@@ -8,6 +8,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // PGlite-backed integration tests boot an embedded Postgres per test;
+    // generous ceiling so slow CI runners don't flake.
+    testTimeout: 20_000,
   },
   resolve: {
     alias: {

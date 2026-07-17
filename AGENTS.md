@@ -25,11 +25,29 @@ things.
 | `pnpm build` | production build |
 | `node scripts/screenshot.mjs [routes]` | light/dark × desktop/phone PNGs → `.screenshots/` |
 
+## Route map (don't re-derive this)
+
+| You need | Go to |
+| --- | --- |
+| Public pages (landing, schedule, sign-in) | `src/app/` — `/trips` is the public schedule |
+| Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
+| DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
+| DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
+| Queries and seed data | `src/db/queries.ts`, `src/db/seed.ts` |
+| Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
+| Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |
+| Dev/e2e staff logins | `src/db/dev-credentials.ts` |
+| Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
+| "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
+
 ## Skills
 
-Prefer these over ad-hoc process: **new-feature** (the full build loop), **verify** (before
-every commit), **design-review** (after UI work), **adr** (hard-to-reverse decisions).
-Reviewer agents: **design-critic**, **dive-domain-expert** (required for safety-critical work).
+Prefer these over ad-hoc process — index with triggers in
+[.claude/skills/README.md](.claude/skills/README.md): **new-feature** (the full build loop),
+**verify** (before every commit), **design-review** (after UI work), **schema-change** (any
+`src/db/schema.ts` edit), **debug** (before attempting fixes), **adr** (hard-to-reverse
+decisions). Reviewer agents: **design-critic**, **dive-domain-expert** (required for
+safety-critical work).
 
 ## Hard rules
 
