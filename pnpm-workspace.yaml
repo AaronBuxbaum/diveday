@@ -1,3 +1,9 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# next pins postcss@8.4.31 exactly, which is below the lowest non-vulnerable
+# version (8.5.10) per the advisory Dependabot flagged. Remove this override
+# once next's own pin reaches >=8.5.10.
+overrides:
+  postcss: ">=8.5.10"
