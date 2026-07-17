@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — the single source of truth for color, motion, and radius.
+ * Semantic names only: components never reference raw hex values.
+ * Palette story: sunlit sand (light) / open ocean at depth (dark),
+ * lagoon teal as the action color, coral as the rare warm accent.
+ * See docs/design/principles.md before adding or changing tokens.
+ */
+
+:root {
+  /* Surfaces */
+  --background: #faf9f6; /* sunlit sand */
+  --surface: #ffffff;
+  --surface-sunken: #f1efe9;
+  --border: #e3e0d7;
+
+  /* Ink */
+  --foreground: #0c2a35; /* deep-sea ink */
+  --muted: #5b6f77;
+
+  /* Action — lagoon */
+  --primary: #0e7490;
+  --primary-hover: #155e75;
+  --primary-foreground: #ffffff;
+
+  /* Accent — coral, used sparingly for moments of delight */
+  --accent: #ff6f61;
+  --accent-foreground: #3d1410;
+
+  /* Feedback */
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+
+  /* Shape & motion */
+  --radius: 0.75rem;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Surfaces */
+    --background: #071720; /* open ocean at depth */
+    --surface: #0d222d;
+    --surface-sunken: #051118;
+    --border: #1c3a47;
+
+    /* Ink */
+    --foreground: #e9f3f4;
+    --muted: #8fa8b0;
+
+    /* Action — lagoon, brightened for contrast at depth */
+    --primary: #22d3ee;
+    --primary-hover: #67e8f9;
+    --primary-foreground: #072a33;
+
+    /* Accent */
+    --accent: #ff8a7e;
+    --accent-foreground: #3d1410;
+
+    /* Feedback */
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-lg: var(--radius);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    transition-duration: 0.01ms !important;
+  }
+}
