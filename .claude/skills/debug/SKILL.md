@@ -27,7 +27,8 @@ description: Debugging playbook — failing tests, red CI, Playwright flakes, Dr
 | Element found twice (strict mode) | Next's route announcer is also `role="alert"` — filter locators by text |
 | First-navigation timeouts in e2e | Dev-server compile cost — assert `toHaveURL` first; expect timeout is already 15s |
 | Test can't see a new column/table | No migration yet — see the `schema-change` skill |
-| Stale/weird dev data | `pnpm db:reset` (wipes `.pglite/`; next boot re-migrates + re-seeds) |
+| Stale/weird dev data | `pnpm db:reset` (wipes `.pglite/`; next boot re-migrates + re-seeds) — but **kill any running dev server first**: wiping the directory under a live PGlite handle poisons that server (writes start failing with DrizzleQueryError), and Playwright's `reuseExistingServer` will happily run the suite against it |
+| Random e2e write failures, reads fine | A leaked `next dev` from an earlier screenshot/verify session holding a deleted `.pglite` — check `curl localhost:3000`, kill it, rerun |
 | Vitest timeout on db tests | Each test boots PGlite; ceiling is 20s in `vitest.config.ts` — a hang usually means an unresolved promise, not slowness |
 | CI failure | The failed step's log tail only — never stream full job logs |
 | Framework behaving "wrong" | This is **Next 16** — check `node_modules/next/dist/docs/` before assuming our bug (middleware→proxy, async `searchParams`, `connection()`) |

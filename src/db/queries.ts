@@ -109,6 +109,35 @@ export async function getTripRoster(db: AppDb, tripId: string) {
     .orderBy(asc(bookings.createdAt));
 }
 
+/**
+ * A booking on a specific trip, with its person — for the confirmation
+ * panel, which must render from the database, never from URL params.
+ */
+export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: string) {
+  const [row] = await db
+    .select({ booking: bookings, person: people })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function restoreBooking(db: AppDb, shopId: string, bookingId: string) {
+  const [booking] = await db
+    .update(bookings)
+    .set({ status: "booked" })
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .returning();
+  return booking ?? null;
+}
+
 export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
   const [booking] = await db
     .update(bookings)

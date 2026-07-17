@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import { signOut } from "@/lib/auth";
@@ -31,6 +32,7 @@ export default async function ShopPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <FlashParams params={["created"]} />
       <header className="mb-10 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>

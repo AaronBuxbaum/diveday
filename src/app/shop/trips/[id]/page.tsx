@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import {
   cancelBooking,
@@ -10,11 +11,12 @@ import {
   getTripRoster,
   getTripWithBooked,
   listStaff,
+  restoreBooking,
   setTripCrew,
   setTripStatus,
   updateTrip,
 } from "@/db/queries";
-import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import {
@@ -44,7 +46,11 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
   reinstated: { tone: "success", text: "Back on! The trip is on the schedule again." },
   crew: { tone: "success", text: "Crew updated." },
   "booking-removed": { tone: "success", text: "Booking cancelled — the spot is open again." },
-  invalid: { tone: "danger", text: "Something didn't parse — check the fields and try again." },
+  "booking-restored": { tone: "success", text: "Back on the roster." },
+  invalid: {
+    tone: "danger",
+    text: "That didn't save — check the date, times, and capacity, then try again.",
+  },
   "end-before-start": { tone: "danger", text: "The trip has to end after it starts." },
 };
 
@@ -53,11 +59,11 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; bid?: string }>;
 }) {
   const session = await requireStaffSession();
   const { id: tripId } = await params;
-  const { notice } = await searchParams;
+  const { notice, bid } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -69,6 +75,7 @@ export default async function ManageTripPage({
     getTripRoster(db, tripId),
   ]);
   const banner = notice ? BANNERS[notice] : undefined;
+  const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
@@ -125,15 +132,25 @@ export default async function ManageTripPage({
     "use server";
     const s = await requireStaffSession();
     const bookingId = String(formData.get("bookingId") ?? "");
-    if (bookingId) await cancelBooking(await getDb(), s.user.shopId, bookingId);
-    redirect(`${back}?notice=booking-removed`);
+    if (!bookingId) redirect(back);
+    await cancelBooking(await getDb(), s.user.shopId, bookingId);
+    redirect(`${back}?notice=booking-removed&bid=${bookingId}`);
+  }
+
+  async function undoRemoveBookingAction(formData: FormData) {
+    "use server";
+    const s = await requireStaffSession();
+    const bookingId = String(formData.get("bookingId") ?? "");
+    if (bookingId) await restoreBooking(await getDb(), s.user.shopId, bookingId);
+    redirect(`${back}?notice=booking-restored`);
   }
 
   const inputClass =
-    "rounded-lg border border-border bg-background px-3 py-2 text-base font-normal";
+    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <FlashParams params={["notice", "bid"]} />
       <Link href="/shop" className="text-sm font-medium text-primary hover:underline">
         ← Back to the shop
       </Link>
@@ -158,20 +175,31 @@ export default async function ManageTripPage({
       </header>
       <p className="mt-1 text-muted">
         {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-        {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+        {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
       </p>
 
       {banner ? (
-        <p
+        <div
           role="status"
           className={
             banner.tone === "success"
-              ? "mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
-              : "mt-6 rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
+              ? "mt-6 flex items-center justify-between gap-3 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+              : "mt-6 flex items-center justify-between gap-3 rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
           }
         >
-          {banner.text}
-        </p>
+          <span>{banner.text}</span>
+          {undoBookingId ? (
+            <form action={undoRemoveBookingAction}>
+              <input type="hidden" name="bookingId" value={undoBookingId} />
+              <button
+                type="submit"
+                className="min-h-11 rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
+              >
+                Undo
+              </button>
+            </form>
+          ) : null}
+        </div>
       ) : null}
 
       <section className="mt-10">
@@ -245,7 +273,7 @@ export default async function ManageTripPage({
           <div>
             <button
               type="submit"
-              className="rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              className="min-h-11 rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
             >
               Save changes
             </button>
@@ -260,16 +288,16 @@ export default async function ManageTripPage({
           <p className="mt-4 text-sm text-muted">No staff on file yet.</p>
         ) : (
           <form action={saveCrewAction} className="mt-4 flex flex-col gap-3">
-            <ul className="flex flex-col gap-2">
+            <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
               {staff.map(({ person, roles }) => (
                 <li key={person.id}>
-                  <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-sm">
+                  <label className="flex min-h-11 items-center gap-3 px-4 py-3 text-sm">
                     <input
                       type="checkbox"
                       name="crew"
                       value={person.id}
                       defaultChecked={crewIds.includes(person.id)}
-                      className="size-4 accent-[var(--primary)]"
+                      className="size-4 accent-primary"
                     />
                     <span className="font-medium">{person.fullName}</span>
                     <span className="text-muted">{roles.join(", ")}</span>
@@ -280,7 +308,7 @@ export default async function ManageTripPage({
             <div>
               <button
                 type="submit"
-                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
               >
                 Save crew
               </button>
@@ -301,11 +329,11 @@ export default async function ManageTripPage({
             No bookings yet — share the trip page and they'll show up here.
           </p>
         ) : (
-          <ul className="mt-4 flex flex-col gap-2">
+          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
             {roster.map(({ booking, person }) => (
               <li
                 key={booking.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-sm"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
               >
                 <div className="min-w-0">
                   <p className="font-medium">{person.fullName}</p>
@@ -315,7 +343,7 @@ export default async function ManageTripPage({
                   <input type="hidden" name="bookingId" value={booking.id} />
                   <button
                     type="submit"
-                    className="rounded-lg px-3 py-1.5 font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
+                    className="min-h-11 rounded-lg px-4 font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
                   >
                     Cancel booking
                   </button>
@@ -331,7 +359,7 @@ export default async function ManageTripPage({
           <form action={reinstateTripAction}>
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
             >
               Reinstate trip
             </button>
@@ -340,7 +368,7 @@ export default async function ManageTripPage({
           <form action={cancelTripAction} className="flex items-center gap-3">
             <button
               type="submit"
-              className="rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
+              className="min-h-11 rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
             >
               Cancel trip
             </button>

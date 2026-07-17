@@ -33,9 +33,9 @@ export default async function TripsPage() {
 
       {upcoming.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-10 text-center">
-          <h2 className="font-medium">No trips on the books</h2>
+          <h2 className="font-medium">No trips on the books yet</h2>
           <p className="mt-1 text-sm text-muted">
-            The ocean&apos;s still there — schedule your first charter to fill this page.
+            Check back soon — or call the shop and we&apos;ll find you a boat.
           </p>
         </div>
       ) : (

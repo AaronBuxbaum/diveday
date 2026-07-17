@@ -25,7 +25,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await page.getByLabel("Returns").fill("11:30");
   await page.getByLabel("Capacity").fill("6");
   await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page).toHaveURL(/\/shop\?created=/);
+  await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/$/);
 
@@ -74,7 +74,7 @@ test("staff edits a trip and cancelling removes it from the public schedule", as
   await page.getByLabel("Departs").fill("13:00");
   await page.getByLabel("Returns").fill("16:00");
   await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page).toHaveURL(/\/shop\?created=/);
+  await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
 
   // Edit the title from the manage page.
   await page.getByRole("link", { name: new RegExp(title) }).click();
