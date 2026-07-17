@@ -1,8 +1,13 @@
+import fs from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
-// In sandboxed agent environments where browser downloads are unavailable,
-// point PLAYWRIGHT_CHROMIUM_EXECUTABLE at a pre-installed Chromium binary.
-const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+// Sandboxed agent environments pre-install Chromium (often a different revision
+// than this Playwright version expects) and block browser downloads. Prefer an
+// explicit override, then the sandbox binary, then Playwright's own resolution.
+const sandboxChromium = "/opt/pw-browsers/chromium";
+const executablePath =
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
+  (!process.env.CI && fs.existsSync(sandboxChromium) ? sandboxChromium : undefined);
 
 export default defineConfig({
   testDir: "./e2e",
