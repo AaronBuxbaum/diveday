@@ -1,0 +1,64 @@
+# Architecture overview
+
+## Shape
+
+A single full-stack **Next.js 16** app (App Router, React 19, TypeScript strict). Server
+components by default; client components only where interactivity demands it. No separate API
+service until something other than the web app needs one ([ADR-0001](decisions/0001-nextjs-fullstack.md)).
+
+## Stack
+
+| Layer | Choice | Why (ADR) |
+| --- | --- | --- |
+| Framework | Next.js 16 (App Router) | [0001](decisions/0001-nextjs-fullstack.md) |
+| Language | TypeScript, `strict` | [0001](decisions/0001-nextjs-fullstack.md) |
+| Styling | Tailwind 4 + semantic CSS tokens | [0004](decisions/0004-design-tokens.md) |
+| Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
+| Unit tests | Vitest + Testing Library | [0002](decisions/0002-toolchain.md) |
+| E2E tests | Playwright | [0002](decisions/0002-toolchain.md) |
+| Package manager | pnpm | [0002](decisions/0002-toolchain.md) |
+
+⚠️ Next.js 16 differs from most training data — read the guides in `node_modules/next/dist/docs/`
+before writing framework-touching code (see AGENTS.md).
+
+## Layout
+
+```
+src/
+  app/          # routes, layouts — App Router. Keep route files thin.
+  lib/          # framework-free domain logic and helpers. Most unit tests live here.
+  components/   # (when it exists) shared UI components, token-styled
+  test/         # test setup
+e2e/            # Playwright specs
+docs/           # the knowledge base (see docs/README.md)
+.claude/        # skills, agents, settings for AI-driven development
+scripts/        # dev utilities (screenshots, etc.)
+```
+
+Single app at repo root — no monorepo until a second deployable exists
+([ADR-0003](decisions/0003-repo-structure.md)).
+
+**Dependency direction:** `app/` may import `lib/` and `components/`; `lib/` imports neither.
+Domain logic goes in `lib/` where Vitest can reach it without a browser.
+
+## Deferred decisions
+
+Write the ADR when the milestone forces the choice — not before. Leading candidates recorded so
+future agents start from context, not from scratch:
+
+| Decision | Needed by | Leading candidates |
+| --- | --- | --- |
+| Database + ORM | M1 | Postgres + Drizzle; Postgres + Prisma |
+| Auth | M1 | Better Auth; Auth.js; Clerk |
+| Hosting | M1 | Vercel; Fly.io |
+| E-signature approach | M3 | draw-on-canvas + typed consent vs. vendor API |
+| Payments | M7 | Stripe |
+| Offline strategy for manifests | M6 | PWA + local-first cache |
+
+## Cross-cutting rules
+
+- **Multi-tenant from M1**: every domain table carries the shop's id.
+- **Time is zoned**: trips happen at physical places; store UTC + IANA timezone, format via
+  `src/lib/format.ts` only.
+- **Safety-critical surfaces** (manifests, medical flags) prefer boring, explicit code and
+  exhaustive tests over cleverness.
