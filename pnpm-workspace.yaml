@@ -1,0 +1,12 @@
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
+
+# Security floors for transitive pins Dependabot can't bump itself. Remove
+# each once the pinning package catches up.
+# - postcss: next pins 8.4.31 exactly; advisory floor is 8.5.10.
+# - esbuild: drizzle-kit ships 0.25.x and (via deprecated @esbuild-kit/esm-loader)
+#   0.18.x; advisory floor is 0.28.1. drizzle-kit verified working post-override.
+overrides:
+  postcss: ">=8.5.10"
+  esbuild: ">=0.28.1"
