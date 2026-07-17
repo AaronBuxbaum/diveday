@@ -1,5 +1,7 @@
+import { hash } from "bcryptjs";
 import type { AppDb } from "./client";
-import { bookings, people, personRoles, shops, trips } from "./schema";
+import { DEV_STAFF_LOGINS } from "./dev-credentials";
+import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -74,6 +76,24 @@ export async function seedDemo(db: AppDb): Promise<void> {
         personId: person.id,
         role,
       })),
+    ),
+  );
+
+  // Staff sign-in accounts with deterministic dev passwords (never in prod).
+  // Cost 4 keeps seeding fast in tests; real account creation flows must use
+  // a production-grade cost.
+  const logins = Object.values(DEV_STAFF_LOGINS);
+  await db.insert(userAccounts).values(
+    await Promise.all(
+      logins.map(async (login) => {
+        const person = staff.find((p) => p.email === login.email);
+        if (!person) throw new Error(`seed: no staff person for ${login.email}`);
+        return {
+          personId: person.id,
+          email: login.email,
+          hashedPassword: await hash(login.password, 4),
+        };
+      }),
     ),
   );
 

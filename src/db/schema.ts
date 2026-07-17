@@ -114,6 +114,30 @@ export const bookings = pgTable(
   ],
 );
 
+export const accountStatus = pgEnum("account_status", ["active", "disabled"]);
+
+/**
+ * A login method attached to a person — not an identity. Roles stay on
+ * person_roles; staff-ness is derived, never stored here (ADR-0006).
+ */
+export const userAccounts = pgTable(
+  "user_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    email: text("email").notNull(),
+    hashedPassword: text("hashed_password").notNull(),
+    status: accountStatus("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_accounts_email_unique").on(table.email),
+    uniqueIndex("user_accounts_person_unique").on(table.personId),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
