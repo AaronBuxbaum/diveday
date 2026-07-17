@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { createTrip, getShopBySlug } from "@/db/queries";
+import { createTrip, getShopById } from "@/db/queries";
 import { requireStaffSession } from "@/lib/session";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -22,7 +22,7 @@ const formSchema = z.object({
 
 async function scheduleTrip(formData: FormData) {
   "use server";
-  await requireStaffSession();
+  const session = await requireStaffSession();
 
   const parsed = formSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect("/shop/trips/new?error=invalid");
@@ -33,7 +33,7 @@ async function scheduleTrip(formData: FormData) {
   if (!startWall || !endWall) redirect("/shop/trips/new?error=invalid");
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, "blue-mantis");
+  const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect("/shop/trips/new?error=invalid");
 
   const startsAt = wallTimeToUtc(startWall, shop.timezone);
