@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Scuba
 
-## Getting Started
+Delight-first dive shop operations: **bookings, waivers, cert checks, gear, and boat
+manifests** in one place that's a genuine pleasure to use.
 
-First, run the development server:
+Built entirely by AI agents. The repo is structured for that: [`AGENTS.md`](AGENTS.md) is the
+agent entry point, [`docs/`](docs/README.md) is the project's memory (vision, dive-domain
+glossary, ADRs, design principles, workflow), and [`.claude/`](.claude/) carries the skills and
+reviewer agents that encode how work gets done here.
+
+## Quickstart
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Command | What |
+| --- | --- |
+| `pnpm check` | lint + typecheck + unit tests |
+| `pnpm test` | unit tests (Vitest) |
+| `pnpm e2e` | end-to-end tests (Playwright) |
+| `pnpm build` | production build |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Next.js 16 · React 19 · TypeScript strict · Tailwind 4 · Biome · Vitest · Playwright · pnpm —
+rationale in [docs/architecture/decisions/](docs/architecture/decisions/README.md).
 
-## Learn More
+## Reading order
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. [docs/product/vision.md](docs/product/vision.md) — why this exists
+2. [docs/design/principles.md](docs/design/principles.md) — what "delight-first" means concretely
+3. [docs/product/roadmap.md](docs/product/roadmap.md) — where it's headed
