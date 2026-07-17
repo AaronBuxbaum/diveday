@@ -52,9 +52,12 @@ async function scheduleTrip(formData: FormData) {
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "Something didn't parse — check the fields and try again.",
+  invalid: "That didn't save — check the date, times, and capacity, then try again.",
   "end-before-start": "The trip has to end after it starts — check the times.",
 };
+
+const inputClass =
+  "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 
 export default async function NewTripPage({
   searchParams,
@@ -88,7 +91,7 @@ export default async function NewTripPage({
             required
             maxLength={120}
             placeholder="Two-Tank Reef — Molasses & French"
-            className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
+            className={inputClass}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
@@ -98,36 +101,21 @@ export default async function NewTripPage({
             rows={2}
             maxLength={500}
             placeholder="Sites, conditions, who it's for, required certs."
-            className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
+            className={inputClass}
           />
         </label>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
             Date
-            <input
-              name="date"
-              type="date"
-              required
-              className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
-            />
+            <input name="date" type="date" required className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
             Departs
-            <input
-              name="startTime"
-              type="time"
-              required
-              className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
-            />
+            <input name="startTime" type="time" required className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
             Returns
-            <input
-              name="endTime"
-              type="time"
-              required
-              className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
-            />
+            <input name="endTime" type="time" required className={inputClass} />
           </label>
         </div>
         <label className="flex w-full flex-col gap-1 text-sm font-medium sm:w-40">
@@ -139,13 +127,13 @@ export default async function NewTripPage({
             min={1}
             max={60}
             defaultValue={12}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal tabular-nums"
+            className={`${inputClass} tabular-nums`}
           />
         </label>
         <div className="mt-2 flex items-center gap-3">
           <button
             type="submit"
-            className="rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+            className="min-h-11 rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >
             Put it on the board
           </button>

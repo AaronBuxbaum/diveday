@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { FlashParams } from "@/components/FlashParams";
+import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { getDefaultShop, getTripWithBooked } from "@/db/queries";
-import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { getBookingForTrip, getDefaultShop, getTripWithBooked } from "@/db/queries";
+import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
 export const metadata: Metadata = {
@@ -31,16 +33,20 @@ export default async function TripDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ booked?: string; name?: string; error?: string }>;
+  searchParams: Promise<{ booking?: string; error?: string }>;
 }) {
   await connection();
   const { id: tripId } = await params;
-  const { booked: justBooked, name, error } = await searchParams;
+  const { booking: bookingId, error } = await searchParams;
   const db = await getDb();
   const shop = await getDefaultShop(db);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
+
+  // The confirmation renders only from a real booking row — never from a
+  // URL claim (design principle 6: trustworthy by inspection).
+  const confirmed = bookingId ? await getBookingForTrip(db, tripId, bookingId) : null;
 
   const inPast = trip.startsAt <= new Date();
   const full = isFull(trip);
@@ -70,15 +76,15 @@ export default async function TripDetailPage({
             : "unavailable";
       redirect(`/trips/${tripId}?error=${code}`);
     }
-    const first = outcome.personName.split(" ")[0] ?? outcome.personName;
-    redirect(`/trips/${tripId}?booked=1&name=${encodeURIComponent(first)}`);
+    redirect(`/trips/${tripId}?booking=${outcome.bookingId}`);
   }
 
   const inputClass =
-    "rounded-lg border border-border bg-background px-3 py-2 text-base font-normal";
+    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+      <FlashParams params={["error"]} />
       <Link href="/trips" className="text-sm font-medium text-primary hover:underline">
         ← All trips
       </Link>
@@ -93,19 +99,19 @@ export default async function TripDetailPage({
         {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
       </header>
 
-      {justBooked ? (
-        <section className="mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
+      {confirmed ? (
+        <section className="rise-in mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
           <h2 className="text-xl font-semibold text-balance">
-            You're on the boat{name ? `, ${name}` : ""}! 🤿
+            You're on the boat, {confirmed.person.fullName.split(" ")[0]}! 🤿
           </h2>
           <p className="mt-2 text-muted">
-            {formatShortDate(trip.startsAt, "en-US", shop.timezone)} at{" "}
-            {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone).split(" – ")[0]} —
-            be at the dock 30 minutes early and we'll take it from there.
+            {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
+            {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock
+            30 minutes early and we'll take it from there.
           </p>
           <Link
             href="/trips"
-            className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
+            className="mt-3 inline-block py-2 text-base font-medium text-primary hover:underline"
           >
             Back to the schedule
           </Link>
@@ -145,7 +151,7 @@ export default async function TripDetailPage({
             </p>
           ) : null}
           <form action={bookSpot} className="mt-4 flex flex-col gap-4">
-            <label className="flex flex-col gap-1 text-sm font-medium">
+            <label className="flex flex-col gap-1 text-base font-medium">
               Name
               <input
                 name="fullName"
@@ -157,7 +163,7 @@ export default async function TripDetailPage({
               />
             </label>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm font-medium">
+              <label className="flex flex-col gap-1 text-base font-medium">
                 Email
                 <input
                   name="email"
@@ -168,7 +174,7 @@ export default async function TripDetailPage({
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
+              <label className="flex flex-col gap-1 text-base font-medium">
                 Phone <span className="font-normal text-muted">(optional)</span>
                 <input
                   name="phone"
@@ -180,14 +186,14 @@ export default async function TripDetailPage({
               </label>
             </div>
             <div className="mt-1">
-              <button
-                type="submit"
-                className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              <SubmitButton
+                pendingLabel="Booking…"
+                className="min-h-11 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
               >
                 Book {remaining === 1 ? "the last spot" : "my spot"}
-              </button>
+              </SubmitButton>
             </div>
-            <p className="text-xs text-muted">
+            <p className="text-sm text-muted">
               No account needed. The shop will confirm your certification and gear at check-in.
             </p>
           </form>

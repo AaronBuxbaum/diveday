@@ -52,7 +52,7 @@ export default async function SignInPage({
               type="email"
               required
               autoComplete="email"
-              className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
+              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -62,12 +62,12 @@ export default async function SignInPage({
               type="password"
               required
               autoComplete="current-password"
-              className="rounded-lg border border-border bg-background px-3 py-2 text-base font-normal"
+              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
             />
           </label>
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >
             Sign in
           </button>
