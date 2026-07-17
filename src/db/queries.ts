@@ -2,6 +2,21 @@ import { and, asc, count, eq, gte, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
 import { bookings, shops, trips } from "./schema";
 
+export type NewTrip = {
+  shopId: string;
+  title: string;
+  description?: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+};
+
+export async function createTrip(db: AppDb, input: NewTrip) {
+  const [trip] = await db.insert(trips).values(input).returning();
+  if (!trip) throw new Error("createTrip: insert returned no row");
+  return trip;
+}
+
 export async function getShopBySlug(db: AppDb, slug: string) {
   const [shop] = await db.select().from(shops).where(eq(shops.slug, slug)).limit(1);
   return shop ?? null;

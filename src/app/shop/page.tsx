@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getDb } from "@/db/client";
 import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
 import { signOut } from "@/lib/auth";
@@ -15,8 +16,13 @@ async function signOutAction() {
   await signOut({ redirectTo: "/" });
 }
 
-export default async function ShopPage() {
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string }>;
+}) {
   const session = await requireStaffSession();
+  const { created } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) return null;
@@ -35,15 +41,32 @@ export default async function ShopPage() {
               : `${upcoming.length} upcoming ${upcoming.length === 1 ? "trip" : "trips"} on the schedule.`}
           </p>
         </div>
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+        <div className="flex shrink-0 items-center gap-3">
+          <Link
+            href="/shop/trips/new"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >
-            Sign out
-          </button>
-        </form>
+            Schedule a trip
+          </Link>
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
+
+      {created ? (
+        <p
+          role="status"
+          className="mb-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
+          “{created}” is on the board. 🤙
+        </p>
+      ) : null}
 
       {upcoming.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-10 text-center">
