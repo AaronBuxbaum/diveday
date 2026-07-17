@@ -52,6 +52,42 @@ export function wallTimeToUtc(wall: WallTime, timeZone: string): Date {
   return new Date(naive - offset);
 }
 
+/** Wall-clock parts of a UTC instant in `timeZone` — the inverse of wallTimeToUtc. */
+export function utcToWallTime(date: Date, timeZone: string): WallTime {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+      .formatToParts(date)
+      .map((p) => [p.type, p.value]),
+  );
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour: Number(parts.hour) % 24,
+    minute: Number(parts.minute),
+  };
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "2026-07-18" — value for an HTML date input. */
+export function toDateInputValue(wall: WallTime): string {
+  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
+}
+
+/** "07:30" — value for an HTML time input. */
+export function toTimeInputValue(wall: WallTime): string {
+  return `${pad(wall.hour)}:${pad(wall.minute)}`;
+}
+
 /** Parse an HTML date input ("2026-07-18") + time input ("07:30"). */
 export function parseWallTime(dateValue: string, timeValue: string): WallTime | null {
   const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);

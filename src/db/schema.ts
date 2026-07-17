@@ -114,6 +114,20 @@ export const bookings = pgTable(
   ],
 );
 
+/** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
+export const tripAssignments = pgTable(
+  "trip_assignments",
+  {
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+  },
+  (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
+);
+
 export const accountStatus = pgEnum("account_status", ["active", "disabled"]);
 
 /**

@@ -29,3 +29,23 @@ export function formatTimeRange(
 ): string {
   return `${formatTime(start, locale, timeZone)} – ${formatTime(end, locale, timeZone)}`;
 }
+
+/**
+ * "7:30 AM – 11:00 AM EDT" — for operational surfaces (manage pages,
+ * confirmations) where an unlabeled time is a trust failure. The public
+ * schedule stays bare: local time is the honest default there.
+ */
+export function formatTimeRangeTz(
+  start: Date,
+  end: Date,
+  locale = "en-US",
+  timeZone?: string,
+): string {
+  const endWithZone = new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone,
+  }).format(end);
+  return `${formatTime(start, locale, timeZone)} – ${endWithZone}`;
+}

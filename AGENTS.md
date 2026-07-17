@@ -34,6 +34,7 @@ things.
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/queries.ts`, `src/db/seed.ts` |
+| The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |

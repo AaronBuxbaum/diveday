@@ -17,13 +17,17 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   credentials + JWT, edge-safe proxy split). Staff sign-in live; protected `/shop` dashboard.
 - ⬜ Hosting: choose and ADR when something needs deploying.
 
-## M2 — Bookings (in progress)
+## M2 — Bookings (core complete)
 
 - ✅ Shop-side: staff schedule trips (`/shop/trips/new` — local-time entry converted via
   `src/lib/zoned.ts`, capacity, validation, success moment on `/shop`).
-- ⬜ Shop-side: edit/cancel trips, courses, staff assignment.
-- ⬜ Diver-side: public booking page — the "under a minute" flow. This is the delight showcase;
-  budget design time accordingly.
+- ✅ Shop-side: manage trips (`/shop/trips/[id]` — edit details, cancel/reinstate, crew
+  assignment via `trip_assignments`, diver roster with booking cancel).
+- ✅ Diver-side: public booking flow (`/trips/[id]` — no account, name + email, transactional
+  capacity enforcement in `src/db/bookings.ts`, confirmation moment, sold-out/past states).
+- ⬜ Courses: deferred until cert levels and DSD rules exist (M4) — a course session without
+  prerequisite gating is just a trip, and shops can schedule it as one meanwhile.
+- ⬜ Booking notifications (email confirmations) — arrives with M7 notifications.
 
 ## M3 — Waivers
 

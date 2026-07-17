@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
+import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import { signOut } from "@/lib/auth";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
@@ -24,13 +25,14 @@ export default async function ShopPage({
   const session = await requireStaffSession();
   const { created } = await searchParams;
   const db = await getDb();
-  const shop = await getShopBySlug(db, "blue-mantis");
+  const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const upcoming = await upcomingTripsWithCounts(db, shop.id);
   const firstName = session.user.name?.split(" ")[0] ?? "there";
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <FlashParams params={["created"]} />
       <header className="mb-10 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
@@ -78,31 +80,33 @@ export default async function ShopPage({
       ) : (
         <ul className="flex flex-col gap-4">
           {upcoming.map((trip) => (
-            <li
-              key={trip.id}
-              className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <h2 className="font-medium">{trip.title}</h2>
-                <p className="text-sm text-muted">
-                  {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-                  {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="text-sm text-muted tabular-nums">
-                  {trip.booked} of {trip.capacity} booked
-                </span>
-                <span
-                  className={
-                    isFull(trip)
-                      ? "inline-block rounded-full border border-border bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
-                      : "inline-block rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary tabular-nums"
-                  }
-                >
-                  {capacityLabel(trip)}
-                </span>
-              </div>
+            <li key={trip.id}>
+              <Link
+                href={`/shop/trips/${trip.id}`}
+                className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-5 transition-colors duration-200 hover:border-primary/40 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <h2 className="font-medium">{trip.title}</h2>
+                  <p className="text-sm text-muted">
+                    {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
+                    {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="text-sm text-muted tabular-nums">
+                    {trip.booked} of {trip.capacity} booked
+                  </span>
+                  <span
+                    className={
+                      isFull(trip)
+                        ? "inline-block rounded-full border border-border bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
+                        : "inline-block rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary tabular-nums"
+                    }
+                  >
+                    {capacityLabel(trip)}
+                  </span>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>
