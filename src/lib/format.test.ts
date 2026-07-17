@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatShortDate, formatTime, formatTimeRange } from "./format";
+import { formatShortDate, formatTime, formatTimeRange, formatTimeRangeTz } from "./format";
 
 const morning = new Date("2026-07-17T07:30:00Z");
 const midday = new Date("2026-07-17T11:00:00Z");
@@ -19,5 +19,14 @@ describe("formatTime", () => {
 describe("formatTimeRange", () => {
   it("joins start and end with an en dash", () => {
     expect(formatTimeRange(morning, midday, "en-US", "UTC")).toBe("7:30 AM – 11:00 AM");
+  });
+});
+
+describe("formatTimeRangeTz", () => {
+  it("labels the end time with the zone", () => {
+    expect(formatTimeRangeTz(morning, midday, "en-US", "UTC")).toBe("7:30 AM – 11:00 AM UTC");
+    expect(formatTimeRangeTz(morning, midday, "en-US", "America/New_York")).toBe(
+      "3:30 AM – 7:00 AM EDT",
+    );
   });
 });

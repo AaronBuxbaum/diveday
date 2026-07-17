@@ -14,6 +14,8 @@
   --surface: #ffffff;
   --surface-sunken: #f1efe9;
   --border: #e3e0d7;
+  /* Form controls only: ≥3:1 against --background (dock test, WCAG 1.4.11) */
+  --border-strong: #8a8577;
 
   /* Ink */
   --foreground: #0c2a35; /* deep-sea ink */
@@ -45,6 +47,7 @@
     --surface: #0d222d;
     --surface-sunken: #051118;
     --border: #1c3a47;
+    --border-strong: #4f7285;
 
     /* Ink */
     --foreground: #e9f3f4;
@@ -71,6 +74,7 @@
   --color-surface: var(--surface);
   --color-surface-sunken: var(--surface-sunken);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-primary: var(--primary);
@@ -90,6 +94,22 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Earned-moment entrance (confirmation panels). Reduced-motion kill-switch below covers it. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 200ms var(--ease-out-soft) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

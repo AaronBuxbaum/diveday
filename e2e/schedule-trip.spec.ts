@@ -29,7 +29,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await page.getByLabel("Capacity").fill("8");
   await page.getByRole("button", { name: "Put it on the board" }).click();
 
-  await expect(page).toHaveURL(/\/shop\?created=/);
+  await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
   await expect(page.getByRole("status")).toContainText(title);
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
