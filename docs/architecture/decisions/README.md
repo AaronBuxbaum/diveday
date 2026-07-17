@@ -19,3 +19,4 @@ write a new one that supersedes it.
 | [0002](0002-toolchain.md) | pnpm + Biome + Vitest + Playwright | Accepted |
 | [0003](0003-repo-structure.md) | Single app at repo root, no monorepo yet | Accepted |
 | [0004](0004-design-tokens.md) | Semantic CSS design tokens bound to Tailwind | Accepted |
+| [0005](0005-database.md) | Postgres via Drizzle ORM, PGlite for dev/tests | Accepted |

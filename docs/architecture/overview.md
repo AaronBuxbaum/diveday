@@ -13,6 +13,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Framework | Next.js 16 (App Router) | [0001](decisions/0001-nextjs-fullstack.md) |
 | Language | TypeScript, `strict` | [0001](decisions/0001-nextjs-fullstack.md) |
 | Styling | Tailwind 4 + semantic CSS tokens | [0004](decisions/0004-design-tokens.md) |
+| Database | Postgres via Drizzle ORM; PGlite in dev/test | [0005](decisions/0005-database.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library | [0002](decisions/0002-toolchain.md) |
 | E2E tests | Playwright | [0002](decisions/0002-toolchain.md) |
@@ -27,8 +28,10 @@ before writing framework-touching code (see AGENTS.md).
 src/
   app/          # routes, layouts — App Router. Keep route files thin.
   lib/          # framework-free domain logic and helpers. Most unit tests live here.
+  db/           # schema.ts (source of truth), client.ts (getDb seam), queries, seed
   components/   # (when it exists) shared UI components, token-styled
   test/         # test setup
+drizzle/        # generated SQL migrations — committed, never hand-edited
 e2e/            # Playwright specs
 docs/           # the knowledge base (see docs/README.md)
 .claude/        # skills, agents, settings for AI-driven development
@@ -48,7 +51,6 @@ future agents start from context, not from scratch:
 
 | Decision | Needed by | Leading candidates |
 | --- | --- | --- |
-| Database + ORM | M1 | Postgres + Drizzle; Postgres + Prisma |
 | Auth | M1 | Better Auth; Auth.js; Clerk |
 | Hosting | M1 | Vercel; Fly.io |
 | E-signature approach | M3 | draw-on-canvas + typed consent vs. vendor API |

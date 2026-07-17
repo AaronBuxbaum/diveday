@@ -12,6 +12,8 @@ const executablePath =
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // Dev-server-backed e2e: first hit on a route pays the compile cost.
+  expect: { timeout: 15_000 },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
