@@ -19,6 +19,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
+| [integrations/certification-agencies.md](integrations/certification-agencies.md) | Agency verification API research and credential setup runbook | agency capability or verification configuration changes |
 
 ## Rules
 
