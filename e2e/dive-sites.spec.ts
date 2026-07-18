@@ -55,3 +55,20 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await expect(page.getByText("27°C")).toBeVisible();
   await expect(page.getByText("18 m")).toBeVisible();
 });
+
+test("the seeded reef briefing shows a satellite map, a gentle route, and field-card photos", async ({
+  page,
+}) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.getByRole("button", { name: "Reset demo data" }).click();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+
+  await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();
+  await expect(page.getByText("Reef garden loop")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Stoplight parrotfish" })).toBeVisible();
+});
