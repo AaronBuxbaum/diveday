@@ -312,6 +312,65 @@ export const tripRequirements = pgTable(
   (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
 );
 
+export const gearType = pgEnum("gear_type", [
+  "bcd",
+  "regulator",
+  "wetsuit",
+  "mask_fins",
+  "weights",
+  "tank",
+]);
+
+/** Service holds are a safety state, not a staff-facing warning that can be bypassed. */
+export const gearState = pgEnum("gear_state", ["available", "assigned", "service_hold", "retired"]);
+
+export const gearItems = pgTable(
+  "gear_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    label: text("label").notNull(),
+    type: gearType("type").notNull(),
+    size: text("size"),
+    state: gearState("state").notNull().default("available"),
+    serviceDueAt: timestamp("service_due_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("gear_items_shop_label_unique").on(table.shopId, table.label),
+    index("gear_items_shop_type_state_idx").on(table.shopId, table.type, table.state),
+  ],
+);
+
+export const gearAssignmentStatus = pgEnum("gear_assignment_status", ["assigned", "returned"]);
+
+/** Immutable-ish operational history: only return timestamps/status are updated after assignment. */
+export const gearAssignments = pgTable(
+  "gear_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    gearItemId: uuid("gear_item_id")
+      .notNull()
+      .references(() => gearItems.id),
+    status: gearAssignmentStatus("status").notNull().default("assigned"),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+    returnedAt: timestamp("returned_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("gear_assignments_booking_status_idx").on(table.bookingId, table.status),
+    index("gear_assignments_gear_status_idx").on(table.gearItemId, table.status),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -320,3 +379,5 @@ export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type Certification = typeof certifications.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
+export type GearItem = typeof gearItems.$inferSelect;
+export type GearAssignment = typeof gearAssignments.$inferSelect;
