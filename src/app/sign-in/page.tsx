@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { goToDemoScheduleAction, switchDemoRoleAction } from "@/app/actions/demo";
-import { SubmitButton } from "@/components/SubmitButton";
 import { getDb } from "@/db/client";
 import { shops } from "@/db/schema";
 import { signIn } from "@/lib/auth";
@@ -90,46 +88,6 @@ export default async function SignInPage({
             Create a shop
           </Link>
         </p>
-        {demo ? (
-          <>
-            <div className="mt-6 flex items-center gap-3 text-xs text-muted">
-              <span className="h-px flex-1 bg-border" />
-              explore the demo
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-left">
-              {[
-                { role: "owner", title: "Admin / Owner", desc: "Dana Reyes", icon: "👑" },
-                { role: "instructor", title: "Instructor", desc: "Marcus Webb", icon: "🎓" },
-                { role: "divemaster", title: "Divemaster", desc: "Keiko Tanaka", icon: "🤿" },
-                { role: "captain", title: "Captain", desc: "Sal Moretti", icon: "⚓" },
-              ].map(({ role, title, desc, icon }) => {
-                const action = switchDemoRoleAction.bind(null, role, demoShop[0].slug);
-                return (
-                  <form key={role} action={action}>
-                    <SubmitButton
-                      pendingLabel="Signing in…"
-                      className="w-full flex flex-col items-start gap-1 rounded-lg border border-border bg-surface p-3 text-left transition-all duration-200 hover:border-primary/40 hover:-translate-y-0.5 cursor-pointer disabled:opacity-70"
-                    >
-                      <span className="text-sm font-semibold flex items-center gap-1 text-foreground">
-                        <span>{icon}</span> {title}
-                      </span>
-                      <span className="text-xs text-muted font-normal">{desc}</span>
-                    </SubmitButton>
-                  </form>
-                );
-              })}
-            </div>
-            <form action={goToDemoScheduleAction.bind(null, demoShop[0].slug)} className="mt-2">
-              <SubmitButton
-                pendingLabel="Redirecting…"
-                className="w-full min-h-11 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-muted transition-all duration-200 hover:bg-surface-sunken hover:text-foreground cursor-pointer disabled:opacity-70"
-              >
-                🐬 Browse as Diver
-              </SubmitButton>
-            </form>
-          </>
-        ) : null}
       </div>
     </main>
   );

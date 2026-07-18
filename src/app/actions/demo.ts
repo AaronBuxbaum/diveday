@@ -110,7 +110,3 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     }
   }
 }
-
-export async function goToDemoScheduleAction(shopSlug: string) {
-  redirect(`/shop/${shopSlug}/schedule`);
-}
