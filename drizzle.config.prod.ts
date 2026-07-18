@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { defineConfig } from "drizzle-kit";
+import { withExplicitSslMode } from "./src/db/connection-string";
 
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
@@ -19,5 +20,5 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
-  dbCredentials: { url },
+  dbCredentials: { url: withExplicitSslMode(url) },
 });

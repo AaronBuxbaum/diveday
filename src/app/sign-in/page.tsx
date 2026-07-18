@@ -1,10 +1,7 @@
-import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { getDb } from "@/db/client";
-import { shops } from "@/db/schema";
 import { signIn } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -33,13 +30,6 @@ export default async function SignInPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const db = await getDb();
-  const demoShop = await db
-    .select({ slug: shops.slug })
-    .from(shops)
-    .where(eq(shops.isDemo, true))
-    .limit(1);
-  const demo = demoShop.length > 0;
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">

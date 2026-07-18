@@ -1,18 +1,17 @@
 import { PGlite } from "@electric-sql/pglite";
-import type { ExtractTablesWithRelations } from "drizzle-orm";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
-import type { PgliteTransaction } from "drizzle-orm/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
+import { withExplicitSslMode } from "./connection-string";
 import * as schema from "./schema";
 import { seedIfEmpty } from "./seed";
 
 export type AppDb = ReturnType<typeof drizzle<typeof schema>>;
-export type AppTransaction = PgliteTransaction<
-  typeof schema,
-  ExtractTablesWithRelations<typeof schema>
->;
+type TransactionCallback = Parameters<AppDb["transaction"]>[0];
+export type AppTransaction = TransactionCallback extends (tx: infer T) => Promise<unknown>
+  ? T
+  : never;
 /** Query services may accept either the app database or its transaction boundary. */
 export type DbExecutor = AppDb | AppTransaction;
 
@@ -35,7 +34,9 @@ export function getDb(): Promise<AppDb> {
 async function init(): Promise<AppDb> {
   const databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl) {
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool({
+      connectionString: withExplicitSslMode(databaseUrl),
+    });
     // Same schema, same query-builder surface as the PGlite driver below;
     // the driver classes differ only in how they execute over the wire.
     return drizzleNodePostgres({ client: pool, schema }) as unknown as AppDb;
@@ -43,7 +44,7 @@ async function init(): Promise<AppDb> {
 
   const dataDir = process.env.PGLITE_DATA_DIR ?? ".pglite";
   const client = dataDir === "memory" ? new PGlite() : new PGlite(dataDir);
-  const db = drizzle(client, { schema });
+  const db = drizzle({ client, schema });
   await migrate(db, { migrationsFolder: "drizzle" });
   await seedIfEmpty(db);
   return db;
@@ -51,7 +52,7 @@ async function init(): Promise<AppDb> {
 
 /** Fresh in-memory database for tests: migrated, unseeded, isolated per call. */
 export async function createTestDb(): Promise<AppDb> {
-  const db = drizzle(new PGlite(), { schema });
+  const db = drizzle({ client: new PGlite(), schema });
   await migrate(db, { migrationsFolder: "drizzle" });
   return db;
 }

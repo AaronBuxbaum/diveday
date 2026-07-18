@@ -45,10 +45,10 @@ not all of its current machinery.
   Do not use a branch-local reservation ledger that other pending branches cannot see.
 - **Tests as durable memory.** New behavior includes happy-path and important failure-path tests in the
   same change. Bugs are regression-first. Safety invariants get adversarial tests.
-- **Timestamped migration filenames.** Two parallel schema branches generated from the same `main` both
-  produce the next sequential `NNNN_*.sql` and collide. Set `migrations: { prefix: "timestamp" }` in
-  `drizzle.config.ts` — one line, removes the filename half of the problem; existing numeric migrations
-  stay valid. Serialized finalization (below) waits for a real collision, but this doesn't need to.
+- **Timestamped migration folders.** Drizzle v1 groups each migration SQL file and snapshot under a
+  full UTC timestamp/name directory, removing the shared journal-file collision point. Existing
+  migrations were converted with `drizzle-kit up`; serialized finalization (below) still applies if
+  two branches alter the same schema surface.
 - **Honesty and stop rules.** Report failing checks verbatim; state explicitly what could not be verified
   rather than implying it works. Three failed fix attempts on the same symptom → stop, write down what is
   known and ruled out, and re-diagnose instead of trying a fourth variation. These rules matter most for
@@ -283,7 +283,8 @@ Apply these continuously rather than postponing them to “polish”:
 2. ~~Add architecture-boundary, ADR-format, and docs-link checks.~~ Shipped 2026-07-18
    (`scripts/check-architecture.mjs`, `check-adrs.mjs`, `check-doc-links.mjs` via `pnpm check:repo`).
 3. ~~Add `task:context` for waivers/design/database.~~ Shipped 2026-07-18 (`scripts/task-context.mjs`).
-4. ~~Set `migrations: { prefix: "timestamp" }` in `drizzle.config.ts`.~~ Shipped 2026-07-18.
+4. ~~Move migrations to Drizzle v1 timestamped folders.~~ Shipped 2026-07-18 (`drizzle-kit up`,
+   [Drizzle v1 ADR](../architecture/decisions/20260718-drizzle-v1-beta.md)).
 5. ~~Write the waiver data model and signature/retention ADR — establishing the `SignatureProvider` seam.~~
    Shipped 2026-07-18 (`src/lib/signatures.ts`,
    [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md)).
