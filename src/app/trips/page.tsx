@@ -58,6 +58,11 @@ export default async function TripsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="font-medium">{trip.title}</h2>
+                    {trip.course ? (
+                      <p className="mt-0.5 text-sm font-medium text-primary">
+                        Course session · {trip.course.title}
+                      </p>
+                    ) : null}
                     {trip.description ? (
                       <p className="mt-0.5 text-sm text-muted">{trip.description}</p>
                     ) : null}
