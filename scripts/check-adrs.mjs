@@ -47,7 +47,7 @@ for (const [id, filenames] of ids) {
 }
 
 if (failures.length > 0) {
-  console.error("ADR validation failed:\n" + failures.map((item) => `- ${item}`).join("\n"));
+  console.error(`ADR validation failed:\n${failures.map((item) => `- ${item}`).join("\n")}`);
   process.exit(1);
 }
 

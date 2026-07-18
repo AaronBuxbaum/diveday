@@ -29,15 +29,33 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   prerequisite gating is just a trip, and shops can schedule it as one meanwhile.
 - ⬜ Booking notifications (email confirmations) — arrives with M7 notifications.
 
-## M3 — Waivers
+## M3 — Waivers (core slice complete)
 
-- Waiver templates, e-signature flow (pre-arrival via link), storage, status on the booking.
-- Medical statement with physician-referral blocking state.
+- ✅ Versioned staff templates: a new release is a new immutable version; completed records retain
+  the exact title, version, and text a diver saw.
+- ✅ Pre-arrival, expiring completion links; only a SHA-256 token hash is stored. Pending links can
+  be safely superseded without changing signed history.
+- ✅ Mobile-first typed-consent flow with saved progress, acknowledgement, medical questions,
+  completion confirmation, and explicit unavailable/expired/already-completed states.
+- ✅ Booking roster status with signed timestamp and an unambiguous **medical review** blocker;
+  affirmative medical answers fail closed rather than becoming a generic success.
+- ⬜ Production notification delivery, richer jurisdiction-specific medical questionnaires, and a
+  third-party signature adapter remain follow-up work. See
+  [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
 
-## M4 — Cert checks
+## M4 — Cert checks (core slice complete)
 
-- Card capture (photo + fields), verification workflow, requirements on trips/sites,
-  "ready to board" status roll-up (waiver + cert + payment later).
+- ✅ Capture agency, level, card number, optional expiry, and a durable card-image reference; new
+  evidence starts **pending**, never implicitly trusted.
+- ✅ Staff verification/rejection workflow and per-trip requirements kept separate from a diver’s
+  cards.
+- ✅ A typed, fail-closed readiness result combines waiver and certification evidence. It explains
+  missing, pending, rejected, expired, insufficient, medical-review, and unconfigured states in
+  staff and diver-facing language.
+- ✅ Staff trip roster, public booking confirmation, and future manifest code share the same
+  readiness service.
+- ⬜ Direct image upload/storage, agency API verification, specialty/site-level requirements, and
+  payment readiness remain follow-up work.
 
 ## M5 — Gear
 

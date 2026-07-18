@@ -53,7 +53,7 @@ future agents start from context, not from scratch:
 | Decision | Needed by | Leading candidates |
 | --- | --- | --- |
 | Hosting | M1 | Vercel (sibling-project precedent); Fly.io |
-| E-signature approach | M3 | draw-on-canvas + typed consent vs. vendor API |
+| E-signature approach | M3 | In-house typed consent now; vendor adapter later ([20260718](decisions/20260718-waiver-signature-retention.md)) |
 | Payments | M7 | Stripe |
 | Offline strategy for manifests | M6 | PWA + local-first cache |
 

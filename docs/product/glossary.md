@@ -11,6 +11,12 @@ new domain concept, define it here in the same PR.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
   may require a refresher after long inactivity.
+- **Verified certification** — a card is evidence, not clearance. Scuba records it as pending
+  until staff verify it; only a verified, unexpired card at or above a trip’s required level can
+  satisfy readiness.
+- **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
+  blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
+  unconfigured, pending, expired, or insufficient evidence is never “ready.”
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **Specialties** — standalone certs gating specific activities: **Nitrox/EANx** (enriched
@@ -36,8 +42,10 @@ new domain concept, define it here in the same PR.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically
-  with a **medical statement** (RSTC form). Some answers on the medical form require a
-  physician sign-off — that's a blocking state, not a checkbox.
+  with a **medical statement** (RSTC form). Scuba snapshots the exact template version into each
+  issued record; a signed record is immutable and a replacement link creates a new record. Some
+  answers on the medical form require a physician sign-off — that's a blocking state, not a
+  checkbox.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 

@@ -45,6 +45,36 @@ const areas = {
       "pnpm e2e -- --reporter=line",
     ],
   },
+  certifications: {
+    goal: "Build certification evidence and a fail-closed readiness result shared by staff, divers, and manifests.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/next-steps.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/readiness.ts",
+      "src/lib/readiness.ts",
+      "src/app/shop/certifications",
+      "src/app/shop/trips/[id]",
+      "src/app/trips/[id]",
+    ],
+    tests: ["src/lib/readiness.test.ts", "src/db/readiness.test.ts", "e2e"],
+    invariants: [
+      "Requirements and evidence are separate; missing configuration fails closed.",
+      "Only verified, unexpired evidence at or above the required level can clear a diver.",
+      "Every readiness blocker is typed and human-readable.",
+      "Tenant-scope card capture, review, and readiness queries.",
+    ],
+    validate: [
+      "pnpm test -- src/lib/readiness.test.ts src/db/readiness.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows Scuba's semantic design system.",
     docs: [

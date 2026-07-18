@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { getBookingForTrip, getDefaultShop, getTripWithBooked } from "@/db/queries";
+import { getBookingReadiness } from "@/db/readiness";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
@@ -47,6 +48,7 @@ export default async function TripDetailPage({
   // The confirmation renders only from a real booking row — never from a
   // URL claim (design principle 6: trustworthy by inspection).
   const confirmed = bookingId ? await getBookingForTrip(db, tripId, bookingId) : null;
+  const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
 
   const inPast = trip.startsAt <= new Date();
   const full = isFull(trip);
@@ -109,6 +111,20 @@ export default async function TripDetailPage({
             {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock
             30 minutes early and we'll take it from there.
           </p>
+          {readiness?.status === "blocked" ? (
+            <section className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
+              <h3 className="font-medium">Before your trip</h3>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
+                {readiness.blockers.map((blocker) => (
+                  <li key={blocker.code}>• {blocker.message}</li>
+                ))}
+              </ul>
+            </section>
+          ) : readiness?.status === "ready" ? (
+            <p className="mt-4 text-sm font-medium text-success">
+              Your pre-trip requirements are complete.
+            </p>
+          ) : null}
           <Link
             href="/trips"
             className="mt-3 inline-block py-2 text-base font-medium text-primary hover:underline"

@@ -45,7 +45,7 @@ for (const file of files) {
 
 if (broken.length > 0) {
   console.error(
-    "Broken internal documentation links:\n" + broken.map((item) => `- ${item}`).join("\n"),
+    `Broken internal documentation links:\n${broken.map((item) => `- ${item}`).join("\n")}`,
   );
   process.exit(1);
 }
