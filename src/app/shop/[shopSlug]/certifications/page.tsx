@@ -16,10 +16,34 @@ import {
 } from "@/db/readiness";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { storeCardImage } from "@/lib/storage";
 
 export const metadata: Metadata = {
   title: "Certifications — Scuba",
 };
+
+/**
+ * Resolve the durable card-image reference: prefer an uploaded photo, fall back
+ * to a pasted URL, and report a hard failure (bad file) so the caller can warn.
+ * An unconfigured store silently falls back to the pasted URL.
+ */
+async function resolveCardImageUrl(
+  formData: FormData,
+  pastedUrl: string,
+): Promise<{ url?: string; failed?: boolean }> {
+  const file = formData.get("cardImage");
+  if (file instanceof File && file.size > 0) {
+    const stored = await storeCardImage({
+      keyPrefix: "cards",
+      filename: file.name,
+      contentType: file.type,
+      bytes: await file.arrayBuffer(),
+    });
+    if (stored.status === "stored") return { url: stored.url };
+    if (stored.status === "failed") return { failed: true };
+  }
+  return { url: pastedUrl || undefined };
+}
 
 const agencySchema = z.enum(["padi", "ssi", "naui", "sdi", "tdi", "other"]);
 const levelSchema = z.enum([
@@ -80,6 +104,8 @@ export default async function CertificationsPage({
     const staff = await requireStaffSession();
     const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=invalid`);
+    const image = await resolveCardImageUrl(formData, parsed.data.cardImageUrl);
+    if (image.failed) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=image`);
     const expiresAt = parsed.data.expiresOn
       ? new Date(`${parsed.data.expiresOn}T23:59:59.999Z`)
       : undefined;
@@ -90,7 +116,7 @@ export default async function CertificationsPage({
       level: parsed.data.level,
       identifier: parsed.data.identifier,
       expiresAt,
-      cardImageUrl: parsed.data.cardImageUrl || undefined,
+      cardImageUrl: image.url,
     });
     redirect(
       `/shop/${staff.user.shopSlug}/certifications?notice=${certification ? "captured" : "invalid"}`,
@@ -117,6 +143,8 @@ export default async function CertificationsPage({
     const staff = await requireStaffSession();
     const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=invalid`);
+    const image = await resolveCardImageUrl(formData, parsed.data.cardImageUrl);
+    if (image.failed) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=image`);
     const expiresAt = parsed.data.expiresOn
       ? new Date(`${parsed.data.expiresOn}T23:59:59.999Z`)
       : undefined;
@@ -127,7 +155,7 @@ export default async function CertificationsPage({
       specialty: parsed.data.specialty,
       identifier: parsed.data.identifier,
       expiresAt,
-      cardImageUrl: parsed.data.cardImageUrl || undefined,
+      cardImageUrl: image.url,
     });
     redirect(
       `/shop/${staff.user.shopSlug}/certifications?notice=${certification ? "captured" : "invalid"}`,
@@ -158,7 +186,9 @@ export default async function CertificationsPage({
           ? "Certification marked for correction."
           : notice === "invalid"
             ? "That certification could not be saved. Check the diver and card details."
-            : undefined;
+            : notice === "image"
+              ? "That photo couldn’t be used. Upload a JPG, PNG, or WebP under 5 MB, or paste a URL."
+              : undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
@@ -178,7 +208,7 @@ export default async function CertificationsPage({
       {banner ? (
         <p
           role="status"
-          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${notice === "invalid" ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
+          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${notice === "invalid" || notice === "image" ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
         >
           {banner}
         </p>
@@ -255,8 +285,18 @@ export default async function CertificationsPage({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
+              Card photo{" "}
+              <span className="font-normal text-muted">(upload; JPG/PNG/WebP, ≤5 MB)</span>
+              <input
+                name="cardImage"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
               Card image URL{" "}
-              <span className="font-normal text-muted">(optional secure reference)</span>
+              <span className="font-normal text-muted">(or paste a secure reference)</span>
               <input
                 name="cardImageUrl"
                 type="url"
@@ -352,8 +392,18 @@ export default async function CertificationsPage({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
+              Card photo{" "}
+              <span className="font-normal text-muted">(upload; JPG/PNG/WebP, ≤5 MB)</span>
+              <input
+                name="cardImage"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
               Card image URL{" "}
-              <span className="font-normal text-muted">(optional secure reference)</span>
+              <span className="font-normal text-muted">(or paste a secure reference)</span>
               <input
                 name="cardImageUrl"
                 type="url"

@@ -82,8 +82,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   verified like level cards; dive sites and trips each carry a cert gate and the readiness service
   composes them (stricter level, union of specialties), fail-closed. Nitrox stays a fill-time gate.
   See [20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md).
-- ⬜ Direct image upload/storage, agency API verification, and payment readiness remain follow-up
-  work.
+- ✅ Direct card-image upload: a provider seam ([`src/lib/storage`](../../src/lib/storage)) stores a
+  captured photo to Vercel Blob and saves a durable URL; validated at the seam (image/*, ≤5 MB),
+  with the paste-a-URL path as fallback when storage is unconfigured. See
+  [20260718-card-image-storage](../architecture/decisions/20260718-card-image-storage.md) (needs
+  `BLOB_READ_WRITE_TOKEN` provisioned, H-04).
+- ⬜ Agency API verification and payment readiness remain follow-up work.
 
 ## M5 — Gear (core prep slice complete)
 
