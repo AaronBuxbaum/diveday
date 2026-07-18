@@ -1,27 +1,39 @@
 # Scuba — agent guide
 
 Delight-first dive shop operations: **bookings, waivers, cert checks, gear, boat manifests**.
-Competitors have the features; we win on experience. You (an AI agent) are the only developer —
-the docs are the project's memory, so read them before coding and update them as you change
-things.
+Competitors have the features; we win on experience. AI agents are the developers. This file,
+`docs/`, scripts, and tests are the provider-neutral source of truth; provider-specific folders are
+adapters and must not introduce unique requirements.
 
 ## Read first
 
 1. This file.
-2. [docs/README.md](docs/README.md) — the docs map; open what's relevant to your task
-   (glossary for domain work, design principles for UI, overview + ADRs for structure).
-3. The Next.js warning at the bottom of this file — it applies to *all* framework-touching work.
+2. Run `pnpm task:context -- <area>` when the task matches a supported area.
+3. Read [docs/README.md](docs/README.md) and only the documents relevant to the task.
+4. Read the Next.js warning at the bottom before framework-touching work.
+
+## Context economy
+
+- Do not read `pnpm-lock.yaml`, generated `drizzle/`, `.next/`, `playwright-report/`, or
+  `test-results/` unless diagnosing a specific failure in that artifact.
+- Locate symbols with search and read the narrow surrounding range instead of opening large files.
+- Read `foo.test.ts` before `foo.ts` when asking what behavior is intended; tests are compressed
+  specifications.
+- Iterate with one focused test and quiet output. Run the full pre-commit gate once.
+- Successful tooling should be quiet; inspect only the failed step or useful tail of a log.
 
 ## Commands
 
 | Command | What |
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
-| `pnpm check` | lint + typecheck + unit tests — **the pre-commit bar** |
+| `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
+| `pnpm check:repo` | architecture, ADR, and documentation-link safeguards |
+| `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
-| `pnpm test` / `pnpm test:watch` | Vitest |
-| `pnpm e2e` | Playwright (auto-detects sandbox Chromium; no install needed) |
+| `pnpm test -- <file> --reporter=dot` | focused Vitest run with low-noise success output |
+| `pnpm e2e -- <spec> --reporter=line` | focused Playwright run |
 | `pnpm build` | production build |
 | `node scripts/screenshot.mjs [routes]` | light/dark × desktop/phone PNGs → `.screenshots/` |
 
@@ -41,14 +53,22 @@ things.
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
 | "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
 
-## Skills
+## Skills and providers
 
-Prefer these over ad-hoc process — index with triggers in
-[.claude/skills/README.md](.claude/skills/README.md): **new-feature** (the full build loop),
-**verify** (before every commit), **design-review** (after UI work), **schema-change** (any
-`src/db/schema.ts` edit), **debug** (before attempting fixes), **adr** (hard-to-reverse
-decisions). Reviewer agents: **design-critic**, **dive-domain-expert** (required for
-safety-critical work).
+The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
+in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**,
+**design-review**, **schema-change**, **debug**, and **adr**. Other providers should read the
+corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical docs, tests, or
+code, the skill is stale and must be fixed in the same change.
+
+## Parallel work
+
+- Use a unique branch/feature slug and open a draft PR early for non-trivial concurrent work.
+- State owned paths, expected schema changes, and planned ADR ids in the PR description.
+- New ADRs use collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer.
+- Do not use branch-local reservation ledgers: other pending branches cannot see them.
+- Split work by vertical slice or non-overlapping paths. Trial-merge the target branch before calling
+  work complete.
 
 ## Hard rules
 
@@ -58,9 +78,11 @@ safety-critical work).
 - **New runtime dependency → ADR.** New domain concept → glossary. Invalidated doc → fix in
   the same PR.
 - **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring
-  code, failure-path tests, and a `dive-domain-expert` review.
-- **Layout**: domain logic in `src/lib/` (framework-free, unit-tested); routes in `src/app/`
-  stay thin; e2e specs in `e2e/`; `src/lib/` never imports from `src/app/`.
+  code, failure-path and adversarial tests, and a `dive-domain-expert` review.
+- **Layout**: domain logic in `src/lib/` or an approved feature module; routes in `src/app/` stay
+  thin; e2e specs live in `e2e/`; domain code never imports from `src/app/`.
+- **Tests travel with behavior.** New features include happy-path and important failure-path tests;
+  bug fixes begin with a failing regression test.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->
