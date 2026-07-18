@@ -61,8 +61,9 @@ Sources: [DAN — enriched air nitrox and ppO₂/MOD limits](https://dan.org/ale
 
 ## Vercel hosting
 
-Vercel is the selected web host. A managed Postgres provider, migration path, previews/production
-environment ownership, backups, domain, and incident owner still need H-04 completion. Vercel
-currently connects external Postgres providers through Marketplace integrations rather than a
-native Vercel Postgres product. See [hosting ADR](../architecture/decisions/20260718-vercel-hosting.md)
-and [Vercel's current Postgres guidance](https://vercel.com/docs/postgres).
+Vercel is the selected web host and Neon (through Vercel's Marketplace integration) is the
+production Postgres provider. The Vercel production build applies committed Drizzle migrations
+before building the application; preview builds intentionally skip them. Enable Vercel's System
+Environment Variables so the build can identify production through `VERCEL_ENV`. Backups, domain,
+secrets, and incident ownership still need H-04 completion. See the [Neon hosting
+ADR](../architecture/decisions/20260718-vercel-neon-hosting.md).
