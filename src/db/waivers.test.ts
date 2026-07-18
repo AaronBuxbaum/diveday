@@ -16,7 +16,7 @@ import {
 } from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
-const clearAnswers = { breathing: false, medication: false, recentIllness: false };
+const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
 async function waiverContext() {
   const db = await createTestDb();
@@ -120,7 +120,7 @@ describe("waiver records (in-memory PGlite)", () => {
     const input = {
       signerName: "Nora Quinn",
       agreed: true,
-      medicalAnswers: { ...clearAnswers, breathing: true },
+      medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
       now,
     };
     expect(await completeWaiver(db, issued.token, input)).toEqual({

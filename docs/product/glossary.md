@@ -56,10 +56,15 @@ new domain concept, define it here in the same PR.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically
-  with a **medical statement** (RSTC form). Scuba snapshots the exact template version into each
-  issued record; a signed record is immutable and a replacement link creates a new record. Some
-  answers on the medical form require a physician sign-off — that's a blocking state, not a
-  checkbox.
+  with a **medical statement**. Scuba snapshots the exact template version into each issued record;
+  a signed record is immutable and a replacement link creates a new record. Some answers on the
+  medical form require a physician sign-off — that's a blocking state, not a checkbox.
+- **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
+  shop's **jurisdiction** (RSTC/WRSTC by default, or a UK variant). Defined as data in
+  `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version it was answered
+  against, so a later edit never re-interprets signed evidence. Any **referral**-flagged "yes"
+  triggers physician review, and unknown questionnaires/questions **fail closed** (review
+  required), never waved through.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.

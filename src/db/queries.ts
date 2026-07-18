@@ -245,6 +245,16 @@ export async function getShopById(db: AppDb, id: string) {
   return shop ?? null;
 }
 
+/** Sets which diver medical questionnaire the shop's waivers present. */
+export async function setShopJurisdiction(db: AppDb, shopId: string, jurisdiction: "rstc" | "uk") {
+  const [shop] = await db
+    .update(shops)
+    .set({ jurisdiction })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
 /**
  * The shop public pages serve. Single-shop instance for now — multi-shop
  * routing (slug subpaths or domains) arrives with shop onboarding.

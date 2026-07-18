@@ -6,7 +6,7 @@ import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from
 import { seedDemo } from "./seed";
 import { completeWaiver, issueWaiverRequest, listWaiverTemplates } from "./waivers";
 
-const clearAnswers = { breathing: false, medication: false, recentIllness: false };
+const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
 async function manifestContext() {
   const db = await createTestDb();

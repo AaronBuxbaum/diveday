@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { getShopById } from "@/db/queries";
+import { getShopById, setShopJurisdiction } from "@/db/queries";
 import { createWaiverTemplate, listWaiverTemplates, setDefaultWaiverTemplate } from "@/db/waivers";
+import { MEDICAL_JURISDICTION_LABELS, questionnaireForJurisdiction } from "@/lib/medical";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -17,6 +18,8 @@ const templateSchema = z.object({
   body: z.string().trim().min(40).max(12_000),
   makeDefault: z.string().optional(),
 });
+
+const jurisdictionSchema = z.object({ jurisdiction: z.enum(["rstc", "uk"]) });
 
 export default async function WaiverTemplatesPage({
   params,
@@ -57,14 +60,30 @@ export default async function WaiverTemplatesPage({
     redirect(`/shop/${staff.user.shopSlug}/waivers?notice=${changed ? "default" : "invalid"}`);
   }
 
+  async function chooseJurisdictionAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = jurisdictionSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
+    const updated = await setShopJurisdiction(
+      await getDb(),
+      staff.user.shopId,
+      parsed.data.jurisdiction,
+    );
+    redirect(`/shop/${staff.user.shopSlug}/waivers?notice=${updated ? "jurisdiction" : "invalid"}`);
+  }
+
+  const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const banner =
     notice === "created"
       ? "New template saved. It has its own immutable version."
       : notice === "default"
         ? "This is now the default for new waiver links."
-        : notice === "invalid"
-          ? "That didn’t save. Give the template a title and at least a short release."
-          : undefined;
+        : notice === "jurisdiction"
+          ? "Medical questionnaire updated for new waivers."
+          : notice === "invalid"
+            ? "That didn’t save. Give the template a title and at least a short release."
+            : undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
@@ -89,6 +108,44 @@ export default async function WaiverTemplatesPage({
           {banner}
         </p>
       ) : null}
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Medical questionnaire</h2>
+        <p className="mt-1 text-sm text-muted">
+          Which diver medical form waivers present. A “yes” to any question is a physician-referral
+          blocker, not a checkbox. Completed waivers keep the exact questionnaire version answered.
+        </p>
+        <form
+          action={chooseJurisdictionAction}
+          className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-end"
+        >
+          <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
+            Jurisdiction
+            <select
+              name="jurisdiction"
+              defaultValue={shop.jurisdiction}
+              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+            >
+              {Object.entries(MEDICAL_JURISDICTION_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Save questionnaire
+          </button>
+        </form>
+        <p className="mt-2 text-sm text-muted">
+          Current form:{" "}
+          <strong className="font-medium text-foreground">{questionnaire.title}</strong> ·{" "}
+          {questionnaire.questions.length} questions.
+        </p>
+      </section>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Choose the default</h2>
