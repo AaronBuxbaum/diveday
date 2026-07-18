@@ -54,6 +54,10 @@ new domain concept, define it here in the same PR.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
+- **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded
+  example shop (Blue Mantis), drives the real staff surfaces, and resets the playground back to a
+  clean slate. Enabled by `isDemoMode()` (on outside production; `SCUBA_DEMO` overrides) and never
+  present in a real shop's production instance (ADR 20260718-demo-mode).
 
 ## Gear
 

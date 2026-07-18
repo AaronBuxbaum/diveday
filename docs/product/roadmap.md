@@ -20,6 +20,10 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   credentials + JWT, edge-safe proxy split). Staff sign-in live; protected `/shop` dashboard.
 - ✅ Hosting: Vercel selected and ADR'd. A managed Postgres adapter, environment ownership,
   migrations, backups, domain, and production validation remain H-04 work.
+- ✅ Demo mode: one-click, self-serve trial into the seeded shop with a resettable playground,
+  gated so it never appears in a real shop's production instance
+  ([20260718-demo-mode](../architecture/decisions/20260718-demo-mode.md)). Builds on the demo
+  seed + staff auth; per-visitor isolated shops wait on multi-tenant routing.
 
 ## M2 — Bookings (core complete)
 
