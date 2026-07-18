@@ -71,6 +71,8 @@ new domain concept, define it here in the same PR.
 - **Gear assignment** — one currently checked-out item reserved for one booking. Assignment is
   not a note: it is the conflict-safe operational record that prevents the same regulator or BCD
   being packed for two divers at once.
+- **Retired gear** — equipment permanently removed from the rental pool. It is distinct from a
+  service hold and cannot be assigned or retired while checked out to a diver.
 - **Nitrox fills** — enriched-air tanks must be **O2-analyzed** by the diver before use and
   logged (mix %, analysis, signature). Only nitrox-certified divers may take nitrox tanks.
 

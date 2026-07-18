@@ -7,6 +7,7 @@ import {
   listCurrentGearAssignments,
   listGearServiceEvents,
   recordGearService,
+  retireGear,
   returnGear,
   setGearServiceHold,
 } from "./gear";
@@ -115,5 +116,28 @@ describe("gear assignments (in-memory PGlite)", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "checked_out" });
     expect(await listGearServiceEvents(db, shop.id, item.id)).toHaveLength(0);
+  });
+
+  it("retires only equipment that is back in the gear room", async () => {
+    const { db, shop, booking } = await gearContext();
+    const available = await createGearItem(db, {
+      shopId: shop.id,
+      label: "MASK-8",
+      type: "mask_fins",
+    });
+    const checkedOut = await createGearItem(db, { shopId: shop.id, label: "TANK-4", type: "tank" });
+    if (!available || !checkedOut) throw new Error("expected inventory");
+    expect(await retireGear(db, shop.id, available.id)).toBe(true);
+    expect(
+      await assignGear(db, { shopId: shop.id, bookingId: booking.id, gearItemId: available.id }),
+    ).toEqual({ ok: false, reason: "retired" });
+
+    const assigned = await assignGear(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      gearItemId: checkedOut.id,
+    });
+    if (!assigned.ok) throw new Error("expected assignment");
+    expect(await retireGear(db, shop.id, checkedOut.id)).toBe(false);
   });
 });

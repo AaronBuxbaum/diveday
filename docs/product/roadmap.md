@@ -70,8 +70,10 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ A completed service event records the work, staff member, completed date, and optional next
   due date before returning held equipment to service. Checked-out and retired gear cannot be
   released through this path.
-- ⬜ Diver sizing/preferences, booking-level requests, bulk recommendations, and retiring items
-  remain follow-up work.
+- ✅ Staff can retire returned or held equipment; checked-out equipment cannot be removed from a
+  diver's active assignment.
+- ⬜ Diver sizing/preferences, booking-level requests, and bulk recommendations remain follow-up
+  work.
 
 ## M6 — Boat manifests (live core slice complete)
 

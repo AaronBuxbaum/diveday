@@ -9,6 +9,7 @@ import {
   listGearInventory,
   listGearServiceEvents,
   recordGearService,
+  retireGear,
   returnGear,
   setGearServiceHold,
 } from "@/db/gear";
@@ -83,6 +84,16 @@ export default async function GearPage({
     await returnGear(await getDb(), staff.user.shopId, String(formData.get("id") ?? ""));
     redirect("/shop/gear?notice=returned");
   }
+  async function retireAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const retired = await retireGear(
+      await getDb(),
+      staff.user.shopId,
+      String(formData.get("id") ?? ""),
+    );
+    redirect(`/shop/gear?notice=${retired ? "retired" : "invalid"}`);
+  }
   async function serviceAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
@@ -125,7 +136,9 @@ export default async function GearPage({
               ? "Gear returned to inventory."
               : notice === "service"
                 ? "Service recorded and gear returned to the packing pool."
-                : "Check the gear details and try again."}
+                : notice === "retired"
+                  ? "Gear retired from inventory."
+                  : "Check the gear details and try again."}
         </p>
       ) : null}
       <form
@@ -185,20 +198,31 @@ export default async function GearPage({
                     {item.state.replace("_", " ")}
                   </span>
                   {item.state !== "assigned" && item.state !== "retired" ? (
-                    <form action={holdAction}>
-                      <input type="hidden" name="id" value={item.id} />
-                      <input
-                        type="hidden"
-                        name="held"
-                        value={item.state !== "service_hold" ? "true" : "false"}
-                      />
-                      <button
-                        type="submit"
-                        className="min-h-11 px-3 text-sm font-medium text-primary hover:underline"
-                      >
-                        {item.state === "service_hold" ? "Release hold" : "Service hold"}
-                      </button>
-                    </form>
+                    <>
+                      <form action={holdAction}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <input
+                          type="hidden"
+                          name="held"
+                          value={item.state !== "service_hold" ? "true" : "false"}
+                        />
+                        <button
+                          type="submit"
+                          className="min-h-11 px-3 text-sm font-medium text-primary hover:underline"
+                        >
+                          {item.state === "service_hold" ? "Release hold" : "Service hold"}
+                        </button>
+                      </form>
+                      <form action={retireAction}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <button
+                          type="submit"
+                          className="min-h-11 px-3 text-sm font-medium text-danger hover:underline"
+                        >
+                          Retire item
+                        </button>
+                      </form>
+                    </>
                   ) : null}
                 </div>
               </div>

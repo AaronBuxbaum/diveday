@@ -146,6 +146,22 @@ export async function setGearServiceHold(
   return Boolean(updated);
 }
 
+/** Retirement is terminal in v1: a checked-out item cannot be retired out from under a diver. */
+export async function retireGear(db: AppDb, shopId: string, gearItemId: string) {
+  const [retired] = await db
+    .update(gearItems)
+    .set({ state: "retired" })
+    .where(
+      and(
+        eq(gearItems.id, gearItemId),
+        eq(gearItems.shopId, shopId),
+        inArray(gearItems.state, ["available", "service_hold"]),
+      ),
+    )
+    .returning({ id: gearItems.id });
+  return Boolean(retired);
+}
+
 /** Packing/return view: all equipment still physically checked out. */
 export async function listCurrentGearAssignments(db: AppDb, shopId: string) {
   return db
