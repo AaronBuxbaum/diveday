@@ -1,0 +1,2 @@
+ALTER TABLE "dive_sites" ADD COLUMN "requires_nitrox" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "trip_requirements" ADD COLUMN "requires_nitrox" boolean DEFAULT false NOT NULL;

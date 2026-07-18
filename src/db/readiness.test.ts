@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
+import {
+  createNitroxCertification,
+  listShopNitroxCertifications,
+  reviewNitroxCertification,
+} from "./nitrox";
 import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import {
   createCertification,
@@ -49,6 +54,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       requiresWaiver: false,
       minimumCertificationLevel: "rescue",
       requiredSpecialties: [],
+      requiresNitrox: false,
     });
     const pending = await createCertification(db, {
       shopId: shop.id,
@@ -83,6 +89,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       requiresWaiver: false,
       minimumCertificationLevel: null,
       requiredSpecialties: ["deep"],
+      requiresNitrox: false,
     });
     const missing = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
     expect(missing?.blockers).toContainEqual(
@@ -107,6 +114,50 @@ describe("trip readiness (in-memory PGlite)", () => {
       status: "verified",
     });
     expect(await getBookingReadiness(db, shop.id, rosterEntry.booking.id)).toEqual({
+      status: "ready",
+      blockers: [],
+    });
+  });
+
+  it("gates a required nitrox card, fail-closed, on a trip requirement", async () => {
+    const { db, shop, reef } = await readinessContext();
+    // Pick a booked diver who has no nitrox card on file yet.
+    const roster = await getTripRoster(db, reef.id);
+    const nitroxHolders = new Set(
+      (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
+    );
+    const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
+    if (!entry) throw new Error("expected a booked diver without a nitrox card");
+
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: true,
+    });
+    expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
+      expect.objectContaining({ code: "nitrox_missing" }),
+    );
+
+    const pending = await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId: entry.person.id,
+      agency: "padi",
+      identifier: "EANX-READY-9",
+    });
+    if (!pending) throw new Error("expected nitrox certification to insert");
+    expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
+      expect.objectContaining({ code: "nitrox_pending" }),
+    );
+
+    await reviewNitroxCertification(db, {
+      shopId: shop.id,
+      certificationId: pending.id,
+      status: "verified",
+    });
+    expect(await getBookingReadiness(db, shop.id, entry.booking.id)).toEqual({
       status: "ready",
       blockers: [],
     });

@@ -68,6 +68,7 @@ export default async function EditDiveSitePage({
       imageUrls,
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
+      requiresNitrox: formData.get("requiresNitrox") === "on",
     });
     if (!updated) notFound();
     redirect(`${back}/${id}?notice=saved`);
@@ -238,6 +239,15 @@ export default async function EditDiveSitePage({
                   {label}
                 </label>
               ))}
+              <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                <input
+                  name="requiresNitrox"
+                  type="checkbox"
+                  defaultChecked={site.requiresNitrox}
+                  className="size-4 accent-primary"
+                />
+                Nitrox
+              </label>
             </div>
           </div>
         </fieldset>

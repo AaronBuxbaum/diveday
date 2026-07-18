@@ -1,6 +1,7 @@
 import type {
   Certification,
   DiveSpecialty,
+  NitroxCertification,
   SpecialtyCertification,
   TripRequirement,
   WaiverRecord,
@@ -47,16 +48,22 @@ export function higherCertificationLevel(
 export type SiteCertRequirement = {
   minimumCertificationLevel: CertificationLevel | null;
   requiredSpecialties: readonly DiveSpecialty[];
+  requiresNitrox: boolean;
 };
 
 /**
- * The gate a diver is actually held to on a trip: the stricter minimum level
- * and the union of specialties demanded by the trip and its dive site.
+ * The gate a diver is actually held to on a trip: the stricter minimum level,
+ * the union of specialties, and nitrox if either the trip or its dive site
+ * demands it.
  */
 export function combineCertRequirements(
   requirement: TripRequirement,
   site: SiteCertRequirement | null | undefined,
-): { minimumCertificationLevel: CertificationLevel | null; requiredSpecialties: DiveSpecialty[] } {
+): {
+  minimumCertificationLevel: CertificationLevel | null;
+  requiredSpecialties: DiveSpecialty[];
+  requiresNitrox: boolean;
+} {
   const specialties = new Set<DiveSpecialty>(requirement.requiredSpecialties ?? []);
   for (const specialty of site?.requiredSpecialties ?? []) specialties.add(specialty);
   return {
@@ -65,6 +72,7 @@ export function combineCertRequirements(
       site?.minimumCertificationLevel,
     ),
     requiredSpecialties: [...specialties],
+    requiresNitrox: Boolean(requirement.requiresNitrox) || Boolean(site?.requiresNitrox),
   };
 }
 
@@ -83,6 +91,9 @@ export type ReadinessBlockerCode =
   | "specialty_pending"
   | "specialty_rejected"
   | "specialty_expired"
+  | "nitrox_missing"
+  | "nitrox_pending"
+  | "nitrox_rejected"
   | "readiness_unavailable";
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
@@ -99,6 +110,7 @@ export type ReadinessInput = {
   waiver: WaiverRecord | null;
   certifications: readonly Certification[];
   specialtyCertifications?: readonly SpecialtyCertification[];
+  nitroxCertifications?: readonly NitroxCertification[];
   now?: Date;
 };
 
@@ -221,6 +233,34 @@ function specialtyBlocker(
 }
 
 /**
+ * Nitrox is a yes/no gate cleared only by a verified enriched-air card. Its
+ * evidence lives in nitrox_certifications (which also gates fills), and those
+ * cards carry no expiry — so there is no expired state, only missing/pending/
+ * rejected.
+ */
+function nitroxBlocker(
+  nitroxCertifications: readonly NitroxCertification[],
+): ReadinessBlocker | null {
+  if (nitroxCertifications.some((card) => card.status === "verified")) return null;
+  if (nitroxCertifications.some((card) => card.status === "pending")) {
+    return {
+      code: "nitrox_pending",
+      message: "Nitrox card is waiting for staff verification.",
+    };
+  }
+  if (nitroxCertifications.some((card) => card.status === "rejected")) {
+    return {
+      code: "nitrox_rejected",
+      message: "Nitrox card needs a corrected card or review.",
+    };
+  }
+  return {
+    code: "nitrox_missing",
+    message: "Nitrox certification is required; no card is on file.",
+  };
+}
+
+/**
  * The shared safety boundary. Every unknown or non-ready input becomes a
  * human-readable blocker; only explicit evidence can produce `ready`.
  */
@@ -272,6 +312,11 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
 
   for (const specialty of effective.requiredSpecialties) {
     const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty, now);
+    if (blocker) blockers.push(blocker);
+  }
+
+  if (effective.requiresNitrox) {
+    const blocker = nitroxBlocker(input.nitroxCertifications ?? []);
     if (blocker) blockers.push(blocker);
   }
   return { status: blockers.length === 0 ? "ready" : "blocked", blockers };

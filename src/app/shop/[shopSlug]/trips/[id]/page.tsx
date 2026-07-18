@@ -381,6 +381,7 @@ export default async function ManageTripPage({
       requiresWaiver: parsed.data.requiresWaiver === "on",
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
+      requiresNitrox: formData.get("requiresNitrox") === "on",
     });
     redirect(`${back}?notice=${saved ? "requirements" : "invalid"}`);
   }
@@ -720,11 +721,21 @@ export default async function ManageTripPage({
                     {label}
                   </label>
                 ))}
+                <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                  <input
+                    name="requiresNitrox"
+                    type="checkbox"
+                    defaultChecked={requirement?.requiresNitrox ?? false}
+                    className="size-4 accent-primary"
+                  />
+                  Nitrox
+                </label>
               </div>
             </fieldset>
             {siteRequirement &&
             (siteRequirement.minimumCertificationLevel ||
-              siteRequirement.requiredSpecialties.length > 0) ? (
+              siteRequirement.requiredSpecialties.length > 0 ||
+              siteRequirement.requiresNitrox) ? (
               <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
                 <strong className="font-medium text-foreground">
                   {trip.diveSite?.name ?? "This site"}
@@ -737,6 +748,7 @@ export default async function ManageTripPage({
                   ...siteRequirement.requiredSpecialties.map(
                     (specialty) => `${SPECIALTY_LABELS[specialty]} specialty`,
                   ),
+                  siteRequirement.requiresNitrox ? "a nitrox card" : null,
                 ]
                   .filter(Boolean)
                   .join(", ")}

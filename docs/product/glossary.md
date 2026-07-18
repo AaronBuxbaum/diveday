@@ -21,8 +21,10 @@ new domain concept, define it here in the same PR.
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
-  `specialty_certifications`; **Nitrox/EANx** (enriched air) is different — it gates a **tank at
-  fill time**, not a site, so it is modeled and enforced separately (see Operations, below).
+  `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
+  lives in `nitrox_certifications`) because it gates a **tank at fill time**; a site or trip may
+  *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
+  — the same card, two independent gates (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
   cert. DSD participants have stricter ratios and depth limits and always dive with an
   instructor.

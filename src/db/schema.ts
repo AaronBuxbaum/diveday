@@ -169,6 +169,12 @@ export const diveSites = pgTable(
       .$type<(typeof diveSpecialty.enumValues)[number][]>()
       .notNull()
       .default([]),
+    /**
+     * Whether the site demands a verified nitrox card to board. Evidence lives
+     * in nitrox_certifications (also the fill-time gate), so this is its own
+     * flag, not a member of required_specialties.
+     */
+    requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -576,6 +582,8 @@ export const tripRequirements = pgTable(
       .$type<(typeof diveSpecialty.enumValues)[number][]>()
       .notNull()
       .default([]),
+    /** Trip-level nitrox gate; OR'd with the site's requiresNitrox. */
+    requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
