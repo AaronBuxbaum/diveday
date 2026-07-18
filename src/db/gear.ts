@@ -1,7 +1,16 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
-import { gearAssignmentFailure } from "@/lib/gear";
+import { gearAssignmentFailure, type PackableGearType, recommendGearForRoster } from "@/lib/gear";
 import type { AppDb } from "./client";
-import { bookings, gearAssignments, gearItems, gearServiceEvents, people, trips } from "./schema";
+import {
+  bookings,
+  gearAssignments,
+  gearItems,
+  gearServiceEvents,
+  people,
+  rentalGearProfiles,
+  rentalGearRequests,
+  trips,
+} from "./schema";
 
 export type NewGearItem = {
   shopId: string;
@@ -96,6 +105,96 @@ export async function assignGear(
       .returning({ id: gearAssignments.id });
     if (!assignment) throw new Error("assignGear: insert returned no row");
     return { ok: true, assignmentId: assignment.id };
+  });
+}
+
+/**
+ * Packs the current roster from one live inventory snapshot. Recommendations
+ * only use requested gear and exact saved/requested sizes; conditional item
+ * claims keep a concurrent packing action from double-assigning equipment.
+ */
+export async function assignRecommendedGear(db: AppDb, shopId: string, tripId: string) {
+  return db.transaction(async (tx) => {
+    const [requestRows, available, assignedRows] = await Promise.all([
+      tx
+        .select({ booking: bookings, request: rentalGearRequests, profile: rentalGearProfiles })
+        .from(bookings)
+        .leftJoin(rentalGearRequests, eq(rentalGearRequests.bookingId, bookings.id))
+        .leftJoin(
+          rentalGearProfiles,
+          and(
+            eq(rentalGearProfiles.personId, bookings.personId),
+            eq(rentalGearProfiles.shopId, bookings.shopId),
+          ),
+        )
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, tripId),
+            ne(bookings.status, "cancelled"),
+          ),
+        ),
+      tx
+        .select({ id: gearItems.id, type: gearItems.type, size: gearItems.size })
+        .from(gearItems)
+        .where(and(eq(gearItems.shopId, shopId), eq(gearItems.state, "available")))
+        .orderBy(asc(gearItems.type), asc(gearItems.label)),
+      tx
+        .select({ bookingId: bookings.id, type: gearItems.type })
+        .from(gearAssignments)
+        .innerJoin(bookings, eq(bookings.id, gearAssignments.bookingId))
+        .innerJoin(gearItems, eq(gearItems.id, gearAssignments.gearItemId))
+        .where(
+          and(
+            eq(gearAssignments.shopId, shopId),
+            eq(gearAssignments.status, "assigned"),
+            eq(bookings.tripId, tripId),
+          ),
+        ),
+    ]);
+    const assignedTypes = new Map<string, PackableGearType[]>();
+    for (const row of assignedRows) {
+      const current = assignedTypes.get(row.bookingId) ?? [];
+      current.push(row.type);
+      assignedTypes.set(row.bookingId, current);
+    }
+    const recommendations = recommendGearForRoster(
+      requestRows.map(({ booking, request, profile }) => ({
+        bookingId: booking.id,
+        request: request
+          ? {
+              ...request,
+              bcdSize: request.bcdSize ?? profile?.bcdSize,
+              wetsuitSize: request.wetsuitSize ?? profile?.wetsuitSize,
+              finSize: request.finSize ?? profile?.finSize,
+            }
+          : null,
+        assignedTypes: assignedTypes.get(booking.id) ?? [],
+      })),
+      available,
+    );
+    let assigned = 0;
+    for (const recommendation of recommendations) {
+      const [claimed] = await tx
+        .update(gearItems)
+        .set({ state: "assigned" })
+        .where(
+          and(
+            eq(gearItems.id, recommendation.gearItemId),
+            eq(gearItems.shopId, shopId),
+            eq(gearItems.state, "available"),
+          ),
+        )
+        .returning({ id: gearItems.id });
+      if (!claimed) continue;
+      await tx.insert(gearAssignments).values({
+        shopId,
+        bookingId: recommendation.bookingId,
+        gearItemId: recommendation.gearItemId,
+      });
+      assigned += 1;
+    }
+    return { assigned, skipped: recommendations.length - assigned };
   });
 }
 

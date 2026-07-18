@@ -483,6 +483,34 @@ export const rentalGearRequests = pgTable(
 );
 
 /**
+ * Reusable fit details for one diver at one shop. This is a planning aid, not
+ * an equipment reservation or a substitute for a dock-side fit check.
+ */
+export const rentalGearProfiles = pgTable(
+  "rental_gear_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    bcdSize: text("bcd_size"),
+    wetsuitSize: text("wetsuit_size"),
+    bootSize: text("boot_size"),
+    finSize: text("fin_size"),
+    weightPreference: text("weight_preference"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("rental_gear_profiles_shop_person_unique").on(table.shopId, table.personId),
+    index("rental_gear_profiles_shop_person_idx").on(table.shopId, table.personId),
+  ],
+);
+
+/**
  * A completed service event is durable operational history. It is distinct
  * from an item being on service hold: a hold prevents checkout; an event
  * records work that was actually completed and who released the item.
@@ -639,6 +667,7 @@ export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type GearItem = typeof gearItems.$inferSelect;
 export type GearAssignment = typeof gearAssignments.$inferSelect;
 export type RentalGearRequest = typeof rentalGearRequests.$inferSelect;
+export type RentalGearProfile = typeof rentalGearProfiles.$inferSelect;
 export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;

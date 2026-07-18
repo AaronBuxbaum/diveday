@@ -89,7 +89,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Diver booking-level rental requests capture a standard set, fit preferences, usual weighting,
   and notes; staff sees them while packing, but the request never reserves inventory or replaces a
   dock-side fit check.
-- ⬜ Person-level size profiles and bulk recommendations remain follow-up work.
+- ✅ A shop-scoped rental size profile pre-fills a diver’s later requests. Staff can bulk-pack
+  only currently available, requested gear; sized items require an exact requested/profile match,
+  and every conditional inventory claim remains conflict-safe.
 
 ## M6 — Boat manifests (live core slice complete)
 

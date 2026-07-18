@@ -7,7 +7,11 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { getRentalGearRequest, saveRentalGearRequest } from "@/db/gear-requests";
+import {
+  getRentalGearProfile,
+  getRentalGearRequest,
+  saveRentalGearRequest,
+} from "@/db/gear-requests";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
@@ -84,6 +88,9 @@ export default async function TripDetailPage({
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
   const rentalRequest = confirmed
     ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
+    : null;
+  const rentalProfile = confirmed
+    ? await getRentalGearProfile(db, shop.id, confirmed.person.id)
     : null;
 
   const inPast = trip.startsAt <= new Date();
@@ -276,7 +283,7 @@ export default async function TripDetailPage({
                   BCD size
                   <select
                     name="bcdSize"
-                    defaultValue={rentalRequest?.bcdSize ?? ""}
+                    defaultValue={rentalRequest?.bcdSize ?? rentalProfile?.bcdSize ?? ""}
                     className={inputClass}
                   >
                     <option value="">Not sure — help me fit it</option>
@@ -289,7 +296,7 @@ export default async function TripDetailPage({
                   Wetsuit size
                   <select
                     name="wetsuitSize"
-                    defaultValue={rentalRequest?.wetsuitSize ?? ""}
+                    defaultValue={rentalRequest?.wetsuitSize ?? rentalProfile?.wetsuitSize ?? ""}
                     className={inputClass}
                   >
                     <option value="">Not sure — help me fit it</option>
@@ -305,7 +312,7 @@ export default async function TripDetailPage({
                   <input
                     name="bootSize"
                     maxLength={20}
-                    defaultValue={rentalRequest?.bootSize ?? ""}
+                    defaultValue={rentalRequest?.bootSize ?? rentalProfile?.bootSize ?? ""}
                     placeholder="US 9 / EU 42"
                     className={inputClass}
                   />
@@ -317,7 +324,7 @@ export default async function TripDetailPage({
                   <input
                     name="finSize"
                     maxLength={20}
-                    defaultValue={rentalRequest?.finSize ?? ""}
+                    defaultValue={rentalRequest?.finSize ?? rentalProfile?.finSize ?? ""}
                     placeholder="M/L"
                     className={inputClass}
                   />
@@ -330,7 +337,9 @@ export default async function TripDetailPage({
                 <input
                   name="weightPreference"
                   maxLength={80}
-                  defaultValue={rentalRequest?.weightPreference ?? ""}
+                  defaultValue={
+                    rentalRequest?.weightPreference ?? rentalProfile?.weightPreference ?? ""
+                  }
                   placeholder="e.g. 16 lb with a 3 mm suit"
                   className={inputClass}
                 />

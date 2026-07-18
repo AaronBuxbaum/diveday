@@ -4,7 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { assignGear, listAvailableGear, listTripGearAssignments, returnGear } from "@/db/gear";
+import {
+  assignGear,
+  assignRecommendedGear,
+  listAvailableGear,
+  listTripGearAssignments,
+  returnGear,
+} from "@/db/gear";
 import { listTripRentalGearRequests } from "@/db/gear-requests";
 import { sendAndRecordNotification } from "@/db/notifications";
 import {
@@ -21,7 +27,7 @@ import {
   updateTrip,
 } from "@/db/queries";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
-import type { RentalGearRequest } from "@/db/schema";
+import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
 import {
   issueWaiverRequest,
   listTripWaiverActivity,
@@ -83,6 +89,11 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
   "gear-assigned": { tone: "success", text: "Gear added to the packing list." },
   "gear-returned": { tone: "success", text: "Gear returned to the gear room." },
+  "gear-packed": { tone: "success", text: "Available gear was packed from diver requests." },
+  "gear-none": {
+    tone: "danger",
+    text: "Nothing was packed automatically. Check each diver’s request and live inventory.",
+  },
   "gear-error": {
     tone: "danger",
     text: "That gear is no longer available. The packing list has been refreshed.",
@@ -94,25 +105,29 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
   "end-before-start": { tone: "danger", text: "The trip has to end after it starts." },
 };
 
-function rentalRequestSummary(request: RentalGearRequest | null | undefined) {
-  if (!request) return "No rental request yet.";
+function rentalRequestSummary(
+  request: RentalGearRequest | null | undefined,
+  profile: RentalGearProfile | null | undefined,
+) {
+  if (!request && !profile) return "No rental request yet.";
   const requested = [
-    request.bcd && "BCD",
-    request.regulator && "regulator",
-    request.wetsuit && "wetsuit",
-    request.maskFins && "mask & fins",
-    request.weights && "weights",
-    request.tank && "tank",
-    request.diveComputer && "computer",
+    request?.bcd && "BCD",
+    request?.regulator && "regulator",
+    request?.wetsuit && "wetsuit",
+    request?.maskFins && "mask & fins",
+    request?.weights && "weights",
+    request?.tank && "tank",
+    request?.diveComputer && "computer",
   ].filter(Boolean);
   const fit = [
-    request.bcdSize && `BCD ${request.bcdSize}`,
-    request.wetsuitSize && `wetsuit ${request.wetsuitSize}`,
-    request.bootSize && `boot ${request.bootSize}`,
-    request.finSize && `fin ${request.finSize}`,
-    request.weightPreference,
+    (request?.bcdSize ?? profile?.bcdSize) && `BCD ${request?.bcdSize ?? profile?.bcdSize}`,
+    (request?.wetsuitSize ?? profile?.wetsuitSize) &&
+      `wetsuit ${request?.wetsuitSize ?? profile?.wetsuitSize}`,
+    (request?.bootSize ?? profile?.bootSize) && `boot ${request?.bootSize ?? profile?.bootSize}`,
+    (request?.finSize ?? profile?.finSize) && `fin ${request?.finSize ?? profile?.finSize}`,
+    request?.weightPreference ?? profile?.weightPreference,
   ].filter(Boolean);
-  return [requested.length > 0 ? requested.join(", ") : "bringing own gear", fit.join(" · ")]
+  return [requested.length > 0 ? requested.join(", ") : "No rental set requested", fit.join(" · ")]
     .filter(Boolean)
     .join(" — ");
 }
@@ -184,6 +199,9 @@ export default async function ManageTripPage({
   }
   const gearRequestByBooking = new Map(
     gearRequestRows.map((row) => [row.booking.id, row.request] as const),
+  );
+  const gearProfileByBooking = new Map(
+    gearRequestRows.map((row) => [row.booking.id, row.profile] as const),
   );
   const waiverRecordsByBooking = new Map<
     string,
@@ -337,6 +355,13 @@ export default async function ManageTripPage({
       gearItemId: parsed.data.gearItemId,
     });
     redirect(`${back}?notice=${outcome.ok ? "gear-assigned" : "gear-error"}`);
+  }
+
+  async function assignRecommendedGearAction() {
+    "use server";
+    const s = await requireStaffSession();
+    const outcome = await assignRecommendedGear(await getDb(), s.user.shopId, tripId);
+    redirect(`${back}?notice=${outcome.assigned > 0 ? "gear-packed" : "gear-none"}`);
   }
 
   async function returnGearAction(formData: FormData) {
@@ -776,6 +801,14 @@ export default async function ManageTripPage({
           >
             Open gear room
           </Link>
+          <form action={assignRecommendedGearAction}>
+            <button
+              type="submit"
+              className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
+            >
+              Pack recommendations
+            </button>
+          </form>
         </div>
         {roster.length === 0 ? (
           <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
@@ -791,7 +824,10 @@ export default async function ManageTripPage({
                     <div>
                       <p className="font-medium">{person.fullName}</p>
                       <p className="mt-1 text-sm text-muted">
-                        {rentalRequestSummary(gearRequestByBooking.get(booking.id))}
+                        {rentalRequestSummary(
+                          gearRequestByBooking.get(booking.id),
+                          gearProfileByBooking.get(booking.id),
+                        )}
                       </p>
                       {assignedGear.length === 0 ? (
                         <p className="mt-1 text-sm text-muted">Nothing packed yet.</p>

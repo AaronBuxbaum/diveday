@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
 import {
   assignGear,
+  assignRecommendedGear,
   createGearItem,
   listCurrentGearAssignments,
   listGearServiceEvents,
@@ -11,6 +12,7 @@ import {
   returnGear,
   setGearServiceHold,
 } from "./gear";
+import { saveRentalGearRequest } from "./gear-requests";
 import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
 
@@ -139,5 +141,46 @@ describe("gear assignments (in-memory PGlite)", () => {
     });
     if (!assigned.ok) throw new Error("expected assignment");
     expect(await retireGear(db, shop.id, checkedOut.id)).toBe(false);
+  });
+
+  it("bulk-packs only requested, exact-size inventory and never service-held gear", async () => {
+    const { db, shop, booking } = await gearContext();
+    const matching = await createGearItem(db, {
+      shopId: shop.id,
+      label: "BCD-M-BULK",
+      type: "bcd",
+      size: "M",
+    });
+    const wrongSize = await createGearItem(db, {
+      shopId: shop.id,
+      label: "BCD-L-BULK",
+      type: "bcd",
+      size: "L",
+    });
+    const held = await createGearItem(db, {
+      shopId: shop.id,
+      label: "REG-HELD-BULK",
+      type: "regulator",
+    });
+    if (!matching || !wrongSize || !held) throw new Error("expected inventory");
+    await setGearServiceHold(db, shop.id, held.id, true);
+    await saveRentalGearRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      bcd: true,
+      regulator: true,
+      wetsuit: false,
+      maskFins: false,
+      weights: false,
+      tank: false,
+      diveComputer: false,
+      bcdSize: "M",
+    });
+
+    const outcome = await assignRecommendedGear(db, shop.id, booking.tripId);
+    expect(outcome).toEqual({ assigned: 1, skipped: 0 });
+    const assignments = await listCurrentGearAssignments(db, shop.id);
+    expect(assignments.map((row) => row.item.id)).toContain(matching.id);
+    expect(assignments.map((row) => row.item.id)).not.toContain(wrongSize.id);
   });
 });

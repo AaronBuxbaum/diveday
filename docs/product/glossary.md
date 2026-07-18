@@ -81,6 +81,9 @@ new domain concept, define it here in the same PR.
 - **Gear assignment** — one currently checked-out item reserved for one booking. Assignment is
   not a note: it is the conflict-safe operational record that prevents the same regulator or BCD
   being packed for two divers at once.
+- **Rental size profile** — a shop-scoped diver’s reusable BCD, wetsuit, boot, fin, and usual
+  weighting details. It pre-fills a new booking’s request and can guide packing, but never
+  reserves inventory or replaces a dock-side fit check.
 - **Retired gear** — equipment permanently removed from the rental pool. It is distinct from a
   service hold and cannot be assigned or retired while checked out to a diver.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air

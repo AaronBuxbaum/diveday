@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
 import {
+  getRentalGearProfile,
   getRentalGearRequest,
   listTripRentalGearRequests,
   saveRentalGearRequest,
 } from "./gear-requests";
-import { getShopBySlug, upcomingTripsWithCounts } from "./queries";
+import { getBookingForTrip, getShopBySlug, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
 
 describe("rental gear requests (in-memory PGlite)", () => {
@@ -62,6 +63,13 @@ describe("rental gear requests (in-memory PGlite)", () => {
     const direct = await getRentalGearRequest(db, shop.id, booked.bookingId);
     expect(direct?.weightPreference).toBeNull();
     const roster = await listTripRentalGearRequests(db, shop.id, trip.id);
-    expect(roster.find((row) => row.booking.id === booked.bookingId)?.request?.bcdSize).toBe("L");
+    const row = roster.find((entry) => entry.booking.id === booked.bookingId);
+    expect(row?.request?.bcdSize).toBe("L");
+    expect(row?.profile).toMatchObject({ bcdSize: "L", weightPreference: null });
+    const bookingRow = await getBookingForTrip(db, trip.id, booked.bookingId);
+    if (!bookingRow) throw new Error("expected booking row");
+    expect(await getRentalGearProfile(db, shop.id, bookingRow.person.id)).toMatchObject({
+      bcdSize: "L",
+    });
   });
 });
