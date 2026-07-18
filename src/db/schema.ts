@@ -376,6 +376,35 @@ export const notificationDeliveries = pgTable(
   ],
 );
 
+/**
+ * Append-only history of every send attempt — the durable record behind the
+ * denormalized latest state in notification_deliveries. A retry adds a row
+ * here; nothing is ever updated, so the full delivery trail survives.
+ */
+export const notificationDeliveryAttempts = pgTable(
+  "notification_delivery_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    kind: notificationKind("kind").notNull(),
+    status: notificationDeliveryStatus("status").notNull(),
+    providerMessageId: text("provider_message_id"),
+    /** True when a staff member re-triggered the send from the dashboard. */
+    isRetry: boolean("is_retry").notNull().default(false),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("notification_delivery_attempts_booking_kind_idx").on(table.bookingId, table.kind),
+    index("notification_delivery_attempts_shop_attempted_idx").on(table.shopId, table.attemptedAt),
+  ],
+);
+
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
 export const tripAssignments = pgTable(
   "trip_assignments",
@@ -877,6 +906,7 @@ export type Trip = typeof trips.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
+export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type Certification = typeof certifications.$inferSelect;

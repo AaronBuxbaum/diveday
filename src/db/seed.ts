@@ -24,6 +24,7 @@ import {
   nitroxCertifications,
   nitroxFills,
   notificationDeliveries,
+  notificationDeliveryAttempts,
   people,
   personRoles,
   rentalGearProfiles,
@@ -783,6 +784,9 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(rentalGearRequests).where(eq(rentalGearRequests.shopId, shopId));
   await db.delete(rentalGearProfiles).where(eq(rentalGearProfiles.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
+  await db
+    .delete(notificationDeliveryAttempts)
+    .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));

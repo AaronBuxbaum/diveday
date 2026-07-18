@@ -60,7 +60,11 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   jurisdiction on the waivers page. Completed waivers store the questionnaire id + version; any
   referral-flagged "yes" fails closed to physician review, and staff see the flagged questions in
   the waiver activity timeline.
-- ⬜ Durable delivery history/retries and a third-party signature adapter remain follow-up work. See
+- ✅ Durable delivery history + retries: every send appends to an append-only
+  `notification_delivery_attempts` trail behind the denormalized latest state, and staff can retry a
+  failed booking confirmation from the dashboard (waiver links re-issue instead, since their
+  one-time token is never stored).
+- ⬜ A third-party signature adapter remains follow-up work. See
   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
 
 ## M4 — Cert checks (core slice complete)
