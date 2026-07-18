@@ -47,4 +47,27 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     await db.update(userAccounts).set({ status: "disabled" }).where(eq(userAccounts.email, email));
     expect(await verifyCredentials(db, email, password)).toBeNull();
   });
+
+  it("admits the bypass token if the shop is a demo shop", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const { email } = DEV_STAFF_LOGINS.instructor;
+
+    const user = await verifyCredentials(db, email, "demo-role-switcher-bypass-token");
+    expect(user?.name).toBe("Marcus Webb");
+    expect(user?.roles).toContain("instructor");
+  });
+
+  it("rejects the bypass token if the shop is NOT a demo shop", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const { email } = DEV_STAFF_LOGINS.instructor;
+
+    // Toggle demo flag off for the shop
+    const { shops } = await import("@/db/schema");
+    await db.update(shops).set({ isDemo: false });
+
+    const user = await verifyCredentials(db, email, "demo-role-switcher-bypass-token");
+    expect(user).toBeNull();
+  });
 });

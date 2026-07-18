@@ -26,7 +26,7 @@ async function bookVisitor(db: AppDb, shopId: string, tripId: string) {
 }
 
 describe("createBooking (in-memory PGlite)", () => {
-  it("books a new visitor, creating a person with the customer role", async () => {
+  it("books a new visitor, creating a person with the diver role", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await bookVisitor(db, shop.id, open.id);
     expect(outcome).toMatchObject({ ok: true, personName: "Nora Quinn" });
@@ -40,7 +40,7 @@ describe("createBooking (in-memory PGlite)", () => {
       .where(and(eq(people.shopId, shop.id), eq(people.email, visitor.email)));
     if (!person) throw new Error("person not created");
     const roles = await db.select().from(personRoles).where(eq(personRoles.personId, person.id));
-    expect(roles.map((r) => r.role)).toContain("customer");
+    expect(roles.map((r) => r.role)).toContain("diver");
   });
 
   it("dedupes the person by email across trips", async () => {

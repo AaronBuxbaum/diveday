@@ -15,7 +15,7 @@ import {
 /**
  * The domain spine. Multi-tenant from day one: every domain table carries
  * shop_id (ADR-0005, docs/architecture/overview.md). People get roles, not
- * types — a person can be staff and a customer (docs/product/glossary.md).
+ * types — a person can be staff and a diver (docs/product/glossary.md).
  */
 
 export const shops = pgTable("shops", {
@@ -35,7 +35,7 @@ export const personRole = pgEnum("person_role", [
   "divemaster",
   "captain",
   "crew",
-  "customer",
+  "diver",
 ]);
 
 export const people = pgTable(

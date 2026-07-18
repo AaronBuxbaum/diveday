@@ -144,9 +144,24 @@ export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Prom
   });
 
   const staffDefs = [
-    { fullName: "Marcus Webb", email: INSTRUCTOR_EMAIL, roles: ["instructor"] },
-    { fullName: "Keiko Tanaka", email: "keiko@bluemantis.example", roles: ["divemaster"] },
-    { fullName: "Sal Moretti", email: "sal@bluemantis.example", roles: ["captain"] },
+    {
+      fullName: "Marcus Webb",
+      email: INSTRUCTOR_EMAIL,
+      roles: ["instructor"],
+      password: DEV_STAFF_LOGINS.instructor.password,
+    },
+    {
+      fullName: "Keiko Tanaka",
+      email: "keiko@bluemantis.example",
+      roles: ["divemaster"],
+      password: DEV_STAFF_LOGINS.divemaster.password,
+    },
+    {
+      fullName: "Sal Moretti",
+      email: "sal@bluemantis.example",
+      roles: ["captain"],
+      password: DEV_STAFF_LOGINS.captain.password,
+    },
   ] as const;
 
   const staff = await db
@@ -167,6 +182,17 @@ export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Prom
       staffDefs[i].roles.map((role) => ({
         personId: person.id,
         role,
+      })),
+    ),
+  );
+
+  // Seed user accounts for these staff members so they can log in/switch on dynamic trial shops too
+  await db.insert(userAccounts).values(
+    await Promise.all(
+      staff.map(async (person, i) => ({
+        personId: person.id,
+        email: staffDefs[i].email,
+        hashedPassword: await hash(staffDefs[i].password, 4),
       })),
     ),
   );
@@ -218,7 +244,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
 
   await db
     .insert(personRoles)
-    .values(customers.map((person) => ({ personId: person.id, role: "customer" as const })));
+    .values(customers.map((person) => ({ personId: person.id, role: "diver" as const })));
 
   await db.insert(certifications).values(
     customers.slice(0, 10).map((person, i) => ({
