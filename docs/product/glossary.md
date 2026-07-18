@@ -49,6 +49,9 @@ new domain concept, define it here in the same PR.
   issued record; a signed record is immutable and a replacement link creates a new record. Some
   answers on the medical form require a physician sign-off — that's a blocking state, not a
   checkbox.
+- **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
+  a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
+  It is derived from timestamps on the evidence records and never exposes the raw completion token.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 

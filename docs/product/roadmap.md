@@ -39,6 +39,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   completion confirmation, and explicit unavailable/expired/already-completed states.
 - ✅ Booking roster status with signed timestamp and an unambiguous **medical review** blocker;
   affirmative medical answers fail closed rather than becoming a generic success.
+- ✅ Staff roster activity explains issued, started, signed, medically blocked, and replaced links
+  from stored evidence without exposing a bearer token.
 - ⬜ Production notification delivery, richer jurisdiction-specific medical questionnaires, and a
   third-party signature adapter remain follow-up work. See
   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).

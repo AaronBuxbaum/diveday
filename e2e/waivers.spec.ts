@@ -43,4 +43,6 @@ test("staff issues a resumable waiver and a medical yes stays visible for review
 
   await page.goto(staffTripUrl);
   await expect(waiverSection.getByText("Medical review")).toBeVisible();
+  await waiverSection.getByText(/Activity ·/).click();
+  await expect(waiverSection.getByText("Medical review required")).toBeVisible();
 });

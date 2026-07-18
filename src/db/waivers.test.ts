@@ -10,6 +10,7 @@ import {
   createWaiverTemplate,
   getWaiverForToken,
   issueWaiverRequest,
+  listTripWaiverActivity,
   listWaiverTemplates,
   setDefaultWaiverTemplate,
 } from "./waivers";
@@ -54,7 +55,7 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("supersedes a pending link and fails the old bearer token closed", async () => {
-    const { db, shop, booking, template } = await waiverContext();
+    const { db, shop, trip, booking, template } = await waiverContext();
     const first = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
@@ -70,6 +71,17 @@ describe("waiver records (in-memory PGlite)", () => {
     if (!first.ok || !second.ok) throw new Error("expected both links to issue");
     expect(await getWaiverForToken(db, first.token, now)).toEqual({ state: "unavailable" });
     expect(await getWaiverForToken(db, second.token, now)).toMatchObject({ state: "available" });
+    const activity = await listTripWaiverActivity(db, shop.id, trip.id);
+    expect(
+      activity
+        .filter((row) => row.booking.id === booking.id)
+        .flatMap((row) => (row.waiver ? [row.waiver] : [])),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: first.recordId, supersededAt: expect.any(Date) }),
+        expect.objectContaining({ id: second.recordId, supersededAt: null }),
+      ]),
+    );
   });
 
   it("keeps the old template snapshot when a newer version becomes default", async () => {
