@@ -20,10 +20,10 @@ async function signOutAction() {
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; reset?: string }>;
 }) {
   const session = await requireStaffSession();
-  const { created } = await searchParams;
+  const { created, reset } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -32,7 +32,7 @@ export default async function ShopPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <FlashParams params={["created"]} />
+      <FlashParams params={["created", "reset"]} />
       <header className="mb-10 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
@@ -67,6 +67,15 @@ export default async function ShopPage({
           className="mb-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
         >
           “{created}” is on the board. 🤙
+        </p>
+      ) : null}
+
+      {reset ? (
+        <p
+          role="status"
+          className="mb-6 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm font-medium text-foreground"
+        >
+          Demo data reset — fresh boat, clean slate. 🤿
         </p>
       ) : null}
 

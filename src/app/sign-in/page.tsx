@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import { enterDemoAction } from "@/app/actions/demo";
+import { SubmitButton } from "@/components/SubmitButton";
 import { signIn } from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 
 export const metadata: Metadata = {
   title: "Sign in — Scuba",
@@ -72,6 +75,23 @@ export default async function SignInPage({
             Sign in
           </button>
         </form>
+        {isDemoMode() ? (
+          <>
+            <div className="mt-6 flex items-center gap-3 text-xs text-muted">
+              <span className="h-px flex-1 bg-border" />
+              just looking?
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <form action={enterDemoAction} className="mt-4">
+              <SubmitButton
+                pendingLabel="Spinning up your shop…"
+                className="min-h-11 w-full rounded-lg border border-border-strong bg-surface px-4 py-2.5 font-medium transition-colors duration-200 hover:bg-surface-sunken disabled:opacity-70"
+              >
+                Explore the demo shop
+              </SubmitButton>
+            </form>
+          </>
+        ) : null}
       </div>
     </main>
   );
