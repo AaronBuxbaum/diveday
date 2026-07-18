@@ -64,6 +64,13 @@
       "when": 1784352195131,
       "tag": "20260718052315_curved_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784355821612,
+      "tag": "20260718062341_nitrox",
+      "breakpoints": true
     }
   ]
 }

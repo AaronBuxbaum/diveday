@@ -1,10 +1,18 @@
 import { hash } from "bcryptjs";
+import {
+  DEFAULT_MAX_PPO2_BAR,
+  DEFAULT_MAX_PPO2_CENTIBAR,
+  maxOperatingDepthMeters,
+} from "@/lib/nitrox";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookings,
   certifications,
   courses,
+  gearItems,
+  nitroxCertifications,
+  nitroxFills,
   people,
   personRoles,
   shops,
@@ -248,11 +256,88 @@ export async function seedDemo(db: AppDb): Promise<void> {
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
   ];
-  await db.insert(bookings).values(
-    bookingRows.map((row) => ({
-      shopId: shop.id,
-      status: "booked" as const,
-      ...row,
-    })),
+  const bookingRows_ = await db
+    .insert(bookings)
+    .values(
+      bookingRows.map((row) => ({
+        shopId: shop.id,
+        status: "booked" as const,
+        ...row,
+      })),
+    )
+    .returning();
+
+  await seedNitrox(db, shop.id, staff, customers, wreck, bookingRows_);
+}
+
+/**
+ * Nitrox demo: a small tank bank, a couple of verified EANx cards (and one
+ * pending), and a logged fill on the wreck trip — so the nitrox surfaces show
+ * a realistic gate and a real MOD from the moment a fresh checkout boots.
+ */
+async function seedNitrox(
+  db: AppDb,
+  shopId: string,
+  staff: { id: string }[],
+  customers: { id: string }[],
+  wreck: { id: string },
+  bookingRows: { id: string; tripId: string; personId: string }[],
+): Promise<void> {
+  const tanks = await db
+    .insert(gearItems)
+    .values(
+      ["AL80 Nitrox #1", "AL80 Nitrox #2", "AL80 Nitrox #3"].map((label) => ({
+        shopId,
+        label,
+        type: "tank" as const,
+        size: "AL80",
+      })),
+    )
+    .returning();
+
+  // Two verified EANx cards, one still pending review.
+  await db.insert(nitroxCertifications).values([
+    {
+      shopId,
+      personId: customers[0].id,
+      agency: "padi" as const,
+      identifier: "EANX-0001",
+      status: "verified" as const,
+      reviewedAt: new Date(),
+    },
+    {
+      shopId,
+      personId: customers[1].id,
+      agency: "ssi" as const,
+      identifier: "EANX-0002",
+      status: "verified" as const,
+      reviewedAt: new Date(),
+    },
+    {
+      shopId,
+      personId: customers[2].id,
+      agency: "padi" as const,
+      identifier: "EANX-0003",
+      status: "pending" as const,
+    },
+  ]);
+
+  // One logged fill for a certified diver on the wreck ("nitrox recommended").
+  const wreckBookingForCert = bookingRows.find(
+    (b) => b.tripId === wreck.id && b.personId === customers[0].id,
   );
+  const staffMember = staff[0];
+  const tank = tanks[0];
+  if (wreckBookingForCert && staffMember && tank) {
+    await db.insert(nitroxFills).values({
+      shopId,
+      bookingId: wreckBookingForCert.id,
+      gearItemId: tank.id,
+      oxygenPercent: 32,
+      maxDepthMeters: maxOperatingDepthMeters(32, DEFAULT_MAX_PPO2_BAR),
+      maxPpO2Centibar: DEFAULT_MAX_PPO2_CENTIBAR,
+      analyzerSignature: "Priya Sharma",
+      filledByPersonId: staffMember.id,
+    });
+  }
 }

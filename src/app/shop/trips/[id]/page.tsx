@@ -840,6 +840,12 @@ export default async function ManageTripPage({
               Open boat manifest
             </Link>
             <Link
+              href={`/shop/trips/${tripId}/nitrox`}
+              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+            >
+              Nitrox fills
+            </Link>
+            <Link
               href="/shop/certifications"
               className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
             >

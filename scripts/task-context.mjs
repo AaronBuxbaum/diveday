@@ -141,6 +141,37 @@ const areas = {
       "pnpm e2e -- --reporter=line",
     ],
   },
+  nitrox: {
+    goal: "Build M7 nitrox fill logging with a verified-card gate and a derived, fail-closed MOD.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/defaults-to-verify.md",
+      "docs/product/human-decisions.md",
+      "docs/design/principles.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/nitrox.ts",
+      "src/db/nitrox.test.ts",
+      "src/lib/nitrox.ts",
+      "src/app/shop/nitrox",
+      "src/app/shop/trips/[id]/nitrox",
+    ],
+    tests: ["src/lib/nitrox.test.ts", "src/db/nitrox.test.ts", "e2e"],
+    invariants: [
+      "Only a verified nitrox card lets a diver receive an EANx fill; the gate is enforced at write time.",
+      "Only a valid recreational EANx mix (22–40% O2) is accepted; out-of-band values fail closed.",
+      "MOD is derived from the mix and ppO2 ceiling, never taken from the caller.",
+      "Tenant-scope every card, tank, and fill; a fill is append-only evidence.",
+      "Nitrox is a safety-critical surface — it needs a dive-domain-expert review (V-05).",
+    ],
+    validate: [
+      "pnpm test -- src/lib/nitrox.test.ts src/db/nitrox.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows Scuba's semantic design system.",
     docs: [
