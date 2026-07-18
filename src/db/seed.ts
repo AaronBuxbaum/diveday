@@ -1,7 +1,15 @@
 import { hash } from "bcryptjs";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+  waiverTemplates,
+} from "./schema";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -34,6 +42,14 @@ export async function seedDemo(db: AppDb): Promise<void> {
     })
     .returning();
   if (!shop) throw new Error("seed: failed to insert demo shop");
+
+  await db.insert(waiverTemplates).values({
+    shopId: shop.id,
+    title: "Blue Mantis Diving Release",
+    version: 1,
+    isDefault: true,
+    body: "I understand that scuba diving and boat travel involve inherent risks. I will follow the crew's briefing, use equipment as instructed, and tell the shop if my health changes before departure.",
+  });
 
   const staffDefs = [
     { fullName: "Dana Reyes", email: "dana@bluemantis.example", roles: ["owner", "manager"] },

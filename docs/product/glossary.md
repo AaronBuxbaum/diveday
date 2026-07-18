@@ -36,8 +36,10 @@ new domain concept, define it here in the same PR.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically
-  with a **medical statement** (RSTC form). Some answers on the medical form require a
-  physician sign-off — that's a blocking state, not a checkbox.
+  with a **medical statement** (RSTC form). Scuba snapshots the exact template version into each
+  issued record; a signed record is immutable and a replacement link creates a new record. Some
+  answers on the medical form require a physician sign-off — that's a blocking state, not a
+  checkbox.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 

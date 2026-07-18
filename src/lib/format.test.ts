@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatShortDate, formatTime, formatTimeRange, formatTimeRangeTz } from "./format";
+import {
+  formatDateTimeTz,
+  formatShortDate,
+  formatTime,
+  formatTimeRange,
+  formatTimeRangeTz,
+} from "./format";
 
 const morning = new Date("2026-07-17T07:30:00Z");
 const midday = new Date("2026-07-17T11:00:00Z");
@@ -13,6 +19,12 @@ describe("formatShortDate", () => {
 describe("formatTime", () => {
   it("renders 12-hour time with minutes", () => {
     expect(formatTime(morning, "en-US", "UTC")).toBe("7:30 AM");
+  });
+});
+
+describe("formatDateTimeTz", () => {
+  it("includes a timezone on safety-relevant timestamps", () => {
+    expect(formatDateTimeTz(morning, "en-US", "UTC")).toBe("Jul 17, 7:30 AM UTC");
   });
 });
 
