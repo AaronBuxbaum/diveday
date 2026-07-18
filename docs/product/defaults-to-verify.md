@@ -41,6 +41,24 @@ and [PADI diver medical questionnaire](https://www.padi.com/sites/default/files/
 
 Source: [example dive-rental reservation form with package and size fields](https://www.sailcaribbeandivers.com/wp-content/uploads/2024/10/SCD-RENTAL-FORM-2024-25.pdf).
 
+## Nitrox fills
+
+- **Starting mix band:** whole-percent recreational EANx from 22% to 40% oxygen. Below 22% is
+  treated as air; above 40% is a technical mix outside this slice. Non-integer and out-of-band
+  values are rejected rather than logged.
+- **Starting MOD basis:** maximum operating depth is derived as `10·(ppO₂/FO₂ − 1)` metres, floored,
+  at a default working ppO₂ of **1.4 bar** with a **1.6 bar** contingency option. The value is
+  computed from the analyzed mix, never entered by hand.
+- **Starting gate + evidence:** a fill is only logged for a diver with a **verified** nitrox
+  specialty card, and it records the diver's typed analysis signature, the mix, the ppO₂ ceiling,
+  and the deriving staff member. It does not replace the diver's own pre-dive O₂ analysis.
+- **Must verify:** agency/blending-facility fill-station procedure, whether a signed analysis
+  sticker or fill log of record is required, the accepted ppO₂ ceilings for the shop's diving,
+  gas-blender qualifications, O₂-clean tank tracking, and any per-agency EANx card acceptance rules.
+
+Sources: [DAN — enriched air nitrox and ppO₂/MOD limits](https://dan.org/alert-diver/article/the-basics-of-nitrox/),
+[NOAA Diving Manual oxygen exposure limits](https://www.noaa.gov/).
+
 ## Vercel hosting
 
 Vercel is the selected web host. A managed Postgres provider, migration path, previews/production

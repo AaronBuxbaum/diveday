@@ -1,6 +1,11 @@
 import { hash } from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import {
+  DEFAULT_MAX_PPO2_BAR,
+  DEFAULT_MAX_PPO2_CENTIBAR,
+  maxOperatingDepthMeters,
+} from "@/lib/nitrox";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
@@ -10,6 +15,8 @@ import {
   gearAssignments,
   gearItems,
   gearServiceEvents,
+  nitroxCertifications,
+  nitroxFills,
   people,
   personRoles,
   rentalGearRequests,
@@ -282,13 +289,89 @@ export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void>
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
   ];
-  await db.insert(bookings).values(
-    bookingRows.map((row) => ({
+  const bookingRows_ = await db
+    .insert(bookings)
+    .values(
+      bookingRows.map((row) => ({
+        shopId,
+        status: "booked" as const,
+        ...row,
+      })),
+    )
+    .returning();
+
+  await seedNitrox(db, shopId, instructor.id, customers, wreck, bookingRows_);
+}
+
+/**
+ * Nitrox demo: a small tank bank, a couple of verified EANx cards (and one
+ * pending), and a logged fill on the wreck trip — so the nitrox surfaces show
+ * a realistic gate and a real MOD from the moment a fresh checkout boots.
+ */
+async function seedNitrox(
+  db: AppDb,
+  shopId: string,
+  filledByPersonId: string,
+  customers: { id: string }[],
+  wreck: { id: string },
+  bookingRows: { id: string; tripId: string; personId: string }[],
+): Promise<void> {
+  const tanks = await db
+    .insert(gearItems)
+    .values(
+      ["AL80 Nitrox #1", "AL80 Nitrox #2", "AL80 Nitrox #3"].map((label) => ({
+        shopId,
+        label,
+        type: "tank" as const,
+        size: "AL80",
+      })),
+    )
+    .returning();
+
+  // Two verified EANx cards, one still pending review.
+  await db.insert(nitroxCertifications).values([
+    {
       shopId,
-      status: "booked" as const,
-      ...row,
-    })),
+      personId: customers[0].id,
+      agency: "padi" as const,
+      identifier: "EANX-0001",
+      status: "verified" as const,
+      reviewedAt: new Date(),
+    },
+    {
+      shopId,
+      personId: customers[1].id,
+      agency: "ssi" as const,
+      identifier: "EANX-0002",
+      status: "verified" as const,
+      reviewedAt: new Date(),
+    },
+    {
+      shopId,
+      personId: customers[2].id,
+      agency: "padi" as const,
+      identifier: "EANX-0003",
+      status: "pending" as const,
+    },
+  ]);
+
+  // One logged fill for a certified diver on the wreck ("nitrox recommended").
+  const wreckBookingForCert = bookingRows.find(
+    (b) => b.tripId === wreck.id && b.personId === customers[0].id,
   );
+  const tank = tanks[0];
+  if (wreckBookingForCert && tank) {
+    await db.insert(nitroxFills).values({
+      shopId,
+      bookingId: wreckBookingForCert.id,
+      gearItemId: tank.id,
+      oxygenPercent: 32,
+      maxDepthMeters: maxOperatingDepthMeters(32, DEFAULT_MAX_PPO2_BAR),
+      maxPpO2Centibar: DEFAULT_MAX_PPO2_CENTIBAR,
+      analyzerSignature: "Priya Sharma",
+      filledByPersonId,
+    });
+  }
 }
 
 /**
@@ -309,6 +392,7 @@ export async function resetDemoSchedule(db: AppDb, shopId: string): Promise<void
 
   // Booking- and trip-dependent operational history first.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  await db.delete(nitroxFills).where(eq(nitroxFills.shopId, shopId));
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
   await db.delete(gearAssignments).where(eq(gearAssignments.shopId, shopId));
   await db.delete(rentalGearRequests).where(eq(rentalGearRequests.shopId, shopId));
@@ -321,6 +405,7 @@ export async function resetDemoSchedule(db: AppDb, shopId: string): Promise<void
   await db.delete(trips).where(eq(trips.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
 
   // Everyone who isn't staff — seeded customers plus booking-flow walk-ups.

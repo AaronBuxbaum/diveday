@@ -47,6 +47,7 @@ but still may need validation; **Validated** has the stated evidence.
 | H-08 | Ready | Product owner + operations lead | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? | Supported courses, prerequisites, expiration/verification rules, ratios, and exception process. | Course catalog/session admission now uses [conservative provisional rules](defaults-to-verify.md#course-admission); approve or replace them before operating courses. |
 | H-09 | Deferred | Product owner + communications owner | Which channel sends booking and waiver notifications, and what consent, copy, timing, and sender identity apply? | Email/SMS provider choice, opt-in requirements, approved templates, and delivery owner. | Production notifications behind the provider seam. |
 | H-10 | Deferred | Product owner + operations lead | Which card-image storage and agency-verification process is acceptable? | Storage/retention policy, access model, verification source, and staff review workflow. | Direct upload, agency integration, and additional trip requirements. |
+| H-11 | Ready | Dive operations lead + gas-blending authority | Which nitrox fill-station procedure, ppO₂ ceilings, mix band, O₂-clean tank tracking, and blender qualifications apply? | Approved fill-log of record, accepted ppO₂ limits, EANx band, and any per-agency card-acceptance rules. | Nitrox fill logging now uses [provisional dive parameters](defaults-to-verify.md#nitrox-fills) (22–40% O₂, MOD at ppO₂ 1.4/1.6); approve or replace them before operating a fill station. |
 
 ## Human verification queue
 
@@ -56,6 +57,7 @@ but still may need validation; **Validated** has the stated evidence.
 | V-02 | Ready after H-05 | Dive operations lead | Field-test the manifest on a phone outdoors with realistic marina connectivity. Include a temporary network loss, a readiness blocker, boarding, and the print/PDF fallback. | Date, device, network conditions, scenarios, findings, and whether the pilot can proceed. |
 | V-03 | Ready before production | Product owner + qualified legal reviewer | Review the configured waiver/medical flow against the approved H-01–H-03 policies and confirm staff know how to handle a medical-review blocker. | Signed-off policy version, staff training owner/date, and escalation contact. |
 | V-04 | Ready before production | Operations lead | Load real initial inventory, staff roles, trips, and pilot bookings; then rehearse check-in, packing, return, and roll call. | Pilot checklist, discrepancies found, and any required data cleanup. |
+| V-05 | Ready before production | `dive-domain-expert` reviewer | Review the nitrox fill slice for domain correctness: EANx mix band, MOD formula and ppO₂ ceilings, the verified-card gate, and analysis-signature evidence. | Reviewer sign-off, any corrections to the [provisional parameters](defaults-to-verify.md#nitrox-fills), and confirmation the write-time gate matches shop policy. |
 
 ## Existing implementation boundaries
 
@@ -78,3 +80,4 @@ but still may need validation; **Validated** has the stated evidence.
 | 2026-07-18 | Created from the remaining product and operational work after M5 gear and M6 live manifest. | Product team |
 | 2026-07-18 | Selected Vercel hosting; added provisional waiver/signature/course/gear baselines for human review. | Product team |
 | 2026-07-18 | Implemented Neon as the H-04 Postgres provider (node-postgres driver, `pnpm db:migrate` runbook); owner/backup/incident-response naming still open. | Engineering |
+| 2026-07-18 | Shipped the M7 nitrox fill-log slice; added H-11 fill-station policy and V-05 dive-domain review. | Product team |

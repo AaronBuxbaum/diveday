@@ -471,6 +471,80 @@ export const gearServiceEvents = pgTable(
   ],
 );
 
+/**
+ * A nitrox (EANx) specialty card. Modeled separately from `certifications`
+ * because that table is the recreational ladder (its `level` enum feeds the
+ * readiness rank map); a specialty is a distinct yes/no gate, not a ladder
+ * rung. Same capture→verify workflow: evidence starts pending and only a
+ * verified card lets a diver receive an enriched-air fill.
+ */
+export const nitroxCertifications = pgTable(
+  "nitrox_certifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    agency: certificationAgency("agency").notNull(),
+    identifier: text("identifier").notNull(),
+    status: certificationStatus("status").notNull().default("pending"),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
+    uniqueIndex("nitrox_certifications_shop_agency_identifier_unique").on(
+      table.shopId,
+      table.agency,
+      table.identifier,
+    ),
+  ],
+);
+
+/**
+ * A logged enriched-air fill for one diver's tank. Safety evidence: the diver
+ * analyzed the mix and signed for it, the mix is within recreational EANx
+ * limits, and — enforced at write time — the diver holds a verified nitrox
+ * card. `maxDepthMeters` is the derived MOD at the stored ppO2 limit; a fill
+ * is an append-only record, never mutated after logging.
+ */
+export const nitroxFills = pgTable(
+  "nitrox_fills",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    gearItemId: uuid("gear_item_id")
+      .notNull()
+      .references(() => gearItems.id),
+    /** Whole-percent O2 fraction of the enriched-air mix (e.g. 32 for EAN32). */
+    oxygenPercent: integer("oxygen_percent").notNull(),
+    /** Max operating depth in metres, derived from the mix and the ppO2 limit. */
+    maxDepthMeters: integer("max_depth_meters").notNull(),
+    /** ppO2 ceiling used for the MOD, in hundredths of a bar (140 = 1.4 bar). */
+    maxPpO2Centibar: integer("max_ppo2_centibar").notNull(),
+    /** The diver's typed confirmation that they personally analyzed the tank. */
+    analyzerSignature: text("analyzer_signature").notNull(),
+    filledByPersonId: uuid("filled_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("nitrox_fills_shop_booking_idx").on(table.shopId, table.bookingId),
+    index("nitrox_fills_shop_gear_idx").on(table.shopId, table.gearItemId),
+  ],
+);
+
 export const rollCallStatus = pgEnum("roll_call_status", ["boarded", "not_boarded"]);
 
 /**
@@ -523,3 +597,5 @@ export type GearAssignment = typeof gearAssignments.$inferSelect;
 export type RentalGearRequest = typeof rentalGearRequests.$inferSelect;
 export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
+export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
+export type NitroxFill = typeof nitroxFills.$inferSelect;

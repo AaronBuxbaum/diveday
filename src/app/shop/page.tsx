@@ -69,6 +69,12 @@ export default async function ShopPage({
             Gear
           </Link>
           <Link
+            href="/shop/nitrox"
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Nitrox
+          </Link>
+          <Link
             href="/shop/reports"
             className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
           >

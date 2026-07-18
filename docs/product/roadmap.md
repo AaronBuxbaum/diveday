@@ -104,7 +104,14 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 
 - ✅ Live staff operations report: upcoming bookings, readiness blockers, rental requests, course
   sessions, and unstaffed instructor-required sessions, all derived from source-of-truth models.
-- ⬜ Payments/deposits, notifications (email/SMS), deeper reporting, nitrox fill logs,
+- ✅ Nitrox fill logs: a verified enriched-air specialty card gates every fill; staff log an
+  analyzed mix per diver/tank and the MOD is derived, not entered. Framework-free rules in
+  [`src/lib/nitrox.ts`](../../src/lib/nitrox.ts); fail-closed persistence in
+  [`src/db/nitrox.ts`](../../src/db/nitrox.ts); surfaces at `/shop/nitrox` and
+  `/shop/trips/[id]/nitrox`. Provisional dive parameters are in
+  [defaults-to-verify.md](defaults-to-verify.md#nitrox-fills) (H-11) and still need a
+  dive-domain-expert review (V-05).
+- ⬜ Payments/deposits, notifications (email/SMS), deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
 
 ## Standing rule

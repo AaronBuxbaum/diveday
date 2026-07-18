@@ -77,8 +77,16 @@ new domain concept, define it here in the same PR.
   being packed for two divers at once.
 - **Retired gear** — equipment permanently removed from the rental pool. It is distinct from a
   service hold and cannot be assigned or retired while checked out to a diver.
-- **Nitrox fills** — enriched-air tanks must be **O2-analyzed** by the diver before use and
-  logged (mix %, analysis, signature). Only nitrox-certified divers may take nitrox tanks.
+- **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
+  (recreationally 22–40% O₂). Scuba models the **nitrox specialty card** separately from the
+  recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.
+- **Nitrox fill** — a logged enriched-air fill for a diver's tank. The diver **O₂-analyzes** the
+  tank and signs for it; the fill records the mix %, the ppO₂ ceiling, and the derived MOD. Only a
+  diver with a **verified** nitrox card may be given an EANx fill — the gate is enforced at write
+  time, not just in the UI.
+- **MOD (maximum operating depth)** — the deepest a mix may be breathed before oxygen toxicity
+  risk, `MOD = 10·(ppO₂/FO₂ − 1)` metres. Derived from the analyzed mix and a ppO₂ ceiling
+  (1.4 bar working, 1.6 bar contingency), never entered by hand.
 
 ## Modeling notes
 
