@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import { assignGear, listAvailableGear, listTripGearAssignments, returnGear } from "@/db/gear";
 import { listTripRentalGearRequests } from "@/db/gear-requests";
+import { sendAndRecordNotification } from "@/db/notifications";
 import {
   cancelBooking,
   getBookingForTrip,
@@ -28,7 +29,7 @@ import {
   listWaiverTemplates,
 } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -281,9 +282,11 @@ export default async function ManageTripPage({
       const booking = await getBookingForTrip(db, tripId, bookingId);
       if (booking?.person.email) {
         try {
-          const delivery = await notify({
+          const delivery = await sendAndRecordNotification(db, {
             kind: "waiver_request",
             waiverRecordId: outcome.recordId,
+            bookingId,
+            shopId: s.user.shopId,
             to: booking.person.email,
             diverName: booking.person.fullName,
             shopName: shop.name,
@@ -293,7 +296,9 @@ export default async function ManageTripPage({
             timezone: shop.timezone,
           });
           if (delivery.status === "failed") {
-            console.error("Waiver request notification failed", { waiverRecordId: outcome.recordId });
+            console.error("Waiver request notification failed", {
+              waiverRecordId: outcome.recordId,
+            });
           }
         } catch {
           // Keep the staff-visible one-time link available if email delivery is unavailable.

@@ -171,6 +171,48 @@ export const bookings = pgTable(
   ],
 );
 
+/** Latest outbound-email state per booking and notification purpose. */
+export const notificationKind = pgEnum("notification_kind", [
+  "booking_confirmation",
+  "waiver_request",
+]);
+
+export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
+  "sent",
+  "failed",
+  "not_configured",
+]);
+
+/**
+ * A current operational status, not an append-only provider log. One row per
+ * booking/purpose means a newly emailed waiver link replaces its prior state.
+ */
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    kind: notificationKind("kind").notNull(),
+    status: notificationDeliveryStatus("status").notNull(),
+    providerMessageId: text("provider_message_id"),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("notification_deliveries_booking_kind_unique").on(table.bookingId, table.kind),
+    index("notification_deliveries_shop_status_attempted_idx").on(
+      table.shopId,
+      table.status,
+      table.attemptedAt,
+    ),
+  ],
+);
+
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
 export const tripAssignments = pgTable(
   "trip_assignments",
@@ -589,6 +631,7 @@ export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type Certification = typeof certifications.$inferSelect;

@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
+import { waiverRequestEmail } from "./email";
 import {
   notificationProviderFromEnvironment,
   notify,
   publicAppUrl,
   resendNotificationProvider,
 } from "./index";
-import { waiverRequestEmail } from "./email";
 
 const booking = {
   kind: "booking_confirmation" as const,
   bookingId: "00000000-0000-4000-8000-000000000001",
+  shopId: "00000000-0000-4000-8000-000000000010",
   to: "nora@example.com",
   diverName: "Nora Quinn",
   shopName: "Blue Mantis",
@@ -21,9 +22,9 @@ const booking = {
 
 describe("notify", () => {
   it("sends a booking confirmation through Resend with an idempotency key", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }),
-    );
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }));
     const provider = resendNotificationProvider(
       { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
       fetchImpl,
@@ -61,9 +62,9 @@ describe("notify", () => {
   });
 
   it("uses the waiver record as the idempotency boundary for a private link", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ id: "resend-waiver-id" }), { status: 200 }),
-    );
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-waiver-id" }), { status: 200 }));
     const provider = resendNotificationProvider(
       { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
       fetchImpl,
@@ -74,6 +75,8 @@ describe("notify", () => {
         {
           kind: "waiver_request",
           waiverRecordId: "00000000-0000-4000-8000-000000000002",
+          bookingId: "00000000-0000-4000-8000-000000000001",
+          shopId: "00000000-0000-4000-8000-000000000010",
           to: "nora@example.com",
           diverName: "Nora Quinn",
           shopName: "Blue Mantis",

@@ -8,10 +8,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { getRentalGearRequest, saveRentalGearRequest } from "@/db/gear-requests";
+import { sendAndRecordNotification } from "@/db/notifications";
 import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
-import { notify } from "@/lib/notifications";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
 export const metadata: Metadata = {
@@ -124,9 +124,10 @@ export default async function TripDetailPage({
     ]);
     if (confirmedBooking?.person.email && tripNow) {
       try {
-        const delivery = await notify({
+        const delivery = await sendAndRecordNotification(dbi, {
           kind: "booking_confirmation",
           bookingId: outcome.bookingId,
+          shopId: shopNow.id,
           to: confirmedBooking.person.email,
           diverName: confirmedBooking.person.fullName,
           shopName: shopNow.name,
@@ -136,7 +137,9 @@ export default async function TripDetailPage({
           timezone: shopNow.timezone,
         });
         if (delivery.status === "failed") {
-          console.error("Booking confirmation notification failed", { bookingId: outcome.bookingId });
+          console.error("Booking confirmation notification failed", {
+            bookingId: outcome.bookingId,
+          });
         }
       } catch {
         // Email must never turn a completed, capacity-safe booking into an error page.
@@ -296,7 +299,9 @@ export default async function TripDetailPage({
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
-                  Boot size <span className="font-normal text-muted">(optional)</span>
+                  <span>
+                    Boot size <span className="font-normal text-muted">(optional)</span>
+                  </span>
                   <input
                     name="bootSize"
                     maxLength={20}
@@ -306,7 +311,9 @@ export default async function TripDetailPage({
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
-                  Fin size <span className="font-normal text-muted">(optional)</span>
+                  <span>
+                    Fin size <span className="font-normal text-muted">(optional)</span>
+                  </span>
                   <input
                     name="finSize"
                     maxLength={20}
@@ -317,7 +324,9 @@ export default async function TripDetailPage({
                 </label>
               </div>
               <label className="flex flex-col gap-1 text-sm font-medium">
-                Usual weight setup <span className="font-normal text-muted">(optional)</span>
+                <span>
+                  Usual weight setup <span className="font-normal text-muted">(optional)</span>
+                </span>
                 <input
                   name="weightPreference"
                   maxLength={80}
@@ -327,8 +336,10 @@ export default async function TripDetailPage({
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
-                Anything else the crew should know?{" "}
-                <span className="font-normal text-muted">(optional)</span>
+                <span>
+                  Anything else the crew should know?{" "}
+                  <span className="font-normal text-muted">(optional)</span>
+                </span>
                 <textarea
                   name="note"
                   rows={2}
@@ -419,7 +430,9 @@ export default async function TripDetailPage({
                 />
               </label>
               <label className="flex flex-col gap-1 text-base font-medium">
-                Phone <span className="font-normal text-muted">(optional)</span>
+                <span>
+                  Phone <span className="font-normal text-muted">(optional)</span>
+                </span>
                 <input
                   name="phone"
                   type="tel"
