@@ -3,6 +3,9 @@
 Sequencing guidance, not a contract. Each milestone ships a usable vertical slice. Re-order only
 with a note here explaining why.
 
+Human-owned decisions, approvals, and validation are tracked in
+[human-decisions.md](human-decisions.md).
+
 ## M0 — Foundation ✅ (this PR)
 
 Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it.
