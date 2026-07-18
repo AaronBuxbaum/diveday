@@ -10,6 +10,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/vision.md](product/vision.md) | Why this product exists, who it serves, what "delight-first" means | positioning or personas change |
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them | you introduce or rename a domain concept |
 | [product/roadmap.md](product/roadmap.md) | Milestone sequencing | a milestone ships or scope shifts |
+| [next-steps.md](next-steps.md) | Active plan of record: next slices, Sybaris architecture review, agent-platform work | an item ships (dated note) or the plan changes |
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |
