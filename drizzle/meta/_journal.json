@@ -29,6 +29,13 @@
       "when": 1784336358850,
       "tag": "20260718005918_condemned_mother_askani",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784337405768,
+      "tag": "20260718011645_readiness",
+      "breakpoints": true
     }
   ]
 }

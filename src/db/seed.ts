@@ -3,9 +3,11 @@ import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookings,
+  certifications,
   people,
   personRoles,
   shops,
+  tripRequirements,
   trips,
   userAccounts,
   waiverTemplates,
@@ -129,6 +131,17 @@ export async function seedDemo(db: AppDb): Promise<void> {
     .insert(personRoles)
     .values(customers.map((person) => ({ personId: person.id, role: "customer" as const })));
 
+  await db.insert(certifications).values(
+    customers.slice(0, 10).map((person, i) => ({
+      shopId: shop.id,
+      personId: person.id,
+      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
+      level: i === 1 ? ("advanced_open_water" as const) : ("open_water" as const),
+      identifier: `DEMO-${String(i + 1).padStart(4, "0")}`,
+      status: "verified" as const,
+    })),
+  );
+
   const tripRows = await db
     .insert(trips)
     .values([
@@ -166,6 +179,15 @@ export async function seedDemo(db: AppDb): Promise<void> {
       },
     ])
     .returning();
+
+  await db.insert(tripRequirements).values(
+    tripRows.map((trip) => ({
+      tripId: trip.id,
+      shopId: shop.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: "open_water" as const,
+    })),
+  );
 
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;

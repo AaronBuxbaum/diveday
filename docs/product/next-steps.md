@@ -295,7 +295,8 @@ Apply these continuously rather than postponing them to “polish”:
 
 1. Add a staff-facing waiver activity timeline and a richer, jurisdiction-specific medical questionnaire.
    Versioning, referral, expiry, saved progress, and immutable signed evidence shipped in the first slice.
-2. Introduce the generic readiness result while designing certification checks.
+2. ~~Introduce the generic readiness result while designing certification checks.~~ Shipped
+   2026-07-18 (`src/lib/readiness.ts`; shared by staff trip, diver confirmation, and future manifest work).
 3. Add provider adapters or generated skill indexes based on the provider-neutral workflow ADR.
 4. Add path-aware CI and changed-UI evidence enforcement.
 5. Create realistic seeded scenarios and visual regression coverage for critical states.

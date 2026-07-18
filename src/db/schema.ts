@@ -238,9 +238,85 @@ export const waiverRecords = pgTable(
   ],
 );
 
+export const certificationAgency = pgEnum("certification_agency", [
+  "padi",
+  "ssi",
+  "naui",
+  "sdi",
+  "tdi",
+  "other",
+]);
+
+/** Ordered in src/lib/readiness.ts — extend deliberately with the rank map. */
+export const certificationLevel = pgEnum("certification_level", [
+  "open_water",
+  "advanced_open_water",
+  "rescue",
+  "divemaster",
+  "instructor",
+]);
+
+export const certificationStatus = pgEnum("certification_status", [
+  "pending",
+  "verified",
+  "rejected",
+]);
+
+/** Evidence belongs to a person; requirements decide whether it is sufficient for a trip. */
+export const certifications = pgTable(
+  "certifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    agency: certificationAgency("agency").notNull(),
+    level: certificationLevel("level").notNull(),
+    identifier: text("identifier").notNull(),
+    /** Storage seam comes later; this is a provider-neutral durable reference. */
+    cardImageUrl: text("card_image_url"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    status: certificationStatus("status").notNull().default("pending"),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("certifications_shop_person_idx").on(table.shopId, table.personId),
+    uniqueIndex("certifications_shop_agency_identifier_unique").on(
+      table.shopId,
+      table.agency,
+      table.identifier,
+    ),
+  ],
+);
+
+/** One explicit requirement set per trip; absence is deliberately not treated as ready. */
+export const tripRequirements = pgTable(
+  "trip_requirements",
+  {
+    tripId: uuid("trip_id")
+      .primaryKey()
+      .references(() => trips.id),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    requiresWaiver: boolean("requires_waiver").notNull().default(true),
+    minimumCertificationLevel: certificationLevel("minimum_certification_level").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
+export type Certification = typeof certifications.$inferSelect;
+export type TripRequirement = typeof tripRequirements.$inferSelect;

@@ -1,7 +1,15 @@
 import { and, asc, count, eq, gte, inArray, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { AppDb } from "./client";
-import { bookings, people, personRoles, shops, tripAssignments, trips } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  tripAssignments,
+  tripRequirements,
+  trips,
+} from "./schema";
 
 export type NewTrip = {
   shopId: string;
@@ -13,9 +21,19 @@ export type NewTrip = {
 };
 
 export async function createTrip(db: AppDb, input: NewTrip) {
-  const [trip] = await db.insert(trips).values(input).returning();
-  if (!trip) throw new Error("createTrip: insert returned no row");
-  return trip;
+  return db.transaction(async (tx) => {
+    const [trip] = await tx.insert(trips).values(input).returning();
+    if (!trip) throw new Error("createTrip: insert returned no row");
+    // A missing requirement configuration is a readiness blocker, never an
+    // accidental pass. New trips start with the common recreational baseline.
+    await tx.insert(tripRequirements).values({
+      tripId: trip.id,
+      shopId: input.shopId,
+      requiresWaiver: true,
+      minimumCertificationLevel: "open_water",
+    });
+    return trip;
+  });
 }
 
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
