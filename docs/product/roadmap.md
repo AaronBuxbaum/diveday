@@ -38,7 +38,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   Sessions snapshot waiver/C-card baselines; instructor-required sessions reject enrollment until
   an instructor is assigned, and existing-card courses admit only a verified card at the required
   level. Agency-specific ratios, age, medical, specialty, and exception rules remain H-08 review.
-- ⬜ Booking notifications (email confirmations) — arrives with M7 notifications.
+- ✅ Booking confirmations email immediately through the Resend notification seam. Delivery failure
+  never affects the capacity-safe booking; durable delivery history and retry remain follow-up work.
 
 ## M3 — Waivers (core slice complete)
 
@@ -52,7 +53,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   affirmative medical answers fail closed rather than becoming a generic success.
 - ✅ Staff roster activity explains issued, started, signed, medically blocked, and replaced links
   from stored evidence without exposing a bearer token.
-- ⬜ Production notification delivery, richer jurisdiction-specific medical questionnaires, and a
+- ✅ Staff-triggered waiver links can be emailed through the same transactional notification seam;
+  the staff-visible one-time link remains available if delivery fails.
+- ⬜ Durable delivery history/retries, richer jurisdiction-specific medical questionnaires, and a
   third-party signature adapter remain follow-up work. See
   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
 
@@ -112,7 +115,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   `/shop/[shopSlug]/trips/[id]/nitrox`. Provisional dive parameters are in
   [defaults-to-verify.md](defaults-to-verify.md#nitrox-fills) (H-11) and still need a
   dive-domain-expert review (V-05).
-- ⬜ Payments/deposits, notifications (email/SMS), deeper reporting,
+- ⬜ Payments/deposits, SMS and multi-channel notifications, deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
 
 ## Standing rule

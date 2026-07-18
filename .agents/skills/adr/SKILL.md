@@ -13,11 +13,13 @@ file — write it.
 
 ## Procedure
 
-1. Next number: check `docs/architecture/decisions/README.md` index.
-2. Copy `docs/architecture/decisions/0000-template.md` to `NNNN-kebab-slug.md`, fill every
+1. Read `docs/architecture/decisions/README.md` for the ID rules. New records use a
+   collision-resistant `YYYYMMDD-kebab-slug.md` ID; do not allocate the next integer.
+2. Copy `docs/architecture/decisions/0000-template.md` to that filename, fill every
    section. Keep it under a page. Alternatives get one honest line each; consequences include
    the escape hatch (what triggers revisiting, roughly what leaving costs).
-3. Add the row to the index in `decisions/README.md`.
+3. New collision-resistant records do not need an index row; historical `NNNN` records retain
+   their existing index only.
 4. If the stack changed, update the table in `docs/architecture/overview.md`; if this resolves
    a deferred decision, remove it from that table.
 5. Superseding? New ADR states "Supersedes NNNN"; edit the old one's status line to

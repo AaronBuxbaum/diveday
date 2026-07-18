@@ -8,6 +8,7 @@ import { assignGear, listAvailableGear, listTripGearAssignments, returnGear } fr
 import { listTripRentalGearRequests } from "@/db/gear-requests";
 import {
   cancelBooking,
+  getBookingForTrip,
   getShopById,
   getTripCrewIds,
   getTripRoster,
@@ -27,6 +28,7 @@ import {
   listWaiverTemplates,
 } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -129,6 +131,7 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
+  const tripTitle = trip.title;
   const [
     staff,
     crewIds,
@@ -262,7 +265,8 @@ export default async function ManageTripPage({
     const bookingId = String(formData.get("bookingId") ?? "");
     const templateId = String(formData.get("templateId") ?? "");
     if (!bookingId || !templateId) redirect(`${back}?notice=waiver-error`);
-    const outcome = await issueWaiverRequest(await getDb(), {
+    const db = await getDb();
+    const outcome = await issueWaiverRequest(db, {
       shopId: s.user.shopId,
       bookingId,
       templateId,
@@ -271,6 +275,33 @@ export default async function ManageTripPage({
       redirect(
         `${back}?notice=${outcome.reason === "already_completed" ? "waiver-complete" : "waiver-error"}`,
       );
+    }
+    const origin = publicAppUrl();
+    if (origin) {
+      const booking = await getBookingForTrip(db, tripId, bookingId);
+      if (booking?.person.email) {
+        try {
+          const delivery = await notify({
+            kind: "waiver_request",
+            waiverRecordId: outcome.recordId,
+            to: booking.person.email,
+            diverName: booking.person.fullName,
+            shopName: shop.name,
+            tripTitle,
+            completionUrl: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+            expiresAt: outcome.expiresAt,
+            timezone: shop.timezone,
+          });
+          if (delivery.status === "failed") {
+            console.error("Waiver request notification failed", { waiverRecordId: outcome.recordId });
+          }
+        } catch {
+          // Keep the staff-visible one-time link available if email delivery is unavailable.
+          console.error("Waiver request notification could not be prepared", {
+            waiverRecordId: outcome.recordId,
+          });
+        }
+      }
     }
     redirect(`${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`);
   }
@@ -612,7 +643,7 @@ export default async function ManageTripPage({
           <div>
             <h2 className="text-lg font-semibold">Waivers</h2>
             <p className="mt-1 text-sm text-muted">
-              Share a private completion link before the day of the trip. Medical follow-up stays
+              Email a private completion link before the day of the trip. Medical follow-up stays
               visible here.
             </p>
           </div>
@@ -695,7 +726,7 @@ export default async function ManageTripPage({
                             type="submit"
                             className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
                           >
-                            {state === "not_sent" ? "Create link" : "New link"}
+                            {state === "not_sent" ? "Email link" : "Email new link"}
                           </button>
                         </form>
                       )}

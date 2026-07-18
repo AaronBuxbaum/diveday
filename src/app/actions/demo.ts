@@ -4,32 +4,24 @@ import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
-import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { getShopById, getShopBySlug } from "@/db/queries";
-import { people, personRoles, shops } from "@/db/schema";
+import { people, personRoles } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { requireStaffSession } from "@/lib/session";
 
 /**
  * One-click into the demo: sign in as the example shop's owner and land on the
- * staff dashboard. Gated by presence of a demo shop in the database.
+ * staff dashboard. Database initialization guarantees the demo shop and login
+ * exist before this action can run.
  */
 export async function enterDemoAction() {
-  const db = await getDb();
-  const demoShop = await db
-    .select({ slug: shops.slug })
-    .from(shops)
-    .where(eq(shops.isDemo, true))
-    .limit(1);
-  if (demoShop.length === 0) redirect("/");
-  const demoSlug = demoShop[0].slug;
-
   try {
     await signIn("credentials", {
       email: DEV_STAFF_LOGINS.owner.email,
       password: DEV_STAFF_LOGINS.owner.password,
-      redirectTo: `/shop/${demoSlug}`,
+      redirectTo: `/shop/${DEMO_SHOP_SLUG}`,
     });
   } catch (error) {
     if (error instanceof AuthError) redirect("/sign-in?error=1");

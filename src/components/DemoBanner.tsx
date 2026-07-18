@@ -66,13 +66,13 @@ export function DemoBanner({ currentRole, currentName, shopSlug }: DemoBannerPro
     startTransition(async () => {
       try {
         await switchDemoRoleAction(roleId, shopSlug);
-        setIsExpanded(false);
       } catch (err) {
         console.error("Failed to switch demo role:", err);
       } finally {
         setSwitchingTo(null);
       }
     });
+    setIsExpanded(false);
   };
 
   return (

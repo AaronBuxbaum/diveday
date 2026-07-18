@@ -25,8 +25,9 @@ hosting itself.
   PgBouncer connection string) — real session-based transactions, matching
   `src/db/bookings.ts`'s multi-step capacity-enforcement transaction, which the HTTP-batch
   `neon-http` driver cannot express (no branching on an intermediate query result mid-transaction).
-  `src/db/client.ts`'s `getDb()` picks this branch whenever `DATABASE_URL` is set; PGlite
-  (auto-migrated, auto-seeded) stays the fallback when it isn't, so dev/test/CI are unaffected.
+  `src/db/client.ts`'s `getDb()` picks this branch whenever `DATABASE_URL` is set; both adapters
+  bootstrap the required seeded demo shop, while PGlite (auto-migrated) remains the fallback when
+  it isn't, so dev/test/CI are unaffected.
 - **Migrations run out-of-band, never on the request path or at cold start.** Concurrent
   serverless invocations racing a migration, or a function needing DDL privileges, are both worse
   than one extra manual step. `pnpm db:migrate` (`drizzle-kit migrate --config

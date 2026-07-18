@@ -11,6 +11,7 @@ import { getRentalGearRequest, saveRentalGearRequest } from "@/db/gear-requests"
 import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
+import { notify } from "@/lib/notifications";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
 export const metadata: Metadata = {
@@ -116,6 +117,33 @@ export default async function TripDetailPage({
                 ? "course-prerequisite"
                 : "unavailable";
       redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
+    }
+    const [confirmedBooking, tripNow] = await Promise.all([
+      getBookingForTrip(dbi, tripId, outcome.bookingId),
+      getTripWithBooked(dbi, shopNow.id, tripId),
+    ]);
+    if (confirmedBooking?.person.email && tripNow) {
+      try {
+        const delivery = await notify({
+          kind: "booking_confirmation",
+          bookingId: outcome.bookingId,
+          to: confirmedBooking.person.email,
+          diverName: confirmedBooking.person.fullName,
+          shopName: shopNow.name,
+          tripTitle: tripNow.title,
+          startsAt: tripNow.startsAt,
+          endsAt: tripNow.endsAt,
+          timezone: shopNow.timezone,
+        });
+        if (delivery.status === "failed") {
+          console.error("Booking confirmation notification failed", { bookingId: outcome.bookingId });
+        }
+      } catch {
+        // Email must never turn a completed, capacity-safe booking into an error page.
+        console.error("Booking confirmation notification could not be prepared", {
+          bookingId: outcome.bookingId,
+        });
+      }
     }
     redirect(`/shop/${shopSlug}/schedule/${tripId}?booking=${outcome.bookingId}`);
   }

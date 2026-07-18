@@ -9,14 +9,12 @@ test("landing demo CTA drops a visitor into the staff shop with a demo banner", 
   await expect(page).toHaveURL(/\/shop/);
   await expect(page.getByRole("heading", { name: "Welcome back, Dana" })).toBeVisible();
   // The demo banner rides above every /shop surface.
-  await expect(page.getByText("Demo shop.")).toBeVisible();
+  await expect(page.getByText("Demo Playground")).toBeVisible();
 });
 
-test("sign-in offers the demo without a password", async ({ page }) => {
+test("sign-in keeps the demo entry on the homepage", async ({ page }) => {
   await page.goto("/sign-in");
-  await page.getByRole("button", { name: "Explore the demo shop" }).click();
-  await expect(page).toHaveURL(/\/shop/);
-  await expect(page.getByText("Demo shop.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Explore the demo shop" })).toHaveCount(0);
 });
 
 test("reset restores the demo schedule and confirms with a notice", async ({ page }) => {

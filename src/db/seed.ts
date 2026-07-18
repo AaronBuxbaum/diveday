@@ -7,7 +7,7 @@ import {
   maxOperatingDepthMeters,
 } from "@/lib/nitrox";
 import type { DbExecutor } from "./client";
-import { DEV_STAFF_LOGINS } from "./dev-credentials";
+import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookings,
   certifications,
@@ -33,8 +33,8 @@ import {
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
  * Dates are relative to "now" so the schedule always shows upcoming trips.
- * Dev-only convenience — production seeds nothing (ADR-0005). The same demo
- * shop backs the customer-facing demo experience (docs ADR 20260718-demo-mode).
+ * The seeded Blue Mantis shop backs the customer-facing demo experience in
+ * every environment (docs ADR 20260718-production-demo-seed).
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -65,7 +65,7 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
     .insert(shops)
     .values({
       name: "Blue Mantis Divers",
-      slug: "blue-mantis",
+      slug: DEMO_SHOP_SLUG,
       timezone: "America/New_York",
       isDemo: true,
     })

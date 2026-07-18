@@ -14,14 +14,14 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
         <form action={enterDemoAction}>
           <SubmitButton
             pendingLabel="Spinning up your shop…"
-            className="inline-block rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70 cursor-pointer"
+            className="inline-block min-h-11 rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70 cursor-pointer"
           >
             Try the live demo
           </SubmitButton>
         </form>
         <Link
           href="/sign-in"
-          className="inline-block rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+          className="inline-block min-h-11 rounded-lg border border-border-strong bg-surface px-5 py-3 font-medium transition-colors duration-200 hover:bg-surface-sunken"
         >
           Sign in to your shop
         </Link>
