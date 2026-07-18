@@ -11,6 +11,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them | you introduce or rename a domain concept |
 | [product/roadmap.md](product/roadmap.md) | Milestone sequencing | a milestone ships or scope shifts |
 | [product/next-steps.md](product/next-steps.md) | Prioritized product and agent-development execution plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
+| [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work | a human decision is made, assigned, implemented, or validated |
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |
