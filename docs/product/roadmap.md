@@ -70,8 +70,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   staff and diver-facing language.
 - ✅ Staff trip roster, public booking confirmation, and future manifest code share the same
   readiness service.
-- ⬜ Direct image upload/storage, agency API verification, specialty/site-level requirements, and
-  payment readiness remain follow-up work.
+- ✅ Specialty and site-level requirements: specialties (Deep/Wreck/Night/Drysuit) are captured and
+  verified like level cards; dive sites and trips each carry a cert gate and the readiness service
+  composes them (stricter level, union of specialties), fail-closed. Nitrox stays a fill-time gate.
+  See [20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md).
+- ⬜ Direct image upload/storage, agency API verification, and payment readiness remain follow-up
+  work.
 
 ## M5 — Gear (core prep slice complete)
 

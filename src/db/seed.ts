@@ -12,6 +12,7 @@ import {
   bookings,
   certifications,
   courses,
+  type DiveSpecialty,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -29,6 +30,7 @@ import {
   rentalGearRequests,
   rollCallEvents,
   shops,
+  specialtyCertifications,
   tripAssignments,
   tripRequirements,
   trips,
@@ -269,6 +271,46 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     })),
   );
 
+  // Specialty evidence: customer[1] is the AOW diver, fully carded for the
+  // demanding trips; customer[2] has a Deep card still awaiting verification so
+  // the pending gate is visible on a roster.
+  if (customers[1] && customers[2]) {
+    await db.insert(specialtyCertifications).values([
+      {
+        shopId,
+        personId: customers[1].id,
+        agency: "padi" as const,
+        specialty: "deep" as const,
+        identifier: "DEMO-SPEC-DEEP-2",
+        status: "verified" as const,
+      },
+      {
+        shopId,
+        personId: customers[1].id,
+        agency: "padi" as const,
+        specialty: "wreck" as const,
+        identifier: "DEMO-SPEC-WRECK-2",
+        status: "verified" as const,
+      },
+      {
+        shopId,
+        personId: customers[1].id,
+        agency: "padi" as const,
+        specialty: "night" as const,
+        identifier: "DEMO-SPEC-NIGHT-2",
+        status: "verified" as const,
+      },
+      {
+        shopId,
+        personId: customers[2].id,
+        agency: "ssi" as const,
+        specialty: "deep" as const,
+        identifier: "DEMO-SPEC-DEEP-3",
+        status: "pending" as const,
+      },
+    ]);
+  }
+
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
@@ -383,6 +425,10 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         name: "Spiegel Grove",
         locationName: "Key Largo, Florida",
+        // A deep wreck gates itself: AOW plus Deep and Wreck specialties.
+        // Every trip that visits inherits at least this (readiness composes it).
+        minimumCertificationLevel: "advanced_open_water" as const,
+        requiredSpecialties: ["deep", "wreck"] as DiveSpecialty[],
         description:
           "A deliberately sunk former Navy ship with dramatic structure and blue-water scale.",
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
@@ -584,13 +630,23 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     .returning();
 
   await db.insert(tripRequirements).values(
-    tripRows.map((trip) => ({
-      tripId: trip.id,
-      shopId,
-      requiresWaiver: true,
-      minimumCertificationLevel:
-        trip.courseId === discoverCourse.id ? null : ("open_water" as const),
-    })),
+    tripRows.map((trip) => {
+      // The night dive has no site of its own, so its Night gate is trip-level;
+      // the wreck trip inherits AOW + Deep + Wreck from the Spiegel Grove site.
+      const isNight = trip.title.startsWith("Night Dive");
+      return {
+        tripId: trip.id,
+        shopId,
+        requiresWaiver: true,
+        minimumCertificationLevel:
+          trip.courseId === discoverCourse.id
+            ? null
+            : isNight
+              ? ("advanced_open_water" as const)
+              : ("open_water" as const),
+        requiredSpecialties: (isNight ? ["night"] : []) as DiveSpecialty[],
+      };
+    }),
   );
 
   const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
@@ -738,6 +794,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
 

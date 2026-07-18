@@ -95,6 +95,15 @@ export const certificationStatus = pgEnum("certification_status", [
 ]);
 
 /**
+ * Activity-gating specialties that attach to a site or trip ("this wreck
+ * requires AOW + Deep"). Each is a distinct yes/no gate, never a ladder rung,
+ * so they live apart from the recreational-level rank map in readiness.ts.
+ * Nitrox is deliberately absent: it is gated per-tank at fill time
+ * (nitrox_certifications / nitrox_fills), not per-site.
+ */
+export const diveSpecialty = pgEnum("dive_specialty", ["deep", "wreck", "night", "drysuit"]);
+
+/**
  * Course definitions are the reusable instruction catalog. A course session
  * remains a trip so enrollment, capacity, crew, waivers, gear, and manifests
  * all share one operational spine.
@@ -149,6 +158,17 @@ export const diveSites = pgTable(
     currentNote: text("current_note"),
     divePlan: text("dive_plan"),
     landmarks: jsonb("landmarks").$type<string[]>().notNull().default([]),
+    /**
+     * The site's inherent cert gate, composed into every trip that visits it
+     * (readiness.ts takes the stricter of site and trip). Null means the site
+     * imposes no level of its own — never "unknown".
+     */
+    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
+    /** Specialties the site itself demands; unioned with the trip's own list. */
+    requiredSpecialties: jsonb("required_specialties")
+      .$type<(typeof diveSpecialty.enumValues)[number][]>()
+      .notNull()
+      .default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -497,6 +517,44 @@ export const certifications = pgTable(
   ],
 );
 
+/**
+ * A diver's specialty card (Deep, Wreck, Night, Drysuit). Structurally the
+ * same capture→verify evidence as `certifications`, but carries a `specialty`
+ * rather than a ladder `level`: a specialty is a yes/no gate, so it is checked
+ * by kind, never by rank. Kept apart from the level ladder for the same reason
+ * nitrox is (readiness.ts). Only a verified card can clear a specialty gate.
+ */
+export const specialtyCertifications = pgTable(
+  "specialty_certifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    agency: certificationAgency("agency").notNull(),
+    specialty: diveSpecialty("specialty").notNull(),
+    identifier: text("identifier").notNull(),
+    /** Storage seam comes later; this is a provider-neutral durable reference. */
+    cardImageUrl: text("card_image_url"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    status: certificationStatus("status").notNull().default("pending"),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
+    uniqueIndex("specialty_certifications_shop_agency_identifier_unique").on(
+      table.shopId,
+      table.agency,
+      table.identifier,
+    ),
+  ],
+);
+
 /** One explicit requirement set per trip; absence is deliberately not treated as ready. */
 export const tripRequirements = pgTable(
   "trip_requirements",
@@ -510,6 +568,14 @@ export const tripRequirements = pgTable(
     requiresWaiver: boolean("requires_waiver").notNull().default(true),
     /** Null deliberately means no existing C-card is required, never unknown. */
     minimumCertificationLevel: certificationLevel("minimum_certification_level"),
+    /**
+     * Trip-specific specialty gates on top of whatever the dive site demands.
+     * The readiness service unions this with the site's requiredSpecialties.
+     */
+    requiredSpecialties: jsonb("required_specialties")
+      .$type<(typeof diveSpecialty.enumValues)[number][]>()
+      .notNull()
+      .default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -793,6 +859,9 @@ export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSel
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type Certification = typeof certifications.$inferSelect;
+export type SpecialtyCertification = typeof specialtyCertifications.$inferSelect;
+export type DiveSpecialty = (typeof diveSpecialty.enumValues)[number];
+export type DiveSite = typeof diveSites.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type GearItem = typeof gearItems.$inferSelect;
 export type GearAssignment = typeof gearAssignments.$inferSelect;

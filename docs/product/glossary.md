@@ -109,6 +109,13 @@ new domain concept, define it here in the same PR.
 - A **person** may be simultaneously a customer, a student, and staff — model roles, not
   separate person types.
 - Cert requirements attach to **sites/activities** ("this wreck requires AOW + Deep"), and are
-  checked against a diver's **verified** cards at booking *and* at check-in.
+  checked against a diver's **verified** cards at booking *and* at check-in. A dive site carries an
+  inherent gate (minimum level + required specialties); a trip carries its own; the readiness
+  service composes them — the **stricter** minimum level and the **union** of specialties
+  ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
+- **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
+  Night, Drysuit) is a distinct yes/no gate. Levels live in `certifications`; specialties live in
+  `specialty_certifications`, both captured pending and usable only once verified. **Nitrox** is
+  not in this set — it is gated per tank at fill time, not per site.
 - Bookings, waivers, certs, gear, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.

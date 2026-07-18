@@ -1,4 +1,10 @@
-import type { Certification, TripRequirement, WaiverRecord } from "@/db/schema";
+import type {
+  Certification,
+  DiveSpecialty,
+  SpecialtyCertification,
+  TripRequirement,
+  WaiverRecord,
+} from "@/db/schema";
 import { waiverState } from "./waivers";
 
 export const CERTIFICATION_LEVEL_LABELS = {
@@ -11,6 +17,14 @@ export const CERTIFICATION_LEVEL_LABELS = {
 
 export type CertificationLevel = keyof typeof CERTIFICATION_LEVEL_LABELS;
 
+/** Activity-gating specialties; each is a yes/no gate, never a ladder rung. */
+export const SPECIALTY_LABELS = {
+  deep: "Deep",
+  wreck: "Wreck",
+  night: "Night",
+  drysuit: "Drysuit",
+} as const satisfies Record<DiveSpecialty, string>;
+
 const levelRank: Record<CertificationLevel, number> = {
   open_water: 1,
   advanced_open_water: 2,
@@ -18,6 +32,41 @@ const levelRank: Record<CertificationLevel, number> = {
   divemaster: 4,
   instructor: 5,
 };
+
+/** The stricter of two levels; null means "no level demanded" and never wins. */
+export function higherCertificationLevel(
+  a: CertificationLevel | null | undefined,
+  b: CertificationLevel | null | undefined,
+): CertificationLevel | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return levelRank[a] >= levelRank[b] ? a : b;
+}
+
+/** A dive site's inherent cert gate, composed into every trip that visits it. */
+export type SiteCertRequirement = {
+  minimumCertificationLevel: CertificationLevel | null;
+  requiredSpecialties: readonly DiveSpecialty[];
+};
+
+/**
+ * The gate a diver is actually held to on a trip: the stricter minimum level
+ * and the union of specialties demanded by the trip and its dive site.
+ */
+export function combineCertRequirements(
+  requirement: TripRequirement,
+  site: SiteCertRequirement | null | undefined,
+): { minimumCertificationLevel: CertificationLevel | null; requiredSpecialties: DiveSpecialty[] } {
+  const specialties = new Set<DiveSpecialty>(requirement.requiredSpecialties ?? []);
+  for (const specialty of site?.requiredSpecialties ?? []) specialties.add(specialty);
+  return {
+    minimumCertificationLevel: higherCertificationLevel(
+      requirement.minimumCertificationLevel,
+      site?.minimumCertificationLevel,
+    ),
+    requiredSpecialties: [...specialties],
+  };
+}
 
 export type ReadinessBlockerCode =
   | "requirements_not_configured"
@@ -30,6 +79,10 @@ export type ReadinessBlockerCode =
   | "certification_rejected"
   | "certification_expired"
   | "certification_insufficient"
+  | "specialty_missing"
+  | "specialty_pending"
+  | "specialty_rejected"
+  | "specialty_expired"
   | "readiness_unavailable";
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
@@ -41,8 +94,11 @@ export type ReadinessResult = {
 
 export type ReadinessInput = {
   requirement: TripRequirement | null;
+  /** The primary dive site's inherent gate, composed with the trip's own. */
+  siteRequirement?: SiteCertRequirement | null;
   waiver: WaiverRecord | null;
   certifications: readonly Certification[];
+  specialtyCertifications?: readonly SpecialtyCertification[];
   now?: Date;
 };
 
@@ -125,6 +181,46 @@ function certificationBlocker(
 }
 
 /**
+ * A specialty is a yes/no gate: only a verified, unexpired card of that exact
+ * specialty clears it. Every other state fails closed with a specific reason.
+ */
+function specialtyBlocker(
+  specialtyCertifications: readonly SpecialtyCertification[],
+  specialty: DiveSpecialty,
+  now: Date,
+): ReadinessBlocker | null {
+  const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
+  const label = SPECIALTY_LABELS[specialty];
+  if (
+    cards.some((card) => card.status === "verified" && (!card.expiresAt || card.expiresAt > now))
+  ) {
+    return null;
+  }
+  if (cards.some((card) => card.status === "pending")) {
+    return {
+      code: "specialty_pending",
+      message: `${label} specialty card is waiting for staff verification.`,
+    };
+  }
+  if (cards.some((card) => card.status === "rejected")) {
+    return {
+      code: "specialty_rejected",
+      message: `${label} specialty card needs a corrected card or review.`,
+    };
+  }
+  if (cards.some((card) => card.expiresAt && card.expiresAt <= now)) {
+    return {
+      code: "specialty_expired",
+      message: `${label} specialty card on file has expired.`,
+    };
+  }
+  return {
+    code: "specialty_missing",
+    message: `${label} specialty is required; no card is on file.`,
+  };
+}
+
+/**
  * The shared safety boundary. Every unknown or non-ready input becomes a
  * human-readable blocker; only explicit evidence can produce `ready`.
  */
@@ -163,13 +259,20 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  if (input.requirement.minimumCertificationLevel) {
+  const effective = combineCertRequirements(input.requirement, input.siteRequirement);
+
+  if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(
       input.certifications,
-      input.requirement.minimumCertificationLevel,
+      effective.minimumCertificationLevel,
       now,
     );
     if (certification) blockers.push(certification);
+  }
+
+  for (const specialty of effective.requiredSpecialties) {
+    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty, now);
+    if (blocker) blockers.push(blocker);
   }
   return { status: blockers.length === 0 ? "ready" : "blocked", blockers };
 }
