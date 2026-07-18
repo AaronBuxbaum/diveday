@@ -13,7 +13,8 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Framework | Next.js 16 (App Router) | [0001](decisions/0001-nextjs-fullstack.md) |
 | Language | TypeScript, `strict` | [0001](decisions/0001-nextjs-fullstack.md) |
 | Styling | Tailwind 4 + semantic CSS tokens | [0004](decisions/0004-design-tokens.md) |
-| Database | Postgres via Drizzle ORM; PGlite in dev/test | [0005](decisions/0005-database.md) |
+| Database | Postgres via Drizzle ORM; PGlite in dev/test, Neon in production | [0005](decisions/0005-database.md), [20260718 Neon](decisions/20260718-vercel-neon-hosting.md) |
+| Hosting | Vercel (Git integration, preview deploys) | [20260718 hosting](decisions/20260718-vercel-hosting.md) |
 | Auth | Auth.js v5 credentials, JWT sessions, proxy gating | [0006](decisions/0006-auth.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library | [0002](decisions/0002-toolchain.md) |
@@ -52,7 +53,6 @@ future agents start from context, not from scratch:
 
 | Decision | Needed by | Leading candidates |
 | --- | --- | --- |
-| Hosting | M1 | Vercel ([20260718 hosting ADR](decisions/20260718-vercel-hosting.md)); managed Postgres provider still needs H-04 completion |
 | E-signature approach | M3 | In-house typed consent now; vendor adapter later ([20260718](decisions/20260718-waiver-signature-retention.md)) |
 | Payments | M7 | Stripe |
 | Offline strategy for manifests | M6 | PWA + local-first cache |

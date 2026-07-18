@@ -22,9 +22,10 @@ but still may need validation; **Validated** has the stated evidence.
 1. Name the operating jurisdiction(s) and the person responsible for legal approval. Have them
    review the waiver language, medical questions, typed-consent standard, and evidence-retention
    policy before production use.
-2. Vercel is now the selected production host. Name the person who owns the production database,
-   secrets, backups, domain, and incident response; choose the managed Postgres integration and
-   record the migration/preview procedure.
+2. Vercel is the selected production host and Neon (via Vercel's Marketplace integration) is the
+   selected Postgres provider — code and migration runbook are implemented (see [Neon hosting
+   ADR](../architecture/decisions/20260718-vercel-neon-hosting.md)). Still needed: name the person
+   who owns production secrets, backups, domain, and incident response.
 3. Decide whether the live-only manifest is acceptable for the first pilot. If it is, schedule the
    outdoor phone and connectivity field test below; if not, authorize the offline design decision
    before operating from a dock.
@@ -39,7 +40,7 @@ but still may need validation; **Validated** has the stated evidence.
 | H-01 | Ready | Product owner + qualified legal reviewer | Which jurisdiction(s), waiver text, and medical-question wording apply to the shop? | Jurisdiction, approved template/version, reviewer, and approval date. | Production waiver templates and any jurisdiction-specific questionnaire. The current PADI-style form shape is only a [provisional baseline](defaults-to-verify.md#waiver-and-signature). See [waiver ADR](../architecture/decisions/20260718-waiver-signature-retention.md). |
 | H-02 | Ready | Product owner + qualified legal/privacy reviewer | What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags? | Retention duration, deletion workflow, permitted staff access, and any legal hold or audit exception. | Production data lifecycle, access controls, and deletion tooling. |
 | H-03 | Ready | Product owner + qualified legal reviewer | Is the current typed name + explicit consent + timestamp sufficient for the intended release, or is a specialist e-signature provider required? | Accepted assurance level, required provider criteria (if any), and rollout boundary. | Keep the local signature provider or select and implement a vendor adapter. The current baseline is documented for review in [defaults-to-verify.md](defaults-to-verify.md#waiver-and-signature). |
-| H-04 | Chosen | Product owner / technical owner | Vercel is selected for web hosting. Who owns the managed Postgres integration, production/preview environments, secrets, backups, domain, and incident response? | Postgres provider and region, named owners, deployment/migration runbook, and initial production scope. | Implement the production database adapter and first deployment. See [Vercel hosting ADR](../architecture/decisions/20260718-vercel-hosting.md). |
+| H-04 | Implemented | Product owner / technical owner | Vercel is selected for web hosting and Neon (Vercel Marketplace integration) is selected as the Postgres provider. Still open: who owns secrets, backups, domain, and incident response? | Provider: Neon. Driver: `drizzle-orm/node-postgres`. Migration runbook: `pnpm db:migrate`. Still needed: region confirmation and named owner for secrets/backups/incident response. | Name the remaining owner and record backup/incident policy. See [Neon hosting ADR](../architecture/decisions/20260718-vercel-neon-hosting.md) and [Vercel hosting ADR](../architecture/decisions/20260718-vercel-hosting.md). |
 | H-05 | Ready | Product owner + dive operations lead | Is a live, online-only manifest acceptable for the first pilot? | Pilot decision, acceptable connectivity conditions, and stop rule if connectivity is lost. | A live-only pilot, or an offline-manifest design ADR before use. See [manifest ADR](../architecture/decisions/20260718-manifest-live-first.md). |
 | H-06 | Ready | Dive operations lead | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? | Required measurements/preferences, who may override a request, and the safe fallback when a size is unavailable. | The booking-level rental request now uses a [standard provisional set](defaults-to-verify.md#rental-gear-request); approve or change it before production. |
 | H-07 | Deferred | Product owner + finance owner | What payment/deposit, cancellation, refund, tax, and provider policy should the first paid booking support? | Policy plus provider approval and webhook/account owner. | M7 payment scope and a payment-provider ADR. Stripe is only a leading candidate, not a decision. |
@@ -76,3 +77,4 @@ but still may need validation; **Validated** has the stated evidence.
 | --- | --- | --- |
 | 2026-07-18 | Created from the remaining product and operational work after M5 gear and M6 live manifest. | Product team |
 | 2026-07-18 | Selected Vercel hosting; added provisional waiver/signature/course/gear baselines for human review. | Product team |
+| 2026-07-18 | Implemented Neon as the H-04 Postgres provider (node-postgres driver, `pnpm db:migrate` runbook); owner/backup/incident-response naming still open. | Engineering |
