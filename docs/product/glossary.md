@@ -19,8 +19,12 @@ new domain concept, define it here in the same PR.
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
-- **Specialties** — standalone certs gating specific activities: **Nitrox/EANx** (enriched
-  air), **Deep** (beyond 18 m/60 ft for OW divers), Night, Wreck, Drysuit.
+- **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
+  OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
+  `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
+  lives in `nitrox_certifications`) because it gates a **tank at fill time**; a site or trip may
+  *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
+  — the same card, two independent gates (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
   cert. DSD participants have stricter ratios and depth limits and always dive with an
   instructor.
@@ -52,10 +56,15 @@ new domain concept, define it here in the same PR.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically
-  with a **medical statement** (RSTC form). Scuba snapshots the exact template version into each
-  issued record; a signed record is immutable and a replacement link creates a new record. Some
-  answers on the medical form require a physician sign-off — that's a blocking state, not a
-  checkbox.
+  with a **medical statement**. Scuba snapshots the exact template version into each issued record;
+  a signed record is immutable and a replacement link creates a new record. Some answers on the
+  medical form require a physician sign-off — that's a blocking state, not a checkbox.
+- **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
+  shop's **jurisdiction** (RSTC/WRSTC by default, or a UK variant). Defined as data in
+  `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version it was answered
+  against, so a later edit never re-interprets signed evidence. Any **referral**-flagged "yes"
+  triggers physician review, and unknown questionnaires/questions **fail closed** (review
+  required), never waved through.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.
@@ -109,6 +118,13 @@ new domain concept, define it here in the same PR.
 - A **person** may be simultaneously a customer, a student, and staff — model roles, not
   separate person types.
 - Cert requirements attach to **sites/activities** ("this wreck requires AOW + Deep"), and are
-  checked against a diver's **verified** cards at booking *and* at check-in.
+  checked against a diver's **verified** cards at booking *and* at check-in. A dive site carries an
+  inherent gate (minimum level + required specialties); a trip carries its own; the readiness
+  service composes them — the **stricter** minimum level and the **union** of specialties
+  ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
+- **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
+  Night, Drysuit) is a distinct yes/no gate. Levels live in `certifications`; specialties live in
+  `specialty_certifications`, both captured pending and usable only once verified. **Nitrox** is
+  not in this set — it is gated per tank at fill time, not per site.
 - Bookings, waivers, certs, gear, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.

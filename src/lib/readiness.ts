@@ -1,5 +1,20 @@
-import type { Certification, TripRequirement, WaiverRecord } from "@/db/schema";
+import type {
+  Certification,
+  DiveSpecialty,
+  NitroxCertification,
+  PaymentStatus,
+  SpecialtyCertification,
+  TripRequirement,
+  WaiverRecord,
+} from "@/db/schema";
 import { waiverState } from "./waivers";
+
+/** Payment states that clear the "ready to board" payment gate. */
+const PAYMENT_CLEARED: ReadonlySet<PaymentStatus> = new Set<PaymentStatus>([
+  "deposit_paid",
+  "paid",
+  "waived",
+]);
 
 export const CERTIFICATION_LEVEL_LABELS = {
   open_water: "Open Water",
@@ -11,6 +26,14 @@ export const CERTIFICATION_LEVEL_LABELS = {
 
 export type CertificationLevel = keyof typeof CERTIFICATION_LEVEL_LABELS;
 
+/** Activity-gating specialties; each is a yes/no gate, never a ladder rung. */
+export const SPECIALTY_LABELS = {
+  deep: "Deep",
+  wreck: "Wreck",
+  night: "Night",
+  drysuit: "Drysuit",
+} as const satisfies Record<DiveSpecialty, string>;
+
 const levelRank: Record<CertificationLevel, number> = {
   open_water: 1,
   advanced_open_water: 2,
@@ -18,6 +41,48 @@ const levelRank: Record<CertificationLevel, number> = {
   divemaster: 4,
   instructor: 5,
 };
+
+/** The stricter of two levels; null means "no level demanded" and never wins. */
+export function higherCertificationLevel(
+  a: CertificationLevel | null | undefined,
+  b: CertificationLevel | null | undefined,
+): CertificationLevel | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return levelRank[a] >= levelRank[b] ? a : b;
+}
+
+/** A dive site's inherent cert gate, composed into every trip that visits it. */
+export type SiteCertRequirement = {
+  minimumCertificationLevel: CertificationLevel | null;
+  requiredSpecialties: readonly DiveSpecialty[];
+  requiresNitrox: boolean;
+};
+
+/**
+ * The gate a diver is actually held to on a trip: the stricter minimum level,
+ * the union of specialties, and nitrox if either the trip or its dive site
+ * demands it.
+ */
+export function combineCertRequirements(
+  requirement: TripRequirement,
+  site: SiteCertRequirement | null | undefined,
+): {
+  minimumCertificationLevel: CertificationLevel | null;
+  requiredSpecialties: DiveSpecialty[];
+  requiresNitrox: boolean;
+} {
+  const specialties = new Set<DiveSpecialty>(requirement.requiredSpecialties ?? []);
+  for (const specialty of site?.requiredSpecialties ?? []) specialties.add(specialty);
+  return {
+    minimumCertificationLevel: higherCertificationLevel(
+      requirement.minimumCertificationLevel,
+      site?.minimumCertificationLevel,
+    ),
+    requiredSpecialties: [...specialties],
+    requiresNitrox: Boolean(requirement.requiresNitrox) || Boolean(site?.requiresNitrox),
+  };
+}
 
 export type ReadinessBlockerCode =
   | "requirements_not_configured"
@@ -30,6 +95,14 @@ export type ReadinessBlockerCode =
   | "certification_rejected"
   | "certification_expired"
   | "certification_insufficient"
+  | "specialty_missing"
+  | "specialty_pending"
+  | "specialty_rejected"
+  | "specialty_expired"
+  | "nitrox_missing"
+  | "nitrox_pending"
+  | "nitrox_rejected"
+  | "payment_due"
   | "readiness_unavailable";
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
@@ -41,8 +114,14 @@ export type ReadinessResult = {
 
 export type ReadinessInput = {
   requirement: TripRequirement | null;
+  /** The primary dive site's inherent gate, composed with the trip's own. */
+  siteRequirement?: SiteCertRequirement | null;
   waiver: WaiverRecord | null;
   certifications: readonly Certification[];
+  specialtyCertifications?: readonly SpecialtyCertification[];
+  nitroxCertifications?: readonly NitroxCertification[];
+  /** The booking's current payment state; absent is treated as unpaid. */
+  paymentStatus?: PaymentStatus | null;
   now?: Date;
 };
 
@@ -125,6 +204,74 @@ function certificationBlocker(
 }
 
 /**
+ * A specialty is a yes/no gate: only a verified, unexpired card of that exact
+ * specialty clears it. Every other state fails closed with a specific reason.
+ */
+function specialtyBlocker(
+  specialtyCertifications: readonly SpecialtyCertification[],
+  specialty: DiveSpecialty,
+  now: Date,
+): ReadinessBlocker | null {
+  const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
+  const label = SPECIALTY_LABELS[specialty];
+  if (
+    cards.some((card) => card.status === "verified" && (!card.expiresAt || card.expiresAt > now))
+  ) {
+    return null;
+  }
+  if (cards.some((card) => card.status === "pending")) {
+    return {
+      code: "specialty_pending",
+      message: `${label} specialty card is waiting for staff verification.`,
+    };
+  }
+  if (cards.some((card) => card.status === "rejected")) {
+    return {
+      code: "specialty_rejected",
+      message: `${label} specialty card needs a corrected card or review.`,
+    };
+  }
+  if (cards.some((card) => card.expiresAt && card.expiresAt <= now)) {
+    return {
+      code: "specialty_expired",
+      message: `${label} specialty card on file has expired.`,
+    };
+  }
+  return {
+    code: "specialty_missing",
+    message: `${label} specialty is required; no card is on file.`,
+  };
+}
+
+/**
+ * Nitrox is a yes/no gate cleared only by a verified enriched-air card. Its
+ * evidence lives in nitrox_certifications (which also gates fills), and those
+ * cards carry no expiry — so there is no expired state, only missing/pending/
+ * rejected.
+ */
+function nitroxBlocker(
+  nitroxCertifications: readonly NitroxCertification[],
+): ReadinessBlocker | null {
+  if (nitroxCertifications.some((card) => card.status === "verified")) return null;
+  if (nitroxCertifications.some((card) => card.status === "pending")) {
+    return {
+      code: "nitrox_pending",
+      message: "Nitrox card is waiting for staff verification.",
+    };
+  }
+  if (nitroxCertifications.some((card) => card.status === "rejected")) {
+    return {
+      code: "nitrox_rejected",
+      message: "Nitrox card needs a corrected card or review.",
+    };
+  }
+  return {
+    code: "nitrox_missing",
+    message: "Nitrox certification is required; no card is on file.",
+  };
+}
+
+/**
  * The shared safety boundary. Every unknown or non-ready input becomes a
  * human-readable blocker; only explicit evidence can produce `ready`.
  */
@@ -163,13 +310,38 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  if (input.requirement.minimumCertificationLevel) {
+  const effective = combineCertRequirements(input.requirement, input.siteRequirement);
+
+  if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(
       input.certifications,
-      input.requirement.minimumCertificationLevel,
+      effective.minimumCertificationLevel,
       now,
     );
     if (certification) blockers.push(certification);
+  }
+
+  for (const specialty of effective.requiredSpecialties) {
+    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty, now);
+    if (blocker) blockers.push(blocker);
+  }
+
+  if (effective.requiresNitrox) {
+    const blocker = nitroxBlocker(input.nitroxCertifications ?? []);
+    if (blocker) blockers.push(blocker);
+  }
+
+  if (input.requirement.requiresPayment) {
+    const status = input.paymentStatus ?? "unpaid";
+    if (!PAYMENT_CLEARED.has(status)) {
+      blockers.push({
+        code: "payment_due",
+        message:
+          status === "refunded"
+            ? "Payment was refunded; collect payment before boarding."
+            : "Payment is outstanding for this trip.",
+      });
+    }
   }
   return { status: blockers.length === 0 ? "ready" : "blocked", blockers };
 }

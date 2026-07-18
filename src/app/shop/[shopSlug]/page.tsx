@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { listNotificationDeliveryIssues } from "@/db/notifications";
+import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/notifications";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import { signOut } from "@/lib/auth";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -23,11 +24,11 @@ export default async function ShopPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ created?: string; reset?: string }>;
+  searchParams: Promise<{ created?: string; reset?: string; email?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { created, reset } = await searchParams;
+  const { created, reset, email } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -37,9 +38,21 @@ export default async function ShopPage({
   ]);
   const firstName = session.user.name?.split(" ")[0] ?? "there";
 
+  async function retryConfirmationAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const bookingId = String(formData.get("bookingId") ?? "");
+    const delivery = bookingId
+      ? await retryBookingConfirmation(await getDb(), staff.user.shopId, bookingId)
+      : null;
+    redirect(
+      `/shop/${staff.user.shopSlug}?email=${delivery?.status === "sent" ? "sent" : "failed"}`,
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <FlashParams params={["created", "reset"]} />
+      <FlashParams params={["created", "reset", "email"]} />
       <header className="mb-10 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
@@ -128,6 +141,17 @@ export default async function ShopPage({
         </p>
       ) : null}
 
+      {email ? (
+        <p
+          role="status"
+          className={`mb-6 rounded-lg px-4 py-3 text-sm font-medium ${email === "sent" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}
+        >
+          {email === "sent"
+            ? "Confirmation email re-sent."
+            : "That email still couldn’t be sent — check the address and email configuration."}
+        </p>
+      ) : null}
+
       {deliveryIssues.length > 0 ? (
         <section
           aria-labelledby="delivery-issues-heading"
@@ -142,7 +166,7 @@ export default async function ShopPage({
               : `${deliveryIssues.length} emails need a follow-up.`}
           </p>
           <ul className="mt-3 flex flex-col gap-2">
-            {deliveryIssues.map(({ delivery, person, trip }) => (
+            {deliveryIssues.map(({ delivery, booking, person, trip, attempts }) => (
               <li key={delivery.id} className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm">
                   <span className="font-medium">
@@ -154,13 +178,27 @@ export default async function ShopPage({
                   {delivery.status === "not_configured"
                     ? "email is not configured."
                     : "delivery was unsuccessful."}
+                  {attempts > 1 ? <span className="text-muted"> ({attempts} attempts)</span> : null}
                 </p>
-                <Link
-                  href={`/shop/${shopSlug}/trips/${trip.id}`}
-                  className="min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-primary transition-colors duration-200 hover:bg-surface-sunken"
-                >
-                  Open trip
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                  {delivery.kind === "booking_confirmation" ? (
+                    <form action={retryConfirmationAction}>
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <button
+                        type="submit"
+                        className="min-h-11 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+                      >
+                        Retry email
+                      </button>
+                    </form>
+                  ) : null}
+                  <Link
+                    href={`/shop/${shopSlug}/trips/${trip.id}`}
+                    className="min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-primary transition-colors duration-200 hover:bg-surface-sunken"
+                  >
+                    Open trip
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

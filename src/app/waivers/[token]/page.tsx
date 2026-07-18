@@ -9,30 +9,39 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/queries";
 import type { MedicalAnswers } from "@/db/schema";
 import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "@/db/waivers";
+import type { MedicalQuestionnaire } from "@/lib/medical";
+import { questionnaireForJurisdiction } from "@/lib/medical";
 
 export const metadata: Metadata = {
   title: "Complete your waiver — Scuba",
   robots: { index: false, follow: false },
 };
 
-const draftSchema = z.object({
+const signatureSchema = z.object({
   signerName: z.string().trim().max(120),
   acknowledged: z.string().optional(),
-  breathing: z.enum(["yes", "no"]),
-  medication: z.enum(["yes", "no"]),
-  recentIllness: z.enum(["yes", "no"]),
 });
 
-const completeSchema = draftSchema.extend({
+const completeSignatureSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
   acknowledged: z.literal("on"),
 });
 
-function answersFrom(data: z.infer<typeof draftSchema>): MedicalAnswers {
+/** Reads every question's yes/no answer for the presented questionnaire. */
+function readMedicalAnswers(
+  formData: FormData,
+  questionnaire: MedicalQuestionnaire,
+): MedicalAnswers | null {
+  const responses: Record<string, boolean> = {};
+  for (const question of questionnaire.questions) {
+    const value = formData.get(`q_${question.id}`);
+    if (value !== "yes" && value !== "no") return null;
+    responses[question.id] = value === "yes";
+  }
   return {
-    breathing: data.breathing === "yes",
-    medication: data.medication === "yes",
-    recentIllness: data.recentIllness === "yes",
+    questionnaireId: questionnaire.id,
+    questionnaireVersion: questionnaire.version,
+    responses,
   };
 }
 
@@ -41,7 +50,7 @@ function RadioQuestion({
   question,
   yes,
 }: {
-  name: "breathing" | "medication" | "recentIllness";
+  name: string;
   question: string;
   yes: boolean | undefined;
 }) {
@@ -121,7 +130,11 @@ export default async function WaiverPage({
   }
 
   const { record } = state;
+  const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
+  /** Only pre-fill draft answers captured against this same questionnaire. */
+  const draftResponses =
+    draft && draft.questionnaireId === questionnaire.id ? draft.responses : undefined;
   const inputClass =
     "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
   const errorText =
@@ -133,24 +146,26 @@ export default async function WaiverPage({
 
   async function saveDraftAction(formData: FormData) {
     "use server";
-    const parsed = draftSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`/waivers/${token}?error=invalid`);
+    const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
+    const answers = readMedicalAnswers(formData, questionnaire);
+    if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
     const savedDraft = await saveWaiverDraft(await getDb(), token, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
-      medicalAnswers: answersFrom(parsed.data),
+      medicalAnswers: answers,
     });
     redirect(`/waivers/${token}${savedDraft ? "?saved=1" : "?error=unavailable"}`);
   }
 
   async function completeAction(formData: FormData) {
     "use server";
-    const parsed = completeSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`/waivers/${token}?error=invalid`);
+    const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
+    const answers = readMedicalAnswers(formData, questionnaire);
+    if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
     const outcome = await completeWaiver(await getDb(), token, {
       signerName: parsed.data.signerName,
       agreed: true,
-      medicalAnswers: answersFrom(parsed.data),
+      medicalAnswers: answers,
     });
     if (!outcome.ok) {
       redirect(
@@ -209,27 +224,17 @@ export default async function WaiverPage({
 
       <form action={completeAction} className="mt-8 flex flex-col gap-6">
         <section>
-          <h2 className="text-lg font-semibold">A quick health check</h2>
-          <p className="mt-1 text-sm text-muted">
-            A “yes” doesn’t automatically cancel your dive. It asks the team to check in privately
-            so everyone can make a safe plan.
-          </p>
+          <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
+          <p className="mt-1 text-sm text-muted">{questionnaire.intro}</p>
           <div className="mt-4 flex flex-col gap-3">
-            <RadioQuestion
-              name="breathing"
-              yes={draft?.breathing}
-              question="Do you have a current condition that could affect breathing or consciousness while diving?"
-            />
-            <RadioQuestion
-              name="medication"
-              yes={draft?.medication}
-              question="Are you taking medication that a dive professional should know about?"
-            />
-            <RadioQuestion
-              name="recentIllness"
-              yes={draft?.recentIllness}
-              question="Have you recently been ill or injured in a way that could affect diving?"
-            />
+            {questionnaire.questions.map((question) => (
+              <RadioQuestion
+                key={question.id}
+                name={`q_${question.id}`}
+                yes={draftResponses?.[question.id]}
+                question={question.prompt}
+              />
+            ))}
           </div>
         </section>
 

@@ -1,6 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
+import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import {
+  type DiveSpecialty,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -23,6 +25,10 @@ export type DiveSiteInput = {
   currentNote?: string;
   divePlan?: string;
   landmarks?: string[];
+  /** The site's inherent cert gate; composed into every trip that visits it. */
+  minimumCertificationLevel?: CertificationLevel | null;
+  requiredSpecialties?: DiveSpecialty[];
+  requiresNitrox?: boolean;
 };
 
 export async function listDiveSites(db: AppDb, shopId: string) {
@@ -59,6 +65,9 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
       landmarks: input.landmarks ?? [],
+      minimumCertificationLevel: input.minimumCertificationLevel ?? null,
+      requiredSpecialties: input.requiredSpecialties ?? [],
+      requiresNitrox: input.requiresNitrox ?? false,
     })
     .returning();
   if (!site) throw new Error("createDiveSite: insert returned no row");
@@ -87,6 +96,9 @@ export async function updateDiveSite(
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
       landmarks: input.landmarks ?? [],
+      minimumCertificationLevel: input.minimumCertificationLevel ?? null,
+      requiredSpecialties: input.requiredSpecialties ?? [],
+      requiresNitrox: input.requiresNitrox ?? false,
     })
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
     .returning();
@@ -112,6 +124,9 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     currentNote: source.currentNote ?? undefined,
     divePlan: source.divePlan ?? undefined,
     landmarks: source.landmarks,
+    minimumCertificationLevel: source.minimumCertificationLevel,
+    requiredSpecialties: source.requiredSpecialties,
+    requiresNitrox: source.requiresNitrox,
   });
 }
 

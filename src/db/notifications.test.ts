@@ -2,7 +2,12 @@
 import { describe, expect, it } from "vitest";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
-import { listNotificationDeliveryIssues, recordNotificationDelivery } from "./notifications";
+import {
+  listDeliveryAttempts,
+  listNotificationDeliveryIssues,
+  recordNotificationDelivery,
+  retryBookingConfirmation,
+} from "./notifications";
 import { getShopBySlug, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
 
@@ -71,5 +76,35 @@ describe("notification delivery status", () => {
         delivery: { status: "failed" },
       }),
     ).resolves.toBeNull();
+  });
+
+  it("appends an append-only attempt trail and retries a confirmation", async () => {
+    const { db, shop, booking } = await seededBooking();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "failed" },
+    });
+
+    // No email provider is configured in tests, so a retry attempt is recorded
+    // as not_configured — but it is still a durable, flagged retry attempt.
+    const delivery = await retryBookingConfirmation(db, shop.id, booking.bookingId);
+    expect(delivery?.status).toBe("not_configured");
+
+    const attempts = await listDeliveryAttempts(
+      db,
+      shop.id,
+      booking.bookingId,
+      "booking_confirmation",
+    );
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0]).toMatchObject({ status: "failed", isRetry: false });
+    expect(attempts[1]).toMatchObject({ status: "not_configured", isRetry: true });
+
+    // The dashboard issue reflects the latest status and the attempt count.
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    const issue = issues.find((i) => i.booking.id === booking.bookingId);
+    expect(issue?.attempts).toBe(2);
   });
 });

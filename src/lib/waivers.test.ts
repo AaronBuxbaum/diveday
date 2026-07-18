@@ -1,14 +1,26 @@
 import { describe, expect, it } from "vitest";
-import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
+import type { WaiverRecord } from "@/db/schema";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
 import { localTypedConsentProvider } from "./signatures";
 import { needsMedicalReview, waiverActivityTimeline, waiverState } from "./waivers";
 
-const clear: MedicalAnswers = { breathing: false, medication: false, recentIllness: false };
+const clear = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+const firstReferralId = RSTC_QUESTIONNAIRE.questions.find((q) => q.referral)?.id ?? "";
 
 describe("waiver domain rules", () => {
   it("fails medical readiness closed when any referral answer is yes", () => {
     expect(needsMedicalReview(clear)).toBe(false);
-    expect(needsMedicalReview({ ...clear, recentIllness: true })).toBe(true);
+    expect(
+      needsMedicalReview({ ...clear, responses: { ...clear.responses, [firstReferralId]: true } }),
+    ).toBe(true);
+    // Unknown questionnaire with a yes fails closed.
+    expect(
+      needsMedicalReview({
+        questionnaireId: "unknown",
+        questionnaireVersion: 1,
+        responses: { x: true },
+      }),
+    ).toBe(true);
   });
 
   it("requires both a real typed name and affirmative consent", () => {

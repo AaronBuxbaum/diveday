@@ -5,11 +5,13 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { copyDiveSite, getDiveSite, listDiveSites, updateDiveSite } from "@/db/dive-sites";
 import { splitMediaUrls } from "@/lib/dive-sites";
+import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Edit dive site — Scuba" };
 
 const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
+const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const siteSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(1_200),
@@ -19,6 +21,10 @@ const siteSchema = z.object({
   imageUrls: z.string().max(12_000),
   marineLife: z.string().trim().max(400),
   marineLifeDescription: z.string().trim().max(1_200),
+  minimumCertificationLevel: z.preprocess(
+    (value) => (value === "" ? null : value),
+    z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
+  ),
 });
 
 const inputClass =
@@ -44,6 +50,10 @@ export default async function EditDiveSitePage({
     const activeSession = await requireStaffSession();
     const parsed = siteSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}/${id}?error=invalid`);
+    const specialties = z
+      .array(specialtySchema)
+      .safeParse(formData.getAll("specialty").map(String));
+    if (!specialties.success) redirect(`${back}/${id}?error=invalid`);
     let imageUrls: string[];
     try {
       imageUrls = splitMediaUrls(parsed.data.imageUrls);
@@ -56,6 +66,9 @@ export default async function EditDiveSitePage({
       satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
       routeImageUrl: parsed.data.routeImageUrl || undefined,
       imageUrls,
+      minimumCertificationLevel: parsed.data.minimumCertificationLevel,
+      requiredSpecialties: specialties.data,
+      requiresNitrox: formData.get("requiresNitrox") === "on",
     });
     if (!updated) notFound();
     redirect(`${back}/${id}?notice=saved`);
@@ -188,6 +201,56 @@ export default async function EditDiveSitePage({
             className={inputClass}
           />
         </label>
+        <fieldset className="rounded-lg border border-border bg-surface-sunken p-5">
+          <legend className="px-1 text-sm font-medium">Certification requirements</legend>
+          <p className="text-sm text-muted">
+            The site's own gate. Every trip that visits this site enforces at least this — the
+            readiness service takes the stricter of the site and the trip.
+          </p>
+          <label className="mt-4 flex flex-col gap-1 text-sm font-medium">
+            Minimum certification
+            <select
+              name="minimumCertificationLevel"
+              defaultValue={site.minimumCertificationLevel ?? ""}
+              className={inputClass}
+            >
+              <option value="">No level required by the site</option>
+              {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="mt-4">
+            <p className="text-sm font-medium">Required specialties</p>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
+                <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                  <input
+                    name="specialty"
+                    type="checkbox"
+                    value={value}
+                    defaultChecked={site.requiredSpecialties.includes(
+                      value as keyof typeof SPECIALTY_LABELS,
+                    )}
+                    className="size-4 accent-primary"
+                  />
+                  {label}
+                </label>
+              ))}
+              <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                <input
+                  name="requiresNitrox"
+                  type="checkbox"
+                  defaultChecked={site.requiresNitrox}
+                  className="size-4 accent-primary"
+                />
+                Nitrox
+              </label>
+            </div>
+          </div>
+        </fieldset>
         <button
           type="submit"
           className="mt-2 min-h-11 self-start rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"

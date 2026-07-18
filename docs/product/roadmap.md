@@ -55,8 +55,16 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   from stored evidence without exposing a bearer token.
 - ✅ Staff-triggered waiver links can be emailed through the same transactional notification seam;
   the staff-visible one-time link remains available if delivery fails.
-- ⬜ Durable delivery history/retries, richer jurisdiction-specific medical questionnaires, and a
-  third-party signature adapter remain follow-up work. See
+- ✅ Richer, jurisdiction-aware medical questionnaire: a versioned RSTC/WRSTC form (and a UK
+  variant) defined in [`src/lib/medical.ts`](../../src/lib/medical.ts), selected by the shop's
+  jurisdiction on the waivers page. Completed waivers store the questionnaire id + version; any
+  referral-flagged "yes" fails closed to physician review, and staff see the flagged questions in
+  the waiver activity timeline.
+- ✅ Durable delivery history + retries: every send appends to an append-only
+  `notification_delivery_attempts` trail behind the denormalized latest state, and staff can retry a
+  failed booking confirmation from the dashboard (waiver links re-issue instead, since their
+  one-time token is never stored).
+- ⬜ A third-party signature adapter remains follow-up work. See
   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
 
 ## M4 — Cert checks (core slice complete)
@@ -70,8 +78,28 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   staff and diver-facing language.
 - ✅ Staff trip roster, public booking confirmation, and future manifest code share the same
   readiness service.
-- ⬜ Direct image upload/storage, agency API verification, specialty/site-level requirements, and
-  payment readiness remain follow-up work.
+- ✅ Specialty and site-level requirements: specialties (Deep/Wreck/Night/Drysuit) are captured and
+  verified like level cards; dive sites and trips each carry a cert gate and the readiness service
+  composes them (stricter level, union of specialties), fail-closed. Nitrox stays a fill-time gate.
+  See [20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md).
+- ✅ Direct card-image upload: a provider seam ([`src/lib/storage`](../../src/lib/storage)) stores a
+  captured photo to Vercel Blob and saves a durable URL; validated at the seam (image/*, ≤5 MB),
+  with the paste-a-URL path as fallback when storage is unconfigured. See
+  [20260718-card-image-storage](../architecture/decisions/20260718-card-image-storage.md) (needs
+  `BLOB_READ_WRITE_TOKEN` provisioned, H-04).
+- ✅ Agency cert verification: an assistive provider seam
+  ([`src/lib/cert-verification`](../../src/lib/cert-verification)) checks a C-card against its
+  issuing agency. A confirmed match auto-verifies (recording the source); not-found/mismatch only
+  warn and leave the card pending; it fails closed to "unavailable". Human review stays
+  authoritative. See
+  [20260718-agency-cert-verification](../architecture/decisions/20260718-agency-cert-verification.md)
+  (needs a gateway + `CERT_VERIFICATION_*` env, H).
+- ✅ Payment readiness: a `booking_payments` state plus a per-trip `requires_payment` flag adds a
+  `payment_due` blocker to the shared roll-up (paid/deposit/waived clear; absent = unpaid; a refund
+  re-opens). Staff mark payment on the roster; a Stripe checkout seam
+  ([`src/lib/payments`](../../src/lib/payments)) mints a pay link when configured. See
+  [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md) (online
+  capture + webhook confirmation are H/M7 follow-ups).
 
 ## M5 — Gear (core prep slice complete)
 

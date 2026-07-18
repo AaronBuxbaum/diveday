@@ -9,9 +9,11 @@ import {
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  bookingPayments,
   bookings,
   certifications,
   courses,
+  type DiveSpecialty,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -23,12 +25,14 @@ import {
   nitroxCertifications,
   nitroxFills,
   notificationDeliveries,
+  notificationDeliveryAttempts,
   people,
   personRoles,
   rentalGearProfiles,
   rentalGearRequests,
   rollCallEvents,
   shops,
+  specialtyCertifications,
   tripAssignments,
   tripRequirements,
   trips,
@@ -269,6 +273,46 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     })),
   );
 
+  // Specialty evidence: customer[1] is the AOW diver, fully carded for the
+  // demanding trips; customer[2] has a Deep card still awaiting verification so
+  // the pending gate is visible on a roster.
+  if (customers[1] && customers[2]) {
+    await db.insert(specialtyCertifications).values([
+      {
+        shopId,
+        personId: customers[1].id,
+        agency: "padi" as const,
+        specialty: "deep" as const,
+        identifier: "DEMO-SPEC-DEEP-2",
+        status: "verified" as const,
+      },
+      {
+        shopId,
+        personId: customers[1].id,
+        agency: "padi" as const,
+        specialty: "wreck" as const,
+        identifier: "DEMO-SPEC-WRECK-2",
+        status: "verified" as const,
+      },
+      {
+        shopId,
+        personId: customers[1].id,
+        agency: "padi" as const,
+        specialty: "night" as const,
+        identifier: "DEMO-SPEC-NIGHT-2",
+        status: "verified" as const,
+      },
+      {
+        shopId,
+        personId: customers[2].id,
+        agency: "ssi" as const,
+        specialty: "deep" as const,
+        identifier: "DEMO-SPEC-DEEP-3",
+        status: "pending" as const,
+      },
+    ]);
+  }
+
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
@@ -383,6 +427,11 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         name: "Spiegel Grove",
         locationName: "Key Largo, Florida",
+        // The glossary's canonical gate: a deep wreck dived externally needs
+        // AOW + Deep. (Wreck specialty is for penetration, not the whole site.)
+        // Every trip that visits inherits at least this (readiness composes it).
+        minimumCertificationLevel: "advanced_open_water" as const,
+        requiredSpecialties: ["deep"] as DiveSpecialty[],
         description:
           "A deliberately sunk former Navy ship with dramatic structure and blue-water scale.",
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
@@ -548,7 +597,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       {
         shopId,
         title: "Night Dive — City of Washington",
-        description: "Torches, tarpon, and bioluminescence. AOW or Night specialty.",
+        description: "Torches, tarpon, and bioluminescence. Night specialty required.",
         startsAt: at(2, 22, 0), // ~6:00 PM Eastern
         endsAt: at(3, 0, 30),
         capacity: 8,
@@ -557,7 +606,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         diveSiteId: siteByName.get("Spiegel Grove")?.id,
         title: "Wreck Trip — Spiegel Grove",
-        description: "The big one. AOW + Deep required, nitrox recommended.",
+        description: "The big one. AOW + Deep + nitrox required.",
         startsAt: at(5, 12, 0),
         endsAt: at(5, 16, 0),
         capacity: 10,
@@ -584,13 +633,25 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     .returning();
 
   await db.insert(tripRequirements).values(
-    tripRows.map((trip) => ({
-      tripId: trip.id,
-      shopId,
-      requiresWaiver: true,
-      minimumCertificationLevel:
-        trip.courseId === discoverCourse.id ? null : ("open_water" as const),
-    })),
+    tripRows.map((trip) => {
+      // The night dive has no site of its own, so its Night gate is trip-level;
+      // night diving needs the Night specialty, not a higher level. The wreck
+      // trip inherits AOW + Deep from the Spiegel Grove site and adds a
+      // trip-level nitrox requirement (deep wreck bottom time).
+      const isNight = trip.title.startsWith("Night Dive");
+      const isWreck = trip.title.startsWith("Wreck Trip");
+      return {
+        tripId: trip.id,
+        shopId,
+        requiresWaiver: true,
+        minimumCertificationLevel:
+          trip.courseId === discoverCourse.id ? null : ("open_water" as const),
+        requiredSpecialties: (isNight ? ["night"] : []) as DiveSpecialty[],
+        requiresNitrox: isWreck,
+        // The premium wreck charter is paid up front; the reef trips are not.
+        requiresPayment: isWreck,
+      };
+    }),
   );
 
   const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
@@ -627,6 +688,25 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       })),
     )
     .returning();
+
+  // Payment demo on the pay-to-board wreck trip: one paid, one deposit, the
+  // rest unpaid (an absent row reads as unpaid in readiness).
+  const wreckBookings = bookingRows_.filter((b) => b.tripId === wreck.id);
+  const paidBooking = wreckBookings.find((b) => b.personId === customers[1]?.id);
+  const depositBooking = wreckBookings.find((b) => b.personId === customers[0]?.id);
+  const paymentSeed = [
+    paidBooking
+      ? { bookingId: paidBooking.id, status: "paid" as const, amountCents: 18_000 }
+      : null,
+    depositBooking
+      ? { bookingId: depositBooking.id, status: "deposit_paid" as const, amountCents: 6_000 }
+      : null,
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
+  if (paymentSeed.length > 0) {
+    await db
+      .insert(bookingPayments)
+      .values(paymentSeed.map((row) => ({ shopId, currency: "usd", ...row })));
+  }
 
   await seedNitrox(db, shopId, instructor.id, customers, wreck, bookingRows_);
 }
@@ -683,7 +763,7 @@ async function seedNitrox(
     },
   ]);
 
-  // One logged fill for a certified diver on the wreck ("nitrox recommended").
+  // One logged fill for a certified diver on the nitrox-required wreck trip.
   const wreckBookingForCert = bookingRows.find(
     (b) => b.tripId === wreck.id && b.personId === customers[0].id,
   );
@@ -726,6 +806,10 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(rentalGearRequests).where(eq(rentalGearRequests.shopId, shopId));
   await db.delete(rentalGearProfiles).where(eq(rentalGearProfiles.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
+  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
+  await db
+    .delete(notificationDeliveryAttempts)
+    .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
@@ -738,6 +822,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
 

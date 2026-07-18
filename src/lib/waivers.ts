@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
+import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -11,8 +12,9 @@ export function hashWaiverToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+/** Any referral-flagged "yes" needs physician review; fails closed (medical.ts). */
 export function needsMedicalReview(answers: MedicalAnswers): boolean {
-  return answers.breathing || answers.medication || answers.recentIllness;
+  return needsPhysicianReview(answers);
 }
 
 export type WaiverState =
@@ -63,13 +65,17 @@ export function waiverActivityTimeline(records: readonly WaiverRecord[]): Waiver
     }
     if (record.completedAt) {
       const medicalReview = record.status === "medical_review";
+      const flagged =
+        medicalReview && record.medicalAnswers ? flaggedMedicalPrompts(record.medicalAnswers) : [];
       entries.push({
         recordId: record.id,
         at: record.completedAt,
         kind: medicalReview ? "medical_review" : "completed",
         title: medicalReview ? "Medical review required" : "Waiver signed",
         detail: medicalReview
-          ? "A staff member must follow up before the diver is ready."
+          ? flagged.length > 0
+            ? `Physician clearance needed — flagged: ${flagged.join("; ")}`
+            : "A staff member must follow up before the diver is ready."
           : "Signed evidence is complete.",
       });
     }

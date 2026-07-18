@@ -14,6 +14,7 @@ import {
 } from "@/db/gear";
 import { listTripRentalGearRequests } from "@/db/gear-requests";
 import { sendAndRecordNotification } from "@/db/notifications";
+import { setBookingPayment } from "@/db/payments";
 import {
   cancelBooking,
   getBookingForTrip,
@@ -28,7 +29,12 @@ import {
   updateTrip,
   updateTripConditions,
 } from "@/db/queries";
-import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
+import {
+  getTripRequirements,
+  getTripSiteRequirement,
+  listTripReadiness,
+  upsertTripRequirements,
+} from "@/db/readiness";
 import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
 import {
   issueWaiverRequest,
@@ -38,7 +44,7 @@ import {
 } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
+import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { waiverActivityTimeline, waiverState } from "@/lib/waivers";
@@ -77,6 +83,15 @@ const conditionsSchema = z.object({
   surfaceConditions: z.string().trim().max(300),
 });
 
+const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
+const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
+const PAYMENT_LABELS: Record<z.infer<typeof paymentStatusSchema>, string> = {
+  unpaid: "Unpaid",
+  deposit_paid: "Deposit paid",
+  paid: "Paid",
+  waived: "Waived",
+  refunded: "Refunded",
+};
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
   minimumCertificationLevel: z.preprocess(
@@ -103,6 +118,7 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
     text: "That waiver link could not be created. Try a current booking and template.",
   },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
+  payment: { tone: "success", text: "Payment status updated." },
   conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },
   "gear-assigned": { tone: "success", text: "Gear added to the packing list." },
   "gear-returned": { tone: "success", text: "Gear returned to the gear room." },
@@ -192,6 +208,7 @@ export default async function ManageTripPage({
     listTripRentalGearRequests(db, shop.id, tripId),
     listDiveSites(db, shop.id),
   ]);
+  const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
   const banner = notice ? BANNERS[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
@@ -358,17 +375,40 @@ export default async function ManageTripPage({
     redirect(`${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`);
   }
 
+  async function markPaymentAction(formData: FormData) {
+    "use server";
+    const s = await requireStaffSession();
+    const bookingId = String(formData.get("bookingId") ?? "");
+    const status = paymentStatusSchema.safeParse(formData.get("status"));
+    const saved =
+      bookingId && status.success
+        ? await setBookingPayment(await getDb(), {
+            shopId: s.user.shopId,
+            bookingId,
+            status: status.data,
+          })
+        : null;
+    redirect(`${back}?notice=${saved ? "payment" : "invalid"}`);
+  }
+
   async function saveRequirementsAction(formData: FormData) {
     "use server";
     if (isCourseSession) redirect(`${back}?notice=invalid`);
     const s = await requireStaffSession();
     const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
+    const specialties = z
+      .array(specialtySchema)
+      .safeParse(formData.getAll("specialty").map(String));
+    if (!specialties.success) redirect(`${back}?notice=invalid`);
     const saved = await upsertTripRequirements(await getDb(), {
       shopId: s.user.shopId,
       tripId,
       requiresWaiver: parsed.data.requiresWaiver === "on",
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
+      requiredSpecialties: specialties.data,
+      requiresNitrox: formData.get("requiresNitrox") === "on",
+      requiresPayment: formData.get("requiresPayment") === "on",
     });
     redirect(`${back}?notice=${saved ? "requirements" : "invalid"}`);
   }
@@ -669,6 +709,15 @@ export default async function ManageTripPage({
                 />
                 Require a signed waiver
               </label>
+              <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                <input
+                  name="requiresPayment"
+                  type="checkbox"
+                  defaultChecked={requirement?.requiresPayment ?? false}
+                  className="size-4 accent-primary"
+                />
+                Require payment to board
+              </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Minimum certification
                 <select
@@ -685,6 +734,63 @@ export default async function ManageTripPage({
                 </select>
               </label>
             </div>
+            <fieldset className="mt-5">
+              <legend className="text-sm font-medium">Required specialties</legend>
+              <p className="mt-1 text-sm text-muted">
+                A diver is blocked until a verified card for each proves the specialty.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
+                  <label
+                    key={value}
+                    className="flex min-h-11 items-center gap-2 text-sm font-medium"
+                  >
+                    <input
+                      name="specialty"
+                      type="checkbox"
+                      value={value}
+                      defaultChecked={requirement?.requiredSpecialties?.includes(
+                        value as keyof typeof SPECIALTY_LABELS,
+                      )}
+                      className="size-4 accent-primary"
+                    />
+                    {label}
+                  </label>
+                ))}
+                <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                  <input
+                    name="requiresNitrox"
+                    type="checkbox"
+                    defaultChecked={requirement?.requiresNitrox ?? false}
+                    className="size-4 accent-primary"
+                  />
+                  Nitrox
+                </label>
+              </div>
+            </fieldset>
+            {siteRequirement &&
+            (siteRequirement.minimumCertificationLevel ||
+              siteRequirement.requiredSpecialties.length > 0 ||
+              siteRequirement.requiresNitrox) ? (
+              <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+                <strong className="font-medium text-foreground">
+                  {trip.diveSite?.name ?? "This site"}
+                </strong>{" "}
+                also requires{" "}
+                {[
+                  siteRequirement.minimumCertificationLevel
+                    ? `${CERTIFICATION_LEVEL_LABELS[siteRequirement.minimumCertificationLevel]} or higher`
+                    : null,
+                  ...siteRequirement.requiredSpecialties.map(
+                    (specialty) => `${SPECIALTY_LABELS[specialty]} specialty`,
+                  ),
+                  siteRequirement.requiresNitrox ? "a nitrox card" : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                . Readiness always enforces the stricter of the site and this trip.
+              </p>
+            ) : null}
             <button
               type="submit"
               className="mt-5 min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
@@ -1036,12 +1142,39 @@ export default async function ManageTripPage({
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-            {readinessRows.map(({ booking, person, readiness }) => (
+            {readinessRows.map(({ booking, person, readiness, paymentStatus }) => (
               <li
                 key={booking.id}
                 className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
               >
-                <p className="font-medium">{person.fullName}</p>
+                <div>
+                  <p className="font-medium">{person.fullName}</p>
+                  {requirement?.requiresPayment ? (
+                    <form action={markPaymentAction} className="mt-2 flex items-center gap-2">
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <span className="text-sm text-muted">
+                        Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
+                      </span>
+                      <select
+                        name="status"
+                        defaultValue={paymentStatus ?? "unpaid"}
+                        className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                      >
+                        {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="submit"
+                        className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-sunken"
+                      >
+                        Update
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
                 {readiness.status === "ready" ? (
                   <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
                     Ready
@@ -1049,7 +1182,7 @@ export default async function ManageTripPage({
                 ) : (
                   <ul className="flex flex-col gap-1 text-sm text-danger">
                     {readiness.blockers.map((blocker) => (
-                      <li key={blocker.code}>• {blocker.message}</li>
+                      <li key={blocker.message}>• {blocker.message}</li>
                     ))}
                   </ul>
                 )}

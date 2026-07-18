@@ -214,7 +214,7 @@ export default async function TripManifestPage({
                     {!ready ? (
                       <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
-                          <li key={blocker.code}>• {blocker.message}</li>
+                          <li key={blocker.message}>• {blocker.message}</li>
                         ))}
                       </ul>
                     ) : null}
