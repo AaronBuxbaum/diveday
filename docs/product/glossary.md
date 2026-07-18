@@ -32,8 +32,9 @@ new domain concept, define it here in the same PR.
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, gear needs,
   and minimum cert requirements per site (e.g. AOW for a deep wreck).
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
-  route imagery, pictures, marine-life expectations, and local context. A charter links one
-  briefing in the current slice; dated conditions remain on the charter, not the reusable site.
+  route imagery, point-of-interest landmarks, visual field guide, and local context. A charter
+  links one briefing in the current slice; dated conditions remain on the charter, not the
+  reusable site.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.

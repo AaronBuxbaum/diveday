@@ -342,7 +342,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
           currentNote: "Usually gentle; the crew confirms the final plan.",
           divePlan:
             "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
-          landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
+          landmarks: ["Molasses Reef Light", "Historic ship's winch", "Spanish anchor"],
           imageUrls: [
             commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
             commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
@@ -372,7 +372,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         currentNote: "Usually gentle; the crew confirms the final plan.",
         divePlan:
           "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
-        landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
+        landmarks: ["Molasses Reef Light", "Historic ship's winch", "Spanish anchor"],
         imageUrls: [
           commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
           commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
@@ -388,6 +388,12 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
         marineLifeDescription:
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
+        difficulty: "advanced",
+        depthRange: "18–40 m",
+        currentNote: "Open-water current can be strong; the crew confirms the line plan.",
+        divePlan:
+          "Descend together on the mooring line, tour the exterior flight deck and well deck, then return to the ascent line with reserve gas.",
+        landmarks: ["Flight deck and cranes", "Well deck"],
         imageUrls: [
           commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
           commonsImage("AtlanticGoliathGrouper.jpg"),
@@ -401,6 +407,12 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         marineLife: "Sergeant majors · blue tangs · French angelfish · coral gardens",
         marineLifeDescription:
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
+        difficulty: "beginner",
+        depthRange: "5–8 m",
+        currentNote: "Usually gentle; the crew confirms the final plan.",
+        divePlan:
+          "Arc from the mooring through the bright sand channels, pause at the statue, then return across the shallow coral garden.",
+        landmarks: ["Christ of the Abyss", "Dry Rocks sand channels"],
         imageUrls: [
           commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
           commonsImage("Blue Tang Pickles 20080310.jpg"),
@@ -439,6 +451,78 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         imageUrl: commonsImage("Dasyatis americana NOAA.jpg"),
         description: "Often seen gliding over the sand channels.",
         preparationTip: "Give rays space and watch from the side, not above.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Blue tang",
+        kind: "fish",
+        imageUrl: commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
+        description: "Electric-blue reef fish that often travel in loose groups.",
+        preparationTip: "Scan just above the reef for small groups moving together.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "French angelfish",
+        kind: "fish",
+        imageUrl: commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
+        description: "A tall, dark fish edged with tiny flashes of yellow.",
+        preparationTip: "Look beside tall sponges and coral faces where they feed.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Yellowtail snapper",
+        kind: "schooling fish",
+        imageUrl: commonsImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+        description: "Silver schools marked by a bright yellow stripe and tail.",
+        preparationTip: "Look into the blue beyond the reef instead of only looking down.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Great barracuda",
+        kind: "fish",
+        imageUrl: commonsImage("Sphyraena barracuda by NOAA.jpg"),
+        description: "A long, calm silhouette that may hover at the reef edge.",
+        preparationTip: "Stay relaxed, leave room, and enjoy the view from a respectful distance.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Nurse shark",
+        kind: "shark",
+        imageUrl: commonsImage("FGBNMS - nurse shark (27551309652).jpg"),
+        description: "A broad, mellow bottom-resting shark with rounded fins.",
+        preparationTip: "Check quiet ledges without crowding or blocking an animal's path.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Reef grouper & grunt",
+        kind: "reef fish",
+        imageUrl: commonsImage("Grouper 2 Molasses Reef 1999.jpg"),
+        description: "Chunky grouper often share the reef with striped grunts.",
+        preparationTip: "Pause beside coral overhangs and let hidden fish emerge.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Grooved brain coral",
+        kind: "coral",
+        imageUrl: commonsImage("Brain coral 2 Molasses Reef 20080309.jpg"),
+        description: "Rounded coral patterned with maze-like ridges and valleys.",
+        preparationTip: "Notice the pattern while keeping fins and hands safely clear.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Finger sponge",
+        kind: "sponge",
+        imageUrl: commonsImage("Sponge 06 Molasses Reef 20230714.jpg"),
+        description: "Bright tubular sponges that add colour and height to the reef.",
+        preparationTip: "Look between coral heads for shapes that do not sway like plants.",
       },
     ]);
     await db.insert(diveSiteMoments).values({
