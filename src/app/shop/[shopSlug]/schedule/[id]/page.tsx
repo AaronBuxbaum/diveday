@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { DiveSiteMap } from "@/components/DiveSiteMap";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
@@ -16,6 +17,7 @@ import {
 import { sendAndRecordNotification } from "@/db/notifications";
 import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
+import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
 import { dockDayTimeline, fitMessage, packingChecklist } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
@@ -206,7 +208,9 @@ export default async function TripDetailPage({
 
       {trip.diveSite ? (
         <section className="mt-8 overflow-hidden rounded-xl border border-border bg-surface">
-          {trip.diveSite.satelliteImageUrl ? (
+          {getSeedDiveSiteMap(trip.diveSite.name) ? (
+            <DiveSiteMap siteName={trip.diveSite.name} />
+          ) : trip.diveSite.satelliteImageUrl ? (
             // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
             <img
               src={trip.diveSite.satelliteImageUrl}
@@ -282,6 +286,14 @@ export default async function TripDetailPage({
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   {creatures.map((creature) => (
                     <article key={creature.id} className="rounded-lg border border-border p-4">
+                      {creature.imageUrl ? (
+                        // biome-ignore lint/performance/noImgElement: seed and staff-provided Commons imagery supports arbitrary approved hosts without a global image allowlist.
+                        <img
+                          src={creature.imageUrl}
+                          alt={creature.name}
+                          className="mb-4 aspect-[4/3] w-full rounded-md object-cover"
+                        />
+                      ) : null}
                       <p className="text-xs font-medium tracking-widest text-primary uppercase">
                         {creature.kind}
                       </p>

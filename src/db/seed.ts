@@ -48,6 +48,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const INSTRUCTOR_EMAIL = "marcus@bluemantis.example";
 
+/** Public-domain and CC0 images hosted by Wikimedia Commons. */
+function commonsImage(filename: string): string {
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=1600`;
+}
+
 /** n days from now at the given local-ish hour/minute (UTC-anchored; demo data). */
 function at(daysFromNow: number, hour: number, minute = 0): Date {
   const d = new Date(Date.now() + daysFromNow * DAY_MS);
@@ -298,42 +303,55 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
-  const [molassesTemplate] = await db
-    .insert(globalDiveSites)
-    .values({ slug: "molasses-reef", currentVersion: 2 })
-    .returning();
-  if (!molassesTemplate) throw new Error("seed: common-site template missing");
-  await db.insert(globalDiveSiteVersions).values([
-    {
-      globalDiveSiteId: molassesTemplate.id,
-      version: 1,
-      briefing: {
-        name: "Molasses Reef",
-        locationName: "Key Largo National Marine Sanctuary",
-        description: "A bright outer-reef classic with a relaxed profile.",
-        marineLife: "Parrotfish · angelfish · southern stingrays",
+  const [existingMolassesTemplate] = await db
+    .select()
+    .from(globalDiveSites)
+    .where(eq(globalDiveSites.slug, "molasses-reef"))
+    .limit(1);
+  let molassesTemplate = existingMolassesTemplate;
+  if (!molassesTemplate) {
+    [molassesTemplate] = await db
+      .insert(globalDiveSites)
+      .values({ slug: "molasses-reef", currentVersion: 2 })
+      .returning();
+    if (!molassesTemplate) throw new Error("seed: common-site template missing");
+    await db.insert(globalDiveSiteVersions).values([
+      {
+        globalDiveSiteId: molassesTemplate.id,
+        version: 1,
+        briefing: {
+          name: "Molasses Reef",
+          locationName: "Key Largo National Marine Sanctuary",
+          description: "A bright outer-reef classic with a relaxed profile.",
+          marineLife: "Parrotfish · angelfish · southern stingrays",
+        },
       },
-    },
-    {
-      globalDiveSiteId: molassesTemplate.id,
-      version: 2,
-      briefing: {
-        name: "Molasses Reef",
-        locationName: "Key Largo National Marine Sanctuary",
-        description:
-          "A bright outer-reef classic with a relaxed profile and plenty of room to explore.",
-        marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
-        marineLifeDescription:
-          "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
-        difficulty: "beginner",
-        depthRange: "6–12 m",
-        currentNote: "Usually gentle; the crew confirms the final plan.",
-        divePlan:
-          "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
-        landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
+      {
+        globalDiveSiteId: molassesTemplate.id,
+        version: 2,
+        briefing: {
+          name: "Molasses Reef",
+          locationName: "Key Largo National Marine Sanctuary",
+          description:
+            "A bright outer-reef classic with a relaxed profile and plenty of room to explore.",
+          marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
+          marineLifeDescription:
+            "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
+          difficulty: "beginner",
+          depthRange: "6–12 m",
+          currentNote: "Usually gentle; the crew confirms the final plan.",
+          divePlan:
+            "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
+          landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
+          imageUrls: [
+            commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+            commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
+            commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
+          ],
+        },
       },
-    },
-  ]);
+    ]);
+  }
 
   const siteRows = await db
     .insert(diveSites)
@@ -355,6 +373,11 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         divePlan:
           "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
         landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
+        imageUrls: [
+          commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+          commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
+          commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
+        ],
       },
       {
         shopId,
@@ -365,6 +388,10 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
         marineLifeDescription:
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
+        imageUrls: [
+          commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+          commonsImage("AtlanticGoliathGrouper.jpg"),
+        ],
       },
       {
         shopId,
@@ -374,6 +401,11 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         marineLife: "Sergeant majors · blue tangs · French angelfish · coral gardens",
         marineLifeDescription:
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
+        imageUrls: [
+          commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
+          commonsImage("Blue Tang Pickles 20080310.jpg"),
+          commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+        ],
       },
     ])
     .returning();
@@ -386,6 +418,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         diveSiteId: molasses.id,
         name: "Stoplight parrotfish",
         kind: "fish",
+        imageUrl: commonsImage("Stoplight parrotfish Pickles Reef.jpg"),
         description: "A bright reef grazer with a beak-like mouth.",
         preparationTip: "Move slowly near coral heads and let the colour find you.",
       },
@@ -394,6 +427,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         diveSiteId: molasses.id,
         name: "Elkhorn coral",
         kind: "coral",
+        imageUrl: commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
         description: "Branching coral that makes a remarkable shallow reef silhouette.",
         preparationTip: "Practice neutral buoyancy; never touch or brace on coral.",
       },
@@ -402,6 +436,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         diveSiteId: molasses.id,
         name: "Southern stingray",
         kind: "ray",
+        imageUrl: commonsImage("Dasyatis americana NOAA.jpg"),
         description: "Often seen gliding over the sand channels.",
         preparationTip: "Give rays space and watch from the side, not above.",
       },
@@ -614,6 +649,8 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
   }
   await db.delete(trips).where(eq(trips.shopId, shopId));
+  await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
+  await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
