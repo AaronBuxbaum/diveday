@@ -734,12 +734,20 @@ export default async function ManageTripPage({
               clears a diver.
             </p>
           </div>
-          <Link
-            href="/shop/certifications"
-            className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Manage certifications
-          </Link>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href={`/shop/trips/${tripId}/manifest`}
+              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+            >
+              Open boat manifest
+            </Link>
+            <Link
+              href="/shop/certifications"
+              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+            >
+              Manage certifications
+            </Link>
+          </div>
         </div>
         {readinessRows.length === 0 ? (
           <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">

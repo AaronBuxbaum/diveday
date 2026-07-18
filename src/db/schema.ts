@@ -403,6 +403,44 @@ export const gearServiceEvents = pgTable(
   ],
 );
 
+export const rollCallStatus = pgEnum("roll_call_status", ["boarded", "not_boarded"]);
+
+/**
+ * Append-only safety history. Absence means a diver is still awaiting roll
+ * call; the newest event answers their current boarding state without
+ * rewriting what staff recorded earlier.
+ */
+export const rollCallEvents = pgTable(
+  "roll_call_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: rollCallStatus("status").notNull(),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("roll_call_events_shop_trip_booking_created_idx").on(
+      table.shopId,
+      table.tripId,
+      table.bookingId,
+      table.createdAt,
+    ),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -414,3 +452,4 @@ export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type GearItem = typeof gearItems.$inferSelect;
 export type GearAssignment = typeof gearAssignments.$inferSelect;
 export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
+export type RollCallEvent = typeof rollCallEvents.$inferSelect;
