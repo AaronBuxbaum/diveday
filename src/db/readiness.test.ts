@@ -4,10 +4,13 @@ import { createTestDb } from "./client";
 import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import {
   createCertification,
+  createSpecialtyCertification,
   getBookingReadiness,
   listShopCertifications,
+  listShopSpecialtyCertifications,
   listTripReadiness,
   reviewCertification,
+  reviewSpecialtyCertification,
   upsertTripRequirements,
 } from "./readiness";
 import { seedDemo } from "./seed";
@@ -45,6 +48,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       tripId: reef.id,
       requiresWaiver: false,
       minimumCertificationLevel: "rescue",
+      requiredSpecialties: [],
     });
     const pending = await createCertification(db, {
       shopId: shop.id,
@@ -69,6 +73,59 @@ describe("trip readiness (in-memory PGlite)", () => {
       status: "ready",
       blockers: [],
     });
+  });
+
+  it("gates a required specialty on a verified specialty card, fail-closed", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: null,
+      requiredSpecialties: ["deep"],
+    });
+    const missing = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    expect(missing?.blockers).toContainEqual(
+      expect.objectContaining({ code: "specialty_missing" }),
+    );
+
+    const pending = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "PADI-DEEP-77",
+    });
+    if (!pending) throw new Error("expected specialty certification to insert");
+    expect(
+      (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
+    ).toContainEqual(expect.objectContaining({ code: "specialty_pending" }));
+
+    await reviewSpecialtyCertification(db, {
+      shopId: shop.id,
+      certificationId: pending.id,
+      status: "verified",
+    });
+    expect(await getBookingReadiness(db, shop.id, rosterEntry.booking.id)).toEqual({
+      status: "ready",
+      blockers: [],
+    });
+  });
+
+  it("does not leak specialty certifications across shops", async () => {
+    const { db, rosterEntry } = await readinessContext();
+    expect(
+      await createSpecialtyCertification(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        personId: rosterEntry.person.id,
+        agency: "padi",
+        specialty: "wreck",
+        identifier: "NOT-OURS-SPECIALTY",
+      }),
+    ).toBeNull();
+    expect(
+      await listShopSpecialtyCertifications(db, "00000000-0000-4000-8000-000000000000"),
+    ).toEqual([]);
   });
 
   it("does not leak certifications across shops", async () => {

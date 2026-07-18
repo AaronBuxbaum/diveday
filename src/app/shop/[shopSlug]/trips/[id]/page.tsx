@@ -28,7 +28,12 @@ import {
   updateTrip,
   updateTripConditions,
 } from "@/db/queries";
-import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
+import {
+  getTripRequirements,
+  getTripSiteRequirement,
+  listTripReadiness,
+  upsertTripRequirements,
+} from "@/db/readiness";
 import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
 import {
   issueWaiverRequest,
@@ -38,7 +43,7 @@ import {
 } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
+import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { waiverActivityTimeline, waiverState } from "@/lib/waivers";
@@ -77,6 +82,7 @@ const conditionsSchema = z.object({
   surfaceConditions: z.string().trim().max(300),
 });
 
+const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
   minimumCertificationLevel: z.preprocess(
@@ -192,6 +198,7 @@ export default async function ManageTripPage({
     listTripRentalGearRequests(db, shop.id, tripId),
     listDiveSites(db, shop.id),
   ]);
+  const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
   const banner = notice ? BANNERS[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
@@ -364,11 +371,16 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
+    const specialties = z
+      .array(specialtySchema)
+      .safeParse(formData.getAll("specialty").map(String));
+    if (!specialties.success) redirect(`${back}?notice=invalid`);
     const saved = await upsertTripRequirements(await getDb(), {
       shopId: s.user.shopId,
       tripId,
       requiresWaiver: parsed.data.requiresWaiver === "on",
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
+      requiredSpecialties: specialties.data,
     });
     redirect(`${back}?notice=${saved ? "requirements" : "invalid"}`);
   }
@@ -685,6 +697,52 @@ export default async function ManageTripPage({
                 </select>
               </label>
             </div>
+            <fieldset className="mt-5">
+              <legend className="text-sm font-medium">Required specialties</legend>
+              <p className="mt-1 text-sm text-muted">
+                A diver is blocked until a verified card for each proves the specialty.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
+                  <label
+                    key={value}
+                    className="flex min-h-11 items-center gap-2 text-sm font-medium"
+                  >
+                    <input
+                      name="specialty"
+                      type="checkbox"
+                      value={value}
+                      defaultChecked={requirement?.requiredSpecialties?.includes(
+                        value as keyof typeof SPECIALTY_LABELS,
+                      )}
+                      className="size-4 accent-primary"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {siteRequirement &&
+            (siteRequirement.minimumCertificationLevel ||
+              siteRequirement.requiredSpecialties.length > 0) ? (
+              <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+                <strong className="font-medium text-foreground">
+                  {trip.diveSite?.name ?? "This site"}
+                </strong>{" "}
+                also requires{" "}
+                {[
+                  siteRequirement.minimumCertificationLevel
+                    ? `${CERTIFICATION_LEVEL_LABELS[siteRequirement.minimumCertificationLevel]} or higher`
+                    : null,
+                  ...siteRequirement.requiredSpecialties.map(
+                    (specialty) => `${SPECIALTY_LABELS[specialty]} specialty`,
+                  ),
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                . Readiness always enforces the stricter of the site and this trip.
+              </p>
+            ) : null}
             <button
               type="submit"
               className="mt-5 min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
