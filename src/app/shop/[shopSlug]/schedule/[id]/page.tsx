@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { DiveSiteFieldGuide } from "@/components/DiveSiteFieldGuide";
+import { DiveSiteLandmarks } from "@/components/DiveSiteLandmarks";
 import { DiveSiteMap } from "@/components/DiveSiteMap";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -17,8 +19,9 @@ import {
 import { sendAndRecordNotification } from "@/db/notifications";
 import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
+import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
-import { dockDayTimeline, fitMessage, packingChecklist } from "@/lib/diver-planning";
+import { dockDayTimeline, packingChecklist } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
@@ -96,6 +99,9 @@ export default async function TripDetailPage({
         listPublishedDiveSiteMoments(db, shop.id, trip.diveSite.id),
       ])
     : [[], []];
+  const landmarks = trip.diveSite
+    ? buildDiveSiteLandmarks(trip.diveSite.name, trip.diveSite.landmarks)
+    : [];
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
   const rentalRequest = confirmed
     ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
@@ -229,6 +235,32 @@ export default async function TripDetailPage({
             {trip.diveSite.description ? (
               <p className="mt-4 text-muted">{trip.diveSite.description}</p>
             ) : null}
+            {trip.diveSite.difficulty || trip.diveSite.depthRange || trip.diveSite.currentNote ? (
+              <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-border py-5 sm:grid-cols-3">
+                <div>
+                  <dt className="text-xs font-medium tracking-widest text-muted uppercase">
+                    Experience
+                  </dt>
+                  <dd className="mt-1 font-semibold capitalize">
+                    {trip.diveSite.difficulty ?? "Crew-led"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium tracking-widest text-muted uppercase">
+                    Depth
+                  </dt>
+                  <dd className="mt-1 font-semibold">{trip.diveSite.depthRange ?? "Varies"}</dd>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <dt className="text-xs font-medium tracking-widest text-muted uppercase">
+                    Water movement
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium">
+                    {trip.diveSite.currentNote ?? "The crew confirms it at the dock."}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
             {trip.diveSite.routeImageUrl ? (
               <figure className="mt-5 overflow-hidden rounded-lg border border-border">
                 {/* biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist. */}
@@ -242,80 +274,25 @@ export default async function TripDetailPage({
                 </figcaption>
               </figure>
             ) : null}
-            {trip.diveSite.marineLife || trip.diveSite.marineLifeDescription ? (
-              <div className="mt-6 rounded-lg bg-primary/10 p-4">
-                <h3 className="font-semibold">What you might see</h3>
-                {trip.diveSite.marineLife ? (
-                  <p className="mt-2 font-medium text-primary">{trip.diveSite.marineLife}</p>
-                ) : null}
-                {trip.diveSite.marineLifeDescription ? (
-                  <p className="mt-2 text-sm text-muted">{trip.diveSite.marineLifeDescription}</p>
-                ) : null}
-              </div>
-            ) : null}
-            {fitMessage(
-              trip.diveSite.difficulty,
-              trip.diveSite.depthRange,
-              trip.diveSite.currentNote,
-            ) ? (
-              <div className="mt-5 rounded-lg border border-border p-4">
-                <h3 className="font-semibold">Is this a fit?</h3>
-                <p className="mt-1 text-sm text-muted">
-                  {fitMessage(
-                    trip.diveSite.difficulty,
-                    trip.diveSite.depthRange,
-                    trip.diveSite.currentNote,
-                  )}
-                </p>
-              </div>
-            ) : null}
             {trip.diveSite.divePlan ? (
-              <div className="mt-5 rounded-lg border border-border p-4">
-                <h3 className="font-semibold">An illustrative dive plan</h3>
-                <p className="mt-1 text-sm text-muted">{trip.diveSite.divePlan}</p>
-                {trip.diveSite.landmarks.length ? (
-                  <p className="mt-2 text-sm font-medium text-primary">
-                    Landmarks · {trip.diveSite.landmarks.join(" · ")}
-                  </p>
-                ) : null}
-              </div>
+              <section className="mt-8 grid gap-2 sm:grid-cols-[10rem_1fr] sm:gap-6">
+                <h3 className="font-semibold">How the dive unfolds</h3>
+                <p className="leading-relaxed text-muted">{trip.diveSite.divePlan}</p>
+              </section>
             ) : null}
-            {creatures.length ? (
-              <div className="mt-6">
-                <h3 className="font-semibold">Field cards: meet the reef</h3>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  {creatures.map((creature) => (
-                    <article key={creature.id} className="rounded-lg border border-border p-4">
-                      {creature.imageUrl ? (
-                        // biome-ignore lint/performance/noImgElement: seed and staff-provided Commons imagery supports arbitrary approved hosts without a global image allowlist.
-                        <img
-                          src={creature.imageUrl}
-                          alt={creature.name}
-                          className="mb-4 aspect-[4/3] w-full rounded-md object-cover"
-                        />
-                      ) : null}
-                      <p className="text-xs font-medium tracking-widest text-primary uppercase">
-                        {creature.kind}
-                      </p>
-                      <h4 className="mt-1 font-semibold">{creature.name}</h4>
-                      <p className="mt-2 text-sm text-muted">{creature.description}</p>
-                      {creature.preparationTip ? (
-                        <p className="mt-3 text-sm font-medium text-primary">
-                          Prepare: {creature.preparationTip}
-                        </p>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+            <DiveSiteLandmarks landmarks={landmarks} />
+            <DiveSiteFieldGuide
+              creatures={creatures}
+              summary={trip.diveSite.marineLifeDescription}
+              highlights={trip.diveSite.marineLife}
+            />
             {moments.length ? (
               <div className="mt-6 rounded-lg bg-accent/10 p-4">
                 <h3 className="font-semibold">A recent diver moment</h3>
                 <p className="mt-1 text-sm text-muted">{moments[0]?.caption}</p>
               </div>
             ) : null}
-            {trip.diveSite.imageUrls.length > 0 ? (
+            {creatures.length === 0 && trip.diveSite.imageUrls.length > 0 ? (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {trip.diveSite.imageUrls.map((url, index) => (
                   // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
