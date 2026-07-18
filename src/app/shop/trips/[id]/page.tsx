@@ -18,12 +18,17 @@ import {
   updateTrip,
 } from "@/db/queries";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
-import { issueWaiverRequest, listTripWaiverStatuses, listWaiverTemplates } from "@/db/waivers";
+import {
+  issueWaiverRequest,
+  listTripWaiverActivity,
+  listTripWaiverStatuses,
+  listWaiverTemplates,
+} from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
-import { waiverState } from "@/lib/waivers";
+import { waiverActivityTimeline, waiverState } from "@/lib/waivers";
 import {
   parseWallTime,
   toDateInputValue,
@@ -108,6 +113,7 @@ export default async function ManageTripPage({
     roster,
     templates,
     waiverRows,
+    waiverActivityRows,
     requirement,
     readinessRows,
     availableGear,
@@ -118,6 +124,7 @@ export default async function ManageTripPage({
     getTripRoster(db, tripId),
     listWaiverTemplates(db, shop.id),
     listTripWaiverStatuses(db, shop.id, tripId),
+    listTripWaiverActivity(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
     listTripReadiness(db, shop.id, tripId),
     listAvailableGear(db, shop.id),
@@ -139,6 +146,16 @@ export default async function ManageTripPage({
       type: row.item.type.replace("_", " "),
     });
     gearByBooking.set(row.booking.id, current);
+  }
+  const waiverRecordsByBooking = new Map<
+    string,
+    Exclude<(typeof waiverActivityRows)[number]["waiver"], null>[]
+  >();
+  for (const row of waiverActivityRows) {
+    if (!row.waiver) continue;
+    const current = waiverRecordsByBooking.get(row.booking.id) ?? [];
+    current.push(row.waiver);
+    waiverRecordsByBooking.set(row.booking.id, current);
   }
 
   async function saveDetails(formData: FormData) {
@@ -556,6 +573,7 @@ export default async function ManageTripPage({
         ) : (
           <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
             {waiverRows.map(({ booking, person, waiver: currentWaiver }) => {
+              const activity = waiverActivityTimeline(waiverRecordsByBooking.get(booking.id) ?? []);
               const state = waiverState(currentWaiver);
               const finished = state === "complete" || state === "medical_review";
               const label =
@@ -577,52 +595,68 @@ export default async function ManageTripPage({
                       ? "bg-danger/10 text-danger"
                       : "bg-primary/10 text-primary";
               return (
-                <li
-                  key={booking.id}
-                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium">{person.fullName}</p>
-                    <p className="mt-1 text-sm text-muted">
-                      {currentWaiver
-                        ? `${currentWaiver.templateTitle} v${currentWaiver.templateVersion}${currentWaiver.completedAt ? ` · signed ${formatDateTimeTz(currentWaiver.completedAt, "en-US", shop.timezone)}` : ""}`
-                        : "No waiver issued"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className={`rounded-full px-3 py-1 text-sm font-medium ${tone}`}>
-                      {label}
-                    </span>
-                    {finished ? null : (
-                      <form
-                        action={issueWaiverAction}
-                        className="flex flex-wrap items-center gap-2"
-                      >
-                        <input type="hidden" name="bookingId" value={booking.id} />
-                        <select
-                          name="templateId"
-                          aria-label={`Waiver template for ${person.fullName}`}
-                          defaultValue={
-                            currentWaiver?.templateId ??
-                            templates.find((template) => template.isDefault)?.id
-                          }
-                          className="min-h-11 max-w-44 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                <li key={booking.id} className="px-4 py-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-medium">{person.fullName}</p>
+                      <p className="mt-1 text-sm text-muted">
+                        {currentWaiver
+                          ? `${currentWaiver.templateTitle} v${currentWaiver.templateVersion}${currentWaiver.completedAt ? ` · signed ${formatDateTimeTz(currentWaiver.completedAt, "en-US", shop.timezone)}` : ""}`
+                          : "No waiver issued"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={`rounded-full px-3 py-1 text-sm font-medium ${tone}`}>
+                        {label}
+                      </span>
+                      {finished ? null : (
+                        <form
+                          action={issueWaiverAction}
+                          className="flex flex-wrap items-center gap-2"
                         >
-                          {templates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.title} v{template.version}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="submit"
-                          className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-                        >
-                          {state === "not_sent" ? "Create link" : "New link"}
-                        </button>
-                      </form>
-                    )}
+                          <input type="hidden" name="bookingId" value={booking.id} />
+                          <select
+                            name="templateId"
+                            aria-label={`Waiver template for ${person.fullName}`}
+                            defaultValue={
+                              currentWaiver?.templateId ??
+                              templates.find((template) => template.isDefault)?.id
+                            }
+                            className="min-h-11 max-w-44 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                          >
+                            {templates.map((template) => (
+                              <option key={template.id} value={template.id}>
+                                {template.title} v{template.version}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                          >
+                            {state === "not_sent" ? "Create link" : "New link"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </div>
+                  {activity.length > 0 ? (
+                    <details className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm">
+                      <summary className="min-h-11 cursor-pointer py-2 font-medium text-primary">
+                        Activity · {activity.length} {activity.length === 1 ? "event" : "events"}
+                      </summary>
+                      <ol className="flex flex-col gap-3 pb-2 pt-1">
+                        {activity.map((entry) => (
+                          <li key={`${entry.recordId}-${entry.kind}`}>
+                            <p className="font-medium">{entry.title}</p>
+                            <p className="text-muted">
+                              {formatDateTimeTz(entry.at, "en-US", shop.timezone)} · {entry.detail}
+                            </p>
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
+                  ) : null}
                 </li>
               );
             })}
