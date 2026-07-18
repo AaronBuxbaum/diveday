@@ -3,7 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { listActiveCourses } from "@/db/courses";
 import { createTrip, getShopById } from "@/db/queries";
+import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -18,6 +20,10 @@ const formSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
+  courseId: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().uuid().optional(),
+  ),
 });
 
 async function scheduleTrip(formData: FormData) {
@@ -26,7 +32,7 @@ async function scheduleTrip(formData: FormData) {
 
   const parsed = formSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect("/shop/trips/new?error=invalid");
-  const { title, description, date, startTime, endTime, capacity } = parsed.data;
+  const { title, description, date, startTime, endTime, capacity, courseId } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
@@ -40,14 +46,16 @@ async function scheduleTrip(formData: FormData) {
   const endsAt = wallTimeToUtc(endWall, shop.timezone);
   if (endsAt <= startsAt) redirect("/shop/trips/new?error=end-before-start");
 
-  await createTrip(db, {
+  const created = await createTrip(db, {
     shopId: shop.id,
+    courseId,
     title,
     description: description || undefined,
     startsAt,
     endsAt,
     capacity,
   });
+  if (!created) redirect("/shop/trips/new?error=invalid");
   redirect(`/shop?created=${encodeURIComponent(title)}`);
 }
 
@@ -62,10 +70,13 @@ const inputClass =
 export default async function NewTripPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; course?: string }>;
 }) {
-  await requireStaffSession();
-  const { error } = await searchParams;
+  const session = await requireStaffSession();
+  const { error, course: selectedCourseId } = await searchParams;
+  const db = await getDb();
+  const courseList = await listActiveCourses(db, session.user.shopId);
+  const selectedCourse = courseList.find((course) => course.id === selectedCourseId);
   const message = error ? ERROR_MESSAGES[error] : undefined;
 
   return (
@@ -73,8 +84,12 @@ export default async function NewTripPage({
       <Link href="/shop" className="text-sm font-medium text-primary hover:underline">
         ← Back to the shop
       </Link>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Schedule a trip</h1>
-      <p className="mt-1 text-muted">Times are local to the shop.</p>
+      <h1 className="mt-4 text-3xl font-semibold tracking-tight">
+        Schedule a trip or course session
+      </h1>
+      <p className="mt-1 text-muted">
+        Times are local to the shop. Course sessions inherit their admission rules.
+      </p>
 
       {message ? (
         <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
@@ -84,13 +99,38 @@ export default async function NewTripPage({
 
       <form action={scheduleTrip} className="mt-8 flex flex-col gap-5">
         <label className="flex flex-col gap-1 text-sm font-medium">
+          Course <span className="font-normal text-muted">(optional)</span>
+          <select name="courseId" defaultValue={selectedCourse?.id ?? ""} className={inputClass}>
+            <option value="">Ordinary charter / trip</option>
+            {courseList.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </select>
+          {selectedCourse ? (
+            <span className="mt-1 text-sm font-normal text-muted">
+              {selectedCourse.minimumCertificationLevel
+                ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
+                : "No existing C-card required"}
+              {selectedCourse.requiresInstructor
+                ? " · add an instructor before sharing the session"
+                : ""}
+            </span>
+          ) : null}
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
           Title
           <input
             name="title"
             type="text"
             required
             maxLength={120}
-            placeholder="Two-Tank Reef — Molasses & French"
+            placeholder={
+              selectedCourse
+                ? `${selectedCourse.title} — Session 1`
+                : "Two-Tank Reef — Molasses & French"
+            }
             className={inputClass}
           />
         </label>

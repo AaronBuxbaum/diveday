@@ -21,7 +21,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     if (!shop) throw new Error("demo shop missing");
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
-    expect(upcoming).toHaveLength(4);
+    expect(upcoming).toHaveLength(5);
 
     const starts = upcoming.map((t) => t.startsAt.getTime());
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
@@ -30,6 +30,9 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     expect(bySlugishTitle["Two-Tank Reef — Molasses & French"]).toBe(9);
     expect(bySlugishTitle["Wreck Trip — Spiegel Grove"]).toBe(10);
     expect(bySlugishTitle["Two-Tank Reef — Christ of the Abyss"]).toBe(0);
+    expect(
+      upcoming.find((trip) => trip.title === "Discover Scuba — Pool & Reef")?.course?.title,
+    ).toBe("Discover Scuba Diving");
   });
 
   it("frees the spot when a booking is cancelled", async () => {

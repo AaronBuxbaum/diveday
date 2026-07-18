@@ -18,7 +18,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   everywhere). Demo shop seed data; `/trips` schedule page as the first data-backed surface.
 - ✅ Auth chosen and ADR'd ([0006](../architecture/decisions/0006-auth.md): Auth.js v5
   credentials + JWT, edge-safe proxy split). Staff sign-in live; protected `/shop` dashboard.
-- ⬜ Hosting: choose and ADR when something needs deploying.
+- ✅ Hosting: Vercel selected and ADR'd. A managed Postgres adapter, environment ownership,
+  migrations, backups, domain, and production validation remain H-04 work.
 
 ## M2 — Bookings (core complete)
 
@@ -28,8 +29,10 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   assignment via `trip_assignments`, diver roster with booking cancel).
 - ✅ Diver-side: public booking flow (`/trips/[id]` — no account, name + email, transactional
   capacity enforcement in `src/db/bookings.ts`, confirmation moment, sold-out/past states).
-- ⬜ Courses: deferred until cert levels and DSD rules exist (M4) — a course session without
-  prerequisite gating is just a trip, and shops can schedule it as one meanwhile.
+- ✅ Courses: a staff-owned catalog schedules instructor-led sessions on the trip/booking spine.
+  Sessions snapshot waiver/C-card baselines; instructor-required sessions reject enrollment until
+  an instructor is assigned, and existing-card courses admit only a verified card at the required
+  level. Agency-specific ratios, age, medical, specialty, and exception rules remain H-08 review.
 - ⬜ Booking notifications (email confirmations) — arrives with M7 notifications.
 
 ## M3 — Waivers (core slice complete)
@@ -75,8 +78,10 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   released through this path.
 - ✅ Staff can retire returned or held equipment; checked-out equipment cannot be removed from a
   diver's active assignment.
-- ⬜ Diver sizing/preferences, booking-level requests, and bulk recommendations remain follow-up
-  work.
+- ✅ Diver booking-level rental requests capture a standard set, fit preferences, usual weighting,
+  and notes; staff sees them while packing, but the request never reserves inventory or replaces a
+  dock-side fit check.
+- ⬜ Person-level size profiles and bulk recommendations remain follow-up work.
 
 ## M6 — Boat manifests (live core slice complete)
 
@@ -91,9 +96,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   remain follow-up work. The live-only boundary is deliberate and documented in
   [20260718-manifest-live-first](../architecture/decisions/20260718-manifest-live-first.md).
 
-## M7+ — Later
+## M7+ — Early operational slice shipped; integrations later
 
-Payments/deposits, notifications (email/SMS), reporting, nitrox fill logs, multi-boat/multi-shop.
+- ✅ Live staff operations report: upcoming bookings, readiness blockers, rental requests, course
+  sessions, and unstaffed instructor-required sessions, all derived from source-of-truth models.
+- ⬜ Payments/deposits, notifications (email/SMS), deeper reporting, nitrox fill logs,
+  multi-boat/multi-shop configuration, and their provider/policy decisions.
 
 ## Standing rule
 

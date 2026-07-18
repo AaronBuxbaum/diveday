@@ -24,7 +24,8 @@ export async function upsertTripRequirements(
       | "advanced_open_water"
       | "rescue"
       | "divemaster"
-      | "instructor";
+      | "instructor"
+      | null;
   },
 ) {
   const [trip] = await db

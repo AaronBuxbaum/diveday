@@ -57,6 +57,13 @@
       "when": 1784346882959,
       "tag": "20260718035442_loose_lilith",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784352195131,
+      "tag": "20260718052315_curved_cobalt_man",
+      "breakpoints": true
     }
   ]
 }
