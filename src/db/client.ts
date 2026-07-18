@@ -1,10 +1,18 @@
 import { PGlite } from "@electric-sql/pglite";
+import type { ExtractTablesWithRelations } from "drizzle-orm";
+import type { PgliteTransaction } from "drizzle-orm/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import * as schema from "./schema";
 import { seedIfEmpty } from "./seed";
 
 export type AppDb = ReturnType<typeof drizzle<typeof schema>>;
+export type AppTransaction = PgliteTransaction<
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
+/** Query services may accept either the app database or its transaction boundary. */
+export type DbExecutor = AppDb | AppTransaction;
 
 // Survive Next.js dev-server HMR: module state resets on reload, globalThis doesn't.
 const globalForDb = globalThis as unknown as { scubaDbPromise?: Promise<AppDb> };

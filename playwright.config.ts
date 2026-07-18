@@ -18,7 +18,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
@@ -29,8 +29,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:3000",
+    // Calling Next directly avoids a package-manager preflight inside the
+    // isolated test server, and an explicit loopback host avoids interface
+    // discovery in constrained CI containers.
+    command: "./node_modules/.bin/next dev --hostname 127.0.0.1",
+    url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

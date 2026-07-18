@@ -17,48 +17,241 @@ const shared = {
 const areas = {
   waivers: {
     goal: "Build the M3 waiver flow with immutable signed history and fail-closed medical referral states.",
-    docs: ["docs/product/next-steps.md", "docs/product/roadmap.md", "docs/product/glossary.md", "docs/design/principles.md", "docs/architecture/overview.md"],
-    code: ["src/db/schema.ts", "src/db/client.ts", "src/db/bookings.ts", "src/lib/authz.ts", "src/app/trips/[id]", "src/app/shop"],
+    docs: [
+      "docs/product/next-steps.md",
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/client.ts",
+      "src/db/bookings.ts",
+      "src/lib/authz.ts",
+      "src/app/trips/[id]",
+      "src/app/shop",
+    ],
     tests: ["src/db/bookings.test.ts", "e2e"],
-    invariants: ["Tenant-scope every record and query.", "Signed records are immutable; corrections create a new version.", "Referral-triggering medical answers fail closed.", "Submission must be idempotent and authorized."],
-    validate: ["pnpm test -- src/db/bookings.test.ts --reporter=dot", "pnpm check", "pnpm e2e -- --reporter=line"],
+    invariants: [
+      "Tenant-scope every record and query.",
+      "Signed records are immutable; corrections create a new version.",
+      "Referral-triggering medical answers fail closed.",
+      "Submission must be idempotent and authorized.",
+    ],
+    validate: [
+      "pnpm test -- src/db/bookings.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
+  certifications: {
+    goal: "Build certification evidence and a fail-closed readiness result shared by staff, divers, and manifests.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/next-steps.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/readiness.ts",
+      "src/lib/readiness.ts",
+      "src/app/shop/certifications",
+      "src/app/shop/trips/[id]",
+      "src/app/trips/[id]",
+    ],
+    tests: ["src/lib/readiness.test.ts", "src/db/readiness.test.ts", "e2e"],
+    invariants: [
+      "Requirements and evidence are separate; missing configuration fails closed.",
+      "Only verified, unexpired evidence at or above the required level can clear a diver.",
+      "Every readiness blocker is typed and human-readable.",
+      "Tenant-scope card capture, review, and readiness queries.",
+    ],
+    validate: [
+      "pnpm test -- src/lib/readiness.test.ts src/db/readiness.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
+  gear: {
+    goal: "Build M5 gear prep with conflict-safe assignment, returns, and a tenant-scoped service history.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/next-steps.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/gear.ts",
+      "src/db/gear.test.ts",
+      "src/lib/gear.ts",
+      "src/app/shop/gear",
+      "src/app/shop/trips/[id]",
+    ],
+    tests: ["src/db/gear.test.ts", "src/lib/gear.ts", "e2e"],
+    invariants: [
+      "Tenant-scope inventory, assignments, returns, and service events.",
+      "Held, retired, or already-assigned equipment never becomes assignable.",
+      "Assignment must remain transactionally conflict-safe under simultaneous staff actions.",
+      "Completed service is auditable; checked-out equipment cannot be released through a service log.",
+    ],
+    validate: [
+      "pnpm test -- src/db/gear.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
+  manifests: {
+    goal: "Build M6 manifests and roll call from the shared fail-closed readiness result.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/next-steps.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/readiness.ts",
+      "src/db/manifests.ts",
+      "src/lib/readiness.ts",
+      "src/lib/manifests.ts",
+      "src/app/shop/trips/[id]",
+      "src/app/shop/manifests",
+    ],
+    tests: [
+      "src/db/readiness.test.ts",
+      "src/db/manifests.test.ts",
+      "src/lib/manifests.test.ts",
+      "e2e",
+    ],
+    invariants: [
+      "Every active booking is represented, including incomplete or blocked records.",
+      "Readiness stays fail-closed and is never recomputed differently in the manifest UI.",
+      "Boarding changes are explicit, time-stamped, tenant-scoped, and auditable.",
+      "Phone/sunlight use requires large controls, text labels, and no color-only status.",
+    ],
+    validate: [
+      "pnpm test -- src/db/readiness.test.ts src/db/manifests.test.ts src/lib/manifests.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
   },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows Scuba's semantic design system.",
-    docs: ["docs/design/principles.md", "docs/product/vision.md", "docs/product/next-steps.md", "docs/architecture/decisions/0004-design-tokens.md"],
+    docs: [
+      "docs/design/principles.md",
+      "docs/product/vision.md",
+      "docs/product/next-steps.md",
+      "docs/architecture/decisions/0004-design-tokens.md",
+    ],
     code: ["src/app/globals.css", "src/app", "src/components", "scripts/screenshot.mjs"],
     tests: ["e2e"],
-    invariants: ["Use semantic tokens only; no raw colors in components.", "Inspect light/dark and phone/desktop output.", "Include empty, loading, validation, error, and success states.", "Keep touch targets and focus states accessible."],
-    validate: ["pnpm lint", "pnpm typecheck", "node scripts/screenshot.mjs", "pnpm e2e -- --reporter=line"],
+    invariants: [
+      "Use semantic tokens only; no raw colors in components.",
+      "Inspect light/dark and phone/desktop output.",
+      "Include empty, loading, validation, error, and success states.",
+      "Keep touch targets and focus states accessible.",
+    ],
+    validate: [
+      "pnpm lint",
+      "pnpm typecheck",
+      "node scripts/screenshot.mjs",
+      "pnpm e2e -- --reporter=line",
+    ],
   },
   database: {
     goal: "Change persistence safely while preserving tenant, capacity, and transactional invariants.",
-    docs: ["docs/architecture/overview.md", "docs/architecture/decisions/0005-database.md", "docs/engineering/testing.md", "docs/product/glossary.md"],
-    code: ["src/db/schema.ts", "src/db/client.ts", "src/db/queries.ts", "src/db/bookings.ts", "src/db/seed.ts"],
+    docs: [
+      "docs/architecture/overview.md",
+      "docs/architecture/decisions/0005-database.md",
+      "docs/engineering/testing.md",
+      "docs/product/glossary.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/client.ts",
+      "src/db/queries.ts",
+      "src/db/bookings.ts",
+      "src/db/seed.ts",
+    ],
     tests: ["src/db", "src/lib"],
-    invariants: ["src/db/schema.ts is the source of truth; never infer schema from generated migrations.", "Every tenant-owned domain row carries shop_id.", "Capacity enforcement remains transactional.", "Schema changes include focused PGlite tests and generated migrations."],
-    validate: ["pnpm test -- src/db --reporter=dot", "pnpm typecheck", "pnpm db:generate", "pnpm check"],
+    invariants: [
+      "src/db/schema.ts is the source of truth; never infer schema from generated migrations.",
+      "Every tenant-owned domain row carries shop_id.",
+      "Capacity enforcement remains transactional.",
+      "Schema changes include focused PGlite tests and generated migrations.",
+    ],
+    validate: [
+      "pnpm test -- src/db --reporter=dot",
+      "pnpm typecheck",
+      "pnpm db:generate",
+      "pnpm check",
+    ],
   },
   bookings: {
     goal: "Extend booking behavior without weakening capacity, authorization, or user-facing recovery states.",
-    docs: ["docs/product/roadmap.md", "docs/product/glossary.md", "docs/design/principles.md", "docs/architecture/overview.md"],
-    code: ["src/db/bookings.ts", "src/db/bookings.test.ts", "src/lib/trips.ts", "src/app/trips", "src/app/shop/trips"],
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/bookings.ts",
+      "src/db/bookings.test.ts",
+      "src/lib/trips.ts",
+      "src/app/trips",
+      "src/app/shop/trips",
+    ],
     tests: ["src/db/bookings.test.ts", "e2e"],
-    invariants: ["Capacity enforcement is transactional.", "Cancelled and past trips cannot accept bookings.", "Tenant and staff authorization checks stay explicit."],
-    validate: ["pnpm test -- src/db/bookings.test.ts --reporter=dot", "pnpm check", "pnpm e2e -- --reporter=line"],
+    invariants: [
+      "Capacity enforcement is transactional.",
+      "Cancelled and past trips cannot accept bookings.",
+      "Tenant and staff authorization checks stay explicit.",
+    ],
+    validate: [
+      "pnpm test -- src/db/bookings.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
   },
   auth: {
     goal: "Change authentication or authorization without creating edge/server divergence or tenant leakage.",
-    docs: ["docs/architecture/decisions/0006-auth.md", "docs/architecture/overview.md", "docs/engineering/testing.md"],
-    code: ["src/lib/auth.config.ts", "src/lib/auth.ts", "src/lib/authz.ts", "src/lib/session.ts", "src/proxy.ts"],
+    docs: [
+      "docs/architecture/decisions/0006-auth.md",
+      "docs/architecture/overview.md",
+      "docs/engineering/testing.md",
+    ],
+    code: [
+      "src/lib/auth.config.ts",
+      "src/lib/auth.ts",
+      "src/lib/authz.ts",
+      "src/lib/session.ts",
+      "src/proxy.ts",
+    ],
     tests: ["src/lib", "e2e"],
-    invariants: ["Edge configuration remains edge-safe.", "Server actions and queries enforce authorization independently of route gating.", "Dev credentials never become production behavior."],
-    validate: ["pnpm test -- src/lib --reporter=dot", "pnpm typecheck", "pnpm e2e -- --reporter=line"],
+    invariants: [
+      "Edge configuration remains edge-safe.",
+      "Server actions and queries enforce authorization independently of route gating.",
+      "Dev credentials never become production behavior.",
+    ],
+    validate: [
+      "pnpm test -- src/lib --reporter=dot",
+      "pnpm typecheck",
+      "pnpm e2e -- --reporter=line",
+    ],
   },
 };
 
 function usage() {
-  console.error(`Usage: pnpm task:context -- <area>\nAreas: ${Object.keys(areas).sort().join(", ")}`);
+  console.error(
+    `Usage: pnpm task:context -- <area>\nAreas: ${Object.keys(areas).sort().join(", ")}`,
+  );
   process.exit(1);
 }
 
@@ -67,14 +260,16 @@ if (!areaName || !areas[areaName]) usage();
 const area = areas[areaName];
 
 async function annotate(items) {
-  return Promise.all(items.map(async (item) => {
-    try {
-      await access(path.join(ROOT, item));
-      return item;
-    } catch {
-      return `${item} (planned or not present yet)`;
-    }
-  }));
+  return Promise.all(
+    items.map(async (item) => {
+      try {
+        await access(path.join(ROOT, item));
+        return item;
+      } catch {
+        return `${item} (planned or not present yet)`;
+      }
+    }),
+  );
 }
 
 const sections = [

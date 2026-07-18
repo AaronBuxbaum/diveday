@@ -1,4 +1,4 @@
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -18,7 +18,13 @@ async function walk(relativeDirectory) {
 
 function targetPath(source, rawTarget) {
   const target = rawTarget.split("#", 1)[0].split("?", 1)[0];
-  if (!target || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:")) return null;
+  if (
+    !target ||
+    target.startsWith("http://") ||
+    target.startsWith("https://") ||
+    target.startsWith("mailto:")
+  )
+    return null;
   return path.normalize(path.join(path.dirname(source), decodeURIComponent(target)));
 }
 
@@ -38,7 +44,9 @@ for (const file of files) {
 }
 
 if (broken.length > 0) {
-  console.error("Broken internal documentation links:\n" + broken.map((item) => `- ${item}`).join("\n"));
+  console.error(
+    `Broken internal documentation links:\n${broken.map((item) => `- ${item}`).join("\n")}`,
+  );
   process.exit(1);
 }
 

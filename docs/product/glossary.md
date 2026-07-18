@@ -11,6 +11,12 @@ new domain concept, define it here in the same PR.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
   may require a refresher after long inactivity.
+- **Verified certification** — a card is evidence, not clearance. Scuba records it as pending
+  until staff verify it; only a verified, unexpired card at or above a trip’s required level can
+  satisfy readiness.
+- **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
+  blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
+  unconfigured, pending, expired, or insufficient evidence is never “ready.”
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **Specialties** — standalone certs gating specific activities: **Nitrox/EANx** (enriched
@@ -33,11 +39,19 @@ new domain concept, define it here in the same PR.
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly.
+- **Roll-call event** — an append-only record that a staff member marked one booking boarded or
+  not boarded, including the time and any note. Its newest event is the current state; older events
+  remain evidence of what the crew recorded.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically
-  with a **medical statement** (RSTC form). Some answers on the medical form require a
-  physician sign-off — that's a blocking state, not a checkbox.
+  with a **medical statement** (RSTC form). Scuba snapshots the exact template version into each
+  issued record; a signed record is immutable and a replacement link creates a new record. Some
+  answers on the medical form require a physician sign-off — that's a blocking state, not a
+  checkbox.
+- **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
+  a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
+  It is derived from timestamps on the evidence records and never exposes the raw completion token.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 - **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded
@@ -55,6 +69,14 @@ new domain concept, define it here in the same PR.
 - **Service history** — regulators and BCDs require periodic service (annual or by dive
   count); tanks require periodic **visual inspection (VIP)** and **hydrostatic testing**.
   Out-of-service gear must be un-assignable.
+- **Service event** — a completed, shop-scoped record of work on one item: when it was done,
+  who logged it, what changed, and optionally when it is due next. A service hold blocks checkout;
+  a service event is the auditable evidence that may return an item to the packing pool.
+- **Gear assignment** — one currently checked-out item reserved for one booking. Assignment is
+  not a note: it is the conflict-safe operational record that prevents the same regulator or BCD
+  being packed for two divers at once.
+- **Retired gear** — equipment permanently removed from the rental pool. It is distinct from a
+  service hold and cannot be assigned or retired while checked out to a diver.
 - **Nitrox fills** — enriched-air tanks must be **O2-analyzed** by the diver before use and
   logged (mix %, analysis, signature). Only nitrox-certified divers may take nitrox tanks.
 

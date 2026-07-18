@@ -22,6 +22,14 @@ Every meaningful increment must improve at least one of these outcomes:
 Sybaris has useful patterns from operating a larger AI-maintained application. Pull in the principles,
 not all of its current machinery.
 
+> Review grounding (2026-07-18): findings here are drawn from Sybaris's `AGENTS.md`,
+> `docs/03-architecture.md`, `docs/13-agent-coordination.md`,
+> `docs/archive/REVIEW-2026-07-02-ai-process-token-efficiency.md`, its 12-skill library, its
+> schema/migration workflow, and its provider-seam implementations (`src/lib/ai/`, `payments/`,
+> `legal/`, `notify()`). Same stack as Scuba (Next.js + Drizzle + Auth.js + PGlite in dev), so
+> process lessons transfer directly; its scale (~424 doc files, 130+ ADRs) previews where our
+> conventions break.
+
 ### Adopt now
 
 - **Token-economical orientation.** Keep `AGENTS.md` short and telegraphic. Add explicit “do not read”
@@ -37,6 +45,28 @@ not all of its current machinery.
   Do not use a branch-local reservation ledger that other pending branches cannot see.
 - **Tests as durable memory.** New behavior includes happy-path and important failure-path tests in the
   same change. Bugs are regression-first. Safety invariants get adversarial tests.
+- **Timestamped migration filenames.** Two parallel schema branches generated from the same `main` both
+  produce the next sequential `NNNN_*.sql` and collide. Set `migrations: { prefix: "timestamp" }` in
+  `drizzle.config.ts` — one line, removes the filename half of the problem; existing numeric migrations
+  stay valid. Serialized finalization (below) waits for a real collision, but this doesn't need to.
+- **Honesty and stop rules.** Report failing checks verbatim; state explicitly what could not be verified
+  rather than implying it works. Three failed fix attempts on the same symptom → stop, write down what is
+  known and ruled out, and re-diagnose instead of trying a fourth variation. These rules matter most for
+  weaker models, which are most prone to thrash and optimistic summaries.
+
+### Adopt with the first external integration (M3+)
+
+The strongest structural idea in Sybaris: **every external capability lives behind a small interface in
+`src/lib/<capability>/`, with a stub implementation shipped first**, selected by env var. Features stay
+fully testable with zero infrastructure (the PGlite posture extended to vendors), vendor choice becomes a
+config change plus an ADR instead of a refactor, and no vendor SDK or HTTP call ever appears outside the
+seam directory. Zod-validate at every seam boundary. Record the pattern in an ADR with the first seam.
+
+| Seam | Milestone | Shape |
+| --- | --- | --- |
+| `SignatureProvider` | M3 | create/verify a signature request; v1 draw-on-canvas + typed consent in-house, vendor API slots in later |
+| `notify()` | first outbound notification | one function owns "something happened"; v1 writes in-app/console, an email provider slides in behind it without touching call sites |
+| `PaymentProvider` | M7 | checkout/cancel/`parseWebhook` normalizing into one `applyBillingEvent()`; v1 stub treats everything as paid |
 
 ### Adopt as the repository grows
 
@@ -248,16 +278,27 @@ Apply these continuously rather than postponing them to “polish”:
 
 ### P0 — next
 
-1. Add agent-efficiency rules and collision-resistant ADR policy.
-2. Add architecture-boundary, ADR-format, and docs-link checks.
-3. Add `task:context` for waivers/design/database.
-4. Write the waiver data model and signature/retention ADR.
-5. Ship the smallest complete waiver vertical slice with a polished diver confirmation and staff status.
+1. ~~Add agent-efficiency rules and collision-resistant ADR policy.~~ Shipped 2026-07-18 (AGENTS.md
+   Context economy + Parallel work sections; ADR template/README updated).
+2. ~~Add architecture-boundary, ADR-format, and docs-link checks.~~ Shipped 2026-07-18
+   (`scripts/check-architecture.mjs`, `check-adrs.mjs`, `check-doc-links.mjs` via `pnpm check:repo`).
+3. ~~Add `task:context` for waivers/design/database.~~ Shipped 2026-07-18 (`scripts/task-context.mjs`).
+4. ~~Set `migrations: { prefix: "timestamp" }` in `drizzle.config.ts`.~~ Shipped 2026-07-18.
+5. ~~Write the waiver data model and signature/retention ADR — establishing the `SignatureProvider` seam.~~
+   Shipped 2026-07-18 (`src/lib/signatures.ts`,
+   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md)).
+6. ~~Ship the smallest complete waiver vertical slice with a polished diver confirmation and staff status.~~
+   Shipped 2026-07-18 (versioned templates, expiring token-hash links, resumable typed-consent flow,
+   medical-review blocker, immutable evidence, and adversarial contracts).
 
 ### P1 — after the first waiver slice
 
-1. Add waiver versioning, medical referral, expiry/resume, and audit history.
-2. Introduce the generic readiness result while designing certification checks.
+1. ~~Add a staff-facing waiver activity timeline.~~ Shipped 2026-07-18 (`waiverActivityTimeline`;
+   issued, started, signed, medically blocked, and replaced-link history on the staff trip roster).
+   A richer, jurisdiction-specific medical questionnaire remains legal/policy follow-up. Versioning,
+   referral, expiry, saved progress, and immutable signed evidence shipped in the first slice.
+2. ~~Introduce the generic readiness result while designing certification checks.~~ Shipped
+   2026-07-18 (`src/lib/readiness.ts`; shared by staff trip, diver confirmation, and future manifest work).
 3. Add provider adapters or generated skill indexes based on the provider-neutral workflow ADR.
 4. Add path-aware CI and changed-UI evidence enforcement.
 5. Create realistic seeded scenarios and visual regression coverage for critical states.

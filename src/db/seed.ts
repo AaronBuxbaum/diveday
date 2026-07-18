@@ -5,12 +5,22 @@ import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookings,
+  certifications,
+  courses,
+  gearAssignments,
+  gearItems,
+  gearServiceEvents,
   people,
   personRoles,
+  rentalGearRequests,
+  rollCallEvents,
   shops,
   tripAssignments,
+  tripRequirements,
   trips,
   userAccounts,
+  waiverRecords,
+  waiverTemplates,
 } from "./schema";
 
 /**
@@ -21,6 +31,8 @@ import {
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const INSTRUCTOR_EMAIL = "marcus@bluemantis.example";
 
 /** n days from now at the given local-ish hour/minute (UTC-anchored; demo data). */
 function at(daysFromNow: number, hour: number, minute = 0): Date {
@@ -36,9 +48,10 @@ export async function seedIfEmpty(db: AppDb): Promise<void> {
 }
 
 /**
- * The stable half of the demo: the shop, its staff, and their logins. Seeded
- * once and left alone — resetting the demo playground never touches these, so
- * a signed-in demo session survives a reset (docs ADR 20260718-demo-mode).
+ * The stable half of the demo: the shop, its default waiver template, its
+ * staff, and their logins. Seeded once and left alone — resetting the demo
+ * playground never touches these, so a signed-in demo session survives a reset
+ * (docs ADR 20260718-demo-mode).
  */
 export async function seedDemo(db: AppDb): Promise<void> {
   const [shop] = await db
@@ -51,9 +64,17 @@ export async function seedDemo(db: AppDb): Promise<void> {
     .returning();
   if (!shop) throw new Error("seed: failed to insert demo shop");
 
+  await db.insert(waiverTemplates).values({
+    shopId: shop.id,
+    title: "Blue Mantis Diving Release",
+    version: 1,
+    isDefault: true,
+    body: "I understand that scuba diving and boat travel involve inherent risks. I will follow the crew's briefing, use equipment as instructed, and tell the shop if my health changes before departure.",
+  });
+
   const staffDefs = [
     { fullName: "Dana Reyes", email: "dana@bluemantis.example", roles: ["owner", "manager"] },
-    { fullName: "Marcus Webb", email: "marcus@bluemantis.example", roles: ["instructor"] },
+    { fullName: "Marcus Webb", email: INSTRUCTOR_EMAIL, roles: ["instructor"] },
     { fullName: "Keiko Tanaka", email: "keiko@bluemantis.example", roles: ["divemaster"] },
     { fullName: "Sal Moretti", email: "sal@bluemantis.example", roles: ["captain"] },
   ] as const;
@@ -117,11 +138,20 @@ const customerNames = [
 ];
 
 /**
- * The resettable half of the demo: customers, trips, and their bookings. This
- * is the playground a prospective customer pokes at — schedule a trip, cancel a
- * booking, fill a boat — and the exact set of rows resetDemoSchedule restores.
+ * The resettable half of the demo: customers, their cards, the course catalog,
+ * trips, requirements, and bookings. This is the playground a prospective
+ * customer pokes at — schedule a trip, cancel a booking, fill a boat — and the
+ * exact set of rows resetDemoSchedule restores. Staff already exist (stable
+ * half), so the instructor is looked up rather than passed in.
  */
 export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void> {
+  const [instructor] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.email, INSTRUCTOR_EMAIL)))
+    .limit(1);
+  if (!instructor) throw new Error("seed: instructor missing from stable staff");
+
   const customers = await db
     .insert(people)
     .values(
@@ -137,6 +167,51 @@ export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void>
   await db
     .insert(personRoles)
     .values(customers.map((person) => ({ personId: person.id, role: "customer" as const })));
+
+  await db.insert(certifications).values(
+    customers.slice(0, 10).map((person, i) => ({
+      shopId,
+      personId: person.id,
+      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
+      level: i === 1 ? ("advanced_open_water" as const) : ("open_water" as const),
+      identifier: `DEMO-${String(i + 1).padStart(4, "0")}`,
+      status: "verified" as const,
+    })),
+  );
+
+  // Catalog baselines: DSD/OW welcome uncertified students; continuing
+  // education admits only a verified card at the stated level.
+  const courseRows = await db
+    .insert(courses)
+    .values([
+      {
+        shopId,
+        title: "Discover Scuba Diving",
+        description: "A supervised first underwater experience with an instructor.",
+        minimumCertificationLevel: null,
+      },
+      {
+        shopId,
+        title: "Open Water Diver",
+        description: "The foundational certification course for new divers.",
+        minimumCertificationLevel: null,
+      },
+      {
+        shopId,
+        title: "Advanced Open Water",
+        description: "Build confidence and range with five adventure dives.",
+        minimumCertificationLevel: "open_water" as const,
+      },
+      {
+        shopId,
+        title: "Scuba Refresher",
+        description: "A patient skills tune-up before getting back in the water.",
+        minimumCertificationLevel: "open_water" as const,
+      },
+    ])
+    .returning();
+  const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
+  if (!discoverCourse) throw new Error("seed: DSD course missing");
 
   const tripRows = await db
     .insert(trips)
@@ -173,8 +248,31 @@ export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void>
         endsAt: at(7, 15, 0),
         capacity: 12,
       },
+      {
+        shopId,
+        courseId: discoverCourse.id,
+        title: "Discover Scuba — Pool & Reef",
+        description: "A small, instructor-led first breath underwater. No C-card required.",
+        startsAt: at(4, 14, 0),
+        endsAt: at(4, 17, 0),
+        capacity: 4,
+      },
     ])
     .returning();
+
+  await db.insert(tripRequirements).values(
+    tripRows.map((trip) => ({
+      tripId: trip.id,
+      shopId,
+      requiresWaiver: true,
+      minimumCertificationLevel:
+        trip.courseId === discoverCourse.id ? null : ("open_water" as const),
+    })),
+  );
+
+  const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
+  if (!discoverSession) throw new Error("seed: DSD session missing");
+  await db.insert(tripAssignments).values({ tripId: discoverSession.id, personId: instructor.id });
 
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;
@@ -194,22 +292,38 @@ export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void>
 }
 
 /**
- * Restore the demo playground to its seeded state. Wipes the shop's trips,
- * bookings, crew assignments, and every non-staff person (seeded customers plus
- * any walk-ups the booking flow created), then re-seeds the schedule. Staff and
- * their logins are deliberately left in place so the demo session stays valid
- * (docs ADR 20260718-demo-mode).
+ * Restore the demo playground to its seeded state. Wipes everything a visitor
+ * can touch — trips and their sessions, bookings and everything hanging off
+ * them (waivers, gear, roll call), the course catalog, cards, gear inventory,
+ * and every non-staff person (seeded customers plus any walk-ups the booking
+ * flow created) — then re-seeds the schedule. The shop, its default waiver
+ * template, staff, and their logins are deliberately left in place so the demo
+ * session stays valid (docs ADR 20260718-demo-mode).
+ *
+ * Deletes run children-first so foreign keys never block a reset, however far
+ * a visitor drove the tool (signed a waiver, assigned gear, ran roll call).
  */
 export async function resetDemoSchedule(db: AppDb, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 
+  // Booking- and trip-dependent operational history first.
+  await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
+  await db.delete(gearAssignments).where(eq(gearAssignments.shopId, shopId));
+  await db.delete(rentalGearRequests).where(eq(rentalGearRequests.shopId, shopId));
+  await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
+  await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
   }
   await db.delete(trips).where(eq(trips.shopId, shopId));
+  await db.delete(courses).where(eq(courses.shopId, shopId));
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
 
+  // Everyone who isn't staff — seeded customers plus booking-flow walk-ups.
   const staffRows = await db
     .select({ personId: personRoles.personId })
     .from(personRoles)

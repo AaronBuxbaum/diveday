@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vitest";
+import { buildTripManifest, rollCallLabel } from "./manifests";
+
+const trip = {
+  id: "trip-1",
+  title: "Two-Tank Reef",
+  startsAt: new Date("2026-07-20T12:00:00.000Z"),
+  endsAt: new Date("2026-07-20T16:00:00.000Z"),
+};
+
+describe("buildTripManifest", () => {
+  it("retains every supplied booking and fails closed when its readiness lookup is unavailable", () => {
+    const manifest = buildTripManifest({
+      trip,
+      crew: [{ fullName: "Dana Reyes", roles: ["captain"] }],
+      divers: [
+        {
+          bookingId: "booking-ready",
+          fullName: "Priya Sharma",
+          email: "priya@example.com",
+          emergencyContactName: "Asha Sharma",
+          emergencyContactPhone: "+1-305-555-0101",
+          readiness: { status: "ready", blockers: [] },
+          gear: [{ label: "BCD-12", type: "bcd" }],
+          rollCall: {
+            state: "boarded",
+            occurredAt: new Date("2026-07-20T11:45:00.000Z"),
+            recordedByName: "Dana Reyes",
+            note: null,
+          },
+        },
+        {
+          bookingId: "booking-unknown",
+          fullName: "Omar Haddad",
+          email: null,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          gear: [],
+        },
+      ],
+    });
+
+    expect(manifest.divers).toHaveLength(2);
+    expect(manifest.divers[1]?.readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "readiness_unavailable" }),
+    );
+    expect(manifest.summary).toEqual({
+      totalDivers: 2,
+      ready: 1,
+      blocked: 1,
+      boarded: 1,
+      awaiting: 1,
+    });
+  });
+
+  it("uses explicit words for every roll-call state", () => {
+    expect(rollCallLabel(undefined)).toBe("Awaiting roll call");
+    expect(
+      rollCallLabel({
+        state: "not_boarded",
+        occurredAt: new Date(),
+        recordedByName: "Dana Reyes",
+        note: "Stayed ashore",
+      }),
+    ).toBe("Not boarded");
+  });
+});
