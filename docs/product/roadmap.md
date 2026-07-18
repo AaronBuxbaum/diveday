@@ -87,7 +87,14 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   with the paste-a-URL path as fallback when storage is unconfigured. See
   [20260718-card-image-storage](../architecture/decisions/20260718-card-image-storage.md) (needs
   `BLOB_READ_WRITE_TOKEN` provisioned, H-04).
-- ⬜ Agency API verification and payment readiness remain follow-up work.
+- ✅ Agency cert verification: an assistive provider seam
+  ([`src/lib/cert-verification`](../../src/lib/cert-verification)) checks a C-card against its
+  issuing agency. A confirmed match auto-verifies (recording the source); not-found/mismatch only
+  warn and leave the card pending; it fails closed to "unavailable". Human review stays
+  authoritative. See
+  [20260718-agency-cert-verification](../architecture/decisions/20260718-agency-cert-verification.md)
+  (needs a gateway + `CERT_VERIFICATION_*` env, H).
+- ⬜ Payment readiness remains follow-up work.
 
 ## M5 — Gear (core prep slice complete)
 

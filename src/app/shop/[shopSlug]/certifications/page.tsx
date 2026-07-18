@@ -13,6 +13,7 @@ import {
   listShopSpecialtyCertifications,
   reviewCertification,
   reviewSpecialtyCertification,
+  verifyCertificationWithAgency,
 } from "@/db/readiness";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -138,6 +139,26 @@ export default async function CertificationsPage({
     redirect(`/shop/${staff.user.shopSlug}/certifications?notice=${updated ? status : "invalid"}`);
   }
 
+  async function agencyCheckAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const certificationId = String(formData.get("certificationId") ?? "");
+    const outcome = certificationId
+      ? await verifyCertificationWithAgency(await getDb(), staff.user.shopId, certificationId)
+      : null;
+    const notice =
+      outcome === "verified"
+        ? "agency-verified"
+        : outcome === "not_found"
+          ? "agency-not-found"
+          : outcome === "mismatch"
+            ? "agency-mismatch"
+            : outcome === "unavailable"
+              ? "agency-unavailable"
+              : "invalid";
+    redirect(`/shop/${staff.user.shopSlug}/certifications?notice=${notice}`);
+  }
+
   async function addSpecialtyAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
@@ -188,7 +209,21 @@ export default async function CertificationsPage({
             ? "That certification could not be saved. Check the diver and card details."
             : notice === "image"
               ? "That photo couldn’t be used. Upload a JPG, PNG, or WebP under 5 MB, or paste a URL."
-              : undefined;
+              : notice === "agency-verified"
+                ? "Confirmed with the agency and verified."
+                : notice === "agency-not-found"
+                  ? "The agency couldn’t find this card. Left pending with a note — review manually."
+                  : notice === "agency-mismatch"
+                    ? "The agency returned a mismatch. Left pending with a note — review manually."
+                    : notice === "agency-unavailable"
+                      ? "Agency verification isn’t configured. Verify this card manually."
+                      : undefined;
+  const errorNotice =
+    notice === "invalid" ||
+    notice === "image" ||
+    notice === "agency-not-found" ||
+    notice === "agency-mismatch" ||
+    notice === "agency-unavailable";
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
@@ -208,7 +243,7 @@ export default async function CertificationsPage({
       {banner ? (
         <p
           role="status"
-          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${notice === "invalid" || notice === "image" ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
+          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${errorNotice ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
         >
           {banner}
         </p>
@@ -453,6 +488,9 @@ export default async function CertificationsPage({
                         ? ` · expires ${certification.expiresAt.toLocaleDateString("en-US")}`
                         : ""}
                     </p>
+                    {certification.reviewNote ? (
+                      <p className="mt-1 text-sm text-muted italic">{certification.reviewNote}</p>
+                    ) : null}
                     {certification.cardImageUrl ? (
                       <a
                         href={certification.cardImageUrl}
@@ -470,6 +508,15 @@ export default async function CertificationsPage({
                     </span>
                     {certification.status === "pending" ? (
                       <>
+                        <form action={agencyCheckAction}>
+                          <input type="hidden" name="certificationId" value={certification.id} />
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-sunken"
+                          >
+                            Check with {AGENCY_LABELS[certification.agency]}
+                          </button>
+                        </form>
                         <form action={reviewAction}>
                           <input type="hidden" name="certificationId" value={certification.id} />
                           <input type="hidden" name="status" value="verified" />
@@ -529,6 +576,9 @@ export default async function CertificationsPage({
                         ? ` · expires ${certification.expiresAt.toLocaleDateString("en-US")}`
                         : ""}
                     </p>
+                    {certification.reviewNote ? (
+                      <p className="mt-1 text-sm text-muted italic">{certification.reviewNote}</p>
+                    ) : null}
                     {certification.cardImageUrl ? (
                       <a
                         href={certification.cardImageUrl}
