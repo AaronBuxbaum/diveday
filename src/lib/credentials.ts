@@ -1,13 +1,14 @@
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
-import { people, personRoles, userAccounts } from "@/db/schema";
+import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { isStaff, type Role } from "@/lib/authz";
 
 export type VerifiedUser = {
   id: string;
   personId: string;
   shopId: string;
+  shopSlug: string;
   name: string;
   email: string;
   roles: Role[];
@@ -36,6 +37,9 @@ export async function verifyCredentials(
   const [person] = await db.select().from(people).where(eq(people.id, account.personId)).limit(1);
   if (!person) return null;
 
+  const [shop] = await db.select().from(shops).where(eq(shops.id, person.shopId)).limit(1);
+  if (!shop) return null;
+
   const roleRows = await db
     .select({ role: personRoles.role })
     .from(personRoles)
@@ -50,6 +54,7 @@ export async function verifyCredentials(
     id: account.id,
     personId: person.id,
     shopId: person.shopId,
+    shopSlug: shop.slug,
     name: person.fullName,
     email: account.email,
     roles,

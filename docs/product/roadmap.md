@@ -21,18 +21,19 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Hosting: Vercel selected and ADR'd. A managed Postgres adapter, environment ownership,
   migrations, backups, domain, and production validation remain H-04 work.
 - ✅ Demo mode: one-click, self-serve trial into the seeded shop with a resettable playground,
-  gated so it never appears in a real shop's production instance
-  ([20260718-demo-mode](../architecture/decisions/20260718-demo-mode.md)). Builds on the demo
-  seed + staff auth; per-visitor isolated shops wait on multi-tenant routing.
+  dynamically checked by the presence of a demo shop in the database rather than a global
+  environment variable flag ([20260718-demo-mode](../architecture/decisions/20260718-demo-mode.md)
+  superseded by [20260718-dynamic-demo-onboarding](../architecture/decisions/20260718-dynamic-demo-onboarding.md)).
+  Per-visitor isolated shops and dynamic multi-tenant routing are fully live.
 
 ## M2 — Bookings (core complete)
 
-- ✅ Shop-side: staff schedule trips (`/shop/trips/new` — local-time entry converted via
-  `src/lib/zoned.ts`, capacity, validation, success moment on `/shop`).
-- ✅ Shop-side: manage trips (`/shop/trips/[id]` — edit details, cancel/reinstate, crew
+- ✅ Shop-side: staff schedule trips (`/shop/[shopSlug]/trips/new` — local-time entry converted via
+  `src/lib/zoned.ts`, capacity, validation, success moment on `/shop/[shopSlug]`).
+- ✅ Shop-side: manage trips (`/shop/[shopSlug]/trips/[id]` — edit details, cancel/reinstate, crew
   assignment via `trip_assignments`, diver roster with booking cancel).
-- ✅ Diver-side: public booking flow (`/trips/[id]` — no account, name + email, transactional
-  capacity enforcement in `src/db/bookings.ts`, confirmation moment, sold-out/past states).
+- ✅ Diver-side: public booking flow (`/shop/[shopSlug]/schedule/[id]` — no account, name + email,
+  transactional capacity enforcement in `src/db/bookings.ts`, confirmation moment, sold-out/past states).
 - ✅ Courses: a staff-owned catalog schedules instructor-led sessions on the trip/booking spine.
   Sessions snapshot waiver/C-card baselines; instructor-required sessions reject enrollment until
   an instructor is assigned, and existing-card courses admit only a verified card at the required
@@ -71,7 +72,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 
 ## M5 — Gear (core prep slice complete)
 
-- ✅ Inventory records type, size, service state, optional next-service date, and clear
+- ✅ Inventory records type, size, service state, optional next-service date, and durable
   unavailable/assigned/held status.
 - ✅ Staff can pack available equipment directly against a trip roster; the transactional gate
   prevents an item from being claimed twice and makes a hold or retirement unassignable.
@@ -107,8 +108,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Nitrox fill logs: a verified enriched-air specialty card gates every fill; staff log an
   analyzed mix per diver/tank and the MOD is derived, not entered. Framework-free rules in
   [`src/lib/nitrox.ts`](../../src/lib/nitrox.ts); fail-closed persistence in
-  [`src/db/nitrox.ts`](../../src/db/nitrox.ts); surfaces at `/shop/nitrox` and
-  `/shop/trips/[id]/nitrox`. Provisional dive parameters are in
+  [`src/db/nitrox.ts`](../../src/db/nitrox.ts); surfaces at `/shop/[shopSlug]/nitrox` and
+  `/shop/[shopSlug]/trips/[id]/nitrox`. Provisional dive parameters are in
   [defaults-to-verify.md](defaults-to-verify.md#nitrox-fills) (H-11) and still need a
   dive-domain-expert review (V-05).
 - ⬜ Payments/deposits, notifications (email/SMS), deeper reporting,

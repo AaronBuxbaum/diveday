@@ -6,7 +6,7 @@ import {
   DEFAULT_MAX_PPO2_CENTIBAR,
   maxOperatingDepthMeters,
 } from "@/lib/nitrox";
-import type { AppDb } from "./client";
+import type { DbExecutor } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookings,
@@ -48,7 +48,7 @@ function at(daysFromNow: number, hour: number, minute = 0): Date {
   return d;
 }
 
-export async function seedIfEmpty(db: AppDb): Promise<void> {
+export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   const existing = await db.select({ id: shops.id }).from(shops).limit(1);
   if (existing.length > 0) return;
   await seedDemo(db);
@@ -60,13 +60,14 @@ export async function seedIfEmpty(db: AppDb): Promise<void> {
  * playground never touches these, so a signed-in demo session survives a reset
  * (docs ADR 20260718-demo-mode).
  */
-export async function seedDemo(db: AppDb): Promise<void> {
+export async function seedDemo(db: DbExecutor): Promise<void> {
   const [shop] = await db
     .insert(shops)
     .values({
       name: "Blue Mantis Divers",
       slug: "blue-mantis",
       timezone: "America/New_York",
+      isDemo: true,
     })
     .returning();
   if (!shop) throw new Error("seed: failed to insert demo shop");
@@ -129,6 +130,50 @@ export async function seedDemo(db: AppDb): Promise<void> {
   await seedDemoSchedule(db, shop.id);
 }
 
+/**
+ * Seed a dynamically created shop with the standard demo dataset (schedule,
+ * bookings, gear, nitrox) for dynamic onboarding trials.
+ */
+export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Promise<void> {
+  await db.insert(waiverTemplates).values({
+    shopId,
+    title: "Diving Release & Waiver",
+    version: 1,
+    isDefault: true,
+    body: "I understand that scuba diving and boat travel involve inherent risks. I will follow the crew's briefing, use equipment as instructed, and tell the shop if my health changes before departure.",
+  });
+
+  const staffDefs = [
+    { fullName: "Marcus Webb", email: INSTRUCTOR_EMAIL, roles: ["instructor"] },
+    { fullName: "Keiko Tanaka", email: "keiko@bluemantis.example", roles: ["divemaster"] },
+    { fullName: "Sal Moretti", email: "sal@bluemantis.example", roles: ["captain"] },
+  ] as const;
+
+  const staff = await db
+    .insert(people)
+    .values(
+      staffDefs.map((s) => ({
+        shopId,
+        fullName: s.fullName,
+        email: s.email,
+        emergencyContactName: "On file",
+        emergencyContactPhone: "+1-305-555-0100",
+      })),
+    )
+    .returning();
+
+  await db.insert(personRoles).values(
+    staff.flatMap((person, i) =>
+      staffDefs[i].roles.map((role) => ({
+        personId: person.id,
+        role,
+      })),
+    ),
+  );
+
+  await seedDemoSchedule(db, shopId);
+}
+
 const customerNames = [
   "Priya Sharma",
   "Tom Okafor",
@@ -151,7 +196,7 @@ const customerNames = [
  * exact set of rows resetDemoSchedule restores. Staff already exist (stable
  * half), so the instructor is looked up rather than passed in.
  */
-export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void> {
+export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<void> {
   const [instructor] = await db
     .select({ id: people.id })
     .from(people)
@@ -309,7 +354,7 @@ export async function seedDemoSchedule(db: AppDb, shopId: string): Promise<void>
  * a realistic gate and a real MOD from the moment a fresh checkout boots.
  */
 async function seedNitrox(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   filledByPersonId: string,
   customers: { id: string }[],
@@ -386,7 +431,7 @@ async function seedNitrox(
  * Deletes run children-first so foreign keys never block a reset, however far
  * a visitor drove the tool (signed a waiver, assigned gear, ran roll call).
  */
-export async function resetDemoSchedule(db: AppDb, shopId: string): Promise<void> {
+export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 

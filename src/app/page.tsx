@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
-import { SubmitButton } from "@/components/SubmitButton";
-import { isDemoMode } from "@/lib/demo";
+import { HomeCTA } from "@/components/HomeCTA";
 
 const pillars = [
   {
@@ -27,7 +25,6 @@ const pillars = [
 ];
 
 export default function Home() {
-  const demo = isDemoMode();
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-12 px-6 py-24">
       <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
@@ -40,32 +37,8 @@ export default function Home() {
           place that&apos;s a genuine pleasure to use.
         </p>
         <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
-          {demo ? (
-            <form action={enterDemoAction}>
-              <SubmitButton
-                pendingLabel="Spinning up your shop…"
-                className="inline-block rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
-              >
-                Try the live demo
-              </SubmitButton>
-            </form>
-          ) : null}
-          <Link
-            href="/trips"
-            className={
-              demo
-                ? "inline-block rounded-lg border border-border bg-surface px-5 py-3 font-medium transition-colors duration-200 hover:bg-surface-sunken"
-                : "inline-block rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-            }
-          >
-            See the demo schedule
-          </Link>
+          <HomeCTA enterDemoAction={enterDemoAction} />
         </div>
-        {demo ? (
-          <p className="text-sm text-muted">
-            No signup — you&apos;ll land in a fully-stocked example shop you can reset anytime.
-          </p>
-        ) : null}
       </div>
       <ul className="grid w-full max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {pillars.map((pillar) => (

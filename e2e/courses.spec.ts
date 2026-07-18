@@ -12,7 +12,7 @@ async function signInAsOwner(page: Page) {
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
 }) => {
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: /Discover Scuba — Pool & Reef/ }).click();
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
 
@@ -29,12 +29,12 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 
 test("staff can create a course and see the live operations report", async ({ page }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/courses");
+  await page.goto("/shop/blue-mantis/courses");
   await page.getByLabel("Course name").fill(`Night Diver — ${Date.now()}`);
   await page.getByRole("button", { name: "Add course" }).click();
   await expect(page.getByRole("status")).toContainText("Course added");
 
-  await page.goto("/shop/reports");
+  await page.goto("/shop/blue-mantis/reports");
   await expect(page.getByRole("heading", { name: "Operations at a glance" })).toBeVisible();
   await expect(page.getByText("Discover Scuba — Pool & Reef")).toBeVisible();
 });

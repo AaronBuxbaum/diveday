@@ -18,7 +18,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
 
   // Staff puts a trip on the board.
   await signInAsOwner(page);
-  await page.goto("/shop/trips/new");
+  await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(5));
   await page.getByLabel("Departs").fill("08:00");
@@ -30,7 +30,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await expect(page).toHaveURL(/\/$/);
 
   // A visitor books it from the public schedule — no account.
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("6 spots left")).toBeVisible();
@@ -40,7 +40,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
   // The spot is held: schedule now shows one fewer.
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   const card = page.locator("li").filter({ hasText: title });
   await expect(card.getByText("5 spots left")).toBeVisible();
 
@@ -48,11 +48,11 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await signInAsOwner(page);
   await page.getByRole("link", { name: new RegExp(title) }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
-  await expect(page.getByText("Nora Quinn")).toBeVisible();
+  await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 });
 
 test("a full boat shows the sold-out state instead of a form", async ({ page }) => {
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   // Seeded wreck trip ships full (10 of 10).
   await page
     .locator("li")
@@ -68,7 +68,7 @@ test("staff edits a trip and cancelling removes it from the public schedule", as
   const renamed = `${title} (PM)`;
 
   await signInAsOwner(page);
-  await page.goto("/shop/trips/new");
+  await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(6));
   await page.getByLabel("Departs").fill("13:00");
@@ -82,16 +82,17 @@ test("staff edits a trip and cancelling removes it from the public schedule", as
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("status")).toContainText("Changes saved");
   await expect(page.getByRole("heading", { name: renamed })).toBeVisible();
+  const manageUrl = page.url();
 
   // Cancel: gone from public schedule; reinstate: back.
   await page.getByRole("button", { name: "Cancel trip" }).click();
   await expect(page.getByText("Cancelled", { exact: true })).toBeVisible();
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   await expect(page.locator("li").filter({ hasText: renamed })).toHaveCount(0);
 
-  await page.goBack();
+  await page.goto(manageUrl);
   await page.getByRole("button", { name: "Reinstate trip" }).click();
   await expect(page.getByRole("status")).toContainText("Back on");
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   await expect(page.locator("li").filter({ hasText: renamed })).toBeVisible();
 });

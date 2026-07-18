@@ -11,7 +11,7 @@ async function signInAsOwner(page: Page) {
 
 test("staff captures and verifies a certification before it can be trusted", async ({ page }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/certifications");
+  await page.goto("/shop/blue-mantis/certifications");
   await page.locator('select[name="personId"]').selectOption({ index: 1 }); // Priya in deterministic seed
   await page.locator('select[name="agency"]').selectOption("padi");
   await page.locator('select[name="level"]').selectOption("advanced_open_water");

@@ -12,7 +12,7 @@ async function signInAsOwner(page: Page) {
 test("staff can retire gear only after it is in the gear room", async ({ page }) => {
   const label = `REG-RETIRED-${Date.now()}`;
   await signInAsOwner(page);
-  await page.goto("/shop/gear");
+  await page.goto("/shop/blue-mantis/gear");
   await page.getByPlaceholder("BCD-12").fill(label);
   await page.locator('select[name="type"]').selectOption("regulator");
   await page.getByRole("button", { name: "Add inventory item" }).click();

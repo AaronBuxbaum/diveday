@@ -18,7 +18,7 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
   await signInAsOwner(page);
 
   // Capture a nitrox card for a booked diver, then verify it.
-  await page.goto("/shop/nitrox");
+  await page.goto("/shop/blue-mantis/nitrox");
   await page
     .locator('select[name="personId"]')
     .selectOption({ label: "June Park · june.park@example.com" });
@@ -31,7 +31,7 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
   await expect(page.getByRole("status")).toContainText("verified");
 
   // Log a fill for that now-certified diver on the wreck trip.
-  await page.goto("/shop");
+  await page.goto("/shop/blue-mantis");
   await page.getByRole("link", { name: /Wreck Trip — Spiegel Grove/ }).click();
   await page.getByRole("link", { name: "Nitrox fills" }).click();
   await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
@@ -50,7 +50,7 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
 test("an uncertified diver cannot be selected for a fill", async ({ page }) => {
   test.slow();
   await signInAsOwner(page);
-  await page.goto("/shop");
+  await page.goto("/shop/blue-mantis");
   await page.getByRole("link", { name: /Wreck Trip — Spiegel Grove/ }).click();
   await page.getByRole("link", { name: "Nitrox fills" }).click();
 

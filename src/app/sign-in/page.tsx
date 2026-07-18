@@ -1,11 +1,13 @@
+import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { enterDemoAction } from "@/app/actions/demo";
 import { SubmitButton } from "@/components/SubmitButton";
+import { getDb } from "@/db/client";
+import { shops } from "@/db/schema";
 import { signIn } from "@/lib/auth";
-import { isDemoMode } from "@/lib/demo";
 
 export const metadata: Metadata = {
   title: "Sign in — Scuba",
@@ -33,6 +35,13 @@ export default async function SignInPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const db = await getDb();
+  const demoShop = await db
+    .select({ slug: shops.slug })
+    .from(shops)
+    .where(eq(shops.isDemo, true))
+    .limit(1);
+  const demo = demoShop.length > 0;
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
@@ -75,7 +84,13 @@ export default async function SignInPage({
             Sign in
           </button>
         </form>
-        {isDemoMode() ? (
+        <p className="mt-4 text-center text-sm text-muted">
+          Need a shop?{" "}
+          <Link href="/onboard" className="text-primary font-medium hover:underline">
+            Create a shop
+          </Link>
+        </p>
+        {demo ? (
           <>
             <div className="mt-6 flex items-center gap-3 text-xs text-muted">
               <span className="h-px flex-1 bg-border" />

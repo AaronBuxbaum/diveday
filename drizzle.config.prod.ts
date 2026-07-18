@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
 dotenv.config();
-dotenv.config({ path: '.env.local', override: true });
+dotenv.config({ path: ".env.local", override: true });
 
 // Applies committed migrations from drizzle/ to the real Neon database.
 // Never used for `db:generate` — that always diffs against the PGlite config

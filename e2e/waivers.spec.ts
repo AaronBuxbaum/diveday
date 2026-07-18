@@ -14,6 +14,7 @@ test("staff issues a resumable waiver and a medical yes stays visible for review
 }) => {
   await signInAsOwner(page);
   await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   const staffTripUrl = page.url();
 
   const waiverSection = page
@@ -42,7 +43,7 @@ test("staff issues a resumable waiver and a medical yes stays visible for review
   await expect(page.getByText(/will privately review one of your answers/)).toBeVisible();
 
   await page.goto(staffTripUrl);
-  await expect(waiverSection.getByText("Medical review")).toBeVisible();
+  await expect(waiverSection.getByText("Medical review", { exact: true })).toBeVisible();
   await waiverSection.getByText(/Activity ·/).click();
   await expect(waiverSection.getByText("Medical review required")).toBeVisible();
 });

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getDb } from "@/db/client";
+import { getShopById } from "@/db/queries";
 import type { MedicalAnswers } from "@/db/schema";
 import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "@/db/waivers";
 
@@ -82,6 +83,7 @@ export default async function WaiverPage({
       />
     );
   }
+
   if (state.state === "expired") {
     return (
       <Unavailable
@@ -90,14 +92,23 @@ export default async function WaiverPage({
       />
     );
   }
+
+  const shop = await getShopById(db, state.record.shopId);
+  if (!shop) {
+    return (
+      <Unavailable
+        title="This waiver link isn’t available"
+        text="Ask your dive shop for a fresh link."
+      />
+    );
+  }
+  const shopName = shop.name;
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
         <section className="rise-in rounded-lg border border-accent/40 bg-accent/10 p-7">
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">
-            Blue Mantis Divers
-          </p>
+          <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Waiver received</h1>
           <p className="mt-3 text-base text-muted">
             {needsReview
@@ -153,9 +164,7 @@ export default async function WaiverPage({
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
       <FlashParams params={["saved", "error"]} />
       <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          Blue Mantis Divers
-        </p>
+        <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
           A quick step before the dock
         </h1>
