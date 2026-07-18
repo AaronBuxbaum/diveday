@@ -1,17 +1,29 @@
 # Architecture Decision Records
 
 One record per significant, hard-to-reverse choice: frameworks, storage, auth, new runtime
-dependencies, data-model spines, external services. Not for reversible detail (component naming,
-file moves).
+dependencies, data-model spines, external services. Not for reversible detail such as component
+naming or routine file moves.
 
 Use the `adr` skill (`.claude/skills/adr/`) or copy [0000-template.md](0000-template.md).
-Number sequentially, kebab-case slug, link it from the table below and from
-[overview.md](../overview.md) if it changes the stack table.
 
-Statuses: **Accepted** → possibly **Superseded by NNNN**. Never edit an accepted ADR's decision —
-write a new one that supersedes it.
+## IDs and parallel work
 
-## Index
+Historical ADRs retain their `NNNN-slug.md` filenames and `NNNN` headings. New ADRs use a
+collision-resistant `YYYYMMDD-short-slug.md` filename and the same complete id in the heading,
+for example `20260718-waiver-signature-storage.md`.
+
+Do not allocate the next integer and do not reserve an id in a branch-local ledger. Use the branch
+or feature slug so independently-created ADRs normally land in different files. The repository
+check validates filename/heading alignment, metadata, statuses, required sections, and duplicate ids.
+
+Statuses: **Proposed**, **Accepted**, **Deprecated**, or **Superseded by <id>**. Never silently edit
+an accepted ADR's decision; write a new record that supersedes it.
+
+## Historical index
+
+The table below indexes the original foundational records. New collision-resistant ADRs are found by
+descriptive filename and do not need a central index entry, avoiding merge conflicts between
+parallel branches.
 
 | # | Decision | Status |
 | --- | --- | --- |
