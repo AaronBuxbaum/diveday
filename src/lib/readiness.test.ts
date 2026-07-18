@@ -53,6 +53,12 @@ const nitroxRequirement = {
   requiresNitrox: true,
 } as unknown as TripRequirement;
 
+/** A trip requirement that demands payment to board. */
+const paymentRequirement = {
+  ...requirement,
+  requiresPayment: true,
+} as unknown as TripRequirement;
+
 describe("calculateReadiness", () => {
   it.each([
     [
@@ -227,6 +233,46 @@ describe("calculateReadiness", () => {
       now,
     });
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "nitrox_missing" }));
+  });
+
+  it.each([
+    ["unpaid", "unpaid"],
+    ["absent payment", undefined],
+    ["refunded", "refunded"],
+  ] as const)("blocks payment for %s when the trip requires it", (_name, status) => {
+    expect(
+      calculateReadiness({
+        requirement: paymentRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        paymentStatus: status,
+        now,
+      }).blockers,
+    ).toContainEqual(expect.objectContaining({ code: "payment_due" }));
+  });
+
+  it.each(["paid", "deposit_paid", "waived"] as const)("clears payment when %s", (status) => {
+    expect(
+      calculateReadiness({
+        requirement: paymentRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        paymentStatus: status,
+        now,
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("ignores payment when the trip does not require it", () => {
+    expect(
+      calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        paymentStatus: "unpaid",
+        now,
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
   });
 });
 

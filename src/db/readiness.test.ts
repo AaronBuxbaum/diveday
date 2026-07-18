@@ -58,6 +58,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       minimumCertificationLevel: "rescue",
       requiredSpecialties: [],
       requiresNitrox: false,
+      requiresPayment: false,
     });
     const pending = await createCertification(db, {
       shopId: shop.id,
@@ -93,6 +94,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       minimumCertificationLevel: null,
       requiredSpecialties: ["deep"],
       requiresNitrox: false,
+      requiresPayment: false,
     });
     const missing = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
     expect(missing?.blockers).toContainEqual(
@@ -139,6 +141,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       minimumCertificationLevel: null,
       requiredSpecialties: [],
       requiresNitrox: true,
+      requiresPayment: false,
     });
     expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
       expect.objectContaining({ code: "nitrox_missing" }),

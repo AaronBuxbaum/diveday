@@ -94,7 +94,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   authoritative. See
   [20260718-agency-cert-verification](../architecture/decisions/20260718-agency-cert-verification.md)
   (needs a gateway + `CERT_VERIFICATION_*` env, H).
-- ⬜ Payment readiness remains follow-up work.
+- ✅ Payment readiness: a `booking_payments` state plus a per-trip `requires_payment` flag adds a
+  `payment_due` blocker to the shared roll-up (paid/deposit/waived clear; absent = unpaid; a refund
+  re-opens). Staff mark payment on the roster; a Stripe checkout seam
+  ([`src/lib/payments`](../../src/lib/payments)) mints a pay link when configured. See
+  [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md) (online
+  capture + webhook confirmation are H/M7 follow-ups).
 
 ## M5 — Gear (core prep slice complete)
 

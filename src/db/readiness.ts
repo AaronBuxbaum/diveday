@@ -4,6 +4,7 @@ import { verifyCard } from "@/lib/cert-verification";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
+import { paymentsByBooking } from "./payments";
 import type { DiveSpecialty } from "./schema";
 import {
   bookings,
@@ -38,6 +39,7 @@ export async function upsertTripRequirements(
     minimumCertificationLevel: CertLevel | null;
     requiredSpecialties: DiveSpecialty[];
     requiresNitrox: boolean;
+    requiresPayment: boolean;
   },
 ) {
   const [trip] = await db
@@ -56,6 +58,7 @@ export async function upsertTripRequirements(
         minimumCertificationLevel: input.minimumCertificationLevel,
         requiredSpecialties: input.requiredSpecialties,
         requiresNitrox: input.requiresNitrox,
+        requiresPayment: input.requiresPayment,
         updatedAt: new Date(),
       },
     })
@@ -299,6 +302,8 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     getTripSiteRequirement(db, shopId, tripId),
     listTripWaiverStatuses(db, shopId, tripId),
   ]);
+  const bookingIds = waiverRows.map((row) => row.booking.id);
+  const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
   const [certificationRows, specialtyRows, nitroxRows] =
     personIds.length === 0
@@ -355,6 +360,7 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     certifications: certificationsByPerson.get(row.person.id) ?? [],
     specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
     nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
+    paymentStatus: paymentByBooking.get(row.booking.id) ?? null,
     readiness: calculateReadiness({
       requirement,
       siteRequirement,
@@ -362,6 +368,7 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
+      paymentStatus: paymentByBooking.get(row.booking.id) ?? null,
     }),
   }));
 }

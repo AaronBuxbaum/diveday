@@ -2,11 +2,19 @@ import type {
   Certification,
   DiveSpecialty,
   NitroxCertification,
+  PaymentStatus,
   SpecialtyCertification,
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
 import { waiverState } from "./waivers";
+
+/** Payment states that clear the "ready to board" payment gate. */
+const PAYMENT_CLEARED: ReadonlySet<PaymentStatus> = new Set<PaymentStatus>([
+  "deposit_paid",
+  "paid",
+  "waived",
+]);
 
 export const CERTIFICATION_LEVEL_LABELS = {
   open_water: "Open Water",
@@ -94,6 +102,7 @@ export type ReadinessBlockerCode =
   | "nitrox_missing"
   | "nitrox_pending"
   | "nitrox_rejected"
+  | "payment_due"
   | "readiness_unavailable";
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
@@ -111,6 +120,8 @@ export type ReadinessInput = {
   certifications: readonly Certification[];
   specialtyCertifications?: readonly SpecialtyCertification[];
   nitroxCertifications?: readonly NitroxCertification[];
+  /** The booking's current payment state; absent is treated as unpaid. */
+  paymentStatus?: PaymentStatus | null;
   now?: Date;
 };
 
@@ -318,6 +329,19 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   if (effective.requiresNitrox) {
     const blocker = nitroxBlocker(input.nitroxCertifications ?? []);
     if (blocker) blockers.push(blocker);
+  }
+
+  if (input.requirement.requiresPayment) {
+    const status = input.paymentStatus ?? "unpaid";
+    if (!PAYMENT_CLEARED.has(status)) {
+      blockers.push({
+        code: "payment_due",
+        message:
+          status === "refunded"
+            ? "Payment was refunded; collect payment before boarding."
+            : "Payment is outstanding for this trip.",
+      });
+    }
   }
   return { status: blockers.length === 0 ? "ready" : "blocked", blockers };
 }

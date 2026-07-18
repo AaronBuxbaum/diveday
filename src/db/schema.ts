@@ -334,6 +334,45 @@ export const bookings = pgTable(
   ],
 );
 
+/**
+ * A booking's current payment state. deposit_paid, paid, and waived clear the
+ * "ready to board" payment gate; unpaid and refunded do not (readiness.ts).
+ */
+export const paymentStatus = pgEnum("payment_status", [
+  "unpaid",
+  "deposit_paid",
+  "paid",
+  "waived",
+  "refunded",
+]);
+
+/** One current payment row per booking. Amounts are minor units (cents). */
+export const bookingPayments = pgTable(
+  "booking_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    status: paymentStatus("status").notNull().default("unpaid"),
+    amountCents: integer("amount_cents"),
+    currency: text("currency").notNull().default("usd"),
+    /** Provider that took the payment, e.g. "stripe"; null for a manual mark. */
+    provider: text("provider"),
+    providerRef: text("provider_ref"),
+    note: text("note"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("booking_payments_booking_unique").on(table.bookingId),
+    index("booking_payments_shop_status_idx").on(table.shopId, table.status),
+  ],
+);
+
 /** Latest outbound-email state per booking and notification purpose. */
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
@@ -626,6 +665,8 @@ export const tripRequirements = pgTable(
       .default([]),
     /** Trip-level nitrox gate; OR'd with the site's requiresNitrox. */
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
+    /** Whether a diver must have paid (or a deposit/waiver) to board. */
+    requiresPayment: boolean("requires_payment").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -907,6 +948,8 @@ export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
+export type BookingPayment = typeof bookingPayments.$inferSelect;
+export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type Certification = typeof certifications.$inferSelect;

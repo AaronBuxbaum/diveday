@@ -9,6 +9,7 @@ import {
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  bookingPayments,
   bookings,
   certifications,
   courses,
@@ -647,6 +648,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
           trip.courseId === discoverCourse.id ? null : ("open_water" as const),
         requiredSpecialties: (isNight ? ["night"] : []) as DiveSpecialty[],
         requiresNitrox: isWreck,
+        // The premium wreck charter is paid up front; the reef trips are not.
+        requiresPayment: isWreck,
       };
     }),
   );
@@ -685,6 +688,25 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       })),
     )
     .returning();
+
+  // Payment demo on the pay-to-board wreck trip: one paid, one deposit, the
+  // rest unpaid (an absent row reads as unpaid in readiness).
+  const wreckBookings = bookingRows_.filter((b) => b.tripId === wreck.id);
+  const paidBooking = wreckBookings.find((b) => b.personId === customers[1]?.id);
+  const depositBooking = wreckBookings.find((b) => b.personId === customers[0]?.id);
+  const paymentSeed = [
+    paidBooking
+      ? { bookingId: paidBooking.id, status: "paid" as const, amountCents: 18_000 }
+      : null,
+    depositBooking
+      ? { bookingId: depositBooking.id, status: "deposit_paid" as const, amountCents: 6_000 }
+      : null,
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
+  if (paymentSeed.length > 0) {
+    await db
+      .insert(bookingPayments)
+      .values(paymentSeed.map((row) => ({ shopId, currency: "usd", ...row })));
+  }
 
   await seedNitrox(db, shopId, instructor.id, customers, wreck, bookingRows_);
 }
@@ -784,6 +806,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(rentalGearRequests).where(eq(rentalGearRequests.shopId, shopId));
   await db.delete(rentalGearProfiles).where(eq(rentalGearProfiles.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
+  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));

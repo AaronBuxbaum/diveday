@@ -387,7 +387,7 @@ export default async function TripDetailPage({
               <h3 className="font-medium">Before your trip</h3>
               <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
                 {readiness.blockers.map((blocker) => (
-                  <li key={blocker.code}>• {blocker.message}</li>
+                  <li key={blocker.message}>• {blocker.message}</li>
                 ))}
               </ul>
             </section>
