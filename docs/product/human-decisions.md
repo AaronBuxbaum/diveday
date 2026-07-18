@@ -1,0 +1,73 @@
+# Human decision log
+
+The durable worklist for decisions, approvals, and verification that need a human owner. It
+complements the delivery sequence in [roadmap.md](roadmap.md): implementation can advance only
+when the relevant row is **Chosen** or intentionally **Deferred**.
+
+## How to use this log
+
+1. The product owner assigns a named human owner and records the outcome and date in the relevant
+   row. Link the approval, policy, or test evidence when it exists.
+2. An implementer translates a product or technical outcome into the roadmap and, when it is
+   significant and hard to reverse, an ADR. Then change the row to **Implemented**.
+3. Do not mark a safety or production row complete based on a local demo. Record the required
+   operational or legal evidence first.
+
+**Status key:** **Ready** needs a human action now; **Deferred** is deliberately not needed for the
+current slice; **Chosen** has an outcome awaiting implementation; **Implemented** is in the product
+but still may need validation; **Validated** has the stated evidence.
+
+## Immediate actions for the product owner
+
+1. Name the operating jurisdiction(s) and the person responsible for legal approval. Have them
+   review the waiver language, medical questions, typed-consent standard, and evidence-retention
+   policy before production use.
+2. Choose the production host and name the person who owns the production database, secrets,
+   backups, and domain. Record the choice in the hosting row and add an ADR when it is adopted.
+3. Decide whether the live-only manifest is acceptable for the first pilot. If it is, schedule the
+   outdoor phone and connectivity field test below; if not, authorize the offline design decision
+   before operating from a dock.
+4. Run the browser verification for the merged gear and manifest work on a browser-capable machine.
+   The automated browser suite was not runnable in the implementation environment because Chromium
+   was unavailable.
+
+## Decision register
+
+| ID | Status | Human owner | Decision or approval needed | Minimum outcome to record | Unblocks / follow-up |
+| --- | --- | --- | --- | --- | --- |
+| H-01 | Ready | Product owner + qualified legal reviewer | Which jurisdiction(s), waiver text, and medical-question wording apply to the shop? | Jurisdiction, approved template/version, reviewer, and approval date. | Production waiver templates and any jurisdiction-specific questionnaire. See [waiver ADR](../architecture/decisions/20260718-waiver-signature-retention.md). |
+| H-02 | Ready | Product owner + qualified legal/privacy reviewer | What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags? | Retention duration, deletion workflow, permitted staff access, and any legal hold or audit exception. | Production data lifecycle, access controls, and deletion tooling. |
+| H-03 | Ready | Product owner + qualified legal reviewer | Is the current typed name + explicit consent + timestamp sufficient for the intended release, or is a specialist e-signature provider required? | Accepted assurance level, required provider criteria (if any), and rollout boundary. | Keep the local signature provider or select and implement a vendor adapter. |
+| H-04 | Ready | Product owner / technical owner | Where will production run, and who owns the production database, secrets, backups, domain, and incident response? | Host, environment owner, database/backup owner, and initial deployment scope. | Hosting ADR and first deployment. Leading candidates are in the [architecture overview](../architecture/overview.md#deferred-decisions). |
+| H-05 | Ready | Product owner + dive operations lead | Is a live, online-only manifest acceptable for the first pilot? | Pilot decision, acceptable connectivity conditions, and stop rule if connectivity is lost. | A live-only pilot, or an offline-manifest design ADR before use. See [manifest ADR](../architecture/decisions/20260718-manifest-live-first.md). |
+| H-06 | Ready | Dive operations lead | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? | Required measurements/preferences, who may override a request, and the safe fallback when a size is unavailable. | Diver gear profile, booking-level requests, and bulk recommendations. |
+| H-07 | Deferred | Product owner + finance owner | What payment/deposit, cancellation, refund, tax, and provider policy should the first paid booking support? | Policy plus provider approval and webhook/account owner. | M7 payment scope and a payment-provider ADR. Stripe is only a leading candidate, not a decision. |
+| H-08 | Deferred | Product owner + operations lead | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? | Supported courses, prerequisites, expiration/verification rules, and exception process. | Course scheduling and prerequisite gating. |
+| H-09 | Deferred | Product owner + communications owner | Which channel sends booking and waiver notifications, and what consent, copy, timing, and sender identity apply? | Email/SMS provider choice, opt-in requirements, approved templates, and delivery owner. | Production notifications behind the provider seam. |
+| H-10 | Deferred | Product owner + operations lead | Which card-image storage and agency-verification process is acceptable? | Storage/retention policy, access model, verification source, and staff review workflow. | Direct upload, agency integration, and additional trip requirements. |
+
+## Human verification queue
+
+| ID | Status | Human owner | Work to perform | Evidence of completion |
+| --- | --- | --- | --- | --- |
+| V-01 | Ready | Product owner or QA owner | Browser-check the merged M5/M6 experience in light and dark mode on a desktop viewport and a phone viewport: pack and return gear, service and retire eligible gear, view a manifest with blockers, board an eligible diver, reject a blocked diver, and print/save the manifest. | Browser/OS, viewports, test data, result, defects, and screenshots or a short screen recording. |
+| V-02 | Ready after H-05 | Dive operations lead | Field-test the manifest on a phone outdoors with realistic marina connectivity. Include a temporary network loss, a readiness blocker, boarding, and the print/PDF fallback. | Date, device, network conditions, scenarios, findings, and whether the pilot can proceed. |
+| V-03 | Ready before production | Product owner + qualified legal reviewer | Review the configured waiver/medical flow against the approved H-01–H-03 policies and confirm staff know how to handle a medical-review blocker. | Signed-off policy version, staff training owner/date, and escalation contact. |
+| V-04 | Ready before production | Operations lead | Load real initial inventory, staff roles, trips, and pilot bookings; then rehearse check-in, packing, return, and roll call. | Pilot checklist, discrepancies found, and any required data cleanup. |
+
+## Existing implementation boundaries
+
+- **Waiver evidence:** the first release keeps immutable local records with typed consent; it does
+  not claim cryptographic non-repudiation. The unresolved policy work is H-01 through H-03.
+- **Manifest:** the first release is live, derived, append-only, and intentionally not offline.
+  Cache freshness, encryption/retention, reconciliation conflicts, and per-dive checkpoints need a
+  later ADR if offline capability is approved.
+- **Provider choices:** payment, notification, signature, and similar integrations must remain
+  behind a small provider seam rather than spreading vendor SDK calls through the application. See
+  [next steps](next-steps.md#adopt-with-the-first-external-integration-m3).
+
+## Change history
+
+| Date | Change | Owner |
+| --- | --- | --- |
+| 2026-07-18 | Created from the remaining product and operational work after M5 gear and M6 live manifest. | Product team |
