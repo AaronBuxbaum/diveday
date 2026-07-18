@@ -6,7 +6,7 @@ import {
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import type { MedicalAnswers } from "./schema";
 import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
 
@@ -290,7 +290,7 @@ export async function completeWaiver(
 }
 
 /** Staff roster view: only the current record joins each active booking. */
-export async function listTripWaiverStatuses(db: AppDb, shopId: string, tripId: string) {
+export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tripId: string) {
   return db
     .select({ booking: bookings, person: people, waiver: waiverRecords })
     .from(bookings)

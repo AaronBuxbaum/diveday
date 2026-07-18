@@ -39,6 +39,9 @@ new domain concept, define it here in the same PR.
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly.
+- **Roll-call event** — an append-only record that a staff member marked one booking boarded or
+  not boarded, including the time and any note. Its newest event is the current state; older events
+  remain evidence of what the crew recorded.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically

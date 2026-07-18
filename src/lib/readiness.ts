@@ -29,7 +29,8 @@ export type ReadinessBlockerCode =
   | "certification_pending"
   | "certification_rejected"
   | "certification_expired"
-  | "certification_insufficient";
+  | "certification_insufficient"
+  | "readiness_unavailable";
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
 
@@ -44,6 +45,19 @@ export type ReadinessInput = {
   certifications: readonly Certification[];
   now?: Date;
 };
+
+/** A safety surface must never treat a failed readiness lookup as a pass. */
+export function unavailableReadiness(): ReadinessResult {
+  return {
+    status: "blocked",
+    blockers: [
+      {
+        code: "readiness_unavailable",
+        message: "Readiness evidence is unavailable. Do not board this diver until it is checked.",
+      },
+    ],
+  };
+}
 
 function validVerifiedCertification(certification: Certification, now: Date): boolean {
   return (

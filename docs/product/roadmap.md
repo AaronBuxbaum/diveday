@@ -71,10 +71,18 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ⬜ Diver sizing/preferences, booking-level requests, bulk recommendations, and retiring items
   remain follow-up work.
 
-## M6 — Boat manifests
+## M6 — Boat manifests (live core slice complete)
 
-- Manifest view per trip, roll-call mode (big targets, offline-tolerant, works in sunlight),
-  print/PDF export. The safety-critical milestone — domain review required.
+- ✅ A derived per-trip manifest preserves every active booking alongside shared readiness,
+  assigned gear, emergency contacts, and crew. Missing evidence is a visible blocker, never a
+  reason to omit a diver.
+- ✅ Sunlight/phone-ready roll call has large explicit Boarded / Not boarded controls. A boarded
+  event is rejected unless the shared readiness service clears that diver at the moment of action.
+- ✅ Boarding history is append-only and tenant-scoped, recording the status, staff member, and
+  timestamp; browser print/save-PDF uses the same manifest model.
+- ⬜ Offline snapshots, freshness/reconciliation state, per-dive checkpoints, and field testing
+  remain follow-up work. The live-only boundary is deliberate and documented in
+  [20260718-manifest-live-first](../architecture/decisions/20260718-manifest-live-first.md).
 
 ## M7+ — Later
 
