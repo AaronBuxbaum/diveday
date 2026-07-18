@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import { assignGear, listAvailableGear, listTripGearAssignments, returnGear } from "@/db/gear";
+import { listTripRentalGearRequests } from "@/db/gear-requests";
 import {
   cancelBooking,
   getShopById,
@@ -18,6 +19,7 @@ import {
   updateTrip,
 } from "@/db/queries";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
+import type { RentalGearRequest } from "@/db/schema";
 import {
   issueWaiverRequest,
   listTripWaiverActivity,
@@ -52,13 +54,10 @@ const detailsSchema = z.object({
 
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
-  minimumCertificationLevel: z.enum([
-    "open_water",
-    "advanced_open_water",
-    "rescue",
-    "divemaster",
-    "instructor",
-  ]),
+  minimumCertificationLevel: z.preprocess(
+    (value) => (value === "" ? null : value),
+    z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
+  ),
 });
 
 const gearAssignmentSchema = z.object({
@@ -92,6 +91,29 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
   "end-before-start": { tone: "danger", text: "The trip has to end after it starts." },
 };
 
+function rentalRequestSummary(request: RentalGearRequest | null | undefined) {
+  if (!request) return "No rental request yet.";
+  const requested = [
+    request.bcd && "BCD",
+    request.regulator && "regulator",
+    request.wetsuit && "wetsuit",
+    request.maskFins && "mask & fins",
+    request.weights && "weights",
+    request.tank && "tank",
+    request.diveComputer && "computer",
+  ].filter(Boolean);
+  const fit = [
+    request.bcdSize && `BCD ${request.bcdSize}`,
+    request.wetsuitSize && `wetsuit ${request.wetsuitSize}`,
+    request.bootSize && `boot ${request.bootSize}`,
+    request.finSize && `fin ${request.finSize}`,
+    request.weightPreference,
+  ].filter(Boolean);
+  return [requested.length > 0 ? requested.join(", ") : "bringing own gear", fit.join(" · ")]
+    .filter(Boolean)
+    .join(" — ");
+}
+
 export default async function ManageTripPage({
   params,
   searchParams,
@@ -118,6 +140,7 @@ export default async function ManageTripPage({
     readinessRows,
     availableGear,
     tripGearRows,
+    gearRequestRows,
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewIds(db, tripId),
@@ -129,13 +152,21 @@ export default async function ManageTripPage({
     listTripReadiness(db, shop.id, tripId),
     listAvailableGear(db, shop.id),
     listTripGearAssignments(db, shop.id, tripId),
+    listTripRentalGearRequests(db, shop.id, tripId),
   ]);
   const banner = notice ? BANNERS[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
+  const isCourseSession = Boolean(trip.courseId);
   const back = `/shop/trips/${tripId}`;
+  const hasCourseInstructor = Boolean(
+    trip.course?.requiresInstructor &&
+      staff.some(
+        (entry) => crewIds.includes(entry.person.id) && entry.roles.includes("instructor"),
+      ),
+  );
   const gearByBooking = new Map<string, { assignmentId: string; label: string; type: string }[]>();
   for (const row of tripGearRows) {
     if (!row.assignment || !row.item) continue;
@@ -147,6 +178,9 @@ export default async function ManageTripPage({
     });
     gearByBooking.set(row.booking.id, current);
   }
+  const gearRequestByBooking = new Map(
+    gearRequestRows.map((row) => [row.booking.id, row.request] as const),
+  );
   const waiverRecordsByBooking = new Map<
     string,
     Exclude<(typeof waiverActivityRows)[number]["waiver"], null>[]
@@ -243,6 +277,7 @@ export default async function ManageTripPage({
 
   async function saveRequirementsAction(formData: FormData) {
     "use server";
+    if (isCourseSession) redirect(`${back}?notice=invalid`);
     const s = await requireStaffSession();
     const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
@@ -309,6 +344,11 @@ export default async function ManageTripPage({
         {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
         {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
       </p>
+      {trip.course ? (
+        <p className="mt-2 text-sm font-medium text-primary">
+          Course session · {trip.course.title}
+        </p>
+      ) : null}
 
       {banner ? (
         <div
@@ -432,50 +472,71 @@ export default async function ManageTripPage({
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Readiness requirements</h2>
         <p className="mt-1 text-sm text-muted">
-          These are explicit trip rules. A diver is blocked until the shared readiness service can
-          prove each one.
+          {trip.course
+            ? "This session snapshots the course catalog’s admission rules so a later catalog edit cannot change enrolled students’ requirements."
+            : "These are explicit trip rules. A diver is blocked until the shared readiness service can prove each one."}
         </p>
-        <form
-          action={saveRequirementsAction}
-          className="mt-4 rounded-lg border border-border bg-surface p-5"
-        >
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
-            <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
-              <input
-                name="requiresWaiver"
-                type="checkbox"
-                defaultChecked={requirement?.requiresWaiver ?? true}
-                className="size-4 accent-primary"
-              />
-              Require a signed waiver
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Minimum certification
-              <select
-                name="minimumCertificationLevel"
-                defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-              >
-                {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
+        {trip.course ? (
+          <div className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm">
+            <p>
+              <strong>Waiver:</strong> {requirement?.requiresWaiver ? "required" : "not required"}
+            </p>
+            <p className="mt-2">
+              <strong>Existing certification:</strong>{" "}
+              {requirement?.minimumCertificationLevel
+                ? `${CERTIFICATION_LEVEL_LABELS[requirement.minimumCertificationLevel]} or higher`
+                : "not required for enrollment"}
+            </p>
           </div>
-          <button
-            type="submit"
-            className="mt-5 min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+        ) : (
+          <form
+            action={saveRequirementsAction}
+            className="mt-4 rounded-lg border border-border bg-surface p-5"
           >
-            Save requirements
-          </button>
-        </form>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
+              <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                <input
+                  name="requiresWaiver"
+                  type="checkbox"
+                  defaultChecked={requirement?.requiresWaiver ?? true}
+                  className="size-4 accent-primary"
+                />
+                Require a signed waiver
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Minimum certification
+                <select
+                  name="minimumCertificationLevel"
+                  defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
+                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+                >
+                  <option value="">No existing C-card required</option>
+                  {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <button
+              type="submit"
+              className="mt-5 min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            >
+              Save requirements
+            </button>
+          </form>
+        )}
       </section>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Crew</h2>
         <p className="mt-1 text-sm text-muted">Who's running this trip.</p>
+        {trip.course?.requiresInstructor && !hasCourseInstructor ? (
+          <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+            This course cannot take bookings until one assigned crew member has the instructor role.
+          </p>
+        ) : null}
         {staff.length === 0 ? (
           <p className="mt-4 text-sm text-muted">No staff on file yet.</p>
         ) : (
@@ -693,6 +754,9 @@ export default async function ManageTripPage({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-medium">{person.fullName}</p>
+                      <p className="mt-1 text-sm text-muted">
+                        {rentalRequestSummary(gearRequestByBooking.get(booking.id))}
+                      </p>
                       {assignedGear.length === 0 ? (
                         <p className="mt-1 text-sm text-muted">Nothing packed yet.</p>
                       ) : (

@@ -7,6 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { getRentalGearRequest, saveRentalGearRequest } from "@/db/gear-requests";
 import { getBookingForTrip, getDefaultShop, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
@@ -22,11 +23,42 @@ const bookSchema = z.object({
   phone: z.string().trim().max(30).optional(),
 });
 
+const rentalRequestSchema = z.object({
+  bcd: z.string().optional(),
+  regulator: z.string().optional(),
+  wetsuit: z.string().optional(),
+  maskFins: z.string().optional(),
+  weights: z.string().optional(),
+  tank: z.string().optional(),
+  diveComputer: z.string().optional(),
+  bcdSize: z.string().trim().max(20),
+  wetsuitSize: z.string().trim().max(20),
+  bootSize: z.string().trim().max(20),
+  finSize: z.string().trim().max(20),
+  weightPreference: z.string().trim().max(80),
+  note: z.string().trim().max(300),
+});
+
+const RENTAL_GEAR_OPTIONS = [
+  { name: "bcd", label: "BCD" },
+  { name: "regulator", label: "Regulator" },
+  { name: "wetsuit", label: "Wetsuit" },
+  { name: "maskFins", label: "Mask & fins" },
+  { name: "weights", label: "Weights" },
+  { name: "tank", label: "Tank" },
+  { name: "diveComputer", label: "Dive computer" },
+] as const;
+
 const ERRORS: Record<string, string> = {
   invalid: "Check your name and email and give it another go.",
   full: "Someone grabbed the last spot just before you — the boat's full.",
   already: "You're already on this trip's list — no need to book twice.",
   unavailable: "This trip isn't taking bookings anymore.",
+  "course-unavailable":
+    "This course still needs an assigned instructor before it can take bookings.",
+  "course-prerequisite":
+    "This course needs a verified certification on file. Call the shop and they’ll help get your card checked.",
+  gear: "We couldn’t save that gear request. Please check the details and try again.",
 };
 
 export default async function TripDetailPage({
@@ -34,11 +66,11 @@ export default async function TripDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ booking?: string; error?: string }>;
+  searchParams: Promise<{ booking?: string; error?: string; gear?: string }>;
 }) {
   await connection();
   const { id: tripId } = await params;
-  const { booking: bookingId, error } = await searchParams;
+  const { booking: bookingId, error, gear } = await searchParams;
   const db = await getDb();
   const shop = await getDefaultShop(db);
   if (!shop) notFound();
@@ -49,6 +81,9 @@ export default async function TripDetailPage({
   // URL claim (design principle 6: trustworthy by inspection).
   const confirmed = bookingId ? await getBookingForTrip(db, tripId, bookingId) : null;
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
+  const rentalRequest = confirmed
+    ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
+    : null;
 
   const inPast = trip.startsAt <= new Date();
   const full = isFull(trip);
@@ -75,7 +110,11 @@ export default async function TripDetailPage({
           ? "full"
           : outcome.reason === "already_booked"
             ? "already"
-            : "unavailable";
+            : outcome.reason === "course_unstaffed"
+              ? "course-unavailable"
+              : outcome.reason === "course_prerequisite"
+                ? "course-prerequisite"
+                : "unavailable";
       redirect(`/trips/${tripId}?error=${code}`);
     }
     redirect(`/trips/${tripId}?booking=${outcome.bookingId}`);
@@ -98,6 +137,11 @@ export default async function TripDetailPage({
           {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
           {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
         </p>
+        {trip.course ? (
+          <p className="mt-2 text-sm font-medium text-primary">
+            Course session · {trip.course.title}
+          </p>
+        ) : null}
         {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
       </header>
 
@@ -125,6 +169,151 @@ export default async function TripDetailPage({
               Your pre-trip requirements are complete.
             </p>
           ) : null}
+          <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
+            <h3 className="font-medium">Rental gear</h3>
+            <p className="mt-1 text-sm text-muted">
+              Tell the crew what you’d like to rent. We start with a typical set; they’ll confirm
+              fit and weighting with you at the dock.
+            </p>
+            {gear === "saved" ? (
+              <p
+                role="status"
+                className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
+              >
+                Your gear request is with the crew.
+              </p>
+            ) : null}
+            <form
+              action={async (formData) => {
+                "use server";
+                const parsed = rentalRequestSchema.safeParse(Object.fromEntries(formData));
+                if (!parsed.success)
+                  redirect(`/trips/${tripId}?booking=${confirmed.booking.id}&error=gear`);
+                const saved = await saveRentalGearRequest(await getDb(), {
+                  shopId: shop.id,
+                  bookingId: confirmed.booking.id,
+                  bcd: parsed.data.bcd === "on",
+                  regulator: parsed.data.regulator === "on",
+                  wetsuit: parsed.data.wetsuit === "on",
+                  maskFins: parsed.data.maskFins === "on",
+                  weights: parsed.data.weights === "on",
+                  tank: parsed.data.tank === "on",
+                  diveComputer: parsed.data.diveComputer === "on",
+                  bcdSize: parsed.data.bcdSize,
+                  wetsuitSize: parsed.data.wetsuitSize,
+                  bootSize: parsed.data.bootSize,
+                  finSize: parsed.data.finSize,
+                  weightPreference: parsed.data.weightPreference,
+                  note: parsed.data.note,
+                });
+                redirect(
+                  `/trips/${tripId}?booking=${confirmed.booking.id}&${saved ? "gear=saved" : "error=gear"}`,
+                );
+              }}
+              className="mt-4 flex flex-col gap-4"
+            >
+              <fieldset>
+                <legend className="text-sm font-medium">What should we plan to have ready?</legend>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {RENTAL_GEAR_OPTIONS.map(({ name, label }) => {
+                    const requested = rentalRequest?.[name];
+                    const defaultChecked = requested ?? name !== "diveComputer";
+                    return (
+                      <label
+                        key={name}
+                        className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                      >
+                        <input
+                          name={name}
+                          type="checkbox"
+                          defaultChecked={defaultChecked}
+                          className="size-4 accent-primary"
+                        />
+                        {label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  BCD size
+                  <select
+                    name="bcdSize"
+                    defaultValue={rentalRequest?.bcdSize ?? ""}
+                    className={inputClass}
+                  >
+                    <option value="">Not sure — help me fit it</option>
+                    {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                      <option key={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Wetsuit size
+                  <select
+                    name="wetsuitSize"
+                    defaultValue={rentalRequest?.wetsuitSize ?? ""}
+                    className={inputClass}
+                  >
+                    <option value="">Not sure — help me fit it</option>
+                    {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                      <option key={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Boot size <span className="font-normal text-muted">(optional)</span>
+                  <input
+                    name="bootSize"
+                    maxLength={20}
+                    defaultValue={rentalRequest?.bootSize ?? ""}
+                    placeholder="US 9 / EU 42"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Fin size <span className="font-normal text-muted">(optional)</span>
+                  <input
+                    name="finSize"
+                    maxLength={20}
+                    defaultValue={rentalRequest?.finSize ?? ""}
+                    placeholder="M/L"
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Usual weight setup <span className="font-normal text-muted">(optional)</span>
+                <input
+                  name="weightPreference"
+                  maxLength={80}
+                  defaultValue={rentalRequest?.weightPreference ?? ""}
+                  placeholder="e.g. 16 lb with a 3 mm suit"
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Anything else the crew should know?{" "}
+                <span className="font-normal text-muted">(optional)</span>
+                <textarea
+                  name="note"
+                  rows={2}
+                  maxLength={300}
+                  defaultValue={rentalRequest?.note ?? ""}
+                  className={inputClass}
+                />
+              </label>
+              <div>
+                <SubmitButton
+                  pendingLabel="Saving gear…"
+                  className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                >
+                  Save gear request
+                </SubmitButton>
+              </div>
+            </form>
+          </section>
           <Link
             href="/trips"
             className="mt-3 inline-block py-2 text-base font-medium text-primary hover:underline"

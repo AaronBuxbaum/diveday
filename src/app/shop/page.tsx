@@ -57,10 +57,22 @@ export default async function ShopPage({
             Certifications
           </Link>
           <Link
+            href="/shop/courses"
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Courses
+          </Link>
+          <Link
             href="/shop/gear"
             className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
           >
             Gear
+          </Link>
+          <Link
+            href="/shop/reports"
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Reports
           </Link>
           <Link
             href="/shop/trips/new"
@@ -105,6 +117,11 @@ export default async function ShopPage({
               >
                 <div className="min-w-0">
                   <h2 className="font-medium">{trip.title}</h2>
+                  {trip.course ? (
+                    <p className="text-sm font-medium text-primary">
+                      Course session · {trip.course.title}
+                    </p>
+                  ) : null}
                   <p className="text-sm text-muted">
                     {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
                     {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
