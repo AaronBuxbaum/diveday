@@ -75,6 +75,72 @@ const areas = {
       "pnpm e2e -- --reporter=line",
     ],
   },
+  gear: {
+    goal: "Build M5 gear prep with conflict-safe assignment, returns, and a tenant-scoped service history.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/next-steps.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/gear.ts",
+      "src/db/gear.test.ts",
+      "src/lib/gear.ts",
+      "src/app/shop/gear",
+      "src/app/shop/trips/[id]",
+    ],
+    tests: ["src/db/gear.test.ts", "src/lib/gear.ts", "e2e"],
+    invariants: [
+      "Tenant-scope inventory, assignments, returns, and service events.",
+      "Held, retired, or already-assigned equipment never becomes assignable.",
+      "Assignment must remain transactionally conflict-safe under simultaneous staff actions.",
+      "Completed service is auditable; checked-out equipment cannot be released through a service log.",
+    ],
+    validate: [
+      "pnpm test -- src/db/gear.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
+  manifests: {
+    goal: "Build M6 manifests and roll call from the shared fail-closed readiness result.",
+    docs: [
+      "docs/product/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/product/next-steps.md",
+      "docs/design/principles.md",
+      "docs/architecture/overview.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/readiness.ts",
+      "src/db/manifests.ts",
+      "src/lib/readiness.ts",
+      "src/lib/manifests.ts",
+      "src/app/shop/trips/[id]",
+      "src/app/shop/manifests",
+    ],
+    tests: [
+      "src/db/readiness.test.ts",
+      "src/db/manifests.test.ts",
+      "src/lib/manifests.test.ts",
+      "e2e",
+    ],
+    invariants: [
+      "Every active booking is represented, including incomplete or blocked records.",
+      "Readiness stays fail-closed and is never recomputed differently in the manifest UI.",
+      "Boarding changes are explicit, time-stamped, tenant-scoped, and auditable.",
+      "Phone/sunlight use requires large controls, text labels, and no color-only status.",
+    ],
+    validate: [
+      "pnpm test -- src/db/readiness.test.ts src/db/manifests.test.ts src/lib/manifests.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e -- --reporter=line",
+    ],
+  },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows Scuba's semantic design system.",
     docs: [

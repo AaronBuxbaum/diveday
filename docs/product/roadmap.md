@@ -39,6 +39,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   completion confirmation, and explicit unavailable/expired/already-completed states.
 - ✅ Booking roster status with signed timestamp and an unambiguous **medical review** blocker;
   affirmative medical answers fail closed rather than becoming a generic success.
+- ✅ Staff roster activity explains issued, started, signed, medically blocked, and replaced links
+  from stored evidence without exposing a bearer token.
 - ⬜ Production notification delivery, richer jurisdiction-specific medical questionnaires, and a
   third-party signature adapter remain follow-up work. See
   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
@@ -57,14 +59,34 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ⬜ Direct image upload/storage, agency API verification, specialty/site-level requirements, and
   payment readiness remain follow-up work.
 
-## M5 — Gear
+## M5 — Gear (core prep slice complete)
 
-- Inventory with sizes and service state, assignment to bookings, service logging.
+- ✅ Inventory records type, size, service state, optional next-service date, and clear
+  unavailable/assigned/held status.
+- ✅ Staff can pack available equipment directly against a trip roster; the transactional gate
+  prevents an item from being claimed twice and makes a hold or retirement unassignable.
+- ✅ Returns move equipment back into the visible packing pool, while the gear-room view retains
+  checked-out equipment until it comes back.
+- ✅ A completed service event records the work, staff member, completed date, and optional next
+  due date before returning held equipment to service. Checked-out and retired gear cannot be
+  released through this path.
+- ✅ Staff can retire returned or held equipment; checked-out equipment cannot be removed from a
+  diver's active assignment.
+- ⬜ Diver sizing/preferences, booking-level requests, and bulk recommendations remain follow-up
+  work.
 
-## M6 — Boat manifests
+## M6 — Boat manifests (live core slice complete)
 
-- Manifest view per trip, roll-call mode (big targets, offline-tolerant, works in sunlight),
-  print/PDF export. The safety-critical milestone — domain review required.
+- ✅ A derived per-trip manifest preserves every active booking alongside shared readiness,
+  assigned gear, emergency contacts, and crew. Missing evidence is a visible blocker, never a
+  reason to omit a diver.
+- ✅ Sunlight/phone-ready roll call has large explicit Boarded / Not boarded controls. A boarded
+  event is rejected unless the shared readiness service clears that diver at the moment of action.
+- ✅ Boarding history is append-only and tenant-scoped, recording the status, staff member, and
+  timestamp; browser print/save-PDF uses the same manifest model.
+- ⬜ Offline snapshots, freshness/reconciliation state, per-dive checkpoints, and field testing
+  remain follow-up work. The live-only boundary is deliberate and documented in
+  [20260718-manifest-live-first](../architecture/decisions/20260718-manifest-live-first.md).
 
 ## M7+ — Later
 

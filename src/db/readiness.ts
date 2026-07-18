@@ -1,10 +1,10 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { calculateReadiness } from "@/lib/readiness";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { bookings, certifications, people, personRoles, tripRequirements, trips } from "./schema";
 import { listTripWaiverStatuses } from "./waivers";
 
-export async function getTripRequirements(db: AppDb, shopId: string, tripId: string) {
+export async function getTripRequirements(db: DbExecutor, shopId: string, tripId: string) {
   const [requirement] = await db
     .select()
     .from(tripRequirements)
@@ -120,7 +120,7 @@ export async function listShopDivers(db: AppDb, shopId: string) {
 }
 
 /** The exact same result drives staff rosters today and diver/manifest views later. */
-export async function listTripReadiness(db: AppDb, shopId: string, tripId: string) {
+export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: string) {
   const [requirement, waiverRows] = await Promise.all([
     getTripRequirements(db, shopId, tripId),
     listTripWaiverStatuses(db, shopId, tripId),
@@ -154,7 +154,7 @@ export async function listTripReadiness(db: AppDb, shopId: string, tripId: strin
   }));
 }
 
-export async function getBookingReadiness(db: AppDb, shopId: string, bookingId: string) {
+export async function getBookingReadiness(db: DbExecutor, shopId: string, bookingId: string) {
   const [booking] = await db
     .select({ tripId: bookings.tripId })
     .from(bookings)
