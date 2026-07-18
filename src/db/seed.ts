@@ -12,6 +12,7 @@ import {
   bookings,
   certifications,
   courses,
+  diveSites,
   gearAssignments,
   gearItems,
   gearServiceEvents,
@@ -293,11 +294,48 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
+  const siteRows = await db
+    .insert(diveSites)
+    .values([
+      {
+        shopId,
+        name: "Molasses Reef",
+        locationName: "Key Largo National Marine Sanctuary",
+        description:
+          "A bright outer-reef classic with a relaxed profile and plenty of room to explore.",
+        marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
+        marineLifeDescription:
+          "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
+      },
+      {
+        shopId,
+        name: "Spiegel Grove",
+        locationName: "Key Largo, Florida",
+        description:
+          "A deliberately sunk former Navy ship with dramatic structure and blue-water scale.",
+        marineLife: "Goliath grouper · barracuda · jacks · soft coral",
+        marineLifeDescription:
+          "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
+      },
+      {
+        shopId,
+        name: "Christ of the Abyss",
+        locationName: "John Pennekamp Coral Reef State Park",
+        description: "A shallow, iconic statue site that rewards an unhurried reef dive.",
+        marineLife: "Sergeant majors · blue tangs · French angelfish · coral gardens",
+        marineLifeDescription:
+          "A gentle route with lots to notice near the reef and plenty of light for photos.",
+      },
+    ])
+    .returning();
+  const siteByName = new Map(siteRows.map((site) => [site.name, site]));
+
   const tripRows = await db
     .insert(trips)
     .values([
       {
         shopId,
+        diveSiteId: siteByName.get("Molasses Reef")?.id,
         title: "Two-Tank Reef — Molasses & French",
         description: "Morning double dip on the outer reef. All levels, OW required.",
         startsAt: at(1, 11, 30), // ~7:30 AM Eastern
@@ -314,6 +352,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       },
       {
         shopId,
+        diveSiteId: siteByName.get("Spiegel Grove")?.id,
         title: "Wreck Trip — Spiegel Grove",
         description: "The big one. AOW + Deep required, nitrox recommended.",
         startsAt: at(5, 12, 0),
@@ -322,6 +361,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       },
       {
         shopId,
+        diveSiteId: siteByName.get("Christ of the Abyss")?.id,
         title: "Two-Tank Reef — Christ of the Abyss",
         description: "Classic shallow sites, great for refreshers and new OW divers.",
         startsAt: at(7, 11, 30),
@@ -353,6 +393,18 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
   if (!discoverSession) throw new Error("seed: DSD session missing");
   await db.insert(tripAssignments).values({ tripId: discoverSession.id, personId: instructor.id });
+
+  await db
+    .update(trips)
+    .set({
+      conditionsSummary:
+        "A calm morning is expected; the crew will confirm the final call at the dock.",
+      waterTemperatureC: 27,
+      visibilityMeters: 18,
+      surfaceConditions: "Light east breeze · gentle chop",
+      conditionsUpdatedAt: new Date(),
+    })
+    .where(eq(trips.id, tripRows[0].id));
 
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;
@@ -478,6 +530,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
   }
   await db.delete(trips).where(eq(trips.shopId, shopId));
+  await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));

@@ -186,6 +186,106 @@ export default async function TripDetailPage({
         {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
       </header>
 
+      {trip.diveSite ? (
+        <section className="mt-8 overflow-hidden rounded-xl border border-border bg-surface">
+          {trip.diveSite.satelliteImageUrl ? (
+            // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
+            <img
+              src={trip.diveSite.satelliteImageUrl}
+              alt={`Satellite view of ${trip.diveSite.name}`}
+              className="h-64 w-full object-cover"
+            />
+          ) : null}
+          <div className="p-5 sm:p-6">
+            <p className="text-sm font-medium tracking-widest text-primary uppercase">
+              Your dive site
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{trip.diveSite.name}</h2>
+            {trip.diveSite.locationName ? (
+              <p className="mt-1 text-sm text-muted">{trip.diveSite.locationName}</p>
+            ) : null}
+            {trip.diveSite.description ? (
+              <p className="mt-4 text-muted">{trip.diveSite.description}</p>
+            ) : null}
+            {trip.diveSite.routeImageUrl ? (
+              <figure className="mt-5 overflow-hidden rounded-lg border border-border">
+                {/* biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist. */}
+                <img
+                  src={trip.diveSite.routeImageUrl}
+                  alt={`Planned route for ${trip.diveSite.name}`}
+                  className="max-h-80 w-full object-cover"
+                />
+                <figcaption className="px-3 py-2 text-sm text-muted">
+                  Planned route — the crew will brief the final plan on board.
+                </figcaption>
+              </figure>
+            ) : null}
+            {trip.diveSite.marineLife || trip.diveSite.marineLifeDescription ? (
+              <div className="mt-6 rounded-lg bg-primary/10 p-4">
+                <h3 className="font-semibold">What you might see</h3>
+                {trip.diveSite.marineLife ? (
+                  <p className="mt-2 font-medium text-primary">{trip.diveSite.marineLife}</p>
+                ) : null}
+                {trip.diveSite.marineLifeDescription ? (
+                  <p className="mt-2 text-sm text-muted">{trip.diveSite.marineLifeDescription}</p>
+                ) : null}
+              </div>
+            ) : null}
+            {trip.diveSite.imageUrls.length > 0 ? (
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {trip.diveSite.imageUrls.map((url, index) => (
+                  // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
+                  <img
+                    key={url}
+                    src={url}
+                    alt={`${trip.diveSite?.name} scene ${index + 1}`}
+                    className="aspect-square rounded-lg object-cover"
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {trip.conditionsSummary ||
+      trip.waterTemperatureC !== null ||
+      trip.visibilityMeters !== null ||
+      trip.surfaceConditions ? (
+        <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
+          <p className="text-sm font-medium tracking-widest text-primary uppercase">
+            Predicted conditions
+          </p>
+          {trip.conditionsSummary ? (
+            <p className="mt-3 text-muted">{trip.conditionsSummary}</p>
+          ) : null}
+          <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+            {trip.waterTemperatureC !== null ? (
+              <div className="rounded-lg bg-surface-sunken p-3">
+                <dt className="text-sm text-muted">Water temperature</dt>
+                <dd className="mt-1 text-lg font-semibold">{trip.waterTemperatureC}°C</dd>
+              </div>
+            ) : null}
+            {trip.visibilityMeters !== null ? (
+              <div className="rounded-lg bg-surface-sunken p-3">
+                <dt className="text-sm text-muted">Visibility</dt>
+                <dd className="mt-1 text-lg font-semibold">{trip.visibilityMeters} m</dd>
+              </div>
+            ) : null}
+            {trip.surfaceConditions ? (
+              <div className="rounded-lg bg-surface-sunken p-3">
+                <dt className="text-sm text-muted">Surface</dt>
+                <dd className="mt-1 text-lg font-semibold">{trip.surfaceConditions}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="mt-4 text-xs text-muted">
+            Forecast supplied by the crew; conditions can change. The final call happens at the
+            dock.
+          </p>
+        </section>
+      ) : null}
+
       {confirmed ? (
         <section className="rise-in mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
           <h2 className="text-xl font-semibold text-balance">

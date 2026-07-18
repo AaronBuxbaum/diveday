@@ -122,6 +122,34 @@ export const courses = pgTable(
   ],
 );
 
+/**
+ * A reusable, shop-owned briefing for one dive site. Trip conditions are
+ * intentionally kept on the dated trip: a site library entry is evergreen,
+ * while water temperature and visibility are not.
+ */
+export const diveSites = pgTable(
+  "dive_sites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    description: text("description"),
+    locationName: text("location_name"),
+    satelliteImageUrl: text("satellite_image_url"),
+    routeImageUrl: text("route_image_url"),
+    imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
+    marineLife: text("marine_life"),
+    marineLifeDescription: text("marine_life_description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
+    index("dive_sites_shop_name_idx").on(table.shopId, table.name),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
@@ -129,6 +157,8 @@ export const trips = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /** One primary site for the public briefing; multi-site itineraries are a later slice. */
+    diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */
     courseId: uuid("course_id").references(() => courses.id),
     title: text("title").notNull(),
@@ -137,6 +167,11 @@ export const trips = pgTable(
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     capacity: integer("capacity").notNull(),
     status: tripStatus("status").notNull().default("scheduled"),
+    conditionsSummary: text("conditions_summary"),
+    waterTemperatureC: integer("water_temperature_c"),
+    visibilityMeters: integer("visibility_meters"),
+    surfaceConditions: text("surface_conditions"),
+    conditionsUpdatedAt: timestamp("conditions_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("trips_shop_starts_idx").on(table.shopId, table.startsAt)],

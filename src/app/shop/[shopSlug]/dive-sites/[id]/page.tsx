@@ -1,0 +1,200 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
+import { getDb } from "@/db/client";
+import { copyDiveSite, getDiveSite, listDiveSites, updateDiveSite } from "@/db/dive-sites";
+import { splitMediaUrls } from "@/lib/dive-sites";
+import { requireStaffSession } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Edit dive site — Scuba" };
+
+const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
+const siteSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(1_200),
+  locationName: z.string().trim().max(160),
+  satelliteImageUrl: optionalUrl,
+  routeImageUrl: optionalUrl,
+  imageUrls: z.string().max(12_000),
+  marineLife: z.string().trim().max(400),
+  marineLifeDescription: z.string().trim().max(1_200),
+});
+
+const inputClass =
+  "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
+
+export default async function EditDiveSitePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string; id: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
+  const session = await requireStaffSession();
+  const { shopSlug, id } = await params;
+  const { notice, error } = await searchParams;
+  const back = `/shop/${shopSlug}/dive-sites`;
+  const db = await getDb();
+  const site = await getDiveSite(db, session.user.shopId, id);
+  if (!site) notFound();
+
+  async function saveAction(formData: FormData) {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const parsed = siteSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}/${id}?error=invalid`);
+    let imageUrls: string[];
+    try {
+      imageUrls = splitMediaUrls(parsed.data.imageUrls);
+    } catch {
+      redirect(`${back}/${id}?error=images`);
+    }
+    const updated = await updateDiveSite(await getDb(), activeSession.user.shopId, id, {
+      shopId: activeSession.user.shopId,
+      ...parsed.data,
+      satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
+      routeImageUrl: parsed.data.routeImageUrl || undefined,
+      imageUrls,
+    });
+    if (!updated) notFound();
+    redirect(`${back}/${id}?notice=saved`);
+  }
+
+  async function copyAction() {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const activeDb = await getDb();
+    const names = new Set(
+      (await listDiveSites(activeDb, activeSession.user.shopId)).map((entry) => entry.name),
+    );
+    let copyName = `${site.name} copy`;
+    let number = 2;
+    while (names.has(copyName)) copyName = `${site.name} copy ${number++}`;
+    const copy = await copyDiveSite(activeDb, activeSession.user.shopId, id, copyName);
+    if (!copy) notFound();
+    redirect(`${back}/${copy.id}?notice=copied`);
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+      <Link href={back} className="text-sm font-medium text-primary hover:underline">
+        ← Dive-site library
+      </Link>
+      <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">{site.name}</h1>
+          <p className="mt-1 text-muted">Changes update the briefing linked to this site.</p>
+        </div>
+        <form action={copyAction}>
+          <button
+            type="submit"
+            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Copy and tailor
+          </button>
+        </form>
+      </header>
+      {notice ? (
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
+        >
+          {notice === "copied" ? "Independent copy ready to tailor." : "Site briefing saved."}
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error === "images"
+            ? "Use up to six complete HTTP(S) image links, one per line."
+            : "That didn’t save. Check the name and links, then try again."}
+        </p>
+      ) : null}
+      <form action={saveAction} className="mt-8 flex flex-col gap-5">
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Name
+          <input
+            name="name"
+            required
+            maxLength={120}
+            defaultValue={site.name}
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Location <span className="font-normal text-muted">(optional)</span>
+          <input
+            name="locationName"
+            maxLength={160}
+            defaultValue={site.locationName ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          What makes this site special?
+          <textarea
+            name="description"
+            rows={3}
+            maxLength={1200}
+            defaultValue={site.description ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Satellite map image URL
+            <textarea
+              name="satelliteImageUrl"
+              rows={2}
+              defaultValue={site.satelliteImageUrl ?? ""}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Route image URL <span className="font-normal text-muted">(optional)</span>
+            <textarea
+              name="routeImageUrl"
+              rows={2}
+              defaultValue={site.routeImageUrl ?? ""}
+              className={inputClass}
+            />
+          </label>
+        </div>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Site photo URLs <span className="font-normal text-muted">(one per line, up to six)</span>
+          <textarea
+            name="imageUrls"
+            rows={4}
+            defaultValue={site.imageUrls.join("\n")}
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          What might divers see?
+          <input
+            name="marineLife"
+            maxLength={400}
+            defaultValue={site.marineLife ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Underwater briefing
+          <textarea
+            name="marineLifeDescription"
+            rows={3}
+            maxLength={1200}
+            defaultValue={site.marineLifeDescription ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <button
+          type="submit"
+          className="mt-2 min-h-11 self-start rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+        >
+          Save briefing
+        </button>
+      </form>
+    </main>
+  );
+}
