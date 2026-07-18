@@ -7,8 +7,8 @@ dotenv.config({ path: ".env.local", override: true });
 
 // Applies committed migrations from drizzle/ to the real Neon database.
 // Never used for `db:generate` — that always diffs against the PGlite config
-// so schema authoring stays daemon-free. Run manually after a schema change
-// lands in production (see docs/architecture/decisions/20260718-vercel-neon-hosting.md).
+// so schema authoring stays daemon-free. Vercel's production build runs this
+// before `pnpm build` (see docs/architecture/decisions/20260718-vercel-neon-hosting.md).
 const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 if (!url) {
   throw new Error(
