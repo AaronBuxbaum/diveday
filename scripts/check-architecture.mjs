@@ -49,7 +49,7 @@ for (const root of guardedRoots) {
 
 if (violations.length > 0) {
   console.error(
-    "Architecture boundary violations:\n" + violations.map((item) => `- ${item}`).join("\n"),
+    `Architecture boundary violations:\n${violations.map((item) => `- ${item}`).join("\n")}`,
   );
   console.error(
     "Domain code must not import from src/app. Move shared behavior into src/lib or a feature module.",

@@ -29,10 +29,19 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   prerequisite gating is just a trip, and shops can schedule it as one meanwhile.
 - ⬜ Booking notifications (email confirmations) — arrives with M7 notifications.
 
-## M3 — Waivers
+## M3 — Waivers (core slice complete)
 
-- Waiver templates, e-signature flow (pre-arrival via link), storage, status on the booking.
-- Medical statement with physician-referral blocking state.
+- ✅ Versioned staff templates: a new release is a new immutable version; completed records retain
+  the exact title, version, and text a diver saw.
+- ✅ Pre-arrival, expiring completion links; only a SHA-256 token hash is stored. Pending links can
+  be safely superseded without changing signed history.
+- ✅ Mobile-first typed-consent flow with saved progress, acknowledgement, medical questions,
+  completion confirmation, and explicit unavailable/expired/already-completed states.
+- ✅ Booking roster status with signed timestamp and an unambiguous **medical review** blocker;
+  affirmative medical answers fail closed rather than becoming a generic success.
+- ⬜ Production notification delivery, richer jurisdiction-specific medical questionnaires, and a
+  third-party signature adapter remain follow-up work. See
+  [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
 
 ## M4 — Cert checks
 

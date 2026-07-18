@@ -45,6 +45,12 @@ export default async function ShopPage({
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <Link
+            href="/shop/waivers"
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Waivers
+          </Link>
+          <Link
             href="/shop/trips/new"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >

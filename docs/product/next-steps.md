@@ -283,14 +283,18 @@ Apply these continuously rather than postponing them to “polish”:
 2. ~~Add architecture-boundary, ADR-format, and docs-link checks.~~ Shipped 2026-07-18
    (`scripts/check-architecture.mjs`, `check-adrs.mjs`, `check-doc-links.mjs` via `pnpm check:repo`).
 3. ~~Add `task:context` for waivers/design/database.~~ Shipped 2026-07-18 (`scripts/task-context.mjs`).
-4. Set `migrations: { prefix: "timestamp" }` in `drizzle.config.ts` (see Adopt now).
-5. Write the waiver data model and signature/retention ADR — establishing the `SignatureProvider` seam
-   (see Adopt with the first external integration).
-6. Ship the smallest complete waiver vertical slice with a polished diver confirmation and staff status.
+4. ~~Set `migrations: { prefix: "timestamp" }` in `drizzle.config.ts`.~~ Shipped 2026-07-18.
+5. ~~Write the waiver data model and signature/retention ADR — establishing the `SignatureProvider` seam.~~
+   Shipped 2026-07-18 (`src/lib/signatures.ts`,
+   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md)).
+6. ~~Ship the smallest complete waiver vertical slice with a polished diver confirmation and staff status.~~
+   Shipped 2026-07-18 (versioned templates, expiring token-hash links, resumable typed-consent flow,
+   medical-review blocker, immutable evidence, and adversarial contracts).
 
 ### P1 — after the first waiver slice
 
-1. Add waiver versioning, medical referral, expiry/resume, and audit history.
+1. Add a staff-facing waiver activity timeline and a richer, jurisdiction-specific medical questionnaire.
+   Versioning, referral, expiry, saved progress, and immutable signed evidence shipped in the first slice.
 2. Introduce the generic readiness result while designing certification checks.
 3. Add provider adapters or generated skill indexes based on the provider-neutral workflow ADR.
 4. Add path-aware CI and changed-UI evidence enforcement.

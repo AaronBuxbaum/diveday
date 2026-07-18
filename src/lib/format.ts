@@ -20,6 +20,18 @@ export function formatTime(date: Date, locale = "en-US", timeZone?: string): str
   }).format(date);
 }
 
+/** Operational timestamp with an explicit timezone — use for signed evidence and safety events. */
+export function formatDateTimeTz(date: Date, locale = "en-US", timeZone?: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone,
+  }).format(date);
+}
+
 /** "7:30 AM – 11:00 AM" — en dash, no repeated day. */
 export function formatTimeRange(
   start: Date,
