@@ -4,9 +4,11 @@ import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookings,
   certifications,
+  courses,
   people,
   personRoles,
   shops,
+  tripAssignments,
   tripRequirements,
   trips,
   userAccounts,
@@ -142,6 +144,40 @@ export async function seedDemo(db: AppDb): Promise<void> {
     })),
   );
 
+  // Catalog baselines: DSD/OW welcome uncertified students; continuing
+  // education admits only a verified card at the stated level.
+  const courseRows = await db
+    .insert(courses)
+    .values([
+      {
+        shopId: shop.id,
+        title: "Discover Scuba Diving",
+        description: "A supervised first underwater experience with an instructor.",
+        minimumCertificationLevel: null,
+      },
+      {
+        shopId: shop.id,
+        title: "Open Water Diver",
+        description: "The foundational certification course for new divers.",
+        minimumCertificationLevel: null,
+      },
+      {
+        shopId: shop.id,
+        title: "Advanced Open Water",
+        description: "Build confidence and range with five adventure dives.",
+        minimumCertificationLevel: "open_water" as const,
+      },
+      {
+        shopId: shop.id,
+        title: "Scuba Refresher",
+        description: "A patient skills tune-up before getting back in the water.",
+        minimumCertificationLevel: "open_water" as const,
+      },
+    ])
+    .returning();
+  const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
+  if (!discoverCourse) throw new Error("seed: DSD course missing");
+
   const tripRows = await db
     .insert(trips)
     .values([
@@ -177,6 +213,15 @@ export async function seedDemo(db: AppDb): Promise<void> {
         endsAt: at(7, 15, 0),
         capacity: 12,
       },
+      {
+        shopId: shop.id,
+        courseId: discoverCourse.id,
+        title: "Discover Scuba — Pool & Reef",
+        description: "A small, instructor-led first breath underwater. No C-card required.",
+        startsAt: at(4, 14, 0),
+        endsAt: at(4, 17, 0),
+        capacity: 4,
+      },
     ])
     .returning();
 
@@ -185,9 +230,15 @@ export async function seedDemo(db: AppDb): Promise<void> {
       tripId: trip.id,
       shopId: shop.id,
       requiresWaiver: true,
-      minimumCertificationLevel: "open_water" as const,
+      minimumCertificationLevel:
+        trip.courseId === discoverCourse.id ? null : ("open_water" as const),
     })),
   );
+
+  const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
+  const instructor = staff.find((person) => person.email === "marcus@bluemantis.example");
+  if (!discoverSession || !instructor) throw new Error("seed: DSD session or instructor missing");
+  await db.insert(tripAssignments).values({ tripId: discoverSession.id, personId: instructor.id });
 
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;

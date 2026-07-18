@@ -1,6 +1,15 @@
 import { and, count, eq, ne } from "drizzle-orm";
+import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { bookings, people, personRoles, trips } from "./schema";
+import {
+  bookings,
+  certifications,
+  courses,
+  people,
+  personRoles,
+  tripAssignments,
+  trips,
+} from "./schema";
 
 export type BookingRequest = {
   shopId: string;
@@ -12,7 +21,15 @@ export type BookingRequest = {
 
 export type BookingOutcome =
   | { ok: true; bookingId: string; personName: string }
-  | { ok: false; reason: "trip_unavailable" | "trip_full" | "already_booked" };
+  | {
+      ok: false;
+      reason:
+        | "trip_unavailable"
+        | "trip_full"
+        | "already_booked"
+        | "course_unstaffed"
+        | "course_prerequisite";
+    };
 
 /**
  * The whole "grab a spot" operation in one transaction: trip must be
@@ -35,6 +52,45 @@ export async function createBooking(db: AppDb, req: BookingRequest): Promise<Boo
       return { ok: false, reason: "trip_unavailable" };
     }
 
+    const [course] = trip.courseId
+      ? await tx
+          .select()
+          .from(courses)
+          .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, req.shopId)))
+          .limit(1)
+      : [];
+    // A course session is unsafe to market as open until an instructor is on
+    // the session. This is a booking gate, not a cosmetic staff warning.
+    if (course?.requiresInstructor) {
+      const [instructor] = await tx
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .innerJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
+        .where(and(eq(tripAssignments.tripId, trip.id), eq(personRoles.role, "instructor")))
+        .limit(1);
+      if (!instructor) return { ok: false, reason: "course_unstaffed" };
+    }
+
+    let [person] = await tx
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, req.shopId), eq(people.email, email)))
+      .limit(1);
+
+    // Existing-card courses deliberately fail closed at enrollment. Staff can
+    // capture and verify a card, then the same public form will admit the
+    // diver; we never reserve capacity based on a self-assertion.
+    if (course?.minimumCertificationLevel) {
+      if (!person) return { ok: false, reason: "course_prerequisite" };
+      const cardRows = await tx
+        .select()
+        .from(certifications)
+        .where(and(eq(certifications.shopId, req.shopId), eq(certifications.personId, person.id)));
+      if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
+        return { ok: false, reason: "course_prerequisite" };
+      }
+    }
+
     const [row] = await tx
       .select({ booked: count(bookings.id) })
       .from(bookings)
@@ -43,11 +99,6 @@ export async function createBooking(db: AppDb, req: BookingRequest): Promise<Boo
       return { ok: false, reason: "trip_full" };
     }
 
-    let [person] = await tx
-      .select()
-      .from(people)
-      .where(and(eq(people.shopId, req.shopId), eq(people.email, email)))
-      .limit(1);
     if (!person) {
       [person] = await tx
         .insert(people)

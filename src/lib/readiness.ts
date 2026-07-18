@@ -59,10 +59,23 @@ export function unavailableReadiness(): ReadinessResult {
   };
 }
 
-function validVerifiedCertification(certification: Certification, now: Date): boolean {
+export function validVerifiedCertification(certification: Certification, now: Date): boolean {
   return (
     certification.status === "verified" &&
     (!certification.expiresAt || certification.expiresAt > now)
+  );
+}
+
+/** Shared rank check for course admission and final trip readiness. */
+export function hasVerifiedCertificationAtLeast(
+  certifications: readonly Certification[],
+  minimumLevel: CertificationLevel,
+  now: Date = new Date(),
+): boolean {
+  return certifications.some(
+    (certification) =>
+      validVerifiedCertification(certification, now) &&
+      levelRank[certification.level] >= levelRank[minimumLevel],
   );
 }
 
@@ -74,7 +87,7 @@ function certificationBlocker(
   const verified = certifications.filter((certification) =>
     validVerifiedCertification(certification, now),
   );
-  if (verified.some((certification) => levelRank[certification.level] >= levelRank[minimumLevel])) {
+  if (hasVerifiedCertificationAtLeast(certifications, minimumLevel, now)) {
     return null;
   }
   if (
@@ -150,11 +163,13 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  const certification = certificationBlocker(
-    input.certifications,
-    input.requirement.minimumCertificationLevel,
-    now,
-  );
-  if (certification) blockers.push(certification);
+  if (input.requirement.minimumCertificationLevel) {
+    const certification = certificationBlocker(
+      input.certifications,
+      input.requirement.minimumCertificationLevel,
+      now,
+    );
+    if (certification) blockers.push(certification);
+  }
   return { status: blockers.length === 0 ? "ready" : "blocked", blockers };
 }
