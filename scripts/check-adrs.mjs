@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -33,7 +33,8 @@ for (const filename of entries) {
     failures.push(`${filename}: missing ISO Date metadata`);
   }
   for (const section of requiredSections) {
-    if (!contents.includes(`## ${section}`)) failures.push(`${filename}: missing section “${section}”`);
+    if (!contents.includes(`## ${section}`))
+      failures.push(`${filename}: missing section “${section}”`);
   }
 
   const duplicates = ids.get(expectedHeadingId) ?? [];
@@ -46,7 +47,7 @@ for (const [id, filenames] of ids) {
 }
 
 if (failures.length > 0) {
-  console.error("ADR validation failed:\n" + failures.map((item) => `- ${item}`).join("\n"));
+  console.error(`ADR validation failed:\n${failures.map((item) => `- ${item}`).join("\n")}`);
   process.exit(1);
 }
 
