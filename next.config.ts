@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // dynamically requires optional native/cloud drivers it doesn't use here;
   // keep it external too rather than have the bundler try to resolve them.
   serverExternalPackages: ["@electric-sql/pglite", "pg"],
+  // TypeScript 7 is the native (Go) compiler and no longer exposes the JS
+  // compiler API Next used for its in-build type check. Next drives it through
+  // the TS CLI instead (tsgo), which this flag enables.
+  experimental: { useTypeScriptCli: true },
 };
 
 export default nextConfig;
