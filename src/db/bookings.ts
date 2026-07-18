@@ -17,6 +17,7 @@ export type BookingRequest = {
   fullName: string;
   email: string;
   phone?: string;
+  buddyPreference?: string;
 };
 
 export type BookingOutcome =
@@ -115,13 +116,26 @@ export async function createBooking(db: AppDb, req: BookingRequest): Promise<Boo
       .limit(1);
     if (existing) {
       if (existing.status !== "cancelled") return { ok: false, reason: "already_booked" };
-      await tx.update(bookings).set({ status: "booked" }).where(eq(bookings.id, existing.id));
+      await tx
+        .update(bookings)
+        .set({
+          status: "booked",
+          buddyPreference: req.buddyPreference || null,
+          conditionsBriefedAt: trip.conditionsUpdatedAt,
+        })
+        .where(eq(bookings.id, existing.id));
       return { ok: true, bookingId: existing.id, personName: person.fullName };
     }
 
     const [created] = await tx
       .insert(bookings)
-      .values({ shopId: req.shopId, tripId: trip.id, personId: person.id })
+      .values({
+        shopId: req.shopId,
+        tripId: trip.id,
+        personId: person.id,
+        buddyPreference: req.buddyPreference || null,
+        conditionsBriefedAt: trip.conditionsUpdatedAt,
+      })
       .returning();
     if (!created) throw new Error("createBooking: booking insert returned no row");
     return { ok: true, bookingId: created.id, personName: person.fullName };

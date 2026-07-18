@@ -7,6 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import {
   getRentalGearProfile,
   getRentalGearRequest,
@@ -15,6 +16,7 @@ import {
 import { sendAndRecordNotification } from "@/db/notifications";
 import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
+import { dockDayTimeline, fitMessage, packingChecklist } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
@@ -26,6 +28,7 @@ const bookSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
   email: z.email().max(200),
   phone: z.string().trim().max(30).optional(),
+  buddyPreference: z.string().trim().max(300).optional(),
 });
 
 const rentalRequestSchema = z.object({
@@ -85,6 +88,12 @@ export default async function TripDetailPage({
   // The confirmation renders only from a real booking row — never from a
   // URL claim (design principle 6: trustworthy by inspection).
   const confirmed = bookingId ? await getBookingForTrip(db, tripId, bookingId) : null;
+  const [creatures, moments] = trip.diveSite
+    ? await Promise.all([
+        listDiveSiteCreatures(db, shop.id, trip.diveSite.id),
+        listPublishedDiveSiteMoments(db, shop.id, trip.diveSite.id),
+      ])
+    : [[], []];
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
   const rentalRequest = confirmed
     ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
@@ -111,6 +120,7 @@ export default async function TripDetailPage({
       fullName: parsed.data.fullName,
       email: parsed.data.email,
       phone: parsed.data.phone || undefined,
+      buddyPreference: parsed.data.buddyPreference || undefined,
     });
     if (!outcome.ok) {
       const code =
@@ -185,6 +195,14 @@ export default async function TripDetailPage({
         ) : null}
         {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
       </header>
+      {!confirmed && !inPast && !full ? (
+        <a
+          href="#book"
+          className="fixed right-4 bottom-4 z-20 min-h-11 rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg sm:hidden"
+        >
+          Book · {remaining} left
+        </a>
+      ) : null}
 
       {trip.diveSite ? (
         <section className="mt-8 overflow-hidden rounded-xl border border-border bg-surface">
@@ -231,6 +249,60 @@ export default async function TripDetailPage({
                 ) : null}
               </div>
             ) : null}
+            {fitMessage(
+              trip.diveSite.difficulty,
+              trip.diveSite.depthRange,
+              trip.diveSite.currentNote,
+            ) ? (
+              <div className="mt-5 rounded-lg border border-border p-4">
+                <h3 className="font-semibold">Is this a fit?</h3>
+                <p className="mt-1 text-sm text-muted">
+                  {fitMessage(
+                    trip.diveSite.difficulty,
+                    trip.diveSite.depthRange,
+                    trip.diveSite.currentNote,
+                  )}
+                </p>
+              </div>
+            ) : null}
+            {trip.diveSite.divePlan ? (
+              <div className="mt-5 rounded-lg border border-border p-4">
+                <h3 className="font-semibold">An illustrative dive plan</h3>
+                <p className="mt-1 text-sm text-muted">{trip.diveSite.divePlan}</p>
+                {trip.diveSite.landmarks.length ? (
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    Landmarks · {trip.diveSite.landmarks.join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {creatures.length ? (
+              <div className="mt-6">
+                <h3 className="font-semibold">Field cards: meet the reef</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  {creatures.map((creature) => (
+                    <article key={creature.id} className="rounded-lg border border-border p-4">
+                      <p className="text-xs font-medium tracking-widest text-primary uppercase">
+                        {creature.kind}
+                      </p>
+                      <h4 className="mt-1 font-semibold">{creature.name}</h4>
+                      <p className="mt-2 text-sm text-muted">{creature.description}</p>
+                      {creature.preparationTip ? (
+                        <p className="mt-3 text-sm font-medium text-primary">
+                          Prepare: {creature.preparationTip}
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {moments.length ? (
+              <div className="mt-6 rounded-lg bg-accent/10 p-4">
+                <h3 className="font-semibold">A recent diver moment</h3>
+                <p className="mt-1 text-sm text-muted">{moments[0]?.caption}</p>
+              </div>
+            ) : null}
             {trip.diveSite.imageUrls.length > 0 ? (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {trip.diveSite.imageUrls.map((url, index) => (
@@ -247,6 +319,28 @@ export default async function TripDetailPage({
           </div>
         </section>
       ) : null}
+
+      <section className="mt-6 rounded-xl border border-border bg-surface p-5">
+        <h2 className="text-lg font-semibold">Pack with confidence</h2>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
+          {packingChecklist(trip.waterTemperatureC, trip.surfaceConditions).map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+        <h3 className="mt-5 font-semibold">Your dock-day rhythm</h3>
+        <ol className="mt-2 space-y-1 text-sm text-muted">
+          {dockDayTimeline(trip.startsAt).map((step) => (
+            <li key={step.label}>
+              {step.label} ·{" "}
+              {step.at.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                timeZone: shop.timezone,
+              })}
+            </li>
+          ))}
+        </ol>
+      </section>
 
       {trip.conditionsSummary ||
       trip.waterTemperatureC !== null ||
@@ -282,6 +376,9 @@ export default async function TripDetailPage({
           <p className="mt-4 text-xs text-muted">
             Forecast supplied by the crew; conditions can change. The final call happens at the
             dock.
+            {trip.conditionsUpdatedAt
+              ? ` Updated ${trip.conditionsUpdatedAt.toLocaleString("en-US", { timeZone: shop.timezone, timeZoneName: "short" })}.`
+              : " Update time unavailable."}
           </p>
         </section>
       ) : null}
@@ -418,6 +515,16 @@ export default async function TripDetailPage({
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
+                  Buddy or group notes <span className="font-normal text-muted">(optional)</span>
+                  <textarea
+                    name="buddyPreference"
+                    rows={2}
+                    maxLength={300}
+                    placeholder="I’m travelling with Maya; we’d love a relaxed photo pace."
+                    className={inputClass}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
                   <span>
                     Fin size <span className="font-normal text-muted">(optional)</span>
                   </span>
@@ -502,7 +609,7 @@ export default async function TripDetailPage({
           </p>
         </section>
       ) : (
-        <section className="mt-10">
+        <section id="book" className="mt-10">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-lg font-semibold">Grab a spot</h2>
             <span className="text-sm font-medium text-primary tabular-nums">

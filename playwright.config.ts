@@ -35,6 +35,14 @@ export default defineConfig({
     // discovery in constrained CI containers.
     command: "./node_modules/.bin/next dev --hostname 127.0.0.1",
     url: "http://127.0.0.1:3000",
+    // Browser tests must never inherit a developer's production-like Neon URL
+    // from .env.local. Give them an isolated, migration-backed local database.
+    env: {
+      ...process.env,
+      DATABASE_URL: "",
+      DATABASE_URL_UNPOOLED: "",
+      PGLITE_DATA_DIR: ".pglite-e2e",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

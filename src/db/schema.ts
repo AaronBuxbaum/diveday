@@ -134,6 +134,8 @@ export const diveSites = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    sourceTemplateId: uuid("source_template_id"),
+    sourceTemplateVersion: integer("source_template_version"),
     name: text("name").notNull(),
     description: text("description"),
     locationName: text("location_name"),
@@ -142,11 +144,102 @@ export const diveSites = pgTable(
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
     marineLife: text("marine_life"),
     marineLifeDescription: text("marine_life_description"),
+    difficulty: text("difficulty"),
+    depthRange: text("depth_range"),
+    currentNote: text("current_note"),
+    divePlan: text("dive_plan"),
+    landmarks: jsonb("landmarks").$type<string[]>().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
     index("dive_sites_shop_name_idx").on(table.shopId, table.name),
+  ],
+);
+
+/** Scuba-maintained common-site catalog; shops copy a published version into their own library. */
+export const globalDiveSites = pgTable(
+  "global_dive_sites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    currentVersion: integer("current_version").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("global_dive_sites_slug_idx").on(table.slug)],
+);
+
+/** Immutable published snapshots; a later correction never rewrites a shop's source evidence. */
+export const globalDiveSiteVersions = pgTable(
+  "global_dive_site_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    globalDiveSiteId: uuid("global_dive_site_id")
+      .notNull()
+      .references(() => globalDiveSites.id),
+    version: integer("version").notNull(),
+    briefing: jsonb("briefing")
+      .$type<{
+        name: string;
+        description?: string;
+        locationName?: string;
+        satelliteImageUrl?: string;
+        routeImageUrl?: string;
+        imageUrls?: string[];
+        marineLife?: string;
+        marineLifeDescription?: string;
+        difficulty?: string;
+        depthRange?: string;
+        currentNote?: string;
+        divePlan?: string;
+        landmarks?: string[];
+      }>()
+      .notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("global_dive_site_versions_unique").on(table.globalDiveSiteId, table.version),
+  ],
+);
+
+/** Visual, educational field-card content a shop can tailor after import. */
+export const diveSiteCreatures = pgTable(
+  "dive_site_creatures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    diveSiteId: uuid("dive_site_id")
+      .notNull()
+      .references(() => diveSites.id),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    imageUrl: text("image_url"),
+    description: text("description"),
+    preparationTip: text("preparation_tip"),
+  },
+  (table) => [index("dive_site_creatures_site_idx").on(table.diveSiteId)],
+);
+
+/** Staff-moderated, opt-in moments from prior divers. */
+export const diveSiteMoments = pgTable(
+  "dive_site_moments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    diveSiteId: uuid("dive_site_id")
+      .notNull()
+      .references(() => diveSites.id),
+    caption: text("caption").notNull(),
+    imageUrl: text("image_url"),
+    isPublished: boolean("is_published").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("dive_site_moments_site_published_idx").on(table.diveSiteId, table.isPublished),
   ],
 );
 
@@ -197,6 +290,8 @@ export const bookings = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
+    buddyPreference: text("buddy_preference"),
+    conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     status: bookingStatus("status").notNull().default("booked"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

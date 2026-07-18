@@ -54,3 +54,5 @@ next-env.d.ts
 
 # pglite dev database
 /.pglite/
+/.pglite-e2e/
+/.pglite-visual/

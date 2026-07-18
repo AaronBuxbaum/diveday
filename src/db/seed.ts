@@ -12,10 +12,14 @@ import {
   bookings,
   certifications,
   courses,
+  diveSiteCreatures,
+  diveSiteMoments,
   diveSites,
   gearAssignments,
   gearItems,
   gearServiceEvents,
+  globalDiveSites,
+  globalDiveSiteVersions,
   nitroxCertifications,
   nitroxFills,
   notificationDeliveries,
@@ -294,11 +298,26 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
-  const siteRows = await db
-    .insert(diveSites)
-    .values([
-      {
-        shopId,
+  const [molassesTemplate] = await db
+    .insert(globalDiveSites)
+    .values({ slug: "molasses-reef", currentVersion: 2 })
+    .returning();
+  if (!molassesTemplate) throw new Error("seed: common-site template missing");
+  await db.insert(globalDiveSiteVersions).values([
+    {
+      globalDiveSiteId: molassesTemplate.id,
+      version: 1,
+      briefing: {
+        name: "Molasses Reef",
+        locationName: "Key Largo National Marine Sanctuary",
+        description: "A bright outer-reef classic with a relaxed profile.",
+        marineLife: "Parrotfish · angelfish · southern stingrays",
+      },
+    },
+    {
+      globalDiveSiteId: molassesTemplate.id,
+      version: 2,
+      briefing: {
         name: "Molasses Reef",
         locationName: "Key Largo National Marine Sanctuary",
         description:
@@ -306,6 +325,36 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
         marineLifeDescription:
           "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
+        difficulty: "beginner",
+        depthRange: "6–12 m",
+        currentNote: "Usually gentle; the crew confirms the final plan.",
+        divePlan:
+          "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
+        landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
+      },
+    },
+  ]);
+
+  const siteRows = await db
+    .insert(diveSites)
+    .values([
+      {
+        shopId,
+        sourceTemplateId: molassesTemplate.id,
+        sourceTemplateVersion: 1,
+        name: "Molasses Reef",
+        locationName: "Key Largo National Marine Sanctuary",
+        description:
+          "A bright outer-reef classic with a relaxed profile and plenty of room to explore.",
+        marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
+        marineLifeDescription:
+          "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
+        difficulty: "beginner",
+        depthRange: "6–12 m",
+        currentNote: "Usually gentle; the crew confirms the final plan.",
+        divePlan:
+          "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
+        landmarks: ["Coral ridge", "Sandy ray channel", "Shallow garden"],
       },
       {
         shopId,
@@ -329,6 +378,41 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     ])
     .returning();
   const siteByName = new Map(siteRows.map((site) => [site.name, site]));
+  const molasses = siteByName.get("Molasses Reef");
+  if (molasses) {
+    await db.insert(diveSiteCreatures).values([
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Stoplight parrotfish",
+        kind: "fish",
+        description: "A bright reef grazer with a beak-like mouth.",
+        preparationTip: "Move slowly near coral heads and let the colour find you.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Elkhorn coral",
+        kind: "coral",
+        description: "Branching coral that makes a remarkable shallow reef silhouette.",
+        preparationTip: "Practice neutral buoyancy; never touch or brace on coral.",
+      },
+      {
+        shopId,
+        diveSiteId: molasses.id,
+        name: "Southern stingray",
+        kind: "ray",
+        description: "Often seen gliding over the sand channels.",
+        preparationTip: "Give rays space and watch from the side, not above.",
+      },
+    ]);
+    await db.insert(diveSiteMoments).values({
+      shopId,
+      diveSiteId: molasses.id,
+      caption: "A quiet moment watching a ray disappear into blue water.",
+      isPublished: true,
+    });
+  }
 
   const tripRows = await db
     .insert(trips)

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/db/client";
-import { listDiveSites } from "@/db/dive-sites";
+import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/queries";
 import { requireStaffSession } from "@/lib/session";
 
@@ -14,7 +14,13 @@ export default async function DiveSitesPage({ params }: { params: Promise<{ shop
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
-  const sites = await listDiveSites(db, shop.id);
+  const [sites, templates] = await Promise.all([
+    listDiveSites(db, shop.id),
+    listGlobalDiveSiteTemplates(db),
+  ]);
+  const currentTemplateVersion = new Map(
+    templates.map(({ template, version }) => [template.id, version.version]),
+  );
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
@@ -35,6 +41,12 @@ export default async function DiveSitesPage({ params }: { params: Promise<{ shop
         >
           Create a site
         </Link>
+        <Link
+          href={`/shop/${shopSlug}/dive-sites/catalog`}
+          className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium"
+        >
+          Browse Scuba templates
+        </Link>
       </header>
 
       {sites.length === 0 ? (
@@ -54,6 +66,14 @@ export default async function DiveSitesPage({ params }: { params: Promise<{ shop
               >
                 <h2 className="font-semibold">{site.name}</h2>
                 <p className="mt-1 text-sm text-muted">{site.locationName ?? "Location to add"}</p>
+                {site.sourceTemplateVersion ? (
+                  <p className="mt-2 text-xs font-medium text-primary">
+                    {(currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0) >
+                    site.sourceTemplateVersion
+                      ? `Template update v${currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? ""} ready — your edits are safe.`
+                      : `Scuba template v${site.sourceTemplateVersion}`}
+                  </p>
+                ) : null}
                 <p className="mt-4 line-clamp-2 text-sm text-muted">
                   {site.marineLife || site.description || "Add the briefing your divers will see."}
                 </p>

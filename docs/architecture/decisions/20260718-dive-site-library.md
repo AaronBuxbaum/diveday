@@ -11,10 +11,10 @@ route, and marine-life content. Every record remains shop-scoped.
 
 ## Decision
 
-Use a `dive_sites` library owned by each shop. A trip may reference one library record; the
-site carries its location/map/route/media and underwater briefing, while the trip owns its
-forecast values. Copying creates a new independent site record, and staff provide media as
-HTTP(S) URLs until a storage provider is selected.
+Use immutable versions in a Scuba-maintained common-site catalog. A shop imports a version into
+its own `dive_sites` library, retaining its source template/version even after local edits, so an
+update can be visible without overwriting the shop. A trip may reference one library record; the
+site carries its location/media, educational field cards, and plan while the trip owns forecasts.
 
 ## Alternatives considered
 

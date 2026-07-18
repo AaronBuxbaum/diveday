@@ -48,7 +48,6 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await page.getByRole("button", { name: "Save conditions" }).click();
   await expect(page.getByRole("status")).toContainText("conditions briefing updated");
 
-  await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto("/shop/blue-mantis/schedule");
   await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
   await expect(page.getByRole("heading", { name: siteName })).toBeVisible();

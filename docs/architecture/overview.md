@@ -15,6 +15,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Styling | Tailwind 4 + semantic CSS tokens | [0004](decisions/0004-design-tokens.md) |
 | Database | Postgres via Drizzle ORM; PGlite in dev/test, Neon in production | [0005](decisions/0005-database.md), [20260718 Neon](decisions/20260718-vercel-neon-hosting.md), [20260718 Drizzle beta](decisions/20260718-drizzle-v1-beta.md) |
 | Hosting | Vercel (Git integration, preview deploys) | [20260718 hosting](decisions/20260718-vercel-hosting.md) |
+| Analytics | Vercel Analytics via `@vercel/analytics` | [20260718 analytics](decisions/20260718-vercel-analytics.md) |
 | Auth | Auth.js v5 credentials, JWT sessions, proxy gating | [0006](decisions/0006-auth.md) |
 | Transactional email | Resend REST API behind `src/lib/notifications/` | [20260718 email](decisions/20260718-resend-transactional-email.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
