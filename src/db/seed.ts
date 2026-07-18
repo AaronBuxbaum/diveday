@@ -425,10 +425,11 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         name: "Spiegel Grove",
         locationName: "Key Largo, Florida",
-        // A deep wreck gates itself: AOW plus Deep and Wreck specialties.
+        // The glossary's canonical gate: a deep wreck dived externally needs
+        // AOW + Deep. (Wreck specialty is for penetration, not the whole site.)
         // Every trip that visits inherits at least this (readiness composes it).
         minimumCertificationLevel: "advanced_open_water" as const,
-        requiredSpecialties: ["deep", "wreck"] as DiveSpecialty[],
+        requiredSpecialties: ["deep"] as DiveSpecialty[],
         description:
           "A deliberately sunk former Navy ship with dramatic structure and blue-water scale.",
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
@@ -594,7 +595,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       {
         shopId,
         title: "Night Dive — City of Washington",
-        description: "Torches, tarpon, and bioluminescence. AOW or Night specialty.",
+        description: "Torches, tarpon, and bioluminescence. Night specialty required.",
         startsAt: at(2, 22, 0), // ~6:00 PM Eastern
         endsAt: at(3, 0, 30),
         capacity: 8,
@@ -632,18 +633,15 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   await db.insert(tripRequirements).values(
     tripRows.map((trip) => {
       // The night dive has no site of its own, so its Night gate is trip-level;
-      // the wreck trip inherits AOW + Deep + Wreck from the Spiegel Grove site.
+      // night diving needs the Night specialty, not a higher level. The wreck
+      // trip inherits AOW + Deep from the Spiegel Grove site.
       const isNight = trip.title.startsWith("Night Dive");
       return {
         tripId: trip.id,
         shopId,
         requiresWaiver: true,
         minimumCertificationLevel:
-          trip.courseId === discoverCourse.id
-            ? null
-            : isNight
-              ? ("advanced_open_water" as const)
-              : ("open_water" as const),
+          trip.courseId === discoverCourse.id ? null : ("open_water" as const),
         requiredSpecialties: (isNight ? ["night"] : []) as DiveSpecialty[],
       };
     }),

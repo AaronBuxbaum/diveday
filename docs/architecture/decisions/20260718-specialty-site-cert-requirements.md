@@ -45,6 +45,15 @@ evidence produces `ready`, and no new source may become an implicit pass.
   public confirmation, and future manifests with no new pass path.
 - Commits us to keeping the `dive_specialty` enum and the rank map in `readiness.ts` in sync when
   either changes (adding a specialty is a schema migration + a label entry).
+- **Known constraints (deliberate for this slice):**
+  - *Single site.* A trip links one `dive_site_id`, so composition covers only that site. A trip is
+    domain-defined as "one or more sites" (glossary); when multi-site itineraries ship, the
+    effective gate must fan the same compose rule (stricter level, union of specialties) over
+    **every** site on the trip — otherwise a two-tank whose deeper second dive is a separate site
+    would under-gate. Until then, put the demanding site's gate on the trip requirement directly.
+  - *Conjunctive only.* Composition can express "level X **and** specialty Y", not "level X **or**
+    specialty Y". This is fail-closed (never under-gates), but it cannot model an either/or gate; a
+    requirement that needs OR semantics must wait for a richer requirement model.
 - Escape hatch: if specialties need per-site depth limits, agency equivalence, or expiry policy
   beyond a single card, revisit by promoting `required_specialties` to a join table with
   per-requirement metadata — a mechanical migration off the current jsonb array.

@@ -19,8 +19,10 @@ new domain concept, define it here in the same PR.
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
-- **Specialties** — standalone certs gating specific activities: **Nitrox/EANx** (enriched
-  air), **Deep** (beyond 18 m/60 ft for OW divers), Night, Wreck, Drysuit.
+- **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
+  OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
+  `specialty_certifications`; **Nitrox/EANx** (enriched air) is different — it gates a **tank at
+  fill time**, not a site, so it is modeled and enforced separately (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
   cert. DSD participants have stricter ratios and depth limits and always dive with an
   instructor.
