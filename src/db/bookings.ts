@@ -105,7 +105,7 @@ export async function createBooking(db: AppDb, req: BookingRequest): Promise<Boo
         .values({ shopId: req.shopId, fullName, email, phone: req.phone })
         .returning();
       if (!person) throw new Error("createBooking: person insert returned no row");
-      await tx.insert(personRoles).values({ personId: person.id, role: "customer" });
+      await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
     }
 
     const [existing] = await tx

@@ -81,7 +81,7 @@ describe("resetDemoSchedule", () => {
       .select({ personId: personRoles.personId })
       .from(personRoles)
       .innerJoin(people, eq(people.id, personRoles.personId))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "customer")));
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "diver")));
     for (const { personId } of customerRoles) {
       const [row] = await db.select().from(people).where(eq(people.id, personId));
       expect(row).toBeDefined();

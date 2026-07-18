@@ -1,6 +1,7 @@
 import { DemoBanner } from "@/components/DemoBanner";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/queries";
+import { auth } from "@/lib/auth";
 
 /**
  * Staff-surface shell. If the shop is a demo shop, it hangs the demo banner
@@ -19,9 +20,29 @@ export default async function ShopLayout({
   const shop = await getShopBySlug(db, shopSlug);
   const showBanner = shop?.isDemo ?? false;
 
+  const session = await auth();
+  let currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver" = "diver";
+  if (session?.user) {
+    if (session.user.roles.includes("owner") || session.user.roles.includes("manager")) {
+      currentRole = "owner";
+    } else if (session.user.roles.includes("instructor")) {
+      currentRole = "instructor";
+    } else if (session.user.roles.includes("divemaster")) {
+      currentRole = "divemaster";
+    } else if (session.user.roles.includes("captain")) {
+      currentRole = "captain";
+    }
+  }
+
   return (
     <>
-      {showBanner ? <DemoBanner /> : null}
+      {showBanner ? (
+        <DemoBanner
+          currentRole={currentRole}
+          currentName={session?.user?.name}
+          shopSlug={shopSlug}
+        />
+      ) : null}
       {children}
     </>
   );

@@ -12,7 +12,7 @@ export const ALL_ROLES = [
   "divemaster",
   "captain",
   "crew",
-  "customer",
+  "diver",
 ] as const;
 
 export type Role = (typeof ALL_ROLES)[number];

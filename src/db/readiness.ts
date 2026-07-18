@@ -116,7 +116,7 @@ export async function listShopDivers(db: AppDb, shopId: string) {
     .select({ id: people.id, fullName: people.fullName, email: people.email })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "customer")))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver")))
     .orderBy(asc(people.fullName));
 }
 
