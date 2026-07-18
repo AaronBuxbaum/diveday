@@ -57,6 +57,12 @@ export default async function ShopPage({
             Certifications
           </Link>
           <Link
+            href="/shop/gear"
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Gear
+          </Link>
+          <Link
             href="/shop/trips/new"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >

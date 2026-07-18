@@ -36,6 +36,13 @@
       "when": 1784337405768,
       "tag": "20260718011645_readiness",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784337918792,
+      "tag": "20260718012518_gear",
+      "breakpoints": true
     }
   ]
 }
