@@ -6,7 +6,7 @@ import {
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import type { MedicalAnswers } from "./schema";
 import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
 
@@ -290,7 +290,7 @@ export async function completeWaiver(
 }
 
 /** Staff roster view: only the current record joins each active booking. */
-export async function listTripWaiverStatuses(db: AppDb, shopId: string, tripId: string) {
+export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tripId: string) {
   return db
     .select({ booking: bookings, person: people, waiver: waiverRecords })
     .from(bookings)
@@ -307,4 +307,28 @@ export async function listTripWaiverStatuses(db: AppDb, shopId: string, tripId: 
       ),
     )
     .orderBy(asc(bookings.createdAt));
+}
+
+/**
+ * Full evidence history for a staff timeline. Unlike the roster status query,
+ * this deliberately includes superseded pending links so a replacement is
+ * explainable without exposing its bearer token.
+ */
+export async function listTripWaiverActivity(db: AppDb, shopId: string, tripId: string) {
+  return db
+    .select({ booking: bookings, person: people, waiver: waiverRecords })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .leftJoin(
+      waiverRecords,
+      and(eq(waiverRecords.bookingId, bookings.id), eq(waiverRecords.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt), asc(waiverRecords.createdAt));
 }

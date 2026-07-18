@@ -293,8 +293,10 @@ Apply these continuously rather than postponing them to “polish”:
 
 ### P1 — after the first waiver slice
 
-1. Add a staff-facing waiver activity timeline and a richer, jurisdiction-specific medical questionnaire.
-   Versioning, referral, expiry, saved progress, and immutable signed evidence shipped in the first slice.
+1. ~~Add a staff-facing waiver activity timeline.~~ Shipped 2026-07-18 (`waiverActivityTimeline`;
+   issued, started, signed, medically blocked, and replaced-link history on the staff trip roster).
+   A richer, jurisdiction-specific medical questionnaire remains legal/policy follow-up. Versioning,
+   referral, expiry, saved progress, and immutable signed evidence shipped in the first slice.
 2. ~~Introduce the generic readiness result while designing certification checks.~~ Shipped
    2026-07-18 (`src/lib/readiness.ts`; shared by staff trip, diver confirmation, and future manifest work).
 3. Add provider adapters or generated skill indexes based on the provider-neutral workflow ADR.
