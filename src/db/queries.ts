@@ -4,6 +4,7 @@ import type { AppDb } from "./client";
 import {
   bookings,
   courses,
+  diveSites,
   people,
   personRoles,
   shops,
@@ -15,6 +16,7 @@ import {
 export type NewTrip = {
   shopId: string;
   courseId?: string;
+  diveSiteId?: string;
   title: string;
   description?: string;
   startsAt: Date;
@@ -34,6 +36,16 @@ export async function createTrip(db: AppDb, input: NewTrip) {
         )[0]
       : null;
     if (input.courseId && !course) return null;
+    const site = input.diveSiteId
+      ? (
+          await tx
+            .select({ id: diveSites.id })
+            .from(diveSites)
+            .where(and(eq(diveSites.id, input.diveSiteId), eq(diveSites.shopId, input.shopId)))
+            .limit(1)
+        )[0]
+      : null;
+    if (input.diveSiteId && !site) return null;
     const [trip] = await tx.insert(trips).values(input).returning();
     if (!trip) throw new Error("createTrip: insert returned no row");
     // A missing requirement configuration is a readiness blocker, never an
@@ -52,15 +64,18 @@ export async function createTrip(db: AppDb, input: NewTrip) {
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ trip: trips, course: courses, booked: count(bookings.id) })
+    .select({ trip: trips, course: courses, diveSite: diveSites, booked: count(bookings.id) })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
+    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .groupBy(trips.id, courses.id)
+    .groupBy(trips.id, courses.id, diveSites.id)
     .limit(1);
   const row = rows[0];
-  return row ? { ...row.trip, course: row.course, booked: row.booked } : null;
+  return row
+    ? { ...row.trip, course: row.course, diveSite: row.diveSite, booked: row.booked }
+    : null;
 }
 
 export type TripPatch = {
@@ -69,12 +84,53 @@ export type TripPatch = {
   startsAt: Date;
   endsAt: Date;
   capacity: number;
+  diveSiteId?: string | null;
 };
 
 export async function updateTrip(db: AppDb, shopId: string, tripId: string, patch: TripPatch) {
+  if (patch.diveSiteId) {
+    const [site] = await db
+      .select({ id: diveSites.id })
+      .from(diveSites)
+      .where(and(eq(diveSites.id, patch.diveSiteId), eq(diveSites.shopId, shopId)))
+      .limit(1);
+    if (!site) return null;
+  }
   const [trip] = await db
     .update(trips)
-    .set({ ...patch, description: patch.description ?? null })
+    .set({
+      ...patch,
+      description: patch.description ?? null,
+      ...(patch.diveSiteId === undefined ? {} : { diveSiteId: patch.diveSiteId }),
+    })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .returning();
+  return trip ?? null;
+}
+
+export type TripConditionsPatch = {
+  conditionsSummary?: string;
+  waterTemperatureC?: number;
+  visibilityMeters?: number;
+  surfaceConditions?: string;
+};
+
+/** Forecasts belong to the dated charter and are explicitly timestamped. */
+export async function updateTripConditions(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  patch: TripConditionsPatch,
+) {
+  const [trip] = await db
+    .update(trips)
+    .set({
+      conditionsSummary: patch.conditionsSummary || null,
+      waterTemperatureC: patch.waterTemperatureC ?? null,
+      visibilityMeters: patch.visibilityMeters ?? null,
+      surfaceConditions: patch.surfaceConditions || null,
+      conditionsUpdatedAt: new Date(),
+    })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
     .returning();
   return trip ?? null;
@@ -201,6 +257,7 @@ export async function getDefaultShop(db: AppDb) {
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
   course: typeof courses.$inferSelect | null;
+  diveSite: typeof diveSites.$inferSelect | null;
 };
 
 /**
@@ -216,14 +273,16 @@ export async function upcomingTripsWithCounts(
     .select({
       trip: trips,
       course: courses,
+      diveSite: diveSites,
       booked: count(bookings.id),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
+    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)))
-    .groupBy(trips.id, courses.id)
+    .groupBy(trips.id, courses.id, diveSites.id)
     .orderBy(asc(trips.startsAt));
 
-  return rows.map(({ trip, course, booked }) => ({ ...trip, course, booked }));
+  return rows.map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
 }

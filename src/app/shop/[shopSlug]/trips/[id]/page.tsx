@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
+import { listDiveSites } from "@/db/dive-sites";
 import {
   assignGear,
   assignRecommendedGear,
@@ -25,6 +26,7 @@ import {
   setTripCrew,
   setTripStatus,
   updateTrip,
+  updateTripConditions,
 } from "@/db/queries";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
@@ -59,6 +61,20 @@ const detailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
+  diveSiteId: z.preprocess((value) => (value === "" ? null : value), z.string().uuid().nullable()),
+});
+
+const conditionsSchema = z.object({
+  conditionsSummary: z.string().trim().max(600),
+  waterTemperatureC: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(-2).max(40).optional(),
+  ),
+  visibilityMeters: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(0).max(100).optional(),
+  ),
+  surfaceConditions: z.string().trim().max(300),
 });
 
 const requirementsSchema = z.object({
@@ -87,6 +103,7 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
     text: "That waiver link could not be created. Try a current booking and template.",
   },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
+  conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },
   "gear-assigned": { tone: "success", text: "Gear added to the packing list." },
   "gear-returned": { tone: "success", text: "Gear returned to the gear room." },
   "gear-packed": { tone: "success", text: "Available gear was packed from diver requests." },
@@ -160,6 +177,7 @@ export default async function ManageTripPage({
     availableGear,
     tripGearRows,
     gearRequestRows,
+    diveSiteList,
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewIds(db, tripId),
@@ -172,6 +190,7 @@ export default async function ManageTripPage({
     listAvailableGear(db, shop.id),
     listTripGearAssignments(db, shop.id, tripId),
     listTripRentalGearRequests(db, shop.id, tripId),
+    listDiveSites(db, shop.id),
   ]);
   const banner = notice ? BANNERS[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
@@ -219,7 +238,7 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
-    const { title, description, date, startTime, endTime, capacity } = parsed.data;
+    const { title, description, date, startTime, endTime, capacity, diveSiteId } = parsed.data;
     const sw = parseWallTime(date, startTime);
     const ew = parseWallTime(date, endTime);
     if (!sw || !ew) redirect(`${back}?notice=invalid`);
@@ -235,8 +254,18 @@ export default async function ManageTripPage({
       startsAt,
       endsAt,
       capacity,
+      diveSiteId,
     });
     redirect(`${back}?notice=saved`);
+  }
+
+  async function saveConditionsAction(formData: FormData) {
+    "use server";
+    const s = await requireStaffSession();
+    const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}?notice=invalid`);
+    const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, parsed.data);
+    redirect(`${back}?notice=${saved ? "conditions" : "invalid"}`);
   }
 
   async function cancelTripAction() {
@@ -475,6 +504,22 @@ export default async function ManageTripPage({
               className={inputClass}
             />
           </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Dive-site briefing <span className="font-normal text-muted">(optional)</span>
+            <select name="diveSiteId" defaultValue={trip.diveSiteId ?? ""} className={inputClass}>
+              <option value="">No dive-site briefing yet</option>
+              {diveSiteList.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 text-sm font-normal text-muted">
+              {trip.diveSite
+                ? `Divers currently see “${trip.diveSite.name}” before booking.`
+                : "Attach a saved site so divers can see the location and underwater briefing."}
+            </span>
+          </label>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
             <label className="flex flex-col gap-1 text-sm font-medium">
               Date
@@ -527,6 +572,66 @@ export default async function ManageTripPage({
               Save changes
             </button>
           </div>
+        </form>
+      </section>
+
+      <section className="mt-10 rounded-lg border border-border bg-surface p-5">
+        <h2 className="text-lg font-semibold">Predicted conditions</h2>
+        <p className="mt-1 text-sm text-muted">
+          This is a crew briefing, not a live guarantee. Update it whenever the forecast changes.
+        </p>
+        <form action={saveConditionsAction} className="mt-5 flex flex-col gap-5">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Conditions overview
+            <textarea
+              name="conditionsSummary"
+              rows={2}
+              maxLength={600}
+              defaultValue={trip.conditionsSummary ?? ""}
+              placeholder="A calm morning is expected; the crew will confirm the final call at the dock."
+              className={inputClass}
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Water temp °C
+              <input
+                name="waterTemperatureC"
+                type="number"
+                min={-2}
+                max={40}
+                defaultValue={trip.waterTemperatureC ?? ""}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Visibility metres
+              <input
+                name="visibilityMeters"
+                type="number"
+                min={0}
+                max={100}
+                defaultValue={trip.visibilityMeters ?? ""}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Surface notes
+              <input
+                name="surfaceConditions"
+                maxLength={300}
+                defaultValue={trip.surfaceConditions ?? ""}
+                placeholder="Light breeze · gentle chop"
+                className={inputClass}
+              />
+            </label>
+          </div>
+          <button
+            type="submit"
+            className="min-h-11 self-start rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Save conditions
+          </button>
         </form>
       </section>
 

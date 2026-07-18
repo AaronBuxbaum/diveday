@@ -64,6 +64,11 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
                     {trip.description ? (
                       <p className="mt-0.5 text-sm text-muted">{trip.description}</p>
                     ) : null}
+                    {trip.diveSite ? (
+                      <p className="mt-2 text-sm font-medium text-primary">
+                        Dive site · {trip.diveSite.name}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="shrink-0">
                     <span

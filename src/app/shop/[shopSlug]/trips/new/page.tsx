@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
+import { listDiveSites } from "@/db/dive-sites";
 import { createTrip, getShopById } from "@/db/queries";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -24,6 +25,10 @@ const formSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
   ),
+  diveSiteId: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().uuid().optional(),
+  ),
 });
 
 async function scheduleTrip(formData: FormData) {
@@ -32,7 +37,8 @@ async function scheduleTrip(formData: FormData) {
 
   const parsed = formSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
-  const { title, description, date, startTime, endTime, capacity, courseId } = parsed.data;
+  const { title, description, date, startTime, endTime, capacity, courseId, diveSiteId } =
+    parsed.data;
 
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
@@ -50,6 +56,7 @@ async function scheduleTrip(formData: FormData) {
   const created = await createTrip(db, {
     shopId: shop.id,
     courseId,
+    diveSiteId,
     title,
     description: description || undefined,
     startsAt,
@@ -79,7 +86,10 @@ export default async function NewTripPage({
   const { shopSlug } = await params;
   const { error, course: selectedCourseId } = await searchParams;
   const db = await getDb();
-  const courseList = await listActiveCourses(db, session.user.shopId);
+  const [courseList, diveSiteList] = await Promise.all([
+    listActiveCourses(db, session.user.shopId),
+    listDiveSites(db, session.user.shopId),
+  ]);
   const selectedCourse = courseList.find((course) => course.id === selectedCourseId);
   const message = error ? ERROR_MESSAGES[error] : undefined;
 
@@ -122,6 +132,22 @@ export default async function NewTripPage({
                 : ""}
             </span>
           ) : null}
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Dive site <span className="font-normal text-muted">(optional)</span>
+          <select name="diveSiteId" className={inputClass}>
+            <option value="">Add a site briefing later</option>
+            {diveSiteList.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 text-sm font-normal text-muted">
+            {diveSiteList.length > 0
+              ? "Divers will see the site briefing before they book."
+              : "Build a reusable briefing in Dive sites, then attach it here."}
+          </span>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Title
