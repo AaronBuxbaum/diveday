@@ -26,6 +26,7 @@ export const authConfig = {
       if (user) {
         token.personId = user.personId;
         token.shopId = user.shopId;
+        token.shopSlug = user.shopSlug;
         token.roles = user.roles;
       }
       return token;
@@ -33,19 +34,30 @@ export const authConfig = {
     session({ session, token }) {
       session.user.personId = token.personId as string;
       session.user.shopId = token.shopId as string;
+      session.user.shopSlug = token.shopSlug as string;
       session.user.roles = (token.roles ?? []) as typeof session.user.roles;
       return session;
     },
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const roles = auth?.user?.roles;
-      if (pathname.startsWith(STAFF_PREFIX)) {
+      const isPublicShopRoute = /^\/shop\/[a-z0-9-]+\/schedule(\/.*)?$/.test(pathname);
+
+      if ((pathname === STAFF_PREFIX || pathname === `${STAFF_PREFIX}/`) && isStaff(roles)) {
+        const shopSlug = auth?.user?.shopSlug;
+        if (!shopSlug) return false;
+        return NextResponse.redirect(new URL(`/shop/${shopSlug}`, request.nextUrl));
+      }
+      if (pathname === "/sign-in" && isStaff(roles)) {
+        const shopSlug = auth?.user?.shopSlug;
+        if (shopSlug) {
+          return NextResponse.redirect(new URL(`/shop/${shopSlug}`, request.nextUrl));
+        }
+      }
+      if (pathname.startsWith(STAFF_PREFIX) && !isPublicShopRoute) {
         if (!roles) return false; // Auth.js redirects to pages.signIn
         if (!isStaff(roles)) return NextResponse.redirect(new URL("/", request.nextUrl));
         return true;
-      }
-      if (pathname === "/sign-in" && isStaff(roles)) {
-        return NextResponse.redirect(new URL(STAFF_PREFIX, request.nextUrl));
       }
       return true;
     },

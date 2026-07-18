@@ -1,26 +1,35 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
-import { getShopBySlug } from "@/db/queries";
+import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
+import { getShopById } from "@/db/queries";
+import { shops } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
 import { signIn } from "@/lib/auth";
-import { DEMO_OWNER_LOGIN, DEMO_SHOP_SLUG, isDemoMode } from "@/lib/demo";
 import { requireStaffSession } from "@/lib/session";
 
 /**
  * One-click into the demo: sign in as the example shop's owner and land on the
- * staff dashboard. Gated by isDemoMode() so it is inert in a real production
- * instance (docs ADR 20260718-demo-mode).
+ * staff dashboard. Gated by presence of a demo shop in the database.
  */
 export async function enterDemoAction() {
-  if (!isDemoMode()) redirect("/");
+  const db = await getDb();
+  const demoShop = await db
+    .select({ slug: shops.slug })
+    .from(shops)
+    .where(eq(shops.isDemo, true))
+    .limit(1);
+  if (demoShop.length === 0) redirect("/");
+  const demoSlug = demoShop[0].slug;
+
   try {
     await signIn("credentials", {
-      email: DEMO_OWNER_LOGIN.email,
-      password: DEMO_OWNER_LOGIN.password,
-      redirectTo: "/shop",
+      email: DEV_STAFF_LOGINS.owner.email,
+      password: DEV_STAFF_LOGINS.owner.password,
+      redirectTo: `/shop/${demoSlug}`,
     });
   } catch (error) {
     if (error instanceof AuthError) redirect("/sign-in?error=1");
@@ -28,15 +37,12 @@ export async function enterDemoAction() {
   }
 }
 
-/**
- * Wipe the demo playground back to its seeded state. Staff-gated and demo-gated:
- * only a signed-in staffer, and only while demo mode is on, can trigger it.
- */
 export async function resetDemoAction() {
-  if (!isDemoMode()) redirect("/");
-  await requireStaffSession();
+  const session = await requireStaffSession();
   const db = await getDb();
-  const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
-  if (shop) await resetDemoSchedule(db, shop.id);
-  redirect("/shop?reset=1");
+  const shop = await getShopById(db, session.user.shopId);
+  if (shop?.isDemo) {
+    await resetDemoSchedule(db, shop.id);
+  }
+  redirect(`/shop/${session.user.shopSlug}?reset=1`);
 }

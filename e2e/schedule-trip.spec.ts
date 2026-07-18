@@ -33,7 +33,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("status")).toContainText(title);
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   const card = page.locator("li").filter({ hasText: title });
   await expect(card).toBeVisible();
   await expect(card.getByText("8 spots left")).toBeVisible();
@@ -41,7 +41,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
 
 test("end-before-start is rejected with a friendly message", async ({ page }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/trips/new");
+  await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill("Backwards Trip");
   await page.getByLabel("Date").fill(daysFromNow(4));
   await page.getByLabel("Departs").fill("12:00");
@@ -49,6 +49,6 @@ test("end-before-start is rejected with a friendly message", async ({ page }) =>
   await page.getByRole("button", { name: "Put it on the board" }).click();
 
   await expect(page.getByRole("alert").filter({ hasText: "end after it starts" })).toBeVisible();
-  await page.goto("/trips");
+  await page.goto("/shop/blue-mantis/schedule");
   await expect(page.getByRole("heading", { name: "Backwards Trip" })).not.toBeVisible();
 });

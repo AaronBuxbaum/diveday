@@ -24,6 +24,7 @@ export const shops = pgTable("shops", {
   slug: text("slug").notNull().unique(),
   /** IANA timezone of the physical shop — all schedule display uses this. */
   timezone: text("timezone").notNull(),
+  isDemo: boolean("is_demo").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
