@@ -604,7 +604,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         diveSiteId: siteByName.get("Spiegel Grove")?.id,
         title: "Wreck Trip — Spiegel Grove",
-        description: "The big one. AOW + Deep required, nitrox recommended.",
+        description: "The big one. AOW + Deep + nitrox required.",
         startsAt: at(5, 12, 0),
         endsAt: at(5, 16, 0),
         capacity: 10,
@@ -634,8 +634,10 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     tripRows.map((trip) => {
       // The night dive has no site of its own, so its Night gate is trip-level;
       // night diving needs the Night specialty, not a higher level. The wreck
-      // trip inherits AOW + Deep from the Spiegel Grove site.
+      // trip inherits AOW + Deep from the Spiegel Grove site and adds a
+      // trip-level nitrox requirement (deep wreck bottom time).
       const isNight = trip.title.startsWith("Night Dive");
+      const isWreck = trip.title.startsWith("Wreck Trip");
       return {
         tripId: trip.id,
         shopId,
@@ -643,6 +645,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         minimumCertificationLevel:
           trip.courseId === discoverCourse.id ? null : ("open_water" as const),
         requiredSpecialties: (isNight ? ["night"] : []) as DiveSpecialty[],
+        requiresNitrox: isWreck,
       };
     }),
   );
@@ -737,7 +740,7 @@ async function seedNitrox(
     },
   ]);
 
-  // One logged fill for a certified diver on the wreck ("nitrox recommended").
+  // One logged fill for a certified diver on the nitrox-required wreck trip.
   const wreckBookingForCert = bookingRows.find(
     (b) => b.tripId === wreck.id && b.personId === customers[0].id,
   );

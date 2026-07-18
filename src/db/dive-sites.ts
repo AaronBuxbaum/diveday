@@ -28,6 +28,7 @@ export type DiveSiteInput = {
   /** The site's inherent cert gate; composed into every trip that visits it. */
   minimumCertificationLevel?: CertificationLevel | null;
   requiredSpecialties?: DiveSpecialty[];
+  requiresNitrox?: boolean;
 };
 
 export async function listDiveSites(db: AppDb, shopId: string) {
@@ -66,6 +67,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
+      requiresNitrox: input.requiresNitrox ?? false,
     })
     .returning();
   if (!site) throw new Error("createDiveSite: insert returned no row");
@@ -96,6 +98,7 @@ export async function updateDiveSite(
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
+      requiresNitrox: input.requiresNitrox ?? false,
     })
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
     .returning();
@@ -123,6 +126,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     landmarks: source.landmarks,
     minimumCertificationLevel: source.minimumCertificationLevel,
     requiredSpecialties: source.requiredSpecialties,
+    requiresNitrox: source.requiresNitrox,
   });
 }
 

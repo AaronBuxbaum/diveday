@@ -19,14 +19,18 @@ evidence produces `ready`, and no new source may become an implicit pass.
   `certifications` capture→verify contract (evidence starts `pending`; only a verified, unexpired
   card of the exact specialty clears its gate). A specialty is checked by kind, never by rank, so
   it is modeled apart from the level rank map in `src/lib/readiness.ts`.
-- **Nitrox is deliberately excluded** from this set. It is gated per-tank at fill time
-  (`nitrox_certifications` / `nitrox_fills`, M7), not per-site, and keeps its own table untouched.
+- **Nitrox is kept out of the specialty enum/table, but can gate boarding.** Its evidence stays in
+  `nitrox_certifications` (which also gates fills, M7) — never folded into `specialty_certifications`
+  — so a site or trip requires it via its own `requires_nitrox` boolean, not a member of
+  `required_specialties`. This gives nitrox two independent gates: the per-tank fill gate (unchanged)
+  and an optional boarding gate (e.g. a nitrox-only charter). A verified nitrox card clears the
+  boarding gate; those cards carry no expiry, so there is no expired state.
 - **Requirements attach to both the dive site and the trip.** `dive_sites` gains an inherent gate
-  (`minimum_certification_level`, `required_specialties`); `trip_requirements` gains
-  `required_specialties`. The readiness service **composes** them: the effective gate is the
-  stricter minimum level and the union of specialties (`combineCertRequirements`). A trip with no
-  configured `trip_requirements` row is still "not configured" (blocked) — a site gate never
-  substitutes for the explicit per-trip requirement.
+  (`minimum_certification_level`, `required_specialties`, `requires_nitrox`); `trip_requirements`
+  gains the same two. The readiness service **composes** them: the effective gate is the stricter
+  minimum level, the union of specialties, and nitrox if either side demands it
+  (`combineCertRequirements`). A trip with no configured `trip_requirements` row is still "not
+  configured" (blocked) — a site gate never substitutes for the explicit per-trip requirement.
 
 ## Alternatives considered
 

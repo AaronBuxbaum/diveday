@@ -7,6 +7,7 @@ import {
   bookings,
   certifications,
   diveSites,
+  nitroxCertifications,
   people,
   personRoles,
   specialtyCertifications,
@@ -34,6 +35,7 @@ export async function upsertTripRequirements(
     requiresWaiver: boolean;
     minimumCertificationLevel: CertLevel | null;
     requiredSpecialties: DiveSpecialty[];
+    requiresNitrox: boolean;
   },
 ) {
   const [trip] = await db
@@ -51,6 +53,7 @@ export async function upsertTripRequirements(
         requiresWaiver: input.requiresWaiver,
         minimumCertificationLevel: input.minimumCertificationLevel,
         requiredSpecialties: input.requiredSpecialties,
+        requiresNitrox: input.requiresNitrox,
         updatedAt: new Date(),
       },
     })
@@ -72,16 +75,19 @@ export async function getTripSiteRequirement(
     .select({
       minimumCertificationLevel: diveSites.minimumCertificationLevel,
       requiredSpecialties: diveSites.requiredSpecialties,
+      requiresNitrox: diveSites.requiresNitrox,
     })
     .from(trips)
     .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
     .limit(1);
   if (!row) return null;
-  if (!row.minimumCertificationLevel && row.requiredSpecialties.length === 0) return null;
+  if (!row.minimumCertificationLevel && row.requiredSpecialties.length === 0 && !row.requiresNitrox)
+    return null;
   return {
     minimumCertificationLevel: row.minimumCertificationLevel,
     requiredSpecialties: row.requiredSpecialties,
+    requiresNitrox: row.requiresNitrox,
   };
 }
 
@@ -228,9 +234,9 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     listTripWaiverStatuses(db, shopId, tripId),
   ]);
   const personIds = waiverRows.map((row) => row.person.id);
-  const [certificationRows, specialtyRows] =
+  const [certificationRows, specialtyRows, nitroxRows] =
     personIds.length === 0
-      ? [[], []]
+      ? [[], [], []]
       : await Promise.all([
           db
             .select()
@@ -247,6 +253,15 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
                 inArray(specialtyCertifications.personId, personIds),
               ),
             ),
+          db
+            .select()
+            .from(nitroxCertifications)
+            .where(
+              and(
+                eq(nitroxCertifications.shopId, shopId),
+                inArray(nitroxCertifications.personId, personIds),
+              ),
+            ),
         ]);
   const certificationsByPerson = new Map<string, typeof certificationRows>();
   for (const certification of certificationRows) {
@@ -260,6 +275,12 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     current.push(specialty);
     specialtiesByPerson.set(specialty.personId, current);
   }
+  const nitroxByPerson = new Map<string, typeof nitroxRows>();
+  for (const card of nitroxRows) {
+    const current = nitroxByPerson.get(card.personId) ?? [];
+    current.push(card);
+    nitroxByPerson.set(card.personId, current);
+  }
 
   return waiverRows.map((row) => ({
     ...row,
@@ -267,12 +288,14 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     siteRequirement,
     certifications: certificationsByPerson.get(row.person.id) ?? [],
     specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
+    nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
     readiness: calculateReadiness({
       requirement,
       siteRequirement,
       waiver: row.waiver,
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
+      nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
     }),
   }));
 }

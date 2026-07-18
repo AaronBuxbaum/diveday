@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type {
   Certification,
+  NitroxCertification,
   SpecialtyCertification,
   TripRequirement,
   WaiverRecord,
@@ -36,10 +37,20 @@ function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): Special
   } as SpecialtyCertification;
 }
 
+function nitroxCard(overrides: Partial<NitroxCertification> = {}): NitroxCertification {
+  return { status: "verified", ...overrides } as NitroxCertification;
+}
+
 /** A trip requirement that also demands a Deep specialty card. */
 const deepRequirement = {
   ...requirement,
   requiredSpecialties: ["deep"],
+} as unknown as TripRequirement;
+
+/** A trip requirement that demands a verified nitrox card to board. */
+const nitroxRequirement = {
+  ...requirement,
+  requiresNitrox: true,
 } as unknown as TripRequirement;
 
 describe("calculateReadiness", () => {
@@ -143,7 +154,11 @@ describe("calculateReadiness", () => {
   it("composes the stricter site level over a lax trip level", () => {
     const result = calculateReadiness({
       requirement: { ...requirement, minimumCertificationLevel: "open_water" } as TripRequirement,
-      siteRequirement: { minimumCertificationLevel: "rescue", requiredSpecialties: [] },
+      siteRequirement: {
+        minimumCertificationLevel: "rescue",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+      },
       waiver: signedWaiver,
       certifications: [certification({ level: "advanced_open_water" })],
       now,
@@ -157,13 +172,61 @@ describe("calculateReadiness", () => {
   it("unions a site-only specialty the trip did not list", () => {
     const result = calculateReadiness({
       requirement,
-      siteRequirement: { minimumCertificationLevel: null, requiredSpecialties: ["wreck"] },
+      siteRequirement: {
+        minimumCertificationLevel: null,
+        requiredSpecialties: ["wreck"],
+        requiresNitrox: false,
+      },
       waiver: signedWaiver,
       certifications: [certification()],
       specialtyCertifications: [],
       now,
     });
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "specialty_missing" }));
+  });
+
+  it.each([
+    ["missing nitrox card", undefined, "nitrox_missing"],
+    ["pending nitrox card", nitroxCard({ status: "pending" }), "nitrox_pending"],
+    ["rejected nitrox card", nitroxCard({ status: "rejected" }), "nitrox_rejected"],
+  ] as const)("fails closed on a required nitrox card for %s", (_name, card, code) => {
+    expect(
+      calculateReadiness({
+        requirement: nitroxRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        nitroxCertifications: card ? [card] : [],
+        now,
+      }).blockers,
+    ).toContainEqual(expect.objectContaining({ code }));
+  });
+
+  it("is ready when a required nitrox card is verified", () => {
+    expect(
+      calculateReadiness({
+        requirement: nitroxRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        nitroxCertifications: [nitroxCard()],
+        now,
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("requires nitrox when only the site demands it", () => {
+    const result = calculateReadiness({
+      requirement,
+      siteRequirement: {
+        minimumCertificationLevel: null,
+        requiredSpecialties: [],
+        requiresNitrox: true,
+      },
+      waiver: signedWaiver,
+      certifications: [certification()],
+      nitroxCertifications: [],
+      now,
+    });
+    expect(result.blockers).toContainEqual(expect.objectContaining({ code: "nitrox_missing" }));
   });
 });
 
@@ -178,12 +241,21 @@ describe("higherCertificationLevel", () => {
 });
 
 describe("combineCertRequirements", () => {
-  it("takes the stricter level and the union of specialties without duplicates", () => {
+  it("takes the stricter level, union of specialties, and OR of nitrox", () => {
     const combined = combineCertRequirements(
-      { minimumCertificationLevel: "open_water", requiredSpecialties: ["deep"] } as TripRequirement,
-      { minimumCertificationLevel: "advanced_open_water", requiredSpecialties: ["deep", "wreck"] },
+      {
+        minimumCertificationLevel: "open_water",
+        requiredSpecialties: ["deep"],
+        requiresNitrox: false,
+      } as TripRequirement,
+      {
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: ["deep", "wreck"],
+        requiresNitrox: true,
+      },
     );
     expect(combined.minimumCertificationLevel).toBe("advanced_open_water");
     expect([...combined.requiredSpecialties].sort()).toEqual(["deep", "wreck"]);
+    expect(combined.requiresNitrox).toBe(true);
   });
 });
