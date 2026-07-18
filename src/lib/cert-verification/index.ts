@@ -41,6 +41,31 @@ const responseSchema = z.object({
   reference: z.string().max(200).optional(),
 });
 
+const agencyGatewayEnvironmentKeys = {
+  padi: {
+    url: "PADI_CERT_VERIFICATION_URL",
+    apiKey: "PADI_CERT_VERIFICATION_API_KEY",
+  },
+  ssi: {
+    url: "SSI_CERT_VERIFICATION_URL",
+    apiKey: "SSI_CERT_VERIFICATION_API_KEY",
+  },
+  naui: {
+    url: "NAUI_CERT_VERIFICATION_URL",
+    apiKey: "NAUI_CERT_VERIFICATION_API_KEY",
+  },
+} as const;
+
+type GatewayEnvironmentKeys = { url: string; apiKey: string };
+
+function gatewayConfigFromEnvironment(env: VerificationEnvironment, keys: GatewayEnvironmentKeys) {
+  const config = configSchema.safeParse({
+    url: env[keys.url],
+    apiKey: env[keys.apiKey],
+  });
+  return config.success ? config.data : undefined;
+}
+
 /** Generic agency-verification gateway: one POST, a typed status back. */
 export function httpCertVerificationProvider(
   config: { url: string; apiKey: string },
@@ -80,12 +105,38 @@ export function certVerificationProviderFromEnvironment(
   env: VerificationEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): CertVerificationProvider {
-  const config = configSchema.safeParse({
-    url: env.CERT_VERIFICATION_URL,
-    apiKey: env.CERT_VERIFICATION_API_KEY,
-  });
-  return config.success
-    ? httpCertVerificationProvider(config.data, fetchImpl)
+  return {
+    verify(request) {
+      return certVerificationProviderForAgencyFromEnvironment(
+        request.agency,
+        env,
+        fetchImpl,
+      ).verify(request);
+    },
+  };
+}
+
+/**
+ * Select an agency's explicitly-authorized gateway. PADI, SSI, and NAUI each
+ * have their own endpoint/key pair so one agency's credential can never be
+ * used for another agency's card. The older shared gateway is a deliberate
+ * fallback for shops that operate a single broker for multiple agencies.
+ */
+export function certVerificationProviderForAgencyFromEnvironment(
+  agency: string,
+  env: VerificationEnvironment = process.env,
+  fetchImpl: Fetch = fetch,
+): CertVerificationProvider {
+  const agencyKeys =
+    agencyGatewayEnvironmentKeys[agency.toLowerCase() as keyof typeof agencyGatewayEnvironmentKeys];
+  const config =
+    (agencyKeys && gatewayConfigFromEnvironment(env, agencyKeys)) ??
+    gatewayConfigFromEnvironment(env, {
+      url: "CERT_VERIFICATION_URL",
+      apiKey: "CERT_VERIFICATION_API_KEY",
+    });
+  return config
+    ? httpCertVerificationProvider(config, fetchImpl)
     : disabledCertVerificationProvider;
 }
 
