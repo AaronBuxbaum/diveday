@@ -18,15 +18,22 @@ import {
  * types — a person can be staff and a diver (docs/product/glossary.md).
  */
 
+/** Selects which diver medical questionnaire a shop presents (src/lib/medical.ts). */
+export const medicalJurisdiction = pgEnum("medical_jurisdiction", ["rstc", "uk"]);
+
 export const shops = pgTable("shops", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   /** IANA timezone of the physical shop — all schedule display uses this. */
   timezone: text("timezone").notNull(),
+  /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
+  jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
   isDemo: boolean("is_demo").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export type MedicalJurisdiction = (typeof medicalJurisdiction.enumValues)[number];
 
 export const personRole = pgEnum("person_role", [
   "owner",
@@ -441,10 +448,16 @@ export const waiverRecordStatus = pgEnum("waiver_record_status", [
   "medical_review",
 ]);
 
+/**
+ * A completed diver medical questionnaire. Stores the questionnaire id and
+ * version it was answered against (src/lib/medical.ts) so signed evidence is
+ * never re-interpreted by a later edit to the question set; `responses` maps
+ * each question id to the diver's yes(true)/no(false) answer.
+ */
 export type MedicalAnswers = {
-  breathing: boolean;
-  medication: boolean;
-  recentIllness: boolean;
+  questionnaireId: string;
+  questionnaireVersion: number;
+  responses: Record<string, boolean>;
 };
 
 /**

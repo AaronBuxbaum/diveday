@@ -55,8 +55,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   from stored evidence without exposing a bearer token.
 - ✅ Staff-triggered waiver links can be emailed through the same transactional notification seam;
   the staff-visible one-time link remains available if delivery fails.
-- ⬜ Durable delivery history/retries, richer jurisdiction-specific medical questionnaires, and a
-  third-party signature adapter remain follow-up work. See
+- ✅ Richer, jurisdiction-aware medical questionnaire: a versioned RSTC/WRSTC form (and a UK
+  variant) defined in [`src/lib/medical.ts`](../../src/lib/medical.ts), selected by the shop's
+  jurisdiction on the waivers page. Completed waivers store the questionnaire id + version; any
+  referral-flagged "yes" fails closed to physician review, and staff see the flagged questions in
+  the waiver activity timeline.
+- ⬜ Durable delivery history/retries and a third-party signature adapter remain follow-up work. See
   [20260718-waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md).
 
 ## M4 — Cert checks (core slice complete)
