@@ -55,6 +55,9 @@ new domain concept, define it here in the same PR.
 - **Transactional notification** — a single-recipient operational message such as a booking
   confirmation or a staff-issued waiver link. Delivery is helpful but never changes the booking or
   waiver evidence; a delivery failure must not undo the underlying operation.
+- **Notification delivery status** — the latest known send result for one booking and notification
+  purpose. It lets staff see an unresolved email issue; it is not proof of inbox delivery or a full
+  provider event history.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 - **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded

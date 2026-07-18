@@ -46,6 +46,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
 
   // Staff sees the diver on the roster.
   await signInAsOwner(page);
+  await expect(page.getByRole("heading", { name: "Email delivery needs attention" })).toBeVisible();
   await page.getByRole("link", { name: new RegExp(title) }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("Nora Quinn").first()).toBeVisible();

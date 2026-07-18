@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
+import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import { signOut } from "@/lib/auth";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -30,7 +31,10 @@ export default async function ShopPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
-  const upcoming = await upcomingTripsWithCounts(db, shop.id);
+  const [upcoming, deliveryIssues] = await Promise.all([
+    upcomingTripsWithCounts(db, shop.id),
+    listNotificationDeliveryIssues(db, shop.id),
+  ]);
   const firstName = session.user.name?.split(" ")[0] ?? "there";
 
   return (
@@ -116,6 +120,45 @@ export default async function ShopPage({
         >
           Demo data reset — fresh boat, clean slate. 🤿
         </p>
+      ) : null}
+
+      {deliveryIssues.length > 0 ? (
+        <section
+          aria-labelledby="delivery-issues-heading"
+          className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-4"
+        >
+          <h2 id="delivery-issues-heading" className="font-semibold">
+            Email delivery needs attention
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {deliveryIssues.length === 1
+              ? "One email needs a follow-up."
+              : `${deliveryIssues.length} emails need a follow-up.`}
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {deliveryIssues.map(({ delivery, person, trip }) => (
+              <li key={delivery.id} className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm">
+                  <span className="font-medium">
+                    {delivery.kind === "booking_confirmation"
+                      ? "Booking confirmation"
+                      : "Waiver link"}
+                  </span>{" "}
+                  for {person.fullName} on {trip.title}:{" "}
+                  {delivery.status === "not_configured"
+                    ? "email is not configured."
+                    : "delivery was unsuccessful."}
+                </p>
+                <Link
+                  href={`/shop/${shopSlug}/trips/${trip.id}`}
+                  className="min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-primary transition-colors duration-200 hover:bg-surface-sunken"
+                >
+                  Open trip
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {upcoming.length === 0 ? (

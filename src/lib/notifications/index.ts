@@ -6,6 +6,7 @@ const emailAddressSchema = z.email().max(200);
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),
   bookingId: z.uuid(),
+  shopId: z.uuid(),
   to: emailAddressSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
@@ -18,6 +19,8 @@ const bookingConfirmationSchema = z.object({
 const waiverRequestSchema = z.object({
   kind: z.literal("waiver_request"),
   waiverRecordId: z.uuid(),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
   to: emailAddressSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
@@ -69,7 +72,10 @@ function idempotencyKeyFor(notification: Notification): string {
     : `waiver-request/${notification.waiverRecordId}`;
 }
 
-export function resendNotificationProvider(config: ResendConfig, fetchImpl: Fetch): NotificationProvider {
+export function resendNotificationProvider(
+  config: ResendConfig,
+  fetchImpl: Fetch,
+): NotificationProvider {
   return {
     async send(notification) {
       const message = messageFor(notification);
@@ -127,7 +133,9 @@ export function notificationProviderFromEnvironment(
     apiKey: env.RESEND_API_KEY,
     from: env.RESEND_FROM_EMAIL,
   });
-  return config.success ? resendNotificationProvider(config.data, fetchImpl) : disabledNotificationProvider;
+  return config.success
+    ? resendNotificationProvider(config.data, fetchImpl)
+    : disabledNotificationProvider;
 }
 
 /** A server-only canonical origin for bearer-token links; never derive this from a request header. */

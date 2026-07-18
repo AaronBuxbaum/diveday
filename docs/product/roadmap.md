@@ -38,8 +38,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   Sessions snapshot waiver/C-card baselines; instructor-required sessions reject enrollment until
   an instructor is assigned, and existing-card courses admit only a verified card at the required
   level. Agency-specific ratios, age, medical, specialty, and exception rules remain H-08 review.
-- ✅ Booking confirmations email immediately through the Resend notification seam. Delivery failure
-  never affects the capacity-safe booking; durable delivery history and retry remain follow-up work.
+- ✅ Booking confirmations email immediately through the Resend notification seam. The owner
+  dashboard surfaces an unresolved delivery failure; email never affects the capacity-safe booking.
 
 ## M3 — Waivers (core slice complete)
 
