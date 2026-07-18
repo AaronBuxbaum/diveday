@@ -52,12 +52,15 @@ new domain concept, define it here in the same PR.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.
+- **Transactional notification** — a single-recipient operational message such as a booking
+  confirmation or a staff-issued waiver link. Delivery is helpful but never changes the booking or
+  waiver evidence; a delivery failure must not undo the underlying operation.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 - **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded
   example shop (Blue Mantis), drives the real staff surfaces, and resets the playground back to a
-  clean slate. Enabled by `isDemoMode()` (on outside production; `SCUBA_DEMO` overrides) and never
-  present in a real shop's production instance (ADR 20260718-demo-mode).
+  clean slate. The Blue Mantis demo shop is bootstrapped in every environment; `isDemo` marks that
+  tenant so its banner and reset affordance remain scoped to the demo (ADR 20260718-production-demo-seed).
 
 ## Gear
 

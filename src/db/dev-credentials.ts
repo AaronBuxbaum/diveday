@@ -1,7 +1,6 @@
 /**
- * Deterministic staff logins for the seeded demo shop — dev and e2e only.
- * These exist solely in local PGlite databases; production seeds nothing
- * (ADR-0005) and requires a real AUTH_SECRET (ADR-0006).
+ * Deterministic staff logins for the seeded demo shop. These credentials are
+ * used only for the demo tenant; real shops use their own accounts.
  */
 export const DEV_STAFF_LOGINS = {
   owner: { email: "dana@bluemantis.example", password: "dev-owner-password" },
@@ -9,3 +8,5 @@ export const DEV_STAFF_LOGINS = {
   divemaster: { email: "keiko@bluemantis.example", password: "dev-divemaster-password" },
   captain: { email: "sal@bluemantis.example", password: "dev-captain-password" },
 } as const;
+
+export const DEMO_SHOP_SLUG = "blue-mantis";

@@ -20,7 +20,7 @@ test("staff issues a resumable waiver and a medical yes stays visible for review
   const waiverSection = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Waivers" }) });
-  await waiverSection.getByRole("button", { name: "Create link" }).first().click();
+  await waiverSection.getByRole("button", { name: "Email link" }).first().click();
   await expect(page.getByRole("heading", { name: "Private waiver link ready" })).toBeVisible();
   const waiverHref = await page
     .getByRole("link", { name: "Open waiver link" })
