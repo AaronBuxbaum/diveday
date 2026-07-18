@@ -13,10 +13,16 @@ there is no live agency integration yet (a per-agency, credential-gated human pr
 ## Decision
 
 - **A provider seam, like notifications and storage.** `src/lib/cert-verification/` defines a
-  `CertVerificationProvider` with one `verify` method and a `verifyCard` entry point. A generic
-  HTTP gateway provider (`fetch`, gated on `CERT_VERIFICATION_URL` + `CERT_VERIFICATION_API_KEY`)
-  POSTs `{agency, level, identifier, holderName}` and reads back a typed
-  `verified | not_found | mismatch`. No config → a disabled provider returns `unavailable`.
+  `CertVerificationProvider` with one `verify` method and a `verifyCard` entry point. An HTTP
+  gateway provider (`fetch`) POSTs `{agency, level, identifier, holderName}` and reads back a typed
+  `verified | not_found | mismatch`. `PADI_*`, `SSI_*`, and `NAUI_*` URL/key pairs route only that
+  agency's cards to its authorized gateway; a legacy shared `CERT_VERIFICATION_*` pair is the
+  fallback. No complete matching pair → a disabled provider returns `unavailable`.
+- **No scraping or reverse-engineering.** Agency-facing card forms, digital-card apps, and Pro
+  portals remain human interfaces. The per-agency URL is set only after the agency supplies a
+  supported contract, or after an approved server-side broker translates its documented contract.
+  The exact setup and contacts live in
+  [the agency integration runbook](../../integrations/certification-agencies.md).
 - **The check is assistive, and human review stays authoritative.** Applied in
   `verifyCertificationWithAgency`: a **confirmed match** verifies the card and records the source in
   the review note; **not_found / mismatch** only attach a warning note and leave the card
