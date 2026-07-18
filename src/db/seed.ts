@@ -1,7 +1,17 @@
 import { hash } from "bcryptjs";
+import { newWaiverToken } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+  waivers,
+  waiverTemplates,
+} from "./schema";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -159,11 +169,65 @@ export async function seedDemo(db: AppDb): Promise<void> {
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
   ];
-  await db.insert(bookings).values(
-    bookingRows.map((row) => ({
+  const bookingRecords = await db
+    .insert(bookings)
+    .values(
+      bookingRows.map((row) => ({
+        shopId: shop.id,
+        status: "booked" as const,
+        ...row,
+      })),
+    )
+    .returning();
+
+  // Waiver template + a spread of waiver states on the reef trip so the
+  // check-in view demos every path: signed clean, physician-blocked, unsent.
+  const [template] = await db
+    .insert(waiverTemplates)
+    .values({
       shopId: shop.id,
-      status: "booked" as const,
-      ...row,
-    })),
-  );
+      title: "Liability release & diver medical statement",
+      body: WAIVER_BODY,
+      requiresMedical: true,
+    })
+    .returning();
+  if (!template) throw new Error("seed: failed to insert waiver template");
+
+  const reefBookings = bookingRecords.filter((b) => b.tripId === reef.id);
+  const waiverSeed = reefBookings.map((booking, i) => {
+    const base = { shopId: shop.id, bookingId: booking.id, templateId: template.id };
+    // First few signed clean, one physician-blocked, one signed via clearance,
+    // the rest left pending (link not yet opened).
+    if (i === 0) {
+      return {
+        ...base,
+        token: newWaiverToken(),
+        status: "physician_required" as const,
+        signedName: "signed on file",
+        signedAt: at(-1, 14),
+        medicalFlagged: true,
+        medicalNotes: "medication",
+      };
+    }
+    if (i < 4) {
+      return {
+        ...base,
+        token: newWaiverToken(),
+        status: "signed" as const,
+        signedName: "signed on file",
+        signedAt: at(-1, 15 + i),
+        medicalFlagged: false,
+      };
+    }
+    return { ...base, token: newWaiverToken() }; // pending
+  });
+  await db.insert(waivers).values(waiverSeed);
 }
+
+const WAIVER_BODY = `This is a release of liability and assumption of risk. Read it carefully before you sign.
+
+Scuba diving is an activity with inherent risks, including pressure-related injury, equipment failure, and drowning. By signing, you acknowledge these risks and agree to dive within the limits of your training and certification.
+
+You confirm that the information you provide on the medical statement is true and complete, and that you will tell the dive staff about any change in your health before you get in the water.
+
+You release the dive shop, its staff, and the vessel's crew from liability for injury or loss, except that caused by their own gross negligence, to the fullest extent permitted by law.`;
