@@ -3,6 +3,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import type { AppDb } from "./client";
 import {
   bookings,
+  courses,
   people,
   personRoles,
   shops,
@@ -13,6 +14,7 @@ import {
 
 export type NewTrip = {
   shopId: string;
+  courseId?: string;
   title: string;
   description?: string;
   startsAt: Date;
@@ -22,15 +24,26 @@ export type NewTrip = {
 
 export async function createTrip(db: AppDb, input: NewTrip) {
   return db.transaction(async (tx) => {
+    const course = input.courseId
+      ? (
+          await tx
+            .select()
+            .from(courses)
+            .where(and(eq(courses.id, input.courseId), eq(courses.shopId, input.shopId)))
+            .limit(1)
+        )[0]
+      : null;
+    if (input.courseId && !course) return null;
     const [trip] = await tx.insert(trips).values(input).returning();
     if (!trip) throw new Error("createTrip: insert returned no row");
     // A missing requirement configuration is a readiness blocker, never an
-    // accidental pass. New trips start with the common recreational baseline.
+    // accidental pass. Course sessions snapshot their catalog baseline so a
+    // later catalog edit cannot silently weaken an already-published session.
     await tx.insert(tripRequirements).values({
       tripId: trip.id,
       shopId: input.shopId,
-      requiresWaiver: true,
-      minimumCertificationLevel: "open_water",
+      requiresWaiver: course?.requiresWaiver ?? true,
+      minimumCertificationLevel: course?.minimumCertificationLevel ?? "open_water",
     });
     return trip;
   });
@@ -39,14 +52,15 @@ export async function createTrip(db: AppDb, input: NewTrip) {
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ trip: trips, booked: count(bookings.id) })
+    .select({ trip: trips, course: courses, booked: count(bookings.id) })
     .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .groupBy(trips.id)
+    .groupBy(trips.id, courses.id)
     .limit(1);
   const row = rows[0];
-  return row ? { ...row.trip, booked: row.booked } : null;
+  return row ? { ...row.trip, course: row.course, booked: row.booked } : null;
 }
 
 export type TripPatch = {
@@ -184,7 +198,10 @@ export async function getDefaultShop(db: AppDb) {
   return shop ?? null;
 }
 
-export type TripWithBookedCount = typeof trips.$inferSelect & { booked: number };
+export type TripWithBookedCount = typeof trips.$inferSelect & {
+  booked: number;
+  course: typeof courses.$inferSelect | null;
+};
 
 /**
  * Upcoming scheduled trips with their active-booking counts.
@@ -198,13 +215,15 @@ export async function upcomingTripsWithCounts(
   const rows = await db
     .select({
       trip: trips,
+      course: courses,
       booked: count(bookings.id),
     })
     .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)))
-    .groupBy(trips.id)
+    .groupBy(trips.id, courses.id)
     .orderBy(asc(trips.startsAt));
 
-  return rows.map(({ trip, booked }) => ({ ...trip, booked }));
+  return rows.map(({ trip, course, booked }) => ({ ...trip, course, booked }));
 }

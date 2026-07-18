@@ -69,6 +69,58 @@ export const personRoles = pgTable(
 
 export const tripStatus = pgEnum("trip_status", ["scheduled", "cancelled"]);
 
+export const certificationAgency = pgEnum("certification_agency", [
+  "padi",
+  "ssi",
+  "naui",
+  "sdi",
+  "tdi",
+  "other",
+]);
+
+/** Ordered in src/lib/readiness.ts — extend deliberately with the rank map. */
+export const certificationLevel = pgEnum("certification_level", [
+  "open_water",
+  "advanced_open_water",
+  "rescue",
+  "divemaster",
+  "instructor",
+]);
+
+export const certificationStatus = pgEnum("certification_status", [
+  "pending",
+  "verified",
+  "rejected",
+]);
+
+/**
+ * Course definitions are the reusable instruction catalog. A course session
+ * remains a trip so enrollment, capacity, crew, waivers, gear, and manifests
+ * all share one operational spine.
+ */
+export const courses = pgTable(
+  "courses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    title: text("title").notNull(),
+    description: text("description"),
+    /** Null means an uncertified participant may enroll (for example, DSD/OW). */
+    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
+    /** A course session cannot take enrollments until an instructor is assigned. */
+    requiresInstructor: boolean("requires_instructor").notNull().default(true),
+    requiresWaiver: boolean("requires_waiver").notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("courses_shop_title_unique").on(table.shopId, table.title),
+    index("courses_shop_active_idx").on(table.shopId, table.isActive),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
@@ -76,6 +128,8 @@ export const trips = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /** Present only for a scheduled course session; ordinary charters leave this empty. */
+    courseId: uuid("course_id").references(() => courses.id),
     title: text("title").notNull(),
     description: text("description"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
@@ -238,30 +292,6 @@ export const waiverRecords = pgTable(
   ],
 );
 
-export const certificationAgency = pgEnum("certification_agency", [
-  "padi",
-  "ssi",
-  "naui",
-  "sdi",
-  "tdi",
-  "other",
-]);
-
-/** Ordered in src/lib/readiness.ts — extend deliberately with the rank map. */
-export const certificationLevel = pgEnum("certification_level", [
-  "open_water",
-  "advanced_open_water",
-  "rescue",
-  "divemaster",
-  "instructor",
-]);
-
-export const certificationStatus = pgEnum("certification_status", [
-  "pending",
-  "verified",
-  "rejected",
-]);
-
 /** Evidence belongs to a person; requirements decide whether it is sufficient for a trip. */
 export const certifications = pgTable(
   "certifications",
@@ -305,7 +335,8 @@ export const tripRequirements = pgTable(
       .notNull()
       .references(() => shops.id),
     requiresWaiver: boolean("requires_waiver").notNull().default(true),
-    minimumCertificationLevel: certificationLevel("minimum_certification_level").notNull(),
+    /** Null deliberately means no existing C-card is required, never unknown. */
+    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -368,6 +399,43 @@ export const gearAssignments = pgTable(
   (table) => [
     index("gear_assignments_booking_status_idx").on(table.bookingId, table.status),
     index("gear_assignments_gear_status_idx").on(table.gearItemId, table.status),
+  ],
+);
+
+/**
+ * A diver's requested rental set for one booking. It is a planning input, not
+ * an allocation: staff still chooses real, available inventory through
+ * gear_assignments and confirms fit/weight at check-in.
+ */
+export const rentalGearRequests = pgTable(
+  "rental_gear_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    bcd: boolean("bcd").notNull().default(true),
+    regulator: boolean("regulator").notNull().default(true),
+    wetsuit: boolean("wetsuit").notNull().default(true),
+    maskFins: boolean("mask_fins").notNull().default(true),
+    weights: boolean("weights").notNull().default(true),
+    tank: boolean("tank").notNull().default(true),
+    diveComputer: boolean("dive_computer").notNull().default(false),
+    bcdSize: text("bcd_size"),
+    wetsuitSize: text("wetsuit_size"),
+    bootSize: text("boot_size"),
+    finSize: text("fin_size"),
+    weightPreference: text("weight_preference"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("rental_gear_requests_booking_unique").on(table.bookingId),
+    index("rental_gear_requests_shop_booking_idx").on(table.shopId, table.bookingId),
   ],
 );
 
@@ -444,6 +512,7 @@ export const rollCallEvents = pgTable(
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
+export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
@@ -451,5 +520,6 @@ export type Certification = typeof certifications.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type GearItem = typeof gearItems.$inferSelect;
 export type GearAssignment = typeof gearAssignments.$inferSelect;
+export type RentalGearRequest = typeof rentalGearRequests.$inferSelect;
 export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
