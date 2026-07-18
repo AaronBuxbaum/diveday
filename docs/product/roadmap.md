@@ -57,9 +57,19 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ⬜ Direct image upload/storage, agency API verification, specialty/site-level requirements, and
   payment readiness remain follow-up work.
 
-## M5 — Gear
+## M5 — Gear (core prep slice complete)
 
-- Inventory with sizes and service state, assignment to bookings, service logging.
+- ✅ Inventory records type, size, service state, optional next-service date, and clear
+  unavailable/assigned/held status.
+- ✅ Staff can pack available equipment directly against a trip roster; the transactional gate
+  prevents an item from being claimed twice and makes a hold or retirement unassignable.
+- ✅ Returns move equipment back into the visible packing pool, while the gear-room view retains
+  checked-out equipment until it comes back.
+- ✅ A completed service event records the work, staff member, completed date, and optional next
+  due date before returning held equipment to service. Checked-out and retired gear cannot be
+  released through this path.
+- ⬜ Diver sizing/preferences, booking-level requests, bulk recommendations, and retiring items
+  remain follow-up work.
 
 ## M6 — Boat manifests
 

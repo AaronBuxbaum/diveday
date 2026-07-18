@@ -59,6 +59,12 @@ new domain concept, define it here in the same PR.
 - **Service history** — regulators and BCDs require periodic service (annual or by dive
   count); tanks require periodic **visual inspection (VIP)** and **hydrostatic testing**.
   Out-of-service gear must be un-assignable.
+- **Service event** — a completed, shop-scoped record of work on one item: when it was done,
+  who logged it, what changed, and optionally when it is due next. A service hold blocks checkout;
+  a service event is the auditable evidence that may return an item to the packing pool.
+- **Gear assignment** — one currently checked-out item reserved for one booking. Assignment is
+  not a note: it is the conflict-safe operational record that prevents the same regulator or BCD
+  being packed for two divers at once.
 - **Nitrox fills** — enriched-air tanks must be **O2-analyzed** by the diver before use and
   logged (mix %, analysis, signature). Only nitrox-certified divers may take nitrox tanks.
 

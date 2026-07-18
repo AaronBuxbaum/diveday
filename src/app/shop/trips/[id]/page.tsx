@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
+import { assignGear, listAvailableGear, listTripGearAssignments, returnGear } from "@/db/gear";
 import {
   cancelBooking,
   getShopById,
@@ -55,6 +56,11 @@ const requirementsSchema = z.object({
   ]),
 });
 
+const gearAssignmentSchema = z.object({
+  bookingId: z.string().uuid(),
+  gearItemId: z.string().uuid(),
+});
+
 const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
   saved: { tone: "success", text: "Changes saved." },
   cancelled: { tone: "danger", text: "Trip cancelled — it's off the public schedule." },
@@ -68,6 +74,12 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
     text: "That waiver link could not be created. Try a current booking and template.",
   },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
+  "gear-assigned": { tone: "success", text: "Gear added to the packing list." },
+  "gear-returned": { tone: "success", text: "Gear returned to the gear room." },
+  "gear-error": {
+    tone: "danger",
+    text: "That gear is no longer available. The packing list has been refreshed.",
+  },
   invalid: {
     tone: "danger",
     text: "That didn't save — check the date, times, and capacity, then try again.",
@@ -90,22 +102,44 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const [staff, crewIds, roster, templates, waiverRows, requirement, readinessRows] =
-    await Promise.all([
-      listStaff(db, shop.id),
-      getTripCrewIds(db, tripId),
-      getTripRoster(db, tripId),
-      listWaiverTemplates(db, shop.id),
-      listTripWaiverStatuses(db, shop.id, tripId),
-      getTripRequirements(db, shop.id, tripId),
-      listTripReadiness(db, shop.id, tripId),
-    ]);
+  const [
+    staff,
+    crewIds,
+    roster,
+    templates,
+    waiverRows,
+    requirement,
+    readinessRows,
+    availableGear,
+    tripGearRows,
+  ] = await Promise.all([
+    listStaff(db, shop.id),
+    getTripCrewIds(db, tripId),
+    getTripRoster(db, tripId),
+    listWaiverTemplates(db, shop.id),
+    listTripWaiverStatuses(db, shop.id, tripId),
+    getTripRequirements(db, shop.id, tripId),
+    listTripReadiness(db, shop.id, tripId),
+    listAvailableGear(db, shop.id),
+    listTripGearAssignments(db, shop.id, tripId),
+  ]);
   const banner = notice ? BANNERS[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
   const back = `/shop/trips/${tripId}`;
+  const gearByBooking = new Map<string, { assignmentId: string; label: string; type: string }[]>();
+  for (const row of tripGearRows) {
+    if (!row.assignment || !row.item) continue;
+    const current = gearByBooking.get(row.booking.id) ?? [];
+    current.push({
+      assignmentId: row.assignment.id,
+      label: row.item.label,
+      type: row.item.type.replace("_", " "),
+    });
+    gearByBooking.set(row.booking.id, current);
+  }
 
   async function saveDetails(formData: FormData) {
     "use server";
@@ -202,6 +236,28 @@ export default async function ManageTripPage({
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
     });
     redirect(`${back}?notice=${saved ? "requirements" : "invalid"}`);
+  }
+
+  async function assignGearAction(formData: FormData) {
+    "use server";
+    const s = await requireStaffSession();
+    const parsed = gearAssignmentSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}?notice=gear-error`);
+    const outcome = await assignGear(await getDb(), {
+      shopId: s.user.shopId,
+      bookingId: parsed.data.bookingId,
+      gearItemId: parsed.data.gearItemId,
+    });
+    redirect(`${back}?notice=${outcome.ok ? "gear-assigned" : "gear-error"}`);
+  }
+
+  async function returnGearAction(formData: FormData) {
+    "use server";
+    const s = await requireStaffSession();
+    const assignmentId = String(formData.get("assignmentId") ?? "");
+    if (!assignmentId) redirect(`${back}?notice=gear-error`);
+    const returned = await returnGear(await getDb(), s.user.shopId, assignmentId);
+    redirect(`${back}?notice=${returned ? "gear-returned" : "gear-error"}`);
   }
 
   const inputClass =
@@ -565,6 +621,101 @@ export default async function ManageTripPage({
                           {state === "not_sent" ? "Create link" : "New link"}
                         </button>
                       </form>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-10">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Gear prep</h2>
+            <p className="mt-1 text-sm text-muted">
+              Pack each diver from the live inventory. If another staff member claims an item first,
+              it stays blocked here instead of being double-assigned.
+            </p>
+          </div>
+          <Link
+            href="/shop/gear"
+            className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+          >
+            Open gear room
+          </Link>
+        </div>
+        {roster.length === 0 ? (
+          <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+            Booked divers will appear here when there is gear to prepare.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+            {roster.map(({ booking, person }) => {
+              const assignedGear = gearByBooking.get(booking.id) ?? [];
+              return (
+                <li key={booking.id} className="px-4 py-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-medium">{person.fullName}</p>
+                      {assignedGear.length === 0 ? (
+                        <p className="mt-1 text-sm text-muted">Nothing packed yet.</p>
+                      ) : (
+                        <ul className="mt-1 flex flex-wrap gap-2">
+                          {assignedGear.map((item) => (
+                            <li
+                              key={item.assignmentId}
+                              className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 text-sm font-medium text-primary"
+                            >
+                              {item.label} <span className="font-normal">({item.type})</span>
+                              <form action={returnGearAction}>
+                                <input
+                                  type="hidden"
+                                  name="assignmentId"
+                                  value={item.assignmentId}
+                                />
+                                <button
+                                  type="submit"
+                                  aria-label={`Return ${item.label}`}
+                                  className="min-h-11 px-3 font-semibold hover:underline"
+                                >
+                                  Return
+                                </button>
+                              </form>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    {availableGear.length > 0 ? (
+                      <form action={assignGearAction} className="flex min-w-0 flex-wrap gap-2">
+                        <input type="hidden" name="bookingId" value={booking.id} />
+                        <select
+                          name="gearItemId"
+                          aria-label={`Assign gear to ${person.fullName}`}
+                          defaultValue=""
+                          className="min-h-11 min-w-44 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                        >
+                          <option value="" disabled>
+                            Choose available gear
+                          </option>
+                          {availableGear.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.label} · {item.type.replace("_", " ")}
+                              {item.size ? ` · ${item.size}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="submit"
+                          className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
+                        >
+                          Pack item
+                        </button>
+                      </form>
+                    ) : (
+                      <p className="text-sm text-muted">No available gear right now.</p>
                     )}
                   </div>
                 </li>

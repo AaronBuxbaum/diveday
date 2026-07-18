@@ -371,6 +371,38 @@ export const gearAssignments = pgTable(
   ],
 );
 
+/**
+ * A completed service event is durable operational history. It is distinct
+ * from an item being on service hold: a hold prevents checkout; an event
+ * records work that was actually completed and who released the item.
+ */
+export const gearServiceEvents = pgTable(
+  "gear_service_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    gearItemId: uuid("gear_item_id")
+      .notNull()
+      .references(() => gearItems.id),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    serviceCompletedAt: timestamp("service_completed_at", { withTimezone: true }).notNull(),
+    nextServiceDueAt: timestamp("next_service_due_at", { withTimezone: true }),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("gear_service_events_shop_item_completed_idx").on(
+      table.shopId,
+      table.gearItemId,
+      table.serviceCompletedAt,
+    ),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -381,3 +413,4 @@ export type Certification = typeof certifications.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type GearItem = typeof gearItems.$inferSelect;
 export type GearAssignment = typeof gearAssignments.$inferSelect;
+export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;

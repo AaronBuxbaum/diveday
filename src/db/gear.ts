@@ -1,7 +1,7 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { gearAssignmentFailure } from "@/lib/gear";
 import type { AppDb } from "./client";
-import { bookings, gearAssignments, gearItems, people, trips } from "./schema";
+import { bookings, gearAssignments, gearItems, gearServiceEvents, people, trips } from "./schema";
 
 export type NewGearItem = {
   shopId: string;
@@ -30,6 +30,15 @@ export async function listGearInventory(db: AppDb, shopId: string) {
     .select()
     .from(gearItems)
     .where(eq(gearItems.shopId, shopId))
+    .orderBy(asc(gearItems.type), asc(gearItems.label));
+}
+
+/** Only current, unclaimed equipment is offered in packing controls. */
+export async function listAvailableGear(db: AppDb, shopId: string) {
+  return db
+    .select()
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shopId), eq(gearItems.state, "available")))
     .orderBy(asc(gearItems.type), asc(gearItems.label));
 }
 
@@ -148,4 +157,112 @@ export async function listCurrentGearAssignments(db: AppDb, shopId: string) {
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(gearAssignments.shopId, shopId), eq(gearAssignments.status, "assigned")))
     .orderBy(asc(trips.startsAt), asc(people.fullName));
+}
+
+/**
+ * Packing view for one trip. A left join keeps an unassigned diver visible;
+ * the UI must never make incomplete gear work disappear from the roster.
+ */
+export async function listTripGearAssignments(db: AppDb, shopId: string, tripId: string) {
+  return db
+    .select({ booking: bookings, person: people, assignment: gearAssignments, item: gearItems })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .leftJoin(
+      gearAssignments,
+      and(eq(gearAssignments.bookingId, bookings.id), eq(gearAssignments.status, "assigned")),
+    )
+    .leftJoin(gearItems, eq(gearItems.id, gearAssignments.gearItemId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(gearItems.type), asc(gearItems.label));
+}
+
+export type RecordGearServiceOutcome =
+  | { ok: true; serviceEventId: string }
+  | { ok: false; reason: "gear_not_found" | "staff_not_found" | "checked_out" | "retired" };
+
+/**
+ * An item is briefly claimed with a service hold before its event is written.
+ * That makes a service release and a simultaneous front-desk assignment
+ * deterministic: one wins, and no checked-out item can be released by a log.
+ */
+export async function recordGearService(
+  db: AppDb,
+  input: {
+    shopId: string;
+    gearItemId: string;
+    recordedByPersonId: string;
+    note: string;
+    serviceCompletedAt?: Date;
+    nextServiceDueAt?: Date | null;
+  },
+): Promise<RecordGearServiceOutcome> {
+  return db.transaction(async (tx): Promise<RecordGearServiceOutcome> => {
+    const [staff] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.id, input.recordedByPersonId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    if (!staff) return { ok: false, reason: "staff_not_found" };
+
+    const [item] = await tx
+      .select({ id: gearItems.id, state: gearItems.state })
+      .from(gearItems)
+      .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
+      .limit(1);
+    if (!item) return { ok: false, reason: "gear_not_found" };
+    if (item.state === "assigned") return { ok: false, reason: "checked_out" };
+    if (item.state === "retired") return { ok: false, reason: "retired" };
+
+    const [held] = await tx
+      .update(gearItems)
+      .set({ state: "service_hold" })
+      .where(
+        and(
+          eq(gearItems.id, item.id),
+          eq(gearItems.shopId, input.shopId),
+          inArray(gearItems.state, ["available", "service_hold"]),
+        ),
+      )
+      .returning({ id: gearItems.id });
+    if (!held) return { ok: false, reason: "checked_out" };
+
+    const [event] = await tx
+      .insert(gearServiceEvents)
+      .values({
+        shopId: input.shopId,
+        gearItemId: item.id,
+        recordedByPersonId: staff.id,
+        note: input.note.trim(),
+        serviceCompletedAt: input.serviceCompletedAt ?? new Date(),
+        nextServiceDueAt: input.nextServiceDueAt ?? null,
+      })
+      .returning({ id: gearServiceEvents.id });
+    if (!event) throw new Error("recordGearService: insert returned no row");
+
+    await tx
+      .update(gearItems)
+      .set({ state: "available", serviceDueAt: input.nextServiceDueAt ?? null })
+      .where(and(eq(gearItems.id, item.id), eq(gearItems.state, "service_hold")));
+    return { ok: true, serviceEventId: event.id };
+  });
+}
+
+/** Most recent first so a staff member can see the last completed work at a glance. */
+export async function listGearServiceEvents(db: AppDb, shopId: string, gearItemId?: string) {
+  const scope = [eq(gearServiceEvents.shopId, shopId)];
+  if (gearItemId) scope.push(eq(gearServiceEvents.gearItemId, gearItemId));
+  return db
+    .select({ service: gearServiceEvents, item: gearItems, staff: people })
+    .from(gearServiceEvents)
+    .innerJoin(gearItems, eq(gearItems.id, gearServiceEvents.gearItemId))
+    .innerJoin(people, eq(people.id, gearServiceEvents.recordedByPersonId))
+    .where(and(...scope))
+    .orderBy(desc(gearServiceEvents.serviceCompletedAt));
 }
