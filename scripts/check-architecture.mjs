@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -31,7 +31,10 @@ function importsApp(importer, specifier) {
   if (!specifier.startsWith(".")) return false;
 
   const resolved = path.normalize(path.join(path.dirname(importer), specifier));
-  return resolved === path.normalize("src/app") || resolved.startsWith(`${path.normalize("src/app")}${path.sep}`);
+  return (
+    resolved === path.normalize("src/app") ||
+    resolved.startsWith(`${path.normalize("src/app")}${path.sep}`)
+  );
 }
 
 const violations = [];
@@ -45,8 +48,12 @@ for (const root of guardedRoots) {
 }
 
 if (violations.length > 0) {
-  console.error("Architecture boundary violations:\n" + violations.map((item) => `- ${item}`).join("\n"));
-  console.error("Domain code must not import from src/app. Move shared behavior into src/lib or a feature module.");
+  console.error(
+    "Architecture boundary violations:\n" + violations.map((item) => `- ${item}`).join("\n"),
+  );
+  console.error(
+    "Domain code must not import from src/app. Move shared behavior into src/lib or a feature module.",
+  );
   process.exit(1);
 }
 
