@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -28,7 +28,9 @@ export async function createDiver(db: AppDb, input: NewDiver) {
     const [existing] = await db
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.shopId, input.shopId), eq(people.email, email)))
+      .where(
+        and(eq(people.shopId, input.shopId), eq(people.email, email), isNull(people.deletedAt)),
+      )
       .limit(1);
     if (existing) return null;
   }
@@ -63,6 +65,7 @@ export async function updateDiver(
           eq(people.shopId, input.shopId),
           eq(people.email, email),
           ne(people.id, input.personId),
+          isNull(people.deletedAt),
         ),
       )
       .limit(1);
@@ -71,9 +74,30 @@ export async function updateDiver(
   const [person] = await db
     .update(people)
     .set({ fullName: input.fullName.trim(), email, phone: input.phone?.trim() || null })
-    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .where(
+      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
+    )
     .returning();
   return person ?? null;
+}
+
+/** Soft-delete a diver. Bookings, cards, and gear history stay available to operations. */
+export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
+  const [person] = await db
+    .update(people)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
+    .returning({ id: people.id });
+  return Boolean(person);
+}
+
+export async function restoreDiver(db: AppDb, shopId: string, personId: string) {
+  const [person] = await db
+    .update(people)
+    .set({ deletedAt: null })
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNotNull(people.deletedAt)))
+    .returning({ id: people.id });
+  return Boolean(person);
 }
 
 async function diverIds(db: AppDb, shopId: string) {
@@ -81,7 +105,7 @@ async function diverIds(db: AppDb, shopId: string) {
     .select({ person: people })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver")))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver"), isNull(people.deletedAt)))
     .orderBy(asc(people.fullName));
   return rows.map(({ person }) => person);
 }
@@ -146,7 +170,14 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     .select({ person: people })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), eq(personRoles.role, "diver")))
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+      ),
+    )
     .limit(1);
   if (!personRow) return null;
 

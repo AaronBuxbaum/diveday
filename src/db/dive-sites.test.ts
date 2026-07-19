@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
-import { copyDiveSite, createDiveSite, listDiveSites } from "./dive-sites";
+import { copyDiveSite, createDiveSite, deleteDiveSite, listDiveSites } from "./dive-sites";
 import { getShopBySlug } from "./queries";
 import { seedDemo } from "./seed";
 
@@ -42,5 +42,17 @@ describe("dive-site library", () => {
     expect(
       await copyDiveSite(db, "00000000-0000-0000-0000-000000000000", site.id, "Nope"),
     ).toBeNull();
+  });
+
+  it("archives a site while keeping the briefing row intact", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Archive Point" });
+
+    expect(await deleteDiveSite(db, shop.id, site.id)).toBe(true);
+    expect((await listDiveSites(db, shop.id)).some((entry) => entry.id === site.id)).toBe(false);
+    expect(await copyDiveSite(db, shop.id, site.id, "Should not copy")).toBeNull();
   });
 });

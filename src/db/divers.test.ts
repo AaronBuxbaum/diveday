@@ -1,7 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
-import { createDiver, getDiverProfile, listDiverSummaries, updateDiver } from "./divers";
+import {
+  createDiver,
+  deleteDiver,
+  getDiverProfile,
+  listDiverSummaries,
+  restoreDiver,
+  updateDiver,
+} from "./divers";
 import { saveRentalGearProfile } from "./gear-requests";
 import { getShopBySlug } from "./queries";
 import { seedDemo } from "./seed";
@@ -68,5 +75,28 @@ describe("person-first diver records", () => {
       (row) => row.person.fullName === "Dana Reyes",
     );
     expect(staff).toBeUndefined();
+  });
+
+  it("soft-deletes a diver without erasing their record", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Archived Alex",
+      email: "alex@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+
+    expect(await deleteDiver(db, shop.id, diver.id)).toBe(true);
+    expect((await listDiverSummaries(db, shop.id)).some((row) => row.person.id === diver.id)).toBe(
+      false,
+    );
+    expect(await getDiverProfile(db, shop.id, diver.id)).toBeNull();
+    expect(await restoreDiver(db, shop.id, diver.id)).toBe(true);
+    expect((await listDiverSummaries(db, shop.id)).some((row) => row.person.id === diver.id)).toBe(
+      true,
+    );
   });
 });
