@@ -22,6 +22,7 @@ import {
   getShopBySlug,
   getTripWithBooked,
   getWaitlistEntryForTrip,
+  listTripDives,
 } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
 import { joinTripWaitlist } from "@/db/waitlist";
@@ -102,6 +103,7 @@ export default async function TripDetailPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
+  const tripDives = await listTripDives(db, shop.id, tripId);
   const crewPrediction = hasCrewPrediction(trip);
   const forecastPoint =
     trip.diveSite &&
@@ -271,6 +273,56 @@ export default async function TripDetailPage({
         >
           Book · {remaining} left
         </a>
+      ) : null}
+
+      {tripDives.length > 0 ? (
+        <section className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium tracking-widest text-primary uppercase">
+                Trip plan
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                {trip.plannedDives === 2 ? "Two-tank dive" : `${trip.plannedDives}-dive trip`}
+              </h2>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+              {trip.plannedDives} {trip.plannedDives === 1 ? "dive" : "dives"}
+            </span>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {tripDives.map(({ dive, diveSite }) => {
+              const heading = dive.title || diveSite?.name || `Dive ${dive.diveNumber}`;
+              const hasDetails = Boolean(dive.title || diveSite || dive.description);
+              return (
+                <article
+                  key={dive.id}
+                  className="rounded-xl border border-border bg-surface-sunken p-4"
+                >
+                  <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
+                    Dive {dive.diveNumber}
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold">{heading}</h3>
+                  {diveSite ? (
+                    <p className="mt-1 text-sm font-medium text-primary">
+                      Site briefing · {diveSite.name}
+                    </p>
+                  ) : null}
+                  <p className="mt-3 text-sm leading-6 text-muted">
+                    {dive.description ||
+                      (hasDetails
+                        ? "The crew will share the final route and conditions at the dock."
+                        : "Details are still being finalized — the crew will brief this dive on the boat.")}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-sm text-muted">
+            The trip timing, conditions, and booking apply to the whole boat day. Individual sites
+            can change with conditions, and the crew makes the final call at the dock.
+          </p>
+        </section>
       ) : null}
 
       {trip.diveSite ? (

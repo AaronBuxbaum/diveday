@@ -38,9 +38,10 @@ new domain concept, define it here in the same PR.
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
-  route imagery, point-of-interest landmarks, visual field guide, and local context. A charter
-  links one briefing in the current slice; dated conditions remain on the charter, not the
-  reusable site.
+  route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
+  attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
+  two-tank plan when the crew has not chosen the final site. Dated conditions remain on the trip,
+  not the reusable site.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.

@@ -79,45 +79,45 @@ export function ShopNavLinks({ root }: { root: string }) {
             </Link>
           );
         })}
-        <details className="relative shrink-0">
-          <summary
-            className={`${navClass(moreIsActive)} list-none [&::-webkit-details-marker]:hidden`}
-          >
-            More{" "}
-            <span aria-hidden="true" className="ml-1 text-xs">
-              ⌄
-            </span>
-          </summary>
-          <div className="absolute right-0 z-20 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:left-0 sm:right-auto sm:grid-cols-2">
-            {moreGroups.map((group) => (
-              <div
-                key={group.label}
-                className={group.label === "Business" ? "sm:col-span-2" : undefined}
-              >
-                <p className="px-3 text-xs font-semibold tracking-widest text-muted uppercase">
-                  {group.label}
-                </p>
-                <div className="mt-1 grid sm:grid-cols-2">
-                  {group.links.map(([label, suffix]) => {
-                    const href = `${root}${suffix}`;
-                    const active = isCurrent(pathname, href, root);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        className={navClass(active)}
-                        aria-current={active ? "page" : undefined}
-                      >
-                        {label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </details>
       </nav>
+      <details className="relative shrink-0">
+        <summary
+          className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden`}
+        >
+          More{" "}
+          <span aria-hidden="true" className="ml-1 text-xs">
+            ⌄
+          </span>
+        </summary>
+        <div className="absolute right-0 z-20 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:left-0 sm:right-auto sm:grid-cols-2">
+          {moreGroups.map((group) => (
+            <div
+              key={group.label}
+              className={group.label === "Business" ? "sm:col-span-2" : undefined}
+            >
+              <p className="px-3 text-xs font-semibold tracking-widest text-muted uppercase">
+                {group.label}
+              </p>
+              <div className="mt-1 grid sm:grid-cols-2">
+                {group.links.map(([label, suffix]) => {
+                  const href = `${root}${suffix}`;
+                  const active = isCurrent(pathname, href, root);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={navClass(active)}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }

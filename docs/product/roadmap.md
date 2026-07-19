@@ -150,6 +150,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   the server rechecks current readiness and rejects older device events behind newer live history.
 - ✅ Per-dive checkpoints: each trip records its planned dive count and keeps before-departure and
   after-each-dive head counts independent.
+- ✅ Per-dive trip briefings: staff can publish one to four ordered dives with optional names, site
+  briefings, and diver-facing notes while keeping the boat-day details shared.
 - ⬜ Human field validation remains V-02: phone glare/wet-hand use, airplane-mode reload, extended
   outage, reconciliation conflict, and print fallback must pass before production operations. See
   [the offline ADR](../architecture/decisions/20260718-offline-manifest-snapshots.md).

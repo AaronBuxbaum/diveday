@@ -293,7 +293,7 @@ export const trips = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    /** One primary site for the public briefing; multi-site itineraries are a later slice. */
+    /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */
     courseId: uuid("course_id").references(() => courses.id),
@@ -315,6 +315,31 @@ export const trips = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("trips_shop_starts_idx").on(table.shopId, table.startsAt)],
+);
+
+/**
+ * Optional, ordered briefings within a trip. The trip owns the shared
+ * schedule, price, conditions, and description; these rows only add detail
+ * when a shop has it. A blank row is intentional — "2 tank dive" is a useful
+ * published plan even when the crew has not chosen the individual sites yet.
+ */
+export const tripDives = pgTable(
+  "trip_dives",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    diveNumber: integer("dive_number").notNull(),
+    title: text("title"),
+    diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
+    index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
+  ],
 );
 
 export const bookingStatus = pgEnum("booking_status", [
@@ -1096,6 +1121,7 @@ export const rollCallEvents = pgTable(
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
+export type TripDive = typeof tripDives.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type TripWaitlistEntry = typeof tripWaitlistEntries.$inferSelect;

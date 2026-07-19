@@ -25,7 +25,6 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        backHref={`/shop/${shopSlug}`}
         eyebrow={shop.name}
         title="Schedule"
         description="Upcoming trips and charters. Open a departure to work through its roster, readiness, gear, and manifest."
@@ -110,6 +109,9 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
                         Dive site · {trip.diveSite.name}
                       </p>
                     ) : null}
+                    <p className="mt-2 text-sm text-muted">
+                      {trip.plannedDives === 2 ? "Two-tank trip" : `${trip.plannedDives} dives`}
+                    </p>
                   </div>
                   <div className="shrink-0">
                     <span
