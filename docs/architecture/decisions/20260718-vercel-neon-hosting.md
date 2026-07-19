@@ -33,8 +33,8 @@ hosting itself.
   `production`, it runs `pnpm db:migrate` before `pnpm build`. The command (`drizzle-kit migrate
   --config drizzle.config.prod.ts`) applies committed `drizzle/` SQL against
   `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a transaction-mode pooler is
-  unreliable), falling back to `DATABASE_URL`. **Enable Vercel's System Environment Variables**
-  for the project so `VERCEL_ENV` is available. Preview builds intentionally skip migrations.
+  unreliable), falling back to `DATABASE_URL`. Vercel System Environment Variables are enabled for the project, so `VERCEL_ENV` is available.
+  Preview builds intentionally skip migrations.
 - `next.config.ts` adds `pg` to `serverExternalPackages` alongside `@electric-sql/pglite`, so the
   bundler leaves it external instead of trying to resolve its optional native/cloud drivers.
 - `AUTH_SECRET` is **not** provided by the Neon integration — it's a separate Vercel project
