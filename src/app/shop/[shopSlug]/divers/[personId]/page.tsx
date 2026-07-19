@@ -7,6 +7,7 @@ import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import { saveRentalGearProfile } from "@/db/gear-requests";
+import { createNitroxCertification, reviewNitroxCertification } from "@/db/nitrox";
 import { refundOrder } from "@/db/orders";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import {
@@ -31,7 +32,7 @@ const levelSchema = z.enum([
   "divemaster",
   "instructor",
 ]);
-const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
+const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
 const dateSchema = z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]);
 
 const personSchema = z.object({
@@ -170,15 +171,23 @@ export default async function DiverDetailPage({
     if (!parsed.success) redirect(`${base}?notice=invalid`);
     const image = await resolveCardImage(formData);
     if (image.failed) redirect(`${base}?notice=image`);
-    const saved = await createSpecialtyCertification(await getDb(), {
-      shopId: staff.user.shopId,
-      personId,
-      agency: parsed.data.agency,
-      specialty: parsed.data.specialty,
-      identifier: parsed.data.identifier,
-      expiresAt: dateFromInput(parsed.data.expiresOn),
-      cardImageUrl: image.url,
-    });
+    const saved =
+      parsed.data.specialty === "nitrox"
+        ? await createNitroxCertification(await getDb(), {
+            shopId: staff.user.shopId,
+            personId,
+            agency: parsed.data.agency,
+            identifier: parsed.data.identifier,
+          })
+        : await createSpecialtyCertification(await getDb(), {
+            shopId: staff.user.shopId,
+            personId,
+            agency: parsed.data.agency,
+            specialty: parsed.data.specialty,
+            identifier: parsed.data.identifier,
+            expiresAt: dateFromInput(parsed.data.expiresOn),
+            cardImageUrl: image.url,
+          });
     redirect(`${base}?notice=${saved ? "captured" : "invalid"}`);
   }
 
@@ -223,11 +232,17 @@ export default async function DiverDetailPage({
     const certificationId = String(formData.get("certificationId") ?? "");
     const status = formData.get("status") === "rejected" ? "rejected" : "verified";
     const updated = certificationId
-      ? await reviewSpecialtyCertification(await getDb(), {
-          shopId: staff.user.shopId,
-          certificationId,
-          status,
-        })
+      ? formData.get("cardType") === "nitrox"
+        ? await reviewNitroxCertification(await getDb(), {
+            shopId: staff.user.shopId,
+            certificationId,
+            status,
+          })
+        : await reviewSpecialtyCertification(await getDb(), {
+            shopId: staff.user.shopId,
+            certificationId,
+            status,
+          })
       : null;
     redirect(`${base}?notice=${updated ? status : "invalid"}`);
   }
@@ -418,11 +433,14 @@ export default async function DiverDetailPage({
         <div className="rounded-lg border border-border bg-surface p-4">
           <p className="text-sm text-muted">Cards</p>
           <p className="mt-1 text-2xl font-semibold">
-            {diver.certifications.length + diver.specialtyCertifications.length}
+            {diver.certifications.length +
+              diver.specialtyCertifications.length +
+              diver.nitroxCertifications.length}
           </p>
           <p className="text-sm text-muted">
             {diver.certifications.filter((card) => card.status === "pending").length +
-              diver.specialtyCertifications.filter((card) => card.status === "pending").length}{" "}
+              diver.specialtyCertifications.filter((card) => card.status === "pending").length +
+              diver.nitroxCertifications.filter((card) => card.status === "pending").length}{" "}
             pending review
           </p>
         </div>
@@ -604,7 +622,8 @@ export default async function DiverDetailPage({
               Specialty cards
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Deep, Wreck, Night, and Drysuit cards gate specific sites and trips.
+              Specialty cards live with the diver. A verified Nitrox card is required before an EANx
+              fill or tank handoff.
             </p>
           </div>
           <details>
@@ -635,11 +654,13 @@ export default async function DiverDetailPage({
                   name="specialty"
                   className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
                 >
-                  {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                  {[...Object.entries(SPECIALTY_LABELS), ["nitrox", "Nitrox"]].map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
@@ -678,68 +699,114 @@ export default async function DiverDetailPage({
           </details>
         </div>
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-          {diver.specialtyCertifications.length === 0 ? (
+          {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
             <li className="px-4 py-5 text-sm text-muted">No specialty cards on file.</li>
           ) : (
-            diver.specialtyCertifications.map((card) => (
-              <li
-                key={card.id}
-                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-medium">
-                    {AGENCY_LABELS[card.agency]} · {SPECIALTY_LABELS[card.specialty]}
-                  </p>
-                  <p className="mt-1 break-all text-sm text-muted">
-                    {card.identifier}
-                    {card.expiresAt
-                      ? ` · expires ${card.expiresAt.toLocaleDateString("en-US")}`
-                      : ""}
-                  </p>
-                  {card.cardImageUrl ? (
-                    <a
-                      href={card.cardImageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+            <>
+              {diver.specialtyCertifications.map((card) => (
+                <li
+                  key={card.id}
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {AGENCY_LABELS[card.agency]} · {SPECIALTY_LABELS[card.specialty]}
+                    </p>
+                    <p className="mt-1 break-all text-sm text-muted">
+                      {card.identifier}
+                      {card.expiresAt
+                        ? ` · expires ${card.expiresAt.toLocaleDateString("en-US")}`
+                        : ""}
+                    </p>
+                    {card.cardImageUrl ? (
+                      <a
+                        href={card.cardImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+                      >
+                        View card photo
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
                     >
-                      View card photo
-                    </a>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
-                  >
-                    {card.status}
-                  </span>
-                  {card.status === "pending" ? (
-                    <>
-                      <form action={reviewSpecialtyAction}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="status" value="verified" />
-                        <button
-                          type="submit"
-                          className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
-                        >
-                          Verify
-                        </button>
-                      </form>
-                      <form action={reviewSpecialtyAction}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="status" value="rejected" />
-                        <button
-                          type="submit"
-                          className="min-h-11 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger/10"
-                        >
-                          Needs correction
-                        </button>
-                      </form>
-                    </>
-                  ) : null}
-                </div>
-              </li>
-            ))
+                      {card.status}
+                    </span>
+                    {card.status === "pending" ? (
+                      <>
+                        <form action={reviewSpecialtyAction}>
+                          <input type="hidden" name="certificationId" value={card.id} />
+                          <input type="hidden" name="status" value="verified" />
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                          >
+                            Verify
+                          </button>
+                        </form>
+                        <form action={reviewSpecialtyAction}>
+                          <input type="hidden" name="certificationId" value={card.id} />
+                          <input type="hidden" name="status" value="rejected" />
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                          >
+                            Needs correction
+                          </button>
+                        </form>
+                      </>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+              {diver.nitroxCertifications.map((card) => (
+                <li
+                  key={card.id}
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{AGENCY_LABELS[card.agency]} · Nitrox</p>
+                    <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
+                    >
+                      {card.status}
+                    </span>
+                    {card.status === "pending" ? (
+                      <>
+                        <form action={reviewSpecialtyAction}>
+                          <input type="hidden" name="certificationId" value={card.id} />
+                          <input type="hidden" name="cardType" value="nitrox" />
+                          <input type="hidden" name="status" value="verified" />
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                          >
+                            Verify
+                          </button>
+                        </form>
+                        <form action={reviewSpecialtyAction}>
+                          <input type="hidden" name="certificationId" value={card.id} />
+                          <input type="hidden" name="cardType" value="nitrox" />
+                          <input type="hidden" name="status" value="rejected" />
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                          >
+                            Needs correction
+                          </button>
+                        </form>
+                      </>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </>
           )}
         </ul>
       </section>

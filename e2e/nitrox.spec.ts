@@ -17,13 +17,13 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
   const cardNo = `EANX-T${Date.now()}`;
   await signInAsOwner(page);
 
-  // Capture a nitrox card for a booked diver, then verify it.
-  await page.goto("/shop/blue-mantis/nitrox");
-  await page
-    .locator('select[name="personId"]')
-    .selectOption({ label: "June Park · june.park@example.com" });
+  // Nitrox evidence is handled with the diver's other cards, then verified there.
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: "Open June Park" }).click();
+  await page.getByText("Add specialty", { exact: true }).click();
+  await page.locator('select[name="specialty"]').selectOption("nitrox");
   await page.locator('input[name="identifier"]').fill(cardNo);
-  await page.getByRole("button", { name: "Capture for review" }).click();
+  await page.getByRole("button", { name: "Capture specialty for review" }).click();
   await expect(page.getByRole("status")).toContainText("captured");
 
   const card = page.locator("li").filter({ hasText: cardNo });
