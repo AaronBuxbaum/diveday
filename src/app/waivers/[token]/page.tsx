@@ -11,6 +11,7 @@ import type { MedicalAnswers } from "@/db/schema";
 import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "@/db/waivers";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
+import { revalidateAndRedirect } from "@/lib/navigation";
 
 export const metadata: Metadata = {
   title: "Complete your waiver — Scuba",
@@ -154,7 +155,10 @@ export default async function WaiverPage({
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
     });
-    redirect(`/waivers/${token}${savedDraft ? "?saved=1" : "?error=unavailable"}`);
+    revalidateAndRedirect(
+      `/waivers/${token}`,
+      `/waivers/${token}${savedDraft ? "?saved=1" : "?error=unavailable"}`,
+    );
   }
 
   async function completeAction(formData: FormData) {
@@ -172,7 +176,7 @@ export default async function WaiverPage({
         `/waivers/${token}?error=${outcome.reason === "invalid_signature" ? "invalid" : "unavailable"}`,
       );
     }
-    redirect(`/waivers/${token}`);
+    revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
   }
 
   return (

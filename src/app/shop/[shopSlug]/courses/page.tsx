@@ -7,6 +7,7 @@ import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeade
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility, updateCourse } from "@/db/courses";
 import { getShopById } from "@/db/queries";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
@@ -65,7 +66,10 @@ export default async function CoursesPage({
       requiresInstructor: value.requiresInstructor === "on",
       requiresWaiver: value.requiresWaiver === "on",
     });
-    redirect(`/shop/${staff.user.shopSlug}/courses?notice=${course ? "saved" : "invalid"}`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/courses`,
+      `/shop/${staff.user.shopSlug}/courses?notice=${course ? "saved" : "invalid"}`,
+    );
   }
   async function visibilityAction(formData: FormData) {
     "use server";
@@ -75,7 +79,8 @@ export default async function CoursesPage({
     const saved = courseId
       ? await setCourseVisibility(await getDb(), staff.user.shopId, courseId, visible)
       : null;
-    redirect(
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/courses`,
       `/shop/${staff.user.shopSlug}/courses?notice=${saved ? (visible ? "shown" : "hidden") : "invalid"}`,
     );
   }

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { importGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/queries";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export default async function CommonDiveSitesPage({
@@ -23,7 +24,7 @@ export default async function CommonDiveSitesPage({
     const id = String(formData.get("templateId") ?? "");
     const site = await importGlobalDiveSiteTemplate(await getDb(), active.user.shopId, id);
     if (!site) redirect(back);
-    redirect(`${back}/${site.id}?notice=imported`);
+    revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
   }
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">

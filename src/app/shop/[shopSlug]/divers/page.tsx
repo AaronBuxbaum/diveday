@@ -7,6 +7,7 @@ import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeade
 import { getDb } from "@/db/client";
 import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/queries";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Divers — Scuba" };
@@ -51,7 +52,8 @@ export default async function DiversPage({
       email: parsed.data.email,
       phone: parsed.data.phone,
     });
-    redirect(
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/divers`,
       diver
         ? `/shop/${staff.user.shopSlug}/divers/${diver.id}`
         : `/shop/${staff.user.shopSlug}/divers?notice=duplicate`,
@@ -63,7 +65,10 @@ export default async function DiversPage({
     const staff = await requireStaffSession();
     const personId = String(formData.get("personId") ?? "");
     const restored = personId && (await restoreDiver(await getDb(), staff.user.shopId, personId));
-    redirect(`/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "invalid"}`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/divers`,
+      `/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "invalid"}`,
+    );
   }
 
   const noticeText =

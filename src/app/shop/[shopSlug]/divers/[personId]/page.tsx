@@ -18,6 +18,7 @@ import {
   verifyCertificationWithAgency,
 } from "@/db/readiness";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { storeCardImage } from "@/lib/storage";
@@ -142,7 +143,7 @@ export default async function DiverDetailPage({
       personId,
       ...parsed.data,
     });
-    redirect(`${base}?notice=${saved ? "person-saved" : "duplicate"}`);
+    revalidateAndRedirect(base, `${base}?notice=${saved ? "person-saved" : "duplicate"}`);
   }
 
   async function addCertificationAction(formData: FormData) {
@@ -161,7 +162,7 @@ export default async function DiverDetailPage({
       expiresAt: dateFromInput(parsed.data.expiresOn),
       cardImageUrl: image.url,
     });
-    redirect(`${base}?notice=${saved ? "captured" : "invalid"}`);
+    revalidateAndRedirect(base, `${base}?notice=${saved ? "captured" : "invalid"}`);
   }
 
   async function addSpecialtyAction(formData: FormData) {
@@ -188,7 +189,7 @@ export default async function DiverDetailPage({
             expiresAt: dateFromInput(parsed.data.expiresOn),
             cardImageUrl: image.url,
           });
-    redirect(`${base}?notice=${saved ? "captured" : "invalid"}`);
+    revalidateAndRedirect(base, `${base}?notice=${saved ? "captured" : "invalid"}`);
   }
 
   async function reviewAction(formData: FormData) {
@@ -203,7 +204,7 @@ export default async function DiverDetailPage({
           status,
         })
       : null;
-    redirect(`${base}?notice=${updated ? status : "invalid"}`);
+    revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
   }
 
   async function agencyCheckAction(formData: FormData) {
@@ -223,7 +224,7 @@ export default async function DiverDetailPage({
             : outcome === "unavailable"
               ? "agency-unavailable"
               : "invalid";
-    redirect(`${base}?notice=${result}`);
+    revalidateAndRedirect(base, `${base}?notice=${result}`);
   }
 
   async function reviewSpecialtyAction(formData: FormData) {
@@ -244,7 +245,7 @@ export default async function DiverDetailPage({
             status,
           })
       : null;
-    redirect(`${base}?notice=${updated ? status : "invalid"}`);
+    revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
   }
 
   async function saveProfileAction(formData: FormData) {
@@ -257,7 +258,7 @@ export default async function DiverDetailPage({
       personId,
       ...parsed.data,
     });
-    redirect(`${base}?notice=${saved ? "profile-saved" : "invalid"}`);
+    revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}`);
   }
 
   async function refundPaymentAction(formData: FormData) {
@@ -265,7 +266,7 @@ export default async function DiverDetailPage({
     const staff = await requireStaffSession();
     const orderId = String(formData.get("orderId") ?? "");
     const refunded = orderId ? await refundOrder(await getDb(), staff.user.shopId, orderId) : null;
-    redirect(`${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
+    revalidateAndRedirect(base, `${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
   }
 
   async function bookActivityAction(formData: FormData) {
@@ -281,14 +282,15 @@ export default async function DiverDetailPage({
       email: current.person.email,
       phone: current.person.phone ?? undefined,
     });
-    redirect(`${base}?notice=${result.ok ? "booked" : result.reason}`);
+    revalidateAndRedirect(base, `${base}?notice=${result.ok ? "booked" : result.reason}`);
   }
 
   async function deletePersonAction() {
     "use server";
     const staff = await requireStaffSession();
     const deleted = await deleteDiver(await getDb(), staff.user.shopId, personId);
-    redirect(
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/divers`,
       deleted
         ? `/shop/${staff.user.shopSlug}/divers?notice=deleted&deleted=${encodeURIComponent(personId)}`
         : base,

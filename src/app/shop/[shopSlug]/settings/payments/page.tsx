@@ -11,6 +11,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
 
@@ -47,7 +48,10 @@ async function savePackingAction(formData: FormData) {
     redirect(`/shop/${session.user.shopSlug}/shop?notice=packing_invalid`);
   }
   await setShopPackingList(await getDb(), session.user.shopId, packingList);
-  redirect(`/shop/${session.user.shopSlug}/shop?notice=packing_saved`);
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/shop`,
+    `/shop/${session.user.shopSlug}/shop?notice=packing_saved`,
+  );
 }
 
 async function disconnectAction() {
@@ -60,7 +64,10 @@ async function disconnectAction() {
     await provider.deauthorize(account.stripeAccountId);
     await disconnectShopStripeAccount(db, account.stripeAccountId);
   }
-  redirect(`/shop/${session.user.shopSlug}/shop?notice=disconnected`);
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/shop`,
+    `/shop/${session.user.shopSlug}/shop?notice=disconnected`,
+  );
 }
 
 async function refreshAction() {
@@ -73,7 +80,10 @@ async function refreshAction() {
     const status = await provider.retrieveAccountStatus(account.stripeAccountId);
     await refreshShopStripeAccountStatus(db, account.stripeAccountId, status);
   }
-  redirect(`/shop/${session.user.shopSlug}/shop?notice=refreshed`);
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/shop`,
+    `/shop/${session.user.shopSlug}/shop?notice=refreshed`,
+  );
 }
 
 function StatusRow({ label, ok }: { label: string; ok: boolean }) {

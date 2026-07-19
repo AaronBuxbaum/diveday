@@ -16,6 +16,7 @@ import {
 } from "@/db/gear";
 import { getShopById } from "@/db/queries";
 import { formatShortDate } from "@/lib/format";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 const itemSchema = z.object({
@@ -86,7 +87,10 @@ export default async function GearPage({
       serviceDueAt: serviceDueAt ?? undefined,
       notes: parsed.data.notes,
     });
-    redirect(`/shop/${staff.user.shopSlug}/gear?notice=added`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/gear`,
+      `/shop/${staff.user.shopSlug}/gear?notice=added`,
+    );
   }
   async function updateAction(formData: FormData) {
     "use server";
@@ -104,7 +108,10 @@ export default async function GearPage({
       serviceDueAt: serviceDueAt ?? undefined,
       notes: parsed.data.notes,
     });
-    redirect(`/shop/${staff.user.shopSlug}/gear?notice=${updated ? "saved" : "invalid"}`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/gear`,
+      `/shop/${staff.user.shopSlug}/gear?notice=${updated ? "saved" : "invalid"}`,
+    );
   }
   async function holdAction(formData: FormData) {
     "use server";
@@ -112,13 +119,16 @@ export default async function GearPage({
     const id = String(formData.get("id") ?? "");
     const held = formData.get("held") === "true";
     await setGearServiceHold(await getDb(), staff.user.shopId, id, held);
-    redirect(`/shop/${staff.user.shopSlug}/gear`);
+    revalidateAndRedirect(`/shop/${staff.user.shopSlug}/gear`);
   }
   async function returnAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
     await returnGear(await getDb(), staff.user.shopId, String(formData.get("id") ?? ""));
-    redirect(`/shop/${staff.user.shopSlug}/gear?notice=returned`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/gear`,
+      `/shop/${staff.user.shopSlug}/gear?notice=returned`,
+    );
   }
   async function retireAction(formData: FormData) {
     "use server";
@@ -128,7 +138,10 @@ export default async function GearPage({
       staff.user.shopId,
       String(formData.get("id") ?? ""),
     );
-    redirect(`/shop/${staff.user.shopSlug}/gear?notice=${retired ? "retired" : "invalid"}`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/gear`,
+      `/shop/${staff.user.shopSlug}/gear?notice=${retired ? "retired" : "invalid"}`,
+    );
   }
   async function serviceAction(formData: FormData) {
     "use server";
@@ -148,7 +161,8 @@ export default async function GearPage({
       serviceCompletedAt,
       nextServiceDueAt,
     });
-    redirect(
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/gear`,
       `/shop/${staff.user.shopSlug}/gear?notice=${outcome.ok ? "service" : "service-error"}`,
     );
   }

@@ -12,6 +12,7 @@ import {
 } from "@/db/nitrox";
 import { getShopById, getTripRoster, getTripWithBooked } from "@/db/queries";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { nitroxMixLabel, ppO2CentibarToBar } from "@/lib/nitrox";
 import { requireStaffSession } from "@/lib/session";
 
@@ -87,7 +88,7 @@ export default async function TripNitroxPage({
       filledByPersonId: staff.user.personId,
       maxPpO2Bar: Number(parsed.data.maxPpo2),
     });
-    redirect(`${back}?notice=${outcome.ok ? "logged" : outcome.reason}`);
+    revalidateAndRedirect(back, `${back}?notice=${outcome.ok ? "logged" : outcome.reason}`);
   }
 
   const inputClass =

@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { getShopById, setShopJurisdiction } from "@/db/queries";
 import { createWaiverTemplate, listWaiverTemplates, setDefaultWaiverTemplate } from "@/db/waivers";
 import { MEDICAL_JURISDICTION_LABELS, questionnaireForJurisdiction } from "@/lib/medical";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -44,7 +45,10 @@ export default async function WaiverTemplatesPage({
       body: parsed.data.body,
       makeDefault: parsed.data.makeDefault === "on",
     });
-    redirect(`/shop/${staff.user.shopSlug}/waivers?notice=created`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/waivers`,
+      `/shop/${staff.user.shopSlug}/waivers?notice=created`,
+    );
   }
 
   async function chooseDefaultAction(formData: FormData) {
@@ -54,7 +58,10 @@ export default async function WaiverTemplatesPage({
     const changed = templateId
       ? await setDefaultWaiverTemplate(await getDb(), staff.user.shopId, templateId)
       : false;
-    redirect(`/shop/${staff.user.shopSlug}/waivers?notice=${changed ? "default" : "invalid"}`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/waivers`,
+      `/shop/${staff.user.shopSlug}/waivers?notice=${changed ? "default" : "invalid"}`,
+    );
   }
 
   async function chooseJurisdictionAction(formData: FormData) {
@@ -67,7 +74,10 @@ export default async function WaiverTemplatesPage({
       staff.user.shopId,
       parsed.data.jurisdiction,
     );
-    redirect(`/shop/${staff.user.shopSlug}/waivers?notice=${updated ? "jurisdiction" : "invalid"}`);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/waivers`,
+      `/shop/${staff.user.shopSlug}/waivers?notice=${updated ? "jurisdiction" : "invalid"}`,
+    );
   }
 
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);

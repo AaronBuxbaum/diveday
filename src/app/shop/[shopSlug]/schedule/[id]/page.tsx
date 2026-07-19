@@ -34,6 +34,7 @@ import {
   hasCrewPrediction,
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
 export const metadata: Metadata = {
@@ -218,7 +219,10 @@ export default async function TripDetailPage({
         });
       }
     }
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?booking=${primaryBookingId}`);
+    revalidateAndRedirect(
+      `/shop/${shopSlug}/schedule/${tripId}`,
+      `/shop/${shopSlug}/schedule/${tripId}?booking=${primaryBookingId}`,
+    );
   }
 
   async function joinWaitlist(formData: FormData) {
@@ -239,7 +243,10 @@ export default async function TripDetailPage({
       phone: parsed.data.phone || undefined,
     });
     if (outcome.ok || outcome.reason === "already_waitlisted") {
-      redirect(`/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}`);
+      revalidateAndRedirect(
+        `/shop/${shopSlug}/schedule/${tripId}`,
+        `/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}`,
+      );
     }
     const code =
       outcome.reason === "trip_available"
@@ -313,7 +320,11 @@ export default async function TripDetailPage({
               </p>
             ) : null}
           </div>
-          <div className="-mx-6 mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-1 sm:overflow-visible sm:px-0 lg:grid-cols-2">
+          {/* Dives stack in one column on larger screens: a two-tank day often
+              pairs one richly-briefed site with a sparse second tank, and a
+              multi-column grid would strand a tall card beside a near-empty one.
+              Full-width cards size to their own content, so there is no blank box. */}
+          <div className="-mx-6 mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-1 sm:overflow-visible sm:px-0">
             {diveBriefings.map(({ dive, diveSite, creatures, moments }) => (
               <DiveBriefingCard
                 key={dive.id}
@@ -482,7 +493,8 @@ export default async function TripDetailPage({
                   weightPreference: parsed.data.weightPreference,
                   note: parsed.data.note,
                 });
-                redirect(
+                revalidateAndRedirect(
+                  `/shop/${shopSlug}/schedule/${tripId}`,
                   `/shop/${shopSlug}/schedule/${tripId}?booking=${confirmed.booking.id}&${saved ? "gear=saved" : "error=gear"}`,
                 );
               }}

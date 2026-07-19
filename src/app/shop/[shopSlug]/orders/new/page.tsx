@@ -7,6 +7,7 @@ import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/ord
 import { getShopById } from "@/db/queries";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { formatShortDate } from "@/lib/format";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "New order — Scuba" };
@@ -68,7 +69,10 @@ async function createOrderAction(formData: FormData) {
   if (!result.ok) {
     redirect(`/shop/${session.user.shopSlug}/orders/new?notice=${result.reason}`);
   }
-  redirect(`/shop/${session.user.shopSlug}/orders/${result.order.id}`);
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/orders`,
+    `/shop/${session.user.shopSlug}/orders/${result.order.id}`,
+  );
 }
 
 const NOTICES: Record<string, string> = {

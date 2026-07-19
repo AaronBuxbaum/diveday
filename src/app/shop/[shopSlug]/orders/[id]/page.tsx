@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Order — Scuba" };
@@ -35,7 +36,8 @@ async function refreshAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
   const updated = orderId ? await refreshOrderStatus(db, session.user.shopId, orderId) : null;
-  redirect(
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/orders/${orderId}`,
     `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "refreshed" : "refresh_failed"}`,
   );
 }
@@ -46,7 +48,8 @@ async function voidAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
   const updated = orderId ? await voidOrder(db, session.user.shopId, orderId) : null;
-  redirect(
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/orders/${orderId}`,
     `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "voided" : "void_failed"}`,
   );
 }
@@ -57,7 +60,8 @@ async function refundAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
   const updated = orderId ? await refundOrder(db, session.user.shopId, orderId) : null;
-  redirect(
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/orders/${orderId}`,
     `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "refunded" : "refund_failed"}`,
   );
 }
