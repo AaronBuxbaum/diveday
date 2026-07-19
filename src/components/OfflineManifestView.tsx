@@ -138,7 +138,7 @@ export function OfflineManifestView() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
