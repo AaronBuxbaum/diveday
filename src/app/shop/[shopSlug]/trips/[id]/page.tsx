@@ -40,21 +40,17 @@ import {
   upsertTripRequirements,
 } from "@/db/readiness";
 import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
-import {
-  issueWaiverRequest,
-  listTripWaiverActivity,
-  listTripWaiverStatuses,
-  listWaiverTemplates,
-} from "@/db/waivers";
+import { issueWaiverRequest, listTripWaiverStatuses, listWaiverTemplates } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import { flaggedMedicalPrompts } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { capacityLabel, isFull } from "@/lib/trips";
-import { waiverActivityTimeline, waiverState } from "@/lib/waivers";
+import { waiverState } from "@/lib/waivers";
 import {
   parseWallTime,
   toDateInputValue,
@@ -180,12 +176,50 @@ function rentalRequestSummary(
     .join(" — ");
 }
 
-const WAIVER_BADGES: Record<ReturnType<typeof waiverState>, { label: string; tone: string }> = {
-  not_sent: { label: "Not sent", tone: "bg-primary/10 text-primary" },
-  awaiting_signature: { label: "Waiting on diver", tone: "bg-primary/10 text-primary" },
-  expired: { label: "Link expired", tone: "bg-danger/10 text-danger" },
-  medical_review: { label: "Medical review", tone: "bg-warning/10 text-warning" },
-  complete: { label: "Complete", tone: "bg-success/10 text-success" },
+// The whole waiver collapses to a single control per diver. Its face is the
+// status; its click is the only sensible next action. `action: null` means the
+// waiver is signed and there is nothing left to do — it renders as a static pill.
+type WaiverControl = {
+  label: string;
+  hint?: string;
+  tone: string;
+  action: "send" | "resend" | null;
+  confirm: boolean;
+};
+
+const WAIVER_CONTROLS: Record<ReturnType<typeof waiverState>, WaiverControl> = {
+  not_sent: {
+    label: "Send waiver",
+    tone: "border border-border bg-surface hover:bg-surface-sunken",
+    action: "send",
+    confirm: false,
+  },
+  awaiting_signature: {
+    label: "Waiver sent",
+    hint: "Resend",
+    tone: "border border-border bg-surface hover:bg-surface-sunken",
+    action: "resend",
+    confirm: true,
+  },
+  expired: {
+    label: "Link expired",
+    hint: "Resend",
+    tone: "border border-danger/40 text-danger hover:bg-danger/10",
+    action: "resend",
+    confirm: false,
+  },
+  complete: {
+    label: "Waiver signed",
+    tone: "bg-success/10 text-success",
+    action: null,
+    confirm: false,
+  },
+  medical_review: {
+    label: "Medical review",
+    tone: "bg-warning/10 text-warning",
+    action: null,
+    confirm: false,
+  },
 };
 
 export default async function ManageTripPage({
@@ -210,7 +244,6 @@ export default async function ManageTripPage({
     roster,
     templates,
     waiverRows,
-    waiverActivityRows,
     requirement,
     readinessRows,
     availableGear,
@@ -225,7 +258,6 @@ export default async function ManageTripPage({
     getTripRoster(db, tripId),
     listWaiverTemplates(db, shop.id),
     listTripWaiverStatuses(db, shop.id, tripId),
-    listTripWaiverActivity(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
     listTripReadiness(db, shop.id, tripId),
     listAvailableGear(db, shop.id),
@@ -266,16 +298,6 @@ export default async function ManageTripPage({
   const gearProfileByBooking = new Map(
     gearRequestRows.map((row) => [row.booking.id, row.profile] as const),
   );
-  const waiverRecordsByBooking = new Map<
-    string,
-    Exclude<(typeof waiverActivityRows)[number]["waiver"], null>[]
-  >();
-  for (const row of waiverActivityRows) {
-    if (!row.waiver) continue;
-    const current = waiverRecordsByBooking.get(row.booking.id) ?? [];
-    current.push(row.waiver);
-    waiverRecordsByBooking.set(row.booking.id, current);
-  }
   // The roster is the spine of the diver section; waiver and readiness detail
   // hang off it by booking id so each diver renders as one consolidated card.
   const waiverByBooking = new Map(waiverRows.map((row) => [row.booking.id, row] as const));
@@ -980,10 +1002,11 @@ export default async function ManageTripPage({
               const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
               const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
               const waiverStatus = waiverState(currentWaiver);
-              const badge = WAIVER_BADGES[waiverStatus];
-              const waiverFinished =
-                waiverStatus === "complete" || waiverStatus === "medical_review";
-              const activity = waiverActivityTimeline(waiverRecordsByBooking.get(booking.id) ?? []);
+              const waiverControl = WAIVER_CONTROLS[waiverStatus];
+              const flaggedPrompts =
+                waiverStatus === "medical_review" && currentWaiver?.medicalAnswers
+                  ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
+                  : [];
               const assignedGear = gearByBooking.get(booking.id) ?? [];
               return (
                 <li
@@ -1040,54 +1063,62 @@ export default async function ManageTripPage({
                       <p className="text-xs font-semibold tracking-widest text-muted uppercase">
                         Waiver
                       </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full px-3 py-1 text-sm font-medium ${badge.tone}`}
-                        >
-                          {badge.label}
-                        </span>
-                        {waiverFinished ? null : templates.length === 0 ? (
+                      <div className="mt-2">
+                        {waiverControl.action && templates.length === 0 ? (
                           <span className="text-sm text-muted">Add a template to send</span>
-                        ) : (
-                          <form action={issueWaiverAction} className="flex items-center gap-2">
+                        ) : waiverControl.action ? (
+                          <form action={issueWaiverAction}>
                             <input type="hidden" name="bookingId" value={booking.id} />
                             <SubmitButton
-                              pendingLabel="Sending…"
-                              confirmMessage={
-                                waiverStatus === "not_sent"
-                                  ? undefined
-                                  : `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
+                              pendingLabel={
+                                waiverControl.action === "send" ? "Sending…" : "Resending…"
                               }
-                              className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                              confirmMessage={
+                                waiverControl.confirm
+                                  ? `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
+                                  : undefined
+                              }
+                              className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
                             >
-                              {waiverStatus === "not_sent" ? "Send link" : "Resend"}
+                              {waiverControl.label}
+                              {waiverControl.hint ? (
+                                <span className="font-normal opacity-70">
+                                  {" "}
+                                  · {waiverControl.hint}
+                                </span>
+                              ) : null}
                             </SubmitButton>
                           </form>
+                        ) : (
+                          <span
+                            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium ${waiverControl.tone}`}
+                          >
+                            {waiverControl.label}
+                          </span>
                         )}
                       </div>
-                      <p className="mt-2 text-sm text-muted">
-                        {currentWaiver
-                          ? `${currentWaiver.templateTitle} v${currentWaiver.templateVersion}${currentWaiver.completedAt ? ` · signed ${formatDateTimeTz(currentWaiver.completedAt, "en-US", shop.timezone)}` : ""}`
-                          : "No waiver issued"}
-                      </p>
-                      {activity.length > 0 ? (
-                        <details className="mt-2 rounded-lg bg-surface-sunken px-3 py-1 text-sm">
-                          <summary className="flex min-h-11 cursor-pointer items-center py-2 font-medium text-primary">
-                            Activity · {activity.length}{" "}
-                            {activity.length === 1 ? "event" : "events"}
-                          </summary>
-                          <ol className="flex flex-col gap-3 pb-2 pt-1">
-                            {activity.map((entry) => (
-                              <li key={`${entry.recordId}-${entry.kind}`}>
-                                <p className="font-medium">{entry.title}</p>
-                                <p className="text-muted">
-                                  {formatDateTimeTz(entry.at, "en-US", shop.timezone)} ·{" "}
-                                  {entry.detail}
-                                </p>
-                              </li>
-                            ))}
-                          </ol>
-                        </details>
+                      {currentWaiver?.completedAt && waiverStatus === "complete" ? (
+                        <p className="mt-2 text-sm text-muted">
+                          Signed{" "}
+                          {formatDateTimeTz(currentWaiver.completedAt, "en-US", shop.timezone)}
+                        </p>
+                      ) : null}
+                      {waiverStatus === "medical_review" ? (
+                        <div className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                          <p className="font-medium">Follow up before boarding</p>
+                          {flaggedPrompts.length > 0 ? (
+                            <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                              {flaggedPrompts.map((prompt) => (
+                                <li key={prompt}>{prompt}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-1">
+                              A diver answered yes to a medical question. Confirm physician
+                              clearance before boarding.
+                            </p>
+                          )}
+                        </div>
                       ) : null}
                     </div>
 

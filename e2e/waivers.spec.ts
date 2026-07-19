@@ -10,7 +10,7 @@ async function signInAsOwner(page: Page) {
   await expect(page).toHaveURL(/\/shop/);
 }
 
-test("staff issues a resumable waiver and a medical yes stays visible for review", async ({
+test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
   await signInAsOwner(page);
@@ -18,10 +18,11 @@ test("staff issues a resumable waiver and a medical yes stays visible for review
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   const staffTripUrl = page.url();
 
-  const waiverSection = page
+  const diverSection = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Waivers" }) });
-  await waiverSection.getByRole("button", { name: "Email link" }).first().click();
+    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
+  // The whole waiver is a single button; for an unsent diver it reads "Send waiver".
+  await diverSection.getByRole("button", { name: "Send waiver" }).first().click();
   await expect(page.getByRole("heading", { name: "Private waiver link ready" })).toBeVisible();
   const waiverHref = await page
     .getByRole("link", { name: "Open waiver link" })
@@ -37,14 +38,15 @@ test("staff issues a resumable waiver and a medical yes stays visible for review
   await expect(page.getByLabel("Type your full name")).toHaveValue("Priya Sharma");
 
   // The first question's affirmative answer must not disappear into a generic
-  // success state; it becomes an explicit staff review blocker.
+  // success state; it becomes an explicit staff follow-up item.
   await page.getByRole("radio", { name: "Yes" }).first().check();
   await page.getByRole("button", { name: "Sign waiver" }).click();
   await expect(page.getByRole("heading", { name: "Waiver received" })).toBeVisible();
   await expect(page.getByText(/will privately review one of your answers/)).toBeVisible();
 
+  // Back on the roster, the single button now reports the completed-but-flagged
+  // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);
-  await expect(waiverSection.getByText("Medical review", { exact: true })).toBeVisible();
-  await waiverSection.getByText(/Activity ·/).click();
-  await expect(waiverSection.getByText("Medical review required")).toBeVisible();
+  await expect(diverSection.getByText("Medical review", { exact: true })).toBeVisible();
+  await expect(diverSection.getByText("Follow up before boarding")).toBeVisible();
 });
