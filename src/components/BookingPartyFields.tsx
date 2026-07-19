@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const inputClass =
   "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
@@ -8,7 +8,9 @@ const diverSlots = ["one", "two", "three", "four", "five", "six"] as const;
 
 export function BookingPartyFields({ maxPartySize }: { maxPartySize: number }) {
   const [size, setSize] = useState(1);
+  const [hydrated, setHydrated] = useState(false);
   const limit = Math.max(1, Math.min(6, maxPartySize));
+  useEffect(() => setHydrated(true), []);
   return (
     <>
       <label className="flex max-w-48 flex-col gap-1 text-base font-medium">
@@ -16,6 +18,7 @@ export function BookingPartyFields({ maxPartySize }: { maxPartySize: number }) {
         <select
           name="partySize"
           value={size}
+          data-hydrated={hydrated ? "true" : "false"}
           onChange={(event) => setSize(Number(event.target.value))}
           className={inputClass}
         >

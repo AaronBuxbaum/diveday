@@ -31,14 +31,16 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await expect(page).toHaveURL(/\/$/);
 
   // A visitor books it from the public schedule — no account.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
   await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("6 spots left")).toBeVisible();
   await expect(page.getByText("$120.00")).toBeVisible();
-  await page.getByLabel("Number of divers").selectOption("2");
-  await page.getByLabel("Name").fill("Nora Quinn");
-  await page.getByLabel("Email").fill(`nora-${Date.now()}@example.com`);
+  const partySize = page.getByLabel("Number of divers");
+  await expect(partySize).toHaveAttribute("data-hydrated", "true");
+  await partySize.selectOption("2");
+  await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
+  await page.getByLabel("Email", { exact: true }).fill(`nora-${Date.now()}@example.com`);
   await page.getByLabel("Diver 2 name").fill("Sam Quinn");
   await page.getByLabel("Diver 2 email").fill(`sam-${Date.now()}@example.com`);
   await page.getByRole("button", { name: "Book these spots" }).click();
@@ -63,14 +65,30 @@ test("staff opening a scheduled dive lands on the editable trip view", async ({ 
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses Reef" })
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link")
     .click();
 
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\//);
-  await expect(page.getByRole("heading", { name: "Two-Tank Reef — Molasses Reef" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Two-Tank Reef — Molasses & French" }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
+});
+
+test("a multi-dive trip presents every dive briefing", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+
+  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
+  await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 1$/ })).toBeVisible();
+  await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 2$/ })).toBeVisible();
+  await expect(page.getByText("French Reef is the second tank")).toBeVisible();
 });
 
 test("a full boat lets a diver join the wait list without taking a seat", async ({ page }) => {
