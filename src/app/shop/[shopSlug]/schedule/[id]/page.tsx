@@ -17,10 +17,17 @@ import {
   saveRentalGearRequest,
 } from "@/db/gear-requests";
 import { sendAndRecordNotification } from "@/db/notifications";
-import { getBookingForTrip, getShopBySlug, getTripWithBooked } from "@/db/queries";
+import {
+  getBookingForTrip,
+  getShopBySlug,
+  getTripWithBooked,
+  getWaitlistEntryForTrip,
+} from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
+import { joinTripWaitlist } from "@/db/waitlist";
 import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
+import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
 import { dockDayTimeline, packingChecklist } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -70,6 +77,7 @@ const RENTAL_GEAR_OPTIONS = [
 const ERRORS: Record<string, string> = {
   invalid: "Check your name and email and give it another go.",
   full: "Someone grabbed the last spot just before you — the boat's full.",
+  available: "Good news — a spot just opened. Book it before it goes.",
   already: "You're already on this trip's list — no need to book twice.",
   unavailable: "This trip isn't taking bookings anymore.",
   "course-unavailable":
@@ -84,11 +92,11 @@ export default async function TripDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ booking?: string; error?: string; gear?: string }>;
+  searchParams: Promise<{ booking?: string; waitlist?: string; error?: string; gear?: string }>;
 }) {
   await connection();
   const { shopSlug, id: tripId } = await params;
-  const { booking: bookingId, error, gear } = await searchParams;
+  const { booking: bookingId, waitlist: waitlistId, error, gear } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -109,6 +117,9 @@ export default async function TripDetailPage({
   // The confirmation renders only from a real booking row — never from a
   // URL claim (design principle 6: trustworthy by inspection).
   const confirmed = bookingId ? await getBookingForTrip(db, tripId, bookingId) : null;
+  const waitlistConfirmation = waitlistId
+    ? await getWaitlistEntryForTrip(db, tripId, waitlistId)
+    : null;
   const [creatures, moments] = trip.diveSite
     ? await Promise.all([
         listDiveSiteCreatures(db, shop.id, trip.diveSite.id),
@@ -192,6 +203,32 @@ export default async function TripDetailPage({
     redirect(`/shop/${shopSlug}/schedule/${tripId}?booking=${outcome.bookingId}`);
   }
 
+  async function joinWaitlist(formData: FormData) {
+    "use server";
+    const parsed = bookSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
+    const dbi = await getDb();
+    const shopNow = await getShopBySlug(dbi, shopSlug);
+    if (!shopNow) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
+    const outcome = await joinTripWaitlist(dbi, {
+      shopId: shopNow.id,
+      tripId,
+      fullName: parsed.data.fullName,
+      email: parsed.data.email,
+      phone: parsed.data.phone || undefined,
+    });
+    if (outcome.ok || outcome.reason === "already_waitlisted") {
+      redirect(`/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}`);
+    }
+    const code =
+      outcome.reason === "trip_available"
+        ? "available"
+        : outcome.reason === "already_booked"
+          ? "already"
+          : "unavailable";
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
+  }
+
   const inputClass =
     "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 
@@ -218,6 +255,14 @@ export default async function TripDetailPage({
           </p>
         ) : null}
         {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
+        {trip.priceCents !== null ? (
+          <p className="mt-3 text-lg font-semibold tabular-nums">
+            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+              trip.priceCents / 100,
+            )}{" "}
+            <span className="text-sm font-normal text-muted">per diver</span>
+          </p>
+        ) : null}
       </header>
       {!confirmed && !inPast && !full ? (
         <a
@@ -314,7 +359,7 @@ export default async function TripDetailPage({
                   // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
                   <img
                     key={url}
-                    src={url}
+                    src={resolveDiveSiteImageUrl(url) ?? undefined}
                     alt={`${trip.diveSite?.name} scene ${index + 1}`}
                     className="aspect-square rounded-lg object-cover"
                   />
@@ -609,6 +654,22 @@ export default async function TripDetailPage({
             Back to the schedule
           </Link>
         </section>
+      ) : waitlistConfirmation ? (
+        <section className="rise-in mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
+          <h2 className="text-xl font-semibold text-balance">
+            You&apos;re on the wait list, {waitlistConfirmation.person.fullName.split(" ")[0]}.
+          </h2>
+          <p className="mt-2 text-muted">
+            A spot is not held yet. The shop can see your place in line and will contact you if one
+            opens up.
+          </p>
+          <Link
+            href={`/shop/${shopSlug}/schedule`}
+            className="mt-3 inline-block py-2 text-base font-medium text-primary hover:underline"
+          >
+            Back to the schedule
+          </Link>
+        </section>
       ) : inPast ? (
         <section className="mt-10 rounded-lg border border-border bg-surface p-6">
           <h2 className="font-medium">This one's already sailed</h2>
@@ -635,6 +696,66 @@ export default async function TripDetailPage({
             </Link>{" "}
             — the reef isn't going anywhere.
           </p>
+          {errorMessage ? (
+            <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+              {errorMessage}
+            </p>
+          ) : null}
+          <form
+            action={joinWaitlist}
+            className="mt-6 flex flex-col gap-4 border-t border-border pt-6"
+          >
+            <div>
+              <h3 className="font-semibold">Join the wait list</h3>
+              <p className="mt-1 text-sm text-muted">
+                If a spot opens, the shop will have your details ready.
+              </p>
+            </div>
+            <label className="flex flex-col gap-1 text-base font-medium">
+              Name
+              <input
+                name="fullName"
+                type="text"
+                required
+                maxLength={120}
+                autoComplete="name"
+                className={inputClass}
+              />
+            </label>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-base font-medium">
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  maxLength={200}
+                  autoComplete="email"
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-base font-medium">
+                <span>
+                  Phone <span className="font-normal text-muted">(optional)</span>
+                </span>
+                <input
+                  name="phone"
+                  type="tel"
+                  maxLength={30}
+                  autoComplete="tel"
+                  className={inputClass}
+                />
+              </label>
+            </div>
+            <div>
+              <SubmitButton
+                pendingLabel="Joining…"
+                className="min-h-11 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
+              >
+                Join the wait list
+              </SubmitButton>
+            </div>
+          </form>
         </section>
       ) : (
         <section id="book" className="mt-10">

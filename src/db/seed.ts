@@ -52,9 +52,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const INSTRUCTOR_EMAIL = "marcus@bluemantis.example";
 
-/** Public-domain and CC0 images hosted by Wikimedia Commons. */
+/** Public-domain and CC0 images from Wikimedia Commons, bundled for reliable rendering. */
 function commonsImage(filename: string): string {
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=1600`;
+  return `/dive-sites/${encodeURIComponent(filename)}`;
 }
 
 /** n days from now at the given local-ish hour/minute (UTC-anchored; demo data). */

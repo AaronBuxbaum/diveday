@@ -64,6 +64,15 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
                     {trip.description ? (
                       <p className="mt-0.5 text-sm text-muted">{trip.description}</p>
                     ) : null}
+                    {trip.priceCents !== null ? (
+                      <p className="mt-2 text-sm font-semibold tabular-nums">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(trip.priceCents / 100)}{" "}
+                        <span className="font-normal text-muted">per diver</span>
+                      </p>
+                    ) : null}
                     {trip.diveSite ? (
                       <p className="mt-2 text-sm font-medium text-primary">
                         Dive site · {trip.diveSite.name}

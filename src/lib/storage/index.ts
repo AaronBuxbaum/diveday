@@ -89,8 +89,8 @@ export function imageStorageProviderFromEnvironment(
 
 /**
  * Validate and store a card image. Rejects a non-image or oversized file
- * before touching the provider; an unconfigured provider returns
- * not_configured so the caller can fall back to a pasted URL.
+ * before touching the provider; an unconfigured provider reports
+ * not_configured so the caller can keep the card record without a photo.
  */
 export async function storeCardImage(
   upload: CardImageUpload,
