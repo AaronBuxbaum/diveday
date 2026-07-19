@@ -96,6 +96,39 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/*
+ * Dock/boat surfaces deliberately stay light even when a device is in dark
+ * mode. Bright sun makes the dark palette harder to scan, while the manifest
+ * needs the strongest contrast in the product. Keep this semantic so the
+ * roll-call screens can opt into it without changing the rest of the app.
+ */
+.boat-mode {
+  color-scheme: light;
+  --background: #fffdf5;
+  --surface: #ffffff;
+  --surface-sunken: #edf2f1;
+  --border: #aab7ba;
+  --border-strong: #536b73;
+  --foreground: #062631;
+  --muted: #304e57;
+  --primary: #075985;
+  --primary-hover: #0c4a6e;
+  --primary-foreground: #ffffff;
+  --success: #166534;
+  --warning: #92400e;
+  --danger: #991b1b;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@media (prefers-contrast: more) {
+  .boat-mode {
+    --border: #6b7d82;
+    --border-strong: #263f47;
+    --muted: #1f3b44;
+  }
+}
+
 input,
 select,
 textarea {

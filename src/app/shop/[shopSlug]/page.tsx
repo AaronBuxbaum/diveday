@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
+import { getTripManifest } from "@/db/manifests";
 import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/notifications";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -31,6 +32,7 @@ export default async function ShopPage({
     upcomingTripsWithCounts(db, shop.id),
     listNotificationDeliveryIssues(db, shop.id),
   ]);
+  const nextManifest = upcoming[0] ? await getTripManifest(db, shop.id, upcoming[0].id) : null;
   const firstName = session.user.name?.split(" ")[0] ?? "there";
   const openSeats = upcoming.reduce(
     (total, trip) => total + Math.max(0, trip.capacity - trip.booked),
@@ -118,6 +120,73 @@ export default async function ShopPage({
           tone={deliveryIssues.length > 0 ? "warning" : "success"}
         />
       </section>
+
+      {nextManifest ? (
+        <section
+          aria-labelledby="next-boat-heading"
+          className="mb-10 rounded-3xl border border-primary/30 bg-primary/5 p-5 shadow-sm sm:p-6"
+        >
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">
+                Next boat
+              </p>
+              <h2 id="next-boat-heading" className="mt-2 text-xl font-semibold tracking-tight">
+                {nextManifest.trip.title}
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                {formatShortDate(nextManifest.trip.startsAt, "en-US", shop.timezone)} ·{" "}
+                {formatTimeRange(
+                  nextManifest.trip.startsAt,
+                  nextManifest.trip.endsAt,
+                  "en-US",
+                  shop.timezone,
+                )}
+              </p>
+            </div>
+            <Link
+              href={`/shop/${shopSlug}/trips/${nextManifest.trip.id}/manifest`}
+              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+            >
+              Open boat manifest{" "}
+              <span aria-hidden="true" className="ml-2">
+                →
+              </span>
+            </Link>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ["Ready", nextManifest.summary.ready, "text-success"],
+              ["Blocked", nextManifest.summary.blocked, "text-danger"],
+              ["Boarded", nextManifest.summary.boarded, "text-primary"],
+              ["Awaiting", nextManifest.summary.awaiting, "text-foreground"],
+            ].map(([label, value, tone]) => (
+              <div
+                key={String(label)}
+                className="rounded-2xl border border-border bg-surface px-4 py-3"
+              >
+                <p className="text-xs font-bold tracking-wide text-muted uppercase">{label}</p>
+                <p className={`mt-1 text-2xl font-bold tabular-nums ${tone}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+          {nextManifest.summary.blocked > 0 ? (
+            <p className="mt-4 text-sm font-semibold text-danger">
+              {nextManifest.summary.blocked}{" "}
+              {nextManifest.summary.blocked === 1 ? "diver needs" : "divers need"} attention before
+              boarding.
+            </p>
+          ) : nextManifest.summary.totalDivers > 0 ? (
+            <p className="mt-4 text-sm font-semibold text-success">
+              Everyone currently has a clear readiness result. Finish roll call on the boat.
+            </p>
+          ) : (
+            <p className="mt-4 text-sm font-medium text-muted">
+              No divers are booked yet. The manifest will fill in as reservations arrive.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <section aria-labelledby="workspaces-heading" className="mb-10">
         <div className="flex items-end justify-between gap-4">
