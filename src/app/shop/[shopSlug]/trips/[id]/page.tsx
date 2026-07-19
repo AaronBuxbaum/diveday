@@ -1189,6 +1189,12 @@ export default async function ManageTripPage({
                       </button>
                     </form>
                   ) : null}
+                  <Link
+                    href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                    className="mt-2 inline-block text-sm font-medium text-primary underline"
+                  >
+                    Create order
+                  </Link>
                 </div>
                 {readiness.status === "ready" ? (
                   <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">

@@ -1,9 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
 import { setBookingPayment } from "./payments";
 import type { Order, OrderLineItemKind, OrderStatus } from "./schema";
-import { bookings, orderLineItems, orders, people } from "./schema";
+import { bookings, orderLineItems, orders, people, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 export type NewOrderLineItem = {
@@ -137,6 +137,27 @@ export async function createOrder(
   }
 
   return { ok: true, order };
+}
+
+/** Every person at the shop, for the new-order customer picker. */
+export async function listOrderableCustomers(db: DbExecutor, shopId: string) {
+  return db
+    .select({ id: people.id, fullName: people.fullName, email: people.email })
+    .from(people)
+    .where(eq(people.shopId, shopId))
+    .orderBy(asc(people.fullName));
+}
+
+/** Trip/person context for a booking, so an order started from a roster shows what it's linked to. */
+export async function getBookingContext(db: DbExecutor, shopId: string, bookingId: string) {
+  const [row] = await db
+    .select({ booking: bookings, person: people, trip: trips })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function listOrders(db: DbExecutor, shopId: string) {
