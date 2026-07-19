@@ -27,14 +27,20 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByRole("status")).toContainText("gear request is with the crew");
 });
 
-test("staff can create a course and see the live operations report", async ({ page }) => {
+test("staff can configure and hide a catalog course", async ({ page }) => {
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/courses");
-  await page.getByLabel("Course name").fill(`Night Diver — ${Date.now()}`);
-  await page.getByRole("button", { name: "Add course" }).click();
-  await expect(page.getByRole("status")).toContainText("Course added");
-
-  await page.goto("/shop/blue-mantis/reports");
-  await expect(page.getByRole("heading", { name: "Operations at a glance" })).toBeVisible();
-  await expect(page.getByText("Discover Scuba — Pool & Reef")).toBeVisible();
+  const course = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+  await course.getByText("Edit", { exact: true }).click();
+  await course.getByLabel("Course price ($)").fill("149.00");
+  await course.getByLabel("With eLearning ($)").fill("249.00");
+  await course.getByRole("button", { name: "Save course" }).click();
+  await expect(page.getByText("Course settings saved")).toBeVisible();
+  await expect(page.getByText("Course $149.00").first()).toBeVisible();
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Discover Scuba Diving" })
+    .getByRole("button", { name: "Hide" })
+    .click();
+  await expect(page.getByText("Course hidden")).toBeVisible();
 });

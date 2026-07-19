@@ -38,6 +38,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   Sessions snapshot waiver/C-card baselines; instructor-required sessions reject enrollment until
   an instructor is assigned, and existing-card courses admit only a verified card at the required
   level. Agency-specific ratios, age, medical, specialty, and exception rules remain H-08 review.
+  Shops start from PADI/SSI catalog copies, then configure local and eLearning-inclusive prices
+  and show/hide availability without deleting historical sessions.
 - ✅ Booking confirmations email immediately through the Resend notification seam. The owner
   dashboard surfaces an unresolved delivery failure; email never affects the capacity-safe booking.
 - ✅ Full trips offer a durable, first-come wait list. Entries remain separate from bookings and
@@ -106,8 +108,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   ([`src/lib/payments`](../../src/lib/payments)) mints a pay link when configured. See
   [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md).
 - ✅ Stripe Connect + orders/invoices: a shop authorizes its own Standard Stripe account via OAuth
-  (`/shop/[shopSlug]/shop`); staff build an order from line items and invoice the connected
-  account (`/shop/[shopSlug]/orders`), review a diver's payment history from their person page,
+  (`/shop/[shopSlug]/shop`); staff build an order from a diver's person page, invoice the connected
+  account, review that diver's payment history in the same context,
   and refund paid invoice payments when needed. A Connect webhook
   (`/api/webhooks/stripe`) confirms `invoice.paid`/`voided` and account status changes back into
   the app, cascading paid/refunded orders to their booking's payment gate. See

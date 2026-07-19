@@ -95,10 +95,10 @@ export default async function OrderDetailPage({
           <p className="mt-1 text-muted">{order.order.description || "Order"}</p>
         </div>
         <Link
-          href={`/shop/${shopSlug}/orders`}
+          href={`/shop/${shopSlug}/divers/${order.person.id}`}
           className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
         >
-          All orders
+          Back to diver
         </Link>
       </div>
 

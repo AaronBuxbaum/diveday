@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import { saveRentalGearProfile } from "@/db/gear-requests";
 import { refundOrder } from "@/db/orders";
-import { getShopById } from "@/db/queries";
+import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import {
   createCertification,
   createSpecialtyCertification,
@@ -121,6 +122,12 @@ export default async function DiverDetailPage({
   const shop = await getShopById(db, session.user.shopId);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
   if (!shop || !diver) notFound();
+  const upcoming = (await upcomingTripsWithCounts(db, shop.id)).filter(
+    (trip) =>
+      !diver.bookings.some(
+        ({ booking }) => booking.tripId === trip.id && booking.status !== "cancelled",
+      ) && trip.booked < trip.capacity,
+  );
 
   const base = `/shop/${shopSlug}/divers/${personId}`;
 
@@ -246,6 +253,22 @@ export default async function DiverDetailPage({
     redirect(`${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
   }
 
+  async function bookActivityAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const tripId = String(formData.get("tripId") ?? "");
+    const current = await getDiverProfile(await getDb(), staff.user.shopId, personId);
+    if (!tripId || !current?.person.email) redirect(`${base}?notice=booking-invalid`);
+    const result = await createBooking(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      fullName: current.person.fullName,
+      email: current.person.email,
+      phone: current.person.phone ?? undefined,
+    });
+    redirect(`${base}?notice=${result.ok ? "booked" : result.reason}`);
+  }
+
   async function deletePersonAction() {
     "use server";
     const staff = await requireStaffSession();
@@ -282,13 +305,26 @@ export default async function DiverDetailPage({
                           ? "Another diver already uses that email in this shop."
                           : notice === "refunded"
                             ? "Payment refunded and the diver's trip payment gate was reopened."
-                            : notice === "refund-failed"
-                              ? "That payment could not be refunded. It may not be paid, or Stripe may need attention."
-                              : notice === "deleted"
-                                ? "Diver removed from active shop work. Their booking and card history is preserved."
-                                : notice === "invalid"
-                                  ? "Check the details and try again."
-                                  : null;
+                            : notice === "booked"
+                              ? "Activity booked. Review it below, then create and send the invoice."
+                              : notice === "trip_full"
+                                ? "That activity just filled up. Choose another."
+                                : notice === "already_booked"
+                                  ? "This diver is already booked on that activity."
+                                  : notice === "course_unstaffed"
+                                    ? "Assign an instructor before booking this course."
+                                    : notice === "course_prerequisite"
+                                      ? "Verify the required certification before booking this course."
+                                      : notice === "trip_unavailable" ||
+                                          notice === "booking-invalid"
+                                        ? "Add an email and choose an available activity."
+                                        : notice === "refund-failed"
+                                          ? "That payment could not be refunded. It may not be paid, or Stripe may need attention."
+                                          : notice === "deleted"
+                                            ? "Diver removed from active shop work. Their booking and card history is preserved."
+                                            : notice === "invalid"
+                                              ? "Check the details and try again."
+                                              : null;
   const errorNotice = [
     "image",
     "agency-not-found",
@@ -297,6 +333,12 @@ export default async function DiverDetailPage({
     "duplicate",
     "refund-failed",
     "invalid",
+    "trip_full",
+    "already_booked",
+    "course_unstaffed",
+    "course_prerequisite",
+    "trip_unavailable",
+    "booking-invalid",
   ].includes(notice ?? "");
   const profile = diver.gearProfile;
 
@@ -489,7 +531,7 @@ export default async function DiverDetailPage({
                   <p className="font-medium">
                     {AGENCY_LABELS[card.agency]} · {CERTIFICATION_LEVEL_LABELS[card.level]}
                   </p>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 break-all text-sm text-muted">
                     {card.identifier}
                     {card.expiresAt
                       ? ` · expires ${card.expiresAt.toLocaleDateString("en-US")}`
@@ -648,7 +690,7 @@ export default async function DiverDetailPage({
                   <p className="font-medium">
                     {AGENCY_LABELS[card.agency]} · {SPECIALTY_LABELS[card.specialty]}
                   </p>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 break-all text-sm text-muted">
                     {card.identifier}
                     {card.expiresAt
                       ? ` · expires ${card.expiresAt.toLocaleDateString("en-US")}`
@@ -768,6 +810,63 @@ export default async function DiverDetailPage({
             Save rental fit
           </button>
         </form>
+      </section>
+
+      <section
+        className="mt-10 border-t border-border pt-8"
+        aria-labelledby="book-activity-heading"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="book-activity-heading" className="text-lg font-semibold">
+              Book an activity
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Add this diver to an available course or dive, then create the order from their
+              booking.
+            </p>
+          </div>
+        </div>
+        {diver.person.email ? (
+          <form
+            action={bookActivityAction}
+            className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
+          >
+            <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
+              Course or dive
+              <select
+                name="tripId"
+                required
+                defaultValue=""
+                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              >
+                <option value="" disabled>
+                  Choose an available activity
+                </option>
+                {upcoming.map((trip) => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.course ? `${trip.course.title} — ` : ""}
+                    {trip.title} · {formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+            >
+              Book activity
+            </button>
+          </form>
+        ) : (
+          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+            Add an email address before booking. It identifies the diver and is needed to send their
+            order.
+          </p>
+        )}
+        {diver.person.email && upcoming.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No open activities are available right now.</p>
+        ) : null}
       </section>
 
       <section className="mt-10 border-t border-border pt-8" aria-labelledby="payments-heading">
