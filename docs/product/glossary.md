@@ -128,6 +128,9 @@ new domain concept, define it here in the same PR.
 - **Rental size profile** — a shop-scoped diver’s reusable BCD, wetsuit, boot, fin, and usual
   weighting details. It pre-fills a new booking’s request and can guide packing, but never
   reserves inventory or replaces a dock-side fit check.
+- **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
+  details, certification evidence, rental fit, bookings, and issued gear; cards are not managed as
+  an unrelated certification inbox.
 - **Retired gear** — equipment permanently removed from the rental pool. It is distinct from a
   service hold and cannot be assigned or retired while checked out to a diver.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air

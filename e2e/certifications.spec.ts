@@ -9,7 +9,7 @@ async function signInAsOwner(page: Page) {
   await expect(page).toHaveURL(/\/shop/);
 }
 
-/** The page has two capture forms; scope by the form's own submit button. */
+/** The diver detail page has two capture forms; scope by the form's own submit button. */
 function levelForm(page: Page) {
   return page.locator("form", {
     has: page.getByRole("button", { name: "Capture for review", exact: true }),
@@ -23,11 +23,11 @@ function specialtyForm(page: Page) {
 
 test("staff captures and verifies a certification before it can be trusted", async ({ page }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/certifications");
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: /Priya Sharma/ }).click();
   const form = levelForm(page);
   await expect(form.locator('input[name="cardImageUrl"]')).toHaveCount(0);
   await expect(form.locator('input[name="cardImage"]')).toBeVisible();
-  await form.locator('select[name="personId"]').selectOption({ index: 1 }); // Priya in deterministic seed
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="level"]').selectOption("advanced_open_water");
   await form.getByLabel("Card number").fill(`PADI-AOW-${Date.now()}`);
@@ -41,9 +41,9 @@ test("staff captures and verifies a certification before it can be trusted", asy
 
 test("staff captures and verifies a specialty card, gated the same way", async ({ page }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/certifications");
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: /Priya Sharma/ }).click();
   const form = specialtyForm(page);
-  await form.locator('select[name="personId"]').selectOption({ index: 1 });
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="specialty"]').selectOption("wreck");
   await form.getByLabel("Card number").fill(`PADI-WRECK-${Date.now()}`);

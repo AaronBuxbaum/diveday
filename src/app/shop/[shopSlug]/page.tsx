@@ -5,7 +5,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/notifications";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
-import { signOut } from "@/lib/auth";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -13,11 +12,6 @@ import { capacityLabel, isFull } from "@/lib/trips";
 export const metadata: Metadata = {
   title: "Shop — Scuba",
 };
-
-async function signOutAction() {
-  "use server";
-  await signOut({ redirectTo: "/" });
-}
 
 export default async function ShopPage({
   params,
@@ -53,7 +47,7 @@ export default async function ShopPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <FlashParams params={["created", "reset", "email"]} />
-      <header className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-10">
         <div className="min-w-0">
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome back, {firstName}</h1>
@@ -63,77 +57,62 @@ export default async function ShopPage({
               : `${upcoming.length} upcoming ${upcoming.length === 1 ? "trip" : "trips"} on the schedule.`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+      </header>
+
+      <section aria-labelledby="workspaces-heading" className="mb-10">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 id="workspaces-heading" className="text-lg font-semibold">
+              Workspaces
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Follow the work from the person to the boat to the books.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Link
-            href={`/shop/${shopSlug}/waivers`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            href={`/shop/${shopSlug}/divers`}
+            className="rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/50 hover:bg-surface-sunken"
           >
-            Waivers
+            <p className="text-sm font-medium text-primary">People</p>
+            <h3 className="mt-1 font-semibold">Divers</h3>
+            <p className="mt-1 text-sm text-muted">
+              Cards, rental fit, bookings, and issued gear in one person record.
+            </p>
           </Link>
           <Link
-            href={`/shop/${shopSlug}/certifications`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            href={`/shop/${shopSlug}/schedule`}
+            className="rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/50 hover:bg-surface-sunken"
           >
-            Certifications
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/courses`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-          >
-            Courses
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/dive-sites`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-          >
-            Dive sites
+            <p className="text-sm font-medium text-primary">Plan</p>
+            <h3 className="mt-1 font-semibold">Schedule</h3>
+            <p className="mt-1 text-sm text-muted">
+              Build charters and courses, then open each roster from the calendar.
+            </p>
           </Link>
           <Link
             href={`/shop/${shopSlug}/gear`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            className="rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/50 hover:bg-surface-sunken"
           >
-            Gear
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/nitrox`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-          >
-            Nitrox
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/reports`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-          >
-            Reports
+            <p className="text-sm font-medium text-primary">Prepare</p>
+            <h3 className="mt-1 font-semibold">Get the boat ready</h3>
+            <p className="mt-1 text-sm text-muted">
+              Resolve waivers, readiness blockers, gear requests, and packing work.
+            </p>
           </Link>
           <Link
             href={`/shop/${shopSlug}/orders`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            className="rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/50 hover:bg-surface-sunken"
           >
-            Orders
+            <p className="text-sm font-medium text-primary">Business</p>
+            <h3 className="mt-1 font-semibold">Orders & payments</h3>
+            <p className="mt-1 text-sm text-muted">
+              Invoice the right person from their trip context and track payment state.
+            </p>
           </Link>
-          <Link
-            href={`/shop/${shopSlug}/settings/payments`}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-          >
-            Payments
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/trips/new`}
-            className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-          >
-            Schedule a trip
-          </Link>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-            >
-              Sign out
-            </button>
-          </form>
         </div>
-      </header>
+      </section>
 
       {created ? (
         <p

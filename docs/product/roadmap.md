@@ -96,6 +96,10 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   authoritative. See
   [20260718-agency-cert-verification](../architecture/decisions/20260718-agency-cert-verification.md)
   (needs a gateway + `CERT_VERIFICATION_*` env, H).
+- ✅ Person-first staff workspace: `/shop/[shopSlug]/divers` is the starting point for a diver;
+  each person record owns their level and specialty cards, rental fit profile, bookings, and issued
+  gear history. The former cards-first certifications route remains a bookmark redirect. See
+  [the person-spine ADR](../architecture/decisions/20260719-diver-person-spine.md).
 - ✅ Payment readiness: a `booking_payments` state plus a per-trip `requires_payment` flag adds a
   `payment_due` blocker to the shared roll-up (paid/deposit/waived clear; absent = unpaid; a refund
   re-opens). Staff mark payment on the roster; a Stripe checkout seam
@@ -152,6 +156,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 
 ## M7+ — Early operational slice shipped; integrations later
 
+- ✅ Shop-owner workspace navigation: Today, Divers, and Schedule are the primary workspaces;
+  preparation, planning, and business tools are grouped under More, with dashboard handoffs that
+  explain how the work connects. See [the workspace navigation ADR](../architecture/decisions/20260719-shop-owner-workspace.md).
 - ✅ Live staff operations report: upcoming bookings, readiness blockers, rental requests, course
   sessions, and unstaffed instructor-required sessions, all derived from source-of-truth models.
 - ✅ Nitrox fill logs: a verified enriched-air specialty card gates every fill; staff log an
