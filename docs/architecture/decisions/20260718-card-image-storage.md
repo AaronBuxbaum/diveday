@@ -23,8 +23,10 @@ paste-a-URL path.
   schema change. Upload is additive: the capture forms take a file *or* a pasted URL; an uploaded
   photo wins, an unconfigured store silently falls back to the pasted URL, and a bad file
   (wrong type / too big) is a visible error, never a silent skip.
-- **Human prerequisite (H):** provision a Vercel Blob store and set `BLOB_READ_WRITE_TOKEN`. Until
-  then the seam runs in `not_configured` mode and the pasted-URL path is unchanged.
+- **Deployment prerequisite (satisfied 2026-07-18):** a private Vercel Blob store is connected to the
+  Vercel project and `BLOB_READ_WRITE_TOKEN` is configured for the deployed environments. Local or
+  preview environments without the token still run in `not_configured` mode and retain the pasted-URL
+  fallback.
 
 ## Alternatives considered
 

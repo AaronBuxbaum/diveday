@@ -33,8 +33,8 @@ hosting itself.
   `production`, it runs `pnpm db:migrate` before `pnpm build`. The command (`drizzle-kit migrate
   --config drizzle.config.prod.ts`) applies committed `drizzle/` SQL against
   `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a transaction-mode pooler is
-  unreliable), falling back to `DATABASE_URL`. **Enable Vercel's System Environment Variables**
-  for the project so `VERCEL_ENV` is available. Preview builds intentionally skip migrations.
+  unreliable), falling back to `DATABASE_URL`. Vercel System Environment Variables are enabled for the project, so `VERCEL_ENV` is available.
+  Preview builds intentionally skip migrations.
 - `next.config.ts` adds `pg` to `serverExternalPackages` alongside `@electric-sql/pglite`, so the
   bundler leaves it external instead of trying to resolve its optional native/cloud drivers.
 - `AUTH_SECRET` is **not** provided by the Neon integration — it's a separate Vercel project
@@ -42,8 +42,8 @@ hosting itself.
   [ADR-0006](0006-auth.md)); `.env.example` documents it alongside the DB vars.
 - H-04's remaining scope — named database/secrets/backup/incident owner — is still open; this ADR
   resolves the technical half (provider, driver, migration procedure), not the ownership half.
-- No other new services are needed for M1: object storage, email, and payments stay deferred
-  (`overview.md`'s deferred-decisions table, `product/roadmap.md`).
+- Certification-card object storage is now provisioned through a private Vercel Blob store. Email
+  and payments remain deferred as described in `product/roadmap.md`.
 
 ## Alternatives considered
 
