@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("landing demo CTA drops a visitor into the staff shop with a demo banner", async ({
   page,
