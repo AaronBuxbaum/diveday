@@ -98,8 +98,15 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   `payment_due` blocker to the shared roll-up (paid/deposit/waived clear; absent = unpaid; a refund
   re-opens). Staff mark payment on the roster; a Stripe checkout seam
   ([`src/lib/payments`](../../src/lib/payments)) mints a pay link when configured. See
-  [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md) (online
-  capture + webhook confirmation are H/M7 follow-ups).
+  [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md).
+- ✅ Stripe Connect + orders/invoices: a shop authorizes its own Standard Stripe account via OAuth
+  (`/shop/[shopSlug]/settings/payments`); staff build an order from line items and invoice the
+  connected account (`/shop/[shopSlug]/orders`), and a Connect webhook
+  (`/api/webhooks/stripe`) confirms `invoice.paid`/`voided` and account status changes back into
+  the app, cascading a paid order to its booking's payment gate. See
+  [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md)
+  (the online capture/webhook confirmation this superseded from the prior entry). Tax, refunds,
+  deposits, cancellation policy, and any platform fee remain H-07.
 
 ## M5 — Gear (core prep slice complete)
 

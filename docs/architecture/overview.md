@@ -19,6 +19,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Auth | Auth.js v5 credentials, JWT sessions, proxy gating | [0006](decisions/0006-auth.md) |
 | Transactional email | Resend REST API behind `src/lib/notifications/` | [20260718 email](decisions/20260718-resend-transactional-email.md) |
 | Offline manifests | Encrypted IndexedDB snapshot + data-free service-worker shell | [20260718 offline manifests](decisions/20260718-offline-manifest-snapshots.md) |
+| Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library | [0002](decisions/0002-toolchain.md) |
 | E2E tests | Playwright | [0002](decisions/0002-toolchain.md) |
@@ -57,7 +58,7 @@ future agents start from context, not from scratch:
 | Decision | Needed by | Leading candidates |
 | --- | --- | --- |
 | E-signature approach | M3 | In-house typed consent now; vendor adapter later ([20260718](decisions/20260718-waiver-signature-retention.md)) |
-| Payments | M7 | Stripe |
+| Payments | M7 | Stripe Connect (Standard), settled: [20260719](decisions/20260719-stripe-connect-orders.md) |
 
 ## Cross-cutting rules
 
