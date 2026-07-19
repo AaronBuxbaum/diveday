@@ -12,16 +12,20 @@ const linkClass =
 export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: string }) {
   const root = `/shop/${shopSlug}`;
   return (
-    <header className="border-b border-border bg-surface/95 px-6 py-3 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3">
-        <Link href={root} className="mr-2 flex items-center gap-2 font-semibold tracking-tight">
-          <span className="grid size-8 place-items-center rounded-lg bg-primary text-sm text-primary-foreground">
-            S
+    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
+        <Link href={root} className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
+          <span className="grid size-9 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm">
+            <span aria-hidden="true">✦</span>
+            <span className="sr-only">Scuba home</span>
           </span>
-          <span className="hidden sm:inline">{shopName}</span>
+          <span className="hidden max-w-40 truncate sm:inline">{shopName}</span>
           <span className="sm:hidden">Scuba</span>
         </Link>
-        <nav aria-label="Primary" className="flex flex-1 flex-wrap items-center gap-1">
+        <nav
+          aria-label="Primary"
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+        >
           <Link href={root} className={linkClass}>
             Today
           </Link>
@@ -31,11 +35,14 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
           <Link href={`${root}/schedule`} className={linkClass}>
             Schedule
           </Link>
-          <details className="relative">
+          <details className="relative shrink-0">
             <summary className={`${linkClass} list-none [&::-webkit-details-marker]:hidden`}>
-              More <span aria-hidden="true">⌄</span>
+              More{" "}
+              <span aria-hidden="true" className="ml-1 text-xs">
+                ⌄
+              </span>
             </summary>
-            <div className="absolute left-0 z-20 mt-2 grid w-72 gap-4 rounded-xl border border-border bg-surface p-4 shadow-lg sm:grid-cols-2">
+            <div className="absolute right-0 z-20 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:left-0 sm:right-auto sm:grid-cols-2">
               <div>
                 <p className="px-3 text-xs font-semibold tracking-widest text-muted uppercase">
                   Prepare
@@ -84,8 +91,11 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
             </div>
           </details>
         </nav>
-        <form action={signOutAction}>
-          <button type="submit" className={linkClass}>
+        <form action={signOutAction} className="shrink-0">
+          <button
+            type="submit"
+            className="min-h-11 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground"
+          >
             Sign out
           </button>
         </form>

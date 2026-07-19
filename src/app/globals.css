@@ -96,6 +96,18 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Give every interactive surface a dependable keyboard landing point. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Earned-moment entrance (confirmation panels). Reduced-motion kill-switch below covers it. */
 @keyframes rise-in {
   from {
