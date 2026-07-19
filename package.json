@@ -52,7 +52,9 @@
     "@vitejs/plugin-react": "^6.0.3",
     "dotenv": "^17.4.2",
     "drizzle-kit": "1.0.0-beta.22",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
+    "msw": "^2.15.0",
     "tailwindcss": "^4",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"

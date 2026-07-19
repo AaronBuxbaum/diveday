@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { expect, test } from "./fixtures";
 
 test("unauthenticated /shop redirects to sign-in", async ({ page }) => {
   await page.goto("/shop");

@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { expect, test } from "./fixtures";
 
 async function signInAsOwner(page: import("@playwright/test").Page) {
   await page.goto("/sign-in");
