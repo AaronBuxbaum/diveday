@@ -96,6 +96,22 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+input,
+select,
+textarea {
+  color: var(--foreground);
+  accent-color: var(--primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+}
+
+summary {
+  user-select: none;
+}
+
 /* Give every interactive surface a dependable keyboard landing point. */
 :where(a, button, input, select, textarea, summary):focus-visible {
   outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent);

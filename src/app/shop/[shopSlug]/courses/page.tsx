@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { archiveCourse, createCourse, listActiveCourses, updateCourse } from "@/db/courses";
 import { getShopById } from "@/db/queries";
@@ -95,27 +96,56 @@ export default async function CoursesPage({
             : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <Link href={`/shop/${shopSlug}`} className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-      <header className="mt-4">
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Courses</h1>
-        <p className="mt-2 text-muted">
-          Define a course once, then schedule instructor-led sessions on the same safe booking spine
-          as every charter.
-        </p>
-      </header>
+      <ShopPageHeader
+        backHref={`/shop/${shopSlug}`}
+        eyebrow={shop.name}
+        title="Courses"
+        description="Define a course once, then schedule instructor-led sessions on the same safe booking spine as every charter."
+        actions={
+          <>
+            <a
+              href="#add-course"
+              className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+            >
+              <span aria-hidden="true">+</span> Add course
+            </a>
+            <Link
+              href={`/shop/${shopSlug}/trips/new`}
+              className="min-h-11 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-surface-sunken"
+            >
+              Schedule a session
+            </Link>
+          </>
+        }
+      />
+
+      <section aria-label="Course catalog snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
+        <ShopStat
+          label="Active courses"
+          value={courseList.length}
+          detail="Reusable catalog entries"
+          tone="primary"
+        />
+        <ShopStat
+          label="Admission rules"
+          value={
+            courseList.filter((course) => course.minimumCertificationLevel || course.requiresWaiver)
+              .length
+          }
+          detail="Courses with readiness gates"
+        />
+        <ShopStat
+          label="Instructor-led"
+          value={courseList.filter((course) => course.requiresInstructor).length}
+          detail="Courses requiring crew assignment"
+          tone="success"
+        />
+      </section>
 
       {banner ? (
-        <p
-          role="status"
-          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${notice === "invalid" ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
-        >
-          {banner}
-        </p>
+        <ShopNotice tone={notice === "invalid" ? "danger" : "success"}>{banner}</ShopNotice>
       ) : null}
 
       <section className="mt-10">
@@ -126,51 +156,56 @@ export default async function CoursesPage({
               Sessions inherit this entry’s waiver and certification baseline when they’re created.
             </p>
           </div>
-          <Link
-            href={`/shop/${shopSlug}/trips/new`}
-            className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Schedule a session
-          </Link>
+          <span className="text-sm text-muted">{courseList.length} active in the catalog</span>
         </div>
         {courseList.length === 0 ? (
           <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
             Add your first course below. You can still schedule ordinary charters without one.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="mt-4 grid gap-3 lg:grid-cols-2">
             {courseList.map((course) => (
               <li
                 key={course.id}
-                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
+                className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-surface p-5 shadow-sm"
               >
                 <div>
-                  <h3 className="font-medium">{course.title}</h3>
+                  <h3 className="text-lg font-semibold">{course.title}</h3>
                   {course.description ? (
                     <p className="mt-1 text-sm text-muted">{course.description}</p>
                   ) : null}
-                  <p className="mt-2 text-sm text-muted">
-                    {course.minimumCertificationLevel
-                      ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} card required before enrollment`
-                      : "No existing C-card required"}
-                    {course.requiresInstructor ? " · instructor required" : ""}
-                    {course.requiresWaiver ? " · waiver required" : ""}
-                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+                      {course.minimumCertificationLevel
+                        ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]}+ card`
+                        : "Open to new divers"}
+                    </span>
+                    {course.requiresInstructor ? (
+                      <span className="rounded-full bg-surface-sunken px-2.5 py-1 text-muted">
+                        Instructor required
+                      </span>
+                    ) : null}
+                    {course.requiresWaiver ? (
+                      <span className="rounded-full bg-surface-sunken px-2.5 py-1 text-muted">
+                        Waiver required
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="relative flex shrink-0 flex-wrap gap-2 sm:justify-end">
                   <Link
                     href={`/shop/${shopSlug}/trips/new?course=${course.id}`}
-                    className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-center text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                    className="min-h-11 rounded-xl border border-border bg-surface px-4 py-2 text-center text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
                   >
                     Schedule session
                   </Link>
                   <details>
-                    <summary className="min-h-11 cursor-pointer rounded-lg border border-border bg-surface px-4 py-2 text-center text-sm font-medium text-primary">
+                    <summary className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2 text-center text-sm font-medium text-primary">
                       Edit
                     </summary>
                     <form
                       action={updateCourseAction}
-                      className="mt-3 grid gap-3 rounded-lg border border-border bg-surface p-4 sm:absolute sm:right-0 sm:z-10 sm:w-96"
+                      className="mt-3 grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:absolute sm:right-0 sm:z-10 sm:w-96"
                     >
                       <input type="hidden" name="courseId" value={course.id} />
                       <label className="flex flex-col gap-1 text-sm font-medium">
@@ -226,21 +261,33 @@ export default async function CoursesPage({
                       </label>
                       <button
                         type="submit"
-                        className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                        className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                       >
                         Save course
                       </button>
                     </form>
                   </details>
-                  <form action={archiveCourseAction}>
-                    <input type="hidden" name="courseId" value={course.id} />
-                    <button
-                      type="submit"
-                      className="min-h-11 rounded-lg px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10"
-                    >
+                  <details>
+                    <summary className="min-h-11 cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10">
                       Archive
-                    </button>
-                  </form>
+                    </summary>
+                    <form
+                      action={archiveCourseAction}
+                      className="absolute right-0 z-10 mt-2 w-64 rounded-2xl border border-danger/25 bg-surface p-4 text-sm shadow-xl"
+                    >
+                      <input type="hidden" name="courseId" value={course.id} />
+                      <p className="text-muted">
+                        Existing sessions keep their rules. This course will leave future scheduling
+                        pickers.
+                      </p>
+                      <button
+                        type="submit"
+                        className="mt-3 min-h-11 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-foreground"
+                      >
+                        Archive course
+                      </button>
+                    </form>
+                  </details>
                 </div>
               </li>
             ))}
@@ -248,7 +295,10 @@ export default async function CoursesPage({
         )}
       </section>
 
-      <section className="mt-12 border-t border-border pt-8">
+      <section
+        id="add-course"
+        className="mt-12 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
+      >
         <h2 className="text-lg font-semibold">Add a course</h2>
         <p className="mt-1 text-sm text-muted">
           Start with the published admission rules you’ll actually enforce. Agency-specific ratios
@@ -262,6 +312,7 @@ export default async function CoursesPage({
               required
               maxLength={120}
               placeholder="Open Water Diver"
+              autoComplete="off"
               className={inputClass}
             />
           </label>
@@ -307,7 +358,7 @@ export default async function CoursesPage({
           <div>
             <button
               type="submit"
-              className="min-h-11 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              className="min-h-11 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
             >
               Add course
             </button>

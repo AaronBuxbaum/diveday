@@ -30,6 +30,11 @@ const siteSchema = z
     imageUrls: z.string().max(12_000),
     marineLife: z.string().trim().max(400),
     marineLifeDescription: z.string().trim().max(1_200),
+    difficulty: z.string().trim().max(120),
+    depthRange: z.string().trim().max(120),
+    currentNote: z.string().trim().max(500),
+    divePlan: z.string().trim().max(1_200),
+    landmarks: z.string().max(4_000),
     minimumCertificationLevel: z.preprocess(
       (value) => (value === "" ? null : value),
       z
@@ -75,6 +80,10 @@ export default async function EditDiveSitePage({
     } catch {
       redirect(`${back}/${id}?error=images`);
     }
+    const landmarks = parsed.data.landmarks
+      .split("\n")
+      .map((landmark) => landmark.trim())
+      .filter(Boolean);
     const updated = await updateDiveSite(await getDb(), activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...parsed.data,
@@ -87,6 +96,11 @@ export default async function EditDiveSitePage({
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
+      difficulty: parsed.data.difficulty,
+      depthRange: parsed.data.depthRange,
+      currentNote: parsed.data.currentNote,
+      divePlan: parsed.data.divePlan,
+      landmarks,
     });
     if (!updated) notFound();
     redirect(`${back}/${id}?notice=saved`);
@@ -275,6 +289,59 @@ export default async function EditDiveSitePage({
             rows={3}
             maxLength={1200}
             defaultValue={site.marineLifeDescription ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Difficulty <span className="font-normal text-muted">(optional)</span>
+            <input
+              name="difficulty"
+              maxLength={120}
+              defaultValue={site.difficulty ?? ""}
+              placeholder="Calm, intermediate, advanced"
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Depth range <span className="font-normal text-muted">(optional)</span>
+            <input
+              name="depthRange"
+              maxLength={120}
+              defaultValue={site.depthRange ?? ""}
+              placeholder="20–45 ft"
+              className={inputClass}
+            />
+          </label>
+        </div>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Current and conditions notes <span className="font-normal text-muted">(optional)</span>
+          <textarea
+            name="currentNote"
+            rows={2}
+            maxLength={500}
+            defaultValue={site.currentNote ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Dive plan <span className="font-normal text-muted">(optional)</span>
+          <textarea
+            name="divePlan"
+            rows={3}
+            maxLength={1200}
+            defaultValue={site.divePlan ?? ""}
+            placeholder="Entry, route, turnaround, and exit notes."
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Landmarks <span className="font-normal text-muted">(one per line, optional)</span>
+          <textarea
+            name="landmarks"
+            rows={3}
+            maxLength={4000}
+            defaultValue={site.landmarks.join("\n")}
             className={inputClass}
           />
         </label>
