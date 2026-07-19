@@ -309,6 +309,30 @@ export default async function TripManifestPage({
                         ))}
                       </ul>
                     ) : null}
+                    <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3 print:hidden">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-primary">
+                        Add a note to this roll-call record
+                      </summary>
+                      <div className="mt-2">
+                        <label
+                          htmlFor={"roll-call-note-" + diver.bookingId}
+                          className="text-sm font-semibold"
+                        >
+                          Optional note
+                        </label>
+                        <input
+                          id={"roll-call-note-" + diver.bookingId}
+                          name="note"
+                          form={"not-boarded-" + diver.bookingId}
+                          maxLength={300}
+                          placeholder="Late to the boat, medical question, gear issue…"
+                          className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                        />
+                        <p className="mt-1 text-xs text-muted">
+                          This is saved with the staff audit trail.
+                        </p>
+                      </div>
+                    </details>
                     {diver.rollCall ? (
                       <p className="mt-3 text-sm text-muted">
                         {rollCallLabel(diver.rollCall)}{" "}
@@ -332,7 +356,7 @@ export default async function TripManifestPage({
                       </form>
                     ) : null}
                     {!boarded ? (
-                      <form action={rollCallAction}>
+                      <form id={"not-boarded-" + diver.bookingId} action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="not_boarded" />
                         <SubmitButton
