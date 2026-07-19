@@ -93,7 +93,7 @@ export default async function CoursesPage({
   const active = courseList.filter((c) => c.isActive);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={shop.name}

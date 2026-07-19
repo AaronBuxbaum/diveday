@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/queries";
@@ -84,7 +84,7 @@ export default async function DiversPage({
   const noticeIsError = notice === "duplicate" || notice === "invalid";
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={shop.name}
@@ -97,46 +97,7 @@ export default async function DiversPage({
               : `${divers.length} on file`}
           </span>
         }
-        actions={
-          <a
-            href="#add-diver"
-            className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
-          >
-            <span aria-hidden="true">+</span> Add diver
-          </a>
-        }
       />
-
-      <section aria-label="Divers snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
-        <ShopStat
-          label="Active people"
-          value={divers.length}
-          detail="People available to book"
-          tone="primary"
-        />
-        <ShopStat
-          label="Ready for work"
-          value={
-            divers.filter(
-              (diver) => diver.pendingCertificationCount + diver.pendingSpecialtyCount === 0,
-            ).length
-          }
-          detail="No certification review waiting"
-          tone="success"
-        />
-        <ShopStat
-          label="Needs attention"
-          value={
-            divers.filter(
-              (diver) =>
-                diver.pendingCertificationCount + diver.pendingSpecialtyCount > 0 ||
-                !diver.gearProfile,
-            ).length
-          }
-          detail="Pending cards or missing rental fit"
-          tone="warning"
-        />
-      </section>
 
       {noticeText ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -157,10 +118,7 @@ export default async function DiversPage({
         </div>
       ) : null}
 
-      <details
-        id="add-diver"
-        className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm"
-      >
+      <details className="mt-8 rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
           Add a diver{" "}
           <span aria-hidden="true" className="text-xl font-normal text-primary">
