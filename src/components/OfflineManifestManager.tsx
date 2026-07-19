@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import {
   deleteOfflineManifest,
   loadOfflineManifest,
@@ -10,7 +11,11 @@ import {
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import {
+  type OfflineManifestEnvelope,
+  type OfflineManifestPayload,
+  offlineManifestFreshness,
+} from "@/lib/offline-manifests";
 
 export function OfflineManifestManager({ payload }: { payload: OfflineManifestPayload }) {
   const router = useRouter();
@@ -92,6 +97,13 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
 
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
+  const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
+  const freshnessLabel =
+    freshness === "current"
+      ? "Fresh snapshot"
+      : freshness === "aging"
+        ? "Aging snapshot"
+        : "Stale snapshot";
 
   return (
     <section
@@ -108,6 +120,22 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
             roll-call checkpoint; changes wait here until the live manifest can verify and reconcile
             them.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <ConnectivityStatus />
+            {freshness ? (
+              <span
+                className={
+                  freshness === "current"
+                    ? "inline-flex min-h-9 items-center rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
+                    : freshness === "aging"
+                      ? "inline-flex min-h-9 items-center rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
+                      : "inline-flex min-h-9 items-center rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
+                }
+              >
+                {freshnessLabel}
+              </span>
+            ) : null}
+          </div>
           <p className="mt-2 text-sm font-medium" aria-live="polite">
             {message}
           </p>

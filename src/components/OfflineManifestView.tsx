@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import {
   type RollCallCheckpoint,
   rollCallCheckpointLabel,
@@ -150,9 +151,20 @@ export function OfflineManifestView() {
               Saved {dateTime.format(new Date(envelope.snapshot.savedAt))}
             </p>
           </div>
-          <span className="rounded-full bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
-            Device copy · {freshness}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ConnectivityStatus />
+            <span
+              className={
+                freshness === "current"
+                  ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
+                  : freshness === "aging"
+                    ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
+                    : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
+              }
+            >
+              {freshness} device snapshot
+            </span>
+          </div>
         </div>
         <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
           {FRESHNESS_COPY[freshness]}. Boarding uses readiness as saved; live readiness is checked
