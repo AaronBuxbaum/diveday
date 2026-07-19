@@ -3,7 +3,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
-import { archiveCourse, createCourse, listActiveCourses, updateCourse } from "./courses";
+import {
+  archiveCourse,
+  createCourse,
+  listActiveCourses,
+  setCourseVisibility,
+  updateCourse,
+} from "./courses";
 import {
   createTrip,
   getShopBySlug,
@@ -102,11 +108,15 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       minimumCertificationLevel: "open_water",
       requiresInstructor: true,
       requiresWaiver: true,
+      priceCents: 49900,
+      eLearningPriceCents: 59900,
     });
     expect(updated?.title).toBe("Advanced Open Water — Refreshed");
+    expect(updated).toMatchObject({ priceCents: 49900, eLearningPriceCents: 59900 });
     expect(await archiveCourse(db, shop.id, course.id)).toBe(true);
     expect((await listActiveCourses(db, shop.id)).some((entry) => entry.id === course.id)).toBe(
       false,
     );
+    expect((await setCourseVisibility(db, shop.id, course.id, true))?.isActive).toBe(true);
   });
 });

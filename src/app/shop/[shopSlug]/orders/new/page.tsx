@@ -91,7 +91,11 @@ export default async function NewOrderPage({
 
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (!canAcceptPayments(account)) {
-    redirect(`/shop/${shopSlug}/orders?notice=not_connected`);
+    redirect(
+      prefillPersonId
+        ? `/shop/${shopSlug}/divers/${prefillPersonId}?notice=payment-not-connected`
+        : `/shop/${shopSlug}/divers`,
+    );
   }
 
   const [customers, bookingContext, shop] = await Promise.all([
@@ -123,7 +127,11 @@ export default async function NewOrderPage({
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">New order</h1>
         </div>
         <Link
-          href={`/shop/${shopSlug}/orders`}
+          href={
+            prefillPersonId
+              ? `/shop/${shopSlug}/divers/${prefillPersonId}`
+              : `/shop/${shopSlug}/divers`
+          }
           className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
         >
           Cancel

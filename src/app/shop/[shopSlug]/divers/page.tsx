@@ -268,9 +268,14 @@ export default async function DiversPage({
                   return (
                     <tr
                       key={diver.person.id}
-                      className="group transition-colors duration-200 hover:bg-surface-sunken"
+                      className="group relative transition-colors duration-200 hover:bg-surface-sunken"
                     >
-                      <td className="px-4 py-3">
+                      <td className="relative px-4 py-3">
+                        <Link
+                          href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                          className="absolute inset-0 z-10 md:hidden"
+                          aria-label={`Open ${diver.person.fullName}`}
+                        />
                         <div className="flex min-w-0 items-center gap-3">
                           <span
                             className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"

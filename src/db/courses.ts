@@ -6,7 +6,10 @@ import { courses } from "./schema";
 export type NewCourse = {
   shopId: string;
   title: string;
+  agency?: "padi" | "ssi";
   description?: string;
+  priceCents?: number | null;
+  eLearningPriceCents?: number | null;
   minimumCertificationLevel?: CertificationLevel | null;
   requiresInstructor?: boolean;
   requiresWaiver?: boolean;
@@ -25,7 +28,10 @@ export async function createCourse(db: AppDb, input: NewCourse) {
     .values({
       shopId: input.shopId,
       title: input.title.trim(),
+      agency: input.agency ?? "padi",
       description: input.description?.trim() || null,
+      priceCents: input.priceCents ?? null,
+      eLearningPriceCents: input.eLearningPriceCents ?? null,
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiresInstructor: input.requiresInstructor ?? true,
       requiresWaiver: input.requiresWaiver ?? true,
@@ -43,6 +49,15 @@ export async function listActiveCourses(db: AppDb, shopId: string) {
     .orderBy(asc(courses.title));
 }
 
+/** Full shop copy, including entries hidden from new session scheduling. */
+export async function listCourses(db: AppDb, shopId: string) {
+  return db
+    .select()
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(asc(courses.agency), asc(courses.title));
+}
+
 export async function updateCourse(
   db: AppDb,
   shopId: string,
@@ -53,12 +68,15 @@ export async function updateCourse(
     .update(courses)
     .set({
       title: input.title.trim(),
+      agency: input.agency ?? "padi",
       description: input.description?.trim() || null,
+      priceCents: input.priceCents ?? null,
+      eLearningPriceCents: input.eLearningPriceCents ?? null,
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiresInstructor: input.requiresInstructor ?? true,
       requiresWaiver: input.requiresWaiver ?? true,
     })
-    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
   return course ?? null;
 }
@@ -71,6 +89,20 @@ export async function archiveCourse(db: AppDb, shopId: string, courseId: string)
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
     .returning({ id: courses.id });
   return Boolean(course);
+}
+
+export async function setCourseVisibility(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  visible: boolean,
+) {
+  const [course] = await db
+    .update(courses)
+    .set({ isActive: visible })
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .returning();
+  return course ?? null;
 }
 
 export async function getCourse(db: AppDb, shopId: string, courseId: string) {

@@ -199,7 +199,7 @@ export default async function ShopPage({
             </p>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href={`/shop/${shopSlug}/divers`}
             className="group rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-surface-sunken"
@@ -228,17 +228,6 @@ export default async function ShopPage({
             <h3 className="mt-1 font-semibold group-hover:text-primary">Get the boat ready</h3>
             <p className="mt-1 text-sm text-muted">
               Resolve waivers, readiness blockers, gear requests, and packing work.
-            </p>
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/orders`}
-            className="group rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-surface-sunken"
-          >
-            <p className="text-sm font-medium text-primary">Business</p>
-            <h3 className="mt-1 font-semibold group-hover:text-primary">Orders</h3>
-            <p className="mt-1 text-sm text-muted">
-              Invoice the right person from their trip context and track payment state from their
-              Diver page.
             </p>
           </Link>
         </div>

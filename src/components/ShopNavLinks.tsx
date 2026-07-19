@@ -31,10 +31,7 @@ const moreGroups = [
   },
   {
     label: "Business",
-    links: [
-      ["Orders", "/orders"],
-      ["Shop", "/shop"],
-    ],
+    links: [["Shop", "/shop"]],
   },
 ] as const;
 

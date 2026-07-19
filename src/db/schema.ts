@@ -126,7 +126,10 @@ export const courses = pgTable(
       .notNull()
       .references(() => shops.id),
     title: text("title").notNull(),
+    agency: text("agency").notNull().default("padi"),
     description: text("description"),
+    priceCents: integer("price_cents"),
+    eLearningPriceCents: integer("e_learning_price_cents"),
     /** Null means an uncertified participant may enroll (for example, DSD/OW). */
     minimumCertificationLevel: certificationLevel("minimum_certification_level"),
     /** A course session cannot take enrollments until an instructor is assigned. */
