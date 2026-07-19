@@ -37,6 +37,7 @@ import {
   tripDives,
   tripRequirements,
   trips,
+  tripWaitlistEntries,
   userAccounts,
   waiverRecords,
   waiverTemplates,
@@ -893,6 +894,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {
