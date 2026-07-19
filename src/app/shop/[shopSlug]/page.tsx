@@ -107,6 +107,18 @@ export default async function ShopPage({
             Reports
           </Link>
           <Link
+            href={`/shop/${shopSlug}/orders`}
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Orders
+          </Link>
+          <Link
+            href={`/shop/${shopSlug}/settings/payments`}
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          >
+            Payments
+          </Link>
+          <Link
             href={`/shop/${shopSlug}/trips/new`}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >

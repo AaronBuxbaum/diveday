@@ -1,0 +1,1 @@
+ALTER TABLE "trips" ADD COLUMN "price_cents" integer;

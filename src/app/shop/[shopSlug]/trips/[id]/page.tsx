@@ -68,6 +68,10 @@ const detailsSchema = z.object({
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
   plannedDives: z.coerce.number().int().min(1).max(6),
+  priceDollars: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().nonnegative().finite().optional(),
+  ),
   diveSiteId: z.preprocess((value) => (value === "" ? null : value), z.string().uuid().nullable()),
 });
 
@@ -256,8 +260,17 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
-    const { title, description, date, startTime, endTime, capacity, plannedDives, diveSiteId } =
-      parsed.data;
+    const {
+      title,
+      description,
+      date,
+      startTime,
+      endTime,
+      capacity,
+      plannedDives,
+      priceDollars,
+      diveSiteId,
+    } = parsed.data;
     const sw = parseWallTime(date, startTime);
     const ew = parseWallTime(date, endTime);
     if (!sw || !ew) redirect(`${back}?notice=invalid`);
@@ -274,6 +287,7 @@ export default async function ManageTripPage({
       endsAt,
       capacity,
       plannedDives,
+      priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
       diveSiteId,
     });
     redirect(`${back}?notice=saved`);
@@ -615,6 +629,18 @@ export default async function ManageTripPage({
                 min={1}
                 max={6}
                 defaultValue={trip.plannedDives}
+                className={`${inputClass} tabular-nums`}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Price per diver <span className="font-normal text-muted">(optional)</span>
+              <input
+                name="priceDollars"
+                type="number"
+                step="0.01"
+                min={0}
+                placeholder="$0.00"
+                defaultValue={trip.priceCents === null ? "" : (trip.priceCents / 100).toFixed(2)}
                 className={`${inputClass} tabular-nums`}
               />
             </label>
@@ -1189,6 +1215,12 @@ export default async function ManageTripPage({
                       </button>
                     </form>
                   ) : null}
+                  <Link
+                    href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                    className="mt-2 inline-block text-sm font-medium text-primary underline"
+                  >
+                    Create order
+                  </Link>
                 </div>
                 {readiness.status === "ready" ? (
                   <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">

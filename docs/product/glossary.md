@@ -85,6 +85,19 @@ new domain concept, define it here in the same PR.
   provider event history.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
+- **Connected Stripe account** — a shop's own Standard Stripe account, authorized once via OAuth.
+  The shop keeps its own Stripe dashboard, payouts, and tax reporting; Scuba never holds the money
+  and acts on the shop's behalf only through the `Stripe-Account` header the OAuth grant enables.
+  See [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md).
+- **Order** — a shop-issued bill for a customer: one or more line items (a trip fee, course fee,
+  rental gear, deposit, or free-form charge) against a person, optionally tied to a booking. Local
+  status (`open`/`paid`/`void`/`uncollectible`) mirrors the Stripe invoice backing it. A trip's
+  optional per-diver price pre-fills the trip-fee line item when an order is started from a
+  booking's roster row — staff can still edit the amount or add more line items before sending.
+- **Invoice** — the payable Stripe document behind an order, created on the shop's connected
+  account. Staff can share its hosted link directly, or let Stripe email the customer; a webhook
+  (or manual refresh) brings the paid/void result back into the order and, when the order is linked
+  to a booking, into that booking's payment gate the same way a staff mark does.
 - **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded
   example shop (Blue Mantis), drives the real staff surfaces, and resets the playground back to a
   clean slate. The Blue Mantis demo shop is bootstrapped in every environment; `isDemo` marks that

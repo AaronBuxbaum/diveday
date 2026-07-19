@@ -22,6 +22,10 @@ const formSchema = z.object({
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
   plannedDives: z.coerce.number().int().min(1).max(6),
+  priceDollars: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().nonnegative().finite().optional(),
+  ),
   courseId: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
@@ -46,6 +50,7 @@ async function scheduleTrip(formData: FormData) {
     endTime,
     capacity,
     plannedDives,
+    priceDollars,
     courseId,
     diveSiteId,
   } = parsed.data;
@@ -73,6 +78,7 @@ async function scheduleTrip(formData: FormData) {
     endsAt,
     capacity,
     plannedDives,
+    priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
   redirect(`/shop/${session.user.shopSlug}?created=${encodeURIComponent(title)}`);
@@ -225,6 +231,20 @@ export default async function NewTripPage({
             />
           </label>
         </div>
+        <label className="flex flex-col gap-1 text-sm font-medium sm:w-40">
+          Price per diver <span className="font-normal text-muted">(optional)</span>
+          <input
+            name="priceDollars"
+            type="number"
+            step="0.01"
+            min={0}
+            placeholder="$0.00"
+            className={`${inputClass} tabular-nums`}
+          />
+          <span className="mt-1 text-sm font-normal text-muted">
+            Pre-fills the trip fee when staff invoice a diver from this trip's roster.
+          </span>
+        </label>
         <div className="mt-2 flex items-center gap-3">
           <button
             type="submit"
