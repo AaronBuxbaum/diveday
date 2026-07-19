@@ -241,18 +241,37 @@ export default async function DiversPage({
             </p>
           </div>
         ) : (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {visibleDivers.map((diver) => {
-              const pending = diver.pendingCertificationCount + diver.pendingSpecialtyCount;
-              return (
-                <li key={diver.person.id}>
-                  <Link
-                    href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                    className="group block rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-surface-sunken"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-3">
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+            <table className="w-full min-w-180 border-collapse text-left">
+              <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Person
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Cards
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Rental fit
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Attention
+                  </th>
+                  <th scope="col" className="px-4 py-3">
+                    <span className="sr-only">Open diver</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {visibleDivers.map((diver) => {
+                  const pending = diver.pendingCertificationCount + diver.pendingSpecialtyCount;
+                  return (
+                    <tr
+                      key={diver.person.id}
+                      className="group transition-colors duration-200 hover:bg-surface-sunken"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           <span
                             className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
                             aria-hidden="true"
@@ -264,45 +283,57 @@ export default async function DiversPage({
                               .slice(0, 2)
                               .toUpperCase()}
                           </span>
-                          <h3 className="truncate font-semibold group-hover:text-primary">
-                            {diver.person.fullName}
-                          </h3>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold group-hover:text-primary">
+                              {diver.person.fullName}
+                            </p>
+                            <p className="truncate text-sm text-muted">
+                              {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
+                            </p>
+                          </div>
                         </div>
-                        <p className="mt-1 truncate text-sm text-muted">
-                          {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
-                        </p>
-                      </div>
-                      <span
-                        className="shrink-0 text-primary transition-transform group-hover:translate-x-1"
-                        aria-hidden="true"
-                      >
-                        →
-                      </span>
-                    </div>
-                    <div className="mt-5 flex flex-wrap gap-2 text-sm">
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-                        {diver.certificationCount + diver.specialtyCount} card
-                        {diver.certificationCount + diver.specialtyCount === 1 ? "" : "s"}
-                      </span>
-                      <span className="rounded-full bg-surface-sunken px-3 py-1 text-muted">
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
+                          {diver.certificationCount + diver.specialtyCount} card
+                          {diver.certificationCount + diver.specialtyCount === 1 ? "" : "s"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted">
                         {diver.gearProfile ? "Fit saved" : "No fit profile"}
-                      </span>
-                      {diver.assignedGearCount > 0 ? (
-                        <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
-                          {diver.assignedGearCount} gear checked out
-                        </span>
-                      ) : null}
-                      {pending > 0 ? (
-                        <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
-                          {pending} pending review
-                        </span>
-                      ) : null}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-wrap gap-2">
+                          {diver.assignedGearCount > 0 ? (
+                            <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
+                              {diver.assignedGearCount} gear checked out
+                            </span>
+                          ) : null}
+                          {pending > 0 ? (
+                            <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
+                              {pending} pending review
+                            </span>
+                          ) : null}
+                          {diver.assignedGearCount === 0 && pending === 0 ? (
+                            <span className="text-muted">None</span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                          className="inline-flex min-h-11 items-center rounded-xl px-3 font-medium text-primary hover:bg-primary/10"
+                          aria-label={`Open ${diver.person.fullName}`}
+                        >
+                          Open <span aria-hidden="true">→</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

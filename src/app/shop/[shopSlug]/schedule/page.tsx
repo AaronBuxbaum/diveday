@@ -5,6 +5,8 @@ import { connection } from "next/server";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
+import { auth } from "@/lib/auth";
+import { isStaff } from "@/lib/authz";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
 
@@ -21,44 +23,54 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
     notFound();
   }
   const upcoming = await upcomingTripsWithCounts(db, shop.id);
+  const session = await auth();
+  const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={shop.name}
         title="Schedule"
-        description="Upcoming trips and charters. Open a departure to work through its roster, readiness, gear, and manifest."
+        description={
+          staffView
+            ? "Upcoming trips and charters. Open a departure to work through its roster, readiness, gear, and manifest."
+            : "Find your next day on the water, see what to expect, and reserve your spot."
+        }
         actions={
-          <Link
-            href={`/shop/${shopSlug}/trips/new`}
-            className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
-          >
-            <span aria-hidden="true">+</span> Schedule a trip
-          </Link>
+          staffView ? (
+            <Link
+              href={`/shop/${shopSlug}/trips/new`}
+              className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+            >
+              <span aria-hidden="true">+</span> Schedule a trip
+            </Link>
+          ) : undefined
         }
       />
-      <section aria-label="Schedule snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
-        <ShopStat
-          label="Departures"
-          value={upcoming.length}
-          detail="Upcoming trips and sessions"
-          tone="primary"
-        />
-        <ShopStat
-          label="Open seats"
-          value={upcoming.reduce(
-            (total, trip) => total + Math.max(0, trip.capacity - trip.booked),
-            0,
-          )}
-          detail="Available across the board"
-          tone="success"
-        />
-        <ShopStat
-          label="At capacity"
-          value={upcoming.filter(isFull).length}
-          detail="Trips with no open seats"
-        />
-      </section>
+      {staffView ? (
+        <section aria-label="Schedule snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
+          <ShopStat
+            label="Departures"
+            value={upcoming.length}
+            detail="Upcoming trips and sessions"
+            tone="primary"
+          />
+          <ShopStat
+            label="Open seats"
+            value={upcoming.reduce(
+              (total, trip) => total + Math.max(0, trip.capacity - trip.booked),
+              0,
+            )}
+            detail="Available across the board"
+            tone="success"
+          />
+          <ShopStat
+            label="At capacity"
+            value={upcoming.filter(isFull).length}
+            detail="Trips with no open seats"
+          />
+        </section>
+      ) : null}
 
       {upcoming.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border-strong bg-surface p-10 text-center">
