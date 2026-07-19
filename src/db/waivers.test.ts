@@ -34,11 +34,10 @@ async function waiverContext() {
 
 describe("waiver records (in-memory PGlite)", () => {
   it("stores only a token hash and rejects a tampered link", async () => {
-    const { db, shop, booking, template } = await waiverContext();
+    const { db, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
-      templateId: template.id,
       now,
     });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
@@ -55,17 +54,15 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("supersedes a pending link and fails the old bearer token closed", async () => {
-    const { db, shop, trip, booking, template } = await waiverContext();
+    const { db, shop, trip, booking } = await waiverContext();
     const first = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
-      templateId: template.id,
       now,
     });
     const second = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
-      templateId: template.id,
       now: new Date(now.getTime() + 1),
     });
     if (!first.ok || !second.ok) throw new Error("expected both links to issue");
@@ -89,7 +86,6 @@ describe("waiver records (in-memory PGlite)", () => {
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
-      templateId: template.id,
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
@@ -109,11 +105,10 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("makes completion idempotent and routes a medical yes to review", async () => {
-    const { db, shop, booking, template } = await waiverContext();
+    const { db, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
-      templateId: template.id,
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
@@ -136,11 +131,10 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("rejects expired links and cross-tenant issue attempts", async () => {
-    const { db, shop, booking, template } = await waiverContext();
+    const { db, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
-      templateId: template.id,
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
@@ -151,20 +145,18 @@ describe("waiver records (in-memory PGlite)", () => {
       await issueWaiverRequest(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
         bookingId: booking.id,
-        templateId: template.id,
         now,
       }),
     ).toEqual({ ok: false, reason: "booking_not_found" });
   });
 
   it("does not issue a waiver for a cancelled trip", async () => {
-    const { db, shop, trip, booking, template } = await waiverContext();
+    const { db, shop, trip, booking } = await waiverContext();
     await setTripStatus(db, shop.id, trip.id, "cancelled");
     expect(
       await issueWaiverRequest(db, {
         shopId: shop.id,
         bookingId: booking.id,
-        templateId: template.id,
         now,
       }),
     ).toEqual({ ok: false, reason: "booking_unavailable" });
