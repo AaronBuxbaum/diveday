@@ -169,6 +169,17 @@ export async function listOrders(db: DbExecutor, shopId: string) {
     .orderBy(desc(orders.createdAt));
 }
 
+/** Payment records for one diver, used by the person-first diver workspace. */
+export async function listOrdersForPerson(db: DbExecutor, shopId: string, personId: string) {
+  return db
+    .select({ order: orders, trip: trips })
+    .from(orders)
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)))
+    .orderBy(desc(orders.createdAt));
+}
+
 export async function getOrder(db: DbExecutor, shopId: string, orderId: string) {
   const [row] = await db
     .select({ order: orders, person: people })
@@ -205,6 +216,7 @@ async function applyOrderUpdate(
       invoicePdfUrl: patch.invoicePdfUrl ?? order.invoicePdfUrl,
       paidAt: patch.status === "paid" ? (order.paidAt ?? now) : order.paidAt,
       voidedAt: patch.status === "void" ? (order.voidedAt ?? now) : order.voidedAt,
+      refundedAt: patch.status === "refunded" ? (order.refundedAt ?? now) : order.refundedAt,
       updatedAt: now,
     })
     .where(eq(orders.id, order.id))
@@ -217,6 +229,16 @@ async function applyOrderUpdate(
       bookingId: updated.bookingId,
       status: "paid",
       amountCents: updated.totalCents,
+      currency: updated.currency,
+      provider: "stripe",
+      providerRef: updated.stripeInvoiceId,
+    });
+  } else if (updated.status === "refunded" && order.status !== "refunded" && updated.bookingId) {
+    await setBookingPayment(db, {
+      shopId: updated.shopId,
+      bookingId: updated.bookingId,
+      status: "refunded",
+      amountCents: 0,
       currency: updated.currency,
       provider: "stripe",
       providerRef: updated.stripeInvoiceId,
@@ -268,6 +290,24 @@ export async function voidOrder(
   const result = await invoicing.voidInvoice(order.stripeAccountId, order.stripeInvoiceId);
   if (result.status !== "voided") return null;
   return applyOrderUpdate(db, order, { status: "void" });
+}
+
+/** Refund a paid Stripe invoice and reopen its booking payment gate. */
+export async function refundOrder(
+  db: AppDb,
+  shopId: string,
+  orderId: string,
+  invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
+): Promise<Order | null> {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
+    .limit(1);
+  if (order?.status !== "paid") return null;
+  const result = await invoicing.refundInvoice(order.stripeAccountId, order.stripeInvoiceId);
+  if (result.status !== "refunded") return null;
+  return applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
 }
 
 /** Manual fallback for shops without the webhook configured yet: pull current status straight from Stripe. */

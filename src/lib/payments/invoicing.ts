@@ -52,10 +52,15 @@ export type InvoiceLookupResult =
   | { status: "failed" };
 
 export type VoidInvoiceResult = { status: "voided" | "not_configured" | "failed" };
+export type RefundInvoiceResult = {
+  status: "refunded" | "not_configured" | "not_refundable" | "failed";
+  refundId?: string;
+};
 
 export interface InvoicingProvider {
   createInvoice(request: CreateInvoiceRequest): Promise<CreateInvoiceResult>;
   voidInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<VoidInvoiceResult>;
+  refundInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<RefundInvoiceResult>;
   retrieveInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<InvoiceLookupResult>;
 }
 
@@ -72,7 +77,13 @@ const invoiceResponseSchema = z.object({
   invoice_pdf: z.string().url().nullable().optional(),
   total: z.number().int(),
   amount_paid: z.number().int().optional(),
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
 });
+
+const refundResponseSchema = z.object({ id: z.string().min(1) });
 
 function headersFor(secretKey: string, stripeAccountId: string): Record<string, string> {
   return {
@@ -182,6 +193,33 @@ export function stripeInvoicingProvider(
       }
     },
 
+    async refundInvoice(stripeAccountId, stripeInvoiceId) {
+      try {
+        const invoiceResponse = await fetchImpl(
+          `https://api.stripe.com/v1/invoices/${stripeInvoiceId}?expand[]=payment_intent`,
+          { headers: headersFor(config.secretKey, stripeAccountId) },
+        );
+        if (!invoiceResponse.ok) return { status: "failed" };
+        const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
+        if (!invoiceBody.success) return { status: "failed" };
+        const paymentIntent = invoiceBody.data.payment_intent;
+        const paymentIntentId =
+          typeof paymentIntent === "string" ? paymentIntent : paymentIntent?.id;
+        if (!paymentIntentId) return { status: "not_refundable" };
+
+        const response = await post(
+          stripeAccountId,
+          "/refunds",
+          new URLSearchParams({ payment_intent: paymentIntentId }),
+        );
+        if (!response.ok) return { status: "failed" };
+        const body = refundResponseSchema.safeParse(await response.json());
+        return body.success ? { status: "refunded", refundId: body.data.id } : { status: "failed" };
+      } catch {
+        return { status: "failed" };
+      }
+    },
+
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
         const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
@@ -212,6 +250,9 @@ const disabledInvoicingProvider: InvoicingProvider = {
     return { status: "not_configured" };
   },
   async voidInvoice() {
+    return { status: "not_configured" };
+  },
+  async refundInvoice() {
     return { status: "not_configured" };
   },
   async retrieveInvoice() {

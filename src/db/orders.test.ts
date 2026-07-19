@@ -5,6 +5,7 @@ import type {
   CreateInvoiceResult,
   InvoiceLookupResult,
   InvoicingProvider,
+  RefundInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
 import { createTestDb } from "./client";
@@ -16,6 +17,7 @@ import {
   markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
   refreshOrderStatus,
+  refundOrder,
   voidOrder,
 } from "./orders";
 import { getBookingPayment } from "./payments";
@@ -44,6 +46,9 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
     },
     async voidInvoice(): Promise<VoidInvoiceResult> {
       return { status: "voided" };
+    },
+    async refundInvoice(): Promise<RefundInvoiceResult> {
+      return { status: "refunded", refundId: "re_1" };
     },
     async retrieveInvoice(): Promise<InvoiceLookupResult> {
       return {
@@ -248,6 +253,55 @@ describe("orders", () => {
 
     const payment = await getBookingPayment(db, shop.id, entry.booking.id);
     expect(payment).toMatchObject({ status: "paid", provider: "stripe" });
+  });
+
+  it("refunds a paid order and reopens the linked booking payment gate", async () => {
+    const { db, shop, entry } = await orderContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_123");
+    await setShopStripeAccountStatus(db, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: entry.person.id,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing({
+        async retrieveInvoice(): Promise<InvoiceLookupResult> {
+          return {
+            status: "ok",
+            invoice: {
+              status: "paid",
+              hostedInvoiceUrl: null,
+              invoicePdfUrl: null,
+              amountPaidCents: 22_000,
+              totalCents: 22_000,
+            },
+          };
+        },
+        async refundInvoice(): Promise<RefundInvoiceResult> {
+          return { status: "refunded", refundId: "re_1" };
+        },
+      }),
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
+    expect(refunded?.status).toBe("refunded");
+    expect(refunded?.amountPaidCents).toBe(0);
+    expect(refunded?.refundedAt).not.toBeNull();
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      status: "refunded",
+      providerRef: result.order.stripeInvoiceId,
+    });
+    expect(await refundOrder(db, shop.id, result.order.id, fakeInvoicing())).toBeNull();
   });
 
   it("marks an order paid from a webhook invoice.paid event and cascades to its booking", async () => {

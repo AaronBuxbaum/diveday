@@ -31,6 +31,9 @@ describe("stripe invoicing provider", () => {
     const provider = providerWith({}, vi.fn());
     expect(await provider.createInvoice(request)).toEqual({ status: "not_configured" });
     expect(await provider.voidInvoice("acct_123", "in_1")).toEqual({ status: "not_configured" });
+    expect(await provider.refundInvoice("acct_123", "in_1")).toEqual({
+      status: "not_configured",
+    });
     expect(await provider.retrieveInvoice("acct_123", "in_1")).toEqual({
       status: "not_configured",
     });
@@ -91,6 +94,23 @@ describe("stripe invoicing provider", () => {
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.voidInvoice("acct_123", "in_1")).toEqual({ status: "voided" });
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/invoices/in_1/void");
+  });
+
+  it("refunds a paid invoice's payment intent on the connected account", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({ id: "in_1", status: "paid", total: 22_000, payment_intent: "pi_1" }),
+      ok({ id: "re_1" }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.refundInvoice("acct_123", "in_1")).toEqual({
+      status: "refunded",
+      refundId: "re_1",
+    });
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      "https://api.stripe.com/v1/invoices/in_1?expand[]=payment_intent",
+    );
+    expect(fetchImpl.mock.calls[1][0]).toBe("https://api.stripe.com/v1/refunds");
+    expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_1");
   });
 
   it("retrieves current invoice status", async () => {
