@@ -1025,7 +1025,12 @@ export default async function ManageTripPage({
                 <li key={booking.id} className="px-4 py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <p className="font-medium">{person.fullName}</p>
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${person.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {person.fullName}
+                      </Link>
                       <p className="mt-1 text-sm text-muted">
                         {currentWaiver
                           ? `${currentWaiver.templateTitle} v${currentWaiver.templateVersion}${currentWaiver.completedAt ? ` · signed ${formatDateTimeTz(currentWaiver.completedAt, "en-US", shop.timezone)}` : ""}`
@@ -1223,10 +1228,10 @@ export default async function ManageTripPage({
               Nitrox fills
             </Link>
             <Link
-              href={`/shop/${shopSlug}/certifications`}
+              href={`/shop/${shopSlug}/divers`}
               className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
             >
-              Manage certifications
+              Open divers
             </Link>
           </div>
         </div>
@@ -1242,7 +1247,12 @@ export default async function ManageTripPage({
                 className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
               >
                 <div>
-                  <p className="font-medium">{person.fullName}</p>
+                  <Link
+                    href={`/shop/${shopSlug}/divers/${person.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {person.fullName}
+                  </Link>
                   {requirement?.requiresPayment ? (
                     <form action={markPaymentAction} className="mt-2 flex items-center gap-2">
                       <input type="hidden" name="bookingId" value={booking.id} />

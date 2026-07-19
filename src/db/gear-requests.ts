@@ -107,6 +107,43 @@ export async function getRentalGearProfile(db: AppDb, shopId: string, personId: 
   return profile ?? null;
 }
 
+export type RentalGearProfileInput = {
+  shopId: string;
+  personId: string;
+  bcdSize?: string;
+  wetsuitSize?: string;
+  bootSize?: string;
+  finSize?: string;
+  weightPreference?: string;
+};
+
+/** Staff can maintain a diver's reusable fit profile from the person record. */
+export async function saveRentalGearProfile(db: AppDb, input: RentalGearProfileInput) {
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!person) return null;
+  const values = {
+    bcdSize: optional(input.bcdSize),
+    wetsuitSize: optional(input.wetsuitSize),
+    bootSize: optional(input.bootSize),
+    finSize: optional(input.finSize),
+    weightPreference: optional(input.weightPreference),
+    updatedAt: new Date(),
+  };
+  const [profile] = await db
+    .insert(rentalGearProfiles)
+    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    .onConflictDoUpdate({
+      target: [rentalGearProfiles.shopId, rentalGearProfiles.personId],
+      set: values,
+    })
+    .returning();
+  return profile ?? null;
+}
+
 /** Planning view for a roster; a left join keeps divers with no request visible. */
 export async function listTripRentalGearRequests(db: AppDb, shopId: string, tripId: string) {
   return db

@@ -26,7 +26,15 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
       <header className="mb-10">
         <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Schedule</h1>
-        <p className="mt-1 text-muted">Upcoming trips and charters.</p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-muted">Upcoming trips and charters.</p>
+          <Link
+            href={`/shop/${shopSlug}/trips/new`}
+            className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+          >
+            Schedule a trip
+          </Link>
+        </div>
       </header>
 
       {upcoming.length === 0 ? (

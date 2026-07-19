@@ -1,4 +1,5 @@
 import { DemoBanner } from "@/components/DemoBanner";
+import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/queries";
 import { auth } from "@/lib/auth";
@@ -43,7 +44,8 @@ export default async function ShopLayout({
           shopSlug={shopSlug}
         />
       ) : null}
-      {children}
+      {session?.user && shop ? <ShopNav shopSlug={shopSlug} shopName={shop.name} /> : null}
+      <div className="flex-1">{children}</div>
     </>
   );
 }
