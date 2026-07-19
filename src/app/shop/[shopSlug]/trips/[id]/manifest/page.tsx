@@ -178,6 +178,54 @@ export default async function TripManifestPage({
         ))}
       </nav>
 
+      <section
+        aria-labelledby="roll-call-progress-heading"
+        className="boat-progress-panel sticky top-20 z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
+              Active checkpoint
+            </p>
+            <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
+              {rollCallCheckpointLabel(checkpoint)}
+            </h2>
+          </div>
+          <p className="text-base font-bold tabular-nums">
+            {manifest.summary.totalDivers - manifest.summary.awaiting} of{" "}
+            {manifest.summary.totalDivers} recorded
+          </p>
+        </div>
+        <div
+          className="mt-3 h-3 overflow-hidden rounded-full bg-surface-sunken"
+          role="progressbar"
+          aria-label="Roll-call progress"
+          aria-valuemin={0}
+          aria-valuemax={manifest.summary.totalDivers}
+          aria-valuenow={manifest.summary.totalDivers - manifest.summary.awaiting}
+        >
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-200"
+            style={{
+              width:
+                (manifest.summary.totalDivers === 0
+                  ? 0
+                  : ((manifest.summary.totalDivers - manifest.summary.awaiting) /
+                      manifest.summary.totalDivers) *
+                    100) + "%",
+            }}
+          />
+        </div>
+        <p className="mt-2 text-sm font-semibold text-muted">
+          {manifest.summary.awaiting === 0
+            ? "Everyone has an explicit roll-call result. You’re ready for the next check."
+            : String(manifest.summary.awaiting) +
+              " " +
+              (manifest.summary.awaiting === 1 ? "diver is" : "divers are") +
+              " still awaiting a result."}
+        </p>
+      </section>
+
       {manifest.summary.blocked > 0 ? (
         <section className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
           <h2 className="font-semibold text-warning">Readiness needs attention</h2>
@@ -269,14 +317,14 @@ export default async function TripManifestPage({
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
+                  <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap">
                     {ready && !boarded ? (
                       <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="boarded" />
                         <button
                           type="submit"
-                          className="min-h-14 rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground hover:bg-primary-hover"
+                          className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground hover:bg-primary-hover sm:w-auto"
                         >
                           Mark boarded
                         </button>
@@ -288,7 +336,7 @@ export default async function TripManifestPage({
                         <input type="hidden" name="status" value="not_boarded" />
                         <button
                           type="submit"
-                          className="min-h-14 rounded-lg border border-border px-5 text-base font-semibold hover:bg-surface-sunken"
+                          className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold hover:bg-surface-sunken sm:w-auto"
                         >
                           Mark not boarded
                         </button>
