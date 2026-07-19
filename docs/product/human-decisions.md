@@ -86,3 +86,4 @@ but still may need validation; **Validated** has the stated evidence.
 | 2026-07-18 | Shipped the M7 nitrox fill-log slice; added H-11 fill-station policy and V-05 dive-domain review. | Product team |
 | 2026-07-18 | Added public homepage, product, and pricing surfaces with real-demo screenshot capture; recorded H-12 for commercial approval. | Product team |
 | 2026-07-18 | Researched PADI, SSI, and NAUI verification access; added agency-specific gateway configuration and the credential setup runbook. | Engineering |
+| 2026-07-18 | Connected a private Vercel Blob store for certification-card uploads and configured its token in Vercel; updated the card-image ADR and roadmap. | Engineering |
