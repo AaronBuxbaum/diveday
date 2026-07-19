@@ -56,10 +56,7 @@ export type VoidInvoiceResult = { status: "voided" | "not_configured" | "failed"
 export interface InvoicingProvider {
   createInvoice(request: CreateInvoiceRequest): Promise<CreateInvoiceResult>;
   voidInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<VoidInvoiceResult>;
-  retrieveInvoice(
-    stripeAccountId: string,
-    stripeInvoiceId: string,
-  ): Promise<InvoiceLookupResult>;
+  retrieveInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<InvoiceLookupResult>;
 }
 
 type Fetch = typeof fetch;
@@ -187,10 +184,9 @@ export function stripeInvoicingProvider(
 
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
-        const response = await fetchImpl(
-          `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
-          { headers: headersFor(config.secretKey, stripeAccountId) },
-        );
+        const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
+          headers: headersFor(config.secretKey, stripeAccountId),
+        });
         if (!response.ok) return { status: "failed" };
         const body = invoiceResponseSchema.safeParse(await response.json());
         if (!body.success) return { status: "failed" };
@@ -228,5 +224,7 @@ export function invoicingProviderFromEnvironment(
   fetchImpl: Fetch = fetch,
 ): InvoicingProvider {
   const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success ? stripeInvoicingProvider(config.data, fetchImpl) : disabledInvoicingProvider;
+  return config.success
+    ? stripeInvoicingProvider(config.data, fetchImpl)
+    : disabledInvoicingProvider;
 }
