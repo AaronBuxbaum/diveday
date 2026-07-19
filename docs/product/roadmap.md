@@ -159,6 +159,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   `/shop/[shopSlug]/trips/[id]/nitrox`. Provisional dive parameters are in
   [defaults-to-verify.md](defaults-to-verify.md#nitrox-fills) (H-11) and still need a
   dive-domain-expert review (V-05).
+- ✅ Automated marine outlook: a mapped dive site supplies a clearly-labelled 10-day Open-Meteo
+  water-temperature and sea-state fallback until the crew publishes its dated prediction. Underwater
+  visibility remains crew-entered rather than being inferred from atmospheric visibility.
 - ⬜ Payments/deposits, SMS and multi-channel notifications, deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
 

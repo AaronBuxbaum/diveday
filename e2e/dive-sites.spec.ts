@@ -22,6 +22,8 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await page.getByRole("link", { name: "Create a site" }).click();
   await page.getByLabel("Name").fill(siteName);
   await page.getByLabel("Location").fill("Key Largo");
+  await page.getByLabel("Latitude").fill("25.123");
+  await page.getByLabel("Longitude").fill("-80.321");
   await page.getByLabel("What might divers see?").fill("Green turtles · spotted eagle rays");
   await page
     .getByLabel("Underwater briefing")
@@ -32,6 +34,8 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await page.getByRole("button", { name: "Copy and tailor" }).click();
   await expect(page.getByText("Independent copy ready to tailor.")).toBeVisible();
   await expect(page.getByRole("heading", { name: `${siteName} copy` })).toBeVisible();
+  await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
+  await expect(page.getByLabel("Longitude")).toHaveValue("-80.321");
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(tripTitle);
@@ -41,11 +45,13 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await page.getByLabel("Returns").fill("12:00");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await page.getByRole("link", { name: new RegExp(tripTitle) }).click();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
+  const manageTripUrl = page.url();
 
   await page.getByLabel("Conditions overview").fill("Warm water and an easy morning are expected.");
   await page.getByLabel("Water temp °C").fill("27");
   await page.getByLabel("Visibility metres").fill("18");
-  await page.getByRole("button", { name: "Save conditions" }).click();
+  await page.getByRole("button", { name: "Publish crew prediction" }).click();
   await expect(page.getByRole("status")).toContainText("conditions briefing updated");
 
   await page.goto("/shop/blue-mantis/schedule");
@@ -54,6 +60,13 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
   await expect(page.getByText("27°C")).toBeVisible();
   await expect(page.getByText("18 m")).toBeVisible();
+  await expect(page.getByText("Crew prediction")).toBeVisible();
+
+  await page.goto(manageTripUrl);
+  await page.getByRole("button", { name: "Return to automated outlook" }).click();
+  await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
+  await expect(page.getByLabel("Water temp °C")).toHaveValue("");
+  await expect(page.getByLabel("Visibility metres")).toHaveValue("");
 });
 
 test("the seeded reef briefing shows a satellite map, a gentle route, landmarks, and a field guide", async ({

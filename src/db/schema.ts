@@ -1,5 +1,6 @@
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -155,6 +156,9 @@ export const diveSites = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     locationName: text("location_name"),
+    /** Offshore coordinate selected by staff for the automated marine forecast. */
+    forecastLatitude: doublePrecision("forecast_latitude"),
+    forecastLongitude: doublePrecision("forecast_longitude"),
     satelliteImageUrl: text("satellite_image_url"),
     routeImageUrl: text("route_image_url"),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
@@ -216,6 +220,8 @@ export const globalDiveSiteVersions = pgTable(
         name: string;
         description?: string;
         locationName?: string;
+        forecastLatitude?: number;
+        forecastLongitude?: number;
         satelliteImageUrl?: string;
         routeImageUrl?: string;
         imageUrls?: string[];
