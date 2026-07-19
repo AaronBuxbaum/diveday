@@ -36,15 +36,18 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("6 spots left")).toBeVisible();
   await expect(page.getByText("$120.00")).toBeVisible();
+  await page.getByLabel("Number of divers").selectOption("2");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill(`nora-${Date.now()}@example.com`);
-  await page.getByRole("button", { name: "Book my spot" }).click();
+  await page.getByLabel("Diver 2 name").fill("Sam Quinn");
+  await page.getByLabel("Diver 2 email").fill(`sam-${Date.now()}@example.com`);
+  await page.getByRole("button", { name: "Book these spots" }).click();
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
-  // The spot is held: schedule now shows one fewer.
+  // Both named spots are held atomically.
   await page.goto("/shop/blue-mantis/schedule");
   const card = page.locator("li").filter({ hasText: title });
-  await expect(card.getByText("5 spots left")).toBeVisible();
+  await expect(card.getByText("4 spots left")).toBeVisible();
 
   // Staff sees the diver on the roster.
   await signInAsOwner(page);
@@ -52,6 +55,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await page.getByRole("link", { name: new RegExp(title) }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("Nora Quinn").first()).toBeVisible();
+  await expect(page.getByText("Sam Quinn").first()).toBeVisible();
 });
 
 test("staff opening a scheduled dive lands on the editable trip view", async ({ page }) => {

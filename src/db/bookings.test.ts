@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createBooking } from "./bookings";
+import { createBooking, createBookingParty } from "./bookings";
 import { type AppDb, createTestDb } from "./client";
 import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import { people, personRoles } from "./schema";
@@ -69,6 +69,19 @@ describe("createBooking (in-memory PGlite)", () => {
     const { db, shop, fullTrip } = await seededContext();
     const outcome = await bookVisitor(db, shop.id, fullTrip.id);
     expect(outcome).toEqual({ ok: false, reason: "trip_full" });
+  });
+
+  it("books multiple named divers together", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
+      { shopId: shop.id, tripId: open.id, fullName: "Sam Quinn", email: "sam@example.com" },
+    ]);
+    expect(outcome.ok).toBe(true);
+    const roster = await getTripRoster(db, open.id);
+    expect(roster.map((row) => row.person.fullName)).toEqual(
+      expect.arrayContaining(["Nora Quinn", "Sam Quinn"]),
+    );
   });
 
   it("rejects booking the same trip twice", async () => {

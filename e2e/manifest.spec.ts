@@ -25,10 +25,12 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await page.getByLabel("Optional note").first().fill("Guest asked to sit out before departure.");
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("status")).toContainText("Not-boarded status recorded");
-  await expect(page).toHaveURL(/#roll-call-/);
+  await expect(page).not.toHaveURL(/#roll-call-/);
   await expect(page.getByRole("button", { name: "Not boarded ✓" }).first()).toBeVisible();
   await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
+  await page.getByRole("button", { name: "Mark not boarded" }).first().click();
+  await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(2);
 });
 
 test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({

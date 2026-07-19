@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { DiveSiteFieldGuide } from "@/components/DiveSiteFieldGuide";
 import { DiveSiteLandmarks } from "@/components/DiveSiteLandmarks";
 import { DiveSiteMap } from "@/components/DiveSiteMap";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
-import { createBooking } from "@/db/bookings";
+import { createBookingParty } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import {
@@ -152,19 +153,29 @@ export default async function TripDetailPage({
 
   async function bookSpot(formData: FormData) {
     "use server";
-    const parsed = bookSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
+    const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
+    if (!partySize.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
+    const party = Array.from({ length: partySize.data }, (_, index) =>
+      bookSchema.safeParse({
+        fullName: formData.get(`fullName-${index}`),
+        email: formData.get(`email-${index}`),
+      }),
+    );
+    const validParty = party.flatMap((entry) => (entry.success ? [entry.data] : []));
+    if (validParty.length !== partySize.data)
+      redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
     const dbi = await getDb();
     const shopNow = await getShopBySlug(dbi, shopSlug);
     if (!shopNow) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
-    const outcome = await createBooking(dbi, {
-      shopId: shopNow.id,
-      tripId,
-      fullName: parsed.data.fullName,
-      email: parsed.data.email,
-      phone: parsed.data.phone || undefined,
-      buddyPreference: parsed.data.buddyPreference || undefined,
-    });
+    const outcome = await createBookingParty(
+      dbi,
+      validParty.map((entry) => ({
+        shopId: shopNow.id,
+        tripId,
+        fullName: entry.fullName,
+        email: entry.email,
+      })),
+    );
     if (!outcome.ok) {
       const code =
         outcome.reason === "trip_full"
@@ -178,15 +189,17 @@ export default async function TripDetailPage({
                 : "unavailable";
       redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
     }
+    const primaryBookingId = outcome.bookings[0]?.bookingId;
+    if (!primaryBookingId) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
     const [confirmedBooking, tripNow] = await Promise.all([
-      getBookingForTrip(dbi, tripId, outcome.bookingId),
+      getBookingForTrip(dbi, tripId, primaryBookingId),
       getTripWithBooked(dbi, shopNow.id, tripId),
     ]);
     if (confirmedBooking?.person.email && tripNow) {
       try {
         const delivery = await sendAndRecordNotification(dbi, {
           kind: "booking_confirmation",
-          bookingId: outcome.bookingId,
+          bookingId: primaryBookingId,
           shopId: shopNow.id,
           to: confirmedBooking.person.email,
           diverName: confirmedBooking.person.fullName,
@@ -198,17 +211,17 @@ export default async function TripDetailPage({
         });
         if (delivery.status === "failed") {
           console.error("Booking confirmation notification failed", {
-            bookingId: outcome.bookingId,
+            bookingId: primaryBookingId,
           });
         }
       } catch {
         // Email must never turn a completed, capacity-safe booking into an error page.
         console.error("Booking confirmation notification could not be prepared", {
-          bookingId: outcome.bookingId,
+          bookingId: primaryBookingId,
         });
       }
     }
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?booking=${outcome.bookingId}`);
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?booking=${primaryBookingId}`);
   }
 
   async function joinWaitlist(formData: FormData) {
@@ -781,42 +794,7 @@ export default async function TripDetailPage({
                 If a spot opens, the shop will have your details ready.
               </p>
             </div>
-            <label className="flex flex-col gap-1 text-base font-medium">
-              Name
-              <input
-                name="fullName"
-                type="text"
-                required
-                maxLength={120}
-                autoComplete="name"
-                className={inputClass}
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-base font-medium">
-                Email
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  maxLength={200}
-                  autoComplete="email"
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-base font-medium">
-                <span>
-                  Phone <span className="font-normal text-muted">(optional)</span>
-                </span>
-                <input
-                  name="phone"
-                  type="tel"
-                  maxLength={30}
-                  autoComplete="tel"
-                  className={inputClass}
-                />
-              </label>
-            </div>
+            <BookingPartyFields maxPartySize={remaining} />
             <div>
               <SubmitButton
                 pendingLabel="Joining…"
@@ -882,7 +860,7 @@ export default async function TripDetailPage({
                 pendingLabel="Booking…"
                 className="min-h-11 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
               >
-                Book {remaining === 1 ? "the last spot" : "my spot"}
+                Book {remaining === 1 ? "the last spot" : "these spots"}
               </SubmitButton>
             </div>
             <p className="text-sm text-muted">
