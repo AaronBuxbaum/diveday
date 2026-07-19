@@ -31,7 +31,7 @@ export default async function DiveSitesPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         title="Dive-site library"
         description="Build the briefing once, then attach it to any charter. Copy a site before tailoring a special itinerary."

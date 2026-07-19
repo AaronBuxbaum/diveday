@@ -2,21 +2,38 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { formatShortDate, formatTimeRange } from "@/lib/format";
+import {
+  addMonths,
+  buildCalendarWeeks,
+  type MonthRef,
+  monthKey,
+  monthLabel,
+  parseMonthKey,
+} from "@/lib/calendar";
+import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
+import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
 export const metadata: Metadata = {
   title: "Schedule — Scuba",
 };
 
-export default async function TripsPage({ params }: { params: Promise<{ shopSlug: string }> }) {
+export default async function TripsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ month?: string }>;
+}) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
+  const { month } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
@@ -26,8 +43,47 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
   const session = await auth();
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
 
+  // Diver-facing month calendar: place each upcoming dive on its shop-local day
+  // (storage is UTC; the diver thinks in the shop's wall clock), then page
+  // through the months that actually have dives on the books.
+  const tz = shop.timezone;
+  const ordinal = (ref: MonthRef) => ref.year * 12 + (ref.month - 1);
+  const tripsByDay = new Map<string, CalendarTrip[]>();
+  const tripMonths: MonthRef[] = [];
+  for (const trip of upcoming) {
+    const wall = utcToWallTime(trip.startsAt, tz);
+    const iso = toDateInputValue(wall);
+    const list = tripsByDay.get(iso) ?? [];
+    list.push({
+      id: trip.id,
+      title: trip.title,
+      time: formatTime(trip.startsAt, "en-US", tz),
+      full: isFull(trip),
+    });
+    tripsByDay.set(iso, list);
+    tripMonths.push({ year: wall.year, month: wall.month });
+  }
+  const todayWall = utcToWallTime(new Date(), tz);
+  const todayIso = toDateInputValue(todayWall);
+  const firstTripMonth = tripMonths.reduce<MonthRef | null>(
+    (min, m) => (!min || ordinal(m) < ordinal(min) ? m : min),
+    null,
+  );
+  const lastTripMonth = tripMonths.reduce<MonthRef | null>(
+    (max, m) => (!max || ordinal(m) > ordinal(max) ? m : max),
+    null,
+  );
+  const currentMonth: MonthRef = parseMonthKey(month) ??
+    firstTripMonth ?? { year: todayWall.year, month: todayWall.month };
+  const prev = addMonths(currentMonth, -1);
+  const next = addMonths(currentMonth, 1);
+  const prevMonthKey =
+    firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
+  const nextMonthKey =
+    lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
+
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={shop.name}
         title="Schedule"
@@ -70,6 +126,18 @@ export default async function TripsPage({ params }: { params: Promise<{ shopSlug
             detail="Trips with no open seats"
           />
         </section>
+      ) : null}
+
+      {!staffView && upcoming.length > 0 ? (
+        <ScheduleCalendar
+          shopSlug={shopSlug}
+          label={monthLabel(currentMonth)}
+          weeks={buildCalendarWeeks(currentMonth)}
+          todayIso={todayIso}
+          tripsByDay={tripsByDay}
+          prevMonthKey={prevMonthKey}
+          nextMonthKey={nextMonthKey}
+        />
       ) : null}
 
       {upcoming.length === 0 ? (
