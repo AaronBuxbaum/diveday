@@ -90,7 +90,7 @@ export default async function TripManifestPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
+    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
       <FlashParams params={["notice"]} />
       <div className="print:hidden">
         <Link
