@@ -1,15 +1,19 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
 import {
   createTrip,
+  createTripSeries,
   getShopBySlug,
+  getTripSeriesSummary,
   getTripWithBooked,
   listTripDives,
+  setTripStatus,
   upcomingTripsWithCounts,
   updateTrip,
 } from "./queries";
-import { bookings } from "./schema";
+import { bookings, tripRequirements } from "./schema";
 import { seedDemo } from "./seed";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
@@ -55,7 +59,6 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
 
     const [first] = await db.select().from(bookings).limit(1);
     if (!first) throw new Error("no bookings seeded");
-    const { eq } = await import("drizzle-orm");
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, first.id));
 
     const after = await upcomingTripsWithCounts(db, shop.id);
@@ -150,6 +153,135 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
         endsAt: new Date("2030-08-04T21:00:00.000Z"),
         capacity: 10,
         plannedDives: 5,
+      }),
+    ).toBeNull();
+  });
+
+  it("materializes a weekly series of identical, independent trips", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+
+    const result = await createTripSeries(db, {
+      shopId: shop.id,
+      title: "Saturday Two-Tank",
+      description: "Weekly reef charter.",
+      capacity: 12,
+      plannedDives: 2,
+      priceCents: 15_000,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      occurrences: [
+        {
+          startsAt: new Date("2030-09-07T11:00:00.000Z"),
+          endsAt: new Date("2030-09-07T15:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2030-09-14T11:00:00.000Z"),
+          endsAt: new Date("2030-09-14T15:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2030-09-21T11:00:00.000Z"),
+          endsAt: new Date("2030-09-21T15:00:00.000Z"),
+        },
+      ],
+    });
+    if (!result) throw new Error("series not created");
+    expect(result.series.occurrenceCount).toBe(3);
+    expect(result.trips).toHaveLength(3);
+    const [firstInstance] = result.trips;
+    if (!firstInstance) throw new Error("expected a first instance");
+
+    // Every instance points back to the one series and starts identical.
+    for (const trip of result.trips) {
+      expect(trip.seriesId).toBe(result.series.id);
+      expect(trip.title).toBe("Saturday Two-Tank");
+      expect(trip.capacity).toBe(12);
+      expect(trip.priceCents).toBe(15_000);
+      // A readiness requirement row is materialized for each — never an accidental pass.
+      const reqs = await db
+        .select()
+        .from(tripRequirements)
+        .where(eq(tripRequirements.tripId, trip.id));
+      expect(reqs).toHaveLength(1);
+    }
+
+    // Provenance query reports the cadence and how many are still scheduled.
+    const summary = await getTripSeriesSummary(db, shop.id, firstInstance.id);
+    expect(summary?.intervalWeeks).toBe(1);
+    expect(summary?.scheduledCount).toBe(3);
+  });
+
+  it("edits and cancels one instance without touching its siblings", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+
+    const result = await createTripSeries(db, {
+      shopId: shop.id,
+      title: "Weeknight Shore Dive",
+      capacity: 8,
+      plannedDives: 1,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      occurrences: [
+        {
+          startsAt: new Date("2030-10-01T22:00:00.000Z"),
+          endsAt: new Date("2030-10-02T00:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2030-10-08T22:00:00.000Z"),
+          endsAt: new Date("2030-10-09T00:00:00.000Z"),
+        },
+      ],
+    });
+    if (!result) throw new Error("series not created");
+    const [first, second] = result.trips;
+    if (!first || !second) throw new Error("expected two instances");
+
+    await updateTrip(db, shop.id, first.id, {
+      title: "Weeknight Shore Dive — Full Moon",
+      startsAt: first.startsAt,
+      endsAt: first.endsAt,
+      capacity: 20,
+      plannedDives: first.plannedDives,
+    });
+    await setTripStatus(db, shop.id, first.id, "cancelled");
+
+    const editedFirst = await getTripWithBooked(db, shop.id, first.id);
+    const untouchedSecond = await getTripWithBooked(db, shop.id, second.id);
+    expect(editedFirst?.title).toBe("Weeknight Shore Dive — Full Moon");
+    expect(editedFirst?.capacity).toBe(20);
+    expect(untouchedSecond?.title).toBe("Weeknight Shore Dive");
+    expect(untouchedSecond?.capacity).toBe(8);
+
+    // Cancelling one instance shrinks the still-scheduled count, not the series record.
+    const summary = await getTripSeriesSummary(db, shop.id, second.id);
+    expect(summary?.occurrenceCount).toBe(2);
+    expect(summary?.scheduledCount).toBe(1);
+  });
+
+  it("rejects a series with an invalid dive count", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+    expect(
+      await createTripSeries(db, {
+        shopId: shop.id,
+        title: "Impossible cadence",
+        capacity: 10,
+        plannedDives: 9,
+        frequency: "weekly",
+        intervalWeeks: 1,
+        occurrences: [
+          {
+            startsAt: new Date("2030-11-01T13:00:00.000Z"),
+            endsAt: new Date("2030-11-01T17:00:00.000Z"),
+          },
+        ],
       }),
     ).toBeNull();
   });
