@@ -10,7 +10,7 @@ import { STRIPE_CONNECT_STATE_COOKIE } from "../connect/route";
 /** Stripe's OAuth redirect target: verifies state, exchanges the code, and stores the connected account. */
 export async function GET(request: Request) {
   const session = await requireStaffSession();
-  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings/payments`, request.url);
+  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/shop`, request.url);
   const url = new URL(request.url);
 
   const cookieStore = await cookies();

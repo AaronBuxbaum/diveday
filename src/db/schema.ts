@@ -534,7 +534,13 @@ export const shopStripeAccounts = pgTable(
   (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
 
-export const orderStatus = pgEnum("order_status", ["open", "paid", "void", "uncollectible"]);
+export const orderStatus = pgEnum("order_status", [
+  "open",
+  "paid",
+  "void",
+  "uncollectible",
+  "refunded",
+]);
 
 /**
  * What one order line represents — free-form `other` always available since
@@ -582,6 +588,7 @@ export const orders = pgTable(
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
     paidAt: timestamp("paid_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
+    refundedAt: timestamp("refunded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

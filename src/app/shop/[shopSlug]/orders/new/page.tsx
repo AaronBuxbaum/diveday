@@ -73,7 +73,7 @@ async function createOrderAction(formData: FormData) {
 
 const NOTICES: Record<string, string> = {
   invalid: "Pick a customer and at least one line item with an amount.",
-  not_connected: "Connect a Stripe account in payment settings before creating an order.",
+  not_connected: "Connect a Stripe account in Shop settings before creating an order.",
   stripe_failed: "Stripe couldn't create that invoice. Try again in a moment.",
 };
 

@@ -26,6 +26,8 @@ import {
 } from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
 import { joinTripWaitlist } from "@/db/waitlist";
+import { auth } from "@/lib/auth";
+import { isStaff } from "@/lib/authz";
 import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
 import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
@@ -101,6 +103,10 @@ export default async function TripDetailPage({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
+  const session = await auth();
+  if (session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
+    redirect(`/shop/${shopSlug}/trips/${tripId}`);
+  }
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
   const tripDives = await listTripDives(db, shop.id, tripId);
