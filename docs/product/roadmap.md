@@ -85,8 +85,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Direct card-image upload: a provider seam ([`src/lib/storage`](../../src/lib/storage)) stores a
   captured photo to Vercel Blob and saves a durable URL; validated at the seam (image/*, ≤5 MB),
   with the paste-a-URL path as fallback when storage is unconfigured. See
-  [20260718-card-image-storage](../architecture/decisions/20260718-card-image-storage.md) (needs
-  `BLOB_READ_WRITE_TOKEN` provisioned, H-04).
+  [20260718-card-image-storage](../architecture/decisions/20260718-card-image-storage.md) (private Vercel Blob store connected to Vercel and `BLOB_READ_WRITE_TOKEN` configured; local
+  environments without the token retain the pasted-URL fallback).
 - ✅ Agency cert verification: an assistive provider seam
   ([`src/lib/cert-verification`](../../src/lib/cert-verification)) checks a C-card against its
   issuing agency. A confirmed match auto-verifies (recording the source); not-found/mismatch only
