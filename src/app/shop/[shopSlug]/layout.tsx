@@ -1,4 +1,5 @@
 import { DemoBanner } from "@/components/DemoBanner";
+import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/queries";
@@ -45,6 +46,7 @@ export default async function ShopLayout({
         />
       ) : null}
       {session?.user && shop ? <ShopNav shopSlug={shopSlug} shopName={shop.name} /> : null}
+      <PreserveFormScroll />
       <div className="flex-1">{children}</div>
     </>
   );

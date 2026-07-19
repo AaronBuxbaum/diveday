@@ -1181,10 +1181,9 @@ export default async function ManageTripPage({
       <section className="mt-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Readiness</h2>
+            <h2 className="text-lg font-semibold">Diver readiness</h2>
             <p className="mt-1 text-sm text-muted">
-              One result for the front desk today, and the manifest later. Unknown evidence never
-              clears a diver.
+              See who is cleared and exactly what needs attention before departure.
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -1213,62 +1212,72 @@ export default async function ManageTripPage({
             Booked divers will appear here with their readiness status.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="mt-4 grid gap-3">
             {readinessRows.map(({ booking, person, readiness, paymentStatus }) => (
               <li
                 key={booking.id}
-                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
+                className="rounded-xl border border-border bg-surface p-4 shadow-sm"
               >
-                <div>
-                  <Link
-                    href={`/shop/${shopSlug}/divers/${person.id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {person.fullName}
-                  </Link>
-                  {requirement?.requiresPayment ? (
-                    <form action={markPaymentAction} className="mt-2 flex items-center gap-2">
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <span className="text-sm text-muted">
-                        Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
-                      </span>
-                      <select
-                        name="status"
-                        defaultValue={paymentStatus ?? "unpaid"}
-                        className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
-                      >
-                        {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="submit"
-                        className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-sunken"
-                      >
-                        Update
-                      </button>
-                    </form>
-                  ) : null}
-                  <Link
-                    href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                    className="mt-2 inline-block text-sm font-medium text-primary underline"
-                  >
-                    Create order
-                  </Link>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${person.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {person.fullName}
+                    </Link>
+                    {requirement?.requiresPayment ? (
+                      <form action={markPaymentAction} className="mt-2 flex items-center gap-2">
+                        <input type="hidden" name="bookingId" value={booking.id} />
+                        <span className="text-sm text-muted">
+                          Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
+                        </span>
+                        <select
+                          name="status"
+                          defaultValue={paymentStatus ?? "unpaid"}
+                          className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                        >
+                          {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="submit"
+                          className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-sunken"
+                        >
+                          Update
+                        </button>
+                      </form>
+                    ) : null}
+                    <Link
+                      href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                      className="mt-2 inline-block text-sm font-medium text-primary underline"
+                    >
+                      Create order
+                    </Link>
+                  </div>
+                  {readiness.status === "ready" ? (
+                    <span className="shrink-0 rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
+                      Ready
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
+                      Needs attention
+                    </span>
+                  )}
                 </div>
-                {readiness.status === "ready" ? (
-                  <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
-                    Ready
-                  </span>
-                ) : (
-                  <ul className="flex flex-col gap-1 text-sm text-danger">
+                {readiness.status !== "ready" ? (
+                  <ul className="mt-3 grid gap-2 border-t border-border pt-3 text-sm text-danger">
                     {readiness.blockers.map((blocker) => (
-                      <li key={blocker.message}>• {blocker.message}</li>
+                      <li key={blocker.message} className="flex gap-2">
+                        <span aria-hidden="true">!</span>
+                        <span>{blocker.message}</span>
+                      </li>
                     ))}
                   </ul>
-                )}
+                ) : null}
               </li>
             ))}
           </ul>

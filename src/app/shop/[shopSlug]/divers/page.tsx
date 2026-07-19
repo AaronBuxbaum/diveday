@@ -299,9 +299,17 @@ export default async function DiversPage({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-                          {diver.certificationCount + diver.specialtyCount} card
-                          {diver.certificationCount + diver.specialtyCount === 1 ? "" : "s"}
+                        <span className="inline-flex whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-primary">
+                          {diver.certificationCount +
+                            diver.specialtyCount +
+                            diver.nitroxCertificationCount}{" "}
+                          card
+                          {diver.certificationCount +
+                            diver.specialtyCount +
+                            diver.nitroxCertificationCount ===
+                          1
+                            ? ""
+                            : "s"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-muted">

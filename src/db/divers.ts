@@ -8,6 +8,7 @@ import {
   courses,
   gearAssignments,
   gearItems,
+  nitroxCertifications,
   people,
   personRoles,
   rentalGearProfiles,
@@ -116,7 +117,7 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
   const peopleRows = await diverIds(db, shopId);
   if (peopleRows.length === 0) return [];
   const ids = peopleRows.map((person) => person.id);
-  const [levelCards, specialtyCards, profiles, activeAssignments] = await Promise.all([
+  const [levelCards, specialtyCards, nitroxCards, profiles, activeAssignments] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -129,6 +130,12 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
           eq(specialtyCertifications.shopId, shopId),
           inArray(specialtyCertifications.personId, ids),
         ),
+      ),
+    db
+      .select()
+      .from(nitroxCertifications)
+      .where(
+        and(eq(nitroxCertifications.shopId, shopId), inArray(nitroxCertifications.personId, ids)),
       ),
     db
       .select()
@@ -155,12 +162,16 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
   return peopleRows.map((person) => {
     const cards = levelCards.filter((card) => card.personId === person.id);
     const specialty = specialtyCards.filter((card) => card.personId === person.id);
+    const nitrox = nitroxCards.filter((card) => card.personId === person.id);
     return {
       person,
       certificationCount: cards.length,
       pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
       specialtyCount: specialty.length,
-      pendingSpecialtyCount: specialty.filter((card) => card.status === "pending").length,
+      pendingSpecialtyCount:
+        specialty.filter((card) => card.status === "pending").length +
+        nitrox.filter((card) => card.status === "pending").length,
+      nitroxCertificationCount: nitrox.length,
       gearProfile: profileByPerson.get(person.id) ?? null,
       assignedGearCount: assignedCount.get(person.id) ?? 0,
     };
@@ -186,6 +197,7 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
   const [
     levelCards,
     specialtyCards,
+    nitroxCards,
     profile,
     bookingRows,
     gearRows,
@@ -208,6 +220,13 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
         ),
       )
       .orderBy(desc(specialtyCertifications.createdAt)),
+    db
+      .select()
+      .from(nitroxCertifications)
+      .where(
+        and(eq(nitroxCertifications.shopId, shopId), eq(nitroxCertifications.personId, personId)),
+      )
+      .orderBy(desc(nitroxCertifications.createdAt)),
     db
       .select()
       .from(rentalGearProfiles)
@@ -243,6 +262,7 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     person: personRow.person,
     certifications: levelCards,
     specialtyCertifications: specialtyCards,
+    nitroxCertifications: nitroxCards,
     gearProfile: profile[0] ?? null,
     bookings: bookingRows,
     gearAssignments: gearRows,
