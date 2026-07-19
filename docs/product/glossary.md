@@ -35,6 +35,8 @@ new domain concept, define it here in the same PR.
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, gear needs,
   and minimum cert requirements per site (e.g. AOW for a deep wreck).
+- **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
+  does not consume capacity, and never appears on a manifest; staff follow up if space opens.
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
   route imagery, point-of-interest landmarks, visual field guide, and local context. A charter
   links one briefing in the current slice; dated conditions remain on the charter, not the

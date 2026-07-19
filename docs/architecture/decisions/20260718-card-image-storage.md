@@ -1,6 +1,6 @@
 # 20260718-card-image-storage — Store certification card photos behind a provider seam
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260719-card-photo-only
 - **Date:** 2026-07-18
 
 ## Context
