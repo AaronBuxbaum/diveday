@@ -38,9 +38,10 @@ new domain concept, define it here in the same PR.
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
-  route imagery, point-of-interest landmarks, visual field guide, and local context. A charter
-  links one briefing in the current slice; dated conditions remain on the charter, not the
-  reusable site.
+  route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
+  attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
+  two-tank plan when the crew has not chosen the final site. Dated conditions remain on the trip,
+  not the reusable site.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.
@@ -97,13 +98,14 @@ new domain concept, define it here in the same PR.
   See [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md).
 - **Order** — a shop-issued bill for a customer: one or more line items (a trip fee, course fee,
   rental gear, deposit, or free-form charge) against a person, optionally tied to a booking. Local
-  status (`open`/`paid`/`void`/`uncollectible`) mirrors the Stripe invoice backing it. A trip's
+  status (`open`/`paid`/`void`/`uncollectible`/`refunded`) mirrors the Stripe invoice backing it. A trip's
   optional per-diver price pre-fills the trip-fee line item when an order is started from a
   booking's roster row — staff can still edit the amount or add more line items before sending.
 - **Invoice** — the payable Stripe document behind an order, created on the shop's connected
   account. Staff can share its hosted link directly, or let Stripe email the customer; a webhook
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked
-  to a booking, into that booking's payment gate the same way a staff mark does.
+  to a booking, into that booking's payment gate the same way a staff mark does. A paid invoice can
+  be fully refunded from the diver's payment workspace when Stripe exposes its payment intent.
 - **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded
   example shop (Blue Mantis), drives the real staff surfaces, and resets the playground back to a
   clean slate. The Blue Mantis demo shop is bootstrapped in every environment; `isDemo` marks that

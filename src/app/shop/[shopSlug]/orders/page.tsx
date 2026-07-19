@@ -12,10 +12,12 @@ const STATUS_LABELS: Record<string, string> = {
   paid: "Paid",
   void: "Void",
   uncollectible: "Uncollectible",
+  refunded: "Refunded",
 };
 
 function statusClasses(status: string): string {
   if (status === "paid") return "bg-success/10 text-success";
+  if (status === "refunded") return "bg-danger/10 text-danger";
   if (status === "open") return "bg-primary/10 text-primary";
   return "bg-surface-sunken text-muted";
 }
@@ -44,10 +46,10 @@ export default async function OrdersPage({ params }: { params: Promise<{ shopSlu
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <Link
-            href={`/shop/${shopSlug}/settings/payments`}
+            href={`/shop/${shopSlug}/shop`}
             className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
           >
-            Payment settings
+            Shop settings
           </Link>
           {ready ? (
             <Link
@@ -63,8 +65,8 @@ export default async function OrdersPage({ params }: { params: Promise<{ shopSlu
       {!ready ? (
         <p className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
           Connect a Stripe account in{" "}
-          <Link href={`/shop/${shopSlug}/settings/payments`} className="underline">
-            payment settings
+          <Link href={`/shop/${shopSlug}/shop`} className="underline">
+            Shop settings
           </Link>{" "}
           before creating an order.
         </p>

@@ -3,12 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { TripDiveFields } from "@/components/TripDiveFields";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { createTrip, getShopById } from "@/db/queries";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 export const metadata: Metadata = {
@@ -22,16 +24,12 @@ const formSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(6),
+  plannedDives: z.coerce.number().int().min(1).max(4),
   priceDollars: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.coerce.number().nonnegative().finite().optional(),
   ),
   courseId: z.preprocess(
-    (value) => (value === "" ? undefined : value),
-    z.string().uuid().optional(),
-  ),
-  diveSiteId: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
   ),
@@ -53,7 +51,6 @@ async function scheduleTrip(formData: FormData) {
     plannedDives,
     priceDollars,
     courseId,
-    diveSiteId,
   } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
@@ -72,13 +69,13 @@ async function scheduleTrip(formData: FormData) {
   const created = await createTrip(db, {
     shopId: shop.id,
     courseId,
-    diveSiteId,
     title,
     description: description || undefined,
     startsAt,
     endsAt,
     capacity,
     plannedDives,
+    dives: tripDiveDraftsFromForm(formData, plannedDives),
     priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
@@ -114,7 +111,6 @@ export default async function NewTripPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        backHref={`/shop/${shopSlug}`}
         title="Schedule a trip or course session"
         description="Times are local to the shop. Course sessions inherit their admission rules when you put them on the board."
       />
@@ -148,22 +144,6 @@ export default async function NewTripPage({
           ) : null}
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Dive site <span className="font-normal text-muted">(optional)</span>
-          <select name="diveSiteId" className={inputClass}>
-            <option value="">Add a site briefing later</option>
-            {diveSiteList.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
-          </select>
-          <span className="mt-1 text-sm font-normal text-muted">
-            {diveSiteList.length > 0
-              ? "Divers will see the site briefing before they book."
-              : "Build a reusable briefing in Dive sites, then attach it here."}
-          </span>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
           Title
           <input
             name="title"
@@ -178,6 +158,9 @@ export default async function NewTripPage({
             className={inputClass}
           />
         </label>
+        <TripDiveFields
+          diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
+        />
         <label className="flex flex-col gap-1 text-sm font-medium">
           Description <span className="font-normal text-muted">(optional)</span>
           <textarea
@@ -202,7 +185,7 @@ export default async function NewTripPage({
             <input name="endTime" type="time" required className={inputClass} />
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-5 sm:w-80">
+        <div className="grid grid-cols-1 gap-5 sm:w-40">
           <label className="flex flex-col gap-1 text-sm font-medium">
             Capacity
             <input
@@ -212,18 +195,6 @@ export default async function NewTripPage({
               min={1}
               max={60}
               defaultValue={12}
-              className={`${inputClass} tabular-nums`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Planned dives
-            <input
-              name="plannedDives"
-              type="number"
-              required
-              min={1}
-              max={6}
-              defaultValue={2}
               className={`${inputClass} tabular-nums`}
             />
           </label>

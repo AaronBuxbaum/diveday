@@ -86,9 +86,13 @@ export default async function TripManifestPage({
       note: parsed.data.note,
     });
     if (!outcome.ok) {
-      redirect(`${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
+      redirect(
+        `${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}#roll-call-${parsed.data.bookingId}`,
+      );
     }
-    redirect(`${back}&notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}`);
+    redirect(
+      `${back}&notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}#roll-call-${parsed.data.bookingId}`,
+    );
   }
 
   return (
@@ -289,10 +293,11 @@ export default async function TripManifestPage({
             return (
               <li
                 key={diver.bookingId}
+                id={`roll-call-${diver.bookingId}`}
                 className={
                   ready
-                    ? "border-l-4 border-success px-4 py-5 sm:px-5"
-                    : "border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5"
+                    ? "scroll-mt-32 border-l-4 border-success px-4 py-5 sm:px-5"
+                    : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5"
                 }
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -373,7 +378,7 @@ export default async function TripManifestPage({
                     ) : null}
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap">
-                    {ready && !boarded ? (
+                    {ready ? (
                       <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="boarded" />
@@ -381,22 +386,22 @@ export default async function TripManifestPage({
                           pendingLabel="Saving…"
                           className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
-                          Mark boarded
+                          {boarded ? "Boarded ✓" : "Mark boarded"}
                         </SubmitButton>
                       </form>
                     ) : null}
-                    {!boarded ? (
-                      <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
-                        <input type="hidden" name="bookingId" value={diver.bookingId} />
-                        <input type="hidden" name="status" value="not_boarded" />
-                        <SubmitButton
-                          pendingLabel="Saving…"
-                          className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                        >
-                          Mark not boarded
-                        </SubmitButton>
-                      </form>
-                    ) : null}
+                    <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
+                      <input type="hidden" name="bookingId" value={diver.bookingId} />
+                      <input type="hidden" name="status" value="not_boarded" />
+                      <SubmitButton
+                        pendingLabel="Saving…"
+                        className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                      >
+                        {diver.rollCall?.state === "not_boarded"
+                          ? "Not boarded ✓"
+                          : "Mark not boarded"}
+                      </SubmitButton>
+                    </form>
                   </div>
                 </div>
               </li>

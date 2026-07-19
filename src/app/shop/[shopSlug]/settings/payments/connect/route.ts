@@ -13,7 +13,7 @@ export const STRIPE_CONNECT_STATE_COOKIE = "stripe_connect_state";
 
 export async function GET(request: Request) {
   const session = await requireStaffSession();
-  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings/payments`, request.url);
+  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/shop`, request.url);
 
   const appHost = publicAppUrl();
   if (!appHost) {

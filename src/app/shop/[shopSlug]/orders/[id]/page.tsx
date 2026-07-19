@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { getOrder, refreshOrderStatus, voidOrder } from "@/db/orders";
+import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Order — Scuba" };
@@ -13,6 +13,7 @@ const STATUS_LABELS: Record<string, string> = {
   paid: "Paid",
   void: "Void",
   uncollectible: "Uncollectible",
+  refunded: "Refunded",
 };
 
 const KIND_LABELS: Record<string, string> = {
@@ -50,11 +51,24 @@ async function voidAction(formData: FormData) {
   );
 }
 
+async function refundAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const orderId = String(formData.get("orderId") ?? "");
+  const db = await getDb();
+  const updated = orderId ? await refundOrder(db, session.user.shopId, orderId) : null;
+  redirect(
+    `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "refunded" : "refund_failed"}`,
+  );
+}
+
 const NOTICES: Record<string, string> = {
   refreshed: "Status refreshed from Stripe.",
   refresh_failed: "Couldn't reach Stripe to refresh this order.",
   voided: "Order voided.",
   void_failed: "Couldn't void this order — it may already be paid or void.",
+  refunded: "Payment refunded and the diver's trip payment gate was reopened.",
+  refund_failed: "Couldn't refund this order — it may not have a refundable payment yet.",
 };
 
 export default async function OrderDetailPage({
@@ -92,7 +106,7 @@ export default async function OrderDetailPage({
         <p
           role="status"
           className={`mb-6 rounded-lg px-4 py-3 text-sm font-medium ${
-            notice === "refresh_failed" || notice === "void_failed"
+            notice === "refresh_failed" || notice === "void_failed" || notice === "refund_failed"
               ? "bg-danger/10 text-danger"
               : "bg-success/10 text-success"
           }`}
@@ -172,6 +186,17 @@ export default async function OrderDetailPage({
                 </button>
               </form>
             </>
+          ) : null}
+          {order.order.status === "paid" ? (
+            <form action={refundAction}>
+              <input type="hidden" name="orderId" value={order.order.id} />
+              <button
+                type="submit"
+                className="min-h-11 rounded-lg border border-danger/40 bg-surface px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
+              >
+                Refund payment
+              </button>
+            </form>
           ) : null}
         </div>
       </section>

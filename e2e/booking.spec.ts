@@ -54,6 +54,21 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 });
 
+test("staff opening a scheduled dive lands on the editable trip view", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses Reef" })
+    .getByRole("link")
+    .click();
+
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\//);
+  await expect(page.getByRole("heading", { name: "Two-Tank Reef — Molasses Reef" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
+});
+
 test("a full boat lets a diver join the wait list without taking a seat", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule");
   // Seeded wreck trip ships full (10 of 10).

@@ -12,7 +12,7 @@ import {
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Payments — Scuba" };
+export const metadata: Metadata = { title: "Shop — Scuba" };
 
 const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   connected: { tone: "success", text: "Stripe account connected." },
@@ -38,7 +38,7 @@ async function disconnectAction() {
     await provider.deauthorize(account.stripeAccountId);
     await disconnectShopStripeAccount(db, account.stripeAccountId);
   }
-  redirect(`/shop/${session.user.shopSlug}/settings/payments?notice=disconnected`);
+  redirect(`/shop/${session.user.shopSlug}/shop?notice=disconnected`);
 }
 
 async function refreshAction() {
@@ -51,7 +51,7 @@ async function refreshAction() {
     const status = await provider.retrieveAccountStatus(account.stripeAccountId);
     await refreshShopStripeAccountStatus(db, account.stripeAccountId, status);
   }
-  redirect(`/shop/${session.user.shopSlug}/settings/payments?notice=refreshed`);
+  redirect(`/shop/${session.user.shopSlug}/shop?notice=refreshed`);
 }
 
 function StatusRow({ label, ok }: { label: string; ok: boolean }) {
@@ -94,10 +94,11 @@ export default async function PaymentsSettingsPage({
       <FlashParams params={["notice"]} />
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">Settings</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Payments</h1>
+          <p className="text-sm font-medium tracking-widest text-primary uppercase">Shop</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Shop settings</h1>
           <p className="mt-1 text-muted">
-            Connect your own Stripe account so orders and invoices are paid straight into it.
+            One-time and occasional shop configuration lives here, including the Stripe account that
+            receives invoices and payments.
           </p>
         </div>
         <Link

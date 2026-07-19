@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
@@ -22,14 +21,12 @@ const templateSchema = z.object({
 const jurisdictionSchema = z.object({ jurisdiction: z.enum(["rstc", "uk"]) });
 
 export default async function WaiverTemplatesPage({
-  params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
-  const { shopSlug } = await params;
   const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -88,10 +85,7 @@ export default async function WaiverTemplatesPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <FlashParams params={["notice"]} />
-      <Link href={`/shop/${shopSlug}`} className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-      <header className="mt-4">
+      <header>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Waiver templates</h1>
         <p className="mt-2 text-muted">
