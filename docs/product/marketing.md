@@ -2,8 +2,8 @@
 
 Scuba's public pages are the homepage (`/`), product page (`/product`), and pricing page
 (`/pricing`). They are a truthful sales surface for the product that exists today: bookings,
-readiness, waiver and certification evidence, gear, dive sites, nitrox logs, reporting, and a
-live online manifest.
+readiness, waiver and certification evidence, gear, dive sites, nitrox logs, reporting, and an
+encrypted offline manifest with explicit reconciliation.
 
 ## Screenshot assets
 
@@ -34,5 +34,7 @@ early-access starting point, not an implemented checkout or signed commercial po
 amount, included support, billing terms, taxes, and any multi-location offer with the product owner
 before publishing customer-facing pricing beyond this trial surface.
 
-The public pages must not claim offline manifests, multi-location operating views, or a provider
-integration that is not actually enabled. State these boundaries plainly when relevant.
+Offline claims must stay precise: staff explicitly saves an encrypted device copy; the product does
+not invisibly cache an authenticated page, transfer a copy across devices, or guarantee that stale
+snapshot readiness is still live. Multi-location operating views and unconfigured provider
+integrations remain out of scope and must not be claimed.

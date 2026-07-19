@@ -1,6 +1,11 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
-import { buildTripManifest, type TripManifest } from "@/lib/manifests";
+import {
+  buildTripManifest,
+  isRollCallCheckpoint,
+  type RollCallCheckpoint,
+  type TripManifest,
+} from "@/lib/manifests";
 import type { AppDb } from "./client";
 import { listTripGearAssignments } from "./gear";
 import { getTripRoster, getTripWithBooked } from "./queries";
@@ -30,13 +35,24 @@ async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
   return [...byId.values()];
 }
 
-async function listLatestRollCallByBooking(db: AppDb, shopId: string, tripId: string) {
+async function listLatestRollCallByBooking(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  checkpoint: RollCallCheckpoint,
+) {
   const rows = await db
     .select({ event: rollCallEvents, recorder: people })
     .from(rollCallEvents)
     .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
-    .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
-    .orderBy(desc(rollCallEvents.createdAt));
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        eq(rollCallEvents.tripId, tripId),
+        eq(rollCallEvents.checkpoint, checkpoint),
+      ),
+    )
+    .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt));
   const latest = new Map<
     string,
     {
@@ -68,15 +84,17 @@ export async function getTripManifest(
   db: AppDb,
   shopId: string,
   tripId: string,
+  checkpoint: RollCallCheckpoint = "departure",
 ): Promise<TripManifest | null> {
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
+  if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) return null;
   const [roster, readinessRows, gearRows, crew, rollCallByBooking] = await Promise.all([
     getTripRoster(db, tripId),
     listTripReadiness(db, shopId, tripId),
     listTripGearAssignments(db, shopId, tripId),
     listTripCrew(db, shopId, tripId),
-    listLatestRollCallByBooking(db, shopId, tripId),
+    listLatestRollCallByBooking(db, shopId, tripId, checkpoint),
   ]);
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
@@ -94,7 +112,9 @@ export async function getTripManifest(
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
+      plannedDives: trip.plannedDives,
     },
+    checkpoint,
     crew,
     divers: roster.map(({ booking, person }) => ({
       bookingId: booking.id,
@@ -110,10 +130,16 @@ export async function getTripManifest(
 }
 
 export type RecordRollCallOutcome =
-  | { ok: true; eventId: string }
+  | { ok: true; eventId: string; duplicate?: boolean }
   | {
       ok: false;
-      reason: "booking_unavailable" | "staff_not_found" | "not_ready";
+      reason:
+        | "booking_unavailable"
+        | "staff_not_found"
+        | "not_ready"
+        | "invalid_checkpoint"
+        | "newer_event_exists"
+        | "snapshot_invalid";
     };
 
 /**
@@ -129,11 +155,18 @@ export async function recordRollCall(
     bookingId: string;
     recordedByPersonId: string;
     status: "boarded" | "not_boarded";
+    checkpoint?: RollCallCheckpoint;
+    source?: "live" | "offline";
+    clientEventId?: string;
+    offlineSnapshotSavedAt?: Date;
     note?: string;
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
   return db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
+    const checkpoint = input.checkpoint ?? "departure";
+    const source = input.source ?? "live";
+    const occurredAt = input.occurredAt ?? new Date();
     const [staff] = await tx
       .select({ id: people.id })
       .from(people)
@@ -148,8 +181,22 @@ export async function recordRollCall(
       .limit(1);
     if (!staff) return { ok: false, reason: "staff_not_found" };
 
+    if (source === "offline" && input.clientEventId) {
+      const [existing] = await tx
+        .select({ id: rollCallEvents.id })
+        .from(rollCallEvents)
+        .where(
+          and(
+            eq(rollCallEvents.shopId, input.shopId),
+            eq(rollCallEvents.clientEventId, input.clientEventId),
+          ),
+        )
+        .limit(1);
+      if (existing) return { ok: true, eventId: existing.id, duplicate: true };
+    }
+
     const [booking] = await tx
-      .select({ id: bookings.id })
+      .select({ id: bookings.id, plannedDives: trips.plannedDives })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(
@@ -163,6 +210,38 @@ export async function recordRollCall(
       )
       .limit(1);
     if (!booking) return { ok: false, reason: "booking_unavailable" };
+    if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
+      return { ok: false, reason: "invalid_checkpoint" };
+    }
+
+    if (source === "offline") {
+      const savedAt = input.offlineSnapshotSavedAt;
+      const now = new Date();
+      if (
+        !input.clientEventId ||
+        !savedAt ||
+        savedAt.getTime() > occurredAt.getTime() + 5 * 60 * 1000 ||
+        occurredAt.getTime() > now.getTime() + 5 * 60 * 1000
+      ) {
+        return { ok: false, reason: "snapshot_invalid" };
+      }
+      const [newest] = await tx
+        .select({ occurredAt: rollCallEvents.occurredAt })
+        .from(rollCallEvents)
+        .where(
+          and(
+            eq(rollCallEvents.shopId, input.shopId),
+            eq(rollCallEvents.tripId, input.tripId),
+            eq(rollCallEvents.bookingId, booking.id),
+            eq(rollCallEvents.checkpoint, checkpoint),
+          ),
+        )
+        .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt))
+        .limit(1);
+      if (newest && newest.occurredAt > occurredAt) {
+        return { ok: false, reason: "newer_event_exists" };
+      }
+    }
 
     if (input.status === "boarded") {
       const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
@@ -177,8 +256,12 @@ export async function recordRollCall(
         bookingId: booking.id,
         recordedByPersonId: staff.id,
         status: input.status,
+        checkpoint,
+        source,
+        clientEventId: source === "offline" ? input.clientEventId : null,
+        offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
         note: input.note?.trim() || null,
-        occurredAt: input.occurredAt ?? new Date(),
+        occurredAt,
       })
       .returning({ id: rollCallEvents.id });
     if (!event) throw new Error("recordRollCall: insert returned no row");

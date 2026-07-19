@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   canRecordOfflineStatus,
   latestOfflineRollCall,
+  type OfflineManifestSnapshot,
   offlineManifestExpiresAt,
   offlineManifestFreshness,
-  type OfflineManifestSnapshot,
 } from "./offline-manifests";
 
 function snapshot(): OfflineManifestSnapshot {
@@ -14,39 +14,43 @@ function snapshot(): OfflineManifestSnapshot {
     savedAt: "2026-07-20T11:00:00.000Z",
     expiresAt: "2026-07-27T16:00:00.000Z",
     shop: { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
-    manifest: {
-      trip: {
-        id: "trip-1",
-        title: "Two-Tank Reef",
-        startsAt: "2026-07-20T12:00:00.000Z",
-        endsAt: "2026-07-20T16:00:00.000Z",
-      },
-      crew: [],
-      summary: { totalDivers: 2, ready: 1, blocked: 1, boarded: 0, awaiting: 2 },
-      divers: [
-        {
-          bookingId: "ready",
-          fullName: "Ready Diver",
-          email: null,
-          emergencyContactName: null,
-          emergencyContactPhone: null,
-          readiness: { status: "ready", blockers: [] },
-          gear: [],
+    manifests: [
+      {
+        trip: {
+          id: "trip-1",
+          title: "Two-Tank Reef",
+          startsAt: "2026-07-20T12:00:00.000Z",
+          endsAt: "2026-07-20T16:00:00.000Z",
+          plannedDives: 2,
         },
-        {
-          bookingId: "blocked",
-          fullName: "Blocked Diver",
-          email: null,
-          emergencyContactName: null,
-          emergencyContactPhone: null,
-          readiness: {
-            status: "blocked",
-            blockers: [{ code: "waiver_pending", message: "Waiver pending." }],
+        checkpoint: "departure",
+        crew: [],
+        summary: { totalDivers: 2, ready: 1, blocked: 1, boarded: 0, awaiting: 2 },
+        divers: [
+          {
+            bookingId: "ready",
+            fullName: "Ready Diver",
+            email: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            readiness: { status: "ready", blockers: [] },
+            gear: [],
           },
-          gear: [],
-        },
-      ],
-    },
+          {
+            bookingId: "blocked",
+            fullName: "Blocked Diver",
+            email: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            readiness: {
+              status: "blocked",
+              blockers: [{ code: "waiver_pending", message: "Waiver pending." }],
+            },
+            gear: [],
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -75,18 +79,29 @@ describe("offline manifest policy", () => {
 
   it("uses the latest non-rejected device event and exposes pending state", () => {
     const saved = snapshot();
-    const latest = latestOfflineRollCall(saved, [
-      {
-        clientEventId: "event-1",
-        snapshotId: saved.snapshotId,
-        snapshotSavedAt: saved.savedAt,
-        bookingId: "ready",
-        status: "boarded",
-        note: null,
-        occurredAt: "2026-07-20T11:05:00.000Z",
-        syncStatus: "pending",
-      },
-    ], "ready");
-    expect(latest).toEqual({ state: "boarded", occurredAt: "2026-07-20T11:05:00.000Z", pending: true });
+    const latest = latestOfflineRollCall(
+      saved,
+      [
+        {
+          clientEventId: "event-1",
+          snapshotId: saved.snapshotId,
+          snapshotSavedAt: saved.savedAt,
+          tripId: "trip-1",
+          bookingId: "ready",
+          checkpoint: "departure",
+          status: "boarded",
+          note: null,
+          occurredAt: "2026-07-20T11:05:00.000Z",
+          syncStatus: "pending",
+        },
+      ],
+      "ready",
+      "departure",
+    );
+    expect(latest).toEqual({
+      state: "boarded",
+      occurredAt: "2026-07-20T11:05:00.000Z",
+      pending: true,
+    });
   });
 });

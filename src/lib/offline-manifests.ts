@@ -10,22 +10,24 @@ export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
   shop: { slug: string; name: string; timezone: string };
-  manifest: Omit<TripManifest, "trip" | "divers"> & {
-    trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
-      startsAt: string;
-      endsAt: string;
-    };
-    divers: Array<
-      Omit<TripManifest["divers"][number], "rollCall"> & {
-        rollCall?: {
-          state: "boarded" | "not_boarded";
-          occurredAt: string;
-          recordedByName: string;
-          note: string | null;
-        };
-      }
-    >;
-  };
+  manifests: Array<
+    Omit<TripManifest, "trip" | "divers"> & {
+      trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
+        startsAt: string;
+        endsAt: string;
+      };
+      divers: Array<
+        Omit<TripManifest["divers"][number], "rollCall"> & {
+          rollCall?: {
+            state: "boarded" | "not_boarded";
+            occurredAt: string;
+            recordedByName: string;
+            note: string | null;
+          };
+        }
+      >;
+    }
+  >;
 };
 
 export type OfflineManifestSnapshot = OfflineManifestPayload & {
@@ -39,7 +41,9 @@ export type OfflineRollCallEvent = {
   clientEventId: string;
   snapshotId: string;
   snapshotSavedAt: string;
+  tripId: string;
   bookingId: string;
+  checkpoint: TripManifest["checkpoint"];
   status: "boarded" | "not_boarded";
   note: string | null;
   occurredAt: string;
@@ -52,13 +56,13 @@ export type OfflineManifestEnvelope = {
   events: OfflineRollCallEvent[];
 };
 
-export function serializeManifest(
-  manifest: TripManifest,
+export function serializeManifests(
+  manifests: readonly TripManifest[],
   shop: OfflineManifestPayload["shop"],
 ): OfflineManifestPayload {
   return {
     shop,
-    manifest: {
+    manifests: manifests.map((manifest) => ({
       ...manifest,
       trip: {
         ...manifest.trip,
@@ -71,7 +75,7 @@ export function serializeManifest(
           ? { ...diver.rollCall, occurredAt: diver.rollCall.occurredAt.toISOString() }
           : undefined,
       })),
-    },
+    })),
   };
 }
 
@@ -84,7 +88,10 @@ export function offlineManifestExpiresAt(savedAt: Date, tripEndsAt: Date): Date 
   );
 }
 
-export function offlineManifestFreshness(savedAt: Date, now: Date = new Date()): OfflineManifestFreshness {
+export function offlineManifestFreshness(
+  savedAt: Date,
+  now: Date = new Date(),
+): OfflineManifestFreshness {
   const age = Math.max(0, now.getTime() - savedAt.getTime());
   if (age <= OFFLINE_MANIFEST_CURRENT_MS) return "current";
   if (age <= OFFLINE_MANIFEST_AGING_MS) return "aging";
@@ -96,7 +103,7 @@ export function canRecordOfflineStatus(
   bookingId: string,
   status: OfflineRollCallEvent["status"],
 ): boolean {
-  const diver = snapshot.manifest.divers.find((entry) => entry.bookingId === bookingId);
+  const diver = snapshot.manifests[0]?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
   return status === "not_boarded" || diver.readiness.status === "ready";
 }
@@ -105,9 +112,15 @@ export function latestOfflineRollCall(
   snapshot: OfflineManifestSnapshot,
   events: readonly OfflineRollCallEvent[],
   bookingId: string,
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
 ): { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean } | undefined {
   const local = events
-    .filter((event) => event.bookingId === bookingId && event.syncStatus !== "rejected")
+    .filter(
+      (event) =>
+        event.bookingId === bookingId &&
+        event.checkpoint === checkpoint &&
+        event.syncStatus !== "rejected",
+    )
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
   if (local) {
     return {
@@ -116,7 +129,9 @@ export function latestOfflineRollCall(
       pending: local.syncStatus === "pending",
     };
   }
-  const server = snapshot.manifest.divers.find((entry) => entry.bookingId === bookingId)?.rollCall;
+  const server = snapshot.manifests
+    .find((manifest) => manifest.checkpoint === checkpoint)
+    ?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall;
   return server
     ? { state: server.state, occurredAt: server.occurredAt, pending: false }
     : undefined;

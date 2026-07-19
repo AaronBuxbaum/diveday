@@ -3,12 +3,20 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { getDb } from "@/db/client";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
 import { getShopById } from "@/db/queries";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { rollCallLabel } from "@/lib/manifests";
+import {
+  isRollCallCheckpoint,
+  type RollCallCheckpoint,
+  rollCallCheckpointLabel,
+  rollCallCheckpoints,
+  rollCallLabel,
+} from "@/lib/manifests";
+import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -39,36 +47,53 @@ export default async function TripManifestPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; checkpoint?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice } = await searchParams;
+  const { notice, checkpoint: requestedCheckpoint } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
-  const manifest = await getTripManifest(db, shop.id, tripId);
+  const departureManifest = await getTripManifest(db, shop.id, tripId);
+  if (!departureManifest) notFound();
+  const checkpoints = rollCallCheckpoints(departureManifest.trip.plannedDives);
+  const checkpoint: RollCallCheckpoint =
+    requestedCheckpoint &&
+    isRollCallCheckpoint(requestedCheckpoint, departureManifest.trip.plannedDives)
+      ? requestedCheckpoint
+      : "departure";
+  const manifests = await Promise.all(
+    checkpoints.map((value) =>
+      value === "departure"
+        ? Promise.resolve(departureManifest)
+        : getTripManifest(db, shop.id, tripId, value),
+    ),
+  );
+  const completeManifests = manifests.filter((entry) => entry !== null);
+  const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
   const banner = notice ? BANNERS[notice] : undefined;
-  const back = `/shop/${shopSlug}/trips/${tripId}/manifest`;
+  const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
   async function rollCallAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
     const parsed = rollCallSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`${back}?notice=error`);
+    if (!parsed.success) redirect(`${back}&notice=error`);
     const outcome = await recordRollCall(await getDb(), {
       shopId: staff.user.shopId,
       tripId,
       bookingId: parsed.data.bookingId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+      checkpoint,
       note: parsed.data.note,
     });
     if (!outcome.ok) {
-      redirect(`${back}?notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
+      redirect(`${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
     }
-    redirect(`${back}?notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}`);
+    redirect(`${back}&notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}`);
   }
 
   return (
@@ -100,15 +125,18 @@ export default async function TripManifestPage({
         </div>
         <div className="flex flex-wrap items-center gap-3 print:hidden">
           <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-            Live manifest · online
+            Live source · offline copy available
           </span>
           <PrintButton />
         </div>
       </header>
-      <p className="mt-3 text-sm text-muted print:hidden">
-        This is a live view. Offline snapshots and reconciliation are not enabled yet; refresh
-        before departure if the connection changes.
-      </p>
+      <OfflineManifestManager
+        payload={serializeManifests(completeManifests, {
+          slug: shopSlug,
+          name: shop.name,
+          timezone: shop.timezone,
+        })}
+      />
 
       {banner ? (
         <p
@@ -137,6 +165,25 @@ export default async function TripManifestPage({
           </div>
         ))}
       </section>
+
+      <nav
+        className="mt-7 flex gap-2 overflow-x-auto pb-2 print:hidden"
+        aria-label="Roll-call checkpoint"
+      >
+        {checkpoints.map((value) => (
+          <Link
+            key={value}
+            href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
+            className={
+              value === checkpoint
+                ? "min-h-11 shrink-0 rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
+                : "min-h-11 shrink-0 rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
+            }
+          >
+            {rollCallCheckpointLabel(value)}
+          </Link>
+        ))}
+      </nav>
 
       {manifest.summary.blocked > 0 ? (
         <section className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
@@ -170,7 +217,9 @@ export default async function TripManifestPage({
       <section className="mt-9">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Roll call</h2>
+            <h2 className="text-lg font-semibold">
+              {rollCallCheckpointLabel(checkpoint)} roll call
+            </h2>
             <p className="mt-1 text-sm text-muted">
               Check each diver here before departure. Every change is time-stamped with the staff
               member who made it.

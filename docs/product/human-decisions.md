@@ -27,12 +27,12 @@ but still may need validation; **Validated** has the stated evidence.
    run migrations automatically (see [Neon hosting
    ADR](../architecture/decisions/20260718-vercel-neon-hosting.md)). Still needed: name the person
    who owns production secrets, backups, domain, and incident response.
-3. Decide whether the live-only manifest is acceptable for the first pilot. If it is, schedule the
-   outdoor phone and connectivity field test below; if not, authorize the offline design decision
-   before operating from a dock.
-4. Run the browser verification for the merged gear and manifest work on a browser-capable machine.
-   The automated browser suite was not runnable in the implementation environment because Chromium
-   was unavailable.
+3. Assign the dive operations lead and run V-02 against the encrypted offline manifest before a
+   production departure. Record the exact phone/browser, glare and wet-hand findings, airplane-mode
+   reload result, multi-checkpoint roll call, conflict reconciliation, and print fallback.
+4. Run the full browser verification for the merged gear and manifest work in light/dark desktop and
+   phone viewports, keeping the automated offline Playwright scenario as regression evidence rather
+   than a substitute for outdoor field validation.
 
 ## Decision register
 
@@ -42,7 +42,7 @@ but still may need validation; **Validated** has the stated evidence.
 | H-02 | Ready | Product owner + qualified legal/privacy reviewer | What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags? | Retention duration, deletion workflow, permitted staff access, and any legal hold or audit exception. | Production data lifecycle, access controls, and deletion tooling. |
 | H-03 | Ready | Product owner + qualified legal reviewer | Is the current typed name + explicit consent + timestamp sufficient for the intended release, or is a specialist e-signature provider required? | Accepted assurance level, required provider criteria (if any), and rollout boundary. | Keep the local signature provider or select and implement a vendor adapter. The current baseline is documented for review in [defaults-to-verify.md](defaults-to-verify.md#waiver-and-signature). |
 | H-04 | Implemented | Product owner / technical owner | Vercel is selected for web hosting and Neon (Vercel Marketplace integration) is selected as the Postgres provider. Still open: who owns secrets, backups, domain, and incident response? | Provider: Neon. Driver: `drizzle-orm/node-postgres`. Production builds run `pnpm db:migrate`; enable Vercel System Environment Variables. Still needed: region confirmation and named owner for secrets/backups/incident response. | Name the remaining owner and record backup/incident policy. See [Neon hosting ADR](../architecture/decisions/20260718-vercel-neon-hosting.md) and [Vercel hosting ADR](../architecture/decisions/20260718-vercel-hosting.md). |
-| H-05 | Ready | Product owner + dive operations lead | Is a live, online-only manifest acceptable for the first pilot? | Pilot decision, acceptable connectivity conditions, and stop rule if connectivity is lost. | A live-only pilot, or an offline-manifest design ADR before use. See [manifest ADR](../architecture/decisions/20260718-manifest-live-first.md). |
+| H-05 | Implemented | Product owner + dive operations lead | The product now uses explicit encrypted device snapshots rather than a live-only pilot. Approve or replace its 15-minute current / four-hour aging thresholds and retention at the earlier of 14 days after save or seven days after trip end. | Named operations/privacy owners, accepted thresholds and retention, and the production stop rule for a missing/expired/corrupt device copy. | Validate through V-02 before production. See [offline manifest ADR](../architecture/decisions/20260718-offline-manifest-snapshots.md). |
 | H-06 | Ready | Dive operations lead | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? | Required measurements/preferences, who may override a request, and the safe fallback when a size is unavailable. | The booking-level rental request now uses a [standard provisional set](defaults-to-verify.md#rental-gear-request); approve or change it before production. |
 | H-07 | Deferred | Product owner + finance owner | What payment/deposit, cancellation, refund, tax, and provider policy should the first paid booking support? | Policy plus provider approval and webhook/account owner. | M7 payment scope and a payment-provider ADR. Stripe is only a leading candidate, not a decision. |
 | H-08 | Ready | Product owner + operations lead | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? | Supported courses, prerequisites, expiration/verification rules, ratios, and exception process. | Course catalog/session admission now uses [conservative provisional rules](defaults-to-verify.md#course-admission); approve or replace them before operating courses. |
@@ -56,7 +56,7 @@ but still may need validation; **Validated** has the stated evidence.
 | ID | Status | Human owner | Work to perform | Evidence of completion |
 | --- | --- | --- | --- | --- |
 | V-01 | Ready | Product owner or QA owner | Browser-check the merged M5/M6 experience in light and dark mode on a desktop viewport and a phone viewport: pack and return gear, service and retire eligible gear, view a manifest with blockers, board an eligible diver, reject a blocked diver, and print/save the manifest. | Browser/OS, viewports, test data, result, defects, and screenshots or a short screen recording. |
-| V-02 | Ready after H-05 | Dive operations lead | Field-test the manifest on a phone outdoors with realistic marina connectivity. Include a temporary network loss, a readiness blocker, boarding, and the print/PDF fallback. | Date, device, network conditions, scenarios, findings, and whether the pilot can proceed. |
+| V-02 | Ready | Dive operations lead + `dive-domain-expert` reviewer | Field-test the manifest on a phone outdoors with realistic marina connectivity. Include glare/wet hands, save + airplane-mode reload, a blocked diver, before-departure and after-dive roll calls, a deliberately newer live event conflict, reconnection, device-copy deletion, and print/PDF fallback. | Date, device/browser, network conditions, scenarios, freshness shown, reconciliation results, findings, screenshots/video, reviewer sign-off, and whether production departures may proceed. |
 | V-03 | Ready before production | Product owner + qualified legal reviewer | Review the configured waiver/medical flow against the approved H-01–H-03 policies and confirm staff know how to handle a medical-review blocker. | Signed-off policy version, staff training owner/date, and escalation contact. |
 | V-04 | Ready before production | Operations lead | Load real initial inventory, staff roles, trips, and pilot bookings; then rehearse check-in, packing, return, and roll call. | Pilot checklist, discrepancies found, and any required data cleanup. |
 | V-05 | Ready before production | `dive-domain-expert` reviewer | Review the nitrox fill slice for domain correctness: EANx mix band, MOD formula and ppO₂ ceilings, the verified-card gate, and analysis-signature evidence. | Reviewer sign-off, any corrections to the [provisional parameters](defaults-to-verify.md#nitrox-fills), and confirmation the write-time gate matches shop policy. |
@@ -65,9 +65,10 @@ but still may need validation; **Validated** has the stated evidence.
 
 - **Waiver evidence:** the first release keeps immutable local records with typed consent; it does
   not claim cryptographic non-repudiation. The unresolved policy work is H-01 through H-03.
-- **Manifest:** the first release is live, derived, append-only, and intentionally not offline.
-  Cache freshness, encryption/retention, reconciliation conflicts, and per-dive checkpoints need a
-  later ADR if offline capability is approved.
+- **Manifest:** the live source remains derived and append-only. Offline use is an explicitly saved,
+  encrypted device snapshot; it can disappear with browser storage, does not update across devices,
+  and displays stale readiness rather than presenting it as live. Print/PDF is the independent
+  fallback. Production operation remains blocked on H-05 policy approval and V-02 field evidence.
 - **Provider choices:** payment, notification, signature, and similar integrations must remain
   behind a small provider seam rather than spreading vendor SDK calls through the application. See
   [next steps](next-steps.md#adopt-with-the-first-external-integration-m3).
@@ -86,3 +87,4 @@ but still may need validation; **Validated** has the stated evidence.
 | 2026-07-18 | Shipped the M7 nitrox fill-log slice; added H-11 fill-station policy and V-05 dive-domain review. | Product team |
 | 2026-07-18 | Added public homepage, product, and pricing surfaces with real-demo screenshot capture; recorded H-12 for commercial approval. | Product team |
 | 2026-07-18 | Researched PADI, SSI, and NAUI verification access; added agency-specific gateway configuration and the credential setup runbook. | Engineering |
+| 2026-07-18 | Implemented the M6 offline snapshot/reconciliation policy and expanded V-02 into the required outdoor safety review. | Engineering |

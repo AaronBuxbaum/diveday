@@ -15,10 +15,16 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "Everything the shop needs to make a safe departure feel easy.",
     }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "A manifest that stays useful after the signal disappears.",
+    }),
+  ).toBeVisible();
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
     page.getByRole("heading", { name: "One shop price. Every operational workflow." }),
   ).toBeVisible();
   await expect(page.getByText("$249", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Staff explicitly saves an encrypted device copy/)).toBeVisible();
 });

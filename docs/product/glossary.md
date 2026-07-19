@@ -53,6 +53,15 @@ new domain concept, define it here in the same PR.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded or
   not boarded, including the time and any note. Its newest event is the current state; older events
   remain evidence of what the crew recorded.
+- **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
+  A two-tank charter has three checkpoints. A diver's state at one checkpoint never silently carries
+  into the next.
+- **Offline manifest snapshot** — an explicit, time-stamped, encrypted device copy of the complete
+  derived manifest and every checkpoint. It is safety evidence as saved, never an editable roster
+  or a claim that server-side readiness has not changed.
+- **Reconciliation** — applying a device roll-call event to the live append-only history after
+  reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
+  duplicate events are idempotent and an older device event cannot replace newer live history.
 - **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — liability release signed per shop (sometimes per activity), typically

@@ -121,7 +121,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   only currently available, requested gear; sized items require an exact requested/profile match,
   and every conditional inventory claim remains conflict-safe.
 
-## M6 — Boat manifests (live core slice complete)
+## M6 — Boat manifests (implementation complete; field validation open)
 
 - ✅ A derived per-trip manifest preserves every active booking alongside shared readiness,
   assigned gear, emergency contacts, and crew. Missing evidence is a visible blocker, never a
@@ -130,9 +130,16 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   event is rejected unless the shared readiness service clears that diver at the moment of action.
 - ✅ Boarding history is append-only and tenant-scoped, recording the status, staff member, and
   timestamp; browser print/save-PDF uses the same manifest model.
-- ⬜ Offline snapshots, freshness/reconciliation state, per-dive checkpoints, and field testing
-  remain follow-up work. The live-only boundary is deliberate and documented in
-  [20260718-manifest-live-first](../architecture/decisions/20260718-manifest-live-first.md).
+- ✅ Explicit offline safety copy: all checkpoints are encrypted in IndexedDB with visible saved
+  time, current/aging/stale state, bounded device retention, and a data-free cached shell. It never
+  caches authenticated manifest HTML.
+- ✅ Offline roll-call reconciliation: device events carry idempotency/source/snapshot evidence;
+  the server rechecks current readiness and rejects older device events behind newer live history.
+- ✅ Per-dive checkpoints: each trip records its planned dive count and keeps before-departure and
+  after-each-dive head counts independent.
+- ⬜ Human field validation remains V-02: phone glare/wet-hand use, airplane-mode reload, extended
+  outage, reconciliation conflict, and print fallback must pass before production operations. See
+  [the offline ADR](../architecture/decisions/20260718-offline-manifest-snapshots.md).
 
 ## M7+ — Early operational slice shipped; integrations later
 
