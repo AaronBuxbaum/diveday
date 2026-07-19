@@ -223,7 +223,10 @@ export default async function TripDetailPage({
 
   async function joinWaitlist(formData: FormData) {
     "use server";
-    const parsed = bookSchema.safeParse(Object.fromEntries(formData));
+    const parsed = bookSchema.safeParse({
+      fullName: formData.get("fullName-0"),
+      email: formData.get("email-0"),
+    });
     if (!parsed.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
     const dbi = await getDb();
     const shopNow = await getShopBySlug(dbi, shopSlug);
