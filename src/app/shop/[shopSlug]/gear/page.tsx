@@ -12,6 +12,7 @@ import {
   retireGear,
   returnGear,
   setGearServiceHold,
+  updateGearItem,
 } from "@/db/gear";
 import { getShopById } from "@/db/queries";
 import { formatShortDate } from "@/lib/format";
@@ -21,6 +22,7 @@ const itemSchema = z.object({
   label: z.string().trim().min(2).max(80),
   type: z.enum(["bcd", "regulator", "wetsuit", "mask_fins", "weights", "tank"]),
   size: z.string().trim().max(40).optional(),
+  notes: z.string().trim().max(500).optional(),
   serviceDueOn: z.string().optional(),
 });
 
@@ -71,8 +73,27 @@ export default async function GearPage({
       type: parsed.data.type,
       size: parsed.data.size,
       serviceDueAt: serviceDueAt ?? undefined,
+      notes: parsed.data.notes,
     });
     redirect(`/shop/${staff.user.shopSlug}/gear?notice=added`);
+  }
+  async function updateAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = itemSchema.safeParse(Object.fromEntries(formData));
+    const id = String(formData.get("id") ?? "");
+    if (!id || !parsed.success) redirect(`/shop/${staff.user.shopSlug}/gear?notice=invalid`);
+    const serviceDueAt = calendarDate(parsed.data.serviceDueOn);
+    if (parsed.data.serviceDueOn && !serviceDueAt)
+      redirect(`/shop/${staff.user.shopSlug}/gear?notice=invalid`);
+    const updated = await updateGearItem(await getDb(), staff.user.shopId, id, {
+      label: parsed.data.label,
+      type: parsed.data.type,
+      size: parsed.data.size,
+      serviceDueAt: serviceDueAt ?? undefined,
+      notes: parsed.data.notes,
+    });
+    redirect(`/shop/${staff.user.shopSlug}/gear?notice=${updated ? "saved" : "invalid"}`);
   }
   async function holdAction(formData: FormData) {
     "use server";
@@ -144,7 +165,9 @@ export default async function GearPage({
                 ? "Service recorded and gear returned to the packing pool."
                 : notice === "retired"
                   ? "Gear retired from inventory."
-                  : "Check the gear details and try again."}
+                  : notice === "saved"
+                    ? "Gear details updated."
+                    : "Check the gear details and try again."}
         </p>
       ) : null}
       <form
@@ -205,6 +228,72 @@ export default async function GearPage({
                   </span>
                   {item.state !== "assigned" && item.state !== "retired" ? (
                     <>
+                      <details className="relative">
+                        <summary className="min-h-11 cursor-pointer rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary">
+                          Edit
+                        </summary>
+                        <form
+                          action={updateAction}
+                          className="absolute right-0 z-10 mt-2 grid w-80 gap-3 rounded-lg border border-border bg-surface p-4 shadow-lg"
+                        >
+                          <input type="hidden" name="id" value={item.id} />
+                          <label className="flex flex-col gap-1 text-sm font-medium">
+                            Label
+                            <input
+                              name="label"
+                              required
+                              defaultValue={item.label}
+                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1 text-sm font-medium">
+                            Type
+                            <select
+                              name="type"
+                              defaultValue={item.type}
+                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                            >
+                              {["bcd", "regulator", "wetsuit", "mask_fins", "weights", "tank"].map(
+                                (type) => (
+                                  <option key={type}>{type.replace("_", " ")}</option>
+                                ),
+                              )}
+                            </select>
+                          </label>
+                          <label className="flex flex-col gap-1 text-sm font-medium">
+                            Size
+                            <input
+                              name="size"
+                              defaultValue={item.size ?? ""}
+                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1 text-sm font-medium">
+                            Service due
+                            <input
+                              name="serviceDueOn"
+                              type="date"
+                              defaultValue={item.serviceDueAt?.toISOString().slice(0, 10)}
+                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1 text-sm font-medium">
+                            Notes
+                            <textarea
+                              name="notes"
+                              rows={2}
+                              defaultValue={item.notes ?? ""}
+                              className="rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                            />
+                          </label>
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                          >
+                            Save gear
+                          </button>
+                        </form>
+                      </details>
                       <form action={holdAction}>
                         <input type="hidden" name="id" value={item.id} />
                         <input

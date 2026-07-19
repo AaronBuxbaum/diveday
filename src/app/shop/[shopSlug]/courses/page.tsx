@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { createCourse, listActiveCourses } from "@/db/courses";
+import { archiveCourse, createCourse, listActiveCourses, updateCourse } from "@/db/courses";
 import { getShopById } from "@/db/queries";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -58,12 +58,41 @@ export default async function CoursesPage({
     redirect(`/shop/${staff.user.shopSlug}/courses?notice=${course ? "created" : "invalid"}`);
   }
 
+  async function updateCourseAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const courseId = String(formData.get("courseId") ?? "");
+    const parsed = courseSchema.safeParse(Object.fromEntries(formData));
+    if (!courseId || !parsed.success)
+      redirect(`/shop/${staff.user.shopSlug}/courses?notice=invalid`);
+    const course = await updateCourse(await getDb(), staff.user.shopId, courseId, {
+      title: parsed.data.title,
+      description: parsed.data.description || undefined,
+      minimumCertificationLevel: parsed.data.minimumCertificationLevel ?? null,
+      requiresInstructor: parsed.data.requiresInstructor === "on",
+      requiresWaiver: parsed.data.requiresWaiver === "on",
+    });
+    redirect(`/shop/${staff.user.shopSlug}/courses?notice=${course ? "saved" : "invalid"}`);
+  }
+
+  async function archiveCourseAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const courseId = String(formData.get("courseId") ?? "");
+    const archived = courseId && (await archiveCourse(await getDb(), staff.user.shopId, courseId));
+    redirect(`/shop/${staff.user.shopSlug}/courses?notice=${archived ? "archived" : "invalid"}`);
+  }
+
   const banner =
     notice === "created"
       ? "Course added. Schedule a session when you’re ready to put students on the calendar."
-      : notice === "invalid"
-        ? "That didn’t save. Check the course name and try again."
-        : undefined;
+      : notice === "saved"
+        ? "Course updated. New sessions will use the updated admission rules."
+        : notice === "archived"
+          ? "Course archived. Existing sessions and their rules are unchanged."
+          : notice === "invalid"
+            ? "That didn’t save. Check the course name and try again."
+            : undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
@@ -128,12 +157,91 @@ export default async function CoursesPage({
                     {course.requiresWaiver ? " · waiver required" : ""}
                   </p>
                 </div>
-                <Link
-                  href={`/shop/${shopSlug}/trips/new?course=${course.id}`}
-                  className="min-h-11 shrink-0 rounded-lg border border-border bg-surface px-4 py-2 text-center text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-                >
-                  Schedule session
-                </Link>
+                <div className="relative flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                  <Link
+                    href={`/shop/${shopSlug}/trips/new?course=${course.id}`}
+                    className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-center text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                  >
+                    Schedule session
+                  </Link>
+                  <details>
+                    <summary className="min-h-11 cursor-pointer rounded-lg border border-border bg-surface px-4 py-2 text-center text-sm font-medium text-primary">
+                      Edit
+                    </summary>
+                    <form
+                      action={updateCourseAction}
+                      className="mt-3 grid gap-3 rounded-lg border border-border bg-surface p-4 sm:absolute sm:right-0 sm:z-10 sm:w-96"
+                    >
+                      <input type="hidden" name="courseId" value={course.id} />
+                      <label className="flex flex-col gap-1 text-sm font-medium">
+                        Course name
+                        <input
+                          name="title"
+                          required
+                          defaultValue={course.title}
+                          className={inputClass}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm font-medium">
+                        Description
+                        <textarea
+                          name="description"
+                          rows={2}
+                          defaultValue={course.description ?? ""}
+                          className={inputClass}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm font-medium">
+                        Existing certification required
+                        <select
+                          name="minimumCertificationLevel"
+                          defaultValue={course.minimumCertificationLevel ?? ""}
+                          className={inputClass}
+                        >
+                          <option value="">None — new divers may enroll</option>
+                          {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label} or higher
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex min-h-11 items-center gap-3 text-sm">
+                        <input
+                          name="requiresInstructor"
+                          type="checkbox"
+                          defaultChecked={course.requiresInstructor}
+                          className="size-4 accent-primary"
+                        />
+                        Require an instructor
+                      </label>
+                      <label className="flex min-h-11 items-center gap-3 text-sm">
+                        <input
+                          name="requiresWaiver"
+                          type="checkbox"
+                          defaultChecked={course.requiresWaiver}
+                          className="size-4 accent-primary"
+                        />
+                        Require a signed waiver
+                      </label>
+                      <button
+                        type="submit"
+                        className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                      >
+                        Save course
+                      </button>
+                    </form>
+                  </details>
+                  <form action={archiveCourseAction}>
+                    <input type="hidden" name="courseId" value={course.id} />
+                    <button
+                      type="submit"
+                      className="min-h-11 rounded-lg px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10"
+                    >
+                      Archive
+                    </button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>

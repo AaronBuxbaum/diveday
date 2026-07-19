@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { createDiver, listDiverSummaries } from "@/db/divers";
+import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/queries";
 import { requireStaffSession } from "@/lib/session";
 
@@ -21,15 +21,23 @@ export default async function DiversPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; q?: string; deleted?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, q, deleted } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const divers = await listDiverSummaries(db, shop.id);
+  const query = q?.trim() ?? "";
+  const visibleDivers = query
+    ? divers.filter((diver) =>
+        [diver.person.fullName, diver.person.email, diver.person.phone]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(query.toLowerCase())),
+      )
+    : divers;
 
   async function addDiverAction(formData: FormData) {
     "use server";
@@ -49,12 +57,25 @@ export default async function DiversPage({
     );
   }
 
+  async function restoreDiverAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const personId = String(formData.get("personId") ?? "");
+    const restored = personId && (await restoreDiver(await getDb(), staff.user.shopId, personId));
+    redirect(`/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "invalid"}`);
+  }
+
   const noticeText =
     notice === "duplicate"
       ? "A diver with that email is already in this shop."
-      : notice === "invalid"
-        ? "Check the diver's name, email, and phone number."
-        : null;
+      : notice === "deleted"
+        ? "Diver removed. Their history is preserved, but they no longer appear in active work."
+        : notice === "restored"
+          ? "Diver restored to active shop work."
+          : notice === "invalid"
+            ? "Check the diver's name, email, and phone number."
+            : null;
+  const noticeIsError = notice === "duplicate" || notice === "invalid";
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
@@ -71,13 +92,28 @@ export default async function DiversPage({
             so the front desk always has the right context.
           </p>
         </div>
-        <span className="text-sm text-muted">{divers.length} on file</span>
+        <span className="text-sm text-muted">
+          {query ? `${visibleDivers.length} of ${divers.length} shown` : `${divers.length} on file`}
+        </span>
       </header>
 
       {noticeText ? (
-        <p role="status" className="mt-6 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
-          {noticeText}
-        </p>
+        <div
+          className={`mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium ${noticeIsError ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
+        >
+          <p role="status">{noticeText}</p>
+          {notice === "deleted" && deleted ? (
+            <form action={restoreDiverAction}>
+              <input type="hidden" name="personId" value={deleted} />
+              <button
+                type="submit"
+                className="min-h-11 rounded-lg border border-success/30 bg-surface px-3 py-2 text-sm font-medium text-success hover:bg-surface-sunken"
+              >
+                Undo remove
+              </button>
+            </form>
+          ) : null}
+        </div>
       ) : null}
 
       <details className="mt-8 rounded-lg border border-border bg-surface p-5">
@@ -120,19 +156,46 @@ export default async function DiversPage({
       </details>
 
       <section className="mt-10" aria-labelledby="diver-list-heading">
-        <h2 id="diver-list-heading" className="text-lg font-semibold">
-          People
-        </h2>
-        {divers.length === 0 ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="diver-list-heading" className="text-lg font-semibold">
+              People
+            </h2>
+            <p className="mt-1 text-sm text-muted">Search by name, email, or phone.</p>
+          </div>
+          <form method="get" className="flex w-full gap-2 sm:w-80">
+            <label className="sr-only" htmlFor="diver-search">
+              Search divers
+            </label>
+            <input
+              id="diver-search"
+              name="q"
+              defaultValue={query}
+              placeholder="Search people"
+              className="min-h-11 min-w-0 flex-1 rounded-lg border border-border-strong bg-surface px-3 text-base"
+            />
+            <button
+              type="submit"
+              className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-primary hover:bg-surface-sunken"
+            >
+              Search
+            </button>
+          </form>
+        </div>
+        {visibleDivers.length === 0 ? (
           <div className="mt-4 rounded-lg border border-border bg-surface p-8 text-center">
-            <p className="font-medium">No divers on file yet.</p>
+            <p className="font-medium">
+              {query ? "No matching divers." : "No divers on file yet."}
+            </p>
             <p className="mt-1 text-sm text-muted">
-              Add one here or accept a booking to create their person record.
+              {query
+                ? "Try a different search or add a new diver above."
+                : "Add one here or accept a booking to create their person record."}
             </p>
           </div>
         ) : (
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {divers.map((diver) => {
+            {visibleDivers.map((diver) => {
               const pending = diver.pendingCertificationCount + diver.pendingSpecialtyCount;
               return (
                 <li key={diver.person.id}>

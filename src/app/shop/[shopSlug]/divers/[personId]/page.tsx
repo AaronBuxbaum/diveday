@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
-import { getDiverProfile, updateDiver } from "@/db/divers";
+import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import { saveRentalGearProfile } from "@/db/gear-requests";
 import { getShopById } from "@/db/queries";
 import {
@@ -221,6 +221,17 @@ export default async function DiverDetailPage({
     redirect(`${base}?notice=${saved ? "profile-saved" : "invalid"}`);
   }
 
+  async function deletePersonAction() {
+    "use server";
+    const staff = await requireStaffSession();
+    const deleted = await deleteDiver(await getDb(), staff.user.shopId, personId);
+    redirect(
+      deleted
+        ? `/shop/${staff.user.shopSlug}/divers?notice=deleted&deleted=${encodeURIComponent(personId)}`
+        : base,
+    );
+  }
+
   const noticeText =
     notice === "captured"
       ? "Card captured as pending. Verify it before it can make this diver ready."
@@ -244,9 +255,11 @@ export default async function DiverDetailPage({
                         ? "Agency verification is not configured. Verify this card manually."
                         : notice === "duplicate"
                           ? "Another diver already uses that email in this shop."
-                          : notice === "invalid"
-                            ? "Check the details and try again."
-                            : null;
+                          : notice === "deleted"
+                            ? "Diver removed from active shop work. Their booking and card history is preserved."
+                            : notice === "invalid"
+                              ? "Check the details and try again."
+                              : null;
   const errorNotice = [
     "image",
     "agency-not-found",
@@ -772,6 +785,32 @@ export default async function DiverDetailPage({
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="mt-12 border-t border-border pt-8" aria-labelledby="remove-heading">
+        <h2 id="remove-heading" className="text-lg font-semibold">
+          Remove from active divers
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted">
+          This is a soft delete: the person disappears from active shop lists, while bookings,
+          cards, and gear history remain intact for records and safety review.
+        </p>
+        <details className="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-4">
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium text-danger">
+            Remove {diver.person.fullName}
+          </summary>
+          <form action={deletePersonAction} className="mt-3 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted">
+              You can add them again later as a new active record.
+            </p>
+            <button
+              type="submit"
+              className="min-h-11 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Remove diver
+            </button>
+          </form>
+        </details>
       </section>
     </main>
   );

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
-import { createCourse, listActiveCourses } from "./courses";
+import { archiveCourse, createCourse, listActiveCourses, updateCourse } from "./courses";
 import {
   createTrip,
   getShopBySlug,
@@ -95,5 +95,18 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
     const active = await listActiveCourses(db, shop.id);
     expect(active.map((entry) => entry.title)).toContain("Advanced Open Water — Weekend");
+
+    const updated = await updateCourse(db, shop.id, course.id, {
+      title: "Advanced Open Water — Refreshed",
+      description: "Updated catalog copy",
+      minimumCertificationLevel: "open_water",
+      requiresInstructor: true,
+      requiresWaiver: true,
+    });
+    expect(updated?.title).toBe("Advanced Open Water — Refreshed");
+    expect(await archiveCourse(db, shop.id, course.id)).toBe(true);
+    expect((await listActiveCourses(db, shop.id)).some((entry) => entry.id === course.id)).toBe(
+      false,
+    );
   });
 });

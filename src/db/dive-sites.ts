@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import {
@@ -37,7 +37,7 @@ export async function listDiveSites(db: AppDb, shopId: string) {
   return db
     .select()
     .from(diveSites)
-    .where(eq(diveSites.shopId, shopId))
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .orderBy(asc(diveSites.name));
 }
 
@@ -45,7 +45,7 @@ export async function getDiveSite(db: AppDb, shopId: string, siteId: string) {
   const [site] = await db
     .select()
     .from(diveSites)
-    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
+    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .limit(1);
   return site ?? null;
 }
@@ -106,9 +106,19 @@ export async function updateDiveSite(
       requiredSpecialties: input.requiredSpecialties ?? [],
       requiresNitrox: input.requiresNitrox ?? false,
     })
-    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
+    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .returning();
   return site ?? null;
+}
+
+/** Keep historical trip briefings intact while removing a site from new-trip pickers. */
+export async function deleteDiveSite(db: AppDb, shopId: string, siteId: string) {
+  const [site] = await db
+    .update(diveSites)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .returning({ id: diveSites.id });
+  return Boolean(site);
 }
 
 /** Copying makes an independent briefing; edits never surprise another charter. */
