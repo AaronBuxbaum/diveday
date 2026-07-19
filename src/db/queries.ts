@@ -1,6 +1,8 @@
 import { and, asc, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
-import type { AppDb, DbExecutor } from "./client";
+import type { TripRecurrenceFrequency } from "@/lib/recurrence";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import type { Course } from "./schema";
 import {
   bookings,
   courses,
@@ -11,6 +13,7 @@ import {
   tripAssignments,
   tripDives,
   tripRequirements,
+  tripSeries,
   trips,
   tripWaitlistEntries,
 } from "./schema";
@@ -83,6 +86,74 @@ async function replaceTripDives(
   await db.insert(tripDives).values(drafts.map((draft) => ({ tripId, ...draft })));
 }
 
+/** Resolve and validate an optional course reference inside a transaction. */
+async function resolveCourse(
+  tx: AppTransaction,
+  shopId: string,
+  courseId: string | undefined,
+): Promise<{ ok: boolean; course: Course | null }> {
+  if (!courseId) return { ok: true, course: null };
+  const course = (
+    await tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
+      .limit(1)
+  )[0];
+  return course ? { ok: true, course } : { ok: false, course: null };
+}
+
+/**
+ * Insert one trip plus its dives and readiness requirements. The single source
+ * of truth for materializing a trip so a one-off and every instance of a series
+ * share identical dive and requirement wiring — a missing requirement row is a
+ * readiness blocker, never an accidental pass, and a course session snapshots
+ * its catalog baseline against later catalog edits.
+ */
+async function insertTripInstance(
+  tx: AppTransaction,
+  params: {
+    shopId: string;
+    seriesId?: string;
+    courseId?: string;
+    course: Course | null;
+    title: string;
+    description?: string;
+    startsAt: Date;
+    endsAt: Date;
+    capacity: number;
+    plannedDives: number;
+    priceCents?: number | null;
+    drafts: ReturnType<typeof normalizedDiveDrafts>;
+  },
+) {
+  const [trip] = await tx
+    .insert(trips)
+    .values({
+      shopId: params.shopId,
+      seriesId: params.seriesId,
+      courseId: params.courseId,
+      title: params.title,
+      description: params.description,
+      startsAt: params.startsAt,
+      endsAt: params.endsAt,
+      capacity: params.capacity,
+      priceCents: params.priceCents,
+      plannedDives: params.plannedDives,
+      diveSiteId: params.drafts[0]?.diveSiteId ?? null,
+    })
+    .returning();
+  if (!trip) throw new Error("insertTripInstance: insert returned no row");
+  await tx.insert(tripDives).values(params.drafts.map((draft) => ({ tripId: trip.id, ...draft })));
+  await tx.insert(tripRequirements).values({
+    tripId: trip.id,
+    shopId: params.shopId,
+    requiresWaiver: params.course?.requiresWaiver ?? true,
+    minimumCertificationLevel: params.course?.minimumCertificationLevel ?? "open_water",
+  });
+  return trip;
+}
+
 export async function createTrip(db: AppDb, input: NewTrip) {
   return db.transaction(async (tx) => {
     const plannedDives = normalizedDiveCount(input.plannedDives);
@@ -92,51 +163,104 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
     );
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
-    const course = input.courseId
-      ? (
-          await tx
-            .select()
-            .from(courses)
-            .where(
-              and(
-                eq(courses.id, input.courseId),
-                eq(courses.shopId, input.shopId),
-                eq(courses.isActive, true),
-              ),
-            )
-            .limit(1)
-        )[0]
-      : null;
-    if (input.courseId && !course) return null;
-    const primaryDiveSiteId = drafts[0]?.diveSiteId ?? null;
-    const [trip] = await tx
-      .insert(trips)
+    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
+    if (!ok) return null;
+    return insertTripInstance(tx, {
+      shopId: input.shopId,
+      courseId: input.courseId,
+      course,
+      title: input.title,
+      description: input.description,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      capacity: input.capacity,
+      plannedDives,
+      priceCents: input.priceCents,
+      drafts,
+    });
+  });
+}
+
+export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt"> & {
+  frequency: TripRecurrenceFrequency;
+  intervalWeeks: number;
+  /** Pre-computed occurrences (shop-local wall time already converted to UTC). */
+  occurrences: Array<{ startsAt: Date; endsAt: Date }>;
+};
+
+/**
+ * Materialize a recurring series: one `trip_series` row plus one fully-formed,
+ * independent trip per occurrence, all in a single transaction. Every instance
+ * starts identical; staff edit or cancel any single date afterward without
+ * touching its siblings (20260719-recurring-trip-series). Returns null on the
+ * same validation failures as `createTrip`, or when no occurrences are supplied.
+ */
+export async function createTripSeries(db: AppDb, input: NewTripSeries) {
+  return db.transaction(async (tx) => {
+    if (input.occurrences.length === 0) return null;
+    const plannedDives = normalizedDiveCount(input.plannedDives);
+    if (!plannedDives) return null;
+    const drafts = normalizedDiveDrafts(
+      plannedDives,
+      input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
+    );
+    if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
+    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
+    if (!ok) return null;
+
+    const [series] = await tx
+      .insert(tripSeries)
       .values({
         shopId: input.shopId,
-        courseId: input.courseId,
         title: input.title,
-        description: input.description,
-        startsAt: input.startsAt,
-        endsAt: input.endsAt,
-        capacity: input.capacity,
-        priceCents: input.priceCents,
-        plannedDives,
-        diveSiteId: primaryDiveSiteId,
+        frequency: input.frequency,
+        intervalWeeks: input.intervalWeeks,
+        occurrenceCount: input.occurrences.length,
       })
       .returning();
-    if (!trip) throw new Error("createTrip: insert returned no row");
-    await tx.insert(tripDives).values(drafts.map((draft) => ({ tripId: trip.id, ...draft })));
-    // A missing requirement configuration is a readiness blocker, never an
-    // accidental pass. Course sessions snapshot their catalog baseline so a
-    // later catalog edit cannot silently weaken an already-published session.
-    await tx.insert(tripRequirements).values({
-      tripId: trip.id,
-      shopId: input.shopId,
-      requiresWaiver: course?.requiresWaiver ?? true,
-      minimumCertificationLevel: course?.minimumCertificationLevel ?? "open_water",
-    });
-    return trip;
+    if (!series) throw new Error("createTripSeries: insert returned no row");
+
+    const created = [];
+    for (const occurrence of input.occurrences) {
+      created.push(
+        await insertTripInstance(tx, {
+          shopId: input.shopId,
+          seriesId: series.id,
+          courseId: input.courseId,
+          course,
+          title: input.title,
+          description: input.description,
+          startsAt: occurrence.startsAt,
+          endsAt: occurrence.endsAt,
+          capacity: input.capacity,
+          plannedDives,
+          priceCents: input.priceCents,
+          drafts,
+        }),
+      );
+    }
+    return { series, trips: created };
   });
+}
+
+/**
+ * The series a trip belongs to plus how many of its instances are still on the
+ * schedule — provenance for the trip page's "part of a series" note. Null when
+ * the trip is a one-off.
+ */
+export async function getTripSeriesSummary(db: AppDb, shopId: string, tripId: string) {
+  const [row] = await db
+    .select({ series: tripSeries })
+    .from(trips)
+    .innerJoin(tripSeries, eq(tripSeries.id, trips.seriesId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .limit(1);
+  if (!row) return null;
+  const counts = await db
+    .select({ scheduled: count(trips.id) })
+    .from(trips)
+    .where(and(eq(trips.seriesId, row.series.id), eq(trips.status, "scheduled")));
+  return { ...row.series, scheduledCount: counts[0]?.scheduled ?? 0 };
 }
 
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */

@@ -7,9 +7,14 @@ import { TripDiveFields } from "@/components/TripDiveFields";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
-import { createTrip, getShopById } from "@/db/queries";
+import { createTrip, createTripSeries, getShopById } from "@/db/queries";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
+import {
+  MAX_SERIES_OCCURRENCES,
+  MIN_SERIES_OCCURRENCES,
+  weeklyOccurrences,
+} from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -34,6 +39,15 @@ const formSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
   ),
+  // "0" means it does not repeat; any other value is the number of weeks between instances.
+  repeatIntervalWeeks: z.preprocess(
+    (value) => (value === "" || value === undefined ? "0" : value),
+    z.coerce.number().int().min(0).max(8),
+  ),
+  repeatCount: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(MIN_SERIES_OCCURRENCES).max(MAX_SERIES_OCCURRENCES).optional(),
+  ),
 });
 
 async function scheduleTrip(formData: FormData) {
@@ -52,6 +66,8 @@ async function scheduleTrip(formData: FormData) {
     plannedDives,
     priceDollars,
     courseId,
+    repeatIntervalWeeks,
+    repeatCount,
   } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
@@ -62,10 +78,49 @@ async function scheduleTrip(formData: FormData) {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
 
+  // The times must be a coherent single day before we shift them across weeks;
+  // every occurrence inherits this same wall-clock start/end.
   const startsAt = wallTimeToUtc(startWall, shop.timezone);
   const endsAt = wallTimeToUtc(endWall, shop.timezone);
   if (endsAt <= startsAt)
     redirect(`/shop/${session.user.shopSlug}/trips/new?error=end-before-start`);
+
+  const dives = tripDiveDraftsFromForm(formData, plannedDives);
+  const priceCents = priceDollars === undefined ? null : Math.round(priceDollars * 100);
+  const shopHref = `/shop/${session.user.shopSlug}`;
+
+  if (repeatIntervalWeeks > 0) {
+    const occurrenceWalls = weeklyOccurrences(
+      { start: startWall, end: endWall },
+      {
+        frequency: "weekly",
+        intervalWeeks: repeatIntervalWeeks,
+        occurrenceCount: repeatCount ?? 8,
+      },
+    );
+    if (!occurrenceWalls) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
+    const series = await createTripSeries(db, {
+      shopId: shop.id,
+      courseId,
+      title,
+      description: description || undefined,
+      capacity,
+      plannedDives,
+      dives,
+      priceCents,
+      frequency: "weekly",
+      intervalWeeks: repeatIntervalWeeks,
+      occurrences: occurrenceWalls.map((occurrence) => ({
+        startsAt: wallTimeToUtc(occurrence.start, shop.timezone),
+        endsAt: wallTimeToUtc(occurrence.end, shop.timezone),
+      })),
+    });
+    if (!series) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
+    revalidateAndRedirect(
+      shopHref,
+      `${shopHref}?created=${encodeURIComponent(title)}&series=${series.trips.length}`,
+    );
+  }
 
   const created = await createTrip(db, {
     shopId: shop.id,
@@ -76,14 +131,11 @@ async function scheduleTrip(formData: FormData) {
     endsAt,
     capacity,
     plannedDives,
-    dives: tripDiveDraftsFromForm(formData, plannedDives),
-    priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
+    dives,
+    priceCents,
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
-  revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}`,
-    `/shop/${session.user.shopSlug}?created=${encodeURIComponent(title)}`,
-  );
+  revalidateAndRedirect(shopHref, `${shopHref}?created=${encodeURIComponent(title)}`);
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -217,6 +269,38 @@ export default async function NewTripPage({
             Pre-fills the trip fee when staff invoice a diver from this trip's roster.
           </span>
         </label>
+        <fieldset className="rounded-lg border border-border bg-surface p-5">
+          <legend className="px-1 text-sm font-medium">Repeat</legend>
+          <p className="text-sm text-muted">
+            Put the same trip on the board for several weeks at once. Each date is created as its
+            own trip — book, crew, and edit them one at a time.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              How often
+              <select name="repeatIntervalWeeks" defaultValue="0" className={inputClass}>
+                <option value="0">Doesn't repeat</option>
+                <option value="1">Every week</option>
+                <option value="2">Every 2 weeks</option>
+                <option value="4">Every 4 weeks</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Number of trips
+              <input
+                name="repeatCount"
+                type="number"
+                min={MIN_SERIES_OCCURRENCES}
+                max={MAX_SERIES_OCCURRENCES}
+                defaultValue={8}
+                className={`${inputClass} tabular-nums`}
+              />
+              <span className="mt-1 text-sm font-normal text-muted">
+                Up to {MAX_SERIES_OCCURRENCES}, counting the first. Ignored when it doesn't repeat.
+              </span>
+            </label>
+          </div>
+        </fieldset>
         <div className="mt-2 flex items-center gap-3">
           <button
             type="submit"
