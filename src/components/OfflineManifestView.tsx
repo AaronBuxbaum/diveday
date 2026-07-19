@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import {
   type RollCallCheckpoint,
   rollCallCheckpointLabel,
@@ -29,6 +30,7 @@ export function OfflineManifestView() {
   const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
   const [message, setMessage] = useState("Opening encrypted device copy…");
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
+  const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(
     () =>
       typeof window === "undefined"
@@ -79,7 +81,7 @@ export function OfflineManifestView() {
 
   if (!envelope) {
     return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           Offline manifest
         </p>
@@ -103,15 +105,16 @@ export function OfflineManifestView() {
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
+  const rollCallComplete = manifest.summary.totalDivers > 0 && awaiting === 0;
 
-  async function record(bookingId: string, status: "boarded" | "not_boarded") {
+  async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     setBusyBooking(bookingId);
     try {
       const next = await appendOfflineRollCall(tripId, {
         bookingId,
         checkpoint,
         status,
-        note: null,
+        note: note.trim() || null,
       });
       setEnvelope(next);
       setMessage("Saved on this device · waiting to sync.");
@@ -138,7 +141,13 @@ export function OfflineManifestView() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+      <a
+        href="#offline-roll-call"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+      >
+        Skip to offline roll call
+      </a>
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -150,9 +159,20 @@ export function OfflineManifestView() {
               Saved {dateTime.format(new Date(envelope.snapshot.savedAt))}
             </p>
           </div>
-          <span className="rounded-full bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
-            Device copy · {freshness}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ConnectivityStatus />
+            <span
+              className={
+                freshness === "current"
+                  ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
+                  : freshness === "aging"
+                    ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
+                    : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
+              }
+            >
+              {freshness} device snapshot
+            </span>
+          </div>
         </div>
         <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
           {FRESHNESS_COPY[freshness]}. Boarding uses readiness as saved; live readiness is checked
@@ -183,7 +203,13 @@ export function OfflineManifestView() {
         ))}
       </nav>
 
-      <section className="mt-4 grid grid-cols-3 gap-3">
+      <section
+        className={
+          rollCallComplete
+            ? "rise-in mt-4 grid grid-cols-3 gap-3 rounded-2xl border border-accent/50 bg-accent/10 p-3"
+            : "mt-4 grid grid-cols-3 gap-3"
+        }
+      >
         {[
           ["Divers", manifest.summary.totalDivers],
           ["Boarded", boarded],
@@ -197,9 +223,21 @@ export function OfflineManifestView() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-xl font-semibold">{rollCallCheckpointLabel(checkpoint)} roll call</h2>
-        <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
-          {manifest.divers.map((diver) => {
+        <h2 className="text-xl font-semibold">
+          {rollCallComplete
+            ? "Roll call complete ✦"
+            : `${rollCallCheckpointLabel(checkpoint)} roll call`}
+        </h2>
+        {rollCallComplete ? (
+          <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
+            Everyone has an explicit result for this checkpoint.
+          </p>
+        ) : null}
+        <ul
+          id="offline-roll-call"
+          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface"
+        >
+          {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(
               envelope.snapshot,
               envelope.events,
@@ -208,10 +246,20 @@ export function OfflineManifestView() {
             );
             const ready = diver.readiness.status === "ready";
             return (
-              <li key={diver.bookingId} className="p-4">
+              <li
+                key={diver.bookingId}
+                className={
+                  ready
+                    ? "border-l-4 border-success p-4 sm:p-5"
+                    : "border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
+                }
+              >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
                       <span
                         className={
@@ -231,10 +279,23 @@ export function OfflineManifestView() {
                         {state?.pending ? " · pending sync" : ""}
                       </span>
                     </div>
-                    <p className="mt-2 text-base text-muted">
-                      Emergency contact: {diver.emergencyContactName ?? "not on file"}
-                      {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
-                    </p>
+                    <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
+                      <p>
+                        <span className="font-bold">Emergency contact</span>
+                        <span className="mt-0.5 block text-muted">
+                          {diver.emergencyContactName ?? "Not on file"}
+                          {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-bold">Gear</span>
+                        <span className="mt-0.5 block text-muted">
+                          {diver.gear.length > 0
+                            ? diver.gear.map((item) => item.label).join(", ")
+                            : "None assigned"}
+                        </span>
+                      </p>
+                    </div>
                     {!ready ? (
                       <ul className="mt-2 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
@@ -242,26 +303,61 @@ export function OfflineManifestView() {
                         ))}
                       </ul>
                     ) : null}
+                    <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-primary">
+                        Add a note to this roll-call record
+                      </summary>
+                      <div className="mt-2">
+                        <label
+                          htmlFor={`offline-roll-call-note-${diver.bookingId}`}
+                          className="text-sm font-semibold"
+                        >
+                          Optional note
+                        </label>
+                        <input
+                          id={`offline-roll-call-note-${diver.bookingId}`}
+                          maxLength={300}
+                          value={noteByBooking[diver.bookingId] ?? ""}
+                          onChange={(event) =>
+                            setNoteByBooking((current) => ({
+                              ...current,
+                              [diver.bookingId]: event.target.value,
+                            }))
+                          }
+                          placeholder="Late to the boat, medical question, gear issue…"
+                          className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                        />
+                        <p className="mt-1 text-xs text-muted">
+                          This stays encrypted with the pending event.
+                        </p>
+                      </div>
+                    </details>
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                     {ready && state?.state !== "boarded" ? (
                       <button
                         type="button"
                         disabled={busyBooking === diver.bookingId}
-                        onClick={() => record(diver.bookingId, "boarded")}
-                        className="min-h-14 rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground disabled:opacity-60"
+                        onClick={() =>
+                          record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
+                        }
+                        aria-busy={busyBooking === diver.bookingId}
+                        className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
-                        Mark boarded
+                        {busyBooking === diver.bookingId ? "Saving…" : "Mark boarded"}
                       </button>
                     ) : null}
                     {state?.state !== "not_boarded" ? (
                       <button
                         type="button"
                         disabled={busyBooking === diver.bookingId}
-                        onClick={() => record(diver.bookingId, "not_boarded")}
-                        className="min-h-14 rounded-lg border border-border-strong px-5 text-base font-semibold disabled:opacity-60"
+                        onClick={() =>
+                          record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
+                        }
+                        aria-busy={busyBooking === diver.bookingId}
+                        className="min-h-14 w-full touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
-                        Mark not boarded
+                        {busyBooking === diver.bookingId ? "Saving…" : "Mark not boarded"}
                       </button>
                     ) : null}
                   </div>

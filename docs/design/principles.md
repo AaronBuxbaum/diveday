@@ -14,7 +14,9 @@ If an interaction needs a spinner for more than a beat, redesign the interaction
 Primary flows work one-handed on a phone, in glare, with wet fingers: touch targets ≥ 44 px,
 critical text ≥ 16 px, strong contrast (AA minimum, AAA for manifest/roll-call surfaces),
 forgiving inputs (autocomplete, sensible defaults, no precision gestures). Roll call gets the
-most extreme version of this.
+most extreme version of this. Live and offline boat surfaces use an explicit light `boat-mode`
+with visible connectivity/freshness states, a sticky progress cue, and an accessible skip link so
+device dark mode or deck glare cannot hide an operational state.
 
 ## 3. Calm surfaces, earned moments of joy
 

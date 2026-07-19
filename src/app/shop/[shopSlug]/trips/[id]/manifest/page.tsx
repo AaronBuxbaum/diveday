@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall } from "@/db/manifests";
 import { getShopById } from "@/db/queries";
@@ -66,6 +67,7 @@ export default async function TripManifestPage({
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
+  const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
   const banner = notice ? BANNERS[notice] : undefined;
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
@@ -90,7 +92,13 @@ export default async function TripManifestPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
+    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
+      <a
+        href="#roll-call-list"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+      >
+        Skip to roll call
+      </a>
       <FlashParams params={["notice"]} />
       <div className="print:hidden">
         <Link
@@ -178,6 +186,60 @@ export default async function TripManifestPage({
         ))}
       </nav>
 
+      <section
+        aria-labelledby="roll-call-progress-heading"
+        className={
+          rollCallComplete
+            ? "boat-progress-panel rise-in sticky top-20 z-10 mt-4 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur print:hidden"
+            : "boat-progress-panel sticky top-20 z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
+        }
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
+              Active checkpoint
+            </p>
+            <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
+              {rollCallComplete ? "Roll call complete ✦" : rollCallCheckpointLabel(checkpoint)}
+            </h2>
+          </div>
+          <p className="text-base font-bold tabular-nums">
+            {manifest.summary.totalDivers - manifest.summary.awaiting} of{" "}
+            {manifest.summary.totalDivers} recorded
+          </p>
+        </div>
+        <div
+          className="mt-3 h-3 overflow-hidden rounded-full bg-surface-sunken"
+          role="progressbar"
+          aria-label="Roll-call progress"
+          aria-valuemin={0}
+          aria-valuemax={manifest.summary.totalDivers}
+          aria-valuenow={manifest.summary.totalDivers - manifest.summary.awaiting}
+        >
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-200"
+            style={{
+              width: `${
+                manifest.summary.totalDivers === 0
+                  ? 0
+                  : (
+                      (manifest.summary.totalDivers - manifest.summary.awaiting) /
+                        manifest.summary.totalDivers
+                    ) * 100
+              }%`,
+            }}
+          />
+        </div>
+        <p className="mt-2 text-sm font-semibold text-muted" aria-live="polite">
+          {manifest.summary.awaiting === 0
+            ? "Everyone has an explicit roll-call result. You’re ready for the next check."
+            : String(manifest.summary.awaiting) +
+              " " +
+              (manifest.summary.awaiting === 1 ? "diver is" : "divers are") +
+              " still awaiting a result."}
+        </p>
+      </section>
+
       {manifest.summary.blocked > 0 ? (
         <section className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
           <h2 className="font-semibold text-warning">Readiness needs attention</h2>
@@ -207,7 +269,7 @@ export default async function TripManifestPage({
         )}
       </section>
 
-      <section className="mt-9">
+      <section id="roll-call-list" className="mt-9">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
@@ -221,14 +283,24 @@ export default async function TripManifestPage({
           <p className="text-sm text-muted">Shop time: {shop.timezone}</p>
         </div>
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-          {manifest.divers.map((diver) => {
+          {manifest.divers.map((diver, index) => {
             const ready = diver.readiness.status === "ready";
             const boarded = diver.rollCall?.state === "boarded";
             return (
-              <li key={diver.bookingId} className="px-4 py-5">
+              <li
+                key={diver.bookingId}
+                className={
+                  ready
+                    ? "border-l-4 border-success px-4 py-5 sm:px-5"
+                    : "border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5"
+                }
+              >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
                       <span
                         className={
@@ -243,16 +315,23 @@ export default async function TripManifestPage({
                         {rollCallLabel(diver.rollCall)}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-muted">
-                      Emergency contact: {diver.emergencyContactName ?? "not on file"}
-                      {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      Gear:{" "}
-                      {diver.gear.length > 0
-                        ? diver.gear.map((item) => item.label).join(", ")
-                        : "none assigned"}
-                    </p>
+                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      <p>
+                        <span className="font-bold">Emergency contact</span>
+                        <span className="mt-0.5 block text-muted">
+                          {diver.emergencyContactName ?? "Not on file"}
+                          {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-bold">Gear</span>
+                        <span className="mt-0.5 block text-muted">
+                          {diver.gear.length > 0
+                            ? diver.gear.map((item) => item.label).join(", ")
+                            : "None assigned"}
+                        </span>
+                      </p>
+                    </div>
                     {!ready ? (
                       <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
@@ -260,6 +339,30 @@ export default async function TripManifestPage({
                         ))}
                       </ul>
                     ) : null}
+                    <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3 print:hidden">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-primary">
+                        Add a note to this roll-call record
+                      </summary>
+                      <div className="mt-2">
+                        <label
+                          htmlFor={`roll-call-note-${diver.bookingId}`}
+                          className="text-sm font-semibold"
+                        >
+                          Optional note
+                        </label>
+                        <input
+                          id={`roll-call-note-${diver.bookingId}`}
+                          name="note"
+                          form={`not-boarded-${diver.bookingId}`}
+                          maxLength={300}
+                          placeholder="Late to the boat, medical question, gear issue…"
+                          className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                        />
+                        <p className="mt-1 text-xs text-muted">
+                          This is saved with the staff audit trail.
+                        </p>
+                      </div>
+                    </details>
                     {diver.rollCall ? (
                       <p className="mt-3 text-sm text-muted">
                         {rollCallLabel(diver.rollCall)}{" "}
@@ -269,29 +372,29 @@ export default async function TripManifestPage({
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
+                  <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap">
                     {ready && !boarded ? (
                       <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="boarded" />
-                        <button
-                          type="submit"
-                          className="min-h-14 rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground hover:bg-primary-hover"
+                        <SubmitButton
+                          pendingLabel="Saving…"
+                          className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
                           Mark boarded
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                     {!boarded ? (
-                      <form action={rollCallAction}>
+                      <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="not_boarded" />
-                        <button
-                          type="submit"
-                          className="min-h-14 rounded-lg border border-border px-5 text-base font-semibold hover:bg-surface-sunken"
+                        <SubmitButton
+                          pendingLabel="Saving…"
+                          className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
                           Mark not boarded
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                   </div>
