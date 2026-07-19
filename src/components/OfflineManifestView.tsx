@@ -212,7 +212,7 @@ export function OfflineManifestView() {
       <section className="mt-8">
         <h2 className="text-xl font-semibold">{rollCallCheckpointLabel(checkpoint)} roll call</h2>
         <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
-          {manifest.divers.map((diver) => {
+          {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(
               envelope.snapshot,
               envelope.events,
@@ -221,10 +221,20 @@ export function OfflineManifestView() {
             );
             const ready = diver.readiness.status === "ready";
             return (
-              <li key={diver.bookingId} className="p-4">
+              <li
+                key={diver.bookingId}
+                className={
+                  ready
+                    ? "border-l-4 border-success p-4 sm:p-5"
+                    : "border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
+                }
+              >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
                       <span
                         className={
@@ -244,10 +254,23 @@ export function OfflineManifestView() {
                         {state?.pending ? " · pending sync" : ""}
                       </span>
                     </div>
-                    <p className="mt-2 text-base text-muted">
-                      Emergency contact: {diver.emergencyContactName ?? "not on file"}
-                      {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
-                    </p>
+                    <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
+                      <p>
+                        <span className="font-bold">Emergency contact</span>
+                        <span className="mt-0.5 block text-muted">
+                          {diver.emergencyContactName ?? "Not on file"}
+                          {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-bold">Gear</span>
+                        <span className="mt-0.5 block text-muted">
+                          {diver.gear.length > 0
+                            ? diver.gear.map((item) => item.label).join(", ")
+                            : "None assigned"}
+                        </span>
+                      </p>
+                    </div>
                     {!ready ? (
                       <ul className="mt-2 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
