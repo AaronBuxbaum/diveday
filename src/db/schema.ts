@@ -468,9 +468,7 @@ export const shopStripeAccounts = pgTable(
     disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId),
-  ],
+  (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
 
 export const orderStatus = pgEnum("order_status", ["open", "paid", "void", "uncollectible"]);
