@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
+import { listOrdersForPerson } from "./orders";
+import { listPersonBookingPayments } from "./payments";
 import {
   bookings,
   certifications,
@@ -181,7 +183,16 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     .limit(1);
   if (!personRow) return null;
 
-  const [levelCards, specialtyCards, profile, bookingRows, gearRows, requests] = await Promise.all([
+  const [
+    levelCards,
+    specialtyCards,
+    profile,
+    bookingRows,
+    gearRows,
+    requests,
+    personOrders,
+    personBookingPayments,
+  ] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -224,6 +235,8 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(and(eq(rentalGearRequests.shopId, shopId), eq(bookings.personId, personId)))
       .orderBy(desc(rentalGearRequests.updatedAt)),
+    listOrdersForPerson(db, shopId, personId),
+    listPersonBookingPayments(db, shopId, personId),
   ]);
 
   return {
@@ -234,5 +247,7 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     bookings: bookingRows,
     gearAssignments: gearRows,
     gearRequests: requests,
+    orders: personOrders,
+    bookingPayments: personBookingPayments,
   };
 }

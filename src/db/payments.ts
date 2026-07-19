@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "./client";
 import type { PaymentStatus } from "./schema";
-import { bookingPayments, bookings } from "./schema";
+import { bookingPayments, bookings, trips } from "./schema";
 
 export type SetPaymentInput = {
   shopId: string;
@@ -64,4 +64,21 @@ export async function paymentsByBooking(db: DbExecutor, shopId: string, bookingI
     .where(and(eq(bookingPayments.shopId, shopId), inArray(bookingPayments.bookingId, bookingIds)));
   for (const row of rows) map.set(row.bookingId, row.status);
   return map;
+}
+
+/** Current booking payment records for one diver, with the trip that owns each booking. */
+export async function listPersonBookingPayments(db: DbExecutor, shopId: string, personId: string) {
+  return db
+    .select({ payment: bookingPayments, booking: bookings, trip: trips })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, personId),
+      ),
+    )
+    .orderBy(trips.startsAt);
 }

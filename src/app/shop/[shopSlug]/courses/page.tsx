@@ -99,7 +99,6 @@ export default async function CoursesPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        backHref={`/shop/${shopSlug}`}
         eyebrow={shop.name}
         title="Courses"
         description="Define a course once, then schedule instructor-led sessions on the same safe booking spine as every charter."

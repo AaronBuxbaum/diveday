@@ -34,6 +34,7 @@ import {
   shops,
   specialtyCertifications,
   tripAssignments,
+  tripDives,
   tripRequirements,
   trips,
   userAccounts,
@@ -642,6 +643,23 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     ])
     .returning();
 
+  const tripDiveRows = tripRows.flatMap((trip) => {
+    const isReef = trip.title === "Two-Tank Reef — Molasses & French";
+    return Array.from({ length: trip.plannedDives }, (_, index) => ({
+      tripId: trip.id,
+      diveNumber: index + 1,
+      title: isReef && index === 0 ? "Molasses Reef" : null,
+      diveSiteId: isReef && index === 0 ? molasses?.id : index === 0 ? trip.diveSiteId : null,
+      description:
+        isReef && index === 0
+          ? "A relaxed sweep along the outer reef. Look for rays in the sand channels."
+          : isReef && index === 1
+            ? "French Reef is the second tank; the crew confirms the exact mooring at the dock."
+            : null,
+    }));
+  });
+  if (tripDiveRows.length > 0) await db.insert(tripDives).values(tripDiveRows);
+
   await db.insert(tripRequirements).values(
     tripRows.map((trip) => {
       // The night dive has no site of its own, so its Night gate is trip-level;
@@ -825,6 +843,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
+    await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(trips).where(eq(trips.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));

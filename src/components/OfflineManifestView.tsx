@@ -248,10 +248,11 @@ export function OfflineManifestView() {
             return (
               <li
                 key={diver.bookingId}
+                id={`offline-roll-call-${diver.bookingId}`}
                 className={
                   ready
-                    ? "border-l-4 border-success p-4 sm:p-5"
-                    : "border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
+                    ? "scroll-mt-24 border-l-4 border-success p-4 sm:p-5"
+                    : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
                 }
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -334,7 +335,7 @@ export function OfflineManifestView() {
                     </details>
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                    {ready && state?.state !== "boarded" ? (
+                    {ready ? (
                       <button
                         type="button"
                         disabled={busyBooking === diver.bookingId}
@@ -344,22 +345,28 @@ export function OfflineManifestView() {
                         aria-busy={busyBooking === diver.bookingId}
                         className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
-                        {busyBooking === diver.bookingId ? "Saving…" : "Mark boarded"}
+                        {busyBooking === diver.bookingId
+                          ? "Saving…"
+                          : state?.state === "boarded"
+                            ? "Boarded ✓"
+                            : "Mark boarded"}
                       </button>
                     ) : null}
-                    {state?.state !== "not_boarded" ? (
-                      <button
-                        type="button"
-                        disabled={busyBooking === diver.bookingId}
-                        onClick={() =>
-                          record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
-                        }
-                        aria-busy={busyBooking === diver.bookingId}
-                        className="min-h-14 w-full touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                      >
-                        {busyBooking === diver.bookingId ? "Saving…" : "Mark not boarded"}
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      disabled={busyBooking === diver.bookingId}
+                      onClick={() =>
+                        record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
+                      }
+                      aria-busy={busyBooking === diver.bookingId}
+                      className="min-h-14 w-full touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                    >
+                      {busyBooking === diver.bookingId
+                        ? "Saving…"
+                        : state?.state === "not_boarded"
+                          ? "Not boarded ✓"
+                          : "Mark not boarded"}
+                    </button>
                   </div>
                 </div>
               </li>
