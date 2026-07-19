@@ -92,7 +92,7 @@ export default async function PaymentsSettingsPage({
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
       <FlashParams params={["notice"]} />
-      <div className="mb-8 flex items-center justify-between gap-4">
+      <div className="mb-8">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">Shop</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Shop settings</h1>
@@ -101,12 +101,6 @@ export default async function PaymentsSettingsPage({
             receives invoices and payments.
           </p>
         </div>
-        <Link
-          href={`/shop/${shopSlug}`}
-          className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-        >
-          Back
-        </Link>
       </div>
 
       {banner ? (

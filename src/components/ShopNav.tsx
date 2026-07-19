@@ -30,7 +30,7 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
           </span>{" "}
           New trip
         </Link>
-        <form action={signOutAction} className="shrink-0">
+        <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
           <button
             type="submit"
             aria-label="Sign out"

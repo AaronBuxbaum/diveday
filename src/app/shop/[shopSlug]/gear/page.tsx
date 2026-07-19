@@ -280,19 +280,22 @@ export default async function GearPage({
         </div>
         <ul className="mt-4 grid gap-3 lg:grid-cols-2">
           {items.map((item) => (
-            <li key={item.id} className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span>
-                  <strong>{item.label}</strong>{" "}
-                  <span className="text-sm text-muted">
+            <li
+              key={item.id}
+              className="min-w-0 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
+            >
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <strong className="block break-words">{item.label}</strong>
+                  <span className="mt-1 block text-sm text-muted">
                     {GEAR_TYPES[item.type]}
                     {item.size ? ` · ${item.size}` : ""}
                     {item.serviceDueAt
                       ? ` · service due ${formatShortDate(item.serviceDueAt, "en-US", shop.timezone)}`
                       : ""}
                   </span>
-                </span>
-                <div className="relative flex items-center gap-2">
+                </div>
+                <div className="relative flex min-w-0 flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                   <span
                     className={`rounded-full px-3 py-1 text-sm font-medium ${item.state === "available" ? "bg-success/10 text-success" : item.state === "service_hold" ? "bg-warning/10 text-warning" : item.state === "retired" ? "bg-surface-sunken text-muted" : "bg-primary/10 text-primary"}`}
                   >
@@ -306,7 +309,7 @@ export default async function GearPage({
                         </summary>
                         <form
                           action={updateAction}
-                          className="absolute right-0 z-10 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-3 rounded-2xl border border-border bg-surface p-4 shadow-xl"
+                          className="mt-2 grid w-full gap-3 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:absolute sm:right-0 sm:z-10 sm:w-80"
                         >
                           <input type="hidden" name="id" value={item.id} />
                           <label className="flex flex-col gap-1 text-sm font-medium">
