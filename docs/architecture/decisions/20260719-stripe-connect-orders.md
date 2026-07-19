@@ -21,7 +21,7 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
 ## Decision
 
 - **Stripe Connect, Standard accounts, via OAuth.** A shop clicks "Connect Stripe" on
-  `/shop/[shopSlug]/settings/payments`; this redirects to Stripe's OAuth authorize endpoint
+  `/shop/[shopSlug]/shop`; this redirects to Stripe's OAuth authorize endpoint
   (`https://connect.stripe.com/oauth/authorize`) and the shop signs into or creates their **own**
   Stripe account. The callback exchanges the returned code for a `stripe_user_id` and stores it in
   a new `shop_stripe_accounts` row (one per shop). Standard is the correct account type for "the
@@ -36,7 +36,7 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
   authorized the platform via OAuth, the platform's own `STRIPE_SECRET_KEY` can act on that shop's
   behalf by sending a `Stripe-Account: <stripe_user_id>` header — no per-shop secret to store.
 - **Orders are the local, provider-neutral record; Stripe Invoices are the payment surface.** A new
-  `orders` table (status `open | paid | void | uncollectible`, a customer, an optional `booking_id`,
+  `orders` table (status `open | paid | void | uncollectible | refunded`, a customer, an optional `booking_id`,
   totals, and the Stripe invoice/customer ids) plus `order_line_items` (kind, description, quantity,
   unit amount) let staff build an order from one or more charges — a trip fee, a course fee, rental
   gear, a deposit, or a free-form line — against an existing person. Creating an order calls the
@@ -63,6 +63,11 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
   added rental line is common.
 - **Orders require a connected, charges-enabled account.** Without one, order creation is blocked
   with a link back to the connect flow — never a phantom invoice that can never be paid.
+- **Refunds are initiated from the person-first payment context.** A paid order can request a full
+  Stripe refund through its invoice payment intent. The local order becomes `refunded`, and a
+  linked booking's payment gate becomes `refunded` so readiness requires payment again. A missing
+  Stripe payment intent fails visibly; it never pretends that a refund happened. The policy details
+  around partial refunds, cancellation windows, taxes, and deposits remain H-07.
 - **No platform fee is taken today.** The shop's own account is the merchant of record for its
   invoices; this ADR does not implement Stripe Connect's `application_fee_amount`. A platform
   commission is a commercial/H-07 decision, not a mechanism this ADR forecloses — add the fee

@@ -235,9 +235,10 @@ export default async function ShopPage({
             className="group rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-surface-sunken"
           >
             <p className="text-sm font-medium text-primary">Business</p>
-            <h3 className="mt-1 font-semibold group-hover:text-primary">Orders & payments</h3>
+            <h3 className="mt-1 font-semibold group-hover:text-primary">Orders</h3>
             <p className="mt-1 text-sm text-muted">
-              Invoice the right person from their trip context and track payment state.
+              Invoice the right person from their trip context and track payment state from their
+              Diver page.
             </p>
           </Link>
         </div>

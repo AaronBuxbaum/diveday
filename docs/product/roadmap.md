@@ -106,13 +106,14 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   ([`src/lib/payments`](../../src/lib/payments)) mints a pay link when configured. See
   [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md).
 - ✅ Stripe Connect + orders/invoices: a shop authorizes its own Standard Stripe account via OAuth
-  (`/shop/[shopSlug]/settings/payments`); staff build an order from line items and invoice the
-  connected account (`/shop/[shopSlug]/orders`), and a Connect webhook
+  (`/shop/[shopSlug]/shop`); staff build an order from line items and invoice the connected
+  account (`/shop/[shopSlug]/orders`), review a diver's payment history from their person page,
+  and refund paid invoice payments when needed. A Connect webhook
   (`/api/webhooks/stripe`) confirms `invoice.paid`/`voided` and account status changes back into
-  the app, cascading a paid order to its booking's payment gate. See
+  the app, cascading paid/refunded orders to their booking's payment gate. See
   [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md)
-  (the online capture/webhook confirmation this superseded from the prior entry). Tax, refunds,
-  deposits, cancellation policy, and any platform fee remain H-07.
+  (the online capture/webhook confirmation this superseded from the prior entry). Tax, deposits,
+  cancellation policy, and any platform fee remain H-07.
 
 ## M5 — Gear (core prep slice complete)
 
@@ -150,6 +151,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   the server rechecks current readiness and rejects older device events behind newer live history.
 - ✅ Per-dive checkpoints: each trip records its planned dive count and keeps before-departure and
   after-each-dive head counts independent.
+- ✅ Per-dive trip briefings: staff can publish one to four ordered dives with optional names, site
+  briefings, and diver-facing notes while keeping the boat-day details shared.
 - ⬜ Human field validation remains V-02: phone glare/wet-hand use, airplane-mode reload, extended
   outage, reconciliation conflict, and print fallback must pass before production operations. See
   [the offline ADR](../architecture/decisions/20260718-offline-manifest-snapshots.md).

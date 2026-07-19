@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import { saveRentalGearProfile } from "@/db/gear-requests";
+import { refundOrder } from "@/db/orders";
 import { getShopById } from "@/db/queries";
 import {
   createCertification,
@@ -64,6 +65,22 @@ const AGENCY_LABELS: Record<z.infer<typeof agencySchema>, string> = {
   sdi: "SDI",
   tdi: "TDI",
   other: "Other agency",
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  unpaid: "Unpaid",
+  deposit_paid: "Deposit paid",
+  paid: "Paid",
+  waived: "Waived",
+  refunded: "Refunded",
+};
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  open: "Invoice open",
+  paid: "Paid",
+  void: "Void",
+  uncollectible: "Uncollectible",
+  refunded: "Refunded",
 };
 
 async function resolveCardImage(formData: FormData) {
@@ -221,6 +238,14 @@ export default async function DiverDetailPage({
     redirect(`${base}?notice=${saved ? "profile-saved" : "invalid"}`);
   }
 
+  async function refundPaymentAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const orderId = String(formData.get("orderId") ?? "");
+    const refunded = orderId ? await refundOrder(await getDb(), staff.user.shopId, orderId) : null;
+    redirect(`${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
+  }
+
   async function deletePersonAction() {
     "use server";
     const staff = await requireStaffSession();
@@ -255,17 +280,22 @@ export default async function DiverDetailPage({
                         ? "Agency verification is not configured. Verify this card manually."
                         : notice === "duplicate"
                           ? "Another diver already uses that email in this shop."
-                          : notice === "deleted"
-                            ? "Diver removed from active shop work. Their booking and card history is preserved."
-                            : notice === "invalid"
-                              ? "Check the details and try again."
-                              : null;
+                          : notice === "refunded"
+                            ? "Payment refunded and the diver's trip payment gate was reopened."
+                            : notice === "refund-failed"
+                              ? "That payment could not be refunded. It may not be paid, or Stripe may need attention."
+                              : notice === "deleted"
+                                ? "Diver removed from active shop work. Their booking and card history is preserved."
+                                : notice === "invalid"
+                                  ? "Check the details and try again."
+                                  : null;
   const errorNotice = [
     "image",
     "agency-not-found",
     "agency-mismatch",
     "agency-unavailable",
     "duplicate",
+    "refund-failed",
     "invalid",
   ].includes(notice ?? "");
   const profile = diver.gearProfile;
@@ -738,6 +768,133 @@ export default async function DiverDetailPage({
             Save rental fit
           </button>
         </form>
+      </section>
+
+      <section className="mt-10 border-t border-border pt-8" aria-labelledby="payments-heading">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="payments-heading" className="text-lg font-semibold">
+              Payments
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Payment status, invoices, and refunds stay with the diver so the next action is easy
+              to find.
+            </p>
+          </div>
+          <Link
+            href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
+            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
+          >
+            New payment
+          </Link>
+        </div>
+
+        {diver.bookings.length === 0 && diver.orders.length === 0 ? (
+          <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
+            No trip payments yet.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+            {diver.bookings.map(({ booking, trip }) => {
+              const bookingPayment = diver.bookingPayments.find(
+                (row) => row.booking.id === booking.id,
+              );
+              const orderRow = diver.orders.find((row) => row.order.bookingId === booking.id);
+              return (
+                <li
+                  key={booking.id}
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{trip.title}</p>
+                    <p className="text-sm text-muted">
+                      {formatShortDate(trip.startsAt, "en-US", shop.timezone)} · booking payment
+                    </p>
+                    <p className="mt-1 text-sm text-muted">
+                      {bookingPayment
+                        ? `Payment gate: ${PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ?? bookingPayment.payment.status}`
+                        : "Payment gate: not recorded"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {orderRow ? (
+                      <Link
+                        href={`/shop/${shopSlug}/orders/${orderRow.order.id}`}
+                        className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-surface-sunken"
+                      >
+                        Open payment
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/shop/${shopSlug}/orders/new?personId=${personId}&bookingId=${booking.id}`}
+                        className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-surface-sunken"
+                      >
+                        Create invoice
+                      </Link>
+                    )}
+                    {orderRow?.order.status === "paid" ? (
+                      <form action={refundPaymentAction}>
+                        <input type="hidden" name="orderId" value={orderRow.order.id} />
+                        <button
+                          type="submit"
+                          className="min-h-11 rounded-lg border border-danger/40 px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10"
+                        >
+                          Refund
+                        </button>
+                      </form>
+                    ) : null}
+                    <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
+                      {orderRow
+                        ? (ORDER_STATUS_LABELS[orderRow.order.status] ?? orderRow.order.status)
+                        : bookingPayment
+                          ? (PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ??
+                            bookingPayment.payment.status)
+                          : "No invoice"}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+            {diver.orders
+              .filter(({ order }) => order.bookingId === null)
+              .map(({ order }) => (
+                <li
+                  key={order.id}
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{order.description || "Shop payment"}</p>
+                    <p className="text-sm text-muted">
+                      ${(order.totalCents / 100).toFixed(2)} {order.currency.toUpperCase()} · no
+                      trip attached
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/shop/${shopSlug}/orders/${order.id}`}
+                      className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-surface-sunken"
+                    >
+                      Open payment
+                    </Link>
+                    {order.status === "paid" ? (
+                      <form action={refundPaymentAction}>
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <button
+                          type="submit"
+                          className="min-h-11 rounded-lg border border-danger/40 px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10"
+                        >
+                          Refund
+                        </button>
+                      </form>
+                    ) : null}
+                    <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
+                      {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                    </span>
+                  </div>
+                </li>
+              ))}
+          </ul>
+        )}
       </section>
 
       <section className="mt-10 border-t border-border pt-8" aria-labelledby="history-heading">

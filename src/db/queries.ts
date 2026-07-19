@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import {
   bookings,
   courses,
@@ -9,6 +9,7 @@ import {
   personRoles,
   shops,
   tripAssignments,
+  tripDives,
   tripRequirements,
   trips,
   tripWaitlistEntries,
@@ -24,11 +25,73 @@ export type NewTrip = {
   endsAt: Date;
   capacity: number;
   plannedDives?: number;
+  dives?: TripDiveDraft[];
   priceCents?: number | null;
 };
 
+export type TripDiveDraft = {
+  title?: string | null;
+  diveSiteId?: string | null;
+  description?: string | null;
+};
+
+const MAX_TRIP_DIVES = 4;
+
+function normalizedDiveCount(plannedDives?: number) {
+  const count = plannedDives ?? 2;
+  return Number.isInteger(count) && count >= 1 && count <= MAX_TRIP_DIVES ? count : null;
+}
+
+function normalizedDiveDrafts(plannedDives: number, drafts: TripDiveDraft[] | undefined) {
+  return Array.from({ length: plannedDives }, (_, index) => {
+    const draft = drafts?.[index];
+    return {
+      diveNumber: index + 1,
+      title: draft?.title?.trim() || null,
+      diveSiteId: draft?.diveSiteId || null,
+      description: draft?.description?.trim() || null,
+    };
+  });
+}
+
+async function validateDiveSites(
+  db: DbExecutor,
+  shopId: string,
+  drafts: Array<{ diveSiteId: string | null }>,
+) {
+  const siteIds = drafts.map((draft) => draft.diveSiteId).filter((id): id is string => Boolean(id));
+  if (siteIds.length === 0) return true;
+  const sites = await db
+    .select({ id: diveSites.id })
+    .from(diveSites)
+    .where(
+      and(
+        eq(diveSites.shopId, shopId),
+        inArray(diveSites.id, siteIds),
+        isNull(diveSites.deletedAt),
+      ),
+    );
+  return sites.length === new Set(siteIds).size;
+}
+
+async function replaceTripDives(
+  db: DbExecutor,
+  tripId: string,
+  drafts: ReturnType<typeof normalizedDiveDrafts>,
+) {
+  await db.delete(tripDives).where(eq(tripDives.tripId, tripId));
+  await db.insert(tripDives).values(drafts.map((draft) => ({ tripId, ...draft })));
+}
+
 export async function createTrip(db: AppDb, input: NewTrip) {
   return db.transaction(async (tx) => {
+    const plannedDives = normalizedDiveCount(input.plannedDives);
+    if (!plannedDives) return null;
+    const drafts = normalizedDiveDrafts(
+      plannedDives,
+      input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
+    );
+    if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
     const course = input.courseId
       ? (
           await tx
@@ -45,24 +108,24 @@ export async function createTrip(db: AppDb, input: NewTrip) {
         )[0]
       : null;
     if (input.courseId && !course) return null;
-    const site = input.diveSiteId
-      ? (
-          await tx
-            .select({ id: diveSites.id })
-            .from(diveSites)
-            .where(
-              and(
-                eq(diveSites.id, input.diveSiteId),
-                eq(diveSites.shopId, input.shopId),
-                isNull(diveSites.deletedAt),
-              ),
-            )
-            .limit(1)
-        )[0]
-      : null;
-    if (input.diveSiteId && !site) return null;
-    const [trip] = await tx.insert(trips).values(input).returning();
+    const primaryDiveSiteId = drafts[0]?.diveSiteId ?? null;
+    const [trip] = await tx
+      .insert(trips)
+      .values({
+        shopId: input.shopId,
+        courseId: input.courseId,
+        title: input.title,
+        description: input.description,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        capacity: input.capacity,
+        priceCents: input.priceCents,
+        plannedDives,
+        diveSiteId: primaryDiveSiteId,
+      })
+      .returning();
     if (!trip) throw new Error("createTrip: insert returned no row");
+    await tx.insert(tripDives).values(drafts.map((draft) => ({ tripId: trip.id, ...draft })));
     // A missing requirement configuration is a readiness blocker, never an
     // accidental pass. Course sessions snapshot their catalog baseline so a
     // later catalog edit cannot silently weaken an already-published session.
@@ -100,29 +163,49 @@ export type TripPatch = {
   endsAt: Date;
   capacity: number;
   plannedDives: number;
+  dives?: TripDiveDraft[];
   diveSiteId?: string | null;
   priceCents?: number | null;
 };
 
 export async function updateTrip(db: AppDb, shopId: string, tripId: string, patch: TripPatch) {
-  if (patch.diveSiteId) {
-    const [site] = await db
-      .select({ id: diveSites.id })
-      .from(diveSites)
-      .where(and(eq(diveSites.id, patch.diveSiteId), eq(diveSites.shopId, shopId)))
-      .limit(1);
-    if (!site) return null;
-  }
-  const [trip] = await db
-    .update(trips)
-    .set({
-      ...patch,
-      description: patch.description ?? null,
-      ...(patch.diveSiteId === undefined ? {} : { diveSiteId: patch.diveSiteId }),
-    })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .returning();
-  return trip ?? null;
+  return db.transaction(async (tx) => {
+    const plannedDives = normalizedDiveCount(patch.plannedDives);
+    if (!plannedDives) return null;
+    const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;
+    const sitesToValidate = drafts ?? (patch.diveSiteId ? [{ diveSiteId: patch.diveSiteId }] : []);
+    if (!(await validateDiveSites(tx, shopId, sitesToValidate))) return null;
+    const [trip] = await tx
+      .update(trips)
+      .set({
+        title: patch.title,
+        description: patch.description ?? null,
+        startsAt: patch.startsAt,
+        endsAt: patch.endsAt,
+        capacity: patch.capacity,
+        priceCents: patch.priceCents ?? null,
+        plannedDives,
+        ...(patch.diveSiteId === undefined
+          ? {}
+          : { diveSiteId: patch.diveSiteId ?? drafts?.[0]?.diveSiteId ?? null }),
+      })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .returning();
+    if (!trip) return null;
+    if (drafts) await replaceTripDives(tx, tripId, drafts);
+    return trip;
+  });
+}
+
+/** Ordered dive details for a trip, scoped through the owning shop. */
+export async function listTripDives(db: AppDb, shopId: string, tripId: string) {
+  return db
+    .select({ dive: tripDives, diveSite: diveSites })
+    .from(tripDives)
+    .innerJoin(trips, eq(trips.id, tripDives.tripId))
+    .leftJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
+    .where(and(eq(tripDives.tripId, tripId), eq(trips.shopId, shopId)))
+    .orderBy(asc(tripDives.diveNumber));
 }
 
 export type TripConditionsPatch = {

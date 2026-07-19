@@ -36,10 +36,7 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
             aria-label="Sign out"
             className="min-h-11 rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground"
           >
-            <span className="hidden sm:inline">Sign out</span>
-            <span className="sm:hidden" aria-hidden="true">
-              ↪
-            </span>
+            Sign out
           </button>
         </form>
       </div>

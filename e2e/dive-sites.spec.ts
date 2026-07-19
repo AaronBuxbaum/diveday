@@ -39,7 +39,7 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(tripTitle);
-  await page.getByLabel("Dive site").selectOption({ label: siteName });
+  await page.getByLabel("Site briefing").first().selectOption({ label: siteName });
   await page.getByLabel("Date").fill(daysFromNow(5));
   await page.getByLabel("Departs").fill("09:00");
   await page.getByLabel("Returns").fill("12:00");

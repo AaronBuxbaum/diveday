@@ -1,16 +1,10 @@
-import Link from "next/link";
-
 export function ShopPageHeader({
-  backHref,
-  backLabel = "Back to the shop",
   eyebrow,
   title,
   description,
   meta,
   actions,
 }: {
-  backHref?: string;
-  backLabel?: string;
   eyebrow?: string;
   title: string;
   description?: string;
@@ -19,16 +13,7 @@ export function ShopPageHeader({
 }) {
   return (
     <header className="mb-8">
-      {backHref ? (
-        <Link
-          href={backHref}
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary-hover"
-        >
-          <span aria-hidden="true">←</span>
-          {backLabel}
-        </Link>
-      ) : null}
-      <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           {eyebrow ? (
             <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">

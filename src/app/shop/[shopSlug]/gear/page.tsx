@@ -50,14 +50,12 @@ function calendarDate(value: string | undefined): Date | null {
 }
 
 export default async function GearPage({
-  params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
-  const { shopSlug } = await params;
   const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -159,7 +157,6 @@ export default async function GearPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        backHref={`/shop/${shopSlug}`}
         eyebrow={shop.name}
         title="Gear room"
         description="Keep equipment ready, traceable, and easy to pack. Service holds cannot be assigned; checked-out gear stays visible until it returns."

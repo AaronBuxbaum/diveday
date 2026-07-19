@@ -5,6 +5,7 @@ import {
   createTrip,
   getShopBySlug,
   getTripWithBooked,
+  listTripDives,
   upcomingTripsWithCounts,
   updateTrip,
 } from "./queries";
@@ -108,5 +109,48 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
       priceCents: null,
     });
     expect((await getTripWithBooked(db, shop.id, priced.id))?.priceCents).toBeNull();
+  });
+
+  it("stores up to four ordered dives while allowing blank dive details", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+    const existing = (await upcomingTripsWithCounts(db, shop.id)).find((trip) => trip.diveSiteId);
+    if (!existing) throw new Error("seeded dive site missing");
+
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Four-dive weekend",
+      startsAt: new Date("2030-08-03T13:00:00.000Z"),
+      endsAt: new Date("2030-08-03T21:00:00.000Z"),
+      capacity: 10,
+      plannedDives: 4,
+      dives: [
+        { title: "Morning reef", diveSiteId: existing.diveSiteId },
+        { title: "Second tank", description: "A relaxed second site." },
+        {},
+        { title: "Sunset drift" },
+      ],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    const dives = await listTripDives(db, shop.id, trip.id);
+    expect(dives).toHaveLength(4);
+    expect(dives.map(({ dive }) => dive.diveNumber)).toEqual([1, 2, 3, 4]);
+    expect(dives[0]?.dive.title).toBe("Morning reef");
+    expect(dives[0]?.diveSite?.id).toBe(existing.diveSiteId);
+    expect(dives[1]?.dive.description).toBe("A relaxed second site.");
+    expect(dives[2]?.dive.title).toBeNull();
+    expect(
+      await createTrip(db, {
+        shopId: shop.id,
+        title: "Too many dives",
+        startsAt: new Date("2030-08-04T13:00:00.000Z"),
+        endsAt: new Date("2030-08-04T21:00:00.000Z"),
+        capacity: 10,
+        plannedDives: 5,
+      }),
+    ).toBeNull();
   });
 });

@@ -27,6 +27,12 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await page.getByLabel("Departs").fill("09:00");
   await page.getByLabel("Returns").fill("12:30");
   await page.getByLabel("Capacity").fill("8");
+  await page.getByLabel("Number of dives").selectOption("3");
+  await page.getByLabel("Name").nth(0).fill("Morning reef");
+  await page
+    .getByLabel("Diver-facing details")
+    .nth(1)
+    .fill("Second site details will be confirmed at the dock.");
   await page.getByRole("button", { name: "Put it on the board" }).click();
 
   await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
@@ -37,6 +43,11 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   const card = page.locator("li").filter({ hasText: title });
   await expect(card).toBeVisible();
   await expect(card.getByText("8 spots left")).toBeVisible();
+
+  await card.click();
+  await expect(page.getByRole("heading", { name: "3-dive trip" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Morning reef" })).toBeVisible();
+  await expect(page.getByText("Second site details will be confirmed at the dock.")).toBeVisible();
 });
 
 test("end-before-start is rejected with a friendly message", async ({ page }) => {

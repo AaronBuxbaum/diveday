@@ -20,10 +20,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ shopSl
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
-      <Link href={`/shop/${shopSlug}`} className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-      <header className="mt-4">
+      <header>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Operations at a glance</h1>
         <p className="mt-2 text-muted">

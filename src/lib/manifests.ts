@@ -6,7 +6,7 @@ export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 export type RollCallCheckpoint = "departure" | `after_dive_${number}`;
 
 export function rollCallCheckpoints(plannedDives: number): RollCallCheckpoint[] {
-  const safeCount = Math.max(1, Math.min(6, Math.trunc(plannedDives)));
+  const safeCount = Math.max(1, Math.min(4, Math.trunc(plannedDives)));
   return [
     "departure",
     ...Array.from({ length: safeCount }, (_, index) => `after_dive_${index + 1}` as const),

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { TripDiveFields } from "@/components/TripDiveFields";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import {
@@ -24,6 +25,7 @@ import {
   getTripWaitlist,
   getTripWithBooked,
   listStaff,
+  listTripDives,
   restoreBooking,
   setTripCrew,
   setTripStatus,
@@ -48,6 +50,7 @@ import { hasCrewPrediction } from "@/lib/marine-forecast";
 import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { waiverActivityTimeline, waiverState } from "@/lib/waivers";
 import {
@@ -69,12 +72,11 @@ const detailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(6),
+  plannedDives: z.coerce.number().int().min(1).max(4),
   priceDollars: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.coerce.number().nonnegative().finite().optional(),
   ),
-  diveSiteId: z.preprocess((value) => (value === "" ? null : value), z.string().uuid().nullable()),
 });
 
 const conditionsSchema = z.object({
@@ -205,6 +207,7 @@ export default async function ManageTripPage({
     tripGearRows,
     gearRequestRows,
     diveSiteList,
+    tripDiveList,
     waitlist,
   ] = await Promise.all([
     listStaff(db, shop.id),
@@ -219,6 +222,7 @@ export default async function ManageTripPage({
     listTripGearAssignments(db, shop.id, tripId),
     listTripRentalGearRequests(db, shop.id, tripId),
     listDiveSites(db, shop.id),
+    listTripDives(db, shop.id, tripId),
     getTripWaitlist(db, tripId),
   ]);
   const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
@@ -268,17 +272,8 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
-    const {
-      title,
-      description,
-      date,
-      startTime,
-      endTime,
-      capacity,
-      plannedDives,
-      priceDollars,
-      diveSiteId,
-    } = parsed.data;
+    const { title, description, date, startTime, endTime, capacity, plannedDives, priceDollars } =
+      parsed.data;
     const sw = parseWallTime(date, startTime);
     const ew = parseWallTime(date, endTime);
     if (!sw || !ew) redirect(`${back}?notice=invalid`);
@@ -296,7 +291,8 @@ export default async function ManageTripPage({
       capacity,
       plannedDives,
       priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
-      diveSiteId,
+      diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
+      dives: tripDiveDraftsFromForm(formData, plannedDives),
     });
     redirect(`${back}?notice=saved`);
   }
@@ -480,10 +476,6 @@ export default async function ManageTripPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <FlashParams params={["notice", "bid", "waiver"]} />
-      <Link href="/shop" className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-
       <header className="mt-4 flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{trip.title}</h1>
         {cancelled ? (
@@ -576,22 +568,15 @@ export default async function ManageTripPage({
               className={inputClass}
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Dive-site briefing <span className="font-normal text-muted">(optional)</span>
-            <select name="diveSiteId" defaultValue={trip.diveSiteId ?? ""} className={inputClass}>
-              <option value="">No dive-site briefing yet</option>
-              {diveSiteList.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.name}
-                </option>
-              ))}
-            </select>
-            <span className="mt-1 text-sm font-normal text-muted">
-              {trip.diveSite
-                ? `Divers currently see “${trip.diveSite.name}” before booking.`
-                : "Attach a saved site so divers can see the location and underwater briefing."}
-            </span>
-          </label>
+          <TripDiveFields
+            diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
+            initialCount={trip.plannedDives}
+            initialDives={tripDiveList.map(({ dive }) => ({
+              title: dive.title,
+              diveSiteId: dive.diveSiteId,
+              description: dive.description,
+            }))}
+          />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
             <label className="flex flex-col gap-1 text-sm font-medium">
               Date
@@ -632,18 +617,6 @@ export default async function ManageTripPage({
                 min={1}
                 max={60}
                 defaultValue={trip.capacity}
-                className={`${inputClass} tabular-nums`}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Planned dives
-              <input
-                name="plannedDives"
-                type="number"
-                required
-                min={1}
-                max={6}
-                defaultValue={trip.plannedDives}
                 className={`${inputClass} tabular-nums`}
               />
             </label>
