@@ -30,6 +30,7 @@ export function OfflineManifestView() {
   const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
   const [message, setMessage] = useState("Opening encrypted device copy…");
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
+  const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(
     () =>
       typeof window === "undefined"
@@ -105,14 +106,14 @@ export function OfflineManifestView() {
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
 
-  async function record(bookingId: string, status: "boarded" | "not_boarded") {
+  async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     setBusyBooking(bookingId);
     try {
       const next = await appendOfflineRollCall(tripId, {
         bookingId,
         checkpoint,
         status,
-        note: null,
+        note: note.trim() || null,
       });
       setEnvelope(next);
       setMessage("Saved on this device · waiting to sync.");
@@ -254,13 +255,44 @@ export function OfflineManifestView() {
                         ))}
                       </ul>
                     ) : null}
+                    <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-primary">
+                        Add a note to this roll-call record
+                      </summary>
+                      <div className="mt-2">
+                        <label
+                          htmlFor={"offline-roll-call-note-" + diver.bookingId}
+                          className="text-sm font-semibold"
+                        >
+                          Optional note
+                        </label>
+                        <input
+                          id={"offline-roll-call-note-" + diver.bookingId}
+                          maxLength={300}
+                          value={noteByBooking[diver.bookingId] ?? ""}
+                          onChange={(event) =>
+                            setNoteByBooking((current) => ({
+                              ...current,
+                              [diver.bookingId]: event.target.value,
+                            }))
+                          }
+                          placeholder="Late to the boat, medical question, gear issue…"
+                          className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                        />
+                        <p className="mt-1 text-xs text-muted">
+                          This stays encrypted with the pending event.
+                        </p>
+                      </div>
+                    </details>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     {ready && state?.state !== "boarded" ? (
                       <button
                         type="button"
                         disabled={busyBooking === diver.bookingId}
-                        onClick={() => record(diver.bookingId, "boarded")}
+                        onClick={() =>
+                          record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
+                        }
                         aria-busy={busyBooking === diver.bookingId}
                         className="min-h-14 touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
                       >
@@ -271,7 +303,9 @@ export function OfflineManifestView() {
                       <button
                         type="button"
                         disabled={busyBooking === diver.bookingId}
-                        onClick={() => record(diver.bookingId, "not_boarded")}
+                        onClick={() =>
+                          record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
+                        }
                         aria-busy={busyBooking === diver.bookingId}
                         className="min-h-14 touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
                       >
