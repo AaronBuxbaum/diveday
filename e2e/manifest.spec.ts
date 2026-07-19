@@ -21,10 +21,15 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(page.getByRole("heading", { name: "Readiness needs attention" })).toBeVisible();
   await expect(page.getByText("Priya Sharma")).toBeVisible();
 
+  await page.getByRole("link", { name: "After dive 1" }).click();
+  await expect(page.evaluate(() => window.scrollY)).resolves.toBeGreaterThan(0);
+  await page.getByRole("link", { name: "Before departure" }).click();
+
   await page.getByText("Add a note to this roll-call record").first().click();
   await page.getByLabel("Optional note").first().fill("Guest asked to sit out before departure.");
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("status")).toContainText("Not-boarded status recorded");
+  await expect(page.evaluate(() => window.scrollY)).resolves.toBeGreaterThan(0);
   await expect(page).not.toHaveURL(/#roll-call-/);
   await expect(page.getByRole("button", { name: "Not boarded ✓" }).first()).toBeVisible();
   await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();

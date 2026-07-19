@@ -4,9 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
-import { DiveSiteFieldGuide } from "@/components/DiveSiteFieldGuide";
-import { DiveSiteLandmarks } from "@/components/DiveSiteLandmarks";
-import { DiveSiteMap } from "@/components/DiveSiteMap";
+import { DiveBriefingCard } from "@/components/DiveBriefingCard";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createBookingParty } from "@/db/bookings";
@@ -29,9 +27,6 @@ import { getBookingReadiness } from "@/db/readiness";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
-import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
 import { dockDayTimeline, packingChecklist } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -129,15 +124,17 @@ export default async function TripDetailPage({
   const waitlistConfirmation = waitlistId
     ? await getWaitlistEntryForTrip(db, tripId, waitlistId)
     : null;
-  const [creatures, moments] = trip.diveSite
-    ? await Promise.all([
-        listDiveSiteCreatures(db, shop.id, trip.diveSite.id),
-        listPublishedDiveSiteMoments(db, shop.id, trip.diveSite.id),
-      ])
-    : [[], []];
-  const landmarks = trip.diveSite
-    ? buildDiveSiteLandmarks(trip.diveSite.name, trip.diveSite.landmarks)
-    : [];
+  const diveBriefings = await Promise.all(
+    tripDives.map(async ({ dive, diveSite }) => {
+      const [creatures, moments] = diveSite
+        ? await Promise.all([
+            listDiveSiteCreatures(db, shop.id, diveSite.id),
+            listPublishedDiveSiteMoments(db, shop.id, diveSite.id),
+          ])
+        : [[], []];
+      return { dive, diveSite, creatures, moments };
+    }),
+  );
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
   const rentalRequest = confirmed
     ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
@@ -294,160 +291,42 @@ export default async function TripDetailPage({
         </a>
       ) : null}
 
-      {tripDives.length > 0 ? (
-        <section className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+      {diveBriefings.length > 0 ? (
+        <section className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-sm font-medium tracking-widest text-primary uppercase">
-                Trip plan
+                Dive briefings
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                {trip.plannedDives === 2 ? "Two-tank dive" : `${trip.plannedDives}-dive trip`}
+                {trip.plannedDives === 2
+                  ? "Your two-tank plan"
+                  : `Your ${trip.plannedDives}-dive plan`}
               </h2>
             </div>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-              {trip.plannedDives} {trip.plannedDives === 1 ? "dive" : "dives"}
-            </span>
+            {diveBriefings.length > 1 ? (
+              <p className="text-sm font-medium text-muted sm:hidden">
+                Swipe to explore each dive →
+              </p>
+            ) : null}
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {tripDives.map(({ dive, diveSite }) => {
-              const heading = dive.title || diveSite?.name || `Dive ${dive.diveNumber}`;
-              const hasDetails = Boolean(dive.title || diveSite || dive.description);
-              return (
-                <article
-                  key={dive.id}
-                  className="rounded-xl border border-border bg-surface-sunken p-4"
-                >
-                  <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-                    Dive {dive.diveNumber}
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold">{heading}</h3>
-                  {diveSite ? (
-                    <p className="mt-1 text-sm font-medium text-primary">
-                      Site briefing · {diveSite.name}
-                    </p>
-                  ) : null}
-                  <p className="mt-3 text-sm leading-6 text-muted">
-                    {dive.description ||
-                      (hasDetails
-                        ? "The crew will share the final route and conditions at the dock."
-                        : "Details are still being finalized — the crew will brief this dive on the boat.")}
-                  </p>
-                </article>
-              );
-            })}
+          <div className="-mx-6 mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-1 sm:overflow-visible sm:px-0 lg:grid-cols-2">
+            {diveBriefings.map(({ dive, diveSite, creatures, moments }) => (
+              <DiveBriefingCard
+                key={dive.id}
+                diveNumber={dive.diveNumber}
+                title={dive.title}
+                description={dive.description}
+                site={diveSite}
+                creatures={creatures}
+                moments={moments}
+              />
+            ))}
           </div>
-          <p className="mt-4 text-sm text-muted">
-            The trip timing, conditions, and booking apply to the whole boat day. Individual sites
-            can change with conditions, and the crew makes the final call at the dock.
+          <p className="mt-3 text-sm text-muted">
+            Conditions and timing apply to the whole boat day. Sites can change, and the crew makes
+            the final call at the dock.
           </p>
-        </section>
-      ) : null}
-
-      {trip.diveSite ? (
-        <section className="mt-8 overflow-hidden rounded-xl border border-border bg-surface">
-          {getSeedDiveSiteMap(trip.diveSite.name) ? (
-            <DiveSiteMap siteName={trip.diveSite.name} />
-          ) : trip.diveSite.satelliteImageUrl ? (
-            // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
-            <img
-              src={trip.diveSite.satelliteImageUrl}
-              alt={`Satellite view of ${trip.diveSite.name}`}
-              className="h-64 w-full object-cover"
-            />
-          ) : null}
-          <div className="p-5 sm:p-6">
-            <p className="text-sm font-medium tracking-widest text-primary uppercase">
-              Your dive site
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{trip.diveSite.name}</h2>
-            {trip.diveSite.locationName ? (
-              <p className="mt-1 text-sm text-muted">{trip.diveSite.locationName}</p>
-            ) : null}
-            {trip.diveSite.description ? (
-              <p className="mt-4 text-muted">{trip.diveSite.description}</p>
-            ) : null}
-            {trip.diveSite.difficulty || trip.diveSite.depthRange || trip.diveSite.currentNote ? (
-              <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-border py-5 sm:grid-cols-3">
-                <div>
-                  <dt className="text-xs font-medium tracking-widest text-muted uppercase">
-                    Experience
-                  </dt>
-                  <dd className="mt-1 font-semibold capitalize">
-                    {trip.diveSite.difficulty ?? "Crew-led"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium tracking-widest text-muted uppercase">
-                    Depth
-                  </dt>
-                  <dd className="mt-1 font-semibold">{trip.diveSite.depthRange ?? "Varies"}</dd>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <dt className="text-xs font-medium tracking-widest text-muted uppercase">
-                    Water movement
-                  </dt>
-                  <dd className="mt-1 text-sm font-medium">
-                    {trip.diveSite.currentNote ?? "The crew confirms it at the dock."}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
-            {trip.diveSite.routeImageUrl ? (
-              <figure className="mt-5 overflow-hidden rounded-lg border border-border">
-                {/* biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist. */}
-                <img
-                  src={trip.diveSite.routeImageUrl}
-                  alt={`Planned route for ${trip.diveSite.name}`}
-                  className="max-h-80 w-full object-cover"
-                />
-                <figcaption className="px-3 py-2 text-sm text-muted">
-                  Planned route — the crew will brief the final plan on board.
-                </figcaption>
-              </figure>
-            ) : null}
-            {trip.diveSite.divePlan ? (
-              <section className="mt-8 grid gap-2 sm:grid-cols-[10rem_1fr] sm:gap-6">
-                <h3 className="font-semibold">How the dive unfolds</h3>
-                <p className="leading-relaxed text-muted">{trip.diveSite.divePlan}</p>
-              </section>
-            ) : null}
-            <DiveSiteLandmarks landmarks={landmarks} />
-            <DiveSiteFieldGuide
-              creatures={creatures}
-              summary={trip.diveSite.marineLifeDescription}
-              highlights={trip.diveSite.marineLife}
-            />
-            {moments.length ? (
-              <figure className="mt-6 overflow-hidden rounded-lg bg-accent/10 sm:grid sm:grid-cols-[12rem_1fr]">
-                {moments[0]?.imageUrl ? (
-                  // biome-ignore lint/performance/noImgElement: moderated dive-site media supports approved external hosts.
-                  <img
-                    src={resolveDiveSiteImageUrl(moments[0].imageUrl) ?? undefined}
-                    alt="A southern stingray gliding over the reef"
-                    className="aspect-video h-full w-full object-cover sm:aspect-square"
-                  />
-                ) : null}
-                <figcaption className="p-4 sm:self-center">
-                  <h3 className="font-semibold">A recent diver moment</h3>
-                  <p className="mt-1 text-sm text-muted">{moments[0]?.caption}</p>
-                </figcaption>
-              </figure>
-            ) : null}
-            {creatures.length === 0 && trip.diveSite.imageUrls.length > 0 ? (
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {trip.diveSite.imageUrls.map((url, index) => (
-                  // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts without a global image allowlist.
-                  <img
-                    key={url}
-                    src={resolveDiveSiteImageUrl(url) ?? undefined}
-                    alt={`${trip.diveSite?.name} scene ${index + 1}`}
-                    className="aspect-square rounded-lg object-cover"
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
         </section>
       ) : null}
 
@@ -819,42 +698,7 @@ export default async function TripDetailPage({
             </p>
           ) : null}
           <form action={bookSpot} className="mt-4 flex flex-col gap-4">
-            <label className="flex flex-col gap-1 text-base font-medium">
-              Name
-              <input
-                name="fullName"
-                type="text"
-                required
-                maxLength={120}
-                autoComplete="name"
-                className={inputClass}
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-base font-medium">
-                Email
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  maxLength={200}
-                  autoComplete="email"
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-base font-medium">
-                <span>
-                  Phone <span className="font-normal text-muted">(optional)</span>
-                </span>
-                <input
-                  name="phone"
-                  type="tel"
-                  maxLength={30}
-                  autoComplete="tel"
-                  className={inputClass}
-                />
-              </label>
-            </div>
+            <BookingPartyFields maxPartySize={remaining} />
             <div className="mt-1">
               <SubmitButton
                 pendingLabel="Booking…"

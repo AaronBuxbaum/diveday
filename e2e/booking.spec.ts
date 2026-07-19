@@ -73,6 +73,20 @@ test("staff opening a scheduled dive lands on the editable trip view", async ({ 
   await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
 });
 
+test("a multi-dive trip presents every dive briefing", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+
+  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
+  await expect(page.getByText("Dive 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Dive 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("French Reef is the second tank")).toBeVisible();
+});
+
 test("a full boat lets a diver join the wait list without taking a seat", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule");
   // Seeded wreck trip ships full (10 of 10).

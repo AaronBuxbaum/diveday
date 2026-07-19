@@ -1047,7 +1047,7 @@ export default async function ManageTripPage({
                   </div>
                   {activity.length > 0 ? (
                     <details className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm">
-                      <summary className="min-h-11 cursor-pointer py-2 font-medium text-primary">
+                      <summary className="flex min-h-11 cursor-pointer items-center py-2 font-medium text-primary">
                         Activity · {activity.length} {activity.length === 1 ? "event" : "events"}
                       </summary>
                       <ol className="flex flex-col gap-3 pb-2 pt-1">

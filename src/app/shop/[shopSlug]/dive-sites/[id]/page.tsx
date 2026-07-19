@@ -147,7 +147,7 @@ export default async function EditDiveSitePage({
           </button>
         </form>
         <details className="w-full sm:w-auto">
-          <summary className="min-h-11 cursor-pointer rounded-lg border border-danger/30 px-4 py-2 text-center text-sm font-medium text-danger">
+          <summary className="flex min-h-11 cursor-pointer items-center rounded-lg border border-danger/30 px-4 py-2 text-center text-sm font-medium text-danger">
             Archive site
           </summary>
           <form
