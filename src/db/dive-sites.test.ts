@@ -15,6 +15,8 @@ describe("dive-site library", () => {
     const original = await createDiveSite(db, {
       shopId: shop.id,
       name: "Carysfort Reef",
+      forecastLatitude: 25.221,
+      forecastLongitude: -80.214,
       marineLife: "Parrotfish, eagle rays",
       imageUrls: ["https://images.example/carysfort.jpg"],
     });
@@ -23,6 +25,8 @@ describe("dive-site library", () => {
     expect(copy?.id).not.toBe(original.id);
     expect(copy?.name).toBe("Carysfort Reef — private charter");
     expect(copy?.imageUrls).toEqual(["https://images.example/carysfort.jpg"]);
+    expect(copy?.forecastLatitude).toBe(25.221);
+    expect(copy?.forecastLongitude).toBe(-80.214);
     expect((await listDiveSites(db, shop.id)).map((site) => site.name)).toContain(
       "Carysfort Reef — private charter",
     );

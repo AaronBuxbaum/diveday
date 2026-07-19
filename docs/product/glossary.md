@@ -42,6 +42,10 @@ new domain concept, define it here in the same PR.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.
+- **Automated marine outlook** — a provider-generated, date-specific planning fallback shown only
+  in the ten days before a charter when no crew prediction exists. It states its source and valid
+  time, never makes a go/no-go call, and yields completely to a crew prediction. The first slice
+  supplies water temperature and surface state; underwater visibility remains a crew observation.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.

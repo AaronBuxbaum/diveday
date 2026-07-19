@@ -12,20 +12,29 @@ export const metadata: Metadata = { title: "Edit dive site — Scuba" };
 
 const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
-const siteSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  description: z.string().trim().max(1_200),
-  locationName: z.string().trim().max(160),
-  satelliteImageUrl: optionalUrl,
-  routeImageUrl: optionalUrl,
-  imageUrls: z.string().max(12_000),
-  marineLife: z.string().trim().max(400),
-  marineLifeDescription: z.string().trim().max(1_200),
-  minimumCertificationLevel: z.preprocess(
-    (value) => (value === "" ? null : value),
-    z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
-  ),
-});
+const siteSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    description: z.string().trim().max(1_200),
+    locationName: z.string().trim().max(160),
+    forecastLatitude: z.union([z.literal(""), z.coerce.number().min(-90).max(90)]),
+    forecastLongitude: z.union([z.literal(""), z.coerce.number().min(-180).max(180)]),
+    satelliteImageUrl: optionalUrl,
+    routeImageUrl: optionalUrl,
+    imageUrls: z.string().max(12_000),
+    marineLife: z.string().trim().max(400),
+    marineLifeDescription: z.string().trim().max(1_200),
+    minimumCertificationLevel: z.preprocess(
+      (value) => (value === "" ? null : value),
+      z
+        .enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"])
+        .nullable(),
+    ),
+  })
+  .refine(
+    (site) => (site.forecastLatitude === "") === (site.forecastLongitude === ""),
+    "Add both forecast coordinates or leave both blank.",
+  );
 
 const inputClass =
   "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
@@ -63,6 +72,9 @@ export default async function EditDiveSitePage({
     const updated = await updateDiveSite(await getDb(), activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...parsed.data,
+      forecastLatitude: parsed.data.forecastLatitude === "" ? null : parsed.data.forecastLatitude,
+      forecastLongitude:
+        parsed.data.forecastLongitude === "" ? null : parsed.data.forecastLongitude,
       satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
       routeImageUrl: parsed.data.routeImageUrl || undefined,
       imageUrls,
@@ -134,6 +146,39 @@ export default async function EditDiveSitePage({
             className={inputClass}
           />
         </label>
+        <fieldset className="rounded-lg border border-border p-4">
+          <legend className="px-1 text-sm font-medium">Automated marine forecast point</legend>
+          <p className="mt-1 text-sm text-muted">
+            Use the offshore dive point, not the shop address. Leave both blank to keep crew-only
+            conditions.
+          </p>
+          <div className="mt-4 grid gap-5 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Latitude
+              <input
+                name="forecastLatitude"
+                type="number"
+                step="any"
+                min={-90}
+                max={90}
+                defaultValue={site.forecastLatitude ?? ""}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Longitude
+              <input
+                name="forecastLongitude"
+                type="number"
+                step="any"
+                min={-180}
+                max={180}
+                defaultValue={site.forecastLongitude ?? ""}
+                className={inputClass}
+              />
+            </label>
+          </div>
+        </fieldset>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Location <span className="font-normal text-muted">(optional)</span>
           <input

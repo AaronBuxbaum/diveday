@@ -15,6 +15,8 @@ export type DiveSiteInput = {
   name: string;
   description?: string;
   locationName?: string;
+  forecastLatitude?: number | null;
+  forecastLongitude?: number | null;
   satelliteImageUrl?: string;
   routeImageUrl?: string;
   imageUrls?: string[];
@@ -55,6 +57,8 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       ...input,
       description: input.description || null,
       locationName: input.locationName || null,
+      forecastLatitude: input.forecastLatitude ?? null,
+      forecastLongitude: input.forecastLongitude ?? null,
       satelliteImageUrl: input.satelliteImageUrl || null,
       routeImageUrl: input.routeImageUrl || null,
       imageUrls: input.imageUrls ?? [],
@@ -86,6 +90,8 @@ export async function updateDiveSite(
       name: input.name,
       description: input.description || null,
       locationName: input.locationName || null,
+      forecastLatitude: input.forecastLatitude ?? null,
+      forecastLongitude: input.forecastLongitude ?? null,
       satelliteImageUrl: input.satelliteImageUrl || null,
       routeImageUrl: input.routeImageUrl || null,
       imageUrls: input.imageUrls ?? [],
@@ -114,6 +120,8 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     name,
     description: source.description ?? undefined,
     locationName: source.locationName ?? undefined,
+    forecastLatitude: source.forecastLatitude,
+    forecastLongitude: source.forecastLongitude,
     satelliteImageUrl: source.satelliteImageUrl ?? undefined,
     routeImageUrl: source.routeImageUrl ?? undefined,
     imageUrls: source.imageUrls,
