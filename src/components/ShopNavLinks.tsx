@@ -16,22 +16,22 @@ const primaryLinks = [
 const moreGroups = [
   {
     label: "Prepare",
-    links: [
-      ["Waivers", "/waivers"],
-      ["Nitrox", "/nitrox"],
-    ],
+    links: [["Nitrox fills", "/nitrox"]],
   },
   {
     label: "Plan",
     links: [
-      ["Courses", "/courses"],
       ["Dive sites", "/dive-sites"],
       ["Reports", "/reports"],
     ],
   },
   {
     label: "Business",
-    links: [["Shop", "/shop"]],
+    links: [
+      ["Courses", "/courses"],
+      ["Waivers", "/waivers"],
+      ["Shop", "/shop"],
+    ],
   },
 ] as const;
 
