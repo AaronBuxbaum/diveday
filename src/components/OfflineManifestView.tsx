@@ -81,7 +81,7 @@ export function OfflineManifestView() {
 
   if (!envelope) {
     return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           Offline manifest
         </p>
@@ -142,6 +142,12 @@ export function OfflineManifestView() {
 
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+      <a
+        href="#offline-roll-call"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+      >
+        Skip to offline roll call
+      </a>
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -220,14 +226,17 @@ export function OfflineManifestView() {
         <h2 className="text-xl font-semibold">
           {rollCallComplete
             ? "Roll call complete ✦"
-            : rollCallCheckpointLabel(checkpoint) + " roll call"}
+            : `${rollCallCheckpointLabel(checkpoint)} roll call`}
         </h2>
         {rollCallComplete ? (
           <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
             Everyone has an explicit result for this checkpoint.
           </p>
         ) : null}
-        <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
+        <ul
+          id="offline-roll-call"
+          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface"
+        >
           {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(
               envelope.snapshot,
@@ -300,13 +309,13 @@ export function OfflineManifestView() {
                       </summary>
                       <div className="mt-2">
                         <label
-                          htmlFor={"offline-roll-call-note-" + diver.bookingId}
+                          htmlFor={`offline-roll-call-note-${diver.bookingId}`}
                           className="text-sm font-semibold"
                         >
                           Optional note
                         </label>
                         <input
-                          id={"offline-roll-call-note-" + diver.bookingId}
+                          id={`offline-roll-call-note-${diver.bookingId}`}
                           maxLength={300}
                           value={noteByBooking[diver.bookingId] ?? ""}
                           onChange={(event) =>
@@ -324,7 +333,7 @@ export function OfflineManifestView() {
                       </div>
                     </details>
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                     {ready && state?.state !== "boarded" ? (
                       <button
                         type="button"
@@ -333,7 +342,7 @@ export function OfflineManifestView() {
                           record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
                         }
                         aria-busy={busyBooking === diver.bookingId}
-                        className="min-h-14 touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
+                        className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
                         {busyBooking === diver.bookingId ? "Saving…" : "Mark boarded"}
                       </button>
@@ -346,7 +355,7 @@ export function OfflineManifestView() {
                           record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
                         }
                         aria-busy={busyBooking === diver.bookingId}
-                        className="min-h-14 touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
+                        className="min-h-14 w-full touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
                         {busyBooking === diver.bookingId ? "Saving…" : "Mark not boarded"}
                       </button>
