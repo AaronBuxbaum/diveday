@@ -103,7 +103,7 @@ export default async function TripManifestPage({
         Skip to roll call
       </a>
       <FlashParams params={["notice"]} />
-      <RestorePreservedScroll />
+      <RestorePreservedScroll navigationKey={notice} />
       <div className="print:hidden">
         <Link
           href={`/shop/${shopSlug}/trips/${tripId}`}

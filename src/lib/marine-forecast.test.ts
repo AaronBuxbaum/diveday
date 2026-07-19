@@ -31,6 +31,20 @@ describe("shouldShowAutomatedForecast", () => {
 });
 
 describe("fetchAutomatedMarineForecast", () => {
+  it("skips live provider traffic when external HTTP is disabled", async () => {
+    vi.stubEnv("SCUBA_DISABLE_EXTERNAL_HTTP", "1");
+    const fetcher = vi.spyOn(globalThis, "fetch");
+
+    await expect(
+      fetchAutomatedMarineForecast(
+        { latitude: 25.12, longitude: -80.3 },
+        new Date("2026-07-20T09:00:00Z"),
+      ),
+    ).resolves.toBeNull();
+    expect(fetcher).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   it("selects the forecast hour closest to departure and writes a dive-friendly sea-state note", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(

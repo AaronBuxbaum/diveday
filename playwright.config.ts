@@ -15,6 +15,7 @@ export default defineConfig({
   workers: 1,
   // Dev-server-backed e2e: first hit on a route pays the compile cost.
   expect: { timeout: 15_000 },
+  timeout: 60_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
@@ -42,6 +43,10 @@ export default defineConfig({
       DATABASE_URL: "",
       DATABASE_URL_UNPOOLED: "",
       PGLITE_DATA_DIR: ".pglite-e2e",
+      // External providers are unit-tested through injected fetchers. Keeping them out of the
+      // browser smoke suite makes it deterministic without mocking our own server or database.
+      SCUBA_DISABLE_EXTERNAL_HTTP: "1",
+      NEXT_TELEMETRY_DISABLED: "1",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
