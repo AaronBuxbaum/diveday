@@ -71,6 +71,8 @@ export function serializeManifests(
       },
       divers: manifest.divers.map((diver) => ({
         ...diver,
+        // Email is not needed for dock-side roll call; minimize retained private data.
+        email: null,
         rollCall: diver.rollCall
           ? { ...diver.rollCall, occurredAt: diver.rollCall.occurredAt.toISOString() }
           : undefined,
