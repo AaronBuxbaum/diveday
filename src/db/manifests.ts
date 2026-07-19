@@ -4,6 +4,7 @@ import {
   buildTripManifest,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
+  rollCallCheckpoints,
   type TripManifest,
 } from "@/lib/manifests";
 import type { AppDb } from "./client";
@@ -80,21 +81,20 @@ async function listLatestRollCallByBooking(
  * accidentally edit out of sync. Every active booking starts from the trip
  * roster and is joined with the shared readiness, gear, and roll-call records.
  */
-export async function getTripManifest(
+export async function getTripManifests(
   db: AppDb,
   shopId: string,
   tripId: string,
-  checkpoint: RollCallCheckpoint = "departure",
-): Promise<TripManifest | null> {
+): Promise<TripManifest[] | null> {
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
-  if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) return null;
-  const [roster, readinessRows, gearRows, crew, rollCallByBooking] = await Promise.all([
+  const checkpoints = rollCallCheckpoints(trip.plannedDives);
+  const [roster, readinessRows, gearRows, crew, ...rollCalls] = await Promise.all([
     getTripRoster(db, tripId),
     listTripReadiness(db, shopId, tripId),
     listTripGearAssignments(db, shopId, tripId),
     listTripCrew(db, shopId, tripId),
-    listLatestRollCallByBooking(db, shopId, tripId, checkpoint),
+    ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
@@ -106,27 +106,47 @@ export async function getTripManifest(
     current.push({ label: row.item.label, type: row.item.type.replace("_", " ") });
     gearByBooking.set(row.booking.id, current);
   }
-  return buildTripManifest({
-    trip: {
-      id: trip.id,
-      title: trip.title,
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      plannedDives: trip.plannedDives,
-    },
-    checkpoint,
-    crew,
-    divers: roster.map(({ booking, person }) => ({
-      bookingId: booking.id,
-      fullName: person.fullName,
-      email: person.email,
-      emergencyContactName: person.emergencyContactName,
-      emergencyContactPhone: person.emergencyContactPhone,
-      readiness: readinessByBooking.get(booking.id),
-      gear: gearByBooking.get(booking.id) ?? [],
-      rollCall: rollCallByBooking.get(booking.id),
-    })),
+  const tripInput = {
+    id: trip.id,
+    title: trip.title,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    plannedDives: trip.plannedDives,
+  };
+  const diverInputs = roster.map(({ booking, person }) => ({
+    bookingId: booking.id,
+    fullName: person.fullName,
+    email: person.email,
+    emergencyContactName: person.emergencyContactName,
+    emergencyContactPhone: person.emergencyContactPhone,
+    readiness: readinessByBooking.get(booking.id),
+    gear: gearByBooking.get(booking.id) ?? [],
+  }));
+  return checkpoints.map((checkpoint, index) => {
+    const rollCallByBooking = rollCalls[index] ?? new Map();
+    return buildTripManifest({
+      trip: tripInput,
+      checkpoint,
+      crew,
+      divers: diverInputs.map((diver) => ({
+        ...diver,
+        rollCall: rollCallByBooking.get(diver.bookingId),
+      })),
+    });
   });
+}
+
+export async function getTripManifest(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  checkpoint: RollCallCheckpoint = "departure",
+): Promise<TripManifest | null> {
+  const manifests = await getTripManifests(db, shopId, tripId);
+  if (!manifests || !isRollCallCheckpoint(checkpoint, manifests[0]?.trip.plannedDives ?? 0)) {
+    return null;
+  }
+  return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
 }
 
 export type RecordRollCallOutcome =

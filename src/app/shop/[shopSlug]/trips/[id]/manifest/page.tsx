@@ -6,7 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { getDb } from "@/db/client";
-import { getTripManifest, recordRollCall } from "@/db/manifests";
+import { getTripManifests, recordRollCall } from "@/db/manifests";
 import { getShopById } from "@/db/queries";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -55,22 +55,15 @@ export default async function TripManifestPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
-  const departureManifest = await getTripManifest(db, shop.id, tripId);
-  if (!departureManifest) notFound();
+  const completeManifests = await getTripManifests(db, shop.id, tripId);
+  const departureManifest = completeManifests?.[0];
+  if (!departureManifest || !completeManifests) notFound();
   const checkpoints = rollCallCheckpoints(departureManifest.trip.plannedDives);
   const checkpoint: RollCallCheckpoint =
     requestedCheckpoint &&
     isRollCallCheckpoint(requestedCheckpoint, departureManifest.trip.plannedDives)
       ? requestedCheckpoint
       : "departure";
-  const manifests = await Promise.all(
-    checkpoints.map((value) =>
-      value === "departure"
-        ? Promise.resolve(departureManifest)
-        : getTripManifest(db, shop.id, tripId, value),
-    ),
-  );
-  const completeManifests = manifests.filter((entry) => entry !== null);
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
   const banner = notice ? BANNERS[notice] : undefined;
