@@ -69,7 +69,7 @@ export async function listWaiverTemplates(db: AppDb, shopId: string) {
     );
 }
 
-/** Staff can choose which active template a new booking link snapshots. */
+/** Staff select the one active shop default used by every newly issued link. */
 export async function setDefaultWaiverTemplate(db: AppDb, shopId: string, templateId: string) {
   return db.transaction(async (tx) => {
     const [template] = await tx
@@ -108,12 +108,13 @@ export type IssueWaiverOutcome =
     };
 
 /**
- * Creates a new pending record rather than reusing a completed one. Reissuing
+ * Creates a new pending record from the shop default rather than accepting a
+ * caller-selected template. Reissuing
  * a pending link supersedes it, so an old token can never complete later.
  */
 export async function issueWaiverRequest(
   db: AppDb,
-  input: { shopId: string; bookingId: string; templateId: string; now?: Date },
+  input: { shopId: string; bookingId: string; now?: Date },
 ): Promise<IssueWaiverOutcome> {
   const now = input.now ?? new Date();
   const token = createWaiverToken();
@@ -141,8 +142,8 @@ export async function issueWaiverRequest(
       .from(waiverTemplates)
       .where(
         and(
-          eq(waiverTemplates.id, input.templateId),
           eq(waiverTemplates.shopId, input.shopId),
+          eq(waiverTemplates.isDefault, true),
           isNull(waiverTemplates.archivedAt),
         ),
       )

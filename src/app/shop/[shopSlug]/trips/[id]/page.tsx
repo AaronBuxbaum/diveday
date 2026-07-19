@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
@@ -356,13 +357,11 @@ export default async function ManageTripPage({
     "use server";
     const s = await requireStaffSession();
     const bookingId = String(formData.get("bookingId") ?? "");
-    const templateId = String(formData.get("templateId") ?? "");
-    if (!bookingId || !templateId) redirect(`${back}?notice=waiver-error`);
+    if (!bookingId) redirect(`${back}?notice=waiver-error`);
     const db = await getDb();
     const outcome = await issueWaiverRequest(db, {
       shopId: s.user.shopId,
       bookingId,
-      templateId,
     });
     if (!outcome.ok) {
       redirect(
@@ -898,12 +897,12 @@ export default async function ManageTripPage({
               ))}
             </ul>
             <div>
-              <button
-                type="submit"
+              <SubmitButton
+                pendingLabel="Saving crew…"
                 className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
               >
                 Save crew
-              </button>
+              </SubmitButton>
             </div>
           </form>
         )}
@@ -947,7 +946,7 @@ export default async function ManageTripPage({
       </section>
 
       <section className="mt-10">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
           <div>
             <h2 className="text-lg font-semibold">Waivers</h2>
             <p className="mt-1 text-sm text-muted">
@@ -955,12 +954,6 @@ export default async function ManageTripPage({
               visible here.
             </p>
           </div>
-          <Link
-            href={`/shop/${shopSlug}/waivers`}
-            className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Manage templates
-          </Link>
         </div>
         {waiverRows.length === 0 ? (
           <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
@@ -1020,27 +1013,17 @@ export default async function ManageTripPage({
                           className="flex flex-wrap items-center gap-2"
                         >
                           <input type="hidden" name="bookingId" value={booking.id} />
-                          <select
-                            name="templateId"
-                            aria-label={`Waiver template for ${person.fullName}`}
-                            defaultValue={
-                              currentWaiver?.templateId ??
-                              templates.find((template) => template.isDefault)?.id
+                          <SubmitButton
+                            pendingLabel="Sending…"
+                            confirmMessage={
+                              state === "not_sent"
+                                ? undefined
+                                : `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
                             }
-                            className="min-h-11 max-w-44 rounded-lg border border-border-strong bg-surface px-2 text-sm"
-                          >
-                            {templates.map((template) => (
-                              <option key={template.id} value={template.id}>
-                                {template.title} v{template.version}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="submit"
                             className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
                           >
-                            {state === "not_sent" ? "Email link" : "Email new link"}
-                          </button>
+                            {state === "not_sent" ? "Unsent · send" : "Sent · resend"}
+                          </SubmitButton>
                         </form>
                       )}
                     </div>

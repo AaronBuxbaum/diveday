@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { SubmitButton } from "@/components/SubmitButton";
 import { getDb } from "@/db/client";
+import { getShopById, setShopPackingList } from "@/db/queries";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,
@@ -15,6 +17,8 @@ import { requireStaffSession } from "@/lib/session";
 export const metadata: Metadata = { title: "Shop — Scuba" };
 
 const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
+  packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
+  packing_invalid: { tone: "danger", text: "Add between one and twelve packing items." },
   connected: { tone: "success", text: "Stripe account connected." },
   connect_failed: {
     tone: "danger",
@@ -27,6 +31,24 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; text: st
   disconnected: { tone: "success", text: "Stripe account disconnected." },
   refreshed: { tone: "success", text: "Payment status refreshed from Stripe." },
 };
+
+async function savePackingAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const packingList = String(formData.get("packingList") ?? "")
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (
+    packingList.length < 1 ||
+    packingList.length > 12 ||
+    packingList.some((item) => item.length > 100)
+  ) {
+    redirect(`/shop/${session.user.shopSlug}/shop?notice=packing_invalid`);
+  }
+  await setShopPackingList(await getDb(), session.user.shopId, packingList);
+  redirect(`/shop/${session.user.shopSlug}/shop?notice=packing_saved`);
+}
 
 async function disconnectAction() {
   "use server";
@@ -82,6 +104,8 @@ export default async function PaymentsSettingsPage({
   const { shopSlug } = await params;
   const { notice } = await searchParams;
   const db = await getDb();
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) redirect("/");
   const account = await getShopStripeAccount(db, session.user.shopId);
   const ready = canAcceptPayments(account);
   const connectConfigured = Boolean(
@@ -119,6 +143,28 @@ export default async function PaymentsSettingsPage({
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Trip packing checklist</h2>
+        <p className="mt-1 text-sm text-muted">
+          One item per line. Divers see this same concise list on every trip.
+        </p>
+        <form action={savePackingAction} className="mt-4">
+          <textarea
+            name="packingList"
+            rows={6}
+            maxLength={1212}
+            defaultValue={shop.packingList.join("\n")}
+            className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+          />
+          <SubmitButton
+            pendingLabel="Saving…"
+            className="mt-3 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+          >
+            Save packing checklist
+          </SubmitButton>
+        </form>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
         {!account ? (
           <div>
             <h2 className="font-medium">No Stripe account connected</h2>

@@ -61,6 +61,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   from stored evidence without exposing a bearer token.
 - ✅ Staff-triggered waiver links can be emailed through the same transactional notification seam;
   the staff-visible one-time link remains available if delivery fails.
+- ✅ Every waiver request uses the shop-selected default; the trip roster offers one status action
+  rather than an on-demand template picker, while signed evidence retains its template snapshot.
 - ✅ Richer, jurisdiction-aware medical questionnaire: a versioned RSTC/WRSTC form (and a UK
   variant) defined in [`src/lib/medical.ts`](../../src/lib/medical.ts), selected by the shop's
   jurisdiction on the waivers page. Completed waivers store the questionnaire id + version; any
@@ -134,6 +136,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Diver booking-level rental requests capture a standard set, fit preferences, usual weighting,
   and notes; staff sees them while packing, but the request never reserves inventory or replaces a
   dock-side fit check.
+- ✅ The diver-facing packing checklist is configured once at shop level and reused across trips.
 - ✅ A shop-scoped rental size profile pre-fills a diver’s later requests. Staff can bulk-pack
   only currently available, requested gear; sized items require an exact requested/profile match,
   and every conditional inventory claim remains conflict-safe.
