@@ -249,9 +249,10 @@ export function OfflineManifestView() {
                         type="button"
                         disabled={busyBooking === diver.bookingId}
                         onClick={() => record(diver.bookingId, "boarded")}
-                        className="min-h-14 rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground disabled:opacity-60"
+                        aria-busy={busyBooking === diver.bookingId}
+                        className="min-h-14 touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
                       >
-                        Mark boarded
+                        {busyBooking === diver.bookingId ? "Saving…" : "Mark boarded"}
                       </button>
                     ) : null}
                     {state?.state !== "not_boarded" ? (
@@ -259,9 +260,10 @@ export function OfflineManifestView() {
                         type="button"
                         disabled={busyBooking === diver.bookingId}
                         onClick={() => record(diver.bookingId, "not_boarded")}
-                        className="min-h-14 rounded-lg border border-border-strong px-5 text-base font-semibold disabled:opacity-60"
+                        aria-busy={busyBooking === diver.bookingId}
+                        className="min-h-14 touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
                       >
-                        Mark not boarded
+                        {busyBooking === diver.bookingId ? "Saving…" : "Mark not boarded"}
                       </button>
                     ) : null}
                   </div>

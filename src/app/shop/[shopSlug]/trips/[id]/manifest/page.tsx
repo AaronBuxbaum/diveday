@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall } from "@/db/manifests";
 import { getShopById } from "@/db/queries";
@@ -322,24 +323,24 @@ export default async function TripManifestPage({
                       <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="boarded" />
-                        <button
-                          type="submit"
-                          className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground hover:bg-primary-hover sm:w-auto"
+                        <SubmitButton
+                          pendingLabel="Saving…"
+                          className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
                           Mark boarded
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                     {!boarded ? (
                       <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="not_boarded" />
-                        <button
-                          type="submit"
-                          className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold hover:bg-surface-sunken sm:w-auto"
+                        <SubmitButton
+                          pendingLabel="Saving…"
+                          className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
                           Mark not boarded
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                   </div>
