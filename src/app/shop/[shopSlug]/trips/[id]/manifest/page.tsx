@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -86,13 +87,10 @@ export default async function TripManifestPage({
       note: parsed.data.note,
     });
     if (!outcome.ok) {
-      redirect(
-        `${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}#roll-call-${parsed.data.bookingId}`,
-      );
+      redirect(`${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
     }
-    redirect(
-      `${back}&notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}#roll-call-${parsed.data.bookingId}`,
-    );
+    revalidatePath(back.split("?")[0]);
+    redirect(`${back}&notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}`);
   }
 
   return (
@@ -296,7 +294,9 @@ export default async function TripManifestPage({
                 id={`roll-call-${diver.bookingId}`}
                 className={
                   ready
-                    ? "scroll-mt-32 border-l-4 border-success px-4 py-5 sm:px-5"
+                    ? diver.rollCall
+                      ? "border-l-4 border-success px-4 py-5 sm:px-5"
+                      : "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-inset ring-warning/30 sm:px-5"
                     : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5"
                 }
               >
@@ -345,7 +345,7 @@ export default async function TripManifestPage({
                       </ul>
                     ) : null}
                     <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3 print:hidden">
-                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-primary">
+                      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
                         Add a note to this roll-call record
                       </summary>
                       <div className="mt-2">
