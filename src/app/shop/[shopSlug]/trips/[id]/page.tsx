@@ -1023,28 +1023,17 @@ export default async function ManageTripPage({
                       </Link>
                       <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {readiness ? (
-                        readiness.status === "ready" ? (
-                          <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
-                            Ready
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
-                            Needs attention
-                          </span>
-                        )
-                      ) : null}
-                      <form action={removeBookingAction}>
-                        <input type="hidden" name="bookingId" value={booking.id} />
-                        <button
-                          type="submit"
-                          className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
-                        >
-                          Cancel
-                        </button>
-                      </form>
-                    </div>
+                    {readiness ? (
+                      readiness.status === "ready" ? (
+                        <span className="shrink-0 rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
+                          Ready
+                        </span>
+                      ) : (
+                        <span className="shrink-0 rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
+                          Needs attention
+                        </span>
+                      )
+                    ) : null}
                   </div>
 
                   {readiness && readiness.status !== "ready" ? (
@@ -1078,14 +1067,18 @@ export default async function ManageTripPage({
                                   ? `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
                                   : undefined
                               }
-                              className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
+                              className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
                             >
                               {waiverControl.label}
                               {waiverControl.hint ? (
-                                <span className="font-normal opacity-70">
-                                  {" "}
-                                  · {waiverControl.hint}
-                                </span>
+                                <>
+                                  <span aria-hidden="true" className="opacity-40">
+                                    ·
+                                  </span>
+                                  <span className="font-normal opacity-70">
+                                    {waiverControl.hint}
+                                  </span>
+                                </>
                               ) : null}
                             </SubmitButton>
                           </form>
@@ -1223,10 +1216,20 @@ export default async function ManageTripPage({
                     ) : null}
                     <Link
                       href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                      className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+                      className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
                     >
                       Create order
                     </Link>
+                    <form action={removeBookingAction} className="sm:ml-auto">
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <SubmitButton
+                        pendingLabel="Removing…"
+                        confirmMessage={`Remove ${person.fullName} from this trip? Their spot opens back up.`}
+                        className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
+                      >
+                        Remove booking
+                      </SubmitButton>
+                    </form>
                   </div>
                 </li>
               );
