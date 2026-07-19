@@ -42,8 +42,8 @@ hosting itself.
   [ADR-0006](0006-auth.md)); `.env.example` documents it alongside the DB vars.
 - H-04's remaining scope — named database/secrets/backup/incident owner — is still open; this ADR
   resolves the technical half (provider, driver, migration procedure), not the ownership half.
-- No other new services are needed for M1: object storage, email, and payments stay deferred
-  (`overview.md`'s deferred-decisions table, `product/roadmap.md`).
+- Certification-card object storage is now provisioned through a private Vercel Blob store. Email
+  and payments remain deferred as described in `product/roadmap.md`.
 
 ## Alternatives considered
 
