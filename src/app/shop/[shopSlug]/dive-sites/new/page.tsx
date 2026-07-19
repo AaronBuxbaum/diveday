@@ -5,11 +5,13 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { splitMediaUrls } from "@/lib/dive-sites";
+import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Create dive site — Scuba" };
 
 const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
+const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const siteSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
@@ -22,6 +24,17 @@ const siteSchema = z
     imageUrls: z.string().max(12_000),
     marineLife: z.string().trim().max(400),
     marineLifeDescription: z.string().trim().max(1_200),
+    difficulty: z.string().trim().max(120),
+    depthRange: z.string().trim().max(120),
+    currentNote: z.string().trim().max(500),
+    divePlan: z.string().trim().max(1_200),
+    landmarks: z.string().max(4_000),
+    minimumCertificationLevel: z.preprocess(
+      (value) => (value === "" ? null : value),
+      z
+        .enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"])
+        .nullable(),
+    ),
   })
   .refine(
     (site) => (site.forecastLatitude === "") === (site.forecastLongitude === ""),
@@ -54,6 +67,14 @@ export default async function NewDiveSitePage({
     } catch {
       redirect(`${back}/new?error=images`);
     }
+    const specialties = z
+      .array(specialtySchema)
+      .safeParse(formData.getAll("specialty").map(String));
+    if (!specialties.success) redirect(`${back}/new?error=invalid`);
+    const landmarks = parsed.data.landmarks
+      .split("\n")
+      .map((landmark) => landmark.trim())
+      .filter(Boolean);
     const site = await createDiveSite(await getDb(), {
       shopId: activeSession.user.shopId,
       ...parsed.data,
@@ -64,6 +85,14 @@ export default async function NewDiveSitePage({
       satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
       routeImageUrl: parsed.data.routeImageUrl || undefined,
       imageUrls,
+      minimumCertificationLevel: parsed.data.minimumCertificationLevel,
+      requiredSpecialties: specialties.data,
+      requiresNitrox: formData.get("requiresNitrox") === "on",
+      difficulty: parsed.data.difficulty,
+      depthRange: parsed.data.depthRange,
+      currentNote: parsed.data.currentNote,
+      divePlan: parsed.data.divePlan,
+      landmarks,
     });
     redirect(`${back}/${site.id}`);
   }
@@ -181,6 +210,73 @@ function SiteForm({
         Underwater briefing
         <textarea name="marineLifeDescription" rows={3} maxLength={1200} className={inputClass} />
       </label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Difficulty <span className="font-normal text-muted">(optional)</span>
+          <input
+            name="difficulty"
+            maxLength={120}
+            placeholder="Calm, intermediate, advanced"
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Depth range <span className="font-normal text-muted">(optional)</span>
+          <input name="depthRange" maxLength={120} placeholder="20–45 ft" className={inputClass} />
+        </label>
+      </div>
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Current and conditions notes <span className="font-normal text-muted">(optional)</span>
+        <textarea name="currentNote" rows={2} maxLength={500} className={inputClass} />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Dive plan <span className="font-normal text-muted">(optional)</span>
+        <textarea
+          name="divePlan"
+          rows={3}
+          maxLength={1200}
+          placeholder="Entry, route, turnaround, and exit notes."
+          className={inputClass}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Landmarks <span className="font-normal text-muted">(one per line, optional)</span>
+        <textarea name="landmarks" rows={3} maxLength={4000} className={inputClass} />
+      </label>
+      <fieldset className="rounded-2xl border border-border bg-surface-sunken p-5">
+        <legend className="px-1 text-sm font-medium">Readiness gates</legend>
+        <p className="text-sm text-muted">
+          These requirements travel with the site into every new trip that uses it.
+        </p>
+        <label className="mt-4 flex flex-col gap-1 text-sm font-medium">
+          Minimum certification
+          <select name="minimumCertificationLevel" defaultValue="" className={inputClass}>
+            <option value="">No level required by the site</option>
+            {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
+            <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
+              <input
+                name="specialty"
+                type="checkbox"
+                value={value}
+                className="size-4 accent-primary"
+              />
+              {label}
+            </label>
+          ))}
+          <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+            <input name="requiresNitrox" type="checkbox" className="size-4 accent-primary" />
+            Nitrox
+          </label>
+        </div>
+      </fieldset>
       <button
         type="submit"
         className="mt-2 min-h-11 self-start rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
