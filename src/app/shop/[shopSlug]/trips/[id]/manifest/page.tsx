@@ -67,6 +67,7 @@ export default async function TripManifestPage({
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
+  const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
   const banner = notice ? BANNERS[notice] : undefined;
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
@@ -181,7 +182,11 @@ export default async function TripManifestPage({
 
       <section
         aria-labelledby="roll-call-progress-heading"
-        className="boat-progress-panel sticky top-20 z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
+        className={
+          rollCallComplete
+            ? "boat-progress-panel rise-in sticky top-20 z-10 mt-4 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur print:hidden"
+            : "boat-progress-panel sticky top-20 z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
+        }
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -189,7 +194,7 @@ export default async function TripManifestPage({
               Active checkpoint
             </p>
             <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
-              {rollCallCheckpointLabel(checkpoint)}
+              {rollCallComplete ? "Roll call complete ✦" : rollCallCheckpointLabel(checkpoint)}
             </h2>
           </div>
           <p className="text-base font-bold tabular-nums">
@@ -217,7 +222,7 @@ export default async function TripManifestPage({
             }}
           />
         </div>
-        <p className="mt-2 text-sm font-semibold text-muted">
+        <p className="mt-2 text-sm font-semibold text-muted" aria-live="polite">
           {manifest.summary.awaiting === 0
             ? "Everyone has an explicit roll-call result. You’re ready for the next check."
             : String(manifest.summary.awaiting) +
