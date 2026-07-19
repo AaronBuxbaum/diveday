@@ -446,6 +446,110 @@ export const notificationDeliveryAttempts = pgTable(
   ],
 );
 
+/**
+ * One connected Stripe account per shop (Connect, Standard — the shop's own
+ * account, not a platform-controlled sub-account). Presence plus
+ * `charges_enabled` is the sole readiness gate for creating an order; absence
+ * or a disconnect fails closed to "not connected", never a silent retry.
+ * See 20260719-stripe-connect-orders.
+ */
+export const shopStripeAccounts = pgTable(
+  "shop_stripe_accounts",
+  {
+    shopId: uuid("shop_id")
+      .primaryKey()
+      .references(() => shops.id),
+    stripeAccountId: text("stripe_account_id").notNull(),
+    chargesEnabled: boolean("charges_enabled").notNull().default(false),
+    payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
+    detailsSubmitted: boolean("details_submitted").notNull().default(false),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set on an OAuth deauthorize webhook; a later reconnect clears it. */
+    disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId),
+  ],
+);
+
+export const orderStatus = pgEnum("order_status", ["open", "paid", "void", "uncollectible"]);
+
+/**
+ * What one order line represents — free-form `other` always available since
+ * shops will invoice things this catalog doesn't anticipate.
+ */
+export const orderLineItemKind = pgEnum("order_line_item_kind", [
+  "trip_fee",
+  "course_fee",
+  "rental_gear",
+  "deposit",
+  "merchandise",
+  "other",
+]);
+
+/**
+ * A shop-issued order/invoice for one customer. Local, provider-neutral
+ * status mirrors the Stripe invoice it is backed by; `booking_id` is optional
+ * so an order can stand alone (gear sale, walk-in air fill) or settle a
+ * booking's payment gate through the webhook (20260719-stripe-connect-orders).
+ */
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: orderStatus("status").notNull().default("open"),
+    currency: text("currency").notNull().default("usd"),
+    totalCents: integer("total_cents").notNull(),
+    amountPaidCents: integer("amount_paid_cents").notNull().default(0),
+    description: text("description"),
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripeCustomerId: text("stripe_customer_id").notNull(),
+    stripeInvoiceId: text("stripe_invoice_id").notNull(),
+    hostedInvoiceUrl: text("hosted_invoice_url"),
+    invoicePdfUrl: text("invoice_pdf_url"),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("orders_stripe_invoice_unique").on(table.stripeInvoiceId),
+    index("orders_shop_status_idx").on(table.shopId, table.status),
+    index("orders_shop_booking_idx").on(table.shopId, table.bookingId),
+  ],
+);
+
+export const orderLineItems = pgTable(
+  "order_line_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    kind: orderLineItemKind("kind").notNull().default("other"),
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    unitAmountCents: integer("unit_amount_cents").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("order_line_items_order_idx").on(table.orderId)],
+);
+
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
 export const tripAssignments = pgTable(
   "trip_assignments",
@@ -977,3 +1081,8 @@ export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
 export type NitroxFill = typeof nitroxFills.$inferSelect;
+export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type OrderStatus = (typeof orderStatus.enumValues)[number];
+export type OrderLineItem = typeof orderLineItems.$inferSelect;
+export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
