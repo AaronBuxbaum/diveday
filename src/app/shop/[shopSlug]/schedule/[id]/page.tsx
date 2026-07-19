@@ -406,10 +406,20 @@ export default async function TripDetailPage({
               highlights={trip.diveSite.marineLife}
             />
             {moments.length ? (
-              <div className="mt-6 rounded-lg bg-accent/10 p-4">
-                <h3 className="font-semibold">A recent diver moment</h3>
-                <p className="mt-1 text-sm text-muted">{moments[0]?.caption}</p>
-              </div>
+              <figure className="mt-6 overflow-hidden rounded-lg bg-accent/10 sm:grid sm:grid-cols-[12rem_1fr]">
+                {moments[0]?.imageUrl ? (
+                  // biome-ignore lint/performance/noImgElement: moderated dive-site media supports approved external hosts.
+                  <img
+                    src={resolveDiveSiteImageUrl(moments[0].imageUrl) ?? undefined}
+                    alt="A southern stingray gliding over the reef"
+                    className="aspect-video h-full w-full object-cover sm:aspect-square"
+                  />
+                ) : null}
+                <figcaption className="p-4 sm:self-center">
+                  <h3 className="font-semibold">A recent diver moment</h3>
+                  <p className="mt-1 text-sm text-muted">{moments[0]?.caption}</p>
+                </figcaption>
+              </figure>
             ) : null}
             {creatures.length === 0 && trip.diveSite.imageUrls.length > 0 ? (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -646,7 +656,9 @@ export default async function TripDetailPage({
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
-                  Buddy or group notes <span className="font-normal text-muted">(optional)</span>
+                  <span>
+                    Buddy or group notes <span className="font-normal text-muted">(optional)</span>
+                  </span>
                   <textarea
                     name="buddyPreference"
                     rows={2}

@@ -91,4 +91,8 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
     "src",
     /\/dive-sites\//,
   );
+  await expect(page.getByRole("img", { name: /southern stingray/i })).toHaveAttribute(
+    "src",
+    /Dasyatis%20americana%20NOAA\.jpg/,
+  );
 });
