@@ -20,11 +20,12 @@ export default async function ShopPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ created?: string; reset?: string; email?: string }>;
+  searchParams: Promise<{ created?: string; series?: string; reset?: string; email?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { created, reset, email } = await searchParams;
+  const { created, series, reset, email } = await searchParams;
+  const seriesCount = series ? Number.parseInt(series, 10) : 0;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -55,7 +56,7 @@ export default async function ShopPage({
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["created", "reset", "email"]} />
+      <FlashParams params={["created", "series", "reset", "email"]} />
       <header className="mb-6 overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
         <div className="bg-primary/10 px-6 py-3 text-sm font-medium text-primary sm:px-8">
           <span aria-hidden="true">✦</span> A calm morning starts with a clear departure board.
@@ -234,7 +235,13 @@ export default async function ShopPage({
         </div>
       </section>
 
-      {created ? <ShopNotice>“{created}” is on the board. 🤙</ShopNotice> : null}
+      {created ? (
+        <ShopNotice>
+          {seriesCount > 1
+            ? `“${created}” is on the board — ${seriesCount} trips scheduled. 🤙`
+            : `“${created}” is on the board. 🤙`}
+        </ShopNotice>
+      ) : null}
 
       {reset ? (
         <ShopNotice tone="neutral">Demo data reset — fresh boat, clean slate. 🤿</ShopNotice>
@@ -340,7 +347,14 @@ export default async function ShopPage({
                   className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
-                    <h2 className="font-medium group-hover:text-primary">{trip.title}</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-medium group-hover:text-primary">{trip.title}</h2>
+                      {trip.seriesId ? (
+                        <span className="rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
+                          Series
+                        </span>
+                      ) : null}
+                    </div>
                     {trip.course ? (
                       <p className="text-sm font-medium text-primary">
                         Course session · {trip.course.title}

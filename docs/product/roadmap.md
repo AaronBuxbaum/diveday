@@ -46,6 +46,10 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Full trips offer a durable, first-come wait list. Entries remain separate from bookings and
   manifests; staff follow up manually when space opens. Automated offers and expiry policy remain
   future work.
+- ✅ Recurring trips: staff schedule a weekly (or every-N-week) series in one action and it
+  materializes independent, initially-identical trip instances on the shared spine, editable and
+  cancellable per date ([20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md)).
+  Series-wide edits and a rolling horizon remain future work.
 
 ## M3 — Waivers (core slice complete)
 
