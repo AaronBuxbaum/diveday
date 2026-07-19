@@ -67,6 +67,7 @@ const detailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
+  plannedDives: z.coerce.number().int().min(1).max(6),
   diveSiteId: z.preprocess((value) => (value === "" ? null : value), z.string().uuid().nullable()),
 });
 
@@ -255,7 +256,8 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
-    const { title, description, date, startTime, endTime, capacity, diveSiteId } = parsed.data;
+    const { title, description, date, startTime, endTime, capacity, plannedDives, diveSiteId } =
+      parsed.data;
     const sw = parseWallTime(date, startTime);
     const ew = parseWallTime(date, endTime);
     if (!sw || !ew) redirect(`${back}?notice=invalid`);
@@ -271,6 +273,7 @@ export default async function ManageTripPage({
       startsAt,
       endsAt,
       capacity,
+      plannedDives,
       diveSiteId,
     });
     redirect(`${back}?notice=saved`);
@@ -560,7 +563,7 @@ export default async function ManageTripPage({
                 : "Attach a saved site so divers can see the location and underwater briefing."}
             </span>
           </label>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
             <label className="flex flex-col gap-1 text-sm font-medium">
               Date
               <input
@@ -600,6 +603,18 @@ export default async function ManageTripPage({
                 min={1}
                 max={60}
                 defaultValue={trip.capacity}
+                className={`${inputClass} tabular-nums`}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Planned dives
+              <input
+                name="plannedDives"
+                type="number"
+                required
+                min={1}
+                max={6}
+                defaultValue={trip.plannedDives}
                 className={`${inputClass} tabular-nums`}
               />
             </label>

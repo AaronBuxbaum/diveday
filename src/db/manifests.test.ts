@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from "./queries";
+import { rollCallEvents } from "./schema";
 import { seedDemo } from "./seed";
 import { completeWaiver, issueWaiverRequest, listWaiverTemplates } from "./waivers";
 
@@ -89,5 +90,121 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         note: "Not at the dock.",
       }),
     ).resolves.toMatchObject({ ok: true });
+  });
+
+  it("keeps departure and after-dive head counts independent", async () => {
+    const { db, shop, reef, booking, template, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      templateId: template.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date("2026-07-20T11:00:00.000Z"),
+    });
+
+    const departure = await getTripManifest(db, shop.id, reef.id, "departure");
+    const afterDive = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    expect(
+      departure?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall?.state,
+    ).toBe("boarded");
+    expect(
+      afterDive?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall,
+    ).toBeUndefined();
+  });
+
+  it("applies an offline event once and rejects a delayed event behind newer live history", async () => {
+    const { db, shop, reef, booking, template, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      templateId: template.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    const now = Date.now();
+    const offlineInput = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded" as const,
+      checkpoint: "after_dive_1" as const,
+      source: "offline" as const,
+      clientEventId: "11111111-1111-4111-8111-111111111111",
+      offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+      occurredAt: new Date(now - 60 * 60 * 1000),
+    };
+    const first = await recordRollCall(db, offlineInput);
+    const duplicate = await recordRollCall(db, offlineInput);
+    expect(first).toMatchObject({ ok: true });
+    expect(duplicate).toMatchObject({ ok: true, duplicate: true });
+    expect(
+      (await db.select().from(rollCallEvents)).filter(
+        (event) => event.clientEventId === offlineInput.clientEventId,
+      ),
+    ).toHaveLength(1);
+
+    await recordRollCall(db, {
+      ...offlineInput,
+      source: "live",
+      clientEventId: undefined,
+      offlineSnapshotSavedAt: undefined,
+      status: "not_boarded",
+      occurredAt: new Date(now - 10 * 60 * 1000),
+    });
+    await expect(
+      recordRollCall(db, {
+        ...offlineInput,
+        clientEventId: "22222222-2222-4222-8222-222222222222",
+        occurredAt: new Date(now - 30 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "newer_event_exists" });
+  });
+
+  it("rejects invalid checkpoints and implausible offline clocks", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_3",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "invalid_checkpoint" });
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        source: "offline",
+        clientEventId: "33333333-3333-4333-8333-333333333333",
+        offlineSnapshotSavedAt: new Date("2099-01-01T00:00:00.000Z"),
+        occurredAt: new Date("2099-01-01T00:01:00.000Z"),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
   });
 });

@@ -125,15 +125,17 @@ export default function ProductPage() {
                 At the dock
               </p>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                A live manifest that respects the reality of a boat.
+                A manifest that stays useful after the signal disappears.
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
-                The crew gets big, explicit phone controls, readiness blockers that cannot be
-                ignored, append-only boarding history, and a print view from the same manifest.
+                The crew gets big, explicit phone controls, per-dive head counts, readiness blockers
+                that cannot be ignored, append-only boarding history, and a print view from the same
+                manifest.
               </p>
               <p className="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm leading-6 text-muted">
-                The manifest is live and online today. Offline snapshots and reconciliation are not
-                enabled yet, so Scuba makes that operating boundary explicit instead of hiding it.
+                Save an encrypted device copy before leaving service. Every offline change stays
+                visibly pending until Scuba rechecks live readiness and reconciles it; newer live
+                events are never silently overwritten.
               </p>
             </div>
           </div>
