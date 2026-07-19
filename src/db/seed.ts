@@ -366,6 +366,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         briefing: {
           name: "Molasses Reef",
           locationName: "Key Largo National Marine Sanctuary",
+          forecastLatitude: 25.0117,
+          forecastLongitude: -80.3764,
           description: "A bright outer-reef classic with a relaxed profile.",
           marineLife: "Parrotfish · angelfish · southern stingrays",
         },
@@ -376,6 +378,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         briefing: {
           name: "Molasses Reef",
           locationName: "Key Largo National Marine Sanctuary",
+          forecastLatitude: 25.0117,
+          forecastLongitude: -80.3764,
           description:
             "A bright outer-reef classic with a relaxed profile and plenty of room to explore.",
           marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
@@ -406,6 +410,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         sourceTemplateVersion: 1,
         name: "Molasses Reef",
         locationName: "Key Largo National Marine Sanctuary",
+        forecastLatitude: 25.0117,
+        forecastLongitude: -80.3764,
         description:
           "A bright outer-reef classic with a relaxed profile and plenty of room to explore.",
         marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
@@ -432,6 +438,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         // Every trip that visits inherits at least this (readiness composes it).
         minimumCertificationLevel: "advanced_open_water" as const,
         requiredSpecialties: ["deep"] as DiveSpecialty[],
+        forecastLatitude: 25.0789,
+        forecastLongitude: -80.2186,
         description:
           "A deliberately sunk former Navy ship with dramatic structure and blue-water scale.",
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
@@ -452,6 +460,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         name: "Christ of the Abyss",
         locationName: "John Pennekamp Coral Reef State Park",
+        forecastLatitude: 25.1292,
+        forecastLongitude: -80.4011,
         description: "A shallow, iconic statue site that rewards an unhurried reef dive.",
         marineLife: "Sergeant majors · blue tangs · French angelfish · coral gardens",
         marineLifeDescription:

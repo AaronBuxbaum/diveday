@@ -20,6 +20,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Transactional email | Resend REST API behind `src/lib/notifications/` | [20260718 email](decisions/20260718-resend-transactional-email.md) |
 | Offline manifests | Encrypted IndexedDB snapshot + data-free service-worker shell | [20260718 offline manifests](decisions/20260718-offline-manifest-snapshots.md) |
 | Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md) |
+| Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library | [0002](decisions/0002-toolchain.md) |
 | E2E tests | Playwright | [0002](decisions/0002-toolchain.md) |

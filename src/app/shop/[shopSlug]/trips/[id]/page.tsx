@@ -43,6 +43,7 @@ import {
   listWaiverTemplates,
 } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { hasCrewPrediction } from "@/lib/marine-forecast";
 import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -125,6 +126,10 @@ const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
   payment: { tone: "success", text: "Payment status updated." },
   conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },
+  "conditions-cleared": {
+    tone: "success",
+    text: "Crew prediction cleared. Divers will see the automated outlook when it is available.",
+  },
   "gear-assigned": { tone: "success", text: "Gear added to the packing list." },
   "gear-returned": { tone: "success", text: "Gear returned to the gear room." },
   "gear-packed": { tone: "success", text: "Available gear was packed from diver requests." },
@@ -300,6 +305,13 @@ export default async function ManageTripPage({
     if (!parsed.success) redirect(`${back}?notice=invalid`);
     const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, parsed.data);
     redirect(`${back}?notice=${saved ? "conditions" : "invalid"}`);
+  }
+
+  async function clearConditionsAction() {
+    "use server";
+    const s = await requireStaffSession();
+    const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
+    redirect(`${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
   }
 
   async function cancelTripAction() {
@@ -657,9 +669,9 @@ export default async function ManageTripPage({
       </section>
 
       <section className="mt-10 rounded-lg border border-border bg-surface p-5">
-        <h2 className="text-lg font-semibold">Predicted conditions</h2>
+        <h2 className="text-lg font-semibold">Crew prediction</h2>
         <p className="mt-1 text-sm text-muted">
-          This is a crew briefing, not a live guarantee. Update it whenever the forecast changes.
+          Publish the crew’s read on the day. It replaces the automated marine outlook for divers.
         </p>
         <form action={saveConditionsAction} className="mt-5 flex flex-col gap-5">
           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -711,9 +723,19 @@ export default async function ManageTripPage({
             type="submit"
             className="min-h-11 self-start rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
           >
-            Save conditions
+            Publish crew prediction
           </button>
         </form>
+        {hasCrewPrediction(trip) ? (
+          <form action={clearConditionsAction} className="mt-3">
+            <button
+              type="submit"
+              className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            >
+              Return to automated outlook
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section className="mt-10">

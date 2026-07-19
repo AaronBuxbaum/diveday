@@ -23,6 +23,11 @@ import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
 import { dockDayTimeline, packingChecklist } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
+import {
+  fetchAutomatedMarineForecast,
+  hasCrewPrediction,
+  shouldShowAutomatedForecast,
+} from "@/lib/marine-forecast";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 
 export const metadata: Metadata = {
@@ -89,6 +94,17 @@ export default async function TripDetailPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
+  const crewPrediction = hasCrewPrediction(trip);
+  const forecastPoint =
+    trip.diveSite &&
+    trip.diveSite.forecastLatitude !== null &&
+    trip.diveSite.forecastLongitude !== null
+      ? { latitude: trip.diveSite.forecastLatitude, longitude: trip.diveSite.forecastLongitude }
+      : null;
+  const automatedForecast =
+    !crewPrediction && forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
+      ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
+      : null;
 
   // The confirmation renders only from a real booking row — never from a
   // URL claim (design principle 6: trustworthy by inspection).
@@ -331,44 +347,67 @@ export default async function TripDetailPage({
         </ol>
       </section>
 
-      {trip.conditionsSummary ||
-      trip.waterTemperatureC !== null ||
-      trip.visibilityMeters !== null ||
-      trip.surfaceConditions ? (
+      {crewPrediction || automatedForecast ? (
         <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
           <p className="text-sm font-medium tracking-widest text-primary uppercase">
-            Predicted conditions
+            {crewPrediction ? "Crew prediction" : "Automated marine outlook"}
           </p>
-          {trip.conditionsSummary ? (
+          {crewPrediction && trip.conditionsSummary ? (
             <p className="mt-3 text-muted">{trip.conditionsSummary}</p>
           ) : null}
           <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-            {trip.waterTemperatureC !== null ? (
+            {(crewPrediction ? trip.waterTemperatureC : automatedForecast?.waterTemperatureC) !==
+            null ? (
               <div className="rounded-lg bg-surface-sunken p-3">
                 <dt className="text-sm text-muted">Water temperature</dt>
-                <dd className="mt-1 text-lg font-semibold">{trip.waterTemperatureC}°C</dd>
+                <dd className="mt-1 text-lg font-semibold">
+                  {crewPrediction ? trip.waterTemperatureC : automatedForecast?.waterTemperatureC}°C
+                </dd>
               </div>
             ) : null}
-            {trip.visibilityMeters !== null ? (
+            {crewPrediction && trip.visibilityMeters !== null ? (
               <div className="rounded-lg bg-surface-sunken p-3">
                 <dt className="text-sm text-muted">Visibility</dt>
                 <dd className="mt-1 text-lg font-semibold">{trip.visibilityMeters} m</dd>
               </div>
             ) : null}
-            {trip.surfaceConditions ? (
+            {(crewPrediction ? trip.surfaceConditions : automatedForecast?.surfaceConditions) ? (
               <div className="rounded-lg bg-surface-sunken p-3">
                 <dt className="text-sm text-muted">Surface</dt>
-                <dd className="mt-1 text-lg font-semibold">{trip.surfaceConditions}</dd>
+                <dd className="mt-1 text-lg font-semibold">
+                  {crewPrediction ? trip.surfaceConditions : automatedForecast?.surfaceConditions}
+                </dd>
               </div>
             ) : null}
           </dl>
-          <p className="mt-4 text-xs text-muted">
-            Forecast supplied by the crew; conditions can change. The final call happens at the
-            dock.
-            {trip.conditionsUpdatedAt
-              ? ` Updated ${trip.conditionsUpdatedAt.toLocaleString("en-US", { timeZone: shop.timezone, timeZoneName: "short" })}.`
-              : " Update time unavailable."}
-          </p>
+          {crewPrediction ? (
+            <p className="mt-4 text-xs text-muted">
+              Forecast supplied by the crew; conditions can change. The final call happens at the
+              dock.
+              {trip.conditionsUpdatedAt
+                ? ` Updated ${trip.conditionsUpdatedAt.toLocaleString("en-US", { timeZone: shop.timezone, timeZoneName: "short" })}.`
+                : " Update time unavailable."}
+            </p>
+          ) : automatedForecast ? (
+            <div className="mt-4">
+              <p className="text-base text-muted">
+                Planning outlook from Open-Meteo — the crew confirms conditions and makes the final
+                call at the dock.
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                Underwater visibility comes from the crew.{" "}
+                <time dateTime={automatedForecast.validAt.toISOString()}>
+                  For {formatShortDate(automatedForecast.validAt, "en-US", shop.timezone)} ·{" "}
+                  {automatedForecast.validAt.toLocaleTimeString("en-US", {
+                    timeZone: shop.timezone,
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZoneName: "short",
+                  })}
+                </time>
+              </p>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
