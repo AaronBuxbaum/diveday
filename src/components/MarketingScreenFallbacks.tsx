@@ -10,7 +10,7 @@ function AppBar({ label }: { label: string }) {
 export function CaptainRollCallFallback() {
   return (
     <div className="bg-background">
-      <AppBar label="Live manifest · online" />
+      <AppBar label="Encrypted offline copy · current" />
       <div className="space-y-4 p-4">
         <div>
           <p className="text-xs font-medium tracking-widest text-primary uppercase">

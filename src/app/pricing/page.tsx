@@ -14,7 +14,7 @@ const faq = [
   {
     question: "What is included?",
     answer:
-      "The founding-shop price covers every currently available Scuba workflow, from public bookings through the live boat manifest. It is not a collection of separate per-feature add-ons.",
+      "The founding-shop price covers every currently available Scuba workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons.",
   },
   {
     question: "Can I see it before I commit?",
@@ -29,7 +29,7 @@ const faq = [
   {
     question: "Does the manifest work offline?",
     answer:
-      "Not yet. The current manifest is a live online view and makes that status visible to the crew. Offline snapshots and reconciliation are a planned safety-focused follow-up.",
+      "Yes. Staff explicitly saves an encrypted device copy before leaving service. Departure and after-dive roll calls work from that copy, show freshness and pending changes, and reconcile against live safety data when service returns.",
   },
 ] as const;
 

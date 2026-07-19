@@ -21,6 +21,7 @@ const formSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
+  plannedDives: z.coerce.number().int().min(1).max(6),
   courseId: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
@@ -37,8 +38,17 @@ async function scheduleTrip(formData: FormData) {
 
   const parsed = formSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
-  const { title, description, date, startTime, endTime, capacity, courseId, diveSiteId } =
-    parsed.data;
+  const {
+    title,
+    description,
+    date,
+    startTime,
+    endTime,
+    capacity,
+    plannedDives,
+    courseId,
+    diveSiteId,
+  } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
@@ -62,6 +72,7 @@ async function scheduleTrip(formData: FormData) {
     startsAt,
     endsAt,
     capacity,
+    plannedDives,
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
   redirect(`/shop/${session.user.shopSlug}?created=${encodeURIComponent(title)}`);
@@ -188,18 +199,32 @@ export default async function NewTripPage({
             <input name="endTime" type="time" required className={inputClass} />
           </label>
         </div>
-        <label className="flex w-full flex-col gap-1 text-sm font-medium sm:w-40">
-          Capacity
-          <input
-            name="capacity"
-            type="number"
-            required
-            min={1}
-            max={60}
-            defaultValue={12}
-            className={`${inputClass} tabular-nums`}
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-5 sm:w-80">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Capacity
+            <input
+              name="capacity"
+              type="number"
+              required
+              min={1}
+              max={60}
+              defaultValue={12}
+              className={`${inputClass} tabular-nums`}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Planned dives
+            <input
+              name="plannedDives"
+              type="number"
+              required
+              min={1}
+              max={6}
+              defaultValue={2}
+              className={`${inputClass} tabular-nums`}
+            />
+          </label>
+        </div>
         <div className="mt-2 flex items-center gap-3">
           <button
             type="submit"

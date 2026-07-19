@@ -47,9 +47,9 @@ export default function Home() {
                 Run the whole dive day, from booking to head count.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-                Scuba puts bookings, readiness, gear, and a live boat manifest in one considered
-                system — so your crew can spend less time chasing details and more time taking care
-                of divers.
+                Scuba puts bookings, readiness, gear, and an offline-ready boat manifest in one
+                considered system — so your crew can spend less time chasing details and more time
+                taking care of divers.
               </p>
               <div className="mt-8">
                 <HomeCTA enterDemoAction={enterDemoAction} />
@@ -75,7 +75,7 @@ export default function Home() {
                   At the dock
                 </p>
                 <p className="mt-1 text-sm font-medium">
-                  Big, explicit roll-call controls built for a captain&apos;s phone.
+                  Big roll-call controls, encrypted offline, for a captain&apos;s phone.
                 </p>
               </div>
             </div>

@@ -1,6 +1,6 @@
 # 20260718-manifest-live-first — Keep the first boat manifest live, derived, and append-only
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260718-offline-manifest-snapshots
 - **Date:** 2026-07-18
 
 ## Context
@@ -34,3 +34,7 @@ print/PDF uses the exact model staff see on screen. Offline capability requires 
 covering snapshot freshness, cache encryption/retention, reconciliation conflicts, and outdoor
 field testing. If roll call later needs per-dive checkpoints, add a leg/dive identifier to the
 append-only event model rather than overwriting the current events.
+
+Superseded by
+[20260718-offline-manifest-snapshots](20260718-offline-manifest-snapshots.md), which keeps the
+derived and append-only invariants while adding explicit encrypted snapshots and reconciliation.

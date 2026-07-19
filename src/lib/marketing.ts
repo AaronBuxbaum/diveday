@@ -32,7 +32,7 @@ export const productFeatureGroups = [
       "Rental inventory, service holds, packing recommendations, and returns",
       "Dive-site briefings with practical route and conditions context",
       "Nitrox analysis with certification gating and a derived MOD",
-      "A live boat manifest with large, explicit roll-call controls and print support",
+      "An encrypted offline boat manifest with per-dive roll call, explicit sync, and print support",
     ],
   },
   {
@@ -54,7 +54,7 @@ export const earlyAccessPrice = {
   description:
     "One clear price for the complete current operating system — not a seat-by-seat add-on.",
   included: [
-    "Bookings, courses, waivers, certifications, gear, dive sites, nitrox, and manifests",
+    "Bookings, courses, waivers, certifications, gear, dive sites, nitrox, and offline manifests",
     "All staff roles in one shop workspace",
     "New workflow releases while early access is open",
     "A dedicated practice shop with seeded demo data",

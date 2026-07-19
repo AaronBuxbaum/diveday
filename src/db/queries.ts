@@ -22,6 +22,7 @@ export type NewTrip = {
   startsAt: Date;
   endsAt: Date;
   capacity: number;
+  plannedDives?: number;
 };
 
 export async function createTrip(db: AppDb, input: NewTrip) {
@@ -84,6 +85,7 @@ export type TripPatch = {
   startsAt: Date;
   endsAt: Date;
   capacity: number;
+  plannedDives: number;
   diveSiteId?: string | null;
 };
 

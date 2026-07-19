@@ -3,6 +3,28 @@ import { unavailableReadiness } from "./readiness";
 
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
+export type RollCallCheckpoint = "departure" | `after_dive_${number}`;
+
+export function rollCallCheckpoints(plannedDives: number): RollCallCheckpoint[] {
+  const safeCount = Math.max(1, Math.min(6, Math.trunc(plannedDives)));
+  return [
+    "departure",
+    ...Array.from({ length: safeCount }, (_, index) => `after_dive_${index + 1}` as const),
+  ];
+}
+
+export function isRollCallCheckpoint(
+  value: string,
+  plannedDives: number,
+): value is RollCallCheckpoint {
+  return rollCallCheckpoints(plannedDives).some((checkpoint) => checkpoint === value);
+}
+
+export function rollCallCheckpointLabel(checkpoint: RollCallCheckpoint): string {
+  if (checkpoint === "departure") return "Before departure";
+  return `After dive ${checkpoint.slice("after_dive_".length)}`;
+}
+
 export type ManifestGear = {
   label: string;
   type: string;
@@ -35,7 +57,9 @@ export type TripManifest = {
     title: string;
     startsAt: Date;
     endsAt: Date;
+    plannedDives: number;
   };
+  checkpoint: RollCallCheckpoint;
   crew: ManifestCrewMember[];
   divers: (ManifestDiverInput & {
     readiness: ReadinessResult;
@@ -57,6 +81,7 @@ export type TripManifest = {
  */
 export function buildTripManifest(input: {
   trip: TripManifest["trip"];
+  checkpoint?: RollCallCheckpoint;
   crew: ManifestCrewMember[];
   divers: ManifestDiverInput[];
 }): TripManifest {
@@ -67,6 +92,7 @@ export function buildTripManifest(input: {
   }));
   return {
     trip: input.trip,
+    checkpoint: input.checkpoint ?? "departure",
     crew: input.crew,
     divers,
     summary: {

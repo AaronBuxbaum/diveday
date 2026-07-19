@@ -25,3 +25,28 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(page.getByRole("status")).toContainText("Not-boarded status recorded");
   await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();
 });
+
+test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({
+  page,
+  context,
+}) => {
+  await signInAsOwner(page);
+  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+  await page.getByRole("link", { name: "Open boat manifest" }).click();
+
+  await page.getByRole("button", { name: "Save for offline" }).click();
+  await expect(page.getByText(/Saved\. Open offline roll call/)).toBeVisible();
+  await page.getByRole("link", { name: "Open offline roll call" }).click();
+  await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("Device copy · current")).toBeVisible();
+  await page.getByRole("button", { name: "After dive 1" }).click();
+  await page.getByRole("button", { name: "Mark not boarded" }).first().click();
+  await expect(page.getByRole("status")).toContainText("waiting to sync");
+
+  await context.setOffline(false);
+  await expect(page.getByRole("status")).toContainText("reconciled");
+});

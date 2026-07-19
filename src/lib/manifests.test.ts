@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { buildTripManifest, rollCallLabel } from "./manifests";
+import {
+  buildTripManifest,
+  isRollCallCheckpoint,
+  rollCallCheckpointLabel,
+  rollCallCheckpoints,
+  rollCallLabel,
+} from "./manifests";
 
 const trip = {
   id: "trip-1",
   title: "Two-Tank Reef",
   startsAt: new Date("2026-07-20T12:00:00.000Z"),
   endsAt: new Date("2026-07-20T16:00:00.000Z"),
+  plannedDives: 2,
 };
 
 describe("buildTripManifest", () => {
@@ -63,5 +70,12 @@ describe("buildTripManifest", () => {
         note: "Stayed ashore",
       }),
     ).toBe("Not boarded");
+  });
+
+  it("builds bounded departure and after-dive checkpoints", () => {
+    expect(rollCallCheckpoints(2)).toEqual(["departure", "after_dive_1", "after_dive_2"]);
+    expect(isRollCallCheckpoint("after_dive_2", 2)).toBe(true);
+    expect(isRollCallCheckpoint("after_dive_3", 2)).toBe(false);
+    expect(rollCallCheckpointLabel("after_dive_2")).toBe("After dive 2");
   });
 });

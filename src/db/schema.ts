@@ -292,6 +292,8 @@ export const trips = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     capacity: integer("capacity").notNull(),
+    /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
+    plannedDives: integer("planned_dives").notNull().default(2),
     status: tripStatus("status").notNull().default("scheduled"),
     conditionsSummary: text("conditions_summary"),
     waterTemperatureC: integer("water_temperature_c"),
@@ -904,6 +906,7 @@ export const nitroxFills = pgTable(
 );
 
 export const rollCallStatus = pgEnum("roll_call_status", ["boarded", "not_boarded"]);
+export const rollCallSource = pgEnum("roll_call_source", ["live", "offline"]);
 
 /**
  * Append-only safety history. Absence means a diver is still awaiting roll
@@ -927,17 +930,26 @@ export const rollCallEvents = pgTable(
       .notNull()
       .references(() => people.id),
     status: rollCallStatus("status").notNull(),
+    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
+    checkpoint: text("checkpoint").notNull().default("departure"),
+    source: rollCallSource("source").notNull().default("live"),
+    /** Device-generated idempotency key. Live events leave this null. */
+    clientEventId: uuid("client_event_id"),
+    /** Which encrypted snapshot supplied the offline readiness evidence. */
+    offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("roll_call_events_shop_trip_booking_created_idx").on(
+    index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx").on(
       table.shopId,
       table.tripId,
+      table.checkpoint,
       table.bookingId,
-      table.createdAt,
+      table.occurredAt,
     ),
+    uniqueIndex("roll_call_events_shop_client_event_unique").on(table.shopId, table.clientEventId),
   ],
 );
 

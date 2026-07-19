@@ -247,6 +247,11 @@ accessible, explicit actions.
 
 ### Phase E — M6 manifest and roll call
 
+**Implementation status (2026-07-18): complete; V-02 field validation remains.** The derived live
+manifest, encrypted device snapshot, explicit freshness, idempotent reconciliation, independent
+per-dive checkpoints, print view, and adversarial persistence tests are shipped together. Do not
+interpret automated browser coverage as the required outdoor operations sign-off.
+
 Treat this as a dedicated safety project:
 
 - derive the manifest from bookings, assignments, waiver/cert readiness, and crew;
