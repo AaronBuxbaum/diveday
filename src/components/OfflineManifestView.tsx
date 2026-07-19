@@ -105,6 +105,7 @@ export function OfflineManifestView() {
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
+  const rollCallComplete = manifest.summary.totalDivers > 0 && awaiting === 0;
 
   async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     setBusyBooking(bookingId);
@@ -196,7 +197,13 @@ export function OfflineManifestView() {
         ))}
       </nav>
 
-      <section className="mt-4 grid grid-cols-3 gap-3">
+      <section
+        className={
+          rollCallComplete
+            ? "rise-in mt-4 grid grid-cols-3 gap-3 rounded-2xl border border-accent/50 bg-accent/10 p-3"
+            : "mt-4 grid grid-cols-3 gap-3"
+        }
+      >
         {[
           ["Divers", manifest.summary.totalDivers],
           ["Boarded", boarded],
@@ -210,7 +217,16 @@ export function OfflineManifestView() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-xl font-semibold">{rollCallCheckpointLabel(checkpoint)} roll call</h2>
+        <h2 className="text-xl font-semibold">
+          {rollCallComplete
+            ? "Roll call complete ✦"
+            : rollCallCheckpointLabel(checkpoint) + " roll call"}
+        </h2>
+        {rollCallComplete ? (
+          <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
+            Everyone has an explicit result for this checkpoint.
+          </p>
+        ) : null}
         <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
           {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(
