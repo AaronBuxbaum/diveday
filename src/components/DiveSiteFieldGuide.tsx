@@ -1,3 +1,5 @@
+import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
+
 type FieldGuideCreature = {
   id: string;
   name: string;
@@ -41,10 +43,10 @@ export function DiveSiteFieldGuide({
         <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-4">
           {creatures.map((creature) => (
             <figure key={creature.id} className="min-w-0">
-              {creature.imageUrl ? (
+              {resolveDiveSiteImageUrl(creature.imageUrl) ? (
                 // biome-ignore lint/performance/noImgElement: seed and staff-provided Commons imagery supports arbitrary approved hosts without a global image allowlist.
                 <img
-                  src={creature.imageUrl}
+                  src={resolveDiveSiteImageUrl(creature.imageUrl) ?? undefined}
                   alt={creature.name}
                   className="aspect-[4/3] w-full rounded-lg bg-surface-sunken object-cover"
                 />
