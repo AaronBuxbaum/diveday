@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import {
@@ -26,18 +27,13 @@ const FRESHNESS_COPY = {
 } as const;
 
 export function OfflineManifestView() {
+  const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
   const [message, setMessage] = useState("Opening encrypted device copy…");
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
-  const tripId = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? ""
-        : (new URLSearchParams(window.location.search).get("trip") ?? ""),
-    [],
-  );
+  const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
 
   const reconcile = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
@@ -251,7 +247,9 @@ export function OfflineManifestView() {
                 id={`offline-roll-call-${diver.bookingId}`}
                 className={
                   ready
-                    ? "scroll-mt-24 border-l-4 border-success p-4 sm:p-5"
+                    ? state
+                      ? "border-l-4 border-success p-4 sm:p-5"
+                      : "border-l-4 border-warning bg-warning/10 p-4 ring-1 ring-inset ring-warning/30 sm:p-5"
                     : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
                 }
               >
@@ -305,7 +303,7 @@ export function OfflineManifestView() {
                       </ul>
                     ) : null}
                     <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
-                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-primary">
+                      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
                         Add a note to this roll-call record
                       </summary>
                       <div className="mt-2">

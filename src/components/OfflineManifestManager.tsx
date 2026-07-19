@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
@@ -157,12 +156,12 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
           </button>
           {saved ? (
             <>
-              <Link
+              <a
                 href={`/offline-manifest?trip=${tripId}`}
                 className="min-h-11 rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
               >
                 Open offline roll call
-              </Link>
+              </a>
               <button
                 type="button"
                 disabled={busy}

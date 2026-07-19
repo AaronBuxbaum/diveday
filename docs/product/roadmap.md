@@ -33,7 +33,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Shop-side: manage trips (`/shop/[shopSlug]/trips/[id]` — edit details, cancel/reinstate, crew
   assignment via `trip_assignments`, diver roster with booking cancel).
 - ✅ Diver-side: public booking flow (`/shop/[shopSlug]/schedule/[id]` — no account, name + email,
-  transactional capacity enforcement in `src/db/bookings.ts`, confirmation moment, sold-out/past states).
+  transactional capacity enforcement in `src/db/bookings.ts`, one all-or-nothing reservation for
+  up to six named divers, confirmation moment, sold-out/past states).
 - ✅ Courses: a staff-owned catalog schedules instructor-led sessions on the trip/booking spine.
   Sessions snapshot waiver/C-card baselines; instructor-required sessions reject enrollment until
   an instructor is assigned, and existing-card courses admit only a verified card at the required
