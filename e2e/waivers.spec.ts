@@ -1,5 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { expect, test } from "./fixtures";
 
 async function signInAsOwner(page: Page) {
   await page.goto("/sign-in");

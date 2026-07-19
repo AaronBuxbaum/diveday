@@ -22,8 +22,8 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md) |
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
-| Unit tests | Vitest + Testing Library | [0002](decisions/0002-toolchain.md) |
-| E2E tests | Playwright | [0002](decisions/0002-toolchain.md) |
+| Unit tests | Vitest + Testing Library, MSW for real fetch boundaries | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md) |
+| E2E tests | Playwright | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md) |
 | Package manager | pnpm | [0002](decisions/0002-toolchain.md) |
 
 ⚠️ Next.js 16 differs from most training data — read the guides in `node_modules/next/dist/docs/`
