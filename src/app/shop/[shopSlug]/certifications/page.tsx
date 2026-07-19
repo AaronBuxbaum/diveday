@@ -24,13 +24,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * Resolve the durable card-image reference: prefer an uploaded photo, fall back
- * to a pasted URL, and report a hard failure (bad file) so the caller can warn.
- * An unconfigured store silently falls back to the pasted URL.
+ * Resolve the durable card-image reference and report a hard failure (bad file)
+ * so the caller can warn. Cards are always captured as a photo, never a URL.
  */
 async function resolveCardImageUrl(
   formData: FormData,
-  pastedUrl: string,
 ): Promise<{ url?: string; failed?: boolean }> {
   const file = formData.get("cardImage");
   if (file instanceof File && file.size > 0) {
@@ -43,7 +41,7 @@ async function resolveCardImageUrl(
     if (stored.status === "stored") return { url: stored.url };
     if (stored.status === "failed") return { failed: true };
   }
-  return { url: pastedUrl || undefined };
+  return {};
 }
 
 const agencySchema = z.enum(["padi", "ssi", "naui", "sdi", "tdi", "other"]);
@@ -61,7 +59,6 @@ const certificationSchema = z.object({
   level: levelSchema,
   identifier: z.string().trim().min(2).max(120),
   expiresOn: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
-  cardImageUrl: z.union([z.literal(""), z.url().max(2_000)]),
 });
 const specialtyCertificationSchema = z.object({
   personId: z.string().uuid(),
@@ -69,7 +66,6 @@ const specialtyCertificationSchema = z.object({
   specialty: specialtySchema,
   identifier: z.string().trim().min(2).max(120),
   expiresOn: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
-  cardImageUrl: z.union([z.literal(""), z.url().max(2_000)]),
 });
 
 const AGENCY_LABELS: Record<z.infer<typeof agencySchema>, string> = {
@@ -105,7 +101,7 @@ export default async function CertificationsPage({
     const staff = await requireStaffSession();
     const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=invalid`);
-    const image = await resolveCardImageUrl(formData, parsed.data.cardImageUrl);
+    const image = await resolveCardImageUrl(formData);
     if (image.failed) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=image`);
     const expiresAt = parsed.data.expiresOn
       ? new Date(`${parsed.data.expiresOn}T23:59:59.999Z`)
@@ -164,7 +160,7 @@ export default async function CertificationsPage({
     const staff = await requireStaffSession();
     const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=invalid`);
-    const image = await resolveCardImageUrl(formData, parsed.data.cardImageUrl);
+    const image = await resolveCardImageUrl(formData);
     if (image.failed) redirect(`/shop/${staff.user.shopSlug}/certifications?notice=image`);
     const expiresAt = parsed.data.expiresOn
       ? new Date(`${parsed.data.expiresOn}T23:59:59.999Z`)
@@ -208,7 +204,7 @@ export default async function CertificationsPage({
           : notice === "invalid"
             ? "That certification could not be saved. Check the diver and card details."
             : notice === "image"
-              ? "That photo couldn’t be used. Upload a JPG, PNG, or WebP under 5 MB, or paste a URL."
+              ? "That photo couldn’t be used. Upload a JPG, PNG, or WebP under 5 MB."
               : notice === "agency-verified"
                 ? "Confirmed with the agency and verified."
                 : notice === "agency-not-found"
@@ -312,7 +308,9 @@ export default async function CertificationsPage({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Expiry <span className="font-normal text-muted">(if issued)</span>
+              <span>
+                Expiry <span className="font-normal text-muted">(if issued)</span>
+              </span>
               <input
                 name="expiresOn"
                 type="date"
@@ -325,18 +323,7 @@ export default async function CertificationsPage({
               <input
                 name="cardImage"
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-              Card image URL{" "}
-              <span className="font-normal text-muted">(or paste a secure reference)</span>
-              <input
-                name="cardImageUrl"
-                type="url"
-                maxLength={2000}
-                placeholder="https://…"
+                accept="image/jpeg,image/png,image/webp"
                 className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
               />
             </label>
@@ -419,7 +406,9 @@ export default async function CertificationsPage({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Expiry <span className="font-normal text-muted">(if issued)</span>
+              <span>
+                Expiry <span className="font-normal text-muted">(if issued)</span>
+              </span>
               <input
                 name="expiresOn"
                 type="date"
@@ -432,18 +421,7 @@ export default async function CertificationsPage({
               <input
                 name="cardImage"
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-              Card image URL{" "}
-              <span className="font-normal text-muted">(or paste a secure reference)</span>
-              <input
-                name="cardImageUrl"
-                type="url"
-                maxLength={2000}
-                placeholder="https://…"
+                accept="image/jpeg,image/png,image/webp"
                 className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
               />
             </label>

@@ -25,6 +25,8 @@ test("staff captures and verifies a certification before it can be trusted", asy
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/certifications");
   const form = levelForm(page);
+  await expect(form.locator('input[name="cardImageUrl"]')).toHaveCount(0);
+  await expect(form.locator('input[name="cardImage"]')).toBeVisible();
   await form.locator('select[name="personId"]').selectOption({ index: 1 }); // Priya in deterministic seed
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="level"]').selectOption("advanced_open_water");

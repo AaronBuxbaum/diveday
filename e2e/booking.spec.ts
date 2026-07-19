@@ -24,6 +24,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await page.getByLabel("Departs").fill("08:00");
   await page.getByLabel("Returns").fill("11:30");
   await page.getByLabel("Capacity").fill("6");
+  await page.getByLabel(/Price per diver/).fill("120");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -34,6 +35,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("6 spots left")).toBeVisible();
+  await expect(page.getByText("$120.00")).toBeVisible();
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill(`nora-${Date.now()}@example.com`);
   await page.getByRole("button", { name: "Book my spot" }).click();
@@ -52,7 +54,7 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 });
 
-test("a full boat shows the sold-out state instead of a form", async ({ page }) => {
+test("a full boat lets a diver join the wait list without taking a seat", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule");
   // Seeded wreck trip ships full (10 of 10).
   await page
@@ -61,7 +63,16 @@ test("a full boat shows the sold-out state instead of a form", async ({ page }) 
     .getByRole("link")
     .click();
   await expect(page.getByRole("heading", { name: "This boat's full" })).toBeVisible();
-  await expect(page.getByLabel("Name")).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
+  await page.getByLabel("Name").fill("Nora Quinn");
+  await page.getByLabel("Email").fill(`waitlist-${Date.now()}@example.com`);
+  await page.getByRole("button", { name: "Join the wait list" }).click();
+  await expect(page.getByRole("heading", { name: /You're on the wait list, Nora/ })).toBeVisible();
+
+  await signInAsOwner(page);
+  await page.getByRole("link", { name: /Wreck Trip — Spiegel Grove/ }).click();
+  await expect(page.getByRole("heading", { name: "Wait list" })).toBeVisible();
+  await expect(page.getByText("Nora Quinn").last()).toBeVisible();
 });
 
 test("staff edits a trip and cancelling removes it from the public schedule", async ({ page }) => {

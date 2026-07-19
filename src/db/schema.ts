@@ -339,6 +339,32 @@ export const bookings = pgTable(
 );
 
 /**
+ * A diver's place in line for a full trip. It is deliberately separate from
+ * bookings: a wait-list entry never consumes capacity or appears on a manifest.
+ */
+export const tripWaitlistEntries = pgTable(
+  "trip_waitlist_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_waitlist_entries_trip_person_unique").on(table.tripId, table.personId),
+    index("trip_waitlist_entries_trip_created_idx").on(table.tripId, table.createdAt),
+    index("trip_waitlist_entries_shop_trip_idx").on(table.shopId, table.tripId),
+  ],
+);
+
+/**
  * A booking's current payment state. deposit_paid, paid, and waived clear the
  * "ready to board" payment gate; unpaid and refunded do not (readiness.ts).
  */
@@ -1062,6 +1088,7 @@ export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type TripWaitlistEntry = typeof tripWaitlistEntries.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
 export type BookingPayment = typeof bookingPayments.$inferSelect;

@@ -40,6 +40,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   level. Agency-specific ratios, age, medical, specialty, and exception rules remain H-08 review.
 - ✅ Booking confirmations email immediately through the Resend notification seam. The owner
   dashboard surfaces an unresolved delivery failure; email never affects the capacity-safe booking.
+- ✅ Full trips offer a durable, first-come wait list. Entries remain separate from bookings and
+  manifests; staff follow up manually when space opens. Automated offers and expiry policy remain
+  future work.
 
 ## M3 — Waivers (core slice complete)
 
@@ -83,10 +86,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   composes them (stricter level, union of specialties), fail-closed. Nitrox stays a fill-time gate.
   See [20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md).
 - ✅ Direct card-image upload: a provider seam ([`src/lib/storage`](../../src/lib/storage)) stores a
-  captured photo to Vercel Blob and saves a durable URL; validated at the seam (image/*, ≤5 MB),
-  with the paste-a-URL path as fallback when storage is unconfigured. See
-  [20260718-card-image-storage](../architecture/decisions/20260718-card-image-storage.md) (private Vercel Blob store connected to Vercel and `BLOB_READ_WRITE_TOKEN` configured; local
-  environments without the token retain the pasted-URL fallback).
+  captured photo to Vercel Blob and saves a durable URL; validated at the seam (JPG/PNG/WebP,
+  ≤5 MB). The staff form is upload-only, with no pasted-URL alternative. See
+  [20260719-card-photo-only](../architecture/decisions/20260719-card-photo-only.md).
 - ✅ Agency cert verification: an assistive provider seam
   ([`src/lib/cert-verification`](../../src/lib/cert-verification)) checks a C-card against its
   issuing agency. A confirmed match auto-verifies (recording the source); not-found/mismatch only

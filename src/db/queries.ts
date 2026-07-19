@@ -11,6 +11,7 @@ import {
   tripAssignments,
   tripRequirements,
   trips,
+  tripWaitlistEntries,
 } from "./schema";
 
 export type NewTrip = {
@@ -199,6 +200,27 @@ export async function getTripRoster(db: AppDb, tripId: string) {
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")))
     .orderBy(asc(bookings.createdAt));
+}
+
+/** Wait-list entries stay outside the roster because they have not booked a seat. */
+export async function getTripWaitlist(db: AppDb, tripId: string) {
+  return db
+    .select({ entry: tripWaitlistEntries, person: people })
+    .from(tripWaitlistEntries)
+    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
+    .where(eq(tripWaitlistEntries.tripId, tripId))
+    .orderBy(asc(tripWaitlistEntries.createdAt));
+}
+
+/** Confirmation pages render only a real entry, never an identity in the URL. */
+export async function getWaitlistEntryForTrip(db: AppDb, tripId: string, entryId: string) {
+  const [row] = await db
+    .select({ entry: tripWaitlistEntries, person: people })
+    .from(tripWaitlistEntries)
+    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
+    .where(and(eq(tripWaitlistEntries.id, entryId), eq(tripWaitlistEntries.tripId, tripId)))
+    .limit(1);
+  return row ?? null;
 }
 
 /**
