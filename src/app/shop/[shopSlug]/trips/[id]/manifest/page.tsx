@@ -93,6 +93,12 @@ export default async function TripManifestPage({
 
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
+      <a
+        href="#roll-call-list"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+      >
+        Skip to roll call
+      </a>
       <FlashParams params={["notice"]} />
       <div className="print:hidden">
         <Link
@@ -213,12 +219,14 @@ export default async function TripManifestPage({
           <div
             className="h-full rounded-full bg-primary transition-[width] duration-200"
             style={{
-              width:
-                (manifest.summary.totalDivers === 0
+              width: `${
+                manifest.summary.totalDivers === 0
                   ? 0
-                  : ((manifest.summary.totalDivers - manifest.summary.awaiting) /
-                      manifest.summary.totalDivers) *
-                    100) + "%",
+                  : (
+                      (manifest.summary.totalDivers - manifest.summary.awaiting) /
+                        manifest.summary.totalDivers
+                    ) * 100
+              }%`,
             }}
           />
         </div>
@@ -261,7 +269,7 @@ export default async function TripManifestPage({
         )}
       </section>
 
-      <section className="mt-9">
+      <section id="roll-call-list" className="mt-9">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
@@ -337,15 +345,15 @@ export default async function TripManifestPage({
                       </summary>
                       <div className="mt-2">
                         <label
-                          htmlFor={"roll-call-note-" + diver.bookingId}
+                          htmlFor={`roll-call-note-${diver.bookingId}`}
                           className="text-sm font-semibold"
                         >
                           Optional note
                         </label>
                         <input
-                          id={"roll-call-note-" + diver.bookingId}
+                          id={`roll-call-note-${diver.bookingId}`}
                           name="note"
-                          form={"not-boarded-" + diver.bookingId}
+                          form={`not-boarded-${diver.bookingId}`}
                           maxLength={300}
                           placeholder="Late to the boat, medical question, gear issue…"
                           className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
@@ -378,7 +386,7 @@ export default async function TripManifestPage({
                       </form>
                     ) : null}
                     {!boarded ? (
-                      <form id={"not-boarded-" + diver.bookingId} action={rollCallAction}>
+                      <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="not_boarded" />
                         <SubmitButton
