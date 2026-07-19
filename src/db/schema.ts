@@ -85,6 +85,40 @@ export const personRoles = pgTable(
 
 export const tripStatus = pgEnum("trip_status", ["scheduled", "cancelled"]);
 
+/**
+ * How a trip series repeats. Only weekly today (the shop's "every Saturday
+ * two-tank"); the enum exists so a later monthly or daily cadence is an additive
+ * migration, not a reshape. See 20260719-recurring-trip-series.
+ */
+export const tripRecurrenceFrequency = pgEnum("trip_recurrence_frequency", ["weekly"]);
+
+/**
+ * The template + cadence behind a set of repeating trips. A series does not run
+ * on the boat — its instances do. Each instance is a real, independent `trips`
+ * row (see `trips.series_id`) so bookings, manifests, waivers, gear, and roll
+ * call all use the one operational spine and an owner can edit or cancel a
+ * single date without touching the rest. The series row is provenance and the
+ * cadence description, not a live scheduler: instances are materialized once at
+ * creation (docs/architecture/decisions/20260719-recurring-trip-series.md).
+ */
+export const tripSeries = pgTable(
+  "trip_series",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    title: text("title").notNull(),
+    frequency: tripRecurrenceFrequency("frequency").notNull().default("weekly"),
+    /** Weeks between instances: 1 for weekly, 2 for every other week, etc. */
+    intervalWeeks: integer("interval_weeks").notNull().default(1),
+    /** How many instances were materialized when the series was created. */
+    occurrenceCount: integer("occurrence_count").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("trip_series_shop_idx").on(table.shopId)],
+);
+
 export const certificationAgency = pgEnum("certification_agency", [
   "padi",
   "ssi",
@@ -301,6 +335,12 @@ export const trips = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /**
+     * Set when this trip was materialized from a recurring series; null for a
+     * one-off charter. The instance stays fully editable on its own — the
+     * pointer is provenance, never a live link that rewrites this row.
+     */
+    seriesId: uuid("series_id").references(() => tripSeries.id),
     /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */
@@ -322,7 +362,10 @@ export const trips = pgTable(
     conditionsUpdatedAt: timestamp("conditions_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("trips_shop_starts_idx").on(table.shopId, table.startsAt)],
+  (table) => [
+    index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
+    index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+  ],
 );
 
 /**
@@ -1136,6 +1179,7 @@ export const rollCallEvents = pgTable(
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
+export type TripSeries = typeof tripSeries.$inferSelect;
 export type TripDive = typeof tripDives.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;

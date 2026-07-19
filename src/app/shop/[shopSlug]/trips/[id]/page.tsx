@@ -23,6 +23,7 @@ import {
   getShopById,
   getTripCrewIds,
   getTripRoster,
+  getTripSeriesSummary,
   getTripWaitlist,
   getTripWithBooked,
   listStaff,
@@ -47,6 +48,7 @@ import { flaggedMedicalPrompts } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
+import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -268,6 +270,7 @@ export default async function ManageTripPage({
     getTripWaitlist(db, tripId),
   ]);
   const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
+  const series = await getTripSeriesSummary(db, shop.id, tripId);
   const banner = notice ? BANNERS[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
@@ -541,6 +544,17 @@ export default async function ManageTripPage({
       {trip.course ? (
         <p className="mt-2 text-sm font-medium text-primary">
           Course session · {trip.course.title}
+        </p>
+      ) : null}
+      {series ? (
+        <p className="mt-2 text-sm text-muted">
+          Part of a repeating series ·{" "}
+          {recurrenceSummary({
+            frequency: "weekly",
+            intervalWeeks: series.intervalWeeks,
+            occurrenceCount: series.occurrenceCount,
+          })}
+          . Changes here apply to this date only; {series.scheduledCount} still on the schedule.
         </p>
       ) : null}
 

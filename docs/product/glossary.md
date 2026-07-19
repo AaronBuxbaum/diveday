@@ -35,6 +35,10 @@ new domain concept, define it here in the same PR.
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, gear needs,
   and minimum cert requirements per site (e.g. AOW for a deep wreck).
+- **Trip series** — a repeating charter ("every Saturday two-tank") scheduled in one action. The
+  series records only the cadence; each date is materialized as its own independent **trip** that
+  starts identical to the rest and is booked, crewed, edited, or cancelled on its own. See
+  [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md).
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
