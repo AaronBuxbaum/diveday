@@ -1,11 +1,70 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
-import { copyDiveSite, createDiveSite, deleteDiveSite, listDiveSites } from "./dive-sites";
+import {
+  copyDiveSite,
+  createDiveSite,
+  deleteDiveSite,
+  listDiveSites,
+  updateDiveSite,
+} from "./dive-sites";
 import { getShopBySlug } from "./queries";
 import { seedDemo } from "./seed";
 
 describe("dive-site library", () => {
+  it("keeps the full briefing and readiness gates through create and edit", async () => {
+    const db = await createTestDb();
+    await seedDemo(db);
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error("demo shop missing");
+
+    const site = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Molasses North",
+      difficulty: "Intermediate",
+      depthRange: "30–55 ft",
+      currentNote: "Expect a gentle northbound drift.",
+      divePlan: "Enter on the mooring and finish at the stern line.",
+      landmarks: ["Old anchor", "Sandy swim-through"],
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep", "night"],
+      requiresNitrox: true,
+    });
+
+    expect(site).toMatchObject({
+      difficulty: "Intermediate",
+      depthRange: "30–55 ft",
+      currentNote: "Expect a gentle northbound drift.",
+      divePlan: "Enter on the mooring and finish at the stern line.",
+      landmarks: ["Old anchor", "Sandy swim-through"],
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep", "night"],
+      requiresNitrox: true,
+    });
+
+    const edited = await updateDiveSite(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: site.name,
+      difficulty: "Advanced",
+      depthRange: "40–70 ft",
+      currentNote: "Check the tide before departure.",
+      divePlan: "Follow the reef edge and return along the mooring line.",
+      landmarks: ["New anchor"],
+      minimumCertificationLevel: "rescue",
+      requiredSpecialties: ["wreck"],
+      requiresNitrox: false,
+    });
+
+    expect(edited).toMatchObject({
+      difficulty: "Advanced",
+      depthRange: "40–70 ft",
+      landmarks: ["New anchor"],
+      minimumCertificationLevel: "rescue",
+      requiredSpecialties: ["wreck"],
+      requiresNitrox: false,
+    });
+  });
+
   it("copies a site into an independent editable briefing", async () => {
     const db = await createTestDb();
     await seedDemo(db);

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/queries";
@@ -78,36 +79,72 @@ export default async function DiversPage({
   const noticeIsError = notice === "duplicate" || notice === "invalid";
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <Link href={`/shop/${shopSlug}`} className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-      <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Divers</h1>
-          <p className="mt-2 max-w-2xl text-muted">
-            Start with the person. Their cards, rental fit, bookings, and issued gear live together
-            so the front desk always has the right context.
-          </p>
-        </div>
-        <span className="text-sm text-muted">
-          {query ? `${visibleDivers.length} of ${divers.length} shown` : `${divers.length} on file`}
-        </span>
-      </header>
+      <ShopPageHeader
+        backHref={`/shop/${shopSlug}`}
+        eyebrow={shop.name}
+        title="Divers"
+        description="Start with the person. Their cards, rental fit, bookings, and issued gear stay together so the front desk always has the right context."
+        meta={
+          <span className="text-sm text-muted">
+            {query
+              ? `${visibleDivers.length} of ${divers.length} shown`
+              : `${divers.length} on file`}
+          </span>
+        }
+        actions={
+          <a
+            href="#add-diver"
+            className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+          >
+            <span aria-hidden="true">+</span> Add diver
+          </a>
+        }
+      />
+
+      <section aria-label="Divers snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
+        <ShopStat
+          label="Active people"
+          value={divers.length}
+          detail="People available to book"
+          tone="primary"
+        />
+        <ShopStat
+          label="Ready for work"
+          value={
+            divers.filter(
+              (diver) => diver.pendingCertificationCount + diver.pendingSpecialtyCount === 0,
+            ).length
+          }
+          detail="No certification review waiting"
+          tone="success"
+        />
+        <ShopStat
+          label="Needs attention"
+          value={
+            divers.filter(
+              (diver) =>
+                diver.pendingCertificationCount + diver.pendingSpecialtyCount > 0 ||
+                !diver.gearProfile,
+            ).length
+          }
+          detail="Pending cards or missing rental fit"
+          tone="warning"
+        />
+      </section>
 
       {noticeText ? (
-        <div
-          className={`mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium ${noticeIsError ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
-        >
-          <p role="status">{noticeText}</p>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <ShopNotice tone={noticeIsError ? "danger" : "success"}>
+            <p role="status">{noticeText}</p>
+          </ShopNotice>
           {notice === "deleted" && deleted ? (
             <form action={restoreDiverAction}>
               <input type="hidden" name="personId" value={deleted} />
               <button
                 type="submit"
-                className="min-h-11 rounded-lg border border-success/30 bg-surface px-3 py-2 text-sm font-medium text-success hover:bg-surface-sunken"
+                className="min-h-11 rounded-xl border border-success/30 bg-surface px-3 py-2 text-sm font-medium text-success hover:bg-surface-sunken"
               >
                 Undo remove
               </button>
@@ -116,8 +153,16 @@ export default async function DiversPage({
         </div>
       ) : null}
 
-      <details className="mt-8 rounded-lg border border-border bg-surface p-5">
-        <summary className="cursor-pointer font-semibold">Add a diver</summary>
+      <details
+        id="add-diver"
+        className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm"
+      >
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
+          Add a diver{" "}
+          <span aria-hidden="true" className="text-xl font-normal text-primary">
+            +
+          </span>
+        </summary>
         <p className="mt-2 text-sm text-muted">
           Add a returning diver before they book, then fill in the details you already have.
         </p>
@@ -127,7 +172,8 @@ export default async function DiversPage({
             <input
               name="fullName"
               required
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              autoComplete="name"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -135,7 +181,8 @@ export default async function DiversPage({
             <input
               name="email"
               type="email"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              autoComplete="email"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -143,12 +190,13 @@ export default async function DiversPage({
             <input
               name="phone"
               type="tel"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              autoComplete="tel"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
             />
           </label>
           <button
             type="submit"
-            className="min-h-11 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover sm:col-span-3 sm:justify-self-start"
+            className="min-h-11 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover sm:col-span-3 sm:justify-self-start"
           >
             Add diver
           </button>
@@ -172,18 +220,18 @@ export default async function DiversPage({
               name="q"
               defaultValue={query}
               placeholder="Search people"
-              className="min-h-11 min-w-0 flex-1 rounded-lg border border-border-strong bg-surface px-3 text-base"
+              className="min-h-11 min-w-0 flex-1 rounded-xl border border-border-strong bg-surface px-3 text-base"
             />
             <button
               type="submit"
-              className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-primary hover:bg-surface-sunken"
+              className="min-h-11 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-primary hover:bg-surface-sunken"
             >
               Search
             </button>
           </form>
         </div>
         {visibleDivers.length === 0 ? (
-          <div className="mt-4 rounded-lg border border-border bg-surface p-8 text-center">
+          <div className="mt-4 rounded-2xl border border-dashed border-border-strong bg-surface p-10 text-center">
             <p className="font-medium">
               {query ? "No matching divers." : "No divers on file yet."}
             </p>
@@ -201,16 +249,34 @@ export default async function DiversPage({
                 <li key={diver.person.id}>
                   <Link
                     href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                    className="block rounded-lg border border-border bg-surface p-5 transition-colors duration-200 hover:border-primary/50 hover:bg-surface-sunken"
+                    className="group block rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-surface-sunken"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="truncate font-semibold">{diver.person.fullName}</h3>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                            aria-hidden="true"
+                          >
+                            {diver.person.fullName
+                              .split(" ")
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </span>
+                          <h3 className="truncate font-semibold group-hover:text-primary">
+                            {diver.person.fullName}
+                          </h3>
+                        </div>
                         <p className="mt-1 truncate text-sm text-muted">
                           {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
                         </p>
                       </div>
-                      <span className="shrink-0 text-primary" aria-hidden="true">
+                      <span
+                        className="shrink-0 text-primary transition-transform group-hover:translate-x-1"
+                        aria-hidden="true"
+                      >
                         →
                       </span>
                     </div>

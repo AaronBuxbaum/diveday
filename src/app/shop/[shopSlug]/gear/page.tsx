@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import {
   createGearItem,
@@ -33,6 +33,15 @@ const serviceSchema = z.object({
   nextDueOn: z.string().optional(),
 });
 
+const GEAR_TYPES = {
+  bcd: "BCD",
+  regulator: "Regulator",
+  wetsuit: "Wetsuit",
+  mask_fins: "Mask & fins",
+  weights: "Weights",
+  tank: "Tank",
+} as const;
+
 /** Store calendar-only service dates at midday UTC so every US shop sees the selected day. */
 function calendarDate(value: string | undefined): Date | null {
   if (!value) return null;
@@ -58,6 +67,10 @@ export default async function GearPage({
     listCurrentGearAssignments(db, shop.id),
     listGearServiceEvents(db, shop.id),
   ]);
+  const availableCount = items.filter((item) => item.state === "available").length;
+  const holdCount = items.filter((item) => item.state === "service_hold").length;
+  const assignedCount = items.filter((item) => item.state === "assigned").length;
+  const retiredCount = items.filter((item) => item.state === "retired").length;
 
   async function addAction(formData: FormData) {
     "use server";
@@ -143,19 +156,41 @@ export default async function GearPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <Link href={`/shop/${shopSlug}`} className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Gear room</h1>
-      <p className="mt-2 text-muted">
-        Service holds cannot be assigned. Checked-out gear stays visible until it returns.
-      </p>
+      <ShopPageHeader
+        backHref={`/shop/${shopSlug}`}
+        eyebrow={shop.name}
+        title="Gear room"
+        description="Keep equipment ready, traceable, and easy to pack. Service holds cannot be assigned; checked-out gear stays visible until it returns."
+        actions={
+          <a
+            href="#add-gear"
+            className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+          >
+            <span aria-hidden="true">+</span> Add gear
+          </a>
+        }
+      />
+      <section aria-label="Gear snapshot" className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ShopStat label="Available" value={availableCount} detail="Ready to pack" tone="success" />
+        <ShopStat
+          label="Checked out"
+          value={assignedCount}
+          detail="Currently with divers"
+          tone="primary"
+        />
+        <ShopStat
+          label="Service hold"
+          value={holdCount}
+          detail="Unavailable until checked"
+          tone={holdCount > 0 ? "warning" : "default"}
+        />
+        <ShopStat label="Retired" value={retiredCount} detail="Kept for inventory history" />
+      </section>
       {notice ? (
-        <p
-          role="status"
-          className="mt-5 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        <ShopNotice
+          tone={notice === "invalid" || notice === "service-error" ? "danger" : "success"}
         >
           {notice === "added"
             ? "Gear added to inventory."
@@ -168,73 +203,113 @@ export default async function GearPage({
                   : notice === "saved"
                     ? "Gear details updated."
                     : "Check the gear details and try again."}
-        </p>
+        </ShopNotice>
       ) : null}
-      <form
-        action={addAction}
-        className="mt-8 grid grid-cols-1 gap-3 rounded-lg border border-border bg-surface p-5 sm:grid-cols-3"
+      <details
+        id="add-gear"
+        className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm"
       >
-        <input
-          name="label"
-          required
-          placeholder="BCD-12"
-          className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
-        />
-        <select
-          name="type"
-          className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
-        >
-          {["bcd", "regulator", "wetsuit", "mask_fins", "weights", "tank"].map((type) => (
-            <option key={type}>{type.replace("_", " ")}</option>
-          ))}
-        </select>
-        <input
-          name="size"
-          placeholder="Size (optional)"
-          className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
-        />
-        <input
-          name="serviceDueOn"
-          type="date"
-          aria-label="Next service due date"
-          className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
-        />
-        <button
-          type="submit"
-          className="min-h-11 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground sm:col-span-3"
-        >
-          Add inventory item
-        </button>
-      </form>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
+          Add inventory item{" "}
+          <span aria-hidden="true" className="text-xl font-normal text-primary">
+            +
+          </span>
+        </summary>
+        <form action={addAction} className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Inventory label
+            <input
+              name="label"
+              required
+              placeholder="BCD-12"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Type
+            <select
+              name="type"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
+            >
+              {Object.entries(GEAR_TYPES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Size <span className="font-normal text-muted">(optional)</span>
+            <input
+              name="size"
+              placeholder="Medium / 10 / 80 cu ft"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Next service due <span className="font-normal text-muted">(optional)</span>
+            <input
+              name="serviceDueOn"
+              type="date"
+              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
+            Notes <span className="font-normal text-muted">(optional)</span>
+            <textarea
+              name="notes"
+              rows={2}
+              placeholder="Serial number, fit notes, or storage location"
+              className="rounded-xl border border-border-strong bg-surface px-3 py-2 text-base font-normal"
+            />
+          </label>
+          <button
+            type="submit"
+            className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground sm:justify-self-start"
+          >
+            Add inventory item
+          </button>
+        </form>
+      </details>
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Inventory</h2>
-        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Inventory</h2>
+            <p className="mt-1 text-sm text-muted">
+              Edit ready or held items; retire gear when it leaves the shop.
+            </p>
+          </div>
+          <span className="text-sm text-muted">{items.length} total</span>
+        </div>
+        <ul className="mt-4 grid gap-3 lg:grid-cols-2">
           {items.map((item) => (
-            <li key={item.id} className="px-4 py-4">
+            <li key={item.id} className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span>
                   <strong>{item.label}</strong>{" "}
                   <span className="text-sm text-muted">
-                    {item.type.replace("_", " ")}
+                    {GEAR_TYPES[item.type]}
                     {item.size ? ` · ${item.size}` : ""}
                     {item.serviceDueAt
                       ? ` · service due ${formatShortDate(item.serviceDueAt, "en-US", shop.timezone)}`
                       : ""}
                   </span>
                 </span>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                <div className="relative flex items-center gap-2">
+                  <span
+                    className={`rounded-full px-3 py-1 text-sm font-medium ${item.state === "available" ? "bg-success/10 text-success" : item.state === "service_hold" ? "bg-warning/10 text-warning" : item.state === "retired" ? "bg-surface-sunken text-muted" : "bg-primary/10 text-primary"}`}
+                  >
                     {item.state.replace("_", " ")}
                   </span>
                   {item.state !== "assigned" && item.state !== "retired" ? (
                     <>
                       <details className="relative">
-                        <summary className="min-h-11 cursor-pointer rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary">
+                        <summary className="min-h-11 cursor-pointer rounded-xl border border-border px-3 py-2 text-sm font-medium text-primary">
                           Edit
                         </summary>
                         <form
                           action={updateAction}
-                          className="absolute right-0 z-10 mt-2 grid w-80 gap-3 rounded-lg border border-border bg-surface p-4 shadow-lg"
+                          className="absolute right-0 z-10 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-3 rounded-2xl border border-border bg-surface p-4 shadow-xl"
                         >
                           <input type="hidden" name="id" value={item.id} />
                           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -243,7 +318,7 @@ export default async function GearPage({
                               name="label"
                               required
                               defaultValue={item.label}
-                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -251,11 +326,13 @@ export default async function GearPage({
                             <select
                               name="type"
                               defaultValue={item.type}
-                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
                             >
                               {["bcd", "regulator", "wetsuit", "mask_fins", "weights", "tank"].map(
                                 (type) => (
-                                  <option key={type}>{type.replace("_", " ")}</option>
+                                  <option key={type} value={type}>
+                                    {GEAR_TYPES[type as keyof typeof GEAR_TYPES]}
+                                  </option>
                                 ),
                               )}
                             </select>
@@ -265,7 +342,7 @@ export default async function GearPage({
                             <input
                               name="size"
                               defaultValue={item.size ?? ""}
-                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -274,7 +351,7 @@ export default async function GearPage({
                               name="serviceDueOn"
                               type="date"
                               defaultValue={item.serviceDueAt?.toISOString().slice(0, 10)}
-                              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -283,12 +360,12 @@ export default async function GearPage({
                               name="notes"
                               rows={2}
                               defaultValue={item.notes ?? ""}
-                              className="rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                              className="rounded-xl border border-border-strong bg-surface px-3 py-2 text-base"
                             />
                           </label>
                           <button
                             type="submit"
-                            className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                            className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                           >
                             Save gear
                           </button>
@@ -308,15 +385,25 @@ export default async function GearPage({
                           {item.state === "service_hold" ? "Release hold" : "Service hold"}
                         </button>
                       </form>
-                      <form action={retireAction}>
-                        <input type="hidden" name="id" value={item.id} />
-                        <button
-                          type="submit"
-                          className="min-h-11 px-3 text-sm font-medium text-danger hover:underline"
-                        >
-                          Retire item
-                        </button>
-                      </form>
+                      <details>
+                        <summary className="min-h-11 cursor-pointer px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10">
+                          Retire
+                        </summary>
+                        <div className="absolute right-0 z-10 mt-2 w-64 rounded-2xl border border-danger/25 bg-surface p-4 text-sm shadow-xl">
+                          <p className="text-muted">
+                            Retired gear stays in history and can no longer be packed.
+                          </p>
+                          <form action={retireAction}>
+                            <input type="hidden" name="id" value={item.id} />
+                            <button
+                              type="submit"
+                              className="mt-3 min-h-11 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-foreground"
+                            >
+                              Retire item
+                            </button>
+                          </form>
+                        </div>
+                      </details>
                     </>
                   ) : null}
                 </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
@@ -111,21 +112,17 @@ export default async function NewTripPage({
   const message = error ? ERROR_MESSAGES[error] : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <Link href={`/shop/${shopSlug}`} className="text-sm font-medium text-primary hover:underline">
-        ← Back to the shop
-      </Link>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-        Schedule a trip or course session
-      </h1>
-      <p className="mt-1 text-muted">
-        Times are local to the shop. Course sessions inherit their admission rules.
-      </p>
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <ShopPageHeader
+        backHref={`/shop/${shopSlug}`}
+        title="Schedule a trip or course session"
+        description="Times are local to the shop. Course sessions inherit their admission rules when you put them on the board."
+      />
 
       {message ? (
-        <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+        <ShopNotice tone="danger" role="alert">
           {message}
-        </p>
+        </ShopNotice>
       ) : null}
 
       <form action={scheduleTrip} className="mt-8 flex flex-col gap-5">
@@ -248,11 +245,14 @@ export default async function NewTripPage({
         <div className="mt-2 flex items-center gap-3">
           <button
             type="submit"
-            className="min-h-11 rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+            className="min-h-11 rounded-xl bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
           >
             Put it on the board
           </button>
-          <Link href="/shop" className="text-sm font-medium text-muted hover:text-foreground">
+          <Link
+            href={`/shop/${shopSlug}`}
+            className="text-sm font-medium text-muted hover:text-foreground"
+          >
             Cancel
           </Link>
         </div>
