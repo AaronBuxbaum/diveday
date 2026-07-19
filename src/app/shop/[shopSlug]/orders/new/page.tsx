@@ -100,6 +100,21 @@ export default async function NewOrderPage({
     getShopById(db, session.user.shopId),
   ]);
 
+  // Auto-fill the first line item from the linked trip: the fee amount comes
+  // straight from the trip's own price, so staff only need to review and send.
+  const tripFeeDefault = bookingContext
+    ? {
+        kind: (bookingContext.trip.courseId ? "course_fee" : "trip_fee") as
+          | "trip_fee"
+          | "course_fee",
+        description: bookingContext.trip.title,
+        unitAmount:
+          bookingContext.trip.priceCents === null
+            ? ""
+            : (bookingContext.trip.priceCents / 100).toFixed(2),
+      }
+    : null;
+
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
       <div className="mb-8 flex items-center justify-between gap-4">
@@ -124,7 +139,10 @@ export default async function NewOrderPage({
       {bookingContext ? (
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
           Linked to {bookingContext.person.fullName}'s booking on {bookingContext.trip.title} (
-          {formatShortDate(bookingContext.trip.startsAt, "en-US", shop?.timezone)}).
+          {formatShortDate(bookingContext.trip.startsAt, "en-US", shop?.timezone)}).{" "}
+          {bookingContext.trip.priceCents === null
+            ? "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time."
+            : "The trip fee below is pre-filled from this trip's price."}
         </p>
       ) : null}
 
@@ -166,49 +184,54 @@ export default async function NewOrderPage({
 
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-medium">Line items</legend>
-          {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => (
-            <div
-              // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
-              key={i}
-              className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[7rem_1fr_5rem_6rem]"
-            >
-              <select
-                name={`kind-${i}`}
-                defaultValue="other"
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+          {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
+            const rowDefault = i === 0 ? tripFeeDefault : null;
+            return (
+              <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
+                key={i}
+                className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[7rem_1fr_5rem_6rem]"
               >
-                {LINE_ITEM_KINDS.map((kind) => (
-                  <option key={kind.value} value={kind.value}>
-                    {kind.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                name={`description-${i}`}
-                placeholder="Description"
-                maxLength={200}
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
-              />
-              <input
-                type="number"
-                name={`quantity-${i}`}
-                defaultValue={1}
-                min={1}
-                aria-label="Quantity"
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
-              />
-              <input
-                type="number"
-                name={`unitAmount-${i}`}
-                step="0.01"
-                min={0}
-                aria-label="Unit price (USD)"
-                placeholder="$0.00"
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
-              />
-            </div>
-          ))}
+                <select
+                  name={`kind-${i}`}
+                  defaultValue={rowDefault?.kind ?? "other"}
+                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                >
+                  {LINE_ITEM_KINDS.map((kind) => (
+                    <option key={kind.value} value={kind.value}>
+                      {kind.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  name={`description-${i}`}
+                  defaultValue={rowDefault?.description}
+                  placeholder="Description"
+                  maxLength={200}
+                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+                />
+                <input
+                  type="number"
+                  name={`quantity-${i}`}
+                  defaultValue={1}
+                  min={1}
+                  aria-label="Quantity"
+                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+                />
+                <input
+                  type="number"
+                  name={`unitAmount-${i}`}
+                  step="0.01"
+                  min={0}
+                  defaultValue={rowDefault?.unitAmount}
+                  aria-label="Unit price (USD)"
+                  placeholder="$0.00"
+                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+                />
+              </div>
+            );
+          })}
         </fieldset>
 
         <button

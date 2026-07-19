@@ -294,6 +294,8 @@ export const trips = pgTable(
     capacity: integer("capacity").notNull(),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
+    /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
+    priceCents: integer("price_cents"),
     status: tripStatus("status").notNull().default("scheduled"),
     conditionsSummary: text("conditions_summary"),
     waterTemperatureC: integer("water_temperature_c"),

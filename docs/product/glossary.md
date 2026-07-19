@@ -91,7 +91,9 @@ new domain concept, define it here in the same PR.
   See [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md).
 - **Order** — a shop-issued bill for a customer: one or more line items (a trip fee, course fee,
   rental gear, deposit, or free-form charge) against a person, optionally tied to a booking. Local
-  status (`open`/`paid`/`void`/`uncollectible`) mirrors the Stripe invoice backing it.
+  status (`open`/`paid`/`void`/`uncollectible`) mirrors the Stripe invoice backing it. A trip's
+  optional per-diver price pre-fills the trip-fee line item when an order is started from a
+  booking's roster row — staff can still edit the amount or add more line items before sending.
 - **Invoice** — the payable Stripe document behind an order, created on the shop's connected
   account. Staff can share its hosted link directly, or let Stripe email the customer; a webhook
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked

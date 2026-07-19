@@ -10,6 +10,7 @@ import type {
 import { createTestDb } from "./client";
 import {
   createOrder,
+  getBookingContext,
   getOrder,
   listOrders,
   markOrderPaidByInvoiceId,
@@ -18,7 +19,7 @@ import {
   voidOrder,
 } from "./orders";
 import { getBookingPayment } from "./payments";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
+import { getShopBySlug, getTripRoster, upcomingTripsWithCounts, updateTrip } from "./queries";
 import { seedDemo } from "./seed";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
@@ -289,6 +290,25 @@ describe("orders", () => {
     expect(voided?.status).toBe("void");
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
       status: "paid",
+    });
+  });
+
+  it("surfaces the trip's price through booking context so the order form can auto-fill it", async () => {
+    const { db, shop, reef, entry } = await orderContext();
+    expect(await getBookingContext(db, shop.id, entry.booking.id)).toMatchObject({
+      trip: { id: reef.id, priceCents: null },
+    });
+
+    await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: 18_000,
+    });
+    expect(await getBookingContext(db, shop.id, entry.booking.id)).toMatchObject({
+      trip: { priceCents: 18_000 },
     });
   });
 });

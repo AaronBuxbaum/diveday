@@ -55,6 +55,12 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
   Order pages also offer a manual "Refresh status" action (a direct `GET` to the invoice) so a shop
   is never stuck if the webhook secret is not yet configured — fail-visible, not fail-silent,
   matching how every other provider seam here degrades to `not_configured` rather than pretending.
+- **A trip carries an optional per-diver price (`trips.price_cents`).** It is the trip's own
+  attribute, not something orders invent: staff set it when scheduling (or later, on the trip's
+  detail page), and it is null-safe — an unpriced trip just means the trip-fee line item starts
+  blank. Starting an order from a roster row ("Create order") pre-fills the first line item's kind,
+  description, and amount from the trip; staff still review before sending, since a discount or an
+  added rental line is common.
 - **Orders require a connected, charges-enabled account.** Without one, order creation is blocked
   with a link back to the connect flow — never a phantom invoice that can never be paid.
 - **No platform fee is taken today.** The shop's own account is the merchant of record for its
