@@ -45,17 +45,35 @@ export default async function ShopPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <FlashParams params={["created", "reset", "email"]} />
-      <header className="mb-10">
+      <header className="mb-8 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
         <div className="min-w-0">
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome back, {firstName}</h1>
+          <p className="text-sm font-medium tracking-widest text-primary uppercase">
+            {shop.name} · operations
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            Welcome back, {firstName}
+          </h1>
           <p className="mt-1 text-muted">
             {upcoming.length === 0
               ? "Nothing on the books yet."
               : `${upcoming.length} upcoming ${upcoming.length === 1 ? "trip" : "trips"} on the schedule.`}
           </p>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href={`/shop/${shopSlug}/trips/new`}
+            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+          >
+            Schedule a trip
+          </Link>
+          <Link
+            href={`/shop/${shopSlug}/divers`}
+            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-surface-sunken"
+          >
+            Add or find a diver
+          </Link>
         </div>
       </header>
 

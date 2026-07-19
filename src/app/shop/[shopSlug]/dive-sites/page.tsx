@@ -8,9 +8,16 @@ import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Dive sites — Scuba" };
 
-export default async function DiveSitesPage({ params }: { params: Promise<{ shopSlug: string }> }) {
+export default async function DiveSitesPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ notice?: string }>;
+}) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
+  const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -48,6 +55,15 @@ export default async function DiveSitesPage({ params }: { params: Promise<{ shop
           Browse Scuba templates
         </Link>
       </header>
+
+      {notice === "archived" ? (
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
+          Site archived. Historical trip briefings are still preserved.
+        </p>
+      ) : null}
 
       {sites.length === 0 ? (
         <section className="mt-10 rounded-lg border border-border bg-surface p-10 text-center">

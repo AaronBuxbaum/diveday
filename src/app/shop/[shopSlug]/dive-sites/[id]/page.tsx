@@ -3,7 +3,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { copyDiveSite, getDiveSite, listDiveSites, updateDiveSite } from "@/db/dive-sites";
+import {
+  copyDiveSite,
+  deleteDiveSite,
+  getDiveSite,
+  listDiveSites,
+  updateDiveSite,
+} from "@/db/dive-sites";
 import { splitMediaUrls } from "@/lib/dive-sites";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -101,6 +107,13 @@ export default async function EditDiveSitePage({
     redirect(`${back}/${copy.id}?notice=copied`);
   }
 
+  async function deleteAction() {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
+    redirect(deleted ? `${back}?notice=archived` : `${back}/${id}?error=invalid`);
+  }
+
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
@@ -119,6 +132,25 @@ export default async function EditDiveSitePage({
             Copy and tailor
           </button>
         </form>
+        <details className="w-full sm:w-auto">
+          <summary className="min-h-11 cursor-pointer rounded-lg border border-danger/30 px-4 py-2 text-center text-sm font-medium text-danger">
+            Archive site
+          </summary>
+          <form
+            action={deleteAction}
+            className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
+          >
+            <p className="text-muted">
+              Historical trips keep their briefing; new trips will no longer see this site.
+            </p>
+            <button
+              type="submit"
+              className="mt-3 min-h-11 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Archive briefing
+            </button>
+          </form>
+        </details>
       </header>
       {notice ? (
         <p

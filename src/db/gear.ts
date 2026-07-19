@@ -34,6 +34,33 @@ export async function createGearItem(db: AppDb, input: NewGearItem) {
   return item ?? null;
 }
 
+export async function updateGearItem(
+  db: AppDb,
+  shopId: string,
+  gearItemId: string,
+  input: Omit<NewGearItem, "shopId">,
+) {
+  const [item] = await db
+    .update(gearItems)
+    .set({
+      label: input.label.trim(),
+      type: input.type,
+      size: input.size?.trim() || null,
+      serviceDueAt: input.serviceDueAt ?? null,
+      notes: input.notes?.trim() || null,
+    })
+    .where(
+      and(
+        eq(gearItems.id, gearItemId),
+        eq(gearItems.shopId, shopId),
+        ne(gearItems.state, "assigned"),
+        ne(gearItems.state, "retired"),
+      ),
+    )
+    .returning();
+  return item ?? null;
+}
+
 export async function listGearInventory(db: AppDb, shopId: string) {
   return db
     .select()

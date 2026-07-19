@@ -12,6 +12,8 @@ export type NewCourse = {
   requiresWaiver?: boolean;
 };
 
+export type CoursePatch = Omit<NewCourse, "shopId">;
+
 /**
  * The catalog owns the reusable admission baseline. A particular session
  * inherits it when scheduled; later course edits never silently rewrite an
@@ -39,6 +41,36 @@ export async function listActiveCourses(db: AppDb, shopId: string) {
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
     .orderBy(asc(courses.title));
+}
+
+export async function updateCourse(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  input: CoursePatch,
+) {
+  const [course] = await db
+    .update(courses)
+    .set({
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      minimumCertificationLevel: input.minimumCertificationLevel ?? null,
+      requiresInstructor: input.requiresInstructor ?? true,
+      requiresWaiver: input.requiresWaiver ?? true,
+    })
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .returning();
+  return course ?? null;
+}
+
+/** Catalog deletion is an archive so historical course sessions keep their snapshot. */
+export async function archiveCourse(db: AppDb, shopId: string, courseId: string) {
+  const [course] = await db
+    .update(courses)
+    .set({ isActive: false })
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .returning({ id: courses.id });
+  return Boolean(course);
 }
 
 export async function getCourse(db: AppDb, shopId: string, courseId: string) {

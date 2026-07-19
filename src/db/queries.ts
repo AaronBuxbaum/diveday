@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { AppDb } from "./client";
 import {
@@ -34,7 +34,13 @@ export async function createTrip(db: AppDb, input: NewTrip) {
           await tx
             .select()
             .from(courses)
-            .where(and(eq(courses.id, input.courseId), eq(courses.shopId, input.shopId)))
+            .where(
+              and(
+                eq(courses.id, input.courseId),
+                eq(courses.shopId, input.shopId),
+                eq(courses.isActive, true),
+              ),
+            )
             .limit(1)
         )[0]
       : null;
@@ -44,7 +50,13 @@ export async function createTrip(db: AppDb, input: NewTrip) {
           await tx
             .select({ id: diveSites.id })
             .from(diveSites)
-            .where(and(eq(diveSites.id, input.diveSiteId), eq(diveSites.shopId, input.shopId)))
+            .where(
+              and(
+                eq(diveSites.id, input.diveSiteId),
+                eq(diveSites.shopId, input.shopId),
+                isNull(diveSites.deletedAt),
+              ),
+            )
             .limit(1)
         )[0]
       : null;
