@@ -21,10 +21,28 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(page.getByRole("heading", { name: "Readiness needs attention" })).toBeVisible();
   await expect(page.getByText("Priya Sharma")).toBeVisible();
 
+  await page.locator("#roll-call-list").scrollIntoViewIfNeeded();
+  const checkpointScroll = await page.evaluate(() => window.scrollY);
+  await page
+    .getByRole("link", { name: "After dive 1" })
+    .evaluate((link: HTMLElement) => link.click());
+  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - checkpointScroll))
+    .toBeLessThan(100);
+  await page
+    .getByRole("link", { name: "Before departure" })
+    .evaluate((link: HTMLElement) => link.click());
+  await expect(page).toHaveURL(/checkpoint=departure/);
+
   await page.getByText("Add a note to this roll-call record").first().click();
   await page.getByLabel("Optional note").first().fill("Guest asked to sit out before departure.");
+  const rollCallScroll = await page.evaluate(() => window.scrollY);
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
-  await expect(page.getByRole("status")).toContainText("Not-boarded status recorded");
+  await expect(page.getByText("Not-boarded status recorded.", { exact: true })).toBeVisible();
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
+    .toBeLessThan(100);
   await expect(page).not.toHaveURL(/#roll-call-/);
   await expect(page.getByRole("button", { name: "Not boarded ✓" }).first()).toBeVisible();
   await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();

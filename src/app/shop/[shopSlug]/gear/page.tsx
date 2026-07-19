@@ -304,7 +304,7 @@ export default async function GearPage({
                   {item.state !== "assigned" && item.state !== "retired" ? (
                     <>
                       <details className="relative">
-                        <summary className="min-h-11 cursor-pointer rounded-xl border border-border px-3 py-2 text-sm font-medium text-primary">
+                        <summary className="flex min-h-11 cursor-pointer items-center rounded-xl border border-border px-3 py-2 text-sm font-medium text-primary">
                           Edit
                         </summary>
                         <form
@@ -386,7 +386,7 @@ export default async function GearPage({
                         </button>
                       </form>
                       <details>
-                        <summary className="min-h-11 cursor-pointer px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10">
+                        <summary className="flex min-h-11 cursor-pointer items-center px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10">
                           Retire
                         </summary>
                         <div className="absolute right-0 z-10 mt-2 w-64 rounded-2xl border border-danger/25 bg-surface p-4 text-sm shadow-xl">
@@ -410,7 +410,7 @@ export default async function GearPage({
               </div>
               {item.state !== "assigned" && item.state !== "retired" ? (
                 <details className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm">
-                  <summary className="min-h-11 cursor-pointer py-2 font-medium text-primary">
+                  <summary className="flex min-h-11 cursor-pointer items-center py-2 font-medium text-primary">
                     Record completed service
                   </summary>
                   <form action={serviceAction} className="grid gap-3 pb-2 pt-1 sm:grid-cols-3">

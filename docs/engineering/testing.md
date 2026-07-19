@@ -28,6 +28,9 @@ pnpm check         # lint + typecheck + unit — the pre-commit bar
   on the runner's locale or clock. Fixed dates, not `new Date()`.
 - **E2E is a smoke layer, not a matrix.** One spec per critical flow (book a trip, sign a
   waiver, run roll call), kept fast and unflaky; edge cases belong in unit tests.
+- **E2E keeps real application boundaries and disables third-party HTTP.** Exercise Next, auth,
+  and the isolated PGlite database together. Test provider adapters with injected fakes in Vitest;
+  do not add browser-level service-worker mocks for server-side providers.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
 

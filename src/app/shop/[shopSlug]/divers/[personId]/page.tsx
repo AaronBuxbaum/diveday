@@ -379,7 +379,7 @@ export default async function DiverDetailPage({
           </div>
         </div>
         <details className="rounded-lg border border-border bg-surface px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-primary">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
             Edit details
           </summary>
           <form action={savePersonAction} className="mt-4 grid gap-3 sm:w-80">
@@ -467,7 +467,7 @@ export default async function DiverDetailPage({
             </p>
           </div>
           <details>
-            <summary className="min-h-11 cursor-pointer rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
+            <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
               Add card
             </summary>
             <form
@@ -627,7 +627,7 @@ export default async function DiverDetailPage({
             </p>
           </div>
           <details>
-            <summary className="min-h-11 cursor-pointer rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
+            <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
               Add specialty
             </summary>
             <form
@@ -1119,7 +1119,7 @@ export default async function DiverDetailPage({
           cards, and gear history remain intact for records and safety review.
         </p>
         <details className="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-4">
-          <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium text-danger">
+          <summary className="flex min-h-11 cursor-pointer items-center py-2 text-sm font-medium text-danger">
             Remove {diver.person.fullName}
           </summary>
           <form action={deletePersonAction} className="mt-3 flex flex-wrap items-center gap-3">
