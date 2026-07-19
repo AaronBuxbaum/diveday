@@ -30,6 +30,11 @@ export const shops = pgTable("shops", {
   timezone: text("timezone").notNull(),
   /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
   jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
+  /** Diver-facing suggestions shown on every trip; owners configure these once per shop. */
+  packingList: jsonb("packing_list")
+    .$type<string[]>()
+    .notNull()
+    .default(["Certification card", "Swimsuit and towel", "Reef-safe sun protection"]),
   isDemo: boolean("is_demo").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

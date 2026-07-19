@@ -29,7 +29,7 @@ export function DiveBriefingCard({
   const landmarks = site ? buildDiveSiteLandmarks(site.name, site.landmarks) : [];
 
   return (
-    <article className="w-[min(90vw,42rem)] shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
+    <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
       {site && getSeedDiveSiteMap(site.name) ? (
         <DiveSiteMap siteName={site.name} />
       ) : site?.satelliteImageUrl ? (

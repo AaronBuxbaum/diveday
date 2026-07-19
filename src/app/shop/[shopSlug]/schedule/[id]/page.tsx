@@ -27,7 +27,7 @@ import { getBookingReadiness } from "@/db/readiness";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { dockDayTimeline, packingChecklist } from "@/lib/diver-planning";
+import { dockDayTimeline } from "@/lib/diver-planning";
 import { formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import {
   fetchAutomatedMarineForecast,
@@ -336,7 +336,7 @@ export default async function TripDetailPage({
       <section className="mt-6 rounded-xl border border-border bg-surface p-5">
         <h2 className="text-lg font-semibold">Pack with confidence</h2>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
-          {packingChecklist(trip.waterTemperatureC, trip.surfaceConditions).map((item) => (
+          {shop.packingList.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>

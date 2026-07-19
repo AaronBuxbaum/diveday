@@ -376,6 +376,16 @@ export async function setShopJurisdiction(db: AppDb, shopId: string, jurisdictio
   return shop ?? null;
 }
 
+/** Replaces the shop-wide diver packing checklist after route-level validation. */
+export async function setShopPackingList(db: AppDb, shopId: string, packingList: string[]) {
+  const [shop] = await db
+    .update(shops)
+    .set({ packingList })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
 /**
  * The shop public pages serve. Single-shop instance for now — multi-shop
  * routing (slug subpaths or domains) arrives with shop onboarding.

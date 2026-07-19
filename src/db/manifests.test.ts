@@ -38,11 +38,10 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("only records boarding after the shared readiness service clears the diver", async () => {
-    const { db, shop, reef, booking, template, staff } = await manifestContext();
+    const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.booking.id,
-      templateId: template.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
     await completeWaiver(db, issued.token, {
@@ -93,11 +92,10 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("keeps departure and after-dive head counts independent", async () => {
-    const { db, shop, reef, booking, template, staff } = await manifestContext();
+    const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.booking.id,
-      templateId: template.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
     await completeWaiver(db, issued.token, {
@@ -127,11 +125,10 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("applies an offline event once and rejects a delayed event behind newer live history", async () => {
-    const { db, shop, reef, booking, template, staff } = await manifestContext();
+    const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.booking.id,
-      templateId: template.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
     await completeWaiver(db, issued.token, {
