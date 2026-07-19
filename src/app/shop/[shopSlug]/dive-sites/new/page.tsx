@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { splitMediaUrls } from "@/lib/dive-sites";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
@@ -94,7 +95,7 @@ export default async function NewDiveSitePage({
       divePlan: parsed.data.divePlan,
       landmarks,
     });
-    redirect(`${back}/${site.id}`);
+    revalidateAndRedirect(back, `${back}/${site.id}`);
   }
 
   return (

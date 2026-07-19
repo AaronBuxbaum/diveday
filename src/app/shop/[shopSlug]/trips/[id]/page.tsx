@@ -48,6 +48,7 @@ import {
 } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -179,6 +180,14 @@ function rentalRequestSummary(
     .join(" — ");
 }
 
+const WAIVER_BADGES: Record<ReturnType<typeof waiverState>, { label: string; tone: string }> = {
+  not_sent: { label: "Not sent", tone: "bg-primary/10 text-primary" },
+  awaiting_signature: { label: "Waiting on diver", tone: "bg-primary/10 text-primary" },
+  expired: { label: "Link expired", tone: "bg-danger/10 text-danger" },
+  medical_review: { label: "Medical review", tone: "bg-warning/10 text-warning" },
+  complete: { label: "Complete", tone: "bg-success/10 text-success" },
+};
+
 export default async function ManageTripPage({
   params,
   searchParams,
@@ -267,6 +276,10 @@ export default async function ManageTripPage({
     current.push(row.waiver);
     waiverRecordsByBooking.set(row.booking.id, current);
   }
+  // The roster is the spine of the diver section; waiver and readiness detail
+  // hang off it by booking id so each diver renders as one consolidated card.
+  const waiverByBooking = new Map(waiverRows.map((row) => [row.booking.id, row] as const));
+  const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
 
   async function saveDetails(formData: FormData) {
     "use server";
@@ -295,7 +308,7 @@ export default async function ManageTripPage({
       diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
       dives: tripDiveDraftsFromForm(formData, plannedDives),
     });
-    redirect(`${back}?notice=saved`);
+    revalidateAndRedirect(back, `${back}?notice=saved`);
   }
 
   async function saveConditionsAction(formData: FormData) {
@@ -304,28 +317,28 @@ export default async function ManageTripPage({
     const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}?notice=invalid`);
     const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, parsed.data);
-    redirect(`${back}?notice=${saved ? "conditions" : "invalid"}`);
+    revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions" : "invalid"}`);
   }
 
   async function clearConditionsAction() {
     "use server";
     const s = await requireStaffSession();
     const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
-    redirect(`${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
+    revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
   }
 
   async function cancelTripAction() {
     "use server";
     const s = await requireStaffSession();
     await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
-    redirect(`${back}?notice=cancelled`);
+    revalidateAndRedirect(back, `${back}?notice=cancelled`);
   }
 
   async function reinstateTripAction() {
     "use server";
     const s = await requireStaffSession();
     await setTripStatus(await getDb(), s.user.shopId, tripId, "scheduled");
-    redirect(`${back}?notice=reinstated`);
+    revalidateAndRedirect(back, `${back}?notice=reinstated`);
   }
 
   async function saveCrewAction(formData: FormData) {
@@ -333,7 +346,7 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const ids = formData.getAll("crew").map(String);
     await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
-    redirect(`${back}?notice=crew`);
+    revalidateAndRedirect(back, `${back}?notice=crew`);
   }
 
   async function removeBookingAction(formData: FormData) {
@@ -342,7 +355,7 @@ export default async function ManageTripPage({
     const bookingId = String(formData.get("bookingId") ?? "");
     if (!bookingId) redirect(back);
     await cancelBooking(await getDb(), s.user.shopId, bookingId);
-    redirect(`${back}?notice=booking-removed&bid=${bookingId}`);
+    revalidateAndRedirect(back, `${back}?notice=booking-removed&bid=${bookingId}`);
   }
 
   async function undoRemoveBookingAction(formData: FormData) {
@@ -350,7 +363,7 @@ export default async function ManageTripPage({
     const s = await requireStaffSession();
     const bookingId = String(formData.get("bookingId") ?? "");
     if (bookingId) await restoreBooking(await getDb(), s.user.shopId, bookingId);
-    redirect(`${back}?notice=booking-restored`);
+    revalidateAndRedirect(back, `${back}?notice=booking-restored`);
   }
 
   async function issueWaiverAction(formData: FormData) {
@@ -399,7 +412,10 @@ export default async function ManageTripPage({
         }
       }
     }
-    redirect(`${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`);
+    revalidateAndRedirect(
+      back,
+      `${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`,
+    );
   }
 
   async function markPaymentAction(formData: FormData) {
@@ -415,7 +431,7 @@ export default async function ManageTripPage({
             status: status.data,
           })
         : null;
-    redirect(`${back}?notice=${saved ? "payment" : "invalid"}`);
+    revalidateAndRedirect(back, `${back}?notice=${saved ? "payment" : "invalid"}`);
   }
 
   async function saveRequirementsAction(formData: FormData) {
@@ -437,7 +453,7 @@ export default async function ManageTripPage({
       requiresNitrox: formData.get("requiresNitrox") === "on",
       requiresPayment: formData.get("requiresPayment") === "on",
     });
-    redirect(`${back}?notice=${saved ? "requirements" : "invalid"}`);
+    revalidateAndRedirect(back, `${back}?notice=${saved ? "requirements" : "invalid"}`);
   }
 
   async function assignGearAction(formData: FormData) {
@@ -450,14 +466,17 @@ export default async function ManageTripPage({
       bookingId: parsed.data.bookingId,
       gearItemId: parsed.data.gearItemId,
     });
-    redirect(`${back}?notice=${outcome.ok ? "gear-assigned" : "gear-error"}`);
+    revalidateAndRedirect(back, `${back}?notice=${outcome.ok ? "gear-assigned" : "gear-error"}`);
   }
 
   async function assignRecommendedGearAction() {
     "use server";
     const s = await requireStaffSession();
     const outcome = await assignRecommendedGear(await getDb(), s.user.shopId, tripId);
-    redirect(`${back}?notice=${outcome.assigned > 0 ? "gear-packed" : "gear-none"}`);
+    revalidateAndRedirect(
+      back,
+      `${back}?notice=${outcome.assigned > 0 ? "gear-packed" : "gear-none"}`,
+    );
   }
 
   async function returnGearAction(formData: FormData) {
@@ -466,7 +485,7 @@ export default async function ManageTripPage({
     const assignmentId = String(formData.get("assignmentId") ?? "");
     if (!assignmentId) redirect(`${back}?notice=gear-error`);
     const returned = await returnGear(await getDb(), s.user.shopId, assignmentId);
-    redirect(`${back}?notice=${returned ? "gear-returned" : "gear-error"}`);
+    revalidateAndRedirect(back, `${back}?notice=${returned ? "gear-returned" : "gear-error"}`);
   }
 
   const inputClass =
@@ -908,88 +927,70 @@ export default async function ManageTripPage({
         )}
       </section>
 
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">
-          Divers{" "}
-          <span className="font-normal text-muted tabular-nums">
-            {trip.booked} of {trip.capacity}
-          </span>
-        </h2>
+      <section id="roster" className="mt-10">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">
+              Divers{" "}
+              <span className="font-normal text-muted tabular-nums">
+                {trip.booked} of {trip.capacity}
+              </span>
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Readiness, waiver, gear, and payment for each diver — together in one place.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <form action={assignRecommendedGearAction}>
+              <button
+                type="submit"
+                className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
+              >
+                Pack recommendations
+              </button>
+            </form>
+            <Link
+              href={`/shop/${shopSlug}/gear`}
+              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+            >
+              Gear room
+            </Link>
+            <Link
+              href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
+              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+            >
+              Boat manifest
+            </Link>
+            <Link
+              href={`/shop/${shopSlug}/trips/${tripId}/nitrox`}
+              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+            >
+              Nitrox fills
+            </Link>
+          </div>
+        </div>
         {roster.length === 0 ? (
           <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
             No bookings yet — share the trip page and they'll show up here.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-            {roster.map(({ booking, person }) => (
-              <li
-                key={booking.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium">{person.fullName}</p>
-                  <p className="text-muted">{person.email ?? "no email on file"}</p>
-                </div>
-                <form action={removeBookingAction} className="shrink-0">
-                  <input type="hidden" name="bookingId" value={booking.id} />
-                  <button
-                    type="submit"
-                    className="min-h-11 rounded-lg px-4 font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
-                  >
-                    Cancel booking
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="mt-10">
-        <div>
-          <div>
-            <h2 className="text-lg font-semibold">Waivers</h2>
-            <p className="mt-1 text-sm text-muted">
-              Email a private completion link before the day of the trip. Medical follow-up stays
-              visible here.
-            </p>
-          </div>
-        </div>
-        {waiverRows.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-            Waiver links appear here when divers book this trip.
-          </p>
-        ) : templates.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-sm text-muted">
-            Create a waiver template before issuing links.
-          </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-            {waiverRows.map(({ booking, person, waiver: currentWaiver }) => {
+          <ul className="mt-5 grid gap-4">
+            {roster.map(({ booking, person }) => {
+              const readiness = readinessByBooking.get(booking.id)?.readiness;
+              const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
+              const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
+              const waiverStatus = waiverState(currentWaiver);
+              const badge = WAIVER_BADGES[waiverStatus];
+              const waiverFinished =
+                waiverStatus === "complete" || waiverStatus === "medical_review";
               const activity = waiverActivityTimeline(waiverRecordsByBooking.get(booking.id) ?? []);
-              const state = waiverState(currentWaiver);
-              const finished = state === "complete" || state === "medical_review";
-              const label =
-                state === "not_sent"
-                  ? "Not sent"
-                  : state === "awaiting_signature"
-                    ? "Waiting on diver"
-                    : state === "expired"
-                      ? "Link expired"
-                      : state === "medical_review"
-                        ? "Medical review"
-                        : "Complete";
-              const tone =
-                state === "medical_review"
-                  ? "bg-warning/10 text-warning"
-                  : state === "complete"
-                    ? "bg-success/10 text-success"
-                    : state === "expired"
-                      ? "bg-danger/10 text-danger"
-                      : "bg-primary/10 text-primary";
+              const assignedGear = gearByBooking.get(booking.id) ?? [];
               return (
-                <li key={booking.id} className="px-4 py-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <li
+                  key={booking.id}
+                  className="rounded-xl border border-border bg-surface p-5 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <Link
                         href={`/shop/${shopSlug}/divers/${person.id}`}
@@ -997,108 +998,113 @@ export default async function ManageTripPage({
                       >
                         {person.fullName}
                       </Link>
-                      <p className="mt-1 text-sm text-muted">
+                      <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {readiness ? (
+                        readiness.status === "ready" ? (
+                          <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
+                            Ready
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
+                            Needs attention
+                          </span>
+                        )
+                      ) : null}
+                      <form action={removeBookingAction}>
+                        <input type="hidden" name="bookingId" value={booking.id} />
+                        <button
+                          type="submit"
+                          className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                  {readiness && readiness.status !== "ready" ? (
+                    <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
+                      {readiness.blockers.map((blocker) => (
+                        <li key={blocker.message} className="flex gap-2">
+                          <span aria-hidden="true">!</span>
+                          <span>{blocker.message}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  <div className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                        Waiver
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-sm font-medium ${badge.tone}`}
+                        >
+                          {badge.label}
+                        </span>
+                        {waiverFinished ? null : templates.length === 0 ? (
+                          <span className="text-sm text-muted">Add a template to send</span>
+                        ) : (
+                          <form action={issueWaiverAction} className="flex items-center gap-2">
+                            <input type="hidden" name="bookingId" value={booking.id} />
+                            <SubmitButton
+                              pendingLabel="Sending…"
+                              confirmMessage={
+                                waiverStatus === "not_sent"
+                                  ? undefined
+                                  : `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
+                              }
+                              className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                            >
+                              {waiverStatus === "not_sent" ? "Send link" : "Resend"}
+                            </SubmitButton>
+                          </form>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm text-muted">
                         {currentWaiver
                           ? `${currentWaiver.templateTitle} v${currentWaiver.templateVersion}${currentWaiver.completedAt ? ` · signed ${formatDateTimeTz(currentWaiver.completedAt, "en-US", shop.timezone)}` : ""}`
                           : "No waiver issued"}
                       </p>
+                      {activity.length > 0 ? (
+                        <details className="mt-2 rounded-lg bg-surface-sunken px-3 py-1 text-sm">
+                          <summary className="flex min-h-11 cursor-pointer items-center py-2 font-medium text-primary">
+                            Activity · {activity.length}{" "}
+                            {activity.length === 1 ? "event" : "events"}
+                          </summary>
+                          <ol className="flex flex-col gap-3 pb-2 pt-1">
+                            {activity.map((entry) => (
+                              <li key={`${entry.recordId}-${entry.kind}`}>
+                                <p className="font-medium">{entry.title}</p>
+                                <p className="text-muted">
+                                  {formatDateTimeTz(entry.at, "en-US", shop.timezone)} ·{" "}
+                                  {entry.detail}
+                                </p>
+                              </li>
+                            ))}
+                          </ol>
+                        </details>
+                      ) : null}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className={`rounded-full px-3 py-1 text-sm font-medium ${tone}`}>
-                        {label}
-                      </span>
-                      {finished ? null : (
-                        <form
-                          action={issueWaiverAction}
-                          className="flex flex-wrap items-center gap-2"
-                        >
-                          <input type="hidden" name="bookingId" value={booking.id} />
-                          <SubmitButton
-                            pendingLabel="Sending…"
-                            confirmMessage={
-                              state === "not_sent"
-                                ? undefined
-                                : `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
-                            }
-                            className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-                          >
-                            {state === "not_sent" ? "Unsent · send" : "Sent · resend"}
-                          </SubmitButton>
-                        </form>
-                      )}
-                    </div>
-                  </div>
-                  {activity.length > 0 ? (
-                    <details className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm">
-                      <summary className="flex min-h-11 cursor-pointer items-center py-2 font-medium text-primary">
-                        Activity · {activity.length} {activity.length === 1 ? "event" : "events"}
-                      </summary>
-                      <ol className="flex flex-col gap-3 pb-2 pt-1">
-                        {activity.map((entry) => (
-                          <li key={`${entry.recordId}-${entry.kind}`}>
-                            <p className="font-medium">{entry.title}</p>
-                            <p className="text-muted">
-                              {formatDateTimeTz(entry.at, "en-US", shop.timezone)} · {entry.detail}
-                            </p>
-                          </li>
-                        ))}
-                      </ol>
-                    </details>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
 
-      <section className="mt-10">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Gear prep</h2>
-            <p className="mt-1 text-sm text-muted">
-              Pack each diver from the live inventory. If another staff member claims an item first,
-              it stays blocked here instead of being double-assigned.
-            </p>
-          </div>
-          <Link
-            href={`/shop/${shopSlug}/gear`}
-            className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Open gear room
-          </Link>
-          <form action={assignRecommendedGearAction}>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
-            >
-              Pack recommendations
-            </button>
-          </form>
-        </div>
-        {roster.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-            Booked divers will appear here when there is gear to prepare.
-          </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-            {roster.map(({ booking, person }) => {
-              const assignedGear = gearByBooking.get(booking.id) ?? [];
-              return (
-                <li key={booking.id} className="px-4 py-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="font-medium">{person.fullName}</p>
-                      <p className="mt-1 text-sm text-muted">
+                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                        Gear
+                      </p>
+                      <p className="mt-2 text-sm text-muted">
                         {rentalRequestSummary(
                           gearRequestByBooking.get(booking.id),
                           gearProfileByBooking.get(booking.id),
                         )}
                       </p>
                       {assignedGear.length === 0 ? (
-                        <p className="mt-1 text-sm text-muted">Nothing packed yet.</p>
+                        <p className="mt-2 text-sm text-muted">Nothing packed yet.</p>
                       ) : (
-                        <ul className="mt-1 flex flex-wrap gap-2">
+                        <ul className="mt-2 flex flex-wrap gap-2">
                           {assignedGear.map((item) => (
                             <li
                               key={item.assignmentId}
@@ -1123,94 +1129,44 @@ export default async function ManageTripPage({
                           ))}
                         </ul>
                       )}
-                    </div>
-                    {availableGear.length > 0 ? (
-                      <form action={assignGearAction} className="flex min-w-0 flex-wrap gap-2">
-                        <input type="hidden" name="bookingId" value={booking.id} />
-                        <select
-                          name="gearItemId"
-                          aria-label={`Assign gear to ${person.fullName}`}
-                          defaultValue=""
-                          className="min-h-11 min-w-44 rounded-lg border border-border-strong bg-surface px-3 text-base"
-                        >
-                          <option value="" disabled>
-                            Choose available gear
-                          </option>
-                          {availableGear.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.label} · {item.type.replace("_", " ")}
-                              {item.size ? ` · ${item.size}` : ""}
+                      {availableGear.length > 0 ? (
+                        <form action={assignGearAction} className="mt-2 flex flex-wrap gap-2">
+                          <input type="hidden" name="bookingId" value={booking.id} />
+                          <select
+                            name="gearItemId"
+                            aria-label={`Assign gear to ${person.fullName}`}
+                            defaultValue=""
+                            className="min-h-11 min-w-44 flex-1 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                          >
+                            <option value="" disabled>
+                              Choose available gear
                             </option>
-                          ))}
-                        </select>
-                        <button
-                          type="submit"
-                          className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
-                        >
-                          Pack item
-                        </button>
-                      </form>
-                    ) : (
-                      <p className="text-sm text-muted">No available gear right now.</p>
-                    )}
+                            {availableGear.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.label} · {item.type.replace("_", " ")}
+                                {item.size ? ` · ${item.size}` : ""}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="submit"
+                            className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
+                          >
+                            Pack
+                          </button>
+                        </form>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted">No available gear right now.</p>
+                      )}
+                    </div>
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
 
-      <section className="mt-10">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Diver readiness</h2>
-            <p className="mt-1 text-sm text-muted">
-              See who is cleared and exactly what needs attention before departure.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
-              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-            >
-              Open boat manifest
-            </Link>
-            <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/nitrox`}
-              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-            >
-              Nitrox fills
-            </Link>
-            <Link
-              href={`/shop/${shopSlug}/divers`}
-              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
-            >
-              Open divers
-            </Link>
-          </div>
-        </div>
-        {readinessRows.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-            Booked divers will appear here with their readiness status.
-          </p>
-        ) : (
-          <ul className="mt-4 grid gap-3">
-            {readinessRows.map(({ booking, person, readiness, paymentStatus }) => (
-              <li
-                key={booking.id}
-                className="rounded-xl border border-border bg-surface p-4 shadow-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <Link
-                      href={`/shop/${shopSlug}/divers/${person.id}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {person.fullName}
-                    </Link>
+                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">
                     {requirement?.requiresPayment ? (
-                      <form action={markPaymentAction} className="mt-2 flex items-center gap-2">
+                      <form
+                        action={markPaymentAction}
+                        className="flex flex-wrap items-center gap-2"
+                      >
                         <input type="hidden" name="bookingId" value={booking.id} />
                         <span className="text-sm text-muted">
                           Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
@@ -1236,33 +1192,14 @@ export default async function ManageTripPage({
                     ) : null}
                     <Link
                       href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                      className="mt-2 inline-block text-sm font-medium text-primary underline"
+                      className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
                     >
                       Create order
                     </Link>
                   </div>
-                  {readiness.status === "ready" ? (
-                    <span className="shrink-0 rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
-                      Ready
-                    </span>
-                  ) : (
-                    <span className="shrink-0 rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
-                      Needs attention
-                    </span>
-                  )}
-                </div>
-                {readiness.status !== "ready" ? (
-                  <ul className="mt-3 grid gap-2 border-t border-border pt-3 text-sm text-danger">
-                    {readiness.blockers.map((blocker) => (
-                      <li key={blocker.message} className="flex gap-2">
-                        <span aria-hidden="true">!</span>
-                        <span>{blocker.message}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

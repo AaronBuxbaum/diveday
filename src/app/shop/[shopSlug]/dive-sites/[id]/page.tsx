@@ -11,6 +11,7 @@ import {
   updateDiveSite,
 } from "@/db/dive-sites";
 import { splitMediaUrls } from "@/lib/dive-sites";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
@@ -103,7 +104,7 @@ export default async function EditDiveSitePage({
       landmarks,
     });
     if (!updated) notFound();
-    redirect(`${back}/${id}?notice=saved`);
+    revalidateAndRedirect(`${back}/${id}`, `${back}/${id}?notice=saved`);
   }
 
   async function copyAction() {
@@ -118,14 +119,17 @@ export default async function EditDiveSitePage({
     while (names.has(copyName)) copyName = `${site.name} copy ${number++}`;
     const copy = await copyDiveSite(activeDb, activeSession.user.shopId, id, copyName);
     if (!copy) notFound();
-    redirect(`${back}/${copy.id}?notice=copied`);
+    revalidateAndRedirect(back, `${back}/${copy.id}?notice=copied`);
   }
 
   async function deleteAction() {
     "use server";
     const activeSession = await requireStaffSession();
     const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
-    redirect(deleted ? `${back}?notice=archived` : `${back}/${id}?error=invalid`);
+    revalidateAndRedirect(
+      back,
+      deleted ? `${back}?notice=archived` : `${back}/${id}?error=invalid`,
+    );
   }
 
   return (

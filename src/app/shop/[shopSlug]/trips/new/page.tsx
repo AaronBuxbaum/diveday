@@ -8,6 +8,7 @@ import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { createTrip, getShopById } from "@/db/queries";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -79,7 +80,10 @@ async function scheduleTrip(formData: FormData) {
     priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
-  redirect(`/shop/${session.user.shopSlug}?created=${encodeURIComponent(title)}`);
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}`,
+    `/shop/${session.user.shopSlug}?created=${encodeURIComponent(title)}`,
+  );
 }
 
 const ERROR_MESSAGES: Record<string, string> = {

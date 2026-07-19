@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopStat } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
@@ -8,6 +7,7 @@ import { getTripManifest } from "@/db/manifests";
 import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/notifications";
 import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 
@@ -47,7 +47,8 @@ export default async function ShopPage({
     const delivery = bookingId
       ? await retryBookingConfirmation(await getDb(), staff.user.shopId, bookingId)
       : null;
-    redirect(
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}`,
       `/shop/${staff.user.shopSlug}?email=${delivery?.status === "sent" ? "sent" : "failed"}`,
     );
   }
