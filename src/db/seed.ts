@@ -589,6 +589,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       shopId,
       diveSiteId: molasses.id,
       caption: "A quiet moment watching a ray disappear into blue water.",
+      imageUrl: commonsImage("Dasyatis americana NOAA.jpg"),
       isPublished: true,
     });
   }
