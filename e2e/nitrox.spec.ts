@@ -22,8 +22,14 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("link", { name: "Open June Park" }).click();
   await page.getByText("Add specialty", { exact: true }).click();
-  await page.locator('select[name="specialty"]').selectOption("nitrox");
-  await page.locator('input[name="identifier"]').fill(cardNo);
+  // The diver page has two capture forms (level card, specialty card), both
+  // with name="identifier"/name="specialty" inputs; scope to the specialty
+  // form so the selectors resolve unambiguously under strict mode.
+  const specialtyForm = page.locator("form", {
+    has: page.getByRole("button", { name: "Capture specialty for review" }),
+  });
+  await specialtyForm.locator('select[name="specialty"]').selectOption("nitrox");
+  await specialtyForm.locator('input[name="identifier"]').fill(cardNo);
   await page.getByRole("button", { name: "Capture specialty for review" }).click();
   await expect(page.getByRole("status")).toContainText("captured");
 

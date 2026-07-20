@@ -39,13 +39,16 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("status")).toContainText(title);
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
+  // View as a diver: signed in, /schedule/[id] renders the staff editor; the
+  // public dive-plan briefing ("Your N-dive plan") is the signed-out view.
+  await page.context().clearCookies();
   await page.goto("/shop/blue-mantis/schedule");
   const card = page.locator("li").filter({ hasText: title });
   await expect(card).toBeVisible();
   await expect(card.getByText("8 spots left")).toBeVisible();
 
   await card.click();
-  await expect(page.getByRole("heading", { name: "3-dive trip" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your 3-dive plan" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Morning reef" })).toBeVisible();
   await expect(page.getByText("Second site details will be confirmed at the dock.")).toBeVisible();
 });

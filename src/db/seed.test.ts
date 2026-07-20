@@ -7,6 +7,7 @@ import { createTestDb } from "./client";
 import { getShopBySlug, listStaff, upcomingTripsWithCounts } from "./queries";
 import { bookings, people, personRoles, userAccounts } from "./schema";
 import { resetDemoSchedule, seedDemo } from "./seed";
+import { joinTripWaitlist } from "./waitlist";
 
 async function seeded() {
   const db = await createTestDb();
@@ -46,6 +47,38 @@ describe("resetDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.email, "wanda@example.com")));
     expect(walkUp).toHaveLength(0);
+  });
+
+  it("clears wait-list entries so a churned playground resets cleanly", async () => {
+    const { db, shop } = await seeded();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+
+    // A wait-list entry references its trip; before the reset cleared it, that
+    // dangling row blocked the trips delete with an FK violation and left the
+    // fixture dirty for every subsequent e2e test (the real "tests take
+    // forever" cause: each poisoned reset then timed out downstream).
+    const full = trips.find((t) => t.booked >= t.capacity);
+    if (!full) throw new Error("expected a full trip in the seed to wait-list against");
+    const outcome = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: full.id,
+      fullName: "Wait-List Wendy",
+      email: "wendy@example.com",
+    });
+    expect(outcome.ok).toBe(true);
+
+    // Must not throw on the trips/people deletes, and must fully restore.
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    const after = await upcomingTripsWithCounts(db, shop.id);
+    expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
+      trips.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity })),
+    );
+    const wendy = await db
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.email, "wendy@example.com")));
+    expect(wendy).toHaveLength(0);
   });
 
   it("keeps staff and their logins intact so the demo session survives", async () => {

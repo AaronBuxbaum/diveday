@@ -26,6 +26,7 @@ test("staff captures and verifies a certification before it can be trusted", asy
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
+  await page.getByText("Add card", { exact: true }).click(); // open the collapsed capture form
   const form = levelForm(page);
   await expect(form.locator('input[name="cardImageUrl"]')).toHaveCount(0);
   await expect(form.locator('input[name="cardImage"]')).toBeVisible();
@@ -44,18 +45,18 @@ test("staff captures and verifies a specialty card, gated the same way", async (
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
+  await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
+  const cardNo = `PADI-WRECK-${Date.now()}`;
   const form = specialtyForm(page);
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="specialty"]').selectOption("wreck");
-  await form.getByLabel("Card number").fill(`PADI-WRECK-${Date.now()}`);
+  await form.getByLabel("Card number").fill(cardNo);
   await form.getByRole("button", { name: "Capture specialty for review" }).click();
   await expect(page.getByRole("status")).toContainText("pending");
 
-  const pendingRow = page
-    .locator("li")
-    .filter({ hasText: "specialty" })
-    .filter({ hasText: "pending" })
-    .last();
+  // Scope to this card's row by its unique number; the specialty card shows
+  // "<agency> · <specialty>", not the literal word "specialty".
+  const pendingRow = page.locator("li").filter({ hasText: cardNo }).last();
   await pendingRow.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByRole("status")).toContainText("verified");
 });
