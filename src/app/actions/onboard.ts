@@ -122,7 +122,6 @@ export async function onboardAction(formData: FormData) {
           shopId: newShop.id,
           title: DEFAULT_WAIVER_TITLE,
           version: 1,
-          isDefault: true,
           body: DEFAULT_WAIVER_BODY,
         });
       } else {

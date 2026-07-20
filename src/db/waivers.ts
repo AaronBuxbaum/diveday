@@ -18,19 +18,14 @@ export type SaveWaiverTemplateInput = {
 
 /**
  * A shop has exactly one waiver, kept as an append-only chain of versions. The
- * current version (`isDefault`) is what a newly issued link snapshots.
+ * most recent version is what a newly issued link snapshots.
  */
 export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
   const [template] = await db
     .select()
     .from(waiverTemplates)
-    .where(
-      and(
-        eq(waiverTemplates.shopId, shopId),
-        eq(waiverTemplates.isDefault, true),
-        isNull(waiverTemplates.archivedAt),
-      ),
-    )
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
+    .orderBy(desc(waiverTemplates.createdAt))
     .limit(1);
   return template ?? null;
 }
@@ -45,9 +40,9 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
 }
 
 /**
- * Saves an edit as the next version and makes it current. Versions increment
- * per shop — history reads v1 → v2 → v3 — and the previous current version stays
- * intact so a record already signed against it is never rewritten.
+ * Saves an edit as the next version. Versions increment per shop — history reads
+ * v1 → v2 → v3 — and the most recent version is always what new links snapshot.
+ * The previous version stays intact so a record already signed against it is never rewritten.
  */
 export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInput) {
   return db.transaction(async (tx) => {
@@ -56,10 +51,6 @@ export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInp
       .from(waiverTemplates)
       .where(eq(waiverTemplates.shopId, input.shopId));
     const nextVersion = Math.max(0, ...existing.map((row) => row.version)) + 1;
-    await tx
-      .update(waiverTemplates)
-      .set({ isDefault: false })
-      .where(and(eq(waiverTemplates.shopId, input.shopId), eq(waiverTemplates.isDefault, true)));
     const [template] = await tx
       .insert(waiverTemplates)
       .values({
@@ -67,7 +58,6 @@ export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInp
         title: input.title.trim(),
         body: input.body.trim(),
         version: nextVersion,
-        isDefault: true,
       })
       .returning();
     if (!template) throw new Error("saveWaiverTemplate: insert returned no row");
@@ -119,13 +109,8 @@ export async function issueWaiverRequest(
     const [template] = await tx
       .select()
       .from(waiverTemplates)
-      .where(
-        and(
-          eq(waiverTemplates.shopId, input.shopId),
-          eq(waiverTemplates.isDefault, true),
-          isNull(waiverTemplates.archivedAt),
-        ),
-      )
+      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.archivedAt)))
+      .orderBy(desc(waiverTemplates.createdAt))
       .limit(1);
     if (!template) return { ok: false, reason: "template_not_found" };
 
