@@ -37,12 +37,13 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   workers: E2E_WORKER_COUNT,
-  // Precompiled servers serve routes without the dev-mode first-hit compile,
-  // so warm assertions settle in well under a second. The headroom here is only
-  // for the one-time cold render of an authenticated route under parallel load,
-  // which global-setup can't fully pre-warm; it is a ceiling, not added latency.
-  expect: { timeout: 20_000 },
-  timeout: 60_000,
+  // Precompiled servers serve routes without the dev-mode first-hit compile, so
+  // warm assertions settle in well under a second (most tests finish in 1-4s).
+  // The headroom here is only for the one-time cold render of a heavy route the
+  // warmup can't reach (dynamic [id] pages) under parallel CPU load — a ceiling,
+  // not added latency.
+  expect: { timeout: 30_000 },
+  timeout: 90_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
