@@ -173,10 +173,15 @@ describe("gear assignments (in-memory PGlite)", () => {
       bcdSize: "M",
     });
 
+    // Both requested types are packed — a BCD and a regulator — but only from
+    // inventory that matches the request: the L-size BCD is the wrong fit, and
+    // the held regulator is off the floor, so neither may be claimed.
     const outcome = await assignRecommendedGear(db, shop.id, booking.tripId);
-    expect(outcome).toEqual({ assigned: 1, skipped: 0 });
+    expect(outcome).toEqual({ assigned: 2, skipped: 0 });
     const assignments = await listCurrentGearAssignments(db, shop.id);
-    expect(assignments.map((row) => row.item.id)).toContain(matching.id);
-    expect(assignments.map((row) => row.item.id)).not.toContain(wrongSize.id);
+    const assigned = assignments.map((row) => row.item.id);
+    expect(assigned).toContain(matching.id);
+    expect(assigned).not.toContain(wrongSize.id);
+    expect(assigned).not.toContain(held.id);
   });
 });

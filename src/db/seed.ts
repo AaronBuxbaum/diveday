@@ -105,6 +105,10 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
       name: "Blue Mantis Divers",
       slug: DEMO_SHOP_SLUG,
       timezone: "America/New_York",
+      // A front-desk address, not a person's — this is printed on the public
+      // course pages, where it backs the "Get in touch" composer.
+      contactEmail: "hello@bluemantis.example",
+      contactPhone: "+1 305 555 0142",
       isDemo: true,
     })
     .returning();
@@ -238,19 +242,35 @@ export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Prom
   await seedDemoSchedule(db, shopId);
 }
 
-const customerNames = [
-  "Priya Sharma",
-  "Tom Okafor",
-  "Lena Fischer",
-  "Diego Alvarez",
-  "June Park",
-  "Omar Haddad",
-  "Nadia Petrov",
-  "Sam Whitfield",
-  "Ines Costa",
-  "Ravi Menon",
-  "Amara Osei",
-  "Felix Grant",
+/**
+ * The shop's divers. **Order is load-bearing**: the rosters below index into
+ * this list, and tests assert on the exact names that land on today's boat.
+ * Append to the end; never reorder or insert.
+ *
+ * Emergency contacts are deliberately incomplete. A manifest whose every field
+ * is filled cannot show a crew what a manifest is *for*, so two divers arrive
+ * without one and the roll-call sheet says so out loud.
+ */
+const customerDefs: Array<{ fullName: string; emergencyContact?: [string, string] }> = [
+  { fullName: "Priya Sharma", emergencyContact: ["Asha Sharma (sister)", "+1-305-555-0231"] },
+  { fullName: "Tom Okafor", emergencyContact: ["Ngozi Okafor (wife)", "+1-305-555-0232"] },
+  { fullName: "Lena Fischer", emergencyContact: ["Jonas Fischer (husband)", "+49-30-555-0233"] },
+  { fullName: "Diego Alvarez", emergencyContact: ["Rosa Alvarez (mother)", "+1-786-555-0234"] },
+  { fullName: "June Park", emergencyContact: ["Min-ho Park (father)", "+1-305-555-0235"] },
+  { fullName: "Omar Haddad", emergencyContact: ["Layla Haddad (sister)", "+1-305-555-0236"] },
+  // No contact on file: the manifest gap the crew chases at the dock.
+  { fullName: "Nadia Petrov" },
+  { fullName: "Sam Whitfield", emergencyContact: ["Ruth Whitfield (mother)", "+1-954-555-0238"] },
+  { fullName: "Ines Costa", emergencyContact: ["Paulo Costa (brother)", "+351-21-555-0239"] },
+  { fullName: "Ravi Menon", emergencyContact: ["Divya Menon (wife)", "+1-305-555-0240"] },
+  { fullName: "Amara Osei", emergencyContact: ["Kwame Osei (father)", "+1-305-555-0241"] },
+  { fullName: "Felix Grant" },
+  { fullName: "Hana Kobayashi", emergencyContact: ["Ren Kobayashi (brother)", "+81-3-555-0243"] },
+  { fullName: "Mateo Duarte", emergencyContact: ["Sofia Duarte (wife)", "+1-305-555-0244"] },
+  { fullName: "Zoe Bennett", emergencyContact: ["Harriet Bennett (mother)", "+44-20-555-0245"] },
+  { fullName: "Yusuf Demir", emergencyContact: ["Elif Demir (sister)", "+90-212-555-0246"] },
+  { fullName: "Clara Nguyen", emergencyContact: ["Binh Nguyen (father)", "+1-305-555-0247"] },
+  { fullName: "Theo Lindqvist", emergencyContact: ["Ida Lindqvist (wife)", "+46-8-555-0248"] },
 ];
 
 /**
@@ -271,11 +291,13 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   const customers = await db
     .insert(people)
     .values(
-      customerNames.map((fullName, i) => ({
+      customerDefs.map((customer, i) => ({
         shopId,
-        fullName,
-        email: `${fullName.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
+        fullName: customer.fullName,
+        email: `${customer.fullName.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
         phone: `+1-305-555-01${String(i + 10).padStart(2, "0")}`,
+        emergencyContactName: customer.emergencyContact?.[0] ?? null,
+        emergencyContactPhone: customer.emergencyContact?.[1] ?? null,
       })),
     )
     .returning();
@@ -294,6 +316,43 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       status: "verified" as const,
     })),
   );
+
+  // The rest of the regulars, carrying the states a desk actually sees: cards
+  // still queued for review, one that came back rejected, one expiring inside
+  // the month, and agencies beyond the two the shop teaches. Kept separate from
+  // the block above because that block's ten divers crew today's boat and their
+  // readiness is asserted exactly.
+  const laterCerts: Array<{
+    index: number;
+    agency: "padi" | "ssi" | "naui" | "sdi" | "tdi";
+    level: "open_water" | "advanced_open_water" | "rescue" | "divemaster";
+    status: "verified" | "pending" | "rejected";
+    expiresAt?: Date;
+  }> = [
+    { index: 12, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 13, agency: "ssi", level: "open_water", status: "pending" },
+    { index: 14, agency: "padi", level: "rescue", status: "verified", expiresAt: at(26, 12) },
+    // The card did not match the name on the booking; the desk sent it back.
+    { index: 15, agency: "naui", level: "open_water", status: "rejected" },
+    { index: 16, agency: "sdi", level: "open_water", status: "verified" },
+    { index: 17, agency: "tdi", level: "divemaster", status: "verified" },
+  ];
+  const laterCertRows = laterCerts
+    .map((cert) => {
+      const person = customers[cert.index];
+      if (!person) return null;
+      return {
+        shopId,
+        personId: person.id,
+        agency: cert.agency,
+        level: cert.level,
+        identifier: `DEMO-${String(cert.index + 1).padStart(4, "0")}`,
+        status: cert.status,
+        expiresAt: cert.expiresAt ?? null,
+      };
+    })
+    .filter((row) => row !== null);
+  if (laterCertRows.length > 0) await db.insert(certifications).values(laterCertRows);
 
   // Specialty evidence: customer[1] is the AOW diver, fully carded for the
   // demanding trips; customer[2] has a Deep card still awaiting verification so
@@ -421,6 +480,50 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         },
         {
           shopId,
+          agency: "padi",
+          title: "Peak Performance Buoyancy",
+          description: "Two dives spent fixing weighting, trim, and control.",
+          priceCents: 22500,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Night Diver",
+          description: "Three evening dives and the skills the dark demands.",
+          priceCents: 29500,
+          eLearningPriceCents: 14500,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Deep Diver",
+          description: "Four dives that extend your range to 40 meters.",
+          priceCents: 42500,
+          eLearningPriceCents: 17500,
+          minimumCertificationLevel: "advanced_open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Wreck Diver",
+          description: "Survey, mapping, and limited penetration on four dives.",
+          priceCents: 44500,
+          eLearningPriceCents: 17500,
+          minimumCertificationLevel: "advanced_open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Divemaster",
+          description: "The first professional rating, taught as an internship.",
+          priceCents: 125000,
+          eLearningPriceCents: 32500,
+          minimumCertificationLevel: "rescue" as const,
+        },
+        {
+          shopId,
           agency: "ssi",
           title: "Try Scuba",
           description: "A supervised first scuba experience.",
@@ -488,13 +591,34 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       .where(eq(courses.id, course.id));
   }
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
-  const advancedCourse = courseRows.find((course) => course.title === "Advanced Open Water Diver");
-  const rescueCourse = courseRows.find((course) => course.title === "Rescue Diver");
-  if (openWaterCourse && advancedCourse) {
-    await db
-      .update(courses)
-      .set({ relatedCourseIds: [advancedCourse.id, ...(rescueCourse ? [rescueCourse.id] : [])] })
-      .where(eq(courses.id, openWaterCourse.id));
+
+  // "What to take next" is the shop's own teaching ladder, not a list of
+  // everything it sells: each course points at the two or three a diver
+  // realistically does after it. Only published pages render, so a title with
+  // no template content simply drops out of the cards.
+  const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));
+  const nextCourses: Array<[string, string[]]> = [
+    ["Discover Scuba Diving", ["Open Water Diver"]],
+    [
+      "Open Water Diver",
+      ["Advanced Open Water Diver", "Enriched Air (Nitrox) Diver", "Peak Performance Buoyancy"],
+    ],
+    ["Advanced Open Water Diver", ["Rescue Diver", "Deep Diver", "Night Diver"]],
+    ["Rescue Diver", ["Divemaster", "Wreck Diver"]],
+    ["Scuba Refresher", ["Peak Performance Buoyancy", "Advanced Open Water Diver"]],
+    ["Peak Performance Buoyancy", ["Advanced Open Water Diver", "Night Diver"]],
+    ["Night Diver", ["Advanced Open Water Diver", "Rescue Diver"]],
+    ["Deep Diver", ["Wreck Diver", "Enriched Air (Nitrox) Diver"]],
+    ["Wreck Diver", ["Deep Diver", "Rescue Diver"]],
+    ["Enriched Air (Nitrox) Diver", ["Deep Diver", "Advanced Open Water Diver"]],
+  ];
+  for (const [title, next] of nextCourses) {
+    const courseId = courseIdByTitle.get(title);
+    const relatedCourseIds = next
+      .map((entry) => courseIdByTitle.get(entry))
+      .filter((id) => id !== undefined);
+    if (!courseId || relatedCourseIds.length === 0) continue;
+    await db.update(courses).set({ relatedCourseIds }).where(eq(courses.id, courseId));
   }
 
   const [existingMolassesTemplate] = await db
@@ -628,6 +752,48 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
           commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
         ],
       },
+      {
+        shopId,
+        name: "Benwood Wreck",
+        locationName: "Key Largo, Florida",
+        forecastLatitude: 25.0561,
+        forecastLongitude: -80.3222,
+        description: "A broken freighter lying in shallow sand — wreck scale without wreck depth.",
+        marineLife: "Sergeant majors · glassy sweepers · moray eels · yellowtail snapper",
+        marineLifeDescription:
+          "The hull is a fish apartment block: look into every gap and something is home.",
+        difficulty: "intermediate",
+        depthRange: "8–15 m",
+        currentNote: "Mild, but the site sits in open water — the crew calls the drop.",
+        divePlan:
+          "Swim the length of the hull from bow to stern along the sand, then return over the plates at 9 meters.",
+        landmarks: ["Bow section", "Collapsed midships plates"],
+        imageUrls: [
+          commonsImage("Grouper 2 Molasses Reef 1999.jpg"),
+          commonsImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+        ],
+      },
+      {
+        shopId,
+        name: "French Reef",
+        locationName: "Key Largo National Marine Sanctuary",
+        forecastLatitude: 25.0333,
+        forecastLongitude: -80.3494,
+        description: "Swim-throughs, ledges, and overhangs on a shallow spur-and-groove reef.",
+        marineLife: "Nurse sharks · green morays · parrotfish · barracuda",
+        marineLifeDescription:
+          "The overhangs hide sleeping nurse sharks; check the ceilings, not just the sand.",
+        difficulty: "beginner",
+        depthRange: "6–14 m",
+        currentNote: "Usually gentle; the crew confirms the final plan.",
+        divePlan:
+          "Drop on the mooring, work the ledges and swim-throughs into the current, then drift back over the coral heads.",
+        landmarks: ["Christmas Tree Cave", "Hourglass Cave", "White Sand Bottom Cave"],
+        imageUrls: [
+          commonsImage("FGBNMS - nurse shark (27551309652).jpg"),
+          commonsImage("Stoplight parrotfish Pickles Reef.jpg"),
+        ],
+      },
     ])
     .returning();
   const siteByName = new Map(siteRows.map((site) => [site.name, site]));
@@ -691,11 +857,11 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       {
         shopId,
         diveSiteId: molasses.id,
-        name: "Great barracuda",
+        name: "Goliath grouper",
         kind: "fish",
-        imageUrl: commonsImage("Sphyraena barracuda by NOAA.jpg"),
-        description: "A long, calm silhouette that may hover at the reef edge.",
-        preparationTip: "Stay relaxed, leave room, and enjoy the view from a respectful distance.",
+        imageUrl: commonsImage("AtlanticGoliathGrouper.jpg"),
+        description: "Enormous and unbothered; usually parked under a ledge.",
+        preparationTip: "Give it room and never block its way out from under an overhang.",
       },
       {
         shopId,
@@ -741,6 +907,157 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       imageUrl: commonsImage("Dasyatis americana NOAA.jpg"),
       isPublished: true,
     });
+  }
+
+  // A site with an empty field guide reads as a site the shop does not know.
+  // Both of the other seeded sites get one, written to their own character:
+  // the wreck is about scale and silhouettes, the statue about a slow shallow
+  // reef you can spend an hour on.
+  const spiegel = siteByName.get("Spiegel Grove");
+  const christ = siteByName.get("Christ of the Abyss");
+  const benwood = siteByName.get("Benwood Wreck");
+  const french = siteByName.get("French Reef");
+  const laterCreatures = [
+    ...(benwood
+      ? [
+          {
+            diveSiteId: benwood.id,
+            name: "Glassy sweeper",
+            kind: "schooling fish",
+            imageUrl: commonsImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+            description: "Copper-colored clouds that fill the shaded spaces inside the hull.",
+            preparationTip: "Stay outside the plates and let the school reform around you.",
+          },
+          {
+            diveSiteId: benwood.id,
+            name: "Reef grouper",
+            kind: "fish",
+            imageUrl: commonsImage("Grouper 2 Molasses Reef 1999.jpg"),
+            description: "Holds a favorite gap in the wreckage and watches you go past.",
+            preparationTip: "Approach slowly and from the side; a crowded fish just leaves.",
+          },
+        ]
+      : []),
+    ...(french
+      ? [
+          {
+            diveSiteId: french.id,
+            name: "Nurse shark",
+            kind: "shark",
+            imageUrl: commonsImage("FGBNMS - nurse shark (27551309652).jpg"),
+            description: "Often asleep under the ledges, which is where divers miss them.",
+            preparationTip: "Look up into the overhangs, and never block the way out of one.",
+          },
+          {
+            diveSiteId: french.id,
+            name: "Stoplight parrotfish",
+            kind: "fish",
+            imageUrl: commonsImage("Stoplight parrotfish Pickles Reef.jpg"),
+            description: "You will hear them grazing the coral before you find them.",
+            preparationTip: "Hold still near a coral head and follow the crunching sound.",
+          },
+        ]
+      : []),
+    ...(spiegel
+      ? [
+          {
+            diveSiteId: spiegel.id,
+            name: "Goliath grouper",
+            kind: "fish",
+            imageUrl: commonsImage("AtlanticGoliathGrouper.jpg"),
+            description: "A car-sized grouper that holds station in the ship's shadows.",
+            preparationTip: "Keep your distance and your buoyancy; never corner one in a doorway.",
+          },
+          {
+            diveSiteId: spiegel.id,
+            name: "Yellowtail snapper",
+            kind: "schooling fish",
+            imageUrl: commonsImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+            description: "Silver schools that hang above the deck, facing into the current.",
+            preparationTip: "Look out into the blue, not only down at the hull.",
+          },
+          {
+            diveSiteId: spiegel.id,
+            name: "Remora",
+            kind: "fish",
+            imageUrl: commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+            description: "Riders that detach and circle when their host moves off.",
+            preparationTip: "If one takes an interest in you, keep swimming — it loses interest.",
+          },
+        ]
+      : []),
+    ...(christ
+      ? [
+          {
+            diveSiteId: christ.id,
+            name: "Sergeant major",
+            kind: "fish",
+            imageUrl: commonsImage("Blue Tang Pickles 20080310.jpg"),
+            description: "Small striped fish that guard purple egg patches on the statue's base.",
+            preparationTip: "A guarding male will bump your mask; back off rather than push in.",
+          },
+          {
+            diveSiteId: christ.id,
+            name: "French angelfish",
+            kind: "fish",
+            imageUrl: commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
+            description: "Usually in pairs, moving unhurried between coral heads.",
+            preparationTip: "Stay still for a moment and the pair will often come to you.",
+          },
+          {
+            diveSiteId: christ.id,
+            name: "Elkhorn coral",
+            kind: "coral",
+            imageUrl: commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+            description: "Shallow branching coral that catches the light on the way back.",
+            preparationTip: "This is the shallowest part of the dive — watch your fins above it.",
+          },
+        ]
+      : []),
+  ];
+  if (laterCreatures.length > 0) {
+    await db.insert(diveSiteCreatures).values(laterCreatures.map((row) => ({ shopId, ...row })));
+  }
+  const laterMoments = [
+    spiegel
+      ? {
+          diveSiteId: spiegel.id,
+          caption: "The moment the flight deck resolves out of the blue on the way down.",
+          imageUrl: commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+          isPublished: true,
+        }
+      : null,
+    christ
+      ? {
+          diveSiteId: christ.id,
+          caption: "Eight meters down, hands up, sunlight all the way to the sand.",
+          imageUrl: commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
+          isPublished: true,
+        }
+      : null,
+  ].filter((row) => row !== null);
+  if (laterMoments.length > 0) {
+    await db.insert(diveSiteMoments).values(laterMoments.map((row) => ({ shopId, ...row })));
+  }
+
+  /**
+   * A dated session for a catalog course, or nothing at all when this shop does
+   * not carry that title. Spread into the trips list so a missing course drops
+   * its session quietly instead of throwing the whole seed.
+   */
+  function courseSession(
+    courseTitle: string,
+    trip: {
+      title: string;
+      description: string;
+      startsAt: Date;
+      endsAt: Date;
+      capacity: number;
+      plannedDives?: number;
+    },
+  ) {
+    const courseId = courseIdByTitle.get(courseTitle);
+    return courseId ? [{ shopId, courseId, ...trip }] : [];
   }
 
   const tripRows = await db
@@ -808,23 +1125,161 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
             },
           ]
         : []),
+      // A working board is not four boats: these fill out the fortnight so the
+      // schedule, the dive-site pages, and the course catalog all have
+      // something behind them. Every one leaves a different number of spots —
+      // "N spots left" is the string e2e matches trips by, and two trips
+      // showing the same count make that assertion ambiguous.
+      {
+        shopId,
+        diveSiteId: benwood?.id,
+        title: "Two-Tank Reef — Benwood & Elbow",
+        description: "Shallow wreck first, coral heads second. A good day-two boat.",
+        startsAt: at(3, 11, 30),
+        endsAt: at(3, 15, 0),
+        capacity: 12,
+      },
+      {
+        shopId,
+        diveSiteId: french?.id,
+        title: "Afternoon Two-Tank — French Reef",
+        description: "Swim-throughs and ledges, with the light coming in low on the second tank.",
+        startsAt: at(6, 17, 0),
+        endsAt: at(6, 21, 0),
+        capacity: 10,
+      },
+      ...courseSession("Enriched Air (Nitrox) Diver", {
+        title: "Enriched Air (Nitrox) — classroom & two dives",
+        description: "Analyze your own cylinder, then use the procedures on two reef dives.",
+        startsAt: at(8, 12, 0),
+        endsAt: at(8, 20, 0),
+        capacity: 6,
+      }),
+      ...courseSession("Peak Performance Buoyancy", {
+        title: "Peak Performance Buoyancy — one day",
+        description: "A real weight check, then two dives spent hovering.",
+        startsAt: at(13, 12, 0),
+        endsAt: at(13, 19, 0),
+        capacity: 4,
+      }),
+      ...courseSession("Night Diver", {
+        title: "Night Diver — three evenings",
+        description: "Dusk, dark, and navigation, over three consecutive evenings.",
+        startsAt: at(15, 21, 0),
+        endsAt: at(18, 1, 30),
+        capacity: 6,
+        plannedDives: 3,
+      }),
+      ...courseSession("Deep Diver", {
+        title: "Deep Diver — Spiegel Grove & the wall",
+        description: "Four dives building to 40 meters, with gas planning that keeps up.",
+        startsAt: at(20, 12, 0),
+        endsAt: at(21, 20, 0),
+        capacity: 6,
+        plannedDives: 4,
+      }),
     ])
     .returning();
 
+  /**
+   * What each tank actually is. "Dive 1 · Dive 2" tells a diver nothing they
+   * could not have guessed; these are the words the crew uses at the briefing,
+   * which is what makes a trip page worth opening the night before.
+   *
+   * A trip with no entry here still gets its dives — just unnamed, the way a
+   * charter looks before anyone has written the plan.
+   */
+  const divePlans: Record<string, Array<{ title: string; site?: string; description: string }>> = {
+    "Two-Tank Reef — Molasses & French": [
+      {
+        title: "Molasses Reef",
+        site: "Molasses Reef",
+        description: "A relaxed sweep along the outer reef. Look for rays in the sand channels.",
+      },
+      {
+        title: "French Reef",
+        site: "French Reef",
+        description:
+          "French Reef is the second tank; the crew confirms the exact mooring at the dock.",
+      },
+    ],
+    "Two-Tank Reef — Benwood & Elbow": [
+      {
+        title: "Benwood Wreck",
+        site: "Benwood Wreck",
+        description: "Bow to stern along the sand, then back over the plates. Watch the ceilings.",
+      },
+      {
+        title: "Elbow Reef",
+        description:
+          "Shallow coral heads and a wreck-strewn bottom; a long, easy second tank on a full tank of air.",
+      },
+    ],
+    "Afternoon Two-Tank — French Reef": [
+      {
+        title: "French Reef swim-throughs",
+        site: "French Reef",
+        description: "Christmas Tree Cave and the ledges, into the current and drifting back.",
+      },
+      {
+        title: "White Sand Bottom Cave",
+        site: "French Reef",
+        description: "The low sun gets into the overhangs — the best light of the day is here.",
+      },
+    ],
+    "Wreck Trip — Spiegel Grove": [
+      {
+        title: "Flight deck and cranes",
+        site: "Spiegel Grove",
+        description:
+          "Down the mooring together, a tour of the exterior, and back to the line with reserve gas.",
+      },
+      {
+        title: "Well deck",
+        site: "Spiegel Grove",
+        description: "Shallower and slower after the surface interval, staying outside the hull.",
+      },
+    ],
+    "Two-Tank Reef — Christ of the Abyss": [
+      {
+        title: "Christ of the Abyss",
+        site: "Christ of the Abyss",
+        description: "The statue first, before the other boats arrive, then the sand channels.",
+      },
+      {
+        title: "Dry Rocks coral garden",
+        site: "Christ of the Abyss",
+        description: "A shallow, unhurried loop — the tank most refresher divers remember.",
+      },
+    ],
+    "Night Dive — City of Washington": [
+      {
+        title: "Wreck site at dusk",
+        description: "In the water before the light goes, so the descent is on a familiar bottom.",
+      },
+      {
+        title: "Full dark",
+        description: "Torches off for a minute at the safety stop, for the bioluminescence.",
+      },
+    ],
+  };
+
   const tripDiveRows = tripRows.flatMap((trip) => {
-    const isReef = trip.title === "Two-Tank Reef — Molasses & French";
-    return Array.from({ length: trip.plannedDives }, (_, index) => ({
-      tripId: trip.id,
-      diveNumber: index + 1,
-      title: isReef && index === 0 ? "Molasses Reef" : null,
-      diveSiteId: isReef && index === 0 ? molasses?.id : index === 0 ? trip.diveSiteId : null,
-      description:
-        isReef && index === 0
-          ? "A relaxed sweep along the outer reef. Look for rays in the sand channels."
-          : isReef && index === 1
-            ? "French Reef is the second tank; the crew confirms the exact mooring at the dock."
+    const plan = divePlans[trip.title] ?? [];
+    return Array.from({ length: trip.plannedDives }, (_, index) => {
+      const dive = plan[index];
+      return {
+        tripId: trip.id,
+        diveNumber: index + 1,
+        title: dive?.title ?? null,
+        diveSiteId: dive?.site
+          ? (siteByName.get(dive.site)?.id ?? null)
+          : index === 0
+            ? (trip.diveSiteId ?? null)
             : null,
-    }));
+        description: dive?.description ?? null,
+      };
+    });
   });
   if (tripDiveRows.length > 0) await db.insert(tripDives).values(tripDiveRows);
 
@@ -860,34 +1315,107 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
 
   const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
   if (!discoverSession) throw new Error("seed: DSD session missing");
-  // Every course session needs an instructor before it can take a booking.
-  await db
-    .insert(tripAssignments)
-    .values(
-      tripRows
-        .filter((trip) => trip.courseId)
-        .map((trip) => ({ tripId: trip.id, personId: instructor.id })),
-    );
+  // Every course session needs an instructor before it can take a booking. The
+  // charters get a captain and a divemaster, because a boat with an empty crew
+  // list is the one thing no dive shop has ever had.
+  const crewByRole = new Map(
+    (
+      await db
+        .select({ id: people.id, role: personRoles.role })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(eq(people.shopId, shopId))
+    ).map((row) => [row.role, row.id]),
+  );
+  const captainId = crewByRole.get("captain");
+  const divemasterId = crewByRole.get("divemaster");
+  await db.insert(tripAssignments).values(
+    tripRows.flatMap((trip) => {
+      if (trip.courseId) return [{ tripId: trip.id, personId: instructor.id }];
+      return [
+        ...(captainId ? [{ tripId: trip.id, personId: captainId }] : []),
+        ...(divemasterId ? [{ tripId: trip.id, personId: divemasterId }] : []),
+      ];
+    }),
+  );
 
-  await db
-    .update(trips)
-    .set({
-      conditionsSummary:
-        "A calm morning is expected; the crew will confirm the final call at the dock.",
-      waterTemperatureC: 27,
-      visibilityMeters: 18,
-      surfaceConditions: "Light east breeze · gentle chop",
-      conditionsUpdatedAt: new Date(),
-    })
-    .where(eq(trips.id, tripRows[0].id));
+  // Conditions are a live reading, not a description: the boat that sails today
+  // has this morning's numbers, the next two have yesterday's, and everything
+  // further out is honestly blank because nobody has looked yet.
+  const conditions: Array<[number, Record<string, unknown>]> = [
+    [
+      0,
+      {
+        conditionsSummary:
+          "A calm morning is expected; the crew will confirm the final call at the dock.",
+        waterTemperatureC: 27,
+        visibilityMeters: 18,
+        surfaceConditions: "Light east breeze · gentle chop",
+      },
+    ],
+    [
+      1,
+      {
+        conditionsSummary:
+          "Warm and still after dark. Bring a light layer for the surface interval.",
+        waterTemperatureC: 28,
+        visibilityMeters: 15,
+        surfaceConditions: "Glassy · no swell forecast",
+      },
+    ],
+    [
+      2,
+      {
+        conditionsSummary:
+          "Open water, so the call is made at the dock. Expect current on the line.",
+        waterTemperatureC: 26,
+        visibilityMeters: 24,
+        surfaceConditions: "Moderate southeast wind · 1 m swell",
+      },
+    ],
+  ];
+  for (const [index, values] of conditions) {
+    const trip = tripRows[index];
+    if (!trip) continue;
+    await db
+      .update(trips)
+      .set({ ...values, conditionsUpdatedAt: new Date() })
+      .where(eq(trips.id, trip.id));
+  }
 
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;
   if (!reef || !night || !wreck) throw new Error("seed: failed to insert demo trips");
+
+  /**
+   * Later sailings carry their own regulars — divers 10 and up, never the ten
+   * who crew today's boat. Today's roster and its readiness counts are asserted
+   * exactly; a name added to it changes what the departure board says.
+   *
+   * The remaining-seat counts these produce are load-bearing too. "N spots
+   * left" is how e2e picks a trip out of the schedule, so no seeded trip may
+   * leave six seats (a spec creates its own six-seat boat), only the reef trip
+   * may leave three, and only the wreck charter may read Full.
+   */
+  const laterRosters: Array<[string, number[]]> = [
+    ["Two-Tank Reef — Benwood & Elbow", [10, 11, 12]],
+    ["Afternoon Two-Tank — French Reef", [13, 14, 15]],
+    ["Enriched Air (Nitrox) — classroom & two dives", [16, 17]],
+    ["Night Diver — three evenings", [13]],
+    ["Deep Diver — Spiegel Grove & the wall", [17]],
+  ];
   const bookingRows = [
     ...customers.slice(0, 9).map((c) => ({ tripId: reef.id, personId: c.id })),
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
+    ...laterRosters.flatMap(([title, indexes]) => {
+      const trip = tripRows.find((row) => row.title === title);
+      if (!trip) return [];
+      return indexes
+        .map((index) => customers[index])
+        .filter((person) => person !== undefined)
+        .map((person) => ({ tripId: trip.id, personId: person.id }));
+    }),
   ];
   const bookingRows_ = await db
     .insert(bookings)
@@ -920,6 +1448,184 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   }
 
   await seedNitrox(db, shopId, instructor.id, customers, wreck, bookingRows_);
+  await seedGearRoom(db, shopId, customers);
+  await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_);
+}
+
+/**
+ * The paperwork side of a working week: divers waiting on a sold-out charter,
+ * rental sizes already asked for on the boats that have not sailed yet, a
+ * couple of invoices out, and the confirmation emails that went with them —
+ * including one that bounced, because they do.
+ *
+ * Nothing here touches today's boat. Its roster, its readiness counts, and the
+ * blocker copy on the departure board are asserted exactly, and they describe a
+ * morning where the work has not been done yet — which is the point of showing
+ * it.
+ */
+async function seedFrontDesk(
+  db: DbExecutor,
+  shopId: string,
+  customers: { id: string }[],
+  tripRows: { id: string; title: string }[],
+  bookingRows: { id: string; tripId: string; personId: string }[],
+): Promise<void> {
+  const tripByTitle = new Map(tripRows.map((trip) => [trip.title, trip.id]));
+  const wreckId = tripByTitle.get("Wreck Trip — Spiegel Grove");
+
+  // The sold-out charter is where a wait-list earns its keep.
+  if (wreckId) {
+    const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
+    if (waiting.length > 0) {
+      await db
+        .insert(tripWaitlistEntries)
+        .values(waiting.map((person) => ({ shopId, tripId: wreckId, personId: person.id })));
+    }
+  }
+
+  // Rental requests on later boats only — the divers on today's trip have not
+  // told us their sizes yet, which is what the departure board is complaining
+  // about.
+  const laterBookings = bookingRows.filter(
+    (booking) => booking.tripId !== tripRows[0]?.id && booking.tripId !== wreckId,
+  );
+  const requests = laterBookings.slice(0, 6).map((booking, index) => ({
+    shopId,
+    bookingId: booking.id,
+    bcd: true,
+    regulator: true,
+    wetsuit: true,
+    maskFins: index % 2 === 0,
+    weights: true,
+    tank: true,
+    diveComputer: index === 0,
+    bcdSize: ["S", "L", "XL", "L", "S", "L"][index] ?? null,
+    wetsuitSize: ["S", "L", "XL", "M", "S", "M"][index] ?? null,
+  }));
+  if (requests.length > 0) await db.insert(rentalGearRequests).values(requests);
+
+  // Orders are deliberately absent. An order belongs to a Stripe account the
+  // shop connected itself, and fabricating one here would show the settings
+  // page a connected integration whose "Refresh status" button then calls the
+  // real Stripe API and fails. The payment states that gate boarding are
+  // seeded on the wreck charter instead, where they are real.
+
+  // The confirmations that went out. Only successes: a seeded bounce would put
+  // a permanent red row on the dashboard that no amount of retrying clears,
+  // since there is no provider behind it to succeed on the second attempt.
+  const notified = bookingRows.filter((booking) => booking.tripId === wreckId).slice(0, 4);
+  const deliveries = notified.map((booking, index) => ({
+    shopId,
+    bookingId: booking.id,
+    kind: "booking_confirmation" as const,
+    status: "sent" as const,
+    providerMessageId: `demo-msg-${index}`,
+    attemptedAt: new Date(Date.now() - (index + 1) * 60 * 60 * 1000),
+  }));
+  if (deliveries.length > 0) {
+    await db.insert(notificationDeliveries).values(deliveries);
+    await db
+      .insert(notificationDeliveryAttempts)
+      .values(deliveries.map((delivery) => ({ ...delivery, isRetry: false })));
+  }
+}
+
+/**
+ * The gear room a shop actually walks into: a full set of rentals in the sizes
+ * that move, an air bank beside the nitrox bank, one regulator due for service
+ * next week, and one BCD already pulled off the floor for a leaking inflator.
+ *
+ * Nothing here is assigned to anyone. Packing is the demo's job to do, not the
+ * seed's — and an inventory that arrives half-claimed hides the packing flow
+ * that is the point of the gear page.
+ */
+async function seedGearRoom(
+  db: DbExecutor,
+  shopId: string,
+  customers: { id: string }[],
+): Promise<void> {
+  const items: Array<{
+    label: string;
+    type: "bcd" | "regulator" | "wetsuit" | "mask_fins" | "weights" | "tank";
+    size?: string;
+    state?: "available" | "service_hold";
+    serviceDueAt?: Date;
+    notes?: string;
+  }> = [
+    { label: "BCD-01", type: "bcd", size: "S" },
+    { label: "BCD-02", type: "bcd", size: "S" },
+    { label: "BCD-03", type: "bcd", size: "L" },
+    { label: "BCD-04", type: "bcd", size: "L" },
+    { label: "BCD-05", type: "bcd", size: "XL" },
+    {
+      label: "BCD-06",
+      type: "bcd",
+      size: "M",
+      state: "service_hold",
+      notes: "Inflator leaks under pressure. Off the floor until the service kit arrives.",
+    },
+    { label: "REG-01", type: "regulator", serviceDueAt: at(120, 12) },
+    { label: "REG-02", type: "regulator", serviceDueAt: at(96, 12) },
+    { label: "REG-03", type: "regulator", serviceDueAt: at(7, 12), notes: "Annual service due." },
+    { label: "REG-04", type: "regulator", serviceDueAt: at(210, 12) },
+    { label: "REG-05", type: "regulator", serviceDueAt: at(180, 12) },
+    { label: "WET-3MM-01", type: "wetsuit", size: "S" },
+    { label: "WET-3MM-02", type: "wetsuit", size: "M" },
+    { label: "WET-3MM-03", type: "wetsuit", size: "M" },
+    { label: "WET-3MM-04", type: "wetsuit", size: "L" },
+    { label: "WET-3MM-05", type: "wetsuit", size: "XL" },
+    { label: "FINS-01", type: "mask_fins", size: "S" },
+    { label: "FINS-02", type: "mask_fins", size: "M" },
+    { label: "FINS-03", type: "mask_fins", size: "L" },
+    { label: "FINS-04", type: "mask_fins", size: "L" },
+    { label: "WEIGHT-BELT-01", type: "weights", size: "8 kg" },
+    { label: "WEIGHT-BELT-02", type: "weights", size: "10 kg" },
+    { label: "WEIGHT-BELT-03", type: "weights", size: "12 kg" },
+    ...["01", "02", "03", "04", "05", "06"].map((n) => ({
+      label: `AL80 Air ${n}`,
+      type: "tank" as const,
+      size: "AL80",
+    })),
+  ];
+  await db.insert(gearItems).values(
+    items.map((item) => ({
+      shopId,
+      label: item.label,
+      type: item.type,
+      size: item.size ?? null,
+      state: item.state ?? ("available" as const),
+      serviceDueAt: item.serviceDueAt ?? null,
+      notes: item.notes ?? null,
+    })),
+  );
+
+  // Sizes the desk already knows, so a returning diver's kit is picked before
+  // they reach the counter. Deliberately not everyone: a shop's fit book is
+  // always partial, and the diver form exists to fill it in.
+  const fits: Array<[number, { bcd: string; wetsuit: string; boot: string; fin: string }]> = [
+    [0, { bcd: "S", wetsuit: "S", boot: "6", fin: "S" }],
+    [1, { bcd: "L", wetsuit: "L", boot: "11", fin: "L" }],
+    [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M" }],
+    [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S" }],
+    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L" }],
+    [12, { bcd: "S", wetsuit: "M", boot: "7", fin: "M" }],
+  ];
+  const profiles = fits
+    .map(([index, fit]) => {
+      const person = customers[index];
+      if (!person) return null;
+      return {
+        shopId,
+        personId: person.id,
+        bcdSize: fit.bcd,
+        wetsuitSize: fit.wetsuit,
+        bootSize: fit.boot,
+        finSize: fit.fin,
+        weightPreference: null,
+      };
+    })
+    .filter((row) => row !== null);
+  if (profiles.length > 0) await db.insert(rentalGearProfiles).values(profiles);
 }
 
 /**

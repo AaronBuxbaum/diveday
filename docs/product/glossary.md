@@ -19,6 +19,20 @@ new domain concept, define it here in the same PR.
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
+- **PADI Scuba Diver** — a real certification one rung *below* Open Water: limited to 12 m and
+  required to dive under the direct supervision of a PADI Professional. Scuba's ladder has no rung
+  for it, so any course whose agency floor is Scuba Diver (ReActivate, for one) is gated at Open
+  Water instead. That gate is the **shop's**, not the agency's, and diver-facing copy must say so.
+- **Adventure Diver** — the PADI sub-level between Open Water and AOW, earned with three Adventure
+  Dives. It is the agency's real prerequisite for Deep, Wreck, and Rescue. Scuba's ladder cannot
+  record it, so those courses are gated at AOW — again a **shop-set** gate, and a valid Adventure
+  Diver deserves to be told the difference is ours and invited to ask.
+- **Junior certification** — the age-linked form of a level for divers under 15: **Junior Open
+  Water**, **Junior Advanced Open Water**, **Junior Night Diver**, and so on. Same card, extra
+  restrictions — 10–11-year-olds are limited to 12 m and must dive with a PADI Professional or a
+  certified parent/guardian; 12–14-year-olds reach 18 m (21 m on an AOW deep dive) with any
+  certified adult. The restrictions lift at 15. They drive dock-side decisions, so course copy and
+  staff surfaces state them rather than implying the adult limits.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
