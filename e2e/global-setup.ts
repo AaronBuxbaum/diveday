@@ -48,10 +48,23 @@ export default async function globalSetup() {
     e2eWorkerIndexes.map(async (i) => {
       const context = await request.newContext({ baseURL: e2eBaseURL(i) });
       try {
+        // The reset seeds the fixture, so it must succeed. Warming is a pure
+        // optimization — sign-in or a warm GET failing must never abort the
+        // suite (each test still signs in and renders on its own), so it is
+        // wrapped as best-effort.
         await context.post("/api/test/reset", { timeout: 100_000 });
-        await signInOwner(context);
-        for (const route of [...PUBLIC_WARM_ROUTES, ...STAFF_WARM_ROUTES]) {
-          await context.get(route, { timeout: 100_000 }).catch(() => {});
+        try {
+          await signInOwner(context);
+          // Fire the warm-up GETs concurrently: each route's first render is
+          // independent, so overlapping them makes setup cost ~the slowest
+          // route rather than the sum of all of them.
+          await Promise.all(
+            [...PUBLIC_WARM_ROUTES, ...STAFF_WARM_ROUTES].map((route) =>
+              context.get(route, { timeout: 100_000 }).catch(() => {}),
+            ),
+          );
+        } catch {
+          // Best-effort warmup; tests proceed either way.
         }
       } finally {
         await context.dispose();
