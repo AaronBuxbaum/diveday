@@ -16,26 +16,6 @@ export function ShopHistory({
       <h2 id="history-heading" className="text-lg font-semibold">
         Shop history
       </h2>
-      {diver.gearAssignments.some(({ assignment }) => assignment.status === "assigned") ? (
-        <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-4">
-          <h3 className="font-medium">Gear currently checked out</h3>
-          <ul className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-            {diver.gearAssignments
-              .filter(({ assignment }) => assignment.status === "assigned")
-              .map(({ assignment, item, trip }) => (
-                <li key={assignment.id}>
-                  <strong>{item.label}</strong> · {item.type.replace("_", " ")}
-                  <Link
-                    href={`/shop/${shopSlug}/trips/${trip.id}`}
-                    className="block text-muted hover:text-primary hover:underline"
-                  >
-                    {trip.title}
-                  </Link>
-                </li>
-              ))}
-          </ul>
-        </div>
-      ) : null}
       {diver.bookings.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
           No trips yet — book them onto an open charter and it’ll show up here.

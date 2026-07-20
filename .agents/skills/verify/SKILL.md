@@ -39,7 +39,7 @@ Send the screenshots to the user when reporting completion.
 
 For domain logic with no UI yet, drive it directly (a scratch script or `vitest run` on the new
 tests) and confirm outputs on realistic inputs — including the failure paths (full boat,
-uncertified diver, out-of-service gear).
+uncertified diver, a nitrox request with no verified card).
 
 ## Report honestly
 

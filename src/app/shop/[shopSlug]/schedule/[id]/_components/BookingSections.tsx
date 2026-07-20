@@ -138,7 +138,7 @@ export function BookSpotSection({
           </SubmitButton>
         </div>
         <p className="text-sm text-muted">
-          No account needed. The shop will confirm your certification and gear at check-in.
+          No account needed. The shop will confirm your certification and rental fit at check-in.
         </p>
       </form>
     </section>

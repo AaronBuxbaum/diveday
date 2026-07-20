@@ -1,12 +1,6 @@
-import { and, asc, desc, eq, ne } from "drizzle-orm";
-import {
-  DEFAULT_MAX_PPO2_BAR,
-  isValidNitroxMix,
-  maxOperatingDepthMeters,
-  ppO2BarToCentibar,
-} from "@/lib/nitrox";
+import { and, asc, eq, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
-import { bookings, gearItems, nitroxCertifications, nitroxFills, people } from "./schema";
+import { bookings, nitroxCertifications, people } from "./schema";
 
 export type NewNitroxCertification = {
   shopId: string;
@@ -81,54 +75,23 @@ export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promis
   return new Set(rows.map((r) => r.personId));
 }
 
-/** Current, non-retired tanks a fill can be logged against. */
-export async function listShopTanks(db: AppDb, shopId: string) {
-  return db
-    .select()
-    .from(gearItems)
-    .where(
-      and(eq(gearItems.shopId, shopId), eq(gearItems.type, "tank"), ne(gearItems.state, "retired")),
-    )
-    .orderBy(asc(gearItems.label));
-}
-
-export type LogNitroxFillOutcome =
-  | { ok: true; fillId: string; maxDepthMeters: number }
-  | {
-      ok: false;
-      reason:
-        | "booking_unavailable"
-        | "staff_not_found"
-        | "tank_not_found"
-        | "not_a_tank"
-        | "tank_retired"
-        | "diver_not_certified"
-        | "invalid_mix"
-        | "analysis_required";
-    };
+export type SetBookingNitroxOutcome =
+  | { ok: true; wantsNitrox: boolean }
+  | { ok: false; reason: "booking_unavailable" | "diver_not_certified" };
 
 /**
- * Record an enriched-air fill for a diver's tank. Fails closed at every gate:
- * the booking and tank must belong to the shop, the tank must be a usable
- * cylinder, the mix must be a valid recreational EANx blend, the diver must
- * hold a verified nitrox card, and the diver must have signed for their own
- * analysis. The MOD is derived here, never taken from the caller.
+ * Record whether a diver wants enriched air on one booking — billed per dive.
+ *
+ * The safety gate lives here: turning the request *on* requires a verified
+ * nitrox card at write time, checked inside the transaction so a card being
+ * reviewed concurrently can't slip a request through. Turning it *off* is
+ * always allowed; refusing to clear a request would be the unsafe direction.
  */
-export async function logNitroxFill(
+export async function setBookingNitrox(
   db: AppDb,
-  input: {
-    shopId: string;
-    bookingId: string;
-    gearItemId: string;
-    oxygenPercent: number;
-    analyzerSignature: string;
-    filledByPersonId: string;
-    maxPpO2Bar?: number;
-  },
-): Promise<LogNitroxFillOutcome> {
-  const signature = input.analyzerSignature.trim();
-  const maxPpO2Bar = input.maxPpO2Bar ?? DEFAULT_MAX_PPO2_BAR;
-  return db.transaction(async (tx): Promise<LogNitroxFillOutcome> => {
+  input: { shopId: string; bookingId: string; wantsNitrox: boolean },
+): Promise<SetBookingNitroxOutcome> {
+  return db.transaction(async (tx): Promise<SetBookingNitroxOutcome> => {
     const [booking] = await tx
       .select({ id: bookings.id, personId: bookings.personId })
       .from(bookings)
@@ -142,70 +105,25 @@ export async function logNitroxFill(
       .limit(1);
     if (!booking) return { ok: false, reason: "booking_unavailable" };
 
-    const [staff] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .where(and(eq(people.id, input.filledByPersonId), eq(people.shopId, input.shopId)))
-      .limit(1);
-    if (!staff) return { ok: false, reason: "staff_not_found" };
+    if (input.wantsNitrox) {
+      const [card] = await tx
+        .select({ id: nitroxCertifications.id })
+        .from(nitroxCertifications)
+        .where(
+          and(
+            eq(nitroxCertifications.shopId, input.shopId),
+            eq(nitroxCertifications.personId, booking.personId),
+            eq(nitroxCertifications.status, "verified"),
+          ),
+        )
+        .limit(1);
+      if (!card) return { ok: false, reason: "diver_not_certified" };
+    }
 
-    const [tank] = await tx
-      .select({ id: gearItems.id, type: gearItems.type, state: gearItems.state })
-      .from(gearItems)
-      .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
-      .limit(1);
-    if (!tank) return { ok: false, reason: "tank_not_found" };
-    if (tank.type !== "tank") return { ok: false, reason: "not_a_tank" };
-    if (tank.state === "retired") return { ok: false, reason: "tank_retired" };
-
-    // The safety gate: only a verified nitrox card earns an enriched-air fill.
-    const [card] = await tx
-      .select({ id: nitroxCertifications.id })
-      .from(nitroxCertifications)
-      .where(
-        and(
-          eq(nitroxCertifications.shopId, input.shopId),
-          eq(nitroxCertifications.personId, booking.personId),
-          eq(nitroxCertifications.status, "verified"),
-        ),
-      )
-      .limit(1);
-    if (!card) return { ok: false, reason: "diver_not_certified" };
-
-    if (!isValidNitroxMix(input.oxygenPercent)) return { ok: false, reason: "invalid_mix" };
-    if (!signature) return { ok: false, reason: "analysis_required" };
-
-    const maxDepthMeters = maxOperatingDepthMeters(input.oxygenPercent, maxPpO2Bar);
-    const [fill] = await tx
-      .insert(nitroxFills)
-      .values({
-        shopId: input.shopId,
-        bookingId: booking.id,
-        gearItemId: tank.id,
-        oxygenPercent: input.oxygenPercent,
-        maxDepthMeters,
-        maxPpO2Centibar: ppO2BarToCentibar(maxPpO2Bar),
-        analyzerSignature: signature,
-        filledByPersonId: staff.id,
-      })
-      .returning({ id: nitroxFills.id });
-    if (!fill) throw new Error("logNitroxFill: insert returned no row");
-    return { ok: true, fillId: fill.id, maxDepthMeters };
+    await tx
+      .update(bookings)
+      .set({ wantsNitrox: input.wantsNitrox })
+      .where(eq(bookings.id, booking.id));
+    return { ok: true, wantsNitrox: input.wantsNitrox };
   });
-}
-
-/** Fills logged for one trip's divers, newest first, with diver, tank, and staff. */
-export async function listTripNitroxFills(db: AppDb, shopId: string, tripId: string) {
-  return db
-    .select({
-      fill: nitroxFills,
-      person: people,
-      tank: gearItems,
-    })
-    .from(nitroxFills)
-    .innerJoin(bookings, eq(bookings.id, nitroxFills.bookingId))
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(gearItems, eq(gearItems.id, nitroxFills.gearItemId))
-    .where(and(eq(nitroxFills.shopId, shopId), eq(bookings.tripId, tripId)))
-    .orderBy(desc(nitroxFills.analyzedAt));
 }

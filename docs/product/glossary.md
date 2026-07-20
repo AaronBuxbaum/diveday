@@ -36,7 +36,7 @@ new domain concept, define it here in the same PR.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
-  lives in `nitrox_certifications`) because it gates a **tank at fill time**; a site or trip may
+  lives in `nitrox_certifications`) because it gates a **per-booking mix request**; a site or trip may
   *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
   — the same card, two independent gates (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
@@ -47,7 +47,7 @@ new domain concept, define it here in the same PR.
 ## Operations
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
-  "two-tank" (two dives with a **surface interval** between). Has capacity, staff, gear needs,
+  "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
   and minimum cert requirements per site (e.g. AOW for a deep wreck).
 - **Trip series** — a repeating charter ("every Saturday two-tank") scheduled in one action. The
   series records only the cadence; each date is materialized as its own independent **trip** that
@@ -109,7 +109,7 @@ new domain concept, define it here in the same PR.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
   duplicate events are idempotent and an older device event cannot replace newer live history.
-- **Check-in** — the front-desk step where waiver, cert, and gear are confirmed before a diver
+- **Check-in** — the front-desk step where waiver, cert, and rental fit are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. Scuba keeps one versioned release per shop: editing it saves a new immutable version
@@ -138,7 +138,7 @@ new domain concept, define it here in the same PR.
   and acts on the shop's behalf only through the `Stripe-Account` header the OAuth grant enables.
   See [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md).
 - **Order** — a shop-issued bill for a customer: one or more line items (a trip fee, course fee,
-  rental gear, deposit, or free-form charge) against a person, optionally tied to a booking. Local
+  rental, nitrox, deposit, or free-form charge) against a person, optionally tied to a booking. Local
   status (`open`/`paid`/`void`/`uncollectible`/`refunded`) mirrors the Stripe invoice backing it. A trip's
   optional per-diver price pre-fills the trip-fee line item when an order is started from a
   booking's roster row — staff can still edit the amount or add more line items before sending.
@@ -155,40 +155,30 @@ new domain concept, define it here in the same PR.
   or a destructive reset (ADR 20260718-dynamic-demo-onboarding, revised by
   20260720-trial-shops-are-not-demo).
 
-## Gear
+## Rental fit and prep
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
-  SPG), **wetsuit** (sized, thickness in mm), mask/fins/boots, **weights**, **tank/cylinder**
-  (e.g. AL80 aluminum 80 cu ft), optionally a **dive computer**.
-- **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent); assignment
-  must respect size, not just availability.
-- **Service history** — regulators and BCDs require periodic service (annual or by dive
-  count); tanks require periodic **visual inspection (VIP)** and **hydrostatic testing**.
-  Out-of-service gear must be un-assignable.
-- **Service event** — a completed, shop-scoped record of work on one item: when it was done,
-  who logged it, what changed, and optionally when it is due next. A service hold blocks checkout;
-  a service event is the auditable evidence that may return an item to the packing pool.
-- **Gear assignment** — one currently checked-out item reserved for one booking. Assignment is
-  not a note: it is the conflict-safe operational record that prevents the same regulator or BCD
-  being packed for two divers at once.
-- **Rental size profile** — a shop-scoped diver’s reusable BCD, wetsuit, boot, fin, and usual
-  weighting details. It pre-fills a new booking’s request and can guide packing, but never
-  reserves inventory or replaces a dock-side fit check.
+  SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, and a
+  **tank/cylinder** (e.g. AL80 aluminum 80 cu ft).
+- **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
+  and in *what size* (BCD, wetsuit, boot, fin, and usual weighting). It is a storage concept: Scuba
+  tracks no equipment inventory, so a fit never reserves an item, is never evidence, and never
+  replaces a dock-side fit check. It is the single input to the trip prep list.
+- **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
+  groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
+- **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
+  dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
+  for. Purely derived — nothing on it is an allocation. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
-  details, certification evidence, rental fit, bookings, and issued gear; cards are not managed as
-  an unrelated certification inbox.
-- **Retired gear** — equipment permanently removed from the rental pool. It is distinct from a
-  service hold and cannot be assigned or retired while checked out to a diver.
+  details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
+  certification inbox.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). Scuba models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.
-- **Nitrox fill** — a logged enriched-air fill for a diver's tank. The diver **O₂-analyzes** the
-  tank and signs for it; the fill records the mix %, the ppO₂ ceiling, and the derived MOD. Only a
-  diver with a **verified** nitrox card may be given an EANx fill — the gate is enforced at write
-  time, not just in the UI.
-- **MOD (maximum operating depth)** — the deepest a mix may be breathed before oxygen toxicity
-  risk, `MOD = 10·(ppO₂/FO₂ − 1)` metres. Derived from the analyzed mix and a ppO₂ ceiling
-  (1.4 bar working, 1.6 bar contingency), never entered by hand.
+- **Nitrox request** — a per-booking ask for enriched air, billed per dive. Writing it on requires
+  a **verified** nitrox card at write time; clearing it is always allowed. Because a card can be
+  rejected after the fact, every read (prep list, manifest, Today) re-checks the card and
+  downgrades the diver to air rather than trusting the flag.
 
 ## Modeling notes
 
@@ -202,6 +192,6 @@ new domain concept, define it here in the same PR.
 - **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
   Night, Drysuit) is a distinct yes/no gate. Levels live in `certifications`; specialties live in
   `specialty_certifications`, both captured pending and usable only once verified. **Nitrox** is
-  not in this set — it is gated per tank at fill time, not per site.
-- Bookings, waivers, certs, gear, and manifests all hang off the same trip/session spine —
+  not in this set — it gates the per-booking mix request, not a site.
+- Bookings, waivers, certs, rental fit, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.

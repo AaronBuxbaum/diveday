@@ -2,17 +2,9 @@ import Link from "next/link";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { readinessLinkPath } from "@/lib/readiness-links";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
-import type { GearRef } from "../actions";
-import { RentalGearForm } from "./RentalGearForm";
-import type {
-  Confirmed,
-  Readiness,
-  RentalProfile,
-  RentalRequest,
-  Requirement,
-  Shop,
-  Trip,
-} from "./types";
+import type { RentalFitRef } from "../actions";
+import { RentalFitForm } from "./RentalFitForm";
+import type { Confirmed, Readiness, RentalFit, Requirement, Shop, Trip } from "./types";
 
 export function BookingConfirmation({
   shop,
@@ -21,10 +13,10 @@ export function BookingConfirmation({
   confirmed,
   readiness,
   requirement,
-  gearRef,
-  rentalRequest,
-  rentalProfile,
-  gearSaved,
+  fitRef,
+  rentalFit,
+  nitroxCardVerified,
+  fitSaved,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -32,10 +24,10 @@ export function BookingConfirmation({
   confirmed: Confirmed;
   readiness: Readiness | null;
   requirement: Requirement | null;
-  gearRef: GearRef;
-  rentalRequest: RentalRequest;
-  rentalProfile: RentalProfile;
-  gearSaved: boolean;
+  fitRef: RentalFitRef;
+  rentalFit: RentalFit;
+  nitroxCardVerified: boolean;
+  fitSaved: boolean;
 }) {
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
   const nextStep = nextDiverStep(checklist);
@@ -78,11 +70,13 @@ export function BookingConfirmation({
         </Link>
       </div>
 
-      <RentalGearForm
-        gearRef={gearRef}
-        rentalRequest={rentalRequest}
-        rentalProfile={rentalProfile}
-        saved={gearSaved}
+      <RentalFitForm
+        fitRef={fitRef}
+        rentalFit={rentalFit}
+        wantsNitrox={confirmed.booking.wantsNitrox}
+        nitroxCardVerified={nitroxCardVerified}
+        plannedDives={trip.plannedDives}
+        saved={fitSaved}
       />
       <Link
         href={`/shop/${shopSlug}/schedule`}

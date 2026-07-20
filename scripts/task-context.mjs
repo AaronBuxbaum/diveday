@@ -74,8 +74,8 @@ const areas = {
       "pnpm e2e -- --reporter=line",
     ],
   },
-  gear: {
-    goal: "Build M5 gear prep with conflict-safe assignment, returns, and a tenant-scoped service history.",
+  "rental-fit": {
+    goal: "Maintain rental fit and the derived per-trip prep list (tanks, kit, nitrox split).",
     docs: [
       "docs/product/roadmap.md",
       "docs/product/glossary.md",
@@ -85,23 +85,22 @@ const areas = {
     ],
     code: [
       "src/db/schema.ts",
-      "src/db/gear.ts",
-      "src/db/gear.test.ts",
-      "src/lib/gear.ts",
-      "src/app/shop/[shopSlug]/gear",
-      "src/app/shop/[shopSlug]/trips/[id]",
+      "src/db/rental-fit.ts",
+      "src/db/nitrox.ts",
+      "src/lib/dive-prep.ts",
+      "src/app/shop/[shopSlug]/trips/[id]/prep",
     ],
-    tests: ["src/db/gear.test.ts", "src/lib/gear.ts", "e2e"],
+    tests: ["src/lib/dive-prep.test.ts", "src/db/nitrox.test.ts", "e2e/nitrox.spec.ts"],
     invariants: [
-      "Tenant-scope inventory, assignments, returns, and service events.",
-      "Held, retired, or already-assigned equipment never becomes assignable.",
-      "Assignment must remain transactionally conflict-safe under simultaneous staff actions.",
-      "Completed service is auditable; checked-out equipment cannot be released through a service log.",
+      "Scuba tracks no equipment inventory: a fit is a size record, never an allocation.",
+      "One tank per diver per planned dive — the count is never short of the dive plan.",
+      "A nitrox request requires a verified card at write time, and is re-checked on every read.",
+      "A diver with no fit on file is named on the prep list, never silently omitted.",
     ],
     validate: [
-      "pnpm test -- src/db/gear.test.ts --reporter=dot",
+      "pnpm test -- src/lib/dive-prep.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- --reporter=line",
+      "pnpm e2e -- e2e/nitrox.spec.ts --reporter=line",
     ],
   },
   manifests: {

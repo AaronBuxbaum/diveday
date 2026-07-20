@@ -25,7 +25,7 @@ const dailyMoments = [
     role: "For the front desk",
     title: "One answer to “are they ready?”",
     description:
-      "Waiver, certification, site requirements, payment, and gear requests come together before a problem reaches the dock.",
+      "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock.",
     mockup: marketingMockups.frontDeskReadiness,
   },
 ] as const;
@@ -45,7 +45,7 @@ export default function Home() {
                 Run the whole dive day, from booking to head count.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-                Scuba puts bookings, readiness, gear, and an offline-ready boat manifest in one
+                Scuba puts bookings, readiness, trip prep, and an offline-ready boat manifest in one
                 considered system — so your crew can spend less time chasing details and more time
                 taking care of divers.
               </p>

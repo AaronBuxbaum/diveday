@@ -13,7 +13,6 @@ const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
   // Staff work a trip on /trips/[id], which is the Schedule surface's detail
   // view — keep the Schedule tab lit so they don't lose their place.
   { label: "Schedule", suffix: "/schedule", alsoMatch: "/trips" },
-  { label: "Gear", suffix: "/gear" },
 ];
 
 const moreGroups = [

@@ -2,18 +2,15 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { createGearItem } from "./gear";
 import {
   createNitroxCertification,
-  listShopTanks,
-  listTripNitroxFills,
-  logNitroxFill,
   reviewNitroxCertification,
+  setBookingNitrox,
   verifiedNitroxPersonIds,
 } from "./nitrox";
-import { gearItems, people, personRoles } from "./schema";
+import { bookings, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -34,24 +31,12 @@ async function context() {
     .where(and(eq(people.shopId, shop.id), eq(people.email, "nora@example.com")))
     .limit(1);
   if (!diver) throw new Error("diver missing");
-  // A staff member to log the fill.
-  const [staff] = await db
-    .select({ id: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
-    .limit(1);
-  if (!staff) throw new Error("staff missing");
-  const tank = await createGearItem(db, { shopId: shop.id, label: "AL80 #1", type: "tank" });
-  if (!tank) throw new Error("tank insert failed");
   return {
     db,
     shopId: shop.id,
     tripId: open.id,
     bookingId: booking.bookingId,
     personId: diver.id,
-    staffId: staff.id,
-    tankId: tank.id,
   };
 }
 
@@ -67,10 +52,17 @@ async function certifyDiver(db: AppDb, shopId: string, personId: string) {
   return cert;
 }
 
-const base = { oxygenPercent: 32, analyzerSignature: "Nora Quinn" };
+async function wantsNitrox(db: AppDb, bookingId: string) {
+  const [row] = await db
+    .select({ wantsNitrox: bookings.wantsNitrox })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return row?.wantsNitrox;
+}
 
 describe("nitrox certification workflow", () => {
-  it("captures pending and lets a verified card gate a fill", async () => {
+  it("captures pending, and only a reviewed card becomes a gate", async () => {
     const { db, shopId, personId } = await context();
     const cert = await createNitroxCertification(db, {
       shopId,
@@ -81,145 +73,108 @@ describe("nitrox certification workflow", () => {
     if (!cert) throw new Error("cert insert failed");
     expect(cert.status).toBe("pending");
     expect(cert.identifier).toBe("NX-42"); // trimmed
-    expect(await verifiedNitroxPersonIds(db, shopId)).not.toContain(personId);
+    expect([...(await verifiedNitroxPersonIds(db, shopId))]).not.toContain(personId);
 
-    await reviewNitroxCertification(db, {
-      shopId,
-      certificationId: cert.id,
-      status: "verified",
-    });
+    await reviewNitroxCertification(db, { shopId, certificationId: cert.id, status: "verified" });
     expect([...(await verifiedNitroxPersonIds(db, shopId))]).toContain(personId);
   });
 });
 
-describe("logNitroxFill", () => {
-  it("logs a fill for a certified diver and derives the MOD", async () => {
+describe("setBookingNitrox", () => {
+  it("accepts a request from a diver with a verified card", async () => {
     const ctx = await context();
     await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    const out = await logNitroxFill(ctx.db, {
+    const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      ...base,
+      wantsNitrox: true,
     });
-    expect(out).toEqual({ ok: true, fillId: expect.any(String), maxDepthMeters: 33 });
-
-    const fills = await listTripNitroxFills(ctx.db, ctx.shopId, ctx.tripId);
-    expect(fills).toHaveLength(1);
-    expect(fills[0]?.fill.oxygenPercent).toBe(32);
-    expect(fills[0]?.tank.label).toBe("AL80 #1");
+    expect(outcome).toEqual({ ok: true, wantsNitrox: true });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(true);
   });
 
-  it("fails closed for a diver without a verified nitrox card", async () => {
+  it("refuses a request from a diver with no nitrox card at all", async () => {
     const ctx = await context();
-    // No cert at all.
-    const out = await logNitroxFill(ctx.db, {
+    const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      ...base,
+      wantsNitrox: true,
     });
-    expect(out).toEqual({ ok: false, reason: "diver_not_certified" });
+    expect(outcome).toEqual({ ok: false, reason: "diver_not_certified" });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
   });
 
-  it("treats a pending (unverified) card as not certified", async () => {
+  it("refuses a request while the card is still pending review", async () => {
     const ctx = await context();
-    await createNitroxCertification(ctx.db, {
+    const cert = await createNitroxCertification(ctx.db, {
       shopId: ctx.shopId,
       personId: ctx.personId,
       agency: "padi",
-      identifier: "NX-P",
+      identifier: "NX-PENDING",
     });
-    const out = await logNitroxFill(ctx.db, {
+    if (!cert) throw new Error("cert insert failed");
+    const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      ...base,
+      wantsNitrox: true,
     });
-    expect(out).toEqual({ ok: false, reason: "diver_not_certified" });
+    expect(outcome).toEqual({ ok: false, reason: "diver_not_certified" });
   });
 
-  it("rejects an out-of-band mix", async () => {
+  it("refuses a request after the card is rejected", async () => {
+    const ctx = await context();
+    const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    await reviewNitroxCertification(ctx.db, {
+      shopId: ctx.shopId,
+      certificationId: cert.id,
+      status: "rejected",
+    });
+    const outcome = await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: true,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "diver_not_certified" });
+  });
+
+  it("always lets a request be cleared, card or no card", async () => {
     const ctx = await context();
     await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    const out = await logNitroxFill(ctx.db, {
+    await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      oxygenPercent: 45,
-      analyzerSignature: "Nora Quinn",
+      wantsNitrox: true,
     });
-    expect(out).toEqual({ ok: false, reason: "invalid_mix" });
+    const cleared = await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: false,
+    });
+    expect(cleared).toEqual({ ok: true, wantsNitrox: false });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
   });
 
-  it("requires the diver's analysis signature", async () => {
+  it("refuses to write through another shop's id", async () => {
     const ctx = await context();
     await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    const out = await logNitroxFill(ctx.db, {
-      shopId: ctx.shopId,
+    const outcome = await setBookingNitrox(ctx.db, {
+      shopId: crypto.randomUUID(),
       bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      oxygenPercent: 32,
-      analyzerSignature: "   ",
+      wantsNitrox: true,
     });
-    expect(out).toEqual({ ok: false, reason: "analysis_required" });
+    expect(outcome).toEqual({ ok: false, reason: "booking_unavailable" });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
   });
 
-  it("rejects a non-tank gear item", async () => {
+  it("refuses a request on a cancelled booking", async () => {
     const ctx = await context();
     await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    const bcd = await createGearItem(ctx.db, {
-      shopId: ctx.shopId,
-      label: "BCD M #1",
-      type: "bcd",
-    });
-    if (!bcd) throw new Error("bcd insert failed");
-    const out = await logNitroxFill(ctx.db, {
+    await cancelBooking(ctx.db, ctx.shopId, ctx.bookingId);
+    const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
-      gearItemId: bcd.id,
-      filledByPersonId: ctx.staffId,
-      ...base,
+      wantsNitrox: true,
     });
-    expect(out).toEqual({ ok: false, reason: "not_a_tank" });
-  });
-
-  it("rejects a retired tank", async () => {
-    const ctx = await context();
-    await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    await ctx.db.update(gearItems).set({ state: "retired" }).where(eq(gearItems.id, ctx.tankId));
-    const out = await logNitroxFill(ctx.db, {
-      shopId: ctx.shopId,
-      bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      ...base,
-    });
-    expect(out).toEqual({ ok: false, reason: "tank_retired" });
-  });
-
-  it("rejects a booking from another tenant", async () => {
-    const ctx = await context();
-    await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    const out = await logNitroxFill(ctx.db, {
-      shopId: "00000000-0000-4000-8000-000000000000",
-      bookingId: ctx.bookingId,
-      gearItemId: ctx.tankId,
-      filledByPersonId: ctx.staffId,
-      ...base,
-    });
-    expect(out).toEqual({ ok: false, reason: "booking_unavailable" });
-  });
-
-  it("only offers non-retired tanks", async () => {
-    const ctx = await context();
-    await ctx.db.update(gearItems).set({ state: "retired" }).where(eq(gearItems.id, ctx.tankId));
-    const tanks = await listShopTanks(ctx.db, ctx.shopId);
-    expect(tanks.map((t) => t.id)).not.toContain(ctx.tankId);
+    expect(outcome).toEqual({ ok: false, reason: "booking_unavailable" });
   });
 });

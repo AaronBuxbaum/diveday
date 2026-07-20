@@ -27,7 +27,7 @@ export const productFeatureGroups = [
   },
   {
     eyebrow: "Run the dive day",
-    title: "Crew, gear, and the boat share one source of truth",
+    title: "Crew, prep, and the boat share one source of truth",
     features: [
       "Rental inventory, service holds, packing recommendations, and returns",
       "Dive-site briefings with practical route and conditions context",
@@ -40,7 +40,7 @@ export const productFeatureGroups = [
     title: "The next handoff is already clear",
     features: [
       "Instructor and crew assignment on every trip and course session",
-      "Live operational reporting for bookings, blockers, gear requests, and staffing gaps",
+      "Live operational reporting for bookings, blockers, trip prep, and staffing gaps",
       "Role-shaped demo experiences to see the day from the desk, dock, or diver's phone",
       "A multi-tenant shop workspace that starts with useful demo data",
     ],
@@ -54,7 +54,7 @@ export const earlyAccessPrice = {
   description:
     "One clear price for the complete current operating system — not a seat-by-seat add-on.",
   included: [
-    "Bookings, courses, waivers, certifications, gear, dive sites, nitrox, and offline manifests",
+    "Bookings, courses, waivers, certifications, rental fit, dive sites, nitrox, and offline manifests",
     "All staff roles in one shop workspace",
     "New workflow releases while early access is open",
     "A dedicated practice shop with seeded demo data",

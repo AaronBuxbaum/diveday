@@ -9,7 +9,7 @@ import {
 
 function snapshot(): OfflineManifestSnapshot {
   return {
-    version: 1,
+    version: 2,
     snapshotId: "snapshot-1",
     savedAt: "2026-07-20T11:00:00.000Z",
     expiresAt: "2026-07-27T16:00:00.000Z",
@@ -34,7 +34,8 @@ function snapshot(): OfflineManifestSnapshot {
             emergencyContactName: null,
             emergencyContactPhone: null,
             readiness: { status: "ready", blockers: [] },
-            gear: [],
+            rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+            nitroxRequested: false,
           },
           {
             bookingId: "blocked",
@@ -46,7 +47,8 @@ function snapshot(): OfflineManifestSnapshot {
               status: "blocked",
               blockers: [{ code: "waiver_pending", message: "Waiver pending." }],
             },
-            gear: [],
+            rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+            nitroxRequested: false,
           },
         ],
       },

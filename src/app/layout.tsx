@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Scuba — dive shop operations, delightfully",
   description:
-    "Bookings, waivers, cert checks, gear, and boat manifests for dive shops — delight-first.",
+    "Bookings, waivers, cert checks, trip prep, and boat manifests for dive shops — delight-first.",
 };
 
 export default function RootLayout({

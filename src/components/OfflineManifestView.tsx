@@ -288,11 +288,10 @@ export function OfflineManifestView() {
                         </span>
                       </p>
                       <p>
-                        <span className="font-bold">Gear</span>
+                        <span className="font-bold">Rental fit</span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.gear.length > 0
-                            ? diver.gear.map((item) => item.label).join(", ")
-                            : "None assigned"}
+                          {diver.rentalFit.text}
+                          {diver.nitroxRequested ? " · Nitrox requested" : ""}
                         </span>
                       </p>
                     </div>
@@ -324,7 +323,7 @@ export function OfflineManifestView() {
                               [diver.bookingId]: event.target.value,
                             }))
                           }
-                          placeholder="Late to the boat, medical question, gear issue…"
+                          placeholder="Late to the boat, medical question, kit issue…"
                           className={`${controlClass} mt-1`}
                         />
                         <p className="mt-1 text-xs text-muted">

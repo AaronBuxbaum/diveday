@@ -2,9 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { cancelBooking, getBookingForTrip, restoreBooking } from "@/db/bookings";
+import { cancelBooking, createBooking, getBookingForTrip, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { assignGear, assignRecommendedGear, returnGear } from "@/db/gear";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
@@ -16,6 +15,7 @@ import {
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
+import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverRequest } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -60,10 +60,19 @@ const requirementsSchema = z.object({
   ),
 });
 
-const gearAssignmentSchema = z.object({
-  bookingId: z.string().uuid(),
-  gearItemId: z.string().uuid(),
+const addDiverSchema = z.object({
+  fullName: z.string().trim().min(1).max(120),
+  email: z.email().max(200),
+  phone: z.string().trim().max(30).optional(),
 });
+
+function parseAddDiver(formData: FormData) {
+  return addDiverSchema.safeParse({
+    fullName: formData.get("fullName"),
+    email: formData.get("email"),
+    phone: formData.get("phone") || undefined,
+  });
+}
 
 const backPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}`;
 
@@ -133,6 +142,60 @@ export async function saveCrewAction(shopSlug: string, tripId: string, formData:
   const ids = formData.getAll("crew").map(String);
   await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
   revalidateAndRedirect(back, `${back}?notice=crew`);
+}
+
+/** Staff-entered booking for walk-ins or divers tracked in another system. */
+export async function addBookingAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = parseAddDiver(formData);
+  if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
+  const outcome = await createBooking(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    fullName: parsed.data.fullName,
+    email: parsed.data.email,
+    phone: parsed.data.phone,
+  });
+  if (!outcome.ok) {
+    const code =
+      outcome.reason === "trip_full"
+        ? "diver-full"
+        : outcome.reason === "already_booked"
+          ? "diver-already"
+          : outcome.reason === "course_unstaffed"
+            ? "diver-course-unstaffed"
+            : outcome.reason === "course_prerequisite"
+              ? "diver-course-prerequisite"
+              : "diver-unavailable";
+    redirect(`${back}?notice=${code}`);
+  }
+  revalidateAndRedirect(back, `${back}?notice=diver-added&bid=${outcome.bookingId}`);
+}
+
+/** Staff-entered wait-list entry — only valid once the trip is actually full. */
+export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = parseAddDiver(formData);
+  if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
+  const outcome = await joinTripWaitlist(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    fullName: parsed.data.fullName,
+    email: parsed.data.email,
+    phone: parsed.data.phone,
+  });
+  if (outcome.ok || outcome.reason === "already_waitlisted") {
+    revalidateAndRedirect(back, `${back}?notice=diver-waitlisted`);
+  }
+  const code =
+    outcome.reason === "trip_available"
+      ? "diver-waitlist-available"
+      : outcome.reason === "already_booked"
+        ? "diver-already"
+        : "diver-unavailable";
+  redirect(`${back}?notice=${code}`);
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -252,36 +315,4 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiresPayment: formData.get("requiresPayment") === "on",
   });
   revalidateAndRedirect(back, `${back}?notice=${saved ? "requirements" : "invalid"}`);
-}
-
-export async function assignGearAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
-  const parsed = gearAssignmentSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=gear-error`);
-  const outcome = await assignGear(await getDb(), {
-    shopId: s.user.shopId,
-    bookingId: parsed.data.bookingId,
-    gearItemId: parsed.data.gearItemId,
-  });
-  revalidateAndRedirect(back, `${back}?notice=${outcome.ok ? "gear-assigned" : "gear-error"}`);
-}
-
-export async function assignRecommendedGearAction(shopSlug: string, tripId: string) {
-  const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
-  const outcome = await assignRecommendedGear(await getDb(), s.user.shopId, tripId);
-  revalidateAndRedirect(
-    back,
-    `${back}?notice=${outcome.assigned > 0 ? "gear-packed" : "gear-none"}`,
-  );
-}
-
-export async function returnGearAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
-  const assignmentId = String(formData.get("assignmentId") ?? "");
-  if (!assignmentId) redirect(`${back}?notice=gear-error`);
-  const returned = await returnGear(await getDb(), s.user.shopId, assignmentId);
-  revalidateAndRedirect(back, `${back}?notice=${returned ? "gear-returned" : "gear-error"}`);
 }

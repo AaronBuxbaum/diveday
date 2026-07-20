@@ -2,11 +2,6 @@ import { hash } from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { courseSlug } from "@/lib/courses";
-import {
-  DEFAULT_MAX_PPO2_BAR,
-  DEFAULT_MAX_PPO2_CENTIBAR,
-  maxOperatingDepthMeters,
-} from "@/lib/nitrox";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
@@ -20,23 +15,18 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
-  gearAssignments,
-  gearItems,
-  gearServiceEvents,
   globalCourses,
   globalCourseVersions,
   globalDiveSites,
   globalDiveSiteVersions,
   nitroxCertifications,
-  nitroxFills,
   notificationDeliveries,
   notificationDeliveryAttempts,
   orderLineItems,
   orders,
   people,
   personRoles,
-  rentalGearProfiles,
-  rentalGearRequests,
+  rentalFitProfiles,
   rollCallEvents,
   shops,
   specialtyCertifications,
@@ -174,7 +164,7 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
 
 /**
  * Seed a dynamically created shop with the standard demo dataset (schedule,
- * bookings, gear, nitrox) for dynamic onboarding trials.
+ * bookings, rental fit, nitrox) for dynamic onboarding trials.
  */
 export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Promise<void> {
   await db.insert(waiverTemplates).values({
@@ -1446,8 +1436,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       .values(paymentSeed.map((row) => ({ shopId, currency: "usd", ...row })));
   }
 
-  await seedNitrox(db, shopId, instructor.id, customers, wreck, bookingRows_);
-  await seedGearRoom(db, shopId, customers);
+  await seedNitrox(db, shopId, customers, wreck, bookingRows_);
+  await seedRentalFit(db, shopId, customers);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_);
 }
 
@@ -1482,27 +1472,6 @@ async function seedFrontDesk(
     }
   }
 
-  // Rental requests on later boats only — the divers on today's trip have not
-  // told us their sizes yet, which is what the departure board is complaining
-  // about.
-  const laterBookings = bookingRows.filter(
-    (booking) => booking.tripId !== tripRows[0]?.id && booking.tripId !== wreckId,
-  );
-  const requests = laterBookings.slice(0, 6).map((booking, index) => ({
-    shopId,
-    bookingId: booking.id,
-    bcd: true,
-    regulator: true,
-    wetsuit: true,
-    maskFins: index % 2 === 0,
-    weights: true,
-    tank: true,
-    diveComputer: index === 0,
-    bcdSize: ["S", "L", "XL", "L", "S", "L"][index] ?? null,
-    wetsuitSize: ["S", "L", "XL", "M", "S", "M"][index] ?? null,
-  }));
-  if (requests.length > 0) await db.insert(rentalGearRequests).values(requests);
-
   // Orders are deliberately absent. An order belongs to a Stripe account the
   // shop connected itself, and fabricating one here would show the settings
   // page a connected integration whose "Refresh status" button then calls the
@@ -1530,84 +1499,37 @@ async function seedFrontDesk(
 }
 
 /**
- * The gear room a shop actually walks into: a full set of rentals in the sizes
- * that move, an air bank beside the nitrox bank, one regulator due for service
- * next week, and one BCD already pulled off the floor for a leaking inflator.
- *
- * Nothing here is assigned to anyone. Packing is the demo's job to do, not the
- * seed's — and an inventory that arrives half-claimed hides the packing flow
- * that is the point of the gear page.
+ * The fit book the front desk already keeps: sizes for the divers who have
+ * been in before, so tomorrow's prep list is mostly filled in before anyone
+ * asks. Deliberately partial — a real fit book always is, and the gaps are
+ * what the departure board is complaining about.
  */
-async function seedGearRoom(
+async function seedRentalFit(
   db: DbExecutor,
   shopId: string,
   customers: { id: string }[],
 ): Promise<void> {
-  const items: Array<{
-    label: string;
-    type: "bcd" | "regulator" | "wetsuit" | "mask_fins" | "weights" | "tank";
-    size?: string;
-    state?: "available" | "service_hold";
-    serviceDueAt?: Date;
-    notes?: string;
-  }> = [
-    { label: "BCD-01", type: "bcd", size: "S" },
-    { label: "BCD-02", type: "bcd", size: "S" },
-    { label: "BCD-03", type: "bcd", size: "L" },
-    { label: "BCD-04", type: "bcd", size: "L" },
-    { label: "BCD-05", type: "bcd", size: "XL" },
-    {
-      label: "BCD-06",
-      type: "bcd",
-      size: "M",
-      state: "service_hold",
-      notes: "Inflator leaks under pressure. Off the floor until the service kit arrives.",
-    },
-    { label: "REG-01", type: "regulator", serviceDueAt: at(120, 12) },
-    { label: "REG-02", type: "regulator", serviceDueAt: at(96, 12) },
-    { label: "REG-03", type: "regulator", serviceDueAt: at(7, 12), notes: "Annual service due." },
-    { label: "REG-04", type: "regulator", serviceDueAt: at(210, 12) },
-    { label: "REG-05", type: "regulator", serviceDueAt: at(180, 12) },
-    { label: "WET-3MM-01", type: "wetsuit", size: "S" },
-    { label: "WET-3MM-02", type: "wetsuit", size: "M" },
-    { label: "WET-3MM-03", type: "wetsuit", size: "M" },
-    { label: "WET-3MM-04", type: "wetsuit", size: "L" },
-    { label: "WET-3MM-05", type: "wetsuit", size: "XL" },
-    { label: "FINS-01", type: "mask_fins", size: "S" },
-    { label: "FINS-02", type: "mask_fins", size: "M" },
-    { label: "FINS-03", type: "mask_fins", size: "L" },
-    { label: "FINS-04", type: "mask_fins", size: "L" },
-    { label: "WEIGHT-BELT-01", type: "weights", size: "8 kg" },
-    { label: "WEIGHT-BELT-02", type: "weights", size: "10 kg" },
-    { label: "WEIGHT-BELT-03", type: "weights", size: "12 kg" },
-    ...["01", "02", "03", "04", "05", "06"].map((n) => ({
-      label: `AL80 Air ${n}`,
-      type: "tank" as const,
-      size: "AL80",
-    })),
-  ];
-  await db.insert(gearItems).values(
-    items.map((item) => ({
-      shopId,
-      label: item.label,
-      type: item.type,
-      size: item.size ?? null,
-      state: item.state ?? ("available" as const),
-      serviceDueAt: item.serviceDueAt ?? null,
-      notes: item.notes ?? null,
-    })),
-  );
-
-  // Sizes the desk already knows, so a returning diver's kit is picked before
-  // they reach the counter. Deliberately not everyone: a shop's fit book is
-  // always partial, and the diver form exists to fill it in.
-  const fits: Array<[number, { bcd: string; wetsuit: string; boot: string; fin: string }]> = [
-    [0, { bcd: "S", wetsuit: "S", boot: "6", fin: "S" }],
-    [1, { bcd: "L", wetsuit: "L", boot: "11", fin: "L" }],
-    [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M" }],
-    [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S" }],
-    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L" }],
-    [12, { bcd: "S", wetsuit: "M", boot: "7", fin: "M" }],
+  const fits: Array<
+    [
+      number,
+      {
+        bcd: string | null;
+        wetsuit: string | null;
+        boot: string;
+        fin: string;
+        weights?: string;
+        ownsRegulator?: boolean;
+      },
+    ]
+  > = [
+    [0, { bcd: "S", wetsuit: "S", boot: "6", fin: "S", weights: "6 kg" }],
+    [1, { bcd: "L", wetsuit: "L", boot: "11", fin: "L", weights: "8 kg" }],
+    // A diver with their own reg — the prep list has to leave it off.
+    [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M", ownsRegulator: true }],
+    [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
+    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg" }],
+    // Sizes half-recorded, which is how a fit book actually looks.
+    [12, { bcd: null, wetsuit: "M", boot: "7", fin: "M" }],
   ];
   const profiles = fits
     .map(([index, fit]) => {
@@ -1616,42 +1538,34 @@ async function seedGearRoom(
       return {
         shopId,
         personId: person.id,
+        rentsBcd: true,
+        rentsRegulator: !fit.ownsRegulator,
+        rentsWetsuit: true,
+        rentsMaskFins: true,
+        rentsWeights: true,
         bcdSize: fit.bcd,
         wetsuitSize: fit.wetsuit,
         bootSize: fit.boot,
         finSize: fit.fin,
-        weightPreference: null,
+        weightPreference: fit.weights ?? null,
       };
     })
     .filter((row) => row !== null);
-  if (profiles.length > 0) await db.insert(rentalGearProfiles).values(profiles);
+  if (profiles.length > 0) await db.insert(rentalFitProfiles).values(profiles);
 }
 
 /**
- * Nitrox demo: a small tank bank, a couple of verified EANx cards (and one
- * pending), and a logged fill on the wreck trip — so the nitrox surfaces show
- * a realistic gate and a real MOD from the moment a fresh checkout boots.
+ * Nitrox demo: a couple of verified EANx cards (and one pending), plus an
+ * enriched-air request on the wreck charter — so the prep list shows a real
+ * mix split and a real card gate the moment a fresh checkout boots.
  */
 async function seedNitrox(
   db: DbExecutor,
   shopId: string,
-  filledByPersonId: string,
   customers: { id: string }[],
   wreck: { id: string },
   bookingRows: { id: string; tripId: string; personId: string }[],
 ): Promise<void> {
-  const tanks = await db
-    .insert(gearItems)
-    .values(
-      ["AL80 Nitrox #1", "AL80 Nitrox #2", "AL80 Nitrox #3"].map((label) => ({
-        shopId,
-        label,
-        type: "tank" as const,
-        size: "AL80",
-      })),
-    )
-    .returning();
-
   // Two verified EANx cards, one still pending review.
   await db.insert(nitroxCertifications).values([
     {
@@ -1679,36 +1593,30 @@ async function seedNitrox(
     },
   ]);
 
-  // One logged fill for a certified diver on the nitrox-required wreck trip.
+  // An enriched-air request from a diver whose card is verified, on the
+  // nitrox-required wreck charter.
   const wreckBookingForCert = bookingRows.find(
     (b) => b.tripId === wreck.id && b.personId === customers[0].id,
   );
-  const tank = tanks[0];
-  if (wreckBookingForCert && tank) {
-    await db.insert(nitroxFills).values({
-      shopId,
-      bookingId: wreckBookingForCert.id,
-      gearItemId: tank.id,
-      oxygenPercent: 32,
-      maxDepthMeters: maxOperatingDepthMeters(32, DEFAULT_MAX_PPO2_BAR),
-      maxPpO2Centibar: DEFAULT_MAX_PPO2_CENTIBAR,
-      analyzerSignature: "Priya Sharma",
-      filledByPersonId,
-    });
+  if (wreckBookingForCert) {
+    await db
+      .update(bookings)
+      .set({ wantsNitrox: true })
+      .where(eq(bookings.id, wreckBookingForCert.id));
   }
 }
 
 /**
  * Restore the demo playground to its seeded state. Wipes everything a visitor
  * can touch — trips and their sessions, bookings and everything hanging off
- * them (waivers, gear, roll call), the course catalog, cards, gear inventory,
+ * them (waivers, roll call), the course catalog, cards, rental fit,
  * and every non-staff person (seeded customers plus any walk-ups the booking
  * flow created) — then re-seeds the schedule. The shop, its default waiver
  * template, staff, and their logins are deliberately left in place so the demo
  * session stays valid (docs ADR 20260718-demo-mode).
  *
  * Deletes run children-first so foreign keys never block a reset, however far
- * a visitor drove the tool (signed a waiver, assigned gear, ran roll call).
+ * a visitor drove the tool (signed a waiver, saved a fit, ran roll call).
  */
 export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
@@ -1721,11 +1629,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
-  await db.delete(nitroxFills).where(eq(nitroxFills.shopId, shopId));
-  await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
-  await db.delete(gearAssignments).where(eq(gearAssignments.shopId, shopId));
-  await db.delete(rentalGearRequests).where(eq(rentalGearRequests.shopId, shopId));
-  await db.delete(rentalGearProfiles).where(eq(rentalGearProfiles.shopId, shopId));
+  await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db
@@ -1751,7 +1655,6 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
-  await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
 
   // Everyone who isn't staff — seeded customers plus booking-flow walk-ups.
   const staffRows = await db

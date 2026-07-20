@@ -92,7 +92,7 @@ export default async function TripsPage({
         title="Schedule"
         description={
           staffView
-            ? "Upcoming trips and charters. Open a departure to work through its roster, readiness, gear, and manifest."
+            ? "Upcoming trips and charters. Open a departure to work through its roster, readiness, prep list, and manifest."
             : "Find your next day on the water, see what to expect, and reserve your spot."
         }
         actions={

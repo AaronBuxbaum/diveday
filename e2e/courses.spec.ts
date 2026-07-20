@@ -25,8 +25,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
-  await page.getByRole("button", { name: "Save gear request" }).click();
-  await expect(page.getByRole("status")).toContainText("gear request is with the crew");
+  await page.getByRole("button", { name: "Save rental fit" }).click();
+  await expect(page.getByRole("status")).toContainText("The crew will see this when they pack");
 });
 
 test("staff can price a catalog course in place and hide it", async ({ page }) => {

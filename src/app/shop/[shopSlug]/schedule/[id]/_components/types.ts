@@ -1,7 +1,7 @@
 import type { getBookingForTrip } from "@/db/bookings";
 import type { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
-import type { getRentalGearProfile, getRentalGearRequest } from "@/db/gear-requests";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
+import type { getRentalFit } from "@/db/rental-fit";
 import type { getShopBySlug } from "@/db/shops";
 import type { getTripWithBooked, listTripDives } from "@/db/trips";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
@@ -12,8 +12,7 @@ export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;
 export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
-export type RentalRequest = Awaited<ReturnType<typeof getRentalGearRequest>> | null;
-export type RentalProfile = Awaited<ReturnType<typeof getRentalGearProfile>> | null;
+export type RentalFit = Awaited<ReturnType<typeof getRentalFit>> | null;
 export type AutomatedForecast = Awaited<ReturnType<typeof fetchAutomatedMarineForecast>>;
 
 export type DiveBriefing = TripDive & {
@@ -21,14 +20,13 @@ export type DiveBriefing = TripDive & {
   moments: Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>;
 };
 
-export const RENTAL_GEAR_OPTIONS = [
-  { name: "bcd", label: "BCD" },
-  { name: "regulator", label: "Regulator" },
-  { name: "wetsuit", label: "Wetsuit" },
-  { name: "maskFins", label: "Mask & fins" },
-  { name: "weights", label: "Weights" },
-  { name: "tank", label: "Tank" },
-  { name: "diveComputer", label: "Dive computer" },
+/** Form field name ↔ stored column, so the checkbox set has one definition. */
+export const RENTAL_FIT_OPTIONS = [
+  { name: "bcd", field: "rentsBcd", label: "BCD" },
+  { name: "regulator", field: "rentsRegulator", label: "Regulator" },
+  { name: "wetsuit", field: "rentsWetsuit", label: "Wetsuit" },
+  { name: "maskFins", field: "rentsMaskFins", label: "Mask & fins" },
+  { name: "weights", field: "rentsWeights", label: "Weights" },
 ] as const;
 
 export const ERROR_MESSAGES: Record<string, string> = {
@@ -41,5 +39,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
     "This course still needs an assigned instructor before it can take bookings.",
   "course-prerequisite":
     "This course needs a verified certification on file. Call the shop and they’ll help get your card checked.",
-  gear: "We couldn’t save that gear request. Please check the details and try again.",
+  fit: "We couldn’t save that rental fit. Please check the details and try again.",
+  "nitrox-card":
+    "Your fit is saved, but enriched air needs a verified nitrox card on file. Bring your card to the counter and we’ll sort it out.",
 };

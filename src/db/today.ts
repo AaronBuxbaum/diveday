@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -6,11 +6,11 @@ import type { AppDb } from "./client";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { listTripReadiness } from "./readiness";
 import {
-  gearAssignments,
-  gearItems,
+  bookings,
+  nitroxCertifications,
   people,
   personRoles,
-  rentalGearRequests,
+  rentalFitProfiles,
   rollCallEvents,
   tripAssignments,
   tripWaitlistEntries,
@@ -85,88 +85,76 @@ async function boardedCountsByTrip(db: AppDb, shopId: string, tripIds: string[])
   return counts;
 }
 
-/** Bookings that asked for rental kit but have nothing packed against them yet. */
-async function unpackedRequestsByTrip(
+/**
+ * Divers on an upcoming departure with no rental fit on file. The prep list is
+ * derived entirely from fit, so a missing fit is a hole in tomorrow's packing
+ * that nobody sees until the diver is standing at the counter.
+ */
+async function missingFitByTrip(
   db: AppDb,
   shopId: string,
   bookingIdsByTrip: Map<string, string[]>,
 ) {
   const bookingIds = [...bookingIdsByTrip.values()].flat();
-  const unpacked = new Map<string, number>();
-  if (bookingIds.length === 0) return unpacked;
-  const [requests, packed] = await Promise.all([
-    db
-      .select({ bookingId: rentalGearRequests.bookingId })
-      .from(rentalGearRequests)
-      .where(
-        and(
-          eq(rentalGearRequests.shopId, shopId),
-          inArray(rentalGearRequests.bookingId, bookingIds),
-        ),
+  const missing = new Map<string, number>();
+  if (bookingIds.length === 0) return missing;
+  const rows = await db
+    .select({ bookingId: bookings.id, fitId: rentalFitProfiles.id })
+    .from(bookings)
+    .leftJoin(
+      rentalFitProfiles,
+      and(
+        eq(rentalFitProfiles.personId, bookings.personId),
+        eq(rentalFitProfiles.shopId, bookings.shopId),
       ),
-    db
-      .select({ bookingId: gearAssignments.bookingId })
-      .from(gearAssignments)
-      .where(
-        and(
-          eq(gearAssignments.shopId, shopId),
-          eq(gearAssignments.status, "assigned"),
-          inArray(gearAssignments.bookingId, bookingIds),
-        ),
-      ),
-  ]);
-  const requested = new Set(requests.map((row) => row.bookingId));
-  const hasGear = new Set(packed.map((row) => row.bookingId));
+    )
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
+  const withoutFit = new Set(rows.filter((row) => !row.fitId).map((row) => row.bookingId));
   for (const [tripId, ids] of bookingIdsByTrip) {
-    const count = ids.filter((id) => requested.has(id) && !hasGear.has(id)).length;
-    if (count > 0) unpacked.set(tripId, count);
+    const count = ids.filter((id) => withoutFit.has(id)).length;
+    if (count > 0) missing.set(tripId, count);
   }
-  return unpacked;
+  return missing;
 }
 
 /**
- * Kit that is packed for an upcoming departure but falls due for service on or
- * before it sails. Nothing else in the app connects the service calendar to a
- * specific boat day, which is exactly why it belongs on this page.
+ * Divers who asked for enriched air but hold no verified nitrox card right
+ * now. The request was card-gated when it was made, so a hit here means the
+ * card was rejected or removed afterwards — the tank has to go back to air
+ * unless someone verifies the card before the boat leaves.
  */
-async function gearDueByTrip(
+async function ungatedNitroxByTrip(
   db: AppDb,
   shopId: string,
   bookingIdsByTrip: Map<string, string[]>,
-  startsAtByTrip: Map<string, Date>,
 ) {
   const bookingIds = [...bookingIdsByTrip.values()].flat();
-  const byTrip = new Map<string, string[]>();
-  if (bookingIds.length === 0) return byTrip;
+  const ungated = new Map<string, number>();
+  if (bookingIds.length === 0) return ungated;
   const rows = await db
-    .select({
-      bookingId: gearAssignments.bookingId,
-      label: gearItems.label,
-      serviceDueAt: gearItems.serviceDueAt,
-    })
-    .from(gearAssignments)
-    .innerJoin(gearItems, eq(gearItems.id, gearAssignments.gearItemId))
-    .where(
+    .select({ bookingId: bookings.id, cardId: nitroxCertifications.id })
+    .from(bookings)
+    .leftJoin(
+      nitroxCertifications,
       and(
-        eq(gearAssignments.shopId, shopId),
-        eq(gearAssignments.status, "assigned"),
-        ne(gearItems.state, "retired"),
-        isNotNull(gearItems.serviceDueAt),
-        inArray(gearAssignments.bookingId, bookingIds),
+        eq(nitroxCertifications.personId, bookings.personId),
+        eq(nitroxCertifications.shopId, bookings.shopId),
+        eq(nitroxCertifications.status, "verified"),
       ),
     )
-    .orderBy(asc(gearItems.serviceDueAt));
-  const tripByBooking = new Map<string, string>();
-  for (const [tripId, ids] of bookingIdsByTrip) for (const id of ids) tripByBooking.set(id, tripId);
-  for (const row of rows) {
-    const tripId = tripByBooking.get(row.bookingId);
-    const sails = tripId ? startsAtByTrip.get(tripId) : undefined;
-    // Service due after this boat comes back is the gear room's problem, not today's.
-    if (!tripId || !sails || !row.serviceDueAt || row.serviceDueAt > sails) continue;
-    const labels = byTrip.get(tripId) ?? [];
-    if (!labels.includes(row.label)) byTrip.set(tripId, [...labels, row.label]);
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.wantsNitrox, true),
+        inArray(bookings.id, bookingIds),
+      ),
+    );
+  const blocked = new Set(rows.filter((row) => !row.cardId).map((row) => row.bookingId));
+  for (const [tripId, ids] of bookingIdsByTrip) {
+    const count = ids.filter((id) => blocked.has(id)).length;
+    if (count > 0) ungated.set(tripId, count);
   }
-  return byTrip;
+  return ungated;
 }
 
 /** Wait-list depth per trip, so a freed seat can be offered to a real person. */
@@ -233,31 +221,27 @@ export async function getTodayWork(
     ]),
   );
 
-  const [boarded, unpacked, gearDue, waitlisted, staffedTrips, deliveryIssues] = await Promise.all([
-    boardedCountsByTrip(
-      db,
-      shopId,
-      todayTrips.map((trip) => trip.id),
-    ),
-    unpackedRequestsByTrip(db, shopId, bookingIdsByTrip),
-    gearDueByTrip(
-      db,
-      shopId,
-      bookingIdsByTrip,
-      new Map(inWindow.map((trip) => [trip.id, trip.startsAt])),
-    ),
-    waitlistCountsByTrip(
-      db,
-      shopId,
-      inWindow.map((trip) => trip.id),
-    ),
-    tripsWithInstructor(
-      db,
-      shopId,
-      inWindow.filter((trip) => trip.course).map((trip) => trip.id),
-    ),
-    listNotificationDeliveryIssues(db, shopId),
-  ]);
+  const [boarded, missingFit, ungatedNitrox, waitlisted, staffedTrips, deliveryIssues] =
+    await Promise.all([
+      boardedCountsByTrip(
+        db,
+        shopId,
+        todayTrips.map((trip) => trip.id),
+      ),
+      missingFitByTrip(db, shopId, bookingIdsByTrip),
+      ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
+      waitlistCountsByTrip(
+        db,
+        shopId,
+        inWindow.map((trip) => trip.id),
+      ),
+      tripsWithInstructor(
+        db,
+        shopId,
+        inWindow.filter((trip) => trip.course).map((trip) => trip.id),
+      ),
+      listNotificationDeliveryIssues(db, shopId),
+    ]);
 
   const actions: TodayAction[] = [];
 
@@ -278,33 +262,32 @@ export async function getTodayWork(
       }));
     actions.push(...collapseDiverActions(blockedDivers, shopSlug, now));
 
-    const unpackedCount = unpacked.get(trip.id) ?? 0;
-    if (unpackedCount > 0) {
+    const withoutFit = missingFit.get(trip.id) ?? 0;
+    if (withoutFit > 0) {
       actions.push({
-        id: `gear:${trip.id}`,
-        kind: "gear_packing",
+        id: `prep:${trip.id}`,
+        kind: "dive_prep",
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${unpackedCount} ${unpackedCount === 1 ? "diver has" : "divers have"} a rental request with nothing packed yet.`,
-        actionLabel: "Pack gear",
-        href: tripHref,
+        detail: `${withoutFit} ${withoutFit === 1 ? "diver has" : "divers have"} no rental fit on file, so the prep list is incomplete.`,
+        actionLabel: "Open prep list",
+        href: `${tripHref}/prep`,
         dueAt: trip.startsAt,
       });
     }
 
-    // Only kit due on or before this boat day is this boat's problem.
-    const overdue = (gearDue.get(trip.id) ?? []).filter(Boolean);
-    if (overdue.length > 0) {
+    const ungatedCount = ungatedNitrox.get(trip.id) ?? 0;
+    if (ungatedCount > 0) {
       actions.push({
-        id: `service:${trip.id}`,
-        kind: "gear_service",
+        id: `nitrox:${trip.id}`,
+        kind: "nitrox_gate",
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${overdue.slice(0, 3).join(", ")}${overdue.length > 3 ? ` and ${overdue.length - 3} more` : ""} ${overdue.length === 1 ? "is" : "are"} packed but due for service before this trip sails.`,
-        actionLabel: "Open gear room",
-        href: `/shop/${shopSlug}/gear`,
+        detail: `${ungatedCount} ${ungatedCount === 1 ? "diver wants" : "divers want"} enriched air without a verified card — those tanks are planned as air.`,
+        actionLabel: "Open prep list",
+        href: `${tripHref}/prep`,
         dueAt: trip.startsAt,
       });
     }

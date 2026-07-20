@@ -1,6 +1,4 @@
 import type { listDiveSites } from "@/db/dive-sites";
-import type { listAvailableGear } from "@/db/gear";
-import type { listTripRentalGearRequests } from "@/db/gear-requests";
 import type {
   getTripRequirements,
   getTripSiteRequirement,
@@ -14,6 +12,7 @@ import type {
   listTripDives,
 } from "@/db/trips";
 import type { listTripWaiverStatuses } from "@/db/waivers";
+import type { RentalFit } from "@/lib/dive-prep";
 
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type RosterEntry = Awaited<ReturnType<typeof getTripRoster>>[number];
@@ -25,13 +24,9 @@ export type WaiverRow = Awaited<ReturnType<typeof listTripWaiverStatuses>>[numbe
 export type ReadinessRow = Awaited<ReturnType<typeof listTripReadiness>>[number];
 export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
 export type SiteRequirement = Awaited<ReturnType<typeof getTripSiteRequirement>>;
-export type AvailableGear = Awaited<ReturnType<typeof listAvailableGear>>;
+export type RentalFitByBooking = Map<string, RentalFit | null>;
 
-type RentalRow = Awaited<ReturnType<typeof listTripRentalGearRequests>>[number];
-export type GearRequestByBooking = Map<string, RentalRow["request"]>;
-export type GearProfileByBooking = Map<string, RentalRow["profile"]>;
-
-export type AssignedGearItem = { assignmentId: string; label: string; type: string };
-export type GearByBooking = Map<string, AssignedGearItem[]>;
+/** A diver's nitrox request, alongside whether their card actually clears it. */
+export type NitroxByBooking = Map<string, { requested: boolean; approved: boolean }>;
 export type ReadinessByBooking = Map<string, ReadinessRow>;
 export type WaiverByBooking = Map<string, WaiverRow>;

@@ -12,7 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Product — Scuba",
-  description: "The dive-shop operating system for bookings, readiness, gear, and the boat.",
+  description: "The dive-shop operating system for bookings, readiness, trip prep, and the boat.",
 };
 
 export default function ProductPage() {

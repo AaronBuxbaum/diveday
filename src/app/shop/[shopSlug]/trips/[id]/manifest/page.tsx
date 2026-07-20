@@ -333,11 +333,10 @@ export default async function TripManifestPage({
                         </span>
                       </p>
                       <p>
-                        <span className="font-bold">Gear</span>
+                        <span className="font-bold">Rental fit</span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.gear.length > 0
-                            ? diver.gear.map((item) => item.label).join(", ")
-                            : "None assigned"}
+                          {diver.rentalFit.text}
+                          {diver.nitroxRequested ? " · Nitrox requested" : ""}
                         </span>
                       </p>
                     </div>
@@ -364,7 +363,7 @@ export default async function TripManifestPage({
                           name="note"
                           form={`not-boarded-${diver.bookingId}`}
                           maxLength={300}
-                          placeholder="Late to the boat, medical question, gear issue…"
+                          placeholder="Late to the boat, medical question, kit issue…"
                           className={`${controlClass} mt-1`}
                         />
                         <p className="mt-1 text-xs text-muted">

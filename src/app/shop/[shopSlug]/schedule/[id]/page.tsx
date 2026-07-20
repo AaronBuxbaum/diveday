@@ -6,8 +6,9 @@ import { FlashParams } from "@/components/FlashParams";
 import { getBookingForTrip } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
-import { getRentalGearProfile, getRentalGearRequest } from "@/db/gear-requests";
+import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { getBookingReadiness, getTripRequirements } from "@/db/readiness";
+import { getRentalFit } from "@/db/rental-fit";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { auth } from "@/lib/auth";
@@ -40,11 +41,11 @@ export default async function TripDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ booking?: string; waitlist?: string; error?: string; gear?: string }>;
+  searchParams: Promise<{ booking?: string; waitlist?: string; error?: string; fit?: string }>;
 }) {
   await connection();
   const { shopSlug, id: tripId } = await params;
-  const { booking: bookingId, waitlist: waitlistId, error, gear } = await searchParams;
+  const { booking: bookingId, waitlist: waitlistId, error, fit } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -86,12 +87,10 @@ export default async function TripDetailPage({
   );
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
   const requirement = confirmed ? await getTripRequirements(db, shop.id, tripId) : null;
-  const rentalRequest = confirmed
-    ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
-    : null;
-  const rentalProfile = confirmed
-    ? await getRentalGearProfile(db, shop.id, confirmed.person.id)
-    : null;
+  const rentalFit = confirmed ? await getRentalFit(db, shop.id, confirmed.person.id) : null;
+  const nitroxCardVerified = confirmed
+    ? (await verifiedNitroxPersonIds(db, shop.id)).has(confirmed.person.id)
+    : false;
 
   const inPast = trip.startsAt <= new Date();
   const full = isFull(trip);
@@ -136,10 +135,15 @@ export default async function TripDetailPage({
           confirmed={confirmed}
           readiness={readiness}
           requirement={requirement}
-          gearRef={{ ...tripRef, shopId: shop.id, bookingId: confirmed.booking.id }}
-          rentalRequest={rentalRequest}
-          rentalProfile={rentalProfile}
-          gearSaved={gear === "saved"}
+          fitRef={{
+            ...tripRef,
+            shopId: shop.id,
+            bookingId: confirmed.booking.id,
+            personId: confirmed.person.id,
+          }}
+          rentalFit={rentalFit}
+          nitroxCardVerified={nitroxCardVerified}
+          fitSaved={fit === "saved"}
         />
       ) : waitlistConfirmation ? (
         <WaitlistConfirmation

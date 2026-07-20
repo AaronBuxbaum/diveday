@@ -1,6 +1,6 @@
 # Scuba — agent guide
 
-Delight-first dive shop operations: **bookings, waivers, cert checks, gear, boat manifests**.
+Delight-first dive shop operations: **bookings, waivers, cert checks, trip prep, boat manifests**.
 Competitors have the features; we win on experience. AI agents are the developers. This file,
 `docs/`, scripts, and tests are the provider-neutral source of truth; provider-specific folders are
 adapters and must not introduce unique requirements.

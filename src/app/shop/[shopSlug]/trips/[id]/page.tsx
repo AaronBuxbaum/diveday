@@ -6,9 +6,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
-import { listAvailableGear, listTripGearAssignments } from "@/db/gear";
-import { listTripRentalGearRequests } from "@/db/gear-requests";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
+import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import {
   getTripCrewIds,
@@ -20,29 +19,29 @@ import {
   listTripDives,
 } from "@/db/trips";
 import { listTripWaiverStatuses } from "@/db/waivers";
+import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
+import { AddDiverSection } from "./_components/AddDiverSection";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { RosterSection } from "./_components/RosterSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
-import type { AssignedGearItem } from "./_components/types";
 import { WaitlistSection } from "./_components/WaitlistSection";
 import {
-  assignGearAction,
-  assignRecommendedGearAction,
+  addBookingAction,
+  addToWaitlistAction,
   cancelTripAction,
   clearConditionsAction,
   issueWaiverAction,
   markPaymentAction,
   reinstateTripAction,
   removeBookingAction,
-  returnGearAction,
   saveConditionsAction,
   saveCrewAction,
   saveDetails,
@@ -77,9 +76,7 @@ export default async function ManageTripPage({
     waiverRows,
     requirement,
     readinessRows,
-    availableGear,
-    tripGearRows,
-    gearRequestRows,
+    prepDivers,
     diveSiteList,
     tripDiveList,
     waitlist,
@@ -90,9 +87,7 @@ export default async function ManageTripPage({
     listTripWaiverStatuses(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
     listTripReadiness(db, shop.id, tripId),
-    listAvailableGear(db, shop.id),
-    listTripGearAssignments(db, shop.id, tripId),
-    listTripRentalGearRequests(db, shop.id, tripId),
+    listTripPrepDivers(db, shop.id, tripId),
     listDiveSites(db, shop.id),
     listTripDives(db, shop.id, tripId),
     getTripWaitlist(db, tripId),
@@ -109,22 +104,13 @@ export default async function ManageTripPage({
         (entry) => crewIds.includes(entry.person.id) && entry.roles.includes("instructor"),
       ),
   );
-  const gearByBooking = new Map<string, AssignedGearItem[]>();
-  for (const row of tripGearRows) {
-    if (!row.assignment || !row.item) continue;
-    const current = gearByBooking.get(row.booking.id) ?? [];
-    current.push({
-      assignmentId: row.assignment.id,
-      label: row.item.label,
-      type: row.item.type.replace("_", " "),
-    });
-    gearByBooking.set(row.booking.id, current);
-  }
-  const gearRequestByBooking = new Map(
-    gearRequestRows.map((row) => [row.booking.id, row.request] as const),
-  );
-  const gearProfileByBooking = new Map(
-    gearRequestRows.map((row) => [row.booking.id, row.profile] as const),
+  const rentalFitByBooking = new Map(prepDivers.map((row) => [row.bookingId, row.fit] as const));
+  const nitroxByBooking = new Map(
+    prepDivers
+      .filter((row) => row.wantsNitrox)
+      .map(
+        (row) => [row.bookingId, { requested: true, approved: nitroxTanksApproved(row) }] as const,
+      ),
   );
   // The roster is the spine of the diver section; waiver and readiness detail
   // hang off it by booking id so each diver renders as one consolidated card.
@@ -209,6 +195,14 @@ export default async function ManageTripPage({
 
       <WaitlistSection waitlist={waitlist} />
 
+      {cancelled ? null : (
+        <AddDiverSection
+          full={isFull(trip)}
+          addBookingAction={addBookingAction.bind(null, shopSlug, tripId)}
+          addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
+        />
+      )}
+
       <RequirementsSection
         action={saveRequirementsAction.bind(null, shopSlug, tripId)}
         trip={trip}
@@ -235,15 +229,10 @@ export default async function ManageTripPage({
         roster={roster}
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
-        gearByBooking={gearByBooking}
-        gearRequestByBooking={gearRequestByBooking}
-        gearProfileByBooking={gearProfileByBooking}
-        availableGear={availableGear}
+        rentalFitByBooking={rentalFitByBooking}
+        nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
-        assignRecommendedGearAction={assignRecommendedGearAction.bind(null, shopSlug, tripId)}
         issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
-        returnGearAction={returnGearAction.bind(null, shopSlug, tripId)}
-        assignGearAction={assignGearAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
       />

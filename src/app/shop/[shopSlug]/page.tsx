@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 /**
  * Today is a work queue, not a dashboard. Two questions, in order: can the
  * boats leaving today sail, and who needs me before they do? Anything a nav
- * click already answers — the schedule, the diver list, the gear room — is
+ * click already answers — the schedule, the diver list — is
  * deliberately not repeated here.
  */
 export default async function ShopPage({

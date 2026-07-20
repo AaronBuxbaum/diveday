@@ -9,7 +9,7 @@ import {
   restoreDiver,
   updateDiver,
 } from "./divers";
-import { saveRentalGearProfile } from "./gear-requests";
+import { saveRentalFit } from "./rental-fit";
 
 describe("person-first diver records", () => {
   it("composes cards, fit, and history from one diver record", async () => {
@@ -20,9 +20,14 @@ describe("person-first diver records", () => {
     expect(priya).toMatchObject({ certificationCount: 1, pendingCertificationCount: 0 });
     if (!priya) throw new Error("seed diver missing");
 
-    const profile = await saveRentalGearProfile(db, {
+    const profile = await saveRentalFit(db, {
       shopId: shop.id,
       personId: priya.person.id,
+      rentsBcd: true,
+      rentsRegulator: false,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      rentsWeights: true,
       bcdSize: "M",
       wetsuitSize: "3 mm / M",
       finSize: "L",
@@ -31,7 +36,7 @@ describe("person-first diver records", () => {
     expect(profile).toMatchObject({ bcdSize: "M", wetsuitSize: "3 mm / M" });
 
     const detail = await getDiverProfile(db, shop.id, priya.person.id);
-    expect(detail?.gearProfile).toMatchObject({ bcdSize: "M", finSize: "L" });
+    expect(detail?.rentalFit).toMatchObject({ bcdSize: "M", finSize: "L", rentsRegulator: false });
     expect(detail?.certifications).toHaveLength(1);
   });
 

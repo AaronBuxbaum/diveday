@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
   isRollCallCheckpoint,
@@ -8,8 +9,9 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import type { AppDb } from "./client";
-import { listTripGearAssignments } from "./gear";
+import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
+import { rentalFitByBooking } from "./rental-fit";
 import { bookings, people, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
 import { getTripRoster, getTripWithBooked } from "./trips";
 
@@ -79,7 +81,7 @@ async function listLatestRollCallByBooking(
 /**
  * The manifest is a derived safety view, never a separate roster people can
  * accidentally edit out of sync. Every active booking starts from the trip
- * roster and is joined with the shared readiness, gear, and roll-call records.
+ * roster and is joined with the shared readiness, fit, and roll-call records.
  */
 export async function getTripManifests(
   db: AppDb,
@@ -89,23 +91,17 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const [roster, readinessRows, gearRows, crew, ...rollCalls] = await Promise.all([
+  const [roster, readinessRows, certified, fitByBooking, crew, ...rollCalls] = await Promise.all([
     getTripRoster(db, tripId),
     listTripReadiness(db, shopId, tripId),
-    listTripGearAssignments(db, shopId, tripId),
+    verifiedNitroxPersonIds(db, shopId),
+    rentalFitByBooking(db, shopId, tripId),
     listTripCrew(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
   );
-  const gearByBooking = new Map<string, { label: string; type: string }[]>();
-  for (const row of gearRows) {
-    if (!row.item) continue;
-    const current = gearByBooking.get(row.booking.id) ?? [];
-    current.push({ label: row.item.label, type: row.item.type.replace("_", " ") });
-    gearByBooking.set(row.booking.id, current);
-  }
   const tripInput = {
     id: trip.id,
     title: trip.title,
@@ -120,7 +116,9 @@ export async function getTripManifests(
     emergencyContactName: person.emergencyContactName,
     emergencyContactPhone: person.emergencyContactPhone,
     readiness: readinessByBooking.get(booking.id),
-    gear: gearByBooking.get(booking.id) ?? [],
+    rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
+    // The card is re-checked here, so a revoked card takes the request off the manifest.
+    nitroxRequested: booking.wantsNitrox && certified.has(person.id),
   }));
   return checkpoints.map((checkpoint, index) => {
     const rollCallByBooking = rollCalls[index] ?? new Map();

@@ -10,7 +10,16 @@ async function signInAsOwner(page: Page) {
   await expect(page).toHaveURL(/\/shop/);
 }
 
-test("staff records and verifies a nitrox card, then logs a fill with a derived MOD", async ({
+async function openWreckTrip(page: Page) {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+    .getByRole("link")
+    .click();
+}
+
+test("a verified nitrox card turns a diver's tanks to enriched air on the prep list", async ({
   page,
 }) => {
   // A unique card number keeps the flow self-contained and re-run safe.
@@ -36,39 +45,45 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
   await card.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByRole("status")).toContainText("verified");
 
-  // Log a fill for that now-certified diver on the wreck trip.
-  await page.goto("/shop/blue-mantis/schedule");
-  await page
-    .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link")
-    .click();
-  await page.getByRole("link", { name: "Nitrox fills" }).click();
+  await openWreckTrip(page);
+  await page.getByRole("link", { name: "Prep list" }).click();
   await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
-  await page.locator('select[name="bookingId"]').selectOption({ label: "June Park" });
-  await page.locator('select[name="gearItemId"]').selectOption({ index: 1 });
-  await page.locator('input[name="oxygenPercent"]').fill("32");
-  await page.locator('input[name="analyzerSignature"]').fill("June Park");
-  await page.getByRole("button", { name: "Log fill" }).click();
-
-  await expect(page.getByRole("status")).toContainText("Fill logged");
-  // EAN32 at ppO2 1.4 → 33 m MOD.
-  await expect(page.getByText(/MOD 33 m/).first()).toBeVisible();
+  // One tank per diver per dive, and the seeded nitrox request is on the split.
+  await expect(page.getByText("one tank per diver per dive")).toBeVisible();
+  const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
+  await expect(tanks).toContainText("Nitrox");
+  // Nothing on this page claims to know what is in a cylinder.
+  await expect(page.getByText("Scuba logs no gas analysis")).toBeVisible();
 });
 
-test("an uncertified diver cannot be selected for a fill", async ({ page }) => {
+test("a nitrox request without a verified card is planned as air and called out", async ({
+  page,
+}) => {
   await signInAsOwner(page);
+  await openWreckTrip(page);
+  await page.getByRole("link", { name: "Prep list" }).click();
+
+  // The prep list is derived from rental fit, so it always lists tanks even
+  // when nobody on the boat rents a single piece of kit.
+  await expect(page.getByRole("heading", { name: "Tanks" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Rental kit" })).toBeVisible();
+});
+
+test("a diver without a verified card is not offered nitrox at booking", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
     .getByRole("link")
     .click();
-  await page.getByRole("link", { name: "Nitrox fills" }).click();
+  await page.getByLabel("Name").fill("Nora Quinn");
+  await page.getByLabel("Email").fill(`nora+${Date.now()}@example.com`);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
-  // Sam Whitfield (seeded booking, no nitrox card) is present but disabled.
-  const option = page.locator("option", { hasText: "Sam Whitfield" });
-  await expect(option).toHaveAttribute("disabled", "");
-  await expect(option).toContainText("no verified nitrox card");
+  // No card on file, so the request is not offered at all — the diver is told
+  // what to do instead of being allowed to ask for a mix they can't breathe.
+  await expect(page.getByText("Enriched air needs a verified nitrox card")).toBeVisible();
+  await expect(page.locator('input[name="nitrox"]')).toHaveCount(0);
 });
