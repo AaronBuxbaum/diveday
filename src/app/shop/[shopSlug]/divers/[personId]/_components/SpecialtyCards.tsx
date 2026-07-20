@@ -88,7 +88,9 @@ export function SpecialtyCards({
       </div>
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
         {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
-          <li className="px-4 py-5 text-sm text-muted">No specialty cards on file.</li>
+          <li className="px-4 py-5 text-sm text-muted">
+            No specialty or nitrox cards yet — add one above when they earn it.
+          </li>
         ) : (
           <>
             {diver.specialtyCertifications.map((card) => (

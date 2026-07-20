@@ -132,6 +132,12 @@ export default async function TripManifestPage({
           <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
             Live source · offline copy available
           </span>
+          <Link
+            href={`/shop/${shopSlug}/trips/${tripId}/check-in`}
+            className="text-sm font-semibold text-primary hover:underline"
+          >
+            Counter check-in →
+          </Link>
           <PrintButton />
         </div>
       </header>

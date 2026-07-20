@@ -106,7 +106,7 @@ export type TodayAction = {
  * the one surface that actually fixes it. Card evidence lives on the person
  * record; waiver, payment, and requirement work lives on the trip roster.
  */
-const BLOCKER_ACTIONS: Record<
+export const BLOCKER_ACTIONS: Record<
   ReadinessBlockerCode,
   {
     kind: TodayActionKind;

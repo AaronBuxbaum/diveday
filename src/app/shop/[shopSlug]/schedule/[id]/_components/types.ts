@@ -1,7 +1,7 @@
 import type { getBookingForTrip } from "@/db/bookings";
 import type { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getRentalGearProfile, getRentalGearRequest } from "@/db/gear-requests";
-import type { getBookingReadiness } from "@/db/readiness";
+import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { getShopBySlug } from "@/db/shops";
 import type { getTripWithBooked, listTripDives } from "@/db/trips";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
@@ -11,6 +11,7 @@ export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;
+export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
 export type RentalRequest = Awaited<ReturnType<typeof getRentalGearRequest>> | null;
 export type RentalProfile = Awaited<ReturnType<typeof getRentalGearProfile>> | null;
 export type AutomatedForecast = Awaited<ReturnType<typeof fetchAutomatedMarineForecast>>;

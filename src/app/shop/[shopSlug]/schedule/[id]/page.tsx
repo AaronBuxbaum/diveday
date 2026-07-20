@@ -7,7 +7,7 @@ import { getBookingForTrip } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import { getRentalGearProfile, getRentalGearRequest } from "@/db/gear-requests";
-import { getBookingReadiness } from "@/db/readiness";
+import { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { auth } from "@/lib/auth";
@@ -85,6 +85,7 @@ export default async function TripDetailPage({
     }),
   );
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
+  const requirement = confirmed ? await getTripRequirements(db, shop.id, tripId) : null;
   const rentalRequest = confirmed
     ? await getRentalGearRequest(db, shop.id, confirmed.booking.id)
     : null;
@@ -134,6 +135,7 @@ export default async function TripDetailPage({
           trip={trip}
           confirmed={confirmed}
           readiness={readiness}
+          requirement={requirement}
           gearRef={{ ...tripRef, shopId: shop.id, bookingId: confirmed.booking.id }}
           rentalRequest={rentalRequest}
           rentalProfile={rentalProfile}

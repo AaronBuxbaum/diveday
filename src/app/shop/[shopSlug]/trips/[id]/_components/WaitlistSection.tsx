@@ -11,7 +11,8 @@ export function WaitlistSection({ waitlist }: { waitlist: Waitlist }) {
       </p>
       {waitlist.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          No one is waiting for a spot yet.
+          No one’s waiting yet — when the trip sells out, divers can join the wait list from the
+          public trip page.
         </p>
       ) : (
         <ol className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
