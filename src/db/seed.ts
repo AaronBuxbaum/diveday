@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { courseSlug } from "@/lib/courses";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -67,12 +68,36 @@ function at(daysFromNow: number, hour: number, minute = 0): Date {
  * the first thing staff see, and a demo that never has a boat out cannot show
  * it. Always in the future, so it never falls out of the upcoming schedule.
  */
-function hoursFromNow(hours: number): Date {
-  const d = new Date(Date.now() + hours * 60 * 60 * 1000);
+function hoursFromNow(hours: number, from = new Date()): Date {
+  const d = new Date(from.getTime() + hours * 60 * 60 * 1000);
   // Round up to the next half hour: dive boats leave at 7:30, not 7:49, and a
   // ragged time reads as a bug in every screenshot of the demo.
   const step = 30 * 60 * 1000;
   return new Date(Math.ceil(d.getTime() / step) * step);
+}
+
+const DEMO_SHOP_TIMEZONE = "America/New_York";
+
+/**
+ * Start of the seeded departure that must sail *today in the shop's timezone*.
+ * Within five hours of local midnight the plain now+5h offset rounds into
+ * tomorrow, which empties the departure board the demo (and the Today tests)
+ * are built around — so it clamps to the last half-hour slot that still sails
+ * today. Only once local midnight is closer than that final slot does the
+ * trip concede to tomorrow morning: "today, in the future" has run out of room.
+ */
+export function demoTodayDepartureStart(
+  now = new Date(),
+  timeZone: string = DEMO_SHOP_TIMEZONE,
+): Date {
+  const localDay = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
+  const candidate = hoursFromNow(5, now);
+  if (localDay(candidate) === localDay(now)) return candidate;
+  const lastSlotToday = wallTimeToUtc(
+    { ...utcToWallTime(now, timeZone), hour: 23, minute: 30 },
+    timeZone,
+  );
+  return lastSlotToday.getTime() > now.getTime() ? lastSlotToday : candidate;
 }
 
 export async function seedIfEmpty(db: DbExecutor): Promise<void> {
@@ -93,7 +118,7 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
     .values({
       name: "Blue Mantis Divers",
       slug: DEMO_SHOP_SLUG,
-      timezone: "America/New_York",
+      timezone: DEMO_SHOP_TIMEZONE,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@bluemantis.example",
@@ -989,6 +1014,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     return courseId ? [{ shopId, courseId, ...trip }] : [];
   }
 
+  const todaySailStart = demoTodayDepartureStart();
   const tripRows = await db
     .insert(trips)
     .values([
@@ -997,8 +1023,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         diveSiteId: siteByName.get("Molasses Reef")?.id,
         title: "Two-Tank Reef — Molasses & French",
         description: "Morning double dip on the outer reef. All levels, OW required.",
-        startsAt: hoursFromNow(5), // sails today, so Today always has a board
-        endsAt: hoursFromNow(8.5),
+        startsAt: todaySailStart, // sails today, so Today always has a board
+        endsAt: new Date(todaySailStart.getTime() + 3.5 * 60 * 60 * 1000),
         capacity: 12,
       },
       {
