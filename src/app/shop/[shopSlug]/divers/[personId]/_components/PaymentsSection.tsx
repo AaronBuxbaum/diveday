@@ -35,7 +35,7 @@ export function PaymentsSection({
 
       {diver.bookings.length === 0 && diver.orders.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
-          No trip payments yet.
+          No payments yet — they’ll appear here once this diver books a trip or you send an invoice.
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">

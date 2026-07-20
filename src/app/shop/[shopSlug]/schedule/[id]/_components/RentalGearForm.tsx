@@ -29,7 +29,7 @@ export function RentalGearForm({
           role="status"
           className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
         >
-          Your gear request is with the crew.
+          Your gear request is with the crew — they’ll have it sized and packed before you arrive.
         </p>
       ) : null}
       <form action={saveGearRequest.bind(null, gearRef)} className="mt-4 flex flex-col gap-4">
