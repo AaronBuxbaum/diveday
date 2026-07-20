@@ -25,7 +25,10 @@ export function CrewSection({
         </p>
       ) : null}
       {staff.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">No staff on file yet.</p>
+        <p className="mt-4 text-sm text-muted">
+          No crew to assign yet — your instructors and divemasters show up here once they’re on the
+          team.
+        </p>
       ) : (
         <form action={action} className="mt-4 flex flex-col gap-3">
           <ul className="divide-y divide-border rounded-lg border border-border bg-surface">

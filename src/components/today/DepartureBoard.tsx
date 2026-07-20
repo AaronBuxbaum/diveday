@@ -64,10 +64,16 @@ function DepartureCard({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
+            href={`/shop/${shopSlug}/trips/${departure.tripId}/check-in`}
             className={buttonClass()}
           >
-            Open manifest
+            Check in
+          </Link>
+          <Link
+            href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            Manifest
           </Link>
           <Link
             href={`/shop/${shopSlug}/trips/${departure.tripId}`}
@@ -120,7 +126,8 @@ export function DepartureBoard({
         Sailing today
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Roll call runs from the manifest. Readiness is rechecked the moment you board someone.
+        Check divers in at the counter or run roll call from the manifest — readiness is rechecked
+        the moment you board someone.
       </p>
       <ul className="mt-4 flex flex-col gap-3">
         {departures.map((departure) => (

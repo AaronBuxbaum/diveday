@@ -8,6 +8,7 @@ const linkClass =
 
 const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
   { label: "Today", suffix: "" },
+  { label: "Blockers", suffix: "/blockers" },
   { label: "Divers", suffix: "/divers" },
   // Staff work a trip on /trips/[id], which is the Schedule surface's detail
   // view — keep the Schedule tab lit so they don't lose their place.
@@ -40,7 +41,7 @@ function navClass(active: boolean) {
 
 export function ShopNavLinks({ root, className = "" }: { root: string; className?: string }) {
   const pathname = usePathname();
-  const isBoatSurface = pathname.includes("/manifest");
+  const isBoatSurface = pathname.includes("/manifest") || pathname.includes("/check-in");
   const moreIsActive = moreGroups.some((group) =>
     group.links.some(([, suffix]) => isCurrent(pathname, `${root}${suffix}`, root)),
   );

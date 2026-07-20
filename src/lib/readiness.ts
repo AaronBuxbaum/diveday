@@ -107,6 +107,31 @@ export type ReadinessBlockerCode =
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
 
+/** The requirement family a blocker belongs to, shared by every readiness view. */
+export type BlockerCategory = "waiver" | "certification" | "payment" | "setup";
+
+export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
+  requirements_not_configured: "setup",
+  readiness_unavailable: "setup",
+  waiver_not_sent: "waiver",
+  waiver_pending: "waiver",
+  waiver_expired: "waiver",
+  medical_review: "waiver",
+  certification_missing: "certification",
+  certification_pending: "certification",
+  certification_rejected: "certification",
+  certification_expired: "certification",
+  certification_insufficient: "certification",
+  specialty_missing: "certification",
+  specialty_pending: "certification",
+  specialty_rejected: "certification",
+  specialty_expired: "certification",
+  nitrox_missing: "certification",
+  nitrox_pending: "certification",
+  nitrox_rejected: "certification",
+  payment_due: "payment",
+};
+
 export type ReadinessResult = {
   status: "ready" | "blocked";
   blockers: ReadinessBlocker[];

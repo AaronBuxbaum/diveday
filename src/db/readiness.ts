@@ -2,7 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import type { CertVerificationProvider, CertVerificationResult } from "@/lib/cert-verification";
 import { verifyCard } from "@/lib/cert-verification";
 import type { SiteCertRequirement } from "@/lib/readiness";
-import { calculateReadiness } from "@/lib/readiness";
+import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
 import { paymentsByBooking } from "./payments";
 import type { DiveSpecialty } from "./schema";
@@ -13,6 +13,7 @@ import {
   nitroxCertifications,
   people,
   personRoles,
+  shops,
   specialtyCertifications,
   tripRequirements,
   trips,
@@ -382,4 +383,60 @@ export async function getBookingReadiness(db: DbExecutor, shopId: string, bookin
   if (!booking) return null;
   const readiness = await listTripReadiness(db, shopId, booking.tripId);
   return readiness.find((row) => row.booking.id === bookingId)?.readiness ?? null;
+}
+
+export type BookingReadinessDetail = {
+  shop: { name: string; timezone: string };
+  trip: { id: string; title: string; startsAt: Date; endsAt: Date };
+  person: { fullName: string };
+  requirement: Awaited<ReturnType<typeof getTripRequirements>>;
+  readiness: NonNullable<Awaited<ReturnType<typeof getBookingReadiness>>>;
+  cancelled: boolean;
+};
+
+/**
+ * Everything the no-login diver readiness page needs, keyed only by a booking
+ * id (the signed link is the capability, so there is no shop scope to pass).
+ * Fails closed to null when the booking, trip, or shop is missing.
+ */
+export async function getBookingReadinessDetail(
+  db: DbExecutor,
+  bookingId: string,
+): Promise<BookingReadinessDetail | null> {
+  const [row] = await db
+    .select({
+      shopId: bookings.shopId,
+      tripId: bookings.tripId,
+      status: bookings.status,
+      tripTitle: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      personName: people.fullName,
+      shopName: shops.name,
+      timezone: shops.timezone,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!row) return null;
+
+  const readinessRows = await listTripReadiness(db, row.shopId, row.tripId);
+  const match = readinessRows.find((entry) => entry.booking.id === bookingId);
+  // A cancelled booking still resolves (so the page can say so plainly) but the
+  // readiness engine only knows non-cancelled roster rows; fail closed if it's
+  // gone from the roster for any other reason.
+  const readiness = match?.readiness ?? unavailableReadiness();
+  const requirement = match?.requirement ?? (await getTripRequirements(db, row.shopId, row.tripId));
+
+  return {
+    shop: { name: row.shopName, timezone: row.timezone },
+    trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
+    person: { fullName: row.personName },
+    requirement,
+    readiness,
+    cancelled: row.status === "cancelled",
+  };
 }

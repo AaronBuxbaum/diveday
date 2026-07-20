@@ -85,7 +85,9 @@ export function CertificationCards({
       </div>
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
         {diver.certifications.length === 0 ? (
-          <li className="px-4 py-5 text-sm text-muted">No level cards on file.</li>
+          <li className="px-4 py-5 text-sm text-muted">
+            No level cards yet — add their first card above so it can make them trip-ready.
+          </li>
         ) : (
           diver.certifications.map((card) => (
             <li

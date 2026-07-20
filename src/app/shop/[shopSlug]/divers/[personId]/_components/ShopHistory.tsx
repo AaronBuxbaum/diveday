@@ -38,7 +38,7 @@ export function ShopHistory({
       ) : null}
       {diver.bookings.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
-          No bookings yet.
+          No trips yet — book them onto an open charter and it’ll show up here.
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">

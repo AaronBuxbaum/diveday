@@ -11,6 +11,7 @@ import {
   createCertification,
   createSpecialtyCertification,
   getBookingReadiness,
+  getBookingReadinessDetail,
   listShopCertifications,
   listShopSpecialtyCertifications,
   listTripReadiness,
@@ -43,6 +44,25 @@ describe("trip readiness (in-memory PGlite)", () => {
 
     const oneBooking = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
     expect(oneBooking).toEqual(diver?.readiness);
+  });
+
+  it("resolves a booking's full readiness detail for the no-login diver page", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    const detail = await getBookingReadinessDetail(db, rosterEntry.booking.id);
+    expect(detail).not.toBeNull();
+    expect(detail?.shop.name).toBe(shop.name);
+    expect(detail?.trip.title).toBe(reef.title);
+    expect(detail?.person.fullName).toBe(rosterEntry.person.fullName);
+    expect(detail?.cancelled).toBe(false);
+    // The same fail-closed engine result staff and the manifest see.
+    expect(detail?.readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "waiver_not_sent" }),
+    );
+  });
+
+  it("fails closed to null for an unknown booking id", async () => {
+    const { db } = await readinessContext();
+    expect(await getBookingReadinessDetail(db, "00000000-0000-4000-8000-000000000000")).toBeNull();
   });
 
   it("requires review before new card evidence can satisfy a raised trip requirement", async () => {
