@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClass } from "@/components/ui/button";
 
 const links = [
   { href: "/product", label: "Product" },
@@ -20,15 +21,12 @@ export function MarketingNav() {
             <Link
               key={link.href}
               href={link.href}
-              className="min-h-11 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-foreground"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-foreground"
             >
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/onboard"
-            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-          >
+          <Link href="/onboard" className={buttonClass({ className: "font-semibold" })}>
             Start a trial
           </Link>
         </div>

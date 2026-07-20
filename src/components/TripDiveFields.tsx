@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 
 type DiveOption = { id: string; name: string };
 type InitialDive = {
@@ -8,9 +9,6 @@ type InitialDive = {
   diveSiteId: string | null;
   description: string | null;
 };
-
-const inputClass =
-  "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 
 export function TripDiveFields({
   diveSites,
@@ -33,21 +31,22 @@ export function TripDiveFields({
             {count === 2 ? "two-tank trip" : `${count}-dive trip`} plan.
           </p>
         </div>
-        <label className="flex shrink-0 flex-col gap-1 text-sm font-medium sm:w-36">
-          Number of dives
-          <select
-            name="plannedDives"
-            value={count}
-            onChange={(event) => setCount(Number(event.target.value))}
-            className={inputClass}
-          >
-            {[1, 2, 3, 4].map((value) => (
-              <option key={value} value={value}>
-                {value} {value === 1 ? "dive" : "dives"}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FieldGrid columns={1} className="shrink-0 sm:w-36">
+          <Field label="Number of dives">
+            <select
+              name="plannedDives"
+              value={count}
+              onChange={(event) => setCount(Number(event.target.value))}
+              className={controlClass}
+            >
+              {[1, 2, 3, 4].map((value) => (
+                <option key={value} value={value}>
+                  {value} {value === 1 ? "dive" : "dives"}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </FieldGrid>
       </div>
 
       <div className="mt-5 grid gap-3">
@@ -57,24 +56,22 @@ export function TripDiveFields({
           return (
             <fieldset key={number} className="rounded-xl border border-border bg-surface p-4">
               <legend className="px-1 text-sm font-semibold text-primary">Dive {number}</legend>
-              <div className="mt-1 grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  Name <span className="font-normal text-muted">(optional)</span>
+              <FieldGrid columns={2} className="mt-1">
+                <Field label="Name" hint="(optional)">
                   <input
                     name={`dive-${number}-title`}
                     type="text"
                     maxLength={120}
                     defaultValue={initial?.title ?? ""}
                     placeholder={number === 1 ? "Molasses Reef" : "Second tank · site TBD"}
-                    className={inputClass}
+                    className={controlClass}
                   />
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  Site briefing <span className="font-normal text-muted">(optional)</span>
+                </Field>
+                <Field label="Site briefing" hint="(optional)">
                   <select
                     name={`dive-${number}-siteId`}
                     defaultValue={initial?.diveSiteId ?? ""}
-                    className={inputClass}
+                    className={controlClass}
                   >
                     <option value="">No saved site briefing</option>
                     {diveSites.map((site) => (
@@ -83,19 +80,18 @@ export function TripDiveFields({
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-                  Diver-facing details <span className="font-normal text-muted">(optional)</span>
+                </Field>
+                <Field label="Diver-facing details" hint="(optional)" className="sm:col-span-2">
                   <textarea
                     name={`dive-${number}-description`}
                     rows={2}
                     maxLength={500}
                     defaultValue={initial?.description ?? ""}
                     placeholder="What divers should know about this part of the trip."
-                    className={inputClass}
+                    className={controlClass}
                   />
-                </label>
-              </div>
+                </Field>
+              </FieldGrid>
             </fieldset>
           );
         })}

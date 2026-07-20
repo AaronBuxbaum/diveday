@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { splitMediaUrls } from "@/lib/dive-sites";
@@ -41,9 +43,6 @@ const siteSchema = z
     (site) => (site.forecastLatitude === "") === (site.forecastLongitude === ""),
     "Add both forecast coordinates or leave both blank.",
   );
-
-const inputClass =
-  "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 
 export default async function NewDiveSitePage({
   params,
@@ -114,152 +113,154 @@ export default async function NewDiveSitePage({
             : "That didn’t save. Check the required name and links, then try again."}
         </p>
       ) : null}
-      <SiteForm action={createAction} inputClass={inputClass} submitLabel="Save site briefing" />
+      <SiteForm action={createAction} submitLabel="Save site briefing" />
     </main>
   );
 }
 
 function SiteForm({
   action,
-  inputClass,
   submitLabel,
 }: {
   action: (formData: FormData) => Promise<void>;
-  inputClass: string;
   submitLabel: string;
 }) {
   return (
     <form action={action} className="mt-8 flex flex-col gap-5">
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Name
-        <input
-          name="name"
-          required
-          maxLength={120}
-          placeholder="Molasses Reef"
-          className={inputClass}
-        />
-      </label>
+      <FieldGrid columns={1}>
+        <Field label="Name">
+          <input
+            name="name"
+            required
+            maxLength={120}
+            placeholder="Molasses Reef"
+            className={controlClass}
+          />
+        </Field>
+      </FieldGrid>
       <fieldset className="rounded-lg border border-border p-4">
         <legend className="px-1 text-sm font-medium">Automated marine forecast point</legend>
         <p className="mt-1 text-sm text-muted">
           Use the offshore dive point, not the shop address. Leave both blank to keep crew-only
           conditions.
         </p>
-        <div className="mt-4 grid gap-5 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Latitude
+        <FieldGrid columns={2} className="mt-4 gap-y-5">
+          <Field label="Latitude">
             <input
               name="forecastLatitude"
               type="number"
               step="any"
               min={-90}
               max={90}
-              className={inputClass}
+              className={controlClass}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Longitude
+          </Field>
+          <Field label="Longitude">
             <input
               name="forecastLongitude"
               type="number"
               step="any"
               min={-180}
               max={180}
-              className={inputClass}
+              className={controlClass}
             />
-          </label>
-        </div>
+          </Field>
+        </FieldGrid>
       </fieldset>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Location <span className="font-normal text-muted">(optional)</span>
-        <input
-          name="locationName"
-          maxLength={160}
-          placeholder="Key Largo National Marine Sanctuary"
-          className={inputClass}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        What makes this site special?
-        <textarea name="description" rows={3} maxLength={1200} className={inputClass} />
-      </label>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Satellite map image URL
-          <textarea name="satelliteImageUrl" rows={2} className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Route image URL <span className="font-normal text-muted">(optional)</span>
-          <textarea name="routeImageUrl" rows={2} className={inputClass} />
-        </label>
-      </div>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Site photo URLs <span className="font-normal text-muted">(one per line, up to six)</span>
-        <textarea name="imageUrls" rows={4} className={inputClass} />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        What might divers see?
-        <input
-          name="marineLife"
-          maxLength={400}
-          placeholder="Parrotfish, eagle rays, elkhorn coral"
-          className={inputClass}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Underwater briefing
-        <textarea name="marineLifeDescription" rows={3} maxLength={1200} className={inputClass} />
-      </label>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Difficulty <span className="font-normal text-muted">(optional)</span>
+      <FieldGrid columns={1} className="gap-y-5">
+        <Field label="Location" hint="(optional)">
+          <input
+            name="locationName"
+            maxLength={160}
+            placeholder="Key Largo National Marine Sanctuary"
+            className={controlClass}
+          />
+        </Field>
+        <Field label="What makes this site special?">
+          <textarea name="description" rows={3} maxLength={1200} className={controlClass} />
+        </Field>
+      </FieldGrid>
+      <FieldGrid columns={2} className="gap-y-5">
+        <Field label="Satellite map image URL">
+          <textarea name="satelliteImageUrl" rows={2} className={controlClass} />
+        </Field>
+        <Field label="Route image URL" hint="(optional)">
+          <textarea name="routeImageUrl" rows={2} className={controlClass} />
+        </Field>
+      </FieldGrid>
+      <FieldGrid columns={1} className="gap-y-5">
+        <Field label="Site photo URLs" hint="(one per line, up to six)">
+          <textarea name="imageUrls" rows={4} className={controlClass} />
+        </Field>
+        <Field label="What might divers see?">
+          <input
+            name="marineLife"
+            maxLength={400}
+            placeholder="Parrotfish, eagle rays, elkhorn coral"
+            className={controlClass}
+          />
+        </Field>
+        <Field label="Underwater briefing">
+          <textarea
+            name="marineLifeDescription"
+            rows={3}
+            maxLength={1200}
+            className={controlClass}
+          />
+        </Field>
+      </FieldGrid>
+      <FieldGrid columns={2} className="gap-y-5">
+        <Field label="Difficulty" hint="(optional)">
           <input
             name="difficulty"
             maxLength={120}
             placeholder="Calm, intermediate, advanced"
-            className={inputClass}
+            className={controlClass}
           />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Depth range <span className="font-normal text-muted">(optional)</span>
-          <input name="depthRange" maxLength={120} placeholder="20–45 ft" className={inputClass} />
-        </label>
-      </div>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Current and conditions notes <span className="font-normal text-muted">(optional)</span>
-        <textarea name="currentNote" rows={2} maxLength={500} className={inputClass} />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Dive plan <span className="font-normal text-muted">(optional)</span>
-        <textarea
-          name="divePlan"
-          rows={3}
-          maxLength={1200}
-          placeholder="Entry, route, turnaround, and exit notes."
-          className={inputClass}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Landmarks <span className="font-normal text-muted">(one per line, optional)</span>
-        <textarea name="landmarks" rows={3} maxLength={4000} className={inputClass} />
-      </label>
+        </Field>
+        <Field label="Depth range" hint="(optional)">
+          <input
+            name="depthRange"
+            maxLength={120}
+            placeholder="20–45 ft"
+            className={controlClass}
+          />
+        </Field>
+      </FieldGrid>
+      <FieldGrid columns={1} className="gap-y-5">
+        <Field label="Current and conditions notes" hint="(optional)">
+          <textarea name="currentNote" rows={2} maxLength={500} className={controlClass} />
+        </Field>
+        <Field label="Dive plan" hint="(optional)">
+          <textarea
+            name="divePlan"
+            rows={3}
+            maxLength={1200}
+            placeholder="Entry, route, turnaround, and exit notes."
+            className={controlClass}
+          />
+        </Field>
+        <Field label="Landmarks" hint="(one per line, optional)">
+          <textarea name="landmarks" rows={3} maxLength={4000} className={controlClass} />
+        </Field>
+      </FieldGrid>
       <fieldset className="rounded-2xl border border-border bg-surface-sunken p-5">
         <legend className="px-1 text-sm font-medium">Readiness gates</legend>
         <p className="text-sm text-muted">
           These requirements travel with the site into every new trip that uses it.
         </p>
-        <label className="mt-4 flex flex-col gap-1 text-sm font-medium">
-          Minimum certification
-          <select name="minimumCertificationLevel" defaultValue="" className={inputClass}>
-            <option value="">No level required by the site</option>
-            {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FieldGrid columns={1} className="mt-4">
+          <Field label="Minimum certification">
+            <select name="minimumCertificationLevel" defaultValue="" className={controlClass}>
+              <option value="">No level required by the site</option>
+              {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </FieldGrid>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
             <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
@@ -280,7 +281,7 @@ function SiteForm({
       </fieldset>
       <button
         type="submit"
-        className="mt-2 min-h-11 self-start rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+        className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
       >
         {submitLabel}
       </button>

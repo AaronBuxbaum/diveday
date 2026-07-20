@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 
 interface HomeCTAProps {
   enterDemoAction: () => Promise<void>;
@@ -14,14 +15,21 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
         <form action={enterDemoAction}>
           <SubmitButton
             pendingLabel="Spinning up your shop…"
-            className="inline-block min-h-11 rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70 cursor-pointer"
+            className={buttonClass({
+              size: "lg",
+              className: "cursor-pointer py-3 text-base disabled:opacity-70",
+            })}
           >
             Try the live demo
           </SubmitButton>
         </form>
         <Link
           href="/sign-in"
-          className="inline-block min-h-11 rounded-lg border border-border-strong bg-surface px-5 py-3 font-medium transition-colors duration-200 hover:bg-surface-sunken"
+          className={buttonClass({
+            variant: "secondary",
+            size: "lg",
+            className: "border-border-strong py-3 text-base",
+          })}
         >
           Sign in to your shop
         </Link>

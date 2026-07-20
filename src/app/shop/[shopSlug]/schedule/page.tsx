@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
 import { auth } from "@/lib/auth";
@@ -96,7 +97,7 @@ export default async function TripsPage({
           staffView ? (
             <Link
               href={`/shop/${shopSlug}/trips/new`}
-              className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+              className={buttonClass({ className: "rounded-xl" })}
             >
               <span aria-hidden="true">+</span> Schedule a trip
             </Link>

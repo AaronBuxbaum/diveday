@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getShopById, setShopJurisdiction } from "@/db/queries";
 import { createWaiverTemplate, listWaiverTemplates, setDefaultWaiverTemplate } from "@/db/waivers";
@@ -123,23 +125,20 @@ export default async function WaiverTemplatesPage({
           action={chooseJurisdictionAction}
           className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-end"
         >
-          <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
-            Jurisdiction
-            <select
-              name="jurisdiction"
-              defaultValue={shop.jurisdiction}
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-            >
-              {Object.entries(MEDICAL_JURISDICTION_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FieldGrid columns={1} className="flex-1">
+            <Field label="Jurisdiction">
+              <select name="jurisdiction" defaultValue={shop.jurisdiction} className={controlClass}>
+                {Object.entries(MEDICAL_JURISDICTION_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </FieldGrid>
           <button
             type="submit"
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
             Save questionnaire
           </button>
@@ -183,7 +182,10 @@ export default async function WaiverTemplatesPage({
                     <input type="hidden" name="templateId" value={template.id} />
                     <button
                       type="submit"
-                      className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                      className={buttonClass({
+                        variant: "secondary",
+                        className: "text-foreground",
+                      })}
                     >
                       Make default
                     </button>
@@ -202,36 +204,33 @@ export default async function WaiverTemplatesPage({
           signed.
         </p>
         <form action={createTemplateAction} className="mt-5 flex flex-col gap-5">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Template name
-            <input
-              name="title"
-              required
-              maxLength={120}
-              placeholder="Boat charter release"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Release text
-            <textarea
-              name="body"
-              required
-              rows={8}
-              maxLength={12_000}
-              placeholder="Write the release the diver will read and sign."
-              className="rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-            />
-          </label>
+          <FieldGrid columns={1} className="gap-y-5">
+            <Field label="Template name">
+              <input
+                name="title"
+                required
+                maxLength={120}
+                placeholder="Boat charter release"
+                className={controlClass}
+              />
+            </Field>
+            <Field label="Release text">
+              <textarea
+                name="body"
+                required
+                rows={8}
+                maxLength={12_000}
+                placeholder="Write the release the diver will read and sign."
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input name="makeDefault" type="checkbox" className="size-4 accent-primary" />
             Make this the default for new links
           </label>
           <div>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-            >
+            <button type="submit" className={buttonClass({ size: "lg" })}>
               Save new template
             </button>
           </div>

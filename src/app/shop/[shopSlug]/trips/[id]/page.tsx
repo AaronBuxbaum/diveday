@@ -5,6 +5,8 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import {
@@ -513,9 +515,6 @@ export default async function ManageTripPage({
     revalidateAndRedirect(back, `${back}?notice=${returned ? "gear-returned" : "gear-error"}`);
   }
 
-  const inputClass =
-    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
-
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <FlashParams params={["notice", "bid", "waiver"]} />
@@ -573,7 +572,7 @@ export default async function ManageTripPage({
               <input type="hidden" name="bookingId" value={undoBookingId} />
               <button
                 type="submit"
-                className="min-h-11 rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
               >
                 Undo
               </button>
@@ -589,10 +588,7 @@ export default async function ManageTripPage({
             Share this link with the diver. It expires in seven days and is replaced if you issue a
             new one.
           </p>
-          <Link
-            href={`/waivers/${waiver}`}
-            className="mt-3 inline-block min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-          >
+          <Link href={`/waivers/${waiver}`} className={buttonClass({ className: "mt-3" })}>
             Open waiver link
           </Link>
         </section>
@@ -601,27 +597,27 @@ export default async function ManageTripPage({
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Details</h2>
         <form action={saveDetails} className="mt-4 flex flex-col gap-5">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Title
-            <input
-              name="title"
-              type="text"
-              required
-              maxLength={120}
-              defaultValue={trip.title}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Description <span className="font-normal text-muted">(optional)</span>
-            <textarea
-              name="description"
-              rows={2}
-              maxLength={500}
-              defaultValue={trip.description ?? ""}
-              className={inputClass}
-            />
-          </label>
+          <FieldGrid columns={1} className="gap-y-5">
+            <Field label="Title">
+              <input
+                name="title"
+                type="text"
+                required
+                maxLength={120}
+                defaultValue={trip.title}
+                className={controlClass}
+              />
+            </Field>
+            <Field label="Description" hint="(optional)">
+              <textarea
+                name="description"
+                rows={2}
+                maxLength={500}
+                defaultValue={trip.description ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
           <TripDiveFields
             diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
             initialCount={trip.plannedDives}
@@ -631,39 +627,35 @@ export default async function ManageTripPage({
               description: dive.description,
             }))}
           />
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Date
+          <FieldGrid columns={1} className="gap-x-5 gap-y-5 sm:grid-cols-5">
+            <Field label="Date">
               <input
                 name="date"
                 type="date"
                 required
                 defaultValue={toDateInputValue(startWall)}
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Departs
+            </Field>
+            <Field label="Departs">
               <input
                 name="startTime"
                 type="time"
                 required
                 defaultValue={toTimeInputValue(startWall)}
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Returns
+            </Field>
+            <Field label="Returns">
               <input
                 name="endTime"
                 type="time"
                 required
                 defaultValue={toTimeInputValue(endWall)}
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Capacity
+            </Field>
+            <Field label="Capacity">
               <input
                 name="capacity"
                 type="number"
@@ -671,11 +663,10 @@ export default async function ManageTripPage({
                 min={1}
                 max={60}
                 defaultValue={trip.capacity}
-                className={`${inputClass} tabular-nums`}
+                className={`${controlClass} tabular-nums`}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Price per diver <span className="font-normal text-muted">(optional)</span>
+            </Field>
+            <Field label="Price per diver" hint="(optional)">
               <input
                 name="priceDollars"
                 type="number"
@@ -683,15 +674,12 @@ export default async function ManageTripPage({
                 min={0}
                 placeholder="$0.00"
                 defaultValue={trip.priceCents === null ? "" : (trip.priceCents / 100).toFixed(2)}
-                className={`${inputClass} tabular-nums`}
+                className={`${controlClass} tabular-nums`}
               />
-            </label>
-          </div>
+            </Field>
+          </FieldGrid>
           <div>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-            >
+            <button type="submit" className={buttonClass({ size: "lg", className: "text-base" })}>
               Save changes
             </button>
           </div>
@@ -704,54 +692,55 @@ export default async function ManageTripPage({
           Publish the crew’s read on the day. It replaces the automated marine outlook for divers.
         </p>
         <form action={saveConditionsAction} className="mt-5 flex flex-col gap-5">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Conditions overview
-            <textarea
-              name="conditionsSummary"
-              rows={2}
-              maxLength={600}
-              defaultValue={trip.conditionsSummary ?? ""}
-              placeholder="A calm morning is expected; the crew will confirm the final call at the dock."
-              className={inputClass}
-            />
-          </label>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Water temp °C
+          <FieldGrid columns={1}>
+            <Field label="Conditions overview">
+              <textarea
+                name="conditionsSummary"
+                rows={2}
+                maxLength={600}
+                defaultValue={trip.conditionsSummary ?? ""}
+                placeholder="A calm morning is expected; the crew will confirm the final call at the dock."
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+          <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+            <Field label="Water temp °C">
               <input
                 name="waterTemperatureC"
                 type="number"
                 min={-2}
                 max={40}
                 defaultValue={trip.waterTemperatureC ?? ""}
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Visibility metres
+            </Field>
+            <Field label="Visibility metres">
               <input
                 name="visibilityMeters"
                 type="number"
                 min={0}
                 max={100}
                 defaultValue={trip.visibilityMeters ?? ""}
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Surface notes
+            </Field>
+            <Field label="Surface notes">
               <input
                 name="surfaceConditions"
                 maxLength={300}
                 defaultValue={trip.surfaceConditions ?? ""}
                 placeholder="Light breeze · gentle chop"
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-          </div>
+            </Field>
+          </FieldGrid>
           <button
             type="submit"
-            className="min-h-11 self-start rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            className={buttonClass({
+              variant: "secondary",
+              className: "self-start text-foreground",
+            })}
           >
             Publish crew prediction
           </button>
@@ -760,7 +749,7 @@ export default async function ManageTripPage({
           <form action={clearConditionsAction} className="mt-3">
             <button
               type="submit"
-              className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
             >
               Return to automated outlook
             </button>
@@ -839,21 +828,22 @@ export default async function ManageTripPage({
                 />
                 Require payment to board
               </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Minimum certification
-                <select
-                  name="minimumCertificationLevel"
-                  defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-                >
-                  <option value="">No existing C-card required</option>
-                  {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FieldGrid columns={1}>
+                <Field label="Minimum certification">
+                  <select
+                    name="minimumCertificationLevel"
+                    defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
+                    className={controlClass}
+                  >
+                    <option value="">No existing C-card required</option>
+                    {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </FieldGrid>
             </div>
             <fieldset className="mt-5">
               <legend className="text-sm font-medium">Required specialties</legend>
@@ -914,7 +904,10 @@ export default async function ManageTripPage({
             ) : null}
             <button
               type="submit"
-              className="mt-5 min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+              className={buttonClass({
+                variant: "secondary",
+                className: "mt-5 text-foreground",
+              })}
             >
               Save requirements
             </button>
@@ -954,7 +947,7 @@ export default async function ManageTripPage({
             <div>
               <SubmitButton
                 pendingLabel="Saving crew…"
-                className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
               >
                 Save crew
               </SubmitButton>
@@ -980,26 +973,29 @@ export default async function ManageTripPage({
             <form action={assignRecommendedGearAction}>
               <button
                 type="submit"
-                className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
+                className={buttonClass({
+                  variant: "secondary",
+                  className: "text-foreground",
+                })}
               >
                 Pack recommendations
               </button>
             </form>
             <Link
               href={`/shop/${shopSlug}/gear`}
-              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
             >
               Gear room
             </Link>
             <Link
               href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
-              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
             >
               Boat manifest
             </Link>
             <Link
               href={`/shop/${shopSlug}/trips/${tripId}/nitrox`}
-              className="min-h-11 py-2 text-sm font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
             >
               Nitrox fills
             </Link>
@@ -1158,7 +1154,7 @@ export default async function ManageTripPage({
                                 <button
                                   type="submit"
                                   aria-label={`Return ${item.label}`}
-                                  className="min-h-11 px-3 font-semibold hover:underline"
+                                  className="inline-flex min-h-11 items-center px-3 font-semibold hover:underline"
                                 >
                                   Return
                                 </button>
@@ -1174,7 +1170,7 @@ export default async function ManageTripPage({
                             name="gearItemId"
                             aria-label={`Assign gear to ${person.fullName}`}
                             defaultValue=""
-                            className="min-h-11 min-w-44 flex-1 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                            className={`${controlClass} min-w-44 flex-1`}
                           >
                             <option value="" disabled>
                               Choose available gear
@@ -1188,7 +1184,10 @@ export default async function ManageTripPage({
                           </select>
                           <button
                             type="submit"
-                            className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-sunken"
+                            className={buttonClass({
+                              variant: "secondary",
+                              className: "text-foreground",
+                            })}
                           >
                             Pack
                           </button>
@@ -1212,7 +1211,7 @@ export default async function ManageTripPage({
                         <select
                           name="status"
                           defaultValue={paymentStatus ?? "unpaid"}
-                          className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                          className="min-h-11 items-center rounded-lg border border-border-strong bg-surface px-2 text-sm"
                         >
                           {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
                             <option key={value} value={value}>
@@ -1222,7 +1221,11 @@ export default async function ManageTripPage({
                         </select>
                         <button
                           type="submit"
-                          className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-sunken"
+                          className={buttonClass({
+                            variant: "secondary",
+                            size: "sm",
+                            className: "text-foreground",
+                          })}
                         >
                           Update
                         </button>
@@ -1239,7 +1242,7 @@ export default async function ManageTripPage({
                       <SubmitButton
                         pendingLabel="Removing…"
                         confirmMessage={`Remove ${person.fullName} from this trip? Their spot opens back up.`}
-                        className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
                       >
                         Remove booking
                       </SubmitButton>
@@ -1255,19 +1258,13 @@ export default async function ManageTripPage({
       <section className="mt-12 border-t border-border pt-6">
         {cancelled ? (
           <form action={reinstateTripAction}>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-            >
+            <button type="submit" className={buttonClass()}>
               Reinstate trip
             </button>
           </form>
         ) : (
           <form action={cancelTripAction} className="flex items-center gap-3">
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
-            >
+            <button type="submit" className={buttonClass({ variant: "danger" })}>
               Cancel trip
             </button>
             <p className="text-sm text-muted">

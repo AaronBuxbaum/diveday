@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { buttonClass } from "@/components/ui/button";
 import { earlyAccessPrice, productFeatureGroups } from "@/lib/marketing";
 
 export const metadata: Metadata = {
@@ -81,7 +82,10 @@ export default function PricingPage() {
             </ul>
             <Link
               href="/onboard"
-              className="mt-8 block min-h-11 rounded-lg bg-primary px-5 py-3 text-center font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              className={buttonClass({
+                size: "cta",
+                className: "mt-8 w-full",
+              })}
             >
               Start a trial shop
             </Link>

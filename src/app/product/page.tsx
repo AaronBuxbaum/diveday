@@ -7,6 +7,7 @@ import {
   FrontDeskReadinessFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { MarketingScreenshot } from "@/components/MarketingScreenshot";
+import { buttonClass } from "@/components/ui/button";
 import { productFeatureGroups } from "@/lib/marketing";
 
 export const metadata: Metadata = {
@@ -153,7 +154,9 @@ export default function ProductPage() {
             </div>
             <Link
               href="/onboard"
-              className="min-h-11 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              className={buttonClass({
+                size: "cta",
+              })}
             >
               Start a trial
             </Link>

@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { controlClass } from "@/components/ui/form";
 import {
   type RollCallCheckpoint,
   rollCallCheckpointLabel,
@@ -190,8 +191,8 @@ export function OfflineManifestView() {
             onClick={() => setCheckpoint(value)}
             className={
               value === checkpoint
-                ? "min-h-11 shrink-0 rounded-lg bg-primary px-4 font-semibold text-primary-foreground"
-                : "min-h-11 shrink-0 rounded-lg border border-border-strong px-4 font-semibold"
+                ? "inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground"
+                : "inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-border-strong px-4 font-semibold"
             }
           >
             {rollCallCheckpointLabel(value)}
@@ -324,7 +325,7 @@ export function OfflineManifestView() {
                             }))
                           }
                           placeholder="Late to the boat, medical question, gear issue…"
-                          className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                          className={`${controlClass} mt-1`}
                         />
                         <p className="mt-1 text-xs text-muted">
                           This stays encrypted with the pending event.
@@ -341,7 +342,7 @@ export function OfflineManifestView() {
                           record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
                         }
                         aria-busy={busyBooking === diver.bookingId}
-                        className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                        className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
                         {busyBooking === diver.bookingId
                           ? "Saving…"
@@ -357,7 +358,7 @@ export function OfflineManifestView() {
                         record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
                       }
                       aria-busy={busyBooking === diver.bookingId}
-                      className="min-h-14 w-full touch-manipulation rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                      className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                     >
                       {busyBooking === diver.bookingId
                         ? "Saving…"
@@ -376,14 +377,14 @@ export function OfflineManifestView() {
       <footer className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-5">
         <a
           href={`/shop/${envelope.snapshot.shop.slug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
         >
           Open live manifest
         </a>
         <button
           type="button"
           onClick={remove}
-          className="min-h-11 rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger/10"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger/10"
         >
           Delete device copy
         </button>
