@@ -1,12 +1,14 @@
 import { hash } from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { courseSlug } from "@/lib/courses";
 import {
   DEFAULT_MAX_PPO2_BAR,
   DEFAULT_MAX_PPO2_CENTIBAR,
   maxOperatingDepthMeters,
 } from "@/lib/nitrox";
 import type { DbExecutor } from "./client";
+import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookingPayments,
@@ -20,6 +22,8 @@ import {
   gearAssignments,
   gearItems,
   gearServiceEvents,
+  globalCourses,
+  globalCourseVersions,
   globalDiveSites,
   globalDiveSiteVersions,
   nitroxCertifications,
@@ -331,111 +335,167 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     ]);
   }
 
+  // Scuba's published course pages, seeded once and shared by every shop.
+  // Written centrally so a shop's catalog import lands on real copy rather than
+  // an empty form (docs ADR 20260720-course-page-media).
+  const existingTemplates = new Set(
+    (await db.select({ slug: globalCourses.slug }).from(globalCourses)).map((row) => row.slug),
+  );
+  const courseTemplateBySlug = new Map<string, string>();
+  for (const template of COURSE_TEMPLATES) {
+    if (existingTemplates.has(template.slug)) continue;
+    const [row] = await db
+      .insert(globalCourses)
+      .values({ slug: template.slug, currentVersion: template.version })
+      .returning();
+    if (!row) throw new Error(`seed: course template ${template.slug} missing`);
+    courseTemplateBySlug.set(template.slug, row.id);
+    await db.insert(globalCourseVersions).values({
+      globalCourseId: row.id,
+      version: template.version,
+      title: template.title,
+      agency: template.agency,
+      description: template.description,
+      minimumCertificationLevel: template.minimumCertificationLevel,
+      content: template.content,
+    });
+  }
+
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
     .insert(courses)
-    .values([
-      {
-        shopId,
-        agency: "padi",
-        title: "Discover Scuba Diving",
-        description: "A supervised first underwater experience with an instructor.",
-        priceCents: 17500,
-        minimumCertificationLevel: null,
-      },
-      {
-        shopId,
-        agency: "padi",
-        title: "Open Water Diver",
-        description: "The foundational certification course for new divers.",
-        priceCents: 49900,
-        eLearningPriceCents: 21000,
-        minimumCertificationLevel: null,
-      },
-      {
-        shopId,
-        agency: "padi",
-        title: "Advanced Open Water",
-        description: "Build confidence and range with five adventure dives.",
-        priceCents: 42500,
-        eLearningPriceCents: 19000,
-        minimumCertificationLevel: "open_water" as const,
-      },
-      {
-        shopId,
-        agency: "padi",
-        title: "Scuba Refresher",
-        description: "A patient skills tune-up before getting back in the water.",
-        priceCents: 12500,
-        minimumCertificationLevel: "open_water" as const,
-      },
-      {
-        shopId,
-        agency: "padi",
-        title: "Rescue Diver",
-        description: "Problem prevention and rescue skills for experienced divers.",
-        priceCents: 52500,
-        eLearningPriceCents: 24500,
-        minimumCertificationLevel: "advanced_open_water" as const,
-      },
-      {
-        shopId,
-        agency: "padi",
-        title: "Enriched Air (Nitrox) Diver",
-        description: "Plan and dive safely with enriched air nitrox.",
-        priceCents: 19500,
-        eLearningPriceCents: 15000,
-        minimumCertificationLevel: "open_water" as const,
-      },
-      {
-        shopId,
-        agency: "ssi",
-        title: "Try Scuba",
-        description: "A supervised first scuba experience.",
-        priceCents: 15000,
-        minimumCertificationLevel: null,
-      },
-      {
-        shopId,
-        agency: "ssi",
-        title: "SSI Open Water Diver",
-        description: "SSI's entry-level autonomous diver certification.",
-        priceCents: 47500,
-        eLearningPriceCents: 19500,
-        minimumCertificationLevel: null,
-      },
-      {
-        shopId,
-        agency: "ssi",
-        title: "Advanced Adventurer",
-        description: "Five guided specialty adventure dives.",
-        priceCents: 39900,
-        eLearningPriceCents: 17500,
-        minimumCertificationLevel: "open_water" as const,
-      },
-      {
-        shopId,
-        agency: "ssi",
-        title: "Diver Stress & Rescue",
-        description: "Recognize stress and respond to diver emergencies.",
-        priceCents: 49900,
-        eLearningPriceCents: 22500,
-        minimumCertificationLevel: "advanced_open_water" as const,
-      },
-      {
-        shopId,
-        agency: "ssi",
-        title: "Enriched Air Nitrox 40",
-        description: "Use nitrox mixes up to 40 percent oxygen.",
-        priceCents: 18500,
-        eLearningPriceCents: 14000,
-        minimumCertificationLevel: "open_water" as const,
-      },
-    ])
+    .values(
+      [
+        {
+          shopId,
+          agency: "padi",
+          title: "Discover Scuba Diving",
+          description: "A supervised first underwater experience with an instructor.",
+          priceCents: 17500,
+          minimumCertificationLevel: null,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Open Water Diver",
+          description: "The foundational certification course for new divers.",
+          priceCents: 49900,
+          eLearningPriceCents: 21000,
+          minimumCertificationLevel: null,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Advanced Open Water Diver",
+          description: "Build confidence and range with five adventure dives.",
+          priceCents: 42500,
+          eLearningPriceCents: 19000,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Scuba Refresher",
+          description: "A patient skills tune-up before getting back in the water.",
+          priceCents: 12500,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Rescue Diver",
+          description: "Problem prevention and rescue skills for experienced divers.",
+          priceCents: 52500,
+          eLearningPriceCents: 24500,
+          minimumCertificationLevel: "advanced_open_water" as const,
+        },
+        {
+          shopId,
+          agency: "padi",
+          title: "Enriched Air (Nitrox) Diver",
+          description: "Plan and dive safely with enriched air nitrox.",
+          priceCents: 19500,
+          eLearningPriceCents: 15000,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        {
+          shopId,
+          agency: "ssi",
+          title: "Try Scuba",
+          description: "A supervised first scuba experience.",
+          priceCents: 15000,
+          minimumCertificationLevel: null,
+        },
+        {
+          shopId,
+          agency: "ssi",
+          title: "SSI Open Water Diver",
+          description: "SSI's entry-level autonomous diver certification.",
+          priceCents: 47500,
+          eLearningPriceCents: 19500,
+          minimumCertificationLevel: null,
+        },
+        {
+          shopId,
+          agency: "ssi",
+          title: "Advanced Adventurer",
+          description: "Five guided specialty adventure dives.",
+          priceCents: 39900,
+          eLearningPriceCents: 17500,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        {
+          shopId,
+          agency: "ssi",
+          title: "Diver Stress & Rescue",
+          description: "Recognize stress and respond to diver emergencies.",
+          priceCents: 49900,
+          eLearningPriceCents: 22500,
+          minimumCertificationLevel: "advanced_open_water" as const,
+        },
+        {
+          shopId,
+          agency: "ssi",
+          title: "Enriched Air Nitrox 40",
+          description: "Use nitrox mixes up to 40 percent oxygen.",
+          priceCents: 18500,
+          eLearningPriceCents: 14000,
+          minimumCertificationLevel: "open_water" as const,
+        },
+        // The public page lives at /courses/<slug>; the catalog is the only place
+        // slugs are minted, so the seed mints them the same way an import does.
+      ].map((course) => ({ ...course, slug: courseSlug(course.title) })),
+    )
     .returning();
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
   if (!discoverCourse) throw new Error("seed: DSD course missing");
+
+  // The demo shop has already done what a real shop does on day one: imported
+  // the course pages it teaches and published them. Open Water is the one a
+  // visitor is most likely to open, so it is the most complete.
+  for (const template of COURSE_TEMPLATES) {
+    const course = courseRows.find((row) => row.title === template.title);
+    if (!course) continue;
+    await db
+      .update(courses)
+      .set({
+        ...template.content,
+        sourceTemplateId: courseTemplateBySlug.get(template.slug),
+        sourceTemplateVersion: template.version,
+        isPublished: true,
+      })
+      .where(eq(courses.id, course.id));
+  }
+  const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
+  const advancedCourse = courseRows.find((course) => course.title === "Advanced Open Water Diver");
+  const rescueCourse = courseRows.find((course) => course.title === "Rescue Diver");
+  if (openWaterCourse && advancedCourse) {
+    await db
+      .update(courses)
+      .set({ relatedCourseIds: [advancedCourse.id, ...(rescueCourse ? [rescueCourse.id] : [])] })
+      .where(eq(courses.id, openWaterCourse.id));
+  }
 
   const [existingMolassesTemplate] = await db
     .select()
@@ -730,6 +790,24 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         endsAt: at(4, 17, 0),
         capacity: 4,
       },
+      // The course page is only half a demo without a date to book: this is the
+      // session its "See dates" button lands on.
+      ...(openWaterCourse
+        ? [
+            {
+              shopId,
+              courseId: openWaterCourse.id,
+              title: "Open Water Diver — three-day course",
+              description: "Certification course over three days. No experience required.",
+              startsAt: at(9, 12, 0),
+              endsAt: at(11, 21, 0),
+              // 5 students to one instructor: a realistic class, and it keeps
+              // this session's "N spots left" distinct from every other seeded
+              // trip's, which e2e assertions match on by text.
+              capacity: 5,
+            },
+          ]
+        : []),
     ])
     .returning();
 
@@ -758,12 +836,20 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       // trip-level nitrox requirement (deep wreck bottom time).
       const isNight = trip.title.startsWith("Night Dive");
       const isWreck = trip.title.startsWith("Wreck Trip");
+      // Same rule createTrip applies: a course session inherits its catalog
+      // baseline verbatim, null included — an entry-level class is the one
+      // place an uncertified diver belongs on a boat. Everything else takes the
+      // shop's default Open Water gate.
+      const course = trip.courseId
+        ? courseRows.find((entry) => entry.id === trip.courseId)
+        : undefined;
       return {
         tripId: trip.id,
         shopId,
         requiresWaiver: true,
-        minimumCertificationLevel:
-          trip.courseId === discoverCourse.id ? null : ("open_water" as const),
+        minimumCertificationLevel: course
+          ? course.minimumCertificationLevel
+          : ("open_water" as const),
         requiredSpecialties: (isNight ? ["night"] : []) as DiveSpecialty[],
         requiresNitrox: isWreck,
         // The premium wreck charter is paid up front; the reef trips are not.
@@ -774,7 +860,14 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
 
   const discoverSession = tripRows.find((trip) => trip.courseId === discoverCourse.id);
   if (!discoverSession) throw new Error("seed: DSD session missing");
-  await db.insert(tripAssignments).values({ tripId: discoverSession.id, personId: instructor.id });
+  // Every course session needs an instructor before it can take a booking.
+  await db
+    .insert(tripAssignments)
+    .values(
+      tripRows
+        .filter((trip) => trip.courseId)
+        .map((trip) => ({ tripId: trip.id, personId: instructor.id })),
+    );
 
   await db
     .update(trips)

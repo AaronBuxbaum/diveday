@@ -61,6 +61,11 @@ obvious cleanup targets and are not — do not re-litigate them without new evid
   view have different audiences and different failure modes; merging them into one role-branched
   page trades a real safety boundary for a smaller file count. Navigation directness was fixed
   instead — staff trip cards link straight to `/trips/[id]`.
+- **Public shop routes are an allowlist, not a prefix.** `isPublicShopRoute` in
+  `src/lib/auth.config.ts` is the single seam deciding what a signed-out diver may read under
+  `/shop/**`; everything else is staff. It matters most for courses, where the public page sits
+  between the staff catalog above it and the editor below it — the match is anchored to exactly one
+  segment and refuses reserved segments. Add a route there with a test, never by widening a prefix.
 - **PGlite stays per-test.** Test isolation beats the speed of a shared or template database. A
   migrate-once template db is a plausible perf follow-up, but it needs its own design and ADR.
 - **The `src/lib` dive-site helpers stay split** (`dive-site-media` / `-map` / `-landmarks`) —

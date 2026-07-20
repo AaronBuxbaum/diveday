@@ -41,7 +41,8 @@ adapters and must not introduce unique requirements.
 
 | You need | Go to |
 | --- | --- |
-| Public pages (landing, sign-in) | `src/app/` — the public schedule is `src/app/shop/[shopSlug]/schedule` (auth-exempt); staff trip management is `src/app/shop/[shopSlug]/trips/**` |
+| Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
+| Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; Scuba-published templates in `src/db/course-templates.ts` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |

@@ -1,18 +1,22 @@
 import { z } from "zod";
 
 /**
- * The image-storage seam for certification card photos. Like the notification
- * seam, the provider lives behind one entry point so capture flows stay
- * testable without real storage credentials (ADR 20260718-card-image-storage).
- * The stored value is a provider-neutral durable URL, matching the existing
- * `card_image_url` columns.
+ * The image-storage seam. Like the notification seam, the provider lives behind
+ * one entry point so upload flows stay testable without real storage
+ * credentials (ADR 20260718-card-image-storage). The stored value is a
+ * provider-neutral durable URL, matching the `*_image_url` columns.
+ *
+ * Two callers, one seam: certification card photos, which are evidence, and
+ * course page media, which is marketing. They share validation because the
+ * bytes are the same problem; they keep separate key prefixes so a diver's card
+ * never lands in the same namespace as a published brochure photo.
  */
 export type StoredImage =
   | { status: "stored"; url: string }
   | { status: "not_configured" }
   | { status: "failed" };
 
-export type CardImageUpload = {
+export type ImageUpload = {
   /** Stable-ish key prefix, e.g. "cards"; a random suffix keeps names unique. */
   keyPrefix: string;
   filename: string;
@@ -20,11 +24,15 @@ export type CardImageUpload = {
   bytes: ArrayBuffer;
 };
 
+/** @deprecated Use `ImageUpload`; kept so card-capture call sites read unchanged. */
+export type CardImageUpload = ImageUpload;
+
 export interface ImageStorageProvider {
-  upload(input: CardImageUpload): Promise<StoredImage>;
+  upload(input: ImageUpload): Promise<StoredImage>;
 }
 
 export const MAX_CARD_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_COURSE_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
 
 type Fetch = typeof fetch;
@@ -93,11 +101,31 @@ export function imageStorageProviderFromEnvironment(
  * not_configured so the caller can keep the card record without a photo.
  */
 export async function storeCardImage(
-  upload: CardImageUpload,
+  upload: ImageUpload,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
+  return storeImage(upload, MAX_CARD_IMAGE_BYTES, provider);
+}
+
+/**
+ * Store a photo for a course page. Same validation as a card, its own key
+ * prefix, and the caller decides what an unconfigured provider means — the
+ * course editor keeps the page and reports that the photo did not upload.
+ */
+export async function storeCourseImage(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "courses" }, MAX_COURSE_IMAGE_BYTES, provider);
+}
+
+async function storeImage(
+  upload: ImageUpload,
+  maxBytes: number,
+  provider: ImageStorageProvider,
+): Promise<StoredImage> {
   if (!ALLOWED_CONTENT_TYPES.has(upload.contentType)) return { status: "failed" };
-  if (upload.bytes.byteLength === 0 || upload.bytes.byteLength > MAX_CARD_IMAGE_BYTES) {
+  if (upload.bytes.byteLength === 0 || upload.bytes.byteLength > maxBytes) {
     return { status: "failed" };
   }
   return provider.upload(upload);
