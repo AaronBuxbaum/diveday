@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
       "port": 3000
+    },
+    {
+      "name": "scuba-dev-local",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "DATABASE_URL= DATABASE_URL_UNPOOLED= pnpm dev --port 3200"],
+      "port": 3200
     }
   ]
 }

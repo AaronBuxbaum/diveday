@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { imageStorageProviderFromEnvironment, MAX_CARD_IMAGE_BYTES, storeCardImage } from "./index";
+import {
+  imageStorageProviderFromEnvironment,
+  MAX_CARD_IMAGE_BYTES,
+  MAX_COURSE_IMAGE_BYTES,
+  storeCardImage,
+  storeCourseImage,
+} from "./index";
 
 function upload(overrides: Partial<Parameters<typeof storeCardImage>[0]> = {}) {
   return {
@@ -60,5 +66,45 @@ describe("card image storage seam", () => {
       fetchImpl as unknown as typeof fetch,
     );
     expect(await storeCardImage(upload(), provider)).toEqual({ status: "failed" });
+  });
+});
+
+describe("course image storage", () => {
+  const courseUpload = {
+    filename: "open water students.jpg",
+    contentType: "image/jpeg",
+    bytes: new ArrayBuffer(1024),
+  };
+
+  it("keeps course media in its own key namespace, away from card evidence", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ url: "https://blob.example/courses/abc-open-water-students.jpg" }),
+    });
+    const provider = imageStorageProviderFromEnvironment(
+      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(await storeCourseImage(courseUpload, provider)).toEqual({
+      status: "stored",
+      url: "https://blob.example/courses/abc-open-water-students.jpg",
+    });
+    expect(String(fetchImpl.mock.calls[0][0])).toContain(
+      "https://blob.vercel-storage.com/courses/",
+    );
+  });
+
+  it("applies the same validation a card gets", async () => {
+    const provider = { upload: vi.fn() };
+    expect(await storeCourseImage({ ...courseUpload, contentType: "text/html" }, provider)).toEqual(
+      { status: "failed" },
+    );
+    expect(
+      await storeCourseImage(
+        { ...courseUpload, bytes: new ArrayBuffer(MAX_COURSE_IMAGE_BYTES + 1) },
+        provider,
+      ),
+    ).toEqual({ status: "failed" });
+    expect(provider.upload).not.toHaveBeenCalled();
   });
 });

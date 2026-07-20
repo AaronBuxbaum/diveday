@@ -11,17 +11,20 @@ export function SubmitButton({
   pendingLabel,
   className,
   confirmMessage,
+  disabled = false,
 }: {
   children: React.ReactNode;
   pendingLabel: string;
   className?: string;
   confirmMessage?: string;
+  /** For an action the form is not ready for yet; the server still re-checks. */
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className={className}
       aria-busy={pending}
       onClick={(event) => {
