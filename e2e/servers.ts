@@ -10,13 +10,17 @@ import { cpus } from "node:os";
  * isolated database — which `/api/test/reset` restores before each test. That
  * isolation is what lets the suite run fully parallel.
  */
-// Each worker runs both a browser and its own Next server, so the machine
-// hosts 2× the worker count in heavy processes. Half the cores (Playwright's
-// own default heuristic) keeps that from oversubscribing the CPU — oversup­ply
-// there shows up as cold-start latency spikes on the first authenticated
-// render, which can blow an assertion's timeout. Override with E2E_WORKERS.
+// Each worker runs BOTH a headless browser AND its own Next server, so every
+// worker costs ~2 cores, not one. Playwright's usual cpus/2 heuristic assumes
+// one browser per worker; using it here (e.g. 2 workers on a 4-core CI runner)
+// puts 4 heavy processes on 4 cores, and the resulting contention slows the
+// first render of each route enough to blow assertion timeouts — which then
+// burn retries and make the parallel run *slower* than a serial one. Budget
+// ~2 cores per worker instead, which lands on a single uncontended worker for
+// a typical 4-core runner and scales up on bigger machines. Override with
+// E2E_WORKERS.
 const envWorkers = Number(process.env.E2E_WORKERS);
-const defaultWorkers = Math.max(1, Math.floor(cpus().length / 2));
+const defaultWorkers = Math.max(1, Math.floor(cpus().length / 4));
 
 /** How many parallel worker servers to run (and therefore Playwright workers). */
 export const E2E_WORKER_COUNT =
