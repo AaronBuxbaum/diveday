@@ -113,7 +113,6 @@ export function RosterSection({
   gearRequestByBooking,
   gearProfileByBooking,
   availableGear,
-  hasWaiverTemplate,
   requiresPayment,
   assignRecommendedGearAction,
   issueWaiverAction,
@@ -136,7 +135,6 @@ export function RosterSection({
   gearRequestByBooking: GearRequestByBooking;
   gearProfileByBooking: GearProfileByBooking;
   availableGear: AvailableGear;
-  hasWaiverTemplate: boolean;
   requiresPayment: boolean;
   assignRecommendedGearAction: () => void;
   issueWaiverAction: (formData: FormData) => void;
@@ -256,9 +254,7 @@ export function RosterSection({
                       Waiver
                     </p>
                     <div className="mt-2">
-                      {waiverControl.action && !hasWaiverTemplate ? (
-                        <span className="text-sm text-muted">Add a waiver to send</span>
-                      ) : waiverControl.action ? (
+                      {waiverControl.action ? (
                         <form action={issueWaiverAction}>
                           <input type="hidden" name="bookingId" value={booking.id} />
                           <input type="hidden" name="shopName" value={shopName} />

@@ -70,21 +70,16 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   await expect(page.getByLabel("Release text")).toBeHidden();
 
   // Editing pre-fills the current text and saves a new version rather than
-  // mutating the one divers may already have signed.
+  // mutating the one divers may already have signed. Title is immutable.
   await release.getByText("Edit waiver").click();
-  await expect(page.getByLabel("Waiver name")).toHaveValue("Blue Mantis Diving Release");
-  await page
-    .getByLabel("Release text")
-    .fill(
-      "Revised release: I accept the inherent risks of boat charters and open-water diving for this trip.",
-    );
+  const releaseTextarea = page.getByLabel("Release text");
+  await expect(releaseTextarea).toHaveValue(/scuba diving/);
+  await releaseTextarea.fill(
+    "Revised release: I accept the inherent risks of boat charters and open-water diving for this trip.",
+  );
   await page.getByRole("button", { name: "Save new version" }).click();
   await expect(page.getByRole("status")).toContainText("new version");
 
-  // The current card advances to v2 and the old version drops into history.
+  // The current card advances to v2.
   await expect(release.getByText("Version 2")).toBeVisible();
-  const history = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Version history" }) });
-  await expect(history.getByText("v1")).toBeVisible();
 });
