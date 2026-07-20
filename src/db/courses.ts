@@ -11,11 +11,13 @@ export type NewCourse = {
   priceCents?: number | null;
   eLearningPriceCents?: number | null;
   minimumCertificationLevel?: CertificationLevel | null;
-  requiresInstructor?: boolean;
-  requiresWaiver?: boolean;
 };
 
-export type CoursePatch = Omit<NewCourse, "shopId">;
+/**
+ * Title, agency, and the prerequisite card come from the agency's catalog, so
+ * a shop edits only what a shop actually owns: its blurb and its two prices.
+ */
+export type CoursePatch = Pick<NewCourse, "description" | "priceCents" | "eLearningPriceCents">;
 
 /**
  * The catalog owns the reusable admission baseline. A particular session
@@ -33,8 +35,6 @@ export async function createCourse(db: AppDb, input: NewCourse) {
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
-      requiresInstructor: input.requiresInstructor ?? true,
-      requiresWaiver: input.requiresWaiver ?? true,
     })
     .returning();
   return course ?? null;
@@ -67,14 +67,9 @@ export async function updateCourse(
   const [course] = await db
     .update(courses)
     .set({
-      title: input.title.trim(),
-      agency: input.agency ?? "padi",
       description: input.description?.trim() || null,
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
-      minimumCertificationLevel: input.minimumCertificationLevel ?? null,
-      requiresInstructor: input.requiresInstructor ?? true,
-      requiresWaiver: input.requiresWaiver ?? true,
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

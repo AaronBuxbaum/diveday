@@ -97,7 +97,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     : [];
   // A course session is unsafe to market as open until an instructor is on
   // the session. This is a booking gate, not a cosmetic staff warning.
-  if (course?.requiresInstructor) {
+  if (course) {
     const [instructor] = await tx
       .select({ personId: tripAssignments.personId })
       .from(tripAssignments)

@@ -11,6 +11,7 @@ import { getDb } from "@/db/client";
 import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -20,6 +21,7 @@ export const metadata: Metadata = { title: "New order — Scuba" };
 const LINE_ITEM_KINDS = [
   { value: "trip_fee", label: "Trip fee" },
   { value: "course_fee", label: "Course fee" },
+  { value: "e_learning_fee", label: "e-Learning" },
   { value: "rental_gear", label: "Rental gear" },
   { value: "deposit", label: "Deposit" },
   { value: "merchandise", label: "Merchandise" },
@@ -27,6 +29,8 @@ const LINE_ITEM_KINDS = [
 ] as const;
 
 const LINE_ITEM_ROWS = 4;
+
+type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
 
 const dollarsSchema = z
   .string()
@@ -50,7 +54,7 @@ async function createOrderAction(formData: FormData) {
     const dollars = dollarsSchema.safeParse(formData.get(`unitAmount-${i}`));
     if (!dollars.success) continue;
     lineItems.push({
-      kind: kind as (typeof LINE_ITEM_KINDS)[number]["value"],
+      kind: kind as LineItemKind,
       description: itemDescription,
       quantity,
       unitAmountCents: Math.round(dollars.data * 100),
@@ -113,20 +117,16 @@ export default async function NewOrderPage({
     getShopById(db, session.user.shopId),
   ]);
 
-  // Auto-fill the first line item from the linked trip: the fee amount comes
-  // straight from the trip's own price, so staff only need to review and send.
-  const tripFeeDefault = bookingContext
-    ? {
-        kind: (bookingContext.trip.courseId ? "course_fee" : "trip_fee") as
-          | "trip_fee"
-          | "course_fee",
-        description: bookingContext.trip.title,
-        unitAmount:
-          bookingContext.trip.priceCents === null
-            ? ""
-            : (bookingContext.trip.priceCents / 100).toFixed(2),
-      }
-    : null;
+  // Auto-fill from the linked booking so staff only review and send. A course
+  // session fills two lines — instruction and e-learning — because a student
+  // who already did the e-learning gets that line cleared rather than the
+  // total re-worked by hand. Everything else is one trip fee.
+  const lineDefaults = (bookingContext ? bookingInvoiceLines(bookingContext) : []).map((line) => ({
+    kind: line.kind as LineItemKind,
+    description: line.description,
+    unitAmount: line.amountCents === null ? "" : (line.amountCents / 100).toFixed(2),
+  }));
+  const isCourseOrder = lineDefaults.some((line) => line.kind === "e_learning_fee");
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -160,9 +160,11 @@ export default async function NewOrderPage({
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
           Linked to {bookingContext.person.fullName}'s booking on {bookingContext.trip.title} (
           {formatShortDate(bookingContext.trip.startsAt, "en-US", shop?.timezone)}).{" "}
-          {bookingContext.trip.priceCents === null
-            ? "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time."
-            : "The trip fee below is pre-filled from this trip's price."}
+          {isCourseOrder
+            ? "The course's instruction and e-learning lines are pre-filled from your catalog. One invoice, two lines: clear the e-learning line if this student already completed it elsewhere."
+            : bookingContext.trip.priceCents === null
+              ? "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time."
+              : "The trip fee below is pre-filled from this trip's price."}
         </p>
       ) : null}
 
@@ -204,7 +206,7 @@ export default async function NewOrderPage({
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-medium">Line items</legend>
           {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
-            const rowDefault = i === 0 ? tripFeeDefault : null;
+            const rowDefault = lineDefaults[i] ?? null;
             return (
               <div
                 // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered

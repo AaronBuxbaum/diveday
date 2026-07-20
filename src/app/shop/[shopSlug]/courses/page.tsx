@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility, updateCourse } from "@/db/courses";
 import { getShopById } from "@/db/shops";
+import { courseTotalCents } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -15,31 +16,33 @@ import { requireStaffSession } from "@/lib/session";
 export const metadata: Metadata = { title: "Courses — Scuba" };
 
 const money = z.union([z.literal(""), z.coerce.number().nonnegative().max(100000)]);
+/**
+ * A shop prices its own courses; it does not invent the syllabus. Title,
+ * agency, and the prerequisite card come from PADI/SSI, and every course
+ * session requires an instructor and a signed waiver — so none of those are
+ * fields here.
+ */
 const courseSchema = z.object({
-  agency: z.enum(["padi", "ssi"]),
-  title: z.string().trim().min(2).max(120),
   description: z.string().trim().max(500),
   price: money,
   eLearningPrice: money,
-  minimumCertificationLevel: z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).optional(),
-  ),
-  requiresInstructor: z.string().optional(),
-  requiresWaiver: z.string().optional(),
 });
-const dollars = (cents: number | null) =>
-  cents === null ? "Not set" : `$${(cents / 100).toFixed(2)}`;
+
+const centsFromDollars = (value: number | "") => (value === "" ? null : Math.round(value * 100));
+const dollarsInput = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2));
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const formatMoney = (cents: number | null) => (cents === null ? "—" : usd.format(cents / 100));
+
+/** A money cell: right-aligned so the decimal points line up down the column. */
+const priceInputClass =
+  "min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-right text-base font-normal tabular-nums transition-colors focus:border-primary";
 
 export default async function CoursesPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
-  const { shopSlug } = await params;
   const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -55,15 +58,9 @@ export default async function CoursesPage({
       redirect(`/shop/${staff.user.shopSlug}/courses?notice=invalid`);
     const value = parsed.data;
     const course = await updateCourse(await getDb(), staff.user.shopId, courseId, {
-      agency: value.agency,
-      title: value.title,
       description: value.description || undefined,
-      priceCents: value.price === "" ? null : Math.round(value.price * 100),
-      eLearningPriceCents:
-        value.eLearningPrice === "" ? null : Math.round(value.eLearningPrice * 100),
-      minimumCertificationLevel: value.minimumCertificationLevel ?? null,
-      requiresInstructor: value.requiresInstructor === "on",
-      requiresWaiver: value.requiresWaiver === "on",
+      priceCents: centsFromDollars(value.price),
+      eLearningPriceCents: centsFromDollars(value.eLearningPrice),
     });
     revalidateAndRedirect(
       `/shop/${staff.user.shopSlug}/courses`,
@@ -84,12 +81,11 @@ export default async function CoursesPage({
     );
   }
   const messages: Record<string, string> = {
-    saved: "Course settings saved. New bookings will use the updated prices.",
+    saved: "Course pricing saved. New bookings will use the updated prices.",
     shown: "Course shown in scheduling lists.",
     hidden: "Course hidden from scheduling lists. Existing sessions are unchanged.",
-    invalid: "That didn’t save. Check the course details and try again.",
+    invalid: "That didn’t save. Check the prices and try again.",
   };
-  const active = courseList.filter((c) => c.isActive);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -97,168 +93,151 @@ export default async function CoursesPage({
       <ShopPageHeader
         eyebrow={shop.name}
         title="Courses"
-        description="Your shop copy of the PADI and SSI catalog. Set local pricing and hide courses you do not offer."
-        actions={
-          <Link
-            href={`/shop/${shopSlug}/trips/new`}
-            className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
-          >
-            Schedule a session
-          </Link>
-        }
+        description="Your shop copy of the PADI and SSI catalog. Set local pricing and hide courses you do not offer — prerequisites, instructor, and waiver rules come from the agency."
       />
-      <section aria-label="Course catalog snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
-        <ShopStat
-          label="Available"
-          value={active.length}
-          detail="Shown when scheduling"
-          tone="primary"
-        />
-        <ShopStat
-          label="PADI"
-          value={courseList.filter((c) => c.agency === "padi").length}
-          detail="Catalog courses"
-        />
-        <ShopStat
-          label="SSI"
-          value={courseList.filter((c) => c.agency === "ssi").length}
-          detail="Catalog courses"
-          tone="success"
-        />
-      </section>
       {notice && messages[notice] ? (
         <ShopNotice tone={notice === "invalid" ? "danger" : "success"}>
           {messages[notice]}
         </ShopNotice>
       ) : null}
-      <ul className="mt-8 grid gap-3 lg:grid-cols-2">
-        {courseList.map((course) => (
-          <li
-            key={course.id}
-            className={`rounded-2xl border border-border bg-surface p-5 shadow-sm ${course.isActive ? "" : "opacity-65"}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {course.agency}
-                </p>
-                <h2 className="mt-1 text-lg font-semibold">{course.title}</h2>
-                <p className="mt-1 text-sm text-muted">{course.description}</p>
-              </div>
-              <span className="shrink-0 rounded-full bg-surface-sunken px-2.5 py-1 text-xs font-medium text-muted">
-                {course.isActive ? "Shown" : "Hidden"}
-              </span>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-                Course {dollars(course.priceCents)}
-              </span>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-                With eLearning {dollars(course.eLearningPriceCents)}
-              </span>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <details className="relative">
-                <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-xl border border-border px-4 py-2 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
-                  Edit
-                </summary>
-                <form
-                  action={updateCourseAction}
-                  className="mt-2 grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:absolute sm:right-0 sm:z-10 sm:w-96"
-                >
-                  <input type="hidden" name="courseId" value={course.id} />
-                  <input type="hidden" name="agency" value={course.agency} />
-                  <input type="hidden" name="title" value={course.title} />
-                  <FieldGrid columns={1}>
-                    <Field label="Description">
-                      <textarea
-                        name="description"
-                        rows={2}
-                        defaultValue={course.description ?? ""}
-                        className={controlClass}
-                      />
-                    </Field>
-                  </FieldGrid>
-                  <FieldGrid columns={2} className="grid-cols-2">
-                    <Field label="Course price ($)">
-                      <input
-                        name="price"
-                        inputMode="decimal"
-                        defaultValue={
-                          course.priceCents === null ? "" : (course.priceCents / 100).toFixed(2)
-                        }
-                        className={controlClass}
-                      />
-                    </Field>
-                    <Field label="With eLearning ($)">
-                      <input
-                        name="eLearningPrice"
-                        inputMode="decimal"
-                        defaultValue={
-                          course.eLearningPriceCents === null
-                            ? ""
-                            : (course.eLearningPriceCents / 100).toFixed(2)
-                        }
-                        className={controlClass}
-                      />
-                    </Field>
-                  </FieldGrid>
-                  <FieldGrid columns={1}>
-                    <Field label="Existing certification required">
-                      <select
-                        name="minimumCertificationLevel"
-                        defaultValue={course.minimumCertificationLevel ?? ""}
-                        className={controlClass}
-                      >
-                        <option value="">None</option>
-                        {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([v, l]) => (
-                          <option key={v} value={v}>
-                            {l} or higher
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  </FieldGrid>
-                  <label className="flex min-h-11 items-center gap-3 text-sm">
+
+      {/*
+        Each row edits in place. The row's <form> sits in its last cell and the
+        price inputs point back at it with `form=`: a <form> cannot wrap a <tr>
+        without breaking table layout, and a per-row popover is what used to
+        open off the side of the screen.
+      */}
+      <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+        <table className="w-full min-w-[56rem] table-fixed border-collapse text-sm">
+          <caption className="sr-only">
+            Course catalog with per-course pricing and scheduling visibility
+          </caption>
+          {/* Fixed widths so the money columns stay a straight edge down the page. */}
+          <colgroup>
+            <col className="w-[28%]" />
+            <col className="w-[17%]" />
+            <col className="w-[13%]" />
+            <col className="w-[13%]" />
+            <col className="w-[12%]" />
+            <col className="w-[17%]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-border text-left align-bottom text-xs tracking-wide text-muted uppercase">
+              <th scope="col" className="px-4 py-3 font-semibold">
+                Course
+              </th>
+              <th scope="col" className="px-4 py-3 font-semibold">
+                Prerequisite
+              </th>
+              <th scope="col" className="px-4 py-3 text-right font-semibold">
+                Instruction
+              </th>
+              <th scope="col" className="px-4 py-3 text-right font-semibold">
+                e-Learning
+                <span className="block text-[0.625rem] font-medium normal-case">
+                  its own invoice line
+                </span>
+              </th>
+              <th scope="col" className="px-4 py-3 text-right font-semibold">
+                Student pays
+                <span className="block text-[0.625rem] font-medium normal-case">one payment</span>
+              </th>
+              <th scope="col" className="px-4 py-3 text-right font-semibold">
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {courseList.map((course) => {
+              const formId = `course-${course.id}`;
+              return (
+                <tr key={course.id} className={course.isActive ? "" : "text-muted"}>
+                  <th scope="row" className="px-4 py-4 text-left align-top font-normal">
+                    <span className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">{course.title}</span>
+                      <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold tracking-wider text-muted uppercase">
+                        {course.agency}
+                      </span>
+                      {course.isActive ? null : (
+                        <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
+                          Hidden
+                        </span>
+                      )}
+                    </span>
                     <input
-                      name="requiresInstructor"
-                      type="checkbox"
-                      defaultChecked={course.requiresInstructor}
-                      className="size-4 accent-primary"
+                      form={formId}
+                      name="description"
+                      defaultValue={course.description ?? ""}
+                      aria-label={`${course.title} shop blurb`}
+                      placeholder="Add a line divers will read"
+                      className="mt-1 min-h-11 w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm font-normal text-muted transition-colors hover:border-border focus:border-primary focus:bg-surface focus:text-foreground"
                     />
-                    Require an instructor
-                  </label>
-                  <label className="flex min-h-11 items-center gap-3 text-sm">
+                  </th>
+                  <td className="px-4 py-4 align-top text-muted">
+                    {course.minimumCertificationLevel
+                      ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
+                      : "Open to uncertified"}
+                  </td>
+                  <td className="px-4 py-4 text-right align-top">
                     <input
-                      name="requiresWaiver"
-                      type="checkbox"
-                      defaultChecked={course.requiresWaiver}
-                      className="size-4 accent-primary"
+                      form={formId}
+                      name="price"
+                      inputMode="decimal"
+                      defaultValue={dollarsInput(course.priceCents)}
+                      aria-label={`${course.title} instruction fee in dollars`}
+                      placeholder="—"
+                      className={priceInputClass}
                     />
-                    Require a signed waiver
-                  </label>
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-                  >
-                    Save course
-                  </button>
-                </form>
-              </details>
-              <form action={visibilityAction}>
-                <input type="hidden" name="courseId" value={course.id} />
-                <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
-                <button
-                  className="inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-sm font-medium text-muted hover:bg-surface-sunken"
-                  type="submit"
-                >
-                  {course.isActive ? "Hide" : "Show"}
-                </button>
-              </form>
-            </div>
-          </li>
-        ))}
-      </ul>
+                  </td>
+                  <td className="px-4 py-4 text-right align-top">
+                    <input
+                      form={formId}
+                      name="eLearningPrice"
+                      inputMode="decimal"
+                      defaultValue={dollarsInput(course.eLearningPriceCents)}
+                      aria-label={`${course.title} e-learning fee in dollars`}
+                      placeholder="—"
+                      className={priceInputClass}
+                    />
+                  </td>
+                  <td className="px-4 py-4 text-right align-top font-semibold tabular-nums">
+                    <span className="inline-flex min-h-11 items-center">
+                      {formatMoney(courseTotalCents(course))}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    <span className="flex items-center justify-end gap-1">
+                      <form id={formId} action={updateCourseAction}>
+                        <input type="hidden" name="courseId" value={course.id} />
+                        <SubmitButton
+                          pendingLabel="Saving…"
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          Save
+                        </SubmitButton>
+                      </form>
+                      <form action={visibilityAction}>
+                        <input type="hidden" name="courseId" value={course.id} />
+                        <input
+                          type="hidden"
+                          name="visible"
+                          value={course.isActive ? "false" : "true"}
+                        />
+                        <SubmitButton
+                          pendingLabel="Saving…"
+                          className={buttonClass({ variant: "ghost", size: "sm" })}
+                        >
+                          {course.isActive ? "Hide" : "Show"}
+                        </SubmitButton>
+                      </form>
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }

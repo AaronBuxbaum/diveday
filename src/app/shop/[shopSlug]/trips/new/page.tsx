@@ -188,9 +188,7 @@ export default async function NewTripPage({
                   {selectedCourse.minimumCertificationLevel
                     ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
                     : "No existing C-card required"}
-                  {selectedCourse.requiresInstructor
-                    ? " · add an instructor before sharing the session"
-                    : ""}
+                  {" · add an instructor before sharing the session"}
                 </>
               ) : undefined
             }

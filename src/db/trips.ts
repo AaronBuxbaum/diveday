@@ -147,7 +147,9 @@ async function insertTripInstance(
   await tx.insert(tripRequirements).values({
     tripId: trip.id,
     shopId: params.shopId,
-    requiresWaiver: params.course?.requiresWaiver ?? true,
+    // Every trip starts waiver-gated; staff can lift it per trip, but nothing
+    // in the catalog schedules an unsigned session by default.
+    requiresWaiver: true,
     minimumCertificationLevel: params.course?.minimumCertificationLevel ?? "open_water",
   });
   return trip;

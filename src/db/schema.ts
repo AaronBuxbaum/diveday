@@ -167,13 +167,20 @@ export const courses = pgTable(
     title: text("title").notNull(),
     agency: text("agency").notNull().default("padi"),
     description: text("description"),
+    /**
+     * Two additive amounts, not a price and a bundle total: an enrollment
+     * invoices as `price_cents` + `e_learning_price_cents` on one bill, so
+     * either line can be cleared or refunded on its own (a student who already
+     * did the e-learning). See src/lib/courses.ts.
+     */
     priceCents: integer("price_cents"),
     eLearningPriceCents: integer("e_learning_price_cents"),
-    /** Null means an uncertified participant may enroll (for example, DSD/OW). */
+    /**
+     * Set by the certifying agency, not the shop: null means an uncertified
+     * participant may enroll (for example, DSD/OW). Staff read it; nothing in
+     * the app offers to edit it.
+     */
     minimumCertificationLevel: certificationLevel("minimum_certification_level"),
-    /** A course session cannot take enrollments until an instructor is assigned. */
-    requiresInstructor: boolean("requires_instructor").notNull().default(true),
-    requiresWaiver: boolean("requires_waiver").notNull().default(true),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -600,6 +607,8 @@ export const orderStatus = pgEnum("order_status", [
 export const orderLineItemKind = pgEnum("order_line_item_kind", [
   "trip_fee",
   "course_fee",
+  /** The agency e-learning code, billed as its own line beside course_fee. */
+  "e_learning_fee",
   "rental_gear",
   "deposit",
   "merchandise",

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { courseTotalCents } from "@/lib/courses";
 import type {
   CreateInvoiceRequest,
   CreateInvoiceResult,
@@ -9,6 +10,8 @@ import type {
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
+import { updateCourse } from "./courses";
 import {
   createOrder,
   getBookingContext,
@@ -89,6 +92,8 @@ const lineItems = [
     unitAmountCents: 4_000,
   },
 ];
+
+const EMPTY_PRICING = { title: "", priceCents: null, eLearningPriceCents: null };
 
 describe("orders", () => {
   it("refuses to create an order when the shop has no payment-ready Stripe account", async () => {
@@ -360,5 +365,36 @@ describe("orders", () => {
     expect(await getBookingContext(db, shop.id, entry.booking.id)).toMatchObject({
       trip: { priceCents: 18_000 },
     });
+  });
+
+  it("carries a course session's two catalog prices into booking context, and leaves a charter's course null", async () => {
+    const { db, shop, entry } = await orderContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const courseSession = trips.find((trip) => trip.course?.title === "Discover Scuba Diving");
+    if (!courseSession) throw new Error("demo course session missing");
+    const enrolled = await createBooking(db, {
+      shopId: shop.id,
+      tripId: courseSession.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+    });
+    if (!enrolled.ok) throw new Error(`expected enrollment to succeed: ${enrolled.reason}`);
+
+    await updateCourse(db, shop.id, courseSession.course?.id ?? "", {
+      priceCents: 14_900,
+      eLearningPriceCents: 10_000,
+    });
+
+    // The order form bills the two catalog lines, not the trip's own price.
+    const context = await getBookingContext(db, shop.id, enrolled.bookingId);
+    expect(context?.course).toMatchObject({
+      title: "Discover Scuba Diving",
+      priceCents: 14_900,
+      eLearningPriceCents: 10_000,
+    });
+    expect(courseTotalCents(context?.course ?? EMPTY_PRICING)).toBe(24_900);
+
+    // An ordinary charter has no course, so the form falls back to the trip fee.
+    expect((await getBookingContext(db, shop.id, entry.booking.id))?.course).toBeNull();
   });
 });

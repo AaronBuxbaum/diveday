@@ -92,17 +92,20 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     const active = await listActiveCourses(db, shop.id);
     expect(active.map((entry) => entry.title)).toContain("Advanced Open Water — Weekend");
 
+    // A shop edits its own blurb and its two prices; the agency owns the rest,
+    // so an update never rewrites the title or the prerequisite card.
     const updated = await updateCourse(db, shop.id, course.id, {
-      title: "Advanced Open Water — Refreshed",
       description: "Updated catalog copy",
-      minimumCertificationLevel: "open_water",
-      requiresInstructor: true,
-      requiresWaiver: true,
       priceCents: 49900,
-      eLearningPriceCents: 59900,
+      eLearningPriceCents: 21000,
     });
-    expect(updated?.title).toBe("Advanced Open Water — Refreshed");
-    expect(updated).toMatchObject({ priceCents: 49900, eLearningPriceCents: 59900 });
+    expect(updated).toMatchObject({
+      title: "Advanced Open Water — Weekend",
+      minimumCertificationLevel: "open_water",
+      description: "Updated catalog copy",
+      priceCents: 49900,
+      eLearningPriceCents: 21000,
+    });
     expect(await archiveCourse(db, shop.id, course.id)).toBe(true);
     expect((await listActiveCourses(db, shop.id)).some((entry) => entry.id === course.id)).toBe(
       false,
