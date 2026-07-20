@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
-import { people, personRoles } from "@/db/schema";
+import { people, personRole, personRoles } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, signIn, signOut } from "@/lib/auth";
@@ -67,24 +67,22 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     // Find the email for this role in the shop
     let targetEmail: string | null = null;
 
-    if (role === "owner" || role === "manager") {
-      const owners = await db
-        .select({ email: people.email })
-        .from(people)
-        .innerJoin(personRoles, eq(people.id, personRoles.personId))
-        .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
-        .limit(1);
-      targetEmail = owners[0]?.email ?? null;
-    } else {
-      const emailMap: Record<string, string> = {
-        instructor: "marcus@bluemantis.example",
-        divemaster: "keiko@bluemantis.example",
-        captain: "sal@bluemantis.example",
-      };
-      targetEmail = emailMap[role] ?? null;
-    }
+    // Look the target person up by their role *within this shop* rather than by
+    // hardcoded seed emails, so role-switching works on any seeded demo tenant
+    // (not just Blue Mantis). owner/manager both resolve to the shop's owner.
+    const lookupRole = (role === "owner" || role === "manager" ? "owner" : role) as
+      (typeof personRole.enumValues)[number];
+    const matches = await db
+      .select({ email: people.email })
+      .from(people)
+      .innerJoin(personRoles, eq(people.id, personRoles.personId))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, lookupRole)))
+      .limit(1);
+    targetEmail = matches[0]?.email ?? null;
 
     if (!targetEmail) {
+      // No seeded person holds this role in this shop — no-op back to the shop
+      // rather than failing a sign-in. (The banner also hides absent roles.)
       redirect(`/shop/${shopSlug}`);
     }
 
