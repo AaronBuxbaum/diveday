@@ -42,10 +42,10 @@ export default defineConfig({
   // The headroom here is only for the one-time cold render of a heavy route the
   // warmup can't reach (dynamic [id] pages) under parallel CPU load — a ceiling,
   // not added latency.
-  expect: { timeout: 30_000 },
-  timeout: 90_000,
+  expect: { timeout: 20_000 },
+  timeout: 45_000,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     // Real base URL is assigned per worker in e2e/fixtures.ts; this is only a
