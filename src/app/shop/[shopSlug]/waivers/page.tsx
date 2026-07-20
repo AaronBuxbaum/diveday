@@ -8,11 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getShopById, setShopJurisdiction } from "@/db/shops";
-import {
-  getCurrentWaiverTemplate,
-  listWaiverTemplateHistory,
-  saveWaiverTemplate,
-} from "@/db/waivers";
+import { getCurrentWaiverTemplate, saveWaiverTemplate } from "@/db/waivers";
 import { formatShortDate } from "@/lib/format";
 import { MEDICAL_JURISDICTION_LABELS, questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -24,7 +20,6 @@ export const metadata: Metadata = {
 };
 
 const templateSchema = z.object({
-  title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(40).max(12_000),
 });
 
@@ -42,8 +37,6 @@ export default async function WaiverTemplatesPage({
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const current = await getCurrentWaiverTemplate(db, shop.id);
-  const history = await listWaiverTemplateHistory(db, shop.id);
-  const previousVersions = history.filter((template) => template.id !== current?.id);
 
   async function saveWaiverAction(formData: FormData) {
     "use server";
@@ -52,7 +45,7 @@ export default async function WaiverTemplatesPage({
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
     await saveWaiverTemplate(await getDb(), {
       shopId: staff.user.shopId,
-      title: parsed.data.title,
+      title: DEFAULT_WAIVER_TITLE,
       body: parsed.data.body,
     });
     revalidateAndRedirect(
@@ -92,16 +85,6 @@ export default async function WaiverTemplatesPage({
   const editForm = (
     <form action={saveWaiverAction} className="flex flex-col gap-5">
       <FieldGrid columns={1} className="gap-y-5">
-        <Field label="Waiver name">
-          <input
-            name="title"
-            required
-            maxLength={120}
-            defaultValue={current?.title ?? DEFAULT_WAIVER_TITLE}
-            placeholder={DEFAULT_WAIVER_TITLE}
-            className={controlClass}
-          />
-        </Field>
         <Field label="Release text">
           <textarea
             name="body"
@@ -223,32 +206,6 @@ export default async function WaiverTemplatesPage({
           <div className="mt-5">{editForm}</div>
         </details>
       </section>
-
-      {previousVersions.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold">Version history</h2>
-          <p className="mt-1 text-sm text-muted">
-            Older versions are read-only. They stay exactly as signed so completed waivers remain
-            faithful evidence.
-          </p>
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-            {previousVersions.map((template) => (
-              <li key={template.id} className="px-4 py-4">
-                <p className="font-medium">
-                  {template.title}{" "}
-                  <span className="font-normal text-muted">v{template.version}</span>
-                </p>
-                <p className="text-sm text-muted">
-                  Saved {formatShortDate(template.createdAt, "en-US", shop.timezone)}
-                </p>
-                <p className="mt-2 line-clamp-3 text-sm whitespace-pre-line text-muted">
-                  {template.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </main>
   );
 }
