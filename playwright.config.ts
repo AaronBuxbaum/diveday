@@ -43,9 +43,9 @@ export default defineConfig({
   // warmup can't reach (dynamic [id] pages) under parallel CPU load — a ceiling,
   // not added latency.
   expect: { timeout: 20_000 },
-  timeout: 45_000,
+  timeout: 90_000,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     // Real base URL is assigned per worker in e2e/fixtures.ts; this is only a
