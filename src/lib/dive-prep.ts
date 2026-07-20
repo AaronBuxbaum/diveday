@@ -10,7 +10,11 @@
  *   - a nitrox tank is only counted for a diver whose enriched-air card is
  *     verified *right now*. The booking flag is re-checked here rather than
  *     trusted, so a card revoked after the request downgrades that diver to
- *     air and surfaces as a blocker instead of quietly filling EANx.
+ *     air and surfaces as a blocker instead of quietly filling EANx;
+ *   - the divemasters and instructors assigned to the trip dive it too, and
+ *     each gets one air tank per planned dive, same as a diver. Boat crew who
+ *     stay dry (captain, deckhand) are not part of the dive plan and are never
+ *     counted.
  */
 
 export type RentalItemKind = "bcd" | "regulator" | "wetsuit" | "boots" | "mask_fins" | "weights";
@@ -48,7 +52,7 @@ export type PrepLine = {
 };
 
 export type TankPlan = {
-  /** Tanks per diver, per dive: total = diverCount × diveCount. */
+  /** total = (diverCount + crewCount) × diveCount. */
   total: number;
   air: number;
   nitrox: number;
@@ -63,6 +67,8 @@ export type NitroxBlocker = {
 export type DivePrepChecklist = {
   diveCount: number;
   diverCount: number;
+  /** Divemasters and instructors assigned to the trip who dive it and need their own tanks. */
+  crewCount: number;
   tanks: TankPlan;
   lines: PrepLine[];
   /** Divers who asked for enriched air but have no verified card — packed as air. */
@@ -128,6 +134,8 @@ export function nitroxTanksApproved(diver: PrepDiver): boolean {
 export function buildDivePrepChecklist(input: {
   divers: PrepDiver[];
   plannedDives: number;
+  /** Names of the trip's diving crew (instructor/divemaster) — air tanks only, no rental fit. */
+  divingCrew?: string[];
 }): DivePrepChecklist {
   const diveCount = Math.max(1, Math.trunc(input.plannedDives) || 1);
   const grouped = new Map<string, PrepLine>();
@@ -178,13 +186,15 @@ export function buildDivePrepChecklist(input: {
   for (const line of lines) line.divers.sort((a, b) => a.localeCompare(b));
 
   const diverCount = input.divers.length;
+  const crewCount = input.divingCrew?.length ?? 0;
   return {
     diveCount,
     diverCount,
+    crewCount,
     tanks: {
-      total: diverCount * diveCount,
+      total: (diverCount + crewCount) * diveCount,
       nitrox: nitroxDivers * diveCount,
-      air: (diverCount - nitroxDivers) * diveCount,
+      air: (diverCount - nitroxDivers + crewCount) * diveCount,
     },
     lines,
     nitroxBlockers,

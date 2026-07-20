@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
+import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility } from "@/db/courses";
 import { getShopById } from "@/db/shops";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Courses — Scuba" };
 
-/** A closed eye — the action that hides a course from scheduling lists. */
+/** A closed eye — shown for a course currently hidden from scheduling lists. */
 function EyeOffIcon() {
   return (
     <svg
@@ -33,7 +32,7 @@ function EyeOffIcon() {
   );
 }
 
-/** An open eye — the action that shows a hidden course again. */
+/** An open eye — shown for a course currently visible in scheduling lists. */
 function EyeIcon() {
   return (
     <svg
@@ -52,50 +51,32 @@ function EyeIcon() {
   );
 }
 
-export default async function CoursesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ notice?: string }>;
-}) {
+export default async function CoursesPage() {
   const session = await requireStaffSession();
-  const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const courseList = await listCourses(db, shop.id);
 
+  // No redirect: the icon and the "Hidden" badge already show the new state
+  // in place, and a same-page redirect after a form submit resets scroll to
+  // the top, which reads as the page jumping for a one-click toggle.
   async function visibilityAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
     const courseId = String(formData.get("courseId") ?? "");
     const visible = formData.get("visible") === "true";
-    const saved = courseId
-      ? await setCourseVisibility(await getDb(), staff.user.shopId, courseId, visible)
-      : null;
-    revalidateAndRedirect(
-      `/shop/${staff.user.shopSlug}/courses`,
-      `/shop/${staff.user.shopSlug}/courses?notice=${saved ? (visible ? "shown" : "hidden") : "invalid"}`,
-    );
+    if (courseId) await setCourseVisibility(await getDb(), staff.user.shopId, courseId, visible);
+    revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
   }
-  const messages: Record<string, string> = {
-    shown: "Course shown in scheduling lists.",
-    hidden: "Course hidden from scheduling lists. Existing sessions are unchanged.",
-    invalid: "That didn’t save. Try again.",
-  };
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={shop.name}
         title="Courses"
         description="Your shop copy of the PADI and SSI catalog. Open a course to edit its page and pricing, or hide the ones you don’t offer."
       />
-      {notice && messages[notice] ? (
-        <ShopNotice tone={notice === "invalid" ? "danger" : "success"}>
-          {messages[notice]}
-        </ShopNotice>
-      ) : null}
 
       <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         {courseList.map((course) => (
@@ -116,19 +97,6 @@ export default async function CoursesPage({
                     Hidden
                   </span>
                 )}
-                {/*
-                  Two independent states, so two badges: "Hidden" is out of the
-                  session picker, "Live" is on the public web.
-                */}
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    course.isPublished
-                      ? "bg-success/10 text-success"
-                      : "bg-surface-sunken text-muted"
-                  }`}
-                >
-                  {course.isPublished ? "Live" : "Draft"}
-                </span>
               </span>
               <p className="mt-1 text-sm text-muted">
                 {course.minimumCertificationLevel
@@ -150,7 +118,7 @@ export default async function CoursesPage({
                   pendingLabel="…"
                   className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
                 >
-                  {course.isActive ? <EyeOffIcon /> : <EyeIcon />}
+                  {course.isActive ? <EyeIcon /> : <EyeOffIcon />}
                   <span className="sr-only">
                     {course.isActive ? "Hide" : "Show"} {course.title}
                   </span>

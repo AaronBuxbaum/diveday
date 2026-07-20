@@ -561,16 +561,13 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
   // The demo shop starts where a real shop does: every course pre-filled with
-  // Scuba's default page copy and published. That default content is the shop's
-  // starting point — it edits from there. Open Water is the one a visitor is
-  // most likely to open, so it is the most complete.
+  // Scuba's default page copy. That default content is the shop's starting
+  // point — it edits from there. Open Water is the one a visitor is most
+  // likely to open, so it is the most complete.
   for (const template of COURSE_TEMPLATES) {
     const course = courseRows.find((row) => row.title === template.title);
     if (!course) continue;
-    await db
-      .update(courses)
-      .set({ ...template.content, isPublished: true })
-      .where(eq(courses.id, course.id));
+    await db.update(courses).set(template.content).where(eq(courses.id, course.id));
   }
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
   const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));

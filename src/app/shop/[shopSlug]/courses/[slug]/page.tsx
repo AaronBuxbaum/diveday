@@ -57,11 +57,11 @@ export default async function CoursePage({
   const course = await getCourseBySlug(db, shop.id, slug);
   if (!course) notFound();
 
-  // A draft is invisible to the public, but its own staff need to preview it
-  // before publishing — that is what the editor's Preview button opens.
+  // A hidden course is invisible to the public, but its own staff need to
+  // preview it — that is what the editor's Preview button opens.
   const session = await auth();
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
-  if (!course.isPublished && !staffView) notFound();
+  if (!course.isActive && !staffView) notFound();
 
   const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
 
@@ -77,12 +77,12 @@ export default async function CoursePage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      {course.isPublished ? null : (
+      {course.isActive ? null : (
         <p
           role="status"
           className="mb-6 rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-sm font-medium"
         >
-          Draft preview — divers cannot see this page yet.{" "}
+          Hidden — divers cannot see this page.{" "}
           <Link
             href={`/shop/${shopSlug}/courses/${slug}/edit`}
             className="font-semibold text-primary hover:underline"

@@ -8,8 +8,6 @@ import {
   createCourse,
   getCourseBySlug,
   listActiveCourses,
-  listPublishedCourses,
-  setCoursePublished,
   setCourseVisibility,
   updateCourse,
   updateCourseContent,
@@ -209,22 +207,21 @@ describe("course content and public pages (in-memory PGlite)", () => {
     expect(saved?.faqs).toEqual([{ question: "Do I need a computer?", answer: "We rent one." }]);
   });
 
-  it("keeps a course out of the public list until it is published", async () => {
+  it("hides a course from scheduling without deleting it — staff can still find and reshow it", async () => {
     const { db, shop } = await seededShopContext();
     const course = await createCourse(db, { shopId: shop.id, title: "Sidemount Diver" });
     if (!course) throw new Error("course not created");
 
-    const isLive = async () =>
-      (await listPublishedCourses(db, shop.id)).some((entry) => entry.id === course.id);
+    const isActive = async () =>
+      (await listActiveCourses(db, shop.id)).some((entry) => entry.id === course.id);
 
-    expect(await isLive()).toBe(false);
-    await setCoursePublished(db, shop.id, course.id, true);
-    expect(await isLive()).toBe(true);
-
-    // Publishing is not scheduling: hiding a course from the session picker
-    // must not silently pull its page down, and vice versa.
+    expect(await isActive()).toBe(true);
     await setCourseVisibility(db, shop.id, course.id, false);
-    expect(await isLive()).toBe(true);
+    expect(await isActive()).toBe(false);
+    expect((await getCourseBySlug(db, shop.id, course.slug))?.id).toBe(course.id);
+
+    expect((await setCourseVisibility(db, shop.id, course.id, true))?.isActive).toBe(true);
+    expect(await isActive()).toBe(true);
   });
 
   it("finds a course by its public slug, scoped to the shop", async () => {
