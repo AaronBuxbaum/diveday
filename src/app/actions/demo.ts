@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
-import { people, personRole, personRoles } from "@/db/schema";
+import { people, personRoles } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, signIn, signOut } from "@/lib/auth";
@@ -71,7 +71,10 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     // hardcoded seed emails, so role-switching works on any seeded demo tenant
     // (not just Blue Mantis). owner/manager both resolve to the shop's owner.
     const lookupRole = (role === "owner" || role === "manager" ? "owner" : role) as
-      (typeof personRole.enumValues)[number];
+      | "owner"
+      | "instructor"
+      | "divemaster"
+      | "captain";
     const matches = await db
       .select({ email: people.email })
       .from(people)
