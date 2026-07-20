@@ -85,7 +85,9 @@ code, the skill is stale and must be fixed in the same change.
 - **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring
   code, failure-path and adversarial tests, and a `dive-domain-expert` review.
 - **Layout**: domain logic in `src/lib/` or an approved feature module; routes in `src/app/` stay
-  thin; e2e specs live in `e2e/`; domain code never imports from `src/app/`.
+  thin; e2e specs live in `e2e/`; domain code never imports from `src/app/`. Server actions default
+  to inline `"use server"` closures for single-page mutations; `src/app/actions/` is only for actions
+  shared across pages; a large page colocates its actions/zod schemas in a sibling `actions.ts`.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
   bug fixes begin with a failing regression test.
 - **Secrets never enter the repo** — `.env*` is gitignored.
