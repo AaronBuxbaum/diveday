@@ -19,7 +19,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
-    expect(upcoming).toHaveLength(5);
+    expect(upcoming).toHaveLength(6);
 
     const starts = upcoming.map((t) => t.startsAt.getTime());
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
@@ -31,6 +31,10 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     expect(
       upcoming.find((trip) => trip.title === "Discover Scuba — Pool & Reef")?.course?.title,
     ).toBe("Discover Scuba Diving");
+    // The seeded Open Water session is what the public course page books into.
+    expect(
+      upcoming.find((trip) => trip.title === "Open Water Diver — three-day course")?.course?.title,
+    ).toBe("Open Water Diver");
   });
 
   it("frees the spot when a booking is cancelled", async () => {

@@ -58,8 +58,21 @@ new domain concept, define it here in the same PR.
   course and environment.
 - **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
   course identity, the prerequisite card, and the fact that every course session needs an
-  instructor and a signed waiver; the shop controls only its description, its two prices, and
-  whether the course appears when scheduling. Hiding never rewrites existing sessions.
+  instructor and a signed waiver; the shop controls its description, its two prices, its course
+  page, and whether the course appears when scheduling. Hiding never rewrites existing sessions.
+- **Course page** — the diver-facing page for one course: subhead, overview, photos, spec chips
+  (duration, group size, minimum age, prerequisite), a day-by-day plan, what the fee covers, an
+  FAQ, and the upcoming sessions it can be booked through. Published separately from being
+  **active**: active gates the session picker, **published** gates the public web page, and a shop
+  routinely has one without the other.
+- **Course page template** — a Scuba-published, versioned starting point for a course page. A shop
+  imports a copy and edits it; a later template version never rewrites what the shop wrote, and
+  never changes the prerequisite card under a course the shop already teaches.
+- **Prerequisite note** — shop prose beside a course's certification gate ("comfortable swimming
+  200 m", "bring your logbook"). It adds to the gate and never substitutes for it: the card the desk
+  checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The
+  course page labels the two apart for exactly this reason — a note reading "or a qualifying
+  certification" next to an unlabelled gate is how a diver arrives believing they are eligible.
 - **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
   makes a single payment for their sum. Enrollment assumes the e-learning is included; a student
   who already completed it elsewhere has that line cleared before the invoice goes out, or
