@@ -1,6 +1,6 @@
 # 20260718-notification-delivery-status — Keep the latest notification delivery status per booking
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260720-notification-attempt-history](20260720-notification-attempt-history.md)
 - **Date:** 2026-07-18
 
 ## Context

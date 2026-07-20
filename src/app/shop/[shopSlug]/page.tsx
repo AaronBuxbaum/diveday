@@ -6,7 +6,7 @@ import { DepartureBoard } from "@/components/today/DepartureBoard";
 import { TodayQueue } from "@/components/today/TodayQueue";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";

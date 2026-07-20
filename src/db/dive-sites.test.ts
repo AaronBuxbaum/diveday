@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import {
   copyDiveSite,
   createDiveSite,
@@ -8,15 +8,10 @@ import {
   listDiveSites,
   updateDiveSite,
 } from "./dive-sites";
-import { getShopBySlug } from "./queries";
-import { seedDemo } from "./seed";
 
 describe("dive-site library", () => {
   it("keeps the full briefing and readiness gates through create and edit", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const site = await createDiveSite(db, {
       shopId: shop.id,
@@ -66,10 +61,7 @@ describe("dive-site library", () => {
   });
 
   it("copies a site into an independent editable briefing", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const original = await createDiveSite(db, {
       shopId: shop.id,
@@ -92,10 +84,7 @@ describe("dive-site library", () => {
   });
 
   it("will not copy another shop's site", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
     const site = await createDiveSite(db, { shopId: shop.id, name: "Davis Ledge" });
 
     expect(
@@ -104,10 +93,7 @@ describe("dive-site library", () => {
   });
 
   it("archives a site while keeping the briefing row intact", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
     const site = await createDiveSite(db, { shopId: shop.id, name: "Archive Point" });
 
     expect(await deleteDiveSite(db, shop.id, site.id)).toBe(true);

@@ -8,7 +8,7 @@ import type {
   RefundInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import {
   createOrder,
   getBookingContext,
@@ -21,9 +21,8 @@ import {
   voidOrder,
 } from "./orders";
 import { getBookingPayment } from "./payments";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts, updateTrip } from "./queries";
-import { seedDemo } from "./seed";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
+import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingProvider {
   let counter = 0;
@@ -67,10 +66,7 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
 }
 
 async function orderContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");

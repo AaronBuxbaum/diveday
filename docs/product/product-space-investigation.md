@@ -124,7 +124,7 @@ should be retired, gated, or paused — not extended:
 
 Common thread: much of this is **built ahead of the human decisions needed to run it.** Nitrox
 (H-11), courses (H-08), payment policy (H-07), notifications (H-09), and waiver legal (H-01–03) are
-all *provisional* and unapproved ([defaults-to-verify](defaults-to-verify.md)). A large slice of
+all *provisional* and unapproved ([provisional defaults](human-decisions.md#provisional-implementation-defaults--verify-before-production)). A large slice of
 shipped surface **cannot go to production** as-is — and in a default deploy with no keys, no email
 sends, no image stores, no payment processes. We are polishing rooms in a house that has no plumbing
 connected.

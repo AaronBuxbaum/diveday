@@ -37,17 +37,17 @@ but still may need validation; **Validated** has the stated evidence.
 
 | ID | Status | Human owner | Decision or approval needed | Minimum outcome to record | Unblocks / follow-up |
 | --- | --- | --- | --- | --- | --- |
-| H-01 | Ready | Product owner + qualified legal reviewer | Which jurisdiction(s), waiver text, and medical-question wording apply to the shop? | Jurisdiction, approved template/version, reviewer, and approval date. | Production waiver templates and any jurisdiction-specific questionnaire. The current PADI-style form shape is only a [provisional baseline](defaults-to-verify.md#waiver-and-signature). See [waiver ADR](../architecture/decisions/20260718-waiver-signature-retention.md). |
+| H-01 | Ready | Product owner + qualified legal reviewer | Which jurisdiction(s), waiver text, and medical-question wording apply to the shop? | Jurisdiction, approved template/version, reviewer, and approval date. | Production waiver templates and any jurisdiction-specific questionnaire. The current PADI-style form shape is only a [provisional baseline](#waiver-and-signature). See [waiver ADR](../architecture/decisions/20260718-waiver-signature-retention.md). |
 | H-02 | Ready | Product owner + qualified legal/privacy reviewer | What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags? | Retention duration, deletion workflow, permitted staff access, and any legal hold or audit exception. | Production data lifecycle, access controls, and deletion tooling. |
-| H-03 | Ready | Product owner + qualified legal reviewer | Is the current typed name + explicit consent + timestamp sufficient for the intended release, or is a specialist e-signature provider required? | Accepted assurance level, required provider criteria (if any), and rollout boundary. | Keep the local signature provider or select and implement a vendor adapter. The current baseline is documented for review in [defaults-to-verify.md](defaults-to-verify.md#waiver-and-signature). |
+| H-03 | Ready | Product owner + qualified legal reviewer | Is the current typed name + explicit consent + timestamp sufficient for the intended release, or is a specialist e-signature provider required? | Accepted assurance level, required provider criteria (if any), and rollout boundary. | Keep the local signature provider or select and implement a vendor adapter. The current baseline is documented for review in the [provisional defaults](#waiver-and-signature). |
 | H-04 | Implemented | Product owner / technical owner | Vercel is selected for web hosting and Neon (Vercel Marketplace integration) is selected as the Postgres provider. Still open: who owns secrets, backups, domain, and incident response? | Provider: Neon. Driver: `drizzle-orm/node-postgres`. Production builds run `pnpm db:migrate`; Vercel System Environment Variables are enabled. Still needed: region confirmation and named owner for secrets/backups/incident response. | Name the remaining owner and record backup/incident policy. See [Neon hosting ADR](../architecture/decisions/20260718-vercel-neon-hosting.md) and [Vercel hosting ADR](../architecture/decisions/20260718-vercel-hosting.md). |
 | H-05 | Implemented | Product owner + dive operations lead | The product now uses explicit encrypted device snapshots rather than a live-only pilot. Approve or replace its 15-minute current / four-hour aging thresholds and retention at the earlier of 14 days after save or seven days after trip end. | Named operations/privacy owners, accepted thresholds and retention, and the production stop rule for a missing/expired/corrupt device copy. | Validate through V-02 before production. See [offline manifest ADR](../architecture/decisions/20260718-offline-manifest-snapshots.md). |
-| H-06 | Ready | Dive operations lead | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? | Required measurements/preferences, who may override a request, and the safe fallback when a size is unavailable. | The booking-level rental request now uses a [standard provisional set](defaults-to-verify.md#rental-gear-request); approve or change it before production. |
+| H-06 | Ready | Dive operations lead | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? | Required measurements/preferences, who may override a request, and the safe fallback when a size is unavailable. | The booking-level rental request now uses a [standard provisional set](#rental-gear-request); approve or change it before production. |
 | H-07 | In progress | Product owner + finance owner | What payment/deposit, cancellation, refund, tax, and provider policy should the first paid booking support? | Policy plus provider approval and webhook/account owner. | The provider decision is made and implemented: Stripe Connect (Standard, shop-owned accounts), orders/invoices, and webhook confirmation — see [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md). Still open: deposit/cancellation/refund/tax policy and whether the platform ever takes a fee; a live Stripe Connect platform application (`STRIPE_CONNECT_CLIENT_ID`) and Connect webhook secret (`STRIPE_WEBHOOK_SECRET`) still need a named owner. |
-| H-08 | Ready | Product owner + operations lead | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? | Supported courses, prerequisites, expiration/verification rules, ratios, and exception process. | Course catalog/session admission now uses [conservative provisional rules](defaults-to-verify.md#course-admission); approve or replace them before operating courses. |
+| H-08 | Ready | Product owner + operations lead | Which certification levels, agency rules, and Discover Scuba Diver rules define a course booking? | Supported courses, prerequisites, expiration/verification rules, ratios, and exception process. | Course catalog/session admission now uses [conservative provisional rules](#course-admission); approve or replace them before operating courses. |
 | H-09 | In progress | Product owner + communications owner | Which channel sends booking and waiver notifications, and what consent, copy, timing, and sender identity apply? | Provider: Resend. The implemented baseline is immediate transactional booking confirmation and staff-triggered waiver link; `RESEND_FROM_EMAIL` is the verified sender. The owner dashboard shows the latest failed or unconfigured send. Opt-in policy, sender ownership, approved copy, delivery monitoring, retries, and any SMS scope still need an owner. | Durable notification policy and multi-channel delivery. |
 | H-10 | Ready | Product owner + operations lead | Request supported C-card verification access from PADI, SSI, and NAUI, then choose the authorized verification source for each agency. | Agency contacts, account/partner status, approved request fields and retention policy, endpoint/auth documentation, test-card approval, and a named credential owner. | Configure the agency pair in [the integration runbook](../integrations/certification-agencies.md); card capture and fail-closed review already work without an API. |
-| H-11 | Ready | Dive operations lead + gas-blending authority | Which nitrox fill-station procedure, ppO₂ ceilings, mix band, O₂-clean tank tracking, and blender qualifications apply? | Approved fill-log of record, accepted ppO₂ limits, EANx band, and any per-agency card-acceptance rules. | Nitrox fill logging now uses [provisional dive parameters](defaults-to-verify.md#nitrox-fills) (22–40% O₂, MOD at ppO₂ 1.4/1.6); approve or replace them before operating a fill station. |
+| H-11 | Ready | Dive operations lead + gas-blending authority | Which nitrox fill-station procedure, ppO₂ ceilings, mix band, O₂-clean tank tracking, and blender qualifications apply? | Approved fill-log of record, accepted ppO₂ limits, EANx band, and any per-agency card-acceptance rules. | Nitrox fill logging now uses [provisional dive parameters](#nitrox-fills) (22–40% O₂, MOD at ppO₂ 1.4/1.6); approve or replace them before operating a fill station. |
 | H-12 | Ready | Product owner + finance owner | Is the public founding-shop price, commercial term, support promise, and multi-location policy correct? | Approved monthly price, billing cadence, support/onboarding commitment, taxes/fees policy, and public contact/contract flow. | The public pricing page currently uses a [provisional $249 per-location monthly price](marketing.md#pricing-boundary). Validate or replace it before customer-facing launch. |
 
 ## Human verification queue
@@ -58,7 +58,7 @@ but still may need validation; **Validated** has the stated evidence.
 | V-02 | Ready | Dive operations lead + `dive-domain-expert` reviewer | Field-test the manifest on a phone outdoors with realistic marina connectivity. Include glare/wet hands, save + airplane-mode reload, a blocked diver, before-departure and after-dive roll calls, a deliberately newer live event conflict, reconnection, device-copy deletion, and print/PDF fallback. | Date, device/browser, network conditions, scenarios, freshness shown, reconciliation results, findings, screenshots/video, reviewer sign-off, and whether production departures may proceed. |
 | V-03 | Ready before production | Product owner + qualified legal reviewer | Review the configured waiver/medical flow against the approved H-01–H-03 policies and confirm staff know how to handle a medical-review blocker. | Signed-off policy version, staff training owner/date, and escalation contact. |
 | V-04 | Ready before production | Operations lead | Load real initial inventory, staff roles, trips, and pilot bookings; then rehearse check-in, packing, return, and roll call. | Pilot checklist, discrepancies found, and any required data cleanup. |
-| V-05 | Ready before production | `dive-domain-expert` reviewer | Review the nitrox fill slice for domain correctness: EANx mix band, MOD formula and ppO₂ ceilings, the verified-card gate, and analysis-signature evidence. | Reviewer sign-off, any corrections to the [provisional parameters](defaults-to-verify.md#nitrox-fills), and confirmation the write-time gate matches shop policy. |
+| V-05 | Ready before production | `dive-domain-expert` reviewer | Review the nitrox fill slice for domain correctness: EANx mix band, MOD formula and ppO₂ ceilings, the verified-card gate, and analysis-signature evidence. | Reviewer sign-off, any corrections to the [provisional parameters](#nitrox-fills), and confirmation the write-time gate matches shop policy. |
 
 ## Existing implementation boundaries
 
@@ -70,10 +70,82 @@ but still may need validation; **Validated** has the stated evidence.
   fallback. Production operation remains blocked on H-05 policy approval and V-02 field evidence.
 - **Provider choices:** payment, notification, signature, and similar integrations must remain
   behind a small provider seam rather than spreading vendor SDK calls through the application. See
-  [next steps](next-steps.md#adopt-with-the-first-external-integration-m3).
+  the provider-seam rule in [architecture/overview.md](../architecture/overview.md#cross-cutting-rules).
 - **Rental requests:** the first request is an editable planning input, never an inventory
   reservation or fit/weight authorization. Staff allocation remains the conflict-safe source of
   truth.
+
+## Provisional implementation defaults — verify before production
+
+These are practical starting points used by the first course, gear, nitrox, and hosting slices.
+They are not legal, agency, medical, or operations policy — the decision register above remains the
+source of approval work; each row here maps to the H-row that must sign it off.
+
+### Waiver and signature
+
+- **Starting form shape:** liability release / assumption of risk / non-agency acknowledgement plus
+  a medical questionnaire. This follows the structure of PADI's commonly encountered digital form
+  set, not copied PADI text. The shop must use approved, jurisdiction-appropriate language before
+  it sends a real waiver.
+- **Starting signature:** typed full name, explicit agreement, timestamp, immutable template
+  snapshot, and an expiring private completion link. This is a convenient electronic-consent
+  baseline, not a claim of cryptographic non-repudiation or a substitute for legal advice.
+- **Must verify (H-01–H-03):** jurisdiction, approved template and medical questions, age/guardian
+  rules, retention/deletion, privacy notice, and whether a specialist e-signature provider is
+  required.
+
+Sources: [PADI digital forms](https://pros-blog.padi.com/digital-forms-expand/),
+[PADI general-training release](https://pro-cms.padi.com/sites/default/files/documents/training-hub/10072_Liability_Release_v403_FF_EN.pdf),
+and [PADI diver medical questionnaire](https://www.padi.com/sites/default/files/documents/2020-08/10346E_Diver_Medical_Form.pdf).
+
+### Course admission
+
+- **Starting rules:** Discover Scuba Diving and Open Water have no pre-existing C-card gate;
+  Advanced Open Water and a refresher require a verified Open Water card. Instructor-led sessions
+  cannot accept a booking until an instructor is assigned.
+- **Must verify (H-08):** agency, local regulatory, insurer, ratio, depth, age, medical, and
+  exception rules for every course/environment. The current C-card gate is conservative but
+  intentionally incomplete.
+
+### Rental gear request
+
+- **Starting rental set:** BCD, regulator, wetsuit, mask/fins, weights, and tank; dive computer
+  is opt-in. The request asks for BCD/wetsuit size, boot/fin size, usual weighting, and notes.
+- **Safety boundary:** a request is not a reservation or fit approval. Staff still assigns a real,
+  available item and confirms fit/weight at check-in.
+- **Must verify (H-06):** shop inventory packages, thickness/temperature guidance, measurement
+  method, substitution authority, computer/tank policy, and the safe fallback when a requested size
+  is not available.
+
+Source: [example dive-rental reservation form with package and size fields](https://www.sailcaribbeandivers.com/wp-content/uploads/2024/10/SCD-RENTAL-FORM-2024-25.pdf).
+
+### Nitrox fills
+
+- **Starting mix band:** whole-percent recreational EANx from 22% to 40% oxygen. Below 22% is
+  treated as air; above 40% is a technical mix outside this slice. Non-integer and out-of-band
+  values are rejected rather than logged.
+- **Starting MOD basis:** maximum operating depth is derived as `10·(ppO₂/FO₂ − 1)` metres, floored,
+  at a default working ppO₂ of **1.4 bar** with a **1.6 bar** contingency option. The value is
+  computed from the analyzed mix, never entered by hand.
+- **Starting gate + evidence:** a fill is only logged for a diver with a **verified** nitrox
+  specialty card, and it records the diver's typed analysis signature, the mix, the ppO₂ ceiling,
+  and the deriving staff member. It does not replace the diver's own pre-dive O₂ analysis.
+- **Must verify (H-11, V-05):** agency/blending-facility fill-station procedure, whether a signed
+  analysis sticker or fill log of record is required, the accepted ppO₂ ceilings for the shop's
+  diving, gas-blender qualifications, O₂-clean tank tracking, and any per-agency EANx card
+  acceptance rules.
+
+Sources: [DAN — enriched air nitrox and ppO₂/MOD limits](https://dan.org/alert-diver/article/the-basics-of-nitrox/),
+[NOAA Diving Manual oxygen exposure limits](https://www.noaa.gov/).
+
+### Vercel hosting
+
+Vercel is the selected web host and Neon (through Vercel's Marketplace integration) is the
+production Postgres provider. The Vercel production build applies committed Drizzle migrations
+before building the application; preview builds intentionally skip them. Vercel System Environment
+Variables are enabled, so the build can identify production through `VERCEL_ENV`. Backups, domain,
+secrets, and incident ownership still need H-04 completion. See the [Neon hosting
+ADR](../architecture/decisions/20260718-vercel-neon-hosting.md).
 
 ## Change history
 

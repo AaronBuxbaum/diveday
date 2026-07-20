@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { importGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
@@ -28,15 +30,16 @@ export default async function CommonDiveSitesPage({
     revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
   }
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         ← Dive-site library
       </Link>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Scuba common dive sites</h1>
-      <p className="mt-1 text-muted">
-        Published, versioned starting points. Importing makes an independent shop briefing; later
-        template updates never overwrite your edits.
-      </p>
+      <div className="mt-4">
+        <ShopPageHeader
+          title="Scuba common dive sites"
+          description="Published, versioned starting points. Importing makes an independent shop briefing; later template updates never overwrite your edits."
+        />
+      </div>
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
         {templates.map(({ template, version }) => (
           <li key={template.id} className="rounded-lg border border-border bg-surface p-5">
@@ -45,9 +48,9 @@ export default async function CommonDiveSitesPage({
             <p className="mt-2 text-sm text-muted">{version.briefing.description}</p>
             <form action={importAction} className="mt-5">
               <input type="hidden" name="templateId" value={template.id} />
-              <button type="submit" className={buttonClass()}>
+              <SubmitButton pendingLabel="Importing…" className={buttonClass()}>
                 Import to my library
-              </button>
+              </SubmitButton>
             </form>
           </li>
         ))}

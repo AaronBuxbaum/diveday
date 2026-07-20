@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getShopById, setShopPackingList } from "@/db/queries";
+import { getShopById, setShopPackingList } from "@/db/shops";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,
@@ -126,18 +126,13 @@ export default async function PaymentsSettingsPage({
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <div className="mb-8">
-        <div>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">Shop</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Shop settings</h1>
-          <p className="mt-1 text-muted">
-            One-time and occasional shop configuration lives here, including the Stripe account that
-            receives invoices and payments.
-          </p>
-        </div>
-      </div>
+      <ShopPageHeader
+        eyebrow="Shop"
+        title="Shop settings"
+        description="One-time and occasional shop configuration lives here, including the Stripe account that receives invoices and payments."
+      />
 
       {banner ? (
         <div className="mb-6">
@@ -177,7 +172,7 @@ export default async function PaymentsSettingsPage({
             {connectConfigured ? (
               <Link
                 href={`/shop/${shopSlug}/settings/payments/connect`}
-                className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+                className={buttonClass({ className: "mt-4" })}
               >
                 Connect Stripe
               </Link>
@@ -218,7 +213,7 @@ export default async function PaymentsSettingsPage({
                 connectConfigured ? (
                   <Link
                     href={`/shop/${shopSlug}/settings/payments/connect`}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+                    className={buttonClass()}
                   >
                     Reconnect Stripe
                   </Link>
@@ -226,20 +221,23 @@ export default async function PaymentsSettingsPage({
               ) : (
                 <>
                   <form action={refreshAction}>
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingLabel="Refreshing…"
                       className={buttonClass({
                         variant: "secondary",
                         className: "text-foreground",
                       })}
                     >
                       Refresh status
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form action={disconnectAction}>
-                    <button type="submit" className={buttonClass({ variant: "danger" })}>
+                    <SubmitButton
+                      pendingLabel="Disconnecting…"
+                      className={buttonClass({ variant: "danger" })}
+                    >
                       Disconnect
-                    </button>
+                    </SubmitButton>
                   </form>
                 </>
               )}

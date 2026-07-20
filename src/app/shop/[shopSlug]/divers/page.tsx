@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
@@ -109,8 +111,8 @@ export default async function DiversPage({
           {notice === "deleted" && deleted ? (
             <form action={restoreDiverAction}>
               <input type="hidden" name="personId" value={deleted} />
-              <button
-                type="submit"
+              <SubmitButton
+                pendingLabel="Restoring…"
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
@@ -118,7 +120,7 @@ export default async function DiversPage({
                 })}
               >
                 Undo remove
-              </button>
+              </SubmitButton>
             </form>
           ) : null}
         </div>
@@ -145,9 +147,9 @@ export default async function DiversPage({
             <input name="phone" type="tel" autoComplete="tel" className={controlClass} />
           </Field>
           <FieldActions>
-            <button type="submit" className={buttonClass({ size: "lg" })}>
+            <SubmitButton pendingLabel="Adding…" className={buttonClass({ size: "lg" })}>
               Add diver
-            </button>
+            </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </details>
@@ -177,7 +179,7 @@ export default async function DiversPage({
           </form>
         </div>
         {visibleDivers.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-border-strong bg-surface p-10 text-center">
+          <EmptyState className="mt-4">
             <p className="font-medium">
               {query ? "No matching divers." : "No divers on file yet."}
             </p>
@@ -186,7 +188,7 @@ export default async function DiversPage({
                 ? "Try a different search or add a new diver above."
                 : "Add one here or accept a booking to create their person record."}
             </p>
-          </div>
+          </EmptyState>
         ) : (
           <div className="relative mt-4 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
             <table className="w-full min-w-180 border-collapse text-left">

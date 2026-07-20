@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -16,7 +17,7 @@ import {
   setGearServiceHold,
   updateGearItem,
 } from "@/db/gear";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -262,9 +263,12 @@ export default async function GearPage({
             />
           </Field>
           <FieldActions>
-            <button type="submit" className={buttonClass({ className: "rounded-xl py-2" })}>
+            <SubmitButton
+              pendingLabel="Adding…"
+              className={buttonClass({ className: "rounded-xl py-2" })}
+            >
               Add inventory item
-            </button>
+            </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </details>
@@ -361,12 +365,12 @@ export default async function GearPage({
                             />
                           </Field>
                           <FieldActions>
-                            <button
-                              type="submit"
+                            <SubmitButton
+                              pendingLabel="Saving…"
                               className={buttonClass({ className: "rounded-xl py-2" })}
                             >
                               Save gear
-                            </button>
+                            </SubmitButton>
                           </FieldActions>
                         </FieldGrid>
                       </details>
@@ -377,12 +381,12 @@ export default async function GearPage({
                           name="held"
                           value={item.state !== "service_hold" ? "true" : "false"}
                         />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Updating…"
                           className={buttonClass({ variant: "link", size: "sm" })}
                         >
                           {item.state === "service_hold" ? "Release hold" : "Service hold"}
-                        </button>
+                        </SubmitButton>
                       </form>
                       <details>
                         <summary className="flex min-h-11 cursor-pointer items-center px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10">
@@ -394,8 +398,8 @@ export default async function GearPage({
                           </p>
                           <form action={retireAction}>
                             <input type="hidden" name="id" value={item.id} />
-                            <button
-                              type="submit"
+                            <SubmitButton
+                              pendingLabel="Retiring…"
                               className={buttonClass({
                                 variant: "danger-solid",
                                 size: "sm",
@@ -403,7 +407,7 @@ export default async function GearPage({
                               })}
                             >
                               Retire item
-                            </button>
+                            </SubmitButton>
                           </form>
                         </div>
                       </details>
@@ -447,15 +451,15 @@ export default async function GearPage({
                       />
                     </Field>
                     <FieldActions>
-                      <button
-                        type="submit"
+                      <SubmitButton
+                        pendingLabel="Logging…"
                         className={buttonClass({
                           variant: "secondary",
                           className: "text-foreground",
                         })}
                       >
                         Log service & release
-                      </button>
+                      </SubmitButton>
                     </FieldActions>
                   </FieldGrid>
                 </details>
@@ -501,8 +505,8 @@ export default async function GearPage({
                 </span>
                 <form action={returnAction}>
                   <input type="hidden" name="id" value={assignment.id} />
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    pendingLabel="Returning…"
                     className={buttonClass({
                       variant: "secondary",
                       size: "sm",
@@ -510,7 +514,7 @@ export default async function GearPage({
                     })}
                   >
                     Return gear
-                  </button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}

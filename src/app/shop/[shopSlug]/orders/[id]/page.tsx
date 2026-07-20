@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
@@ -94,21 +95,21 @@ export default async function OrderDetailPage({
   if (!order) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopSlug}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">{order.person.fullName}</h1>
-          <p className="mt-1 text-muted">{order.order.description || "Order"}</p>
-        </div>
-        <Link
-          href={`/shop/${shopSlug}/divers/${order.person.id}`}
-          className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-        >
-          Back to diver
-        </Link>
-      </div>
+      <ShopPageHeader
+        eyebrow={shopSlug}
+        title={order.person.fullName}
+        description={order.order.description || "Order"}
+        actions={
+          <Link
+            href={`/shop/${shopSlug}/divers/${order.person.id}`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            Back to diver
+          </Link>
+        }
+      />
 
       {notice ? (
         <div className="mb-6">
@@ -175,27 +176,33 @@ export default async function OrderDetailPage({
             <>
               <form action={refreshAction}>
                 <input type="hidden" name="orderId" value={order.order.id} />
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingLabel="Refreshing…"
                   className={buttonClass({ variant: "secondary", className: "text-foreground" })}
                 >
                   Refresh status
-                </button>
+                </SubmitButton>
               </form>
               <form action={voidAction}>
                 <input type="hidden" name="orderId" value={order.order.id} />
-                <button type="submit" className={buttonClass({ variant: "danger" })}>
+                <SubmitButton
+                  pendingLabel="Voiding…"
+                  className={buttonClass({ variant: "danger" })}
+                >
                   Void order
-                </button>
+                </SubmitButton>
               </form>
             </>
           ) : null}
           {order.order.status === "paid" ? (
             <form action={refundAction}>
               <input type="hidden" name="orderId" value={order.order.id} />
-              <button type="submit" className={buttonClass({ variant: "danger" })}>
+              <SubmitButton
+                pendingLabel="Refunding…"
+                className={buttonClass({ variant: "danger" })}
+              >
                 Refund payment
-              </button>
+              </SubmitButton>
             </form>
           ) : null}
         </div>

@@ -1,13 +1,12 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import {
   createNitroxCertification,
   listShopNitroxCertifications,
   reviewNitroxCertification,
 } from "./nitrox";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import {
   createCertification,
   createSpecialtyCertification,
@@ -21,13 +20,10 @@ import {
   verifyCertificationWithAgency,
 } from "./readiness";
 import { certifications as certificationsTable } from "./schema";
-import { seedDemo } from "./seed";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function readinessContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");

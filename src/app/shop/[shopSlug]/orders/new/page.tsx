@@ -3,12 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/orders";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -128,24 +129,24 @@ export default async function NewOrderPage({
     : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopSlug}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">New order</h1>
-        </div>
-        <Link
-          href={
-            prefillPersonId
-              ? `/shop/${shopSlug}/divers/${prefillPersonId}`
-              : `/shop/${shopSlug}/divers`
-          }
-          className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
-        >
-          Cancel
-        </Link>
-      </div>
+      <ShopPageHeader
+        eyebrow={shopSlug}
+        title="New order"
+        actions={
+          <Link
+            href={
+              prefillPersonId
+                ? `/shop/${shopSlug}/divers/${prefillPersonId}`
+                : `/shop/${shopSlug}/divers`
+            }
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            Cancel
+          </Link>
+        }
+      />
 
       {notice ? (
         <div className="mb-6">
@@ -252,9 +253,12 @@ export default async function NewOrderPage({
           })}
         </fieldset>
 
-        <button type="submit" className={buttonClass({ size: "lg", className: "self-start" })}>
+        <SubmitButton
+          pendingLabel="Sending…"
+          className={buttonClass({ size: "lg", className: "self-start" })}
+        >
           Create and send invoice
-        </button>
+        </SubmitButton>
       </form>
     </main>
   );

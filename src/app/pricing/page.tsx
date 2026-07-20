@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { FeatureGroupsGrid } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
-import { earlyAccessPrice, productFeatureGroups } from "@/lib/marketing";
+import { earlyAccessPrice } from "@/lib/marketing";
 
 export const metadata: Metadata = {
   title: "Pricing — Scuba",
@@ -20,7 +21,7 @@ const faq = [
   {
     question: "Can I see it before I commit?",
     answer:
-      "Yes. Start a seeded trial shop or open the live demo and switch between shop-owner, instructor, divemaster, captain, and diver perspectives.",
+      "Yes. Open the live demo to switch between shop-owner, instructor, divemaster, captain, and diver perspectives, or start a trial shop of your own — optionally seeded with sample trips to explore.",
   },
   {
     question: "What about multiple locations?",
@@ -106,26 +107,8 @@ export default function PricingPage() {
                 Everything needed to run the current Scuba workflow.
               </h2>
             </div>
-            <div className="mt-10 grid gap-4 md:grid-cols-2">
-              {productFeatureGroups.map((group) => (
-                <article
-                  key={group.eyebrow}
-                  className="rounded-xl border border-border bg-background p-5"
-                >
-                  <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                    {group.eyebrow}
-                  </p>
-                  <h3 className="mt-2 font-semibold">{group.title}</h3>
-                  <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
-                    {group.features.map((feature) => (
-                      <li key={feature} className="flex gap-2">
-                        <span className="text-primary">✓</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+            <div className="mt-10">
+              <FeatureGroupsGrid columns={2} />
             </div>
           </div>
         </section>

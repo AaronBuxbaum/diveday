@@ -1,18 +1,5 @@
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-
-async function signInAsOwner(page: import("@playwright/test").Page) {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
-  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/shop/);
-}
-
-function daysFromNow(days: number): string {
-  const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-  return d.toISOString().slice(0, 10);
-}
+import { daysFromNow, signInAsOwner } from "./helpers";
 
 test("staff schedules a trip and it appears on shop and public schedules", async ({ page }) => {
   // Unique per run: the dev database persists across e2e runs.

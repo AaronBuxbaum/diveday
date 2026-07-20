@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { createTestDb } from "./client";
 import {
   archiveCourse,
   createCourse,
@@ -10,21 +10,11 @@ import {
   setCourseVisibility,
   updateCourse,
 } from "./courses";
-import {
-  createTrip,
-  getShopBySlug,
-  getTripWithBooked,
-  listStaff,
-  upcomingTripsWithCounts,
-} from "./queries";
 import { tripAssignments } from "./schema";
-import { seedDemo } from "./seed";
+import { createTrip, getTripWithBooked, listStaff, upcomingTripsWithCounts } from "./trips";
 
 async function courseContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const sessions = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const discover = sessions.find((session) => session.course?.title === "Discover Scuba Diving");
   if (!discover) throw new Error("discover session missing");

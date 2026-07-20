@@ -9,9 +9,9 @@ import {
 } from "@/lib/manifests";
 import type { AppDb } from "./client";
 import { listTripGearAssignments } from "./gear";
-import { getTripRoster, getTripWithBooked } from "./queries";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { bookings, people, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
+import { getTripRoster, getTripWithBooked } from "./trips";
 
 async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
   const rows = await db

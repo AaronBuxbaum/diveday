@@ -2,9 +2,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "@/db/queries";
 import { people, personRoles } from "@/db/schema";
 import { seedDemo } from "@/db/seed";
+import { getShopBySlug } from "@/db/shops";
+import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { STAFF_ROLES } from "@/lib/authz";
 
 vi.mock("@/db/client", async (importOriginal) => {
