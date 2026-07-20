@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   listShopTanks,
@@ -91,9 +93,6 @@ export default async function TripNitroxPage({
     revalidateAndRedirect(back, `${back}?notice=${outcome.ok ? "logged" : outcome.reason}`);
   }
 
-  const inputClass =
-    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
-
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <FlashParams params={["notice"]} />
@@ -139,13 +138,14 @@ export default async function TripNitroxPage({
             No divers booked yet.
           </p>
         ) : (
-          <form
+          <FieldGrid
+            columns={2}
+            as="form"
             action={logFillAction}
-            className="mt-4 grid grid-cols-1 gap-4 rounded-lg border border-border bg-surface p-5 sm:grid-cols-2"
+            className="mt-4 rounded-lg border border-border bg-surface p-5"
           >
-            <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-              Diver
-              <select name="bookingId" required className={inputClass}>
+            <Field label="Diver" className="sm:col-span-2">
+              <select name="bookingId" required className={controlClass}>
                 <option value="">Choose a diver</option>
                 {roster.map(({ booking, person }) => {
                   const ok = certified.has(person.id);
@@ -166,10 +166,9 @@ export default async function TripNitroxPage({
                   .
                 </span>
               )}
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Tank
-              <select name="gearItemId" required className={inputClass}>
+            </Field>
+            <Field label="Tank">
+              <select name="gearItemId" required className={controlClass}>
                 <option value="">Choose a tank</option>
                 {tanks.map((tank) => (
                   <option key={tank.id} value={tank.id}>
@@ -178,9 +177,8 @@ export default async function TripNitroxPage({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Oxygen % <span className="font-normal text-muted">(analyzed, 22–40)</span>
+            </Field>
+            <Field label="Oxygen %" hint="(analyzed, 22–40)">
               <input
                 name="oxygenPercent"
                 type="number"
@@ -188,36 +186,31 @@ export default async function TripNitroxPage({
                 min={22}
                 max={40}
                 defaultValue={32}
-                className={`${inputClass} tabular-nums`}
+                className={`${controlClass} tabular-nums`}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              ppO₂ ceiling
-              <select name="maxPpo2" className={inputClass} defaultValue="1.4">
+            </Field>
+            <Field label="ppO₂ ceiling">
+              <select name="maxPpo2" className={controlClass} defaultValue="1.4">
                 <option value="1.4">1.4 bar (working)</option>
                 <option value="1.6">1.6 bar (contingency)</option>
               </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Diver&apos;s analysis signature
+            </Field>
+            <Field label="Diver's analysis signature">
               <input
                 name="analyzerSignature"
                 type="text"
                 required
                 maxLength={120}
                 placeholder="Diver types their name"
-                className={inputClass}
+                className={controlClass}
               />
-            </label>
-            <div className="sm:col-span-2">
-              <button
-                type="submit"
-                className="min-h-11 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-              >
+            </Field>
+            <FieldActions>
+              <button type="submit" className={buttonClass({ size: "lg" })}>
                 Log fill
               </button>
-            </div>
-          </form>
+            </FieldActions>
+          </FieldGrid>
         )}
       </section>
 

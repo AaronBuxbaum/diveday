@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { signIn } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -45,30 +47,27 @@ export default async function SignInPage({
           </p>
         ) : null}
         <form action={authenticate} className="mt-5 flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Email
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Password
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-            />
-          </label>
-          <button
-            type="submit"
-            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-          >
+          <FieldGrid columns={1} className="gap-y-4">
+            <Field label="Email">
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                className={controlClass}
+              />
+            </Field>
+            <Field label="Password">
+              <input
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+          <button type="submit" className={buttonClass()}>
             Sign in
           </button>
         </form>

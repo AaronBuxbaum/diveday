@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { ShopNavLinks } from "./ShopNavLinks";
+import { buttonClass } from "./ui/button";
 
 async function signOutAction() {
   "use server";
@@ -29,21 +30,13 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
           <span className="hidden max-w-40 truncate sm:inline">{shopName}</span>
           <span className="sm:hidden">Scuba</span>
         </Link>
+        {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
-          <Link
-            href={`${root}/trips/new`}
-            className="hidden min-h-11 shrink-0 items-center rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover sm:inline-flex"
-          >
-            <span aria-hidden="true" className="mr-1">
-              +
-            </span>{" "}
-            New trip
-          </Link>
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
               aria-label="Sign out"
-              className="min-h-11 rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground"
+              className={buttonClass({ variant: "ghost", size: "sm", className: "rounded-xl" })}
             >
               Sign out
             </button>

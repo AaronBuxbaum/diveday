@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopStat } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getTripManifest } from "@/db/manifests";
 import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/notifications";
@@ -78,13 +79,13 @@ export default async function ShopPage({
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href={`/shop/${shopSlug}/trips/new`}
-              className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+              className={buttonClass({ className: "rounded-xl" })}
             >
               Schedule a trip
             </Link>
             <Link
               href={`/shop/${shopSlug}/divers`}
-              className="min-h-11 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-surface-sunken"
+              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
             >
               Add or find a diver
             </Link>
@@ -289,7 +290,7 @@ export default async function ShopPage({
                       <input type="hidden" name="bookingId" value={booking.id} />
                       <button
                         type="submit"
-                        className="min-h-11 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+                        className={buttonClass({ size: "sm", className: "rounded-xl" })}
                       >
                         Retry email
                       </button>
@@ -297,7 +298,11 @@ export default async function ShopPage({
                   ) : null}
                   <Link
                     href={`/shop/${shopSlug}/trips/${trip.id}`}
-                    className="min-h-11 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-primary transition-colors duration-200 hover:bg-surface-sunken"
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "sm",
+                      className: "rounded-xl",
+                    })}
                   >
                     Open trip
                   </Link>

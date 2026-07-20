@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility, updateCourse } from "@/db/courses";
 import { getShopById } from "@/db/queries";
@@ -27,8 +28,6 @@ const courseSchema = z.object({
   requiresInstructor: z.string().optional(),
   requiresWaiver: z.string().optional(),
 });
-const inputClass =
-  "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
 const dollars = (cents: number | null) =>
   cents === null ? "Not set" : `$${(cents / 100).toFixed(2)}`;
 
@@ -170,29 +169,28 @@ export default async function CoursesPage({
                   <input type="hidden" name="courseId" value={course.id} />
                   <input type="hidden" name="agency" value={course.agency} />
                   <input type="hidden" name="title" value={course.title} />
-                  <label className="flex flex-col gap-1 text-sm font-medium">
-                    Description
-                    <textarea
-                      name="description"
-                      rows={2}
-                      defaultValue={course.description ?? ""}
-                      className={inputClass}
-                    />
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="flex flex-col gap-1 text-sm font-medium">
-                      Course price ($)
+                  <FieldGrid columns={1}>
+                    <Field label="Description">
+                      <textarea
+                        name="description"
+                        rows={2}
+                        defaultValue={course.description ?? ""}
+                        className={controlClass}
+                      />
+                    </Field>
+                  </FieldGrid>
+                  <FieldGrid columns={2} className="grid-cols-2">
+                    <Field label="Course price ($)">
                       <input
                         name="price"
                         inputMode="decimal"
                         defaultValue={
                           course.priceCents === null ? "" : (course.priceCents / 100).toFixed(2)
                         }
-                        className={inputClass}
+                        className={controlClass}
                       />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm font-medium">
-                      With eLearning ($)
+                    </Field>
+                    <Field label="With eLearning ($)">
                       <input
                         name="eLearningPrice"
                         inputMode="decimal"
@@ -201,25 +199,26 @@ export default async function CoursesPage({
                             ? ""
                             : (course.eLearningPriceCents / 100).toFixed(2)
                         }
-                        className={inputClass}
+                        className={controlClass}
                       />
-                    </label>
-                  </div>
-                  <label className="flex flex-col gap-1 text-sm font-medium">
-                    Existing certification required
-                    <select
-                      name="minimumCertificationLevel"
-                      defaultValue={course.minimumCertificationLevel ?? ""}
-                      className={inputClass}
-                    >
-                      <option value="">None</option>
-                      {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([v, l]) => (
-                        <option key={v} value={v}>
-                          {l} or higher
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    </Field>
+                  </FieldGrid>
+                  <FieldGrid columns={1}>
+                    <Field label="Existing certification required">
+                      <select
+                        name="minimumCertificationLevel"
+                        defaultValue={course.minimumCertificationLevel ?? ""}
+                        className={controlClass}
+                      >
+                        <option value="">None</option>
+                        {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>
+                            {l} or higher
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </FieldGrid>
                   <label className="flex min-h-11 items-center gap-3 text-sm">
                     <input
                       name="requiresInstructor"

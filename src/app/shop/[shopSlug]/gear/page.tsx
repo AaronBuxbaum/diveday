@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   createGearItem,
@@ -175,10 +177,7 @@ export default async function GearPage({
         title="Gear room"
         description="Keep equipment ready, traceable, and easy to pack. Service holds cannot be assigned; checked-out gear stays visible until it returns."
         actions={
-          <a
-            href="#add-gear"
-            className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
-          >
+          <a href="#add-gear" className={buttonClass({ className: "rounded-xl" })}>
             <span aria-hidden="true">+</span> Add gear
           </a>
         }
@@ -226,61 +225,48 @@ export default async function GearPage({
             +
           </span>
         </summary>
-        <form action={addAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Inventory label
+        <FieldGrid columns={2} as="form" action={addAction} className="mt-4">
+          <Field label="Inventory label">
             <input
               name="label"
               required
               placeholder="BCD-12"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
+              className={`${controlClass} rounded-xl`}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Type
-            <select
-              name="type"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
-            >
+          </Field>
+          <Field label="Type">
+            <select name="type" className={`${controlClass} rounded-xl`}>
               {Object.entries(GEAR_TYPES).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Size <span className="font-normal text-muted">(optional)</span>
+          </Field>
+          <Field label="Size" hint="(optional)">
             <input
               name="size"
               placeholder="Medium / 10 / 80 cu ft"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
+              className={`${controlClass} rounded-xl`}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Next service due <span className="font-normal text-muted">(optional)</span>
-            <input
-              name="serviceDueOn"
-              type="date"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-            Notes <span className="font-normal text-muted">(optional)</span>
+          </Field>
+          <Field label="Next service due" hint="(optional)">
+            <input name="serviceDueOn" type="date" className={`${controlClass} rounded-xl`} />
+          </Field>
+          <Field label="Notes" hint="(optional)" className="sm:col-span-2">
             <textarea
               name="notes"
               rows={2}
               placeholder="Serial number, fit notes, or storage location"
-              className="rounded-xl border border-border-strong bg-surface px-3 py-2 text-base font-normal"
+              className={`${controlClass} rounded-xl`}
             />
-          </label>
-          <button
-            type="submit"
-            className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground sm:justify-self-start"
-          >
-            Add inventory item
-          </button>
-        </form>
+          </Field>
+          <FieldActions>
+            <button type="submit" className={buttonClass({ className: "rounded-xl py-2" })}>
+              Add inventory item
+            </button>
+          </FieldActions>
+        </FieldGrid>
       </details>
       <section className="mt-10">
         <div className="flex items-end justify-between gap-3">
@@ -321,26 +307,26 @@ export default async function GearPage({
                         <summary className="flex min-h-11 cursor-pointer items-center rounded-xl border border-border px-3 py-2 text-sm font-medium text-primary">
                           Edit
                         </summary>
-                        <form
+                        <FieldGrid
+                          columns={1}
+                          as="form"
                           action={updateAction}
-                          className="mt-2 grid w-full gap-3 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:absolute sm:right-0 sm:z-10 sm:w-80"
+                          className="mt-2 w-full gap-y-3 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:absolute sm:right-0 sm:z-10 sm:w-80"
                         >
                           <input type="hidden" name="id" value={item.id} />
-                          <label className="flex flex-col gap-1 text-sm font-medium">
-                            Label
+                          <Field label="Label">
                             <input
                               name="label"
                               required
                               defaultValue={item.label}
-                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
+                              className={`${controlClass} rounded-xl`}
                             />
-                          </label>
-                          <label className="flex flex-col gap-1 text-sm font-medium">
-                            Type
+                          </Field>
+                          <Field label="Type">
                             <select
                               name="type"
                               defaultValue={item.type}
-                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
+                              className={`${controlClass} rounded-xl`}
                             >
                               {["bcd", "regulator", "wetsuit", "mask_fins", "weights", "tank"].map(
                                 (type) => (
@@ -350,40 +336,39 @@ export default async function GearPage({
                                 ),
                               )}
                             </select>
-                          </label>
-                          <label className="flex flex-col gap-1 text-sm font-medium">
-                            Size
+                          </Field>
+                          <Field label="Size">
                             <input
                               name="size"
                               defaultValue={item.size ?? ""}
-                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
+                              className={`${controlClass} rounded-xl`}
                             />
-                          </label>
-                          <label className="flex flex-col gap-1 text-sm font-medium">
-                            Service due
+                          </Field>
+                          <Field label="Service due">
                             <input
                               name="serviceDueOn"
                               type="date"
                               defaultValue={item.serviceDueAt?.toISOString().slice(0, 10)}
-                              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base"
+                              className={`${controlClass} rounded-xl`}
                             />
-                          </label>
-                          <label className="flex flex-col gap-1 text-sm font-medium">
-                            Notes
+                          </Field>
+                          <Field label="Notes">
                             <textarea
                               name="notes"
                               rows={2}
                               defaultValue={item.notes ?? ""}
-                              className="rounded-xl border border-border-strong bg-surface px-3 py-2 text-base"
+                              className={`${controlClass} rounded-xl`}
                             />
-                          </label>
-                          <button
-                            type="submit"
-                            className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-                          >
-                            Save gear
-                          </button>
-                        </form>
+                          </Field>
+                          <FieldActions>
+                            <button
+                              type="submit"
+                              className={buttonClass({ className: "rounded-xl py-2" })}
+                            >
+                              Save gear
+                            </button>
+                          </FieldActions>
+                        </FieldGrid>
                       </details>
                       <form action={holdAction}>
                         <input type="hidden" name="id" value={item.id} />
@@ -394,7 +379,7 @@ export default async function GearPage({
                         />
                         <button
                           type="submit"
-                          className="min-h-11 px-3 text-sm font-medium text-primary hover:underline"
+                          className={buttonClass({ variant: "link", size: "sm" })}
                         >
                           {item.state === "service_hold" ? "Release hold" : "Service hold"}
                         </button>
@@ -411,7 +396,11 @@ export default async function GearPage({
                             <input type="hidden" name="id" value={item.id} />
                             <button
                               type="submit"
-                              className="mt-3 min-h-11 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-foreground"
+                              className={buttonClass({
+                                variant: "danger-solid",
+                                size: "sm",
+                                className: "mt-3 rounded-xl",
+                              })}
                             >
                               Retire item
                             </button>
@@ -427,28 +416,26 @@ export default async function GearPage({
                   <summary className="flex min-h-11 cursor-pointer items-center py-2 font-medium text-primary">
                     Record completed service
                   </summary>
-                  <form action={serviceAction} className="grid gap-3 pb-2 pt-1 sm:grid-cols-3">
+                  <FieldGrid
+                    columns={3}
+                    as="form"
+                    action={serviceAction}
+                    className="gap-y-3 pb-2 pt-1"
+                  >
                     <input type="hidden" name="id" value={item.id} />
-                    <label className="flex flex-col gap-1">
-                      Completed
+                    <Field label="Completed">
                       <input
                         name="completedOn"
                         type="date"
                         required
                         defaultValue={new Date().toISOString().slice(0, 10)}
-                        className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
+                        className={controlClass}
                       />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      Next due <span className="text-muted">(optional)</span>
-                      <input
-                        name="nextDueOn"
-                        type="date"
-                        className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 sm:col-span-3">
-                      Work completed
+                    </Field>
+                    <Field label="Next due" hint="(optional)">
+                      <input name="nextDueOn" type="date" className={controlClass} />
+                    </Field>
+                    <Field label="Work completed" className="sm:col-span-3">
                       <textarea
                         name="note"
                         required
@@ -456,18 +443,21 @@ export default async function GearPage({
                         maxLength={500}
                         rows={2}
                         placeholder="Bench-tested regulator; replaced mouthpiece."
-                        className="rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                        className={controlClass}
                       />
-                    </label>
-                    <div>
+                    </Field>
+                    <FieldActions>
                       <button
                         type="submit"
-                        className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface"
+                        className={buttonClass({
+                          variant: "secondary",
+                          className: "text-foreground",
+                        })}
                       >
                         Log service & release
                       </button>
-                    </div>
-                  </form>
+                    </FieldActions>
+                  </FieldGrid>
                 </details>
               ) : null}
             </li>
@@ -513,7 +503,11 @@ export default async function GearPage({
                   <input type="hidden" name="id" value={assignment.id} />
                   <button
                     type="submit"
-                    className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "sm",
+                      className: "text-foreground",
+                    })}
                   >
                     Return gear
                   </button>

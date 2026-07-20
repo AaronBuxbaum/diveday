@@ -93,12 +93,12 @@ export function ScheduleCalendar({
           return (
             <div
               key={day.iso}
-              className={`min-h-16 rounded-lg border p-1 sm:min-h-24 ${
+              className={`flex min-h-16 flex-col items-center rounded-lg border p-1 sm:min-h-24 ${
                 day.inMonth ? "border-border" : "border-transparent"
               } ${trips.length > 0 && day.inMonth ? "bg-primary/5" : ""}`}
             >
               <div
-                className={`flex size-6 items-center justify-center rounded-full text-xs font-medium tabular-nums ${
+                className={`flex size-6 shrink-0 items-center justify-center self-start rounded-full text-xs font-medium tabular-nums ${
                   isToday
                     ? "bg-primary text-primary-foreground"
                     : day.inMonth
@@ -109,7 +109,7 @@ export function ScheduleCalendar({
                 {day.day}
               </div>
               {trips.length > 0 ? (
-                <ul className="mt-1 flex flex-col gap-1">
+                <ul className="mt-1 flex w-full flex-col gap-1">
                   {trips.map((trip) => (
                     <li key={trip.id}>
                       <Link

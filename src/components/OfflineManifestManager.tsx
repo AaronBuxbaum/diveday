@@ -150,7 +150,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
             type="button"
             disabled={busy}
             onClick={save}
-            className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
           >
             {saved ? "Refresh offline copy" : "Save for offline"}
           </button>
@@ -158,7 +158,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
             <>
               <a
                 href={`/offline-manifest?trip=${tripId}`}
-                className="min-h-11 rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
               >
                 Open offline roll call
               </a>
@@ -166,7 +166,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
                 type="button"
                 disabled={busy}
                 onClick={remove}
-                className="min-h-11 rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger/10 disabled:opacity-60"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger/10 disabled:opacity-60"
               >
                 Delete device copy
               </button>

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/queries";
@@ -109,7 +111,11 @@ export default async function DiversPage({
               <input type="hidden" name="personId" value={deleted} />
               <button
                 type="submit"
-                className="min-h-11 rounded-xl border border-success/30 bg-surface px-3 py-2 text-sm font-medium text-success hover:bg-surface-sunken"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "border-success/30 text-success",
+                })}
               >
                 Undo remove
               </button>
@@ -128,41 +134,22 @@ export default async function DiversPage({
         <p className="mt-2 text-sm text-muted">
           Add a returning diver before they book, then fill in the details you already have.
         </p>
-        <form action={addDiverAction} className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Full name
-            <input
-              name="fullName"
-              required
-              autoComplete="name"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Email <span className="font-normal text-muted">(optional)</span>
-            <input
-              name="email"
-              type="email"
-              autoComplete="email"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Phone <span className="font-normal text-muted">(optional)</span>
-            <input
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-base font-normal"
-            />
-          </label>
-          <button
-            type="submit"
-            className="min-h-11 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover sm:col-span-3 sm:justify-self-start"
-          >
-            Add diver
-          </button>
-        </form>
+        <FieldGrid columns={3} className="mt-4" as="form" action={addDiverAction}>
+          <Field label="Full name">
+            <input name="fullName" required autoComplete="name" className={controlClass} />
+          </Field>
+          <Field label="Email" hint="(optional)">
+            <input name="email" type="email" autoComplete="email" className={controlClass} />
+          </Field>
+          <Field label="Phone" hint="(optional)">
+            <input name="phone" type="tel" autoComplete="tel" className={controlClass} />
+          </Field>
+          <FieldActions>
+            <button type="submit" className={buttonClass({ size: "lg" })}>
+              Add diver
+            </button>
+          </FieldActions>
+        </FieldGrid>
       </details>
 
       <section className="mt-10" aria-labelledby="diver-list-heading">
@@ -182,12 +169,9 @@ export default async function DiversPage({
               name="q"
               defaultValue={query}
               placeholder="Search people"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-border-strong bg-surface px-3 text-base"
+              className={`${controlClass} min-w-0 flex-1`}
             />
-            <button
-              type="submit"
-              className="min-h-11 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-primary hover:bg-surface-sunken"
-            >
+            <button type="submit" className={buttonClass({ variant: "secondary" })}>
               Search
             </button>
           </form>
@@ -234,9 +218,15 @@ export default async function DiversPage({
                       className="group relative transition-colors duration-200 hover:bg-surface-sunken"
                     >
                       <td className="relative px-4 py-3">
+                        {/*
+                         * Phone-only. On desktop the explicit "Open" cell is the
+                         * target, and a second link with the same accessible name
+                         * would duplicate the row for screen readers and swallow
+                         * clicks over the person cell.
+                         */}
                         <Link
                           href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                          className="absolute inset-0 z-10 md:hidden"
+                          className="absolute inset-0 z-10 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary md:hidden"
                           aria-label={`Open ${diver.person.fullName}`}
                         />
                         <div className="flex min-w-0 items-center gap-3">

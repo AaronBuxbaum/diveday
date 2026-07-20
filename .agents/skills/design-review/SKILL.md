@@ -19,12 +19,17 @@ Delight is this product's differentiator — this review is where that stops bei
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)
    - loading/empty/error states — navigate to them, don't assume
-4. Grep the changed files for token violations:
+4. Check alignment at a width where captions wrap — the two failures that screenshots make obvious
+   and diffs hide (see `docs/design/forms-and-controls.md`): fields in a row share one control
+   baseline, and every button-shaped thing has its label centered in its target. Both come free
+   from `<Field>`/`<FieldGrid>` and `buttonClass()`; a surface that fails one is usually a surface
+   that hand-rolled the classes.
+5. Grep the changed files for token violations:
    ```bash
    git diff main --unified=0 | grep -nE '#[0-9a-fA-F]{3,8}|-(red|blue|cyan|teal|zinc|gray|slate|orange|amber)-[0-9]'
    ```
    Raw hex or palette-scale classes in components are findings (ADR-0004).
-5. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
+6. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
    the screenshot paths.
 
 ## Output

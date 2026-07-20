@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -175,17 +176,14 @@ export default async function OrderDetailPage({
                 <input type="hidden" name="orderId" value={order.order.id} />
                 <button
                   type="submit"
-                  className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                  className={buttonClass({ variant: "secondary", className: "text-foreground" })}
                 >
                   Refresh status
                 </button>
               </form>
               <form action={voidAction}>
                 <input type="hidden" name="orderId" value={order.order.id} />
-                <button
-                  type="submit"
-                  className="min-h-11 rounded-lg border border-danger/40 bg-surface px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
-                >
+                <button type="submit" className={buttonClass({ variant: "danger" })}>
                   Void order
                 </button>
               </form>
@@ -194,10 +192,7 @@ export default async function OrderDetailPage({
           {order.order.status === "paid" ? (
             <form action={refundAction}>
               <input type="hidden" name="orderId" value={order.order.id} />
-              <button
-                type="submit"
-                className="min-h-11 rounded-lg border border-danger/40 bg-surface px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
-              >
+              <button type="submit" className={buttonClass({ variant: "danger" })}>
                 Refund payment
               </button>
             </form>

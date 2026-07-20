@@ -75,6 +75,10 @@ code, the skill is stale and must be fixed in the same change.
 - **Verify before commit** — `pnpm check` green minimum; e2e when flows changed; *look at* UI
   you changed (screenshots, light + dark). Never report unverified work as done.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
+- **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
+  button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings
+  are how fields fall out of alignment and button labels drift off-center. See
+  [docs/design/forms-and-controls.md](docs/design/forms-and-controls.md).
 - **New runtime dependency → ADR.** New domain concept → glossary. Invalidated doc → fix in
   the same PR.
 - **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring

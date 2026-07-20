@@ -8,6 +8,7 @@ import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RestorePreservedScroll, ScrollPreservingForm } from "@/components/ScrollPreservingForm";
 import { SubmitButton } from "@/components/SubmitButton";
+import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall } from "@/db/manifests";
 import { getShopById } from "@/db/queries";
@@ -182,8 +183,8 @@ export default async function TripManifestPage({
             scroll={false}
             className={
               value === checkpoint
-                ? "min-h-11 shrink-0 rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
-                : "min-h-11 shrink-0 rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
+                ? "inline-flex min-h-11 shrink-0 items-center rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
+                : "inline-flex min-h-11 shrink-0 items-center rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
             }
           >
             {rollCallCheckpointLabel(value)}
@@ -364,7 +365,7 @@ export default async function TripManifestPage({
                           form={`not-boarded-${diver.bookingId}`}
                           maxLength={300}
                           placeholder="Late to the boat, medical question, gear issue…"
-                          className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
+                          className={`${controlClass} mt-1`}
                         />
                         <p className="mt-1 text-xs text-muted">
                           This is saved with the staff audit trail.
@@ -387,7 +388,7 @@ export default async function TripManifestPage({
                         <input type="hidden" name="status" value="boarded" />
                         <SubmitButton
                           pendingLabel="Saving…"
-                          className="min-h-14 w-full touch-manipulation rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
                           {boarded ? "Boarded ✓" : "Mark boarded"}
                         </SubmitButton>
@@ -401,7 +402,7 @@ export default async function TripManifestPage({
                       <input type="hidden" name="status" value="not_boarded" />
                       <SubmitButton
                         pendingLabel="Saving…"
-                        className="min-h-14 w-full touch-manipulation rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                        className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                       >
                         {diver.rollCall?.state === "not_boarded"
                           ? "Not boarded ✓"
