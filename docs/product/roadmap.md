@@ -15,7 +15,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Database + ORM chosen and ADR'd ([0005](../architecture/decisions/0005-database.md):
   Drizzle + Postgres, PGlite in dev/test with auto-migrate/auto-seed).
 - ✅ Core entities: shop, person (with roles), trip, booking — multi-tenant (`shop_id`
-  everywhere). Demo shop seed data; `/trips` schedule page as the first data-backed surface.
+  everywhere). Demo shop seed data; the `/shop/[shopSlug]/schedule` page as the first
+  data-backed surface.
 - ✅ Auth chosen and ADR'd ([0006](../architecture/decisions/0006-auth.md): Auth.js v5
   credentials + JWT, edge-safe proxy split). Staff sign-in live; protected `/shop` dashboard.
 - ✅ Hosting: Vercel selected and ADR'd. A managed Postgres adapter, environment ownership,

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Capture screenshots of app routes in light + dark, desktop + phone.
- * The visual half of verification — see .claude/skills/design-review.
+ * The visual half of verification — see .agents/skills/design-review.
  *
  * Usage:
  *   node scripts/screenshot.mjs [route ...]        # default: /

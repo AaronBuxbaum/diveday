@@ -5,8 +5,9 @@ manifests** in one place that's a genuine pleasure to use.
 
 Built entirely by AI agents. The repo is structured for that: [`AGENTS.md`](AGENTS.md) is the
 agent entry point, [`docs/`](docs/README.md) is the project's memory (vision, dive-domain
-glossary, ADRs, design principles, workflow), and [`.claude/`](.claude/) carries the skills and
-reviewer agents that encode how work gets done here.
+glossary, ADRs, design principles, workflow), [`.agents/skills/`](.agents/skills/README.md)
+carries the task-scoped skills, and [`.claude/agents/`](.claude/agents/) carries the reviewer
+agents that encode how work gets done here.
 
 ## Quickstart
 
