@@ -377,32 +377,3 @@ export function CourseFaqs({ faqs }: { faqs: CourseFaq[] }) {
     </section>
   );
 }
-
-export function RelatedCourses({
-  courses,
-  shopSlug,
-}: {
-  courses: Array<Pick<Course, "id" | "title" | "slug" | "summary">>;
-  shopSlug: string;
-}) {
-  if (courses.length === 0) return null;
-  return (
-    <section className="mt-12">
-      <h2 className="text-2xl font-semibold tracking-tight">What to take next</h2>
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-        {courses.map((course) => (
-          <li key={course.id} className="rounded-2xl border border-border bg-surface p-5">
-            <h3 className="text-lg font-semibold">{course.title}</h3>
-            {course.summary ? <p className="mt-2 text-sm text-muted">{course.summary}</p> : null}
-            <Link
-              href={`/shop/${shopSlug}/courses/${course.slug}`}
-              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-            >
-              Learn more →
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}

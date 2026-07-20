@@ -29,42 +29,47 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByRole("status")).toContainText("gear request is with the crew");
 });
 
-test("staff can price a catalog course in place and hide it", async ({ page }) => {
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/courses");
-  const row = page.getByRole("row").filter({ hasText: "Discover Scuba Diving" });
-  await row.getByLabel("Discover Scuba Diving instruction fee in dollars").fill("149.00");
-  await row.getByLabel("Discover Scuba Diving e-learning fee in dollars").fill("100.00");
-  await row.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Course pricing saved")).toBeVisible();
-  // The two items are billed separately, so the row states what the student pays.
-  await expect(
-    page.getByRole("row").filter({ hasText: "Discover Scuba Diving" }).getByText("$249.00"),
-  ).toBeVisible();
-
-  await page
-    .getByRole("row")
-    .filter({ hasText: "Discover Scuba Diving" })
-    .getByRole("button", { name: "Hide" })
-    .click();
-  await expect(page.getByText("Course hidden")).toBeVisible();
-  await expect(
-    page.getByRole("row").filter({ hasText: "Discover Scuba Diving" }).getByText("Hidden"),
-  ).toBeVisible();
-});
-
-test("staff import a course page, edit it, publish it, and a signed-out diver books from it", async ({
+test("staff set course pricing on the page and hide the course from scheduling", async ({
   page,
 }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/courses/catalog");
-  // Rescue is in the catalog but not yet a page this shop has written.
-  // Match the card's own title: other templates name Rescue Diver in their
-  // prerequisite prose, and hasText would catch those too.
-  const card = page
+  await page.goto("/shop/blue-mantis/courses");
+  const row = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+  await row.getByRole("link", { name: "Edit" }).click();
+  await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\/edit/);
+
+  // Pricing now lives on the course page, beside the copy it prices.
+  await page.getByLabel("Instruction fee").fill("149.00");
+  await page.getByLabel("e-Learning fee").fill("100.00");
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByRole("status")).toContainText("Course page saved");
+
+  // The two items are billed separately, so the public page states the single
+  // payment the diver makes for both.
+  await page.goto("/shop/blue-mantis/courses/discover-scuba-diving");
+  await expect(page.getByText("$249")).toBeVisible();
+
+  // Back on the roster, the eye toggle hides the course from scheduling lists.
+  await page.goto("/shop/blue-mantis/courses");
+  await page.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
+  await expect(page.getByText("Course hidden")).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" }).getByText("Hidden"),
+  ).toBeVisible();
+});
+
+test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
+  page,
+}) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/courses");
+  // Every course ships pre-filled and published — there is no catalog to import
+  // from. Open Rescue Diver straight from the roster. Match the title exactly:
+  // the Divemaster row names "Rescue Diver or higher" in its prerequisite line.
+  const row = page
     .getByRole("listitem")
-    .filter({ has: page.getByRole("heading", { name: "Rescue Diver", exact: true }) });
-  await card.getByRole("button", { name: "Import and edit" }).click();
+    .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
+  await row.getByRole("link", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/courses\/rescue-diver\/edit/);
 
   const dayPlan = page.getByLabel("Day plan");
@@ -73,8 +78,9 @@ test("staff import a course page, edit it, publish it, and a signed-out diver bo
   await page.getByRole("button", { name: "Save course page" }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
 
-  await page.getByRole("button", { name: "Take page down" }).click();
-  await expect(page.getByRole("status")).toContainText("taken down");
+  // Hide takes the published page down; Publish page brings it back.
+  await page.getByRole("button", { name: "Hide" }).click();
+  await expect(page.getByRole("status")).toContainText("hidden");
   await page.getByRole("button", { name: "Publish page" }).click();
   await expect(page.getByRole("status")).toContainText("live");
 
