@@ -26,6 +26,8 @@ import {
   nitroxFills,
   notificationDeliveries,
   notificationDeliveryAttempts,
+  orderLineItems,
+  orders,
   people,
   personRoles,
   rentalGearProfiles,
@@ -881,7 +883,12 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 
-  // Booking- and trip-dependent operational history first.
+  // Booking- and trip-dependent operational history first. Delete order is a
+  // topological sort of the foreign-key graph: every table that references
+  // bookings, trips, or people must be cleared before those parents. A missing
+  // child here surfaces as an FK-violation mid-run — e.g. a waitlist entry or
+  // order left behind blocks the trips/bookings delete and dirties the next
+  // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(nitroxFills).where(eq(nitroxFills.shopId, shopId));
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
@@ -894,6 +901,10 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  // Orders (and their line items) reference bookings and people; the waitlist
+  // references trips and people. Both must go before the parents below.
+  await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
+  await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
