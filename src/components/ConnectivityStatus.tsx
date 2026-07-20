@@ -2,19 +2,27 @@
 
 import { useEffect, useState } from "react";
 
-export function ConnectivityStatus() {
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+export function ConnectivityStatus({
+  offlineLabel = "No signal · device copy",
+}: {
+  /** What "offline" means on this surface (the manifest has a device copy; a
+   * live-only surface like check-in warns its board may be stale instead). */
+  offlineLabel?: string;
+} = {}) {
+  // Start "online" so the server render and the first client render agree — a
+  // navigator.onLine read in the initializer differs across the boundary and
+  // trips a hydration mismatch on any server-rendered surface. The effect
+  // reconciles to the real state immediately after mount.
+  const [online, setOnline] = useState(true);
 
   useEffect(() => {
-    const markOnline = () => setOnline(true);
-    const markOffline = () => setOnline(false);
-    window.addEventListener("online", markOnline);
-    window.addEventListener("offline", markOffline);
+    const sync = () => setOnline(navigator.onLine);
+    sync();
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
     return () => {
-      window.removeEventListener("online", markOnline);
-      window.removeEventListener("offline", markOffline);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
     };
   }, []);
 
@@ -32,7 +40,7 @@ export function ConnectivityStatus() {
       <span aria-hidden="true" className="text-base leading-none">
         {online ? "●" : "×"}
       </span>
-      {online ? "Connection available" : "No signal · device copy"}
+      {online ? "Connection available" : offlineLabel}
     </span>
   );
 }

@@ -3,16 +3,18 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
 import { buildCheckInChecks, type CheckInCheck } from "@/lib/check-in";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import { requireStaffSession } from "@/lib/session";
 
@@ -73,11 +75,12 @@ export default async function CheckInPage({
   ]);
   if (!manifest) notFound();
 
+  const now = new Date();
   const back = `/shop/${shopSlug}/trips/${tripId}/check-in`;
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   const { totalDivers, boarded, blocked } = manifest.summary;
   const allAboard = totalDivers > 0 && boarded === totalDivers;
-  const remaining = totalDivers - boarded - blocked;
+  const remaining = Math.max(0, totalDivers - boarded - blocked);
   const divers = [...manifest.divers].sort((a, b) => checkInRank(a) - checkInRank(b));
 
   async function boardAction(formData: FormData) {
@@ -102,6 +105,12 @@ export default async function CheckInPage({
 
   return (
     <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <a
+        href="#boarding-list"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+      >
+        Skip to boarding list
+      </a>
       <FlashParams params={["notice"]} />
       <Link
         href={`/shop/${shopSlug}/trips/${tripId}`}
@@ -127,10 +136,10 @@ export default async function CheckInPage({
       ) : null}
 
       {allAboard ? (
-        <EarnedMoment className="mt-6" eyebrow="Check-in complete" title="Everyone’s aboard ⚓">
+        <EarnedMoment className="mt-6" eyebrow="Check-in complete" title="All divers aboard ⚓">
           <p>
-            All {totalDivers} {totalDivers === 1 ? "diver is" : "divers are"} boarded. Roll call and
-            notes live on the{" "}
+            All {totalDivers} {totalDivers === 1 ? "diver is" : "divers are"} boarded. Crew, notes,
+            and after-dive roll call live on the{" "}
             <Link
               href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
               className="font-semibold text-primary hover:underline"
@@ -141,30 +150,40 @@ export default async function CheckInPage({
           </p>
         </EarnedMoment>
       ) : (
-        <section className="mt-6 rounded-2xl border border-primary/30 bg-surface p-4 shadow-sm sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-lg font-bold">
+        <section
+          aria-labelledby="checkin-progress"
+          className="sticky top-16 z-10 mt-6 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur sm:p-5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <p id="checkin-progress" className="text-lg font-bold">
               <span className="tabular-nums">{boarded}</span> of{" "}
               <span className="tabular-nums">{totalDivers}</span> aboard
             </p>
-            <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
-              className="text-sm font-semibold text-primary hover:underline"
-            >
-              Full manifest →
-            </Link>
+            <div className="flex items-center gap-3">
+              <ConnectivityStatus offlineLabel="No signal · board may be stale" />
+              <Link
+                href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Full manifest →
+              </Link>
+            </div>
           </div>
-          <p className="mt-1 text-sm font-medium text-muted">
+          <p className="mt-1 text-base font-medium text-muted">
             {remaining > 0
               ? `${remaining} ready to board${blocked > 0 ? `, ${blocked} still blocked` : ""}.`
               : blocked > 0
                 ? `${blocked} ${blocked === 1 ? "diver is" : "divers are"} blocked and can’t board yet.`
                 : "No one is booked on this departure yet."}
           </p>
+          <p className="mt-1 text-sm text-muted">
+            Readiness as of {formatDateTimeTz(now, "en-US", shop.timezone)} — re-checked the instant
+            you board.
+          </p>
         </section>
       )}
 
-      <ul className="mt-6 flex flex-col gap-3">
+      <ul id="boarding-list" className="mt-6 flex flex-col gap-3">
         {divers.map((diver) => {
           const isBoarded = diver.rollCall?.state === "boarded";
           const isBlocked = diver.readiness.status === "blocked";
@@ -194,10 +213,10 @@ export default async function CheckInPage({
                     <span className="font-semibold text-foreground">Gear:</span>{" "}
                     {diver.gear.length > 0
                       ? diver.gear.map((item) => item.label).join(", ")
-                      : "None assigned"}
+                      : "No rental assigned"}
                   </p>
                   {isBlocked ? (
-                    <ul className="mt-2 flex flex-col gap-1 text-sm text-danger">
+                    <ul className="mt-2 flex flex-col gap-1 text-base text-danger">
                       {diver.readiness.blockers.map((blocker) => (
                         <li key={blocker.code}>• {blocker.message}</li>
                       ))}
@@ -206,13 +225,17 @@ export default async function CheckInPage({
                 </div>
                 <div className="shrink-0">
                   {isBoarded ? (
-                    <span className="inline-flex min-h-14 items-center justify-center rounded-lg bg-success/10 px-5 text-base font-semibold text-success">
+                    <span className="inline-flex min-h-14 items-center justify-center gap-1 rounded-lg bg-success/10 px-6 text-base font-semibold text-success">
                       Aboard ✓
                     </span>
                   ) : isBlocked ? (
                     <Link
                       href={`/shop/${shopSlug}/trips/${tripId}#booking-${diver.bookingId}`}
-                      className="inline-flex min-h-14 w-full items-center justify-center rounded-lg border border-border px-5 text-base font-semibold hover:bg-surface-sunken sm:w-auto"
+                      className={buttonClass({
+                        variant: "secondary",
+                        size: "boat",
+                        className: "w-full sm:w-auto",
+                      })}
                     >
                       Resolve blockers
                     </Link>
@@ -221,7 +244,11 @@ export default async function CheckInPage({
                       <input type="hidden" name="bookingId" value={diver.bookingId} />
                       <SubmitButton
                         pendingLabel="Boarding…"
-                        className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                        className={buttonClass({
+                          size: "boat",
+                          className:
+                            "w-full touch-manipulation transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto",
+                        })}
                       >
                         Board
                       </SubmitButton>
