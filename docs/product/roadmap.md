@@ -54,8 +54,8 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 
 ## M3 — Waivers (core slice complete)
 
-- ✅ Versioned staff templates: a new release is a new immutable version; completed records retain
-  the exact title, version, and text a diver saw.
+- ✅ One versioned release per shop: staff edit a single waiver and each edit is saved as a new
+  immutable version; completed records retain the exact title, version, and text a diver saw.
 - ✅ Pre-arrival, expiring completion links; only a SHA-256 token hash is stored. Pending links can
   be safely superseded without changing signed history.
 - ✅ Mobile-first typed-consent flow with saved progress, acknowledgement, medical questions,
@@ -66,8 +66,9 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   from stored evidence without exposing a bearer token.
 - ✅ Staff-triggered waiver links can be emailed through the same transactional notification seam;
   the staff-visible one-time link remains available if delivery fails.
-- ✅ Every waiver request uses the shop-selected default; the trip roster offers one status action
-  rather than an on-demand template picker, while signed evidence retains its template snapshot.
+- ✅ Every waiver request uses the shop's single current release; the trip roster offers one status
+  action rather than an on-demand template picker, while signed evidence retains its template
+  snapshot.
 - ✅ Richer, jurisdiction-aware medical questionnaire: a versioned RSTC/WRSTC form (and a UK
   variant) defined in [`src/lib/medical.ts`](../../src/lib/medical.ts), selected by the shop's
   jurisdiction on the waivers page. Completed waivers store the questionnaire id + version; any

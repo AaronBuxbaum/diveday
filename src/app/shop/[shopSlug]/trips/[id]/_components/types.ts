@@ -13,7 +13,7 @@ import type {
   listStaff,
   listTripDives,
 } from "@/db/trips";
-import type { listTripWaiverStatuses, listWaiverTemplates } from "@/db/waivers";
+import type { listTripWaiverStatuses } from "@/db/waivers";
 
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type RosterEntry = Awaited<ReturnType<typeof getTripRoster>>[number];
@@ -21,7 +21,6 @@ export type Waitlist = Awaited<ReturnType<typeof getTripWaitlist>>;
 export type StaffList = Awaited<ReturnType<typeof listStaff>>;
 export type TripDiveList = Awaited<ReturnType<typeof listTripDives>>;
 export type DiveSiteList = Awaited<ReturnType<typeof listDiveSites>>;
-export type WaiverTemplates = Awaited<ReturnType<typeof listWaiverTemplates>>;
 export type WaiverRow = Awaited<ReturnType<typeof listTripWaiverStatuses>>[number];
 export type ReadinessRow = Awaited<ReturnType<typeof listTripReadiness>>[number];
 export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
