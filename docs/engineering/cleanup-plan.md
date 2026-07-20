@@ -382,8 +382,11 @@ Bundle these into one PR:
   Next 16 / TS7; ES2017 is a stale default). Verify `pnpm build` and `pnpm check`.
 - `scripts/check-doc-links.mjs`: extend scanning to `.agents/skills/**/*.md` so skill docs get
   link-checked like everything else.
-- `src/lib/auth.config.ts` / redirect stubs: no changes — noted here only so nobody "cleans up"
-  the `certifications` and `orders` redirect stubs; they are intentional bookmark shims.
+- `src/lib/auth.config.ts`: no changes.
+- Redirect stubs: the `certifications` and `orders` index redirect stubs were **deleted** (there are
+  no active users, so there are no bookmarks to preserve — the same rationale WP-1.2/1.3 used to
+  delete rather than redirect the `/shop` and `/reports` routes). The real `orders/[id]` and
+  `orders/new` surfaces are untouched.
 
 ---
 
