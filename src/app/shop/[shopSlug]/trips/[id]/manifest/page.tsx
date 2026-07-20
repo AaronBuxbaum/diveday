@@ -6,7 +6,6 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
-import { RestorePreservedScroll, ScrollPreservingForm } from "@/components/ScrollPreservingForm";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { controlClass } from "@/components/ui/form";
@@ -105,7 +104,6 @@ export default async function TripManifestPage({
         Skip to roll call
       </a>
       <FlashParams params={["notice"]} />
-      <RestorePreservedScroll navigationKey={notice} />
       <div className="print:hidden">
         <Link
           href={`/shop/${shopSlug}/trips/${tripId}`}
@@ -379,7 +377,7 @@ export default async function TripManifestPage({
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap">
                     {ready ? (
-                      <ScrollPreservingForm action={rollCallAction}>
+                      <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
                         <input type="hidden" name="status" value="boarded" />
                         <SubmitButton
@@ -388,12 +386,9 @@ export default async function TripManifestPage({
                         >
                           {boarded ? "Boarded ✓" : "Mark boarded"}
                         </SubmitButton>
-                      </ScrollPreservingForm>
+                      </form>
                     ) : null}
-                    <ScrollPreservingForm
-                      id={`not-boarded-${diver.bookingId}`}
-                      action={rollCallAction}
-                    >
+                    <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
                       <input type="hidden" name="bookingId" value={diver.bookingId} />
                       <input type="hidden" name="status" value="not_boarded" />
                       <SubmitButton
@@ -404,7 +399,7 @@ export default async function TripManifestPage({
                           ? "Not boarded ✓"
                           : "Mark not boarded"}
                       </SubmitButton>
-                    </ScrollPreservingForm>
+                    </form>
                   </div>
                 </div>
               </li>
