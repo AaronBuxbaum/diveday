@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
 
 const linkClass =
   "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
@@ -16,19 +17,11 @@ const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
   { label: "Gear", suffix: "/gear" },
 ];
 
-const moreGroups = [
-  {
-    label: "Plan",
-    links: [["Dive sites", "/dive-sites"]],
-  },
-  {
-    label: "Business",
-    links: [
-      ["Courses", "/courses"],
-      ["Waivers", "/waivers"],
-      ["Settings", "/settings/payments"],
-    ],
-  },
+const moreLinks = [
+  ["Dive sites", "/dive-sites"],
+  ["Courses", "/courses"],
+  ["Waivers", "/waivers"],
+  ["Settings", "/settings/payments"],
 ] as const;
 
 function isCurrent(pathname: string, href: string, root: string) {
@@ -41,10 +34,16 @@ function navClass(active: boolean) {
 
 export function ShopNavLinks({ root, className = "" }: { root: string; className?: string }) {
   const pathname = usePathname();
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const isBoatSurface = pathname.includes("/manifest") || pathname.includes("/check-in");
-  const moreIsActive = moreGroups.some((group) =>
-    group.links.some(([, suffix]) => isCurrent(pathname, `${root}${suffix}`, root)),
+  const moreIsActive = moreLinks.some(([, suffix]) =>
+    isCurrent(pathname, `${root}${suffix}`, root),
   );
+  const closeMore = () => {
+    if (detailsRef.current) {
+      detailsRef.current.open = false;
+    }
+  };
 
   return (
     <div className={`flex min-w-0 items-center gap-2 ${className}`}>
@@ -75,7 +74,7 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
           );
         })}
       </nav>
-      <details className="relative shrink-0">
+      <details ref={detailsRef} className="relative shrink-0">
         <summary
           className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden`}
         >
@@ -84,34 +83,23 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
             ⌄
           </span>
         </summary>
-        {/*
-         * One column, one link per row. The old two-column grid wrapped short
-         * labels ("Nitrox fills", "Dive sites") onto two lines and let a
-         * three-link group spill a stray item into a column of its own, which
-         * read as a layout bug rather than a menu.
-         */}
-        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-3 rounded-2xl border border-border bg-surface p-3 shadow-xl">
-          {moreGroups.map((group) => (
-            <div key={group.label} className="flex flex-col">
-              <p className="px-3 pb-1 text-xs font-semibold tracking-widest text-muted uppercase">
-                {group.label}
-              </p>
-              {group.links.map(([label, suffix]) => {
-                const href = `${root}${suffix}`;
-                const active = isCurrent(pathname, href, root);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`${navClass(active)} whitespace-nowrap`}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+        {/* One column, one link per row — a two-column grid wrapped short labels onto two lines. */}
+        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-2xl border border-border bg-surface p-2 shadow-xl">
+          {moreLinks.map(([label, suffix]) => {
+            const href = `${root}${suffix}`;
+            const active = isCurrent(pathname, href, root);
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={closeMore}
+                className={`${navClass(active)} whitespace-nowrap`}
+                aria-current={active ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
       </details>
     </div>
