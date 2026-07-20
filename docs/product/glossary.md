@@ -56,9 +56,15 @@ new domain concept, define it here in the same PR.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.
-- **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency and
-  course identity stay fixed; the shop controls its description, base price, eLearning-inclusive
-  price, and whether it appears when scheduling. Hiding never rewrites existing sessions.
+- **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
+  course identity, the prerequisite card, and the fact that every course session needs an
+  instructor and a signed waiver; the shop controls only its description, its two prices, and
+  whether the course appears when scheduling. Hiding never rewrites existing sessions.
+- **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
+  makes a single payment for their sum. Enrollment assumes the e-learning is included; a student
+  who already completed it elsewhere has that line cleared before the invoice goes out, or
+  refunded after. Keeping them separate on the order is what makes either one adjustable without
+  re-working the total by hand.
 - **Manifest** — the authoritative list of every person on a boat (divers, students, staff,
   crew), with emergency contacts. A legal/safety document — in US waters, coast guard
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver

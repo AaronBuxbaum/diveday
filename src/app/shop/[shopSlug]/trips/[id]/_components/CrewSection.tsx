@@ -19,7 +19,7 @@ export function CrewSection({
     <section className="mt-10">
       <h2 className="text-lg font-semibold">Crew</h2>
       <p className="mt-1 text-sm text-muted">Who's running this trip.</p>
-      {trip.course?.requiresInstructor && !hasCourseInstructor ? (
+      {trip.course && !hasCourseInstructor ? (
         <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
           This course cannot take bookings until one assigned crew member has the instructor role.
         </p>

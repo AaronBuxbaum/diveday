@@ -4,7 +4,9 @@
 > opinionated recommendation for the next arc of work. Written 2026-07-20 from a full pass over
 > [vision](vision.md), [roadmap](roadmap.md), [next-steps](next-steps.md),
 > [human-decisions](human-decisions.md), [glossary](glossary.md),
-> [design principles](../design/principles.md), the [cleanup plan](../engineering/cleanup-plan.md),
+> [design principles](../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
+> 2026-07-20; its lasting rulings live in
+> [architecture/overview.md](../architecture/overview.md#settled-shape-decisions)),
 > the five [brainstorm lenses](brainstorm/README.md), and the shipped code
 > (`src/app/**`, `src/lib/**`, `src/db/schema.ts` — 33 tables).
 >
@@ -114,11 +116,10 @@ should be retired, gated, or paused — not extended:
   `/trips/[id]/nitrox`. The safety-critical parts (verified-card fill gate, readiness blockers, the
   math lib, the two tables) were **kept intact** — the cut was surface, not the workflow. Deeper
   reduction still waits on the H-11 policy decision.
-- **Navigation debris** the [cleanup plan](../engineering/cleanup-plan.md) catalogs — mostly ✅
-  **done (2026-07-20):** the `shop/page.tsx` alias and the `reports` duplicate page were deleted
-  (no redirects — there are no users to keep bookmarks for), the four flash/notice mechanisms were
-  unified on `ShopNotice`, and "Shop" now means one thing ("Settings" → `/settings/payments`). The
-  `certifications`/`orders` bookmark-shim routes were intentionally left in place.
+- ~~**Navigation debris.**~~ ✅ **Done (2026-07-20).** The `shop/page.tsx` alias, the `reports`
+  duplicate page, and the `certifications`/`orders` bookmark shims were all deleted (no redirects —
+  there are no users to keep bookmarks for), the four flash/notice mechanisms were unified on
+  `ShopNotice`, and "Shop" now means one thing ("Settings" → `/settings/payments`).
 - **A `recurrence` enum with a single `weekly` value** — additive hedging for cadences that don't
   exist yet.
 
@@ -131,13 +132,14 @@ connected.
 
 ## The staff app is also confusing to use
 
-Beyond what's missing, what exists has accreted structural confusion — the exact "hostile,
-forms-that-fight-you" quality the vision mocks in competitors. The [cleanup plan](../engineering/cleanup-plan.md)
-already documents it in executable detail: two trip **list** surfaces and two trip **detail** surfaces
-with a redirect hop between them, four notice mechanisms, copy-pasted button strings, a trial/demo
-identity bug (a real trial shop gets a "Reset demo data" button), and marketing that claims tracked
-real screenshots which never existed. This is not a separate workstream from delight — it *is* the
-delight work. You cannot win on experience while the staff shell contradicts itself.
+✅ **Addressed 2026-07-20.** What existed had accreted structural confusion — the exact "hostile,
+forms-that-fight-you" quality the vision mocks in competitors: a redirect hop between the two trip
+detail surfaces, four notice mechanisms, copy-pasted button strings, a trial/demo identity bug (a
+real trial shop got a "Reset demo data" button), and marketing that claimed tracked real screenshots
+which never existed. The 2026-07-19 cleanup audit catalogued all of it and its work packages shipped
+in full. This was never a separate workstream from delight — it *is* the delight work, and the staff
+shell no longer contradicts itself. The durable "don't undo this" rulings live in
+[architecture/overview.md](../architecture/overview.md#settled-shape-decisions).
 
 ## Recommendation: three moves, in order
 
@@ -148,16 +150,18 @@ substrate into felt product, and cut the surface that isn't earning its keep.
 
 Shrink the surface so every later change is cheaper and the app stops contradicting itself.
 
-- Execute [cleanup plan](../engineering/cleanup-plan.md) Tracks 0–2: navigation unification, one
-  notice system, kill `reports`, fix the trial/demo split, make marketing honest. ✅ The nav +
-  notice unification (and the `reports`/`shop` cuts) shipped 2026-07-20; the trial/demo split and
-  marketing honesty remain.
+- ✅ **The 2026-07-19 cleanup audit shipped in full (2026-07-20)** and its plan document has been
+  retired: navigation unification, one notice system, `reports` and `shop` cut, the trial/demo split
+  fixed, marketing made honest, `db/queries.ts` split, a shared db/e2e test context, and the
+  server-action convention documented.
 - Act on the cut list above: ✅ the superseded Checkout seam was removed and nitrox's footprint was
   trimmed (2026-07-20). Still open: pause/hide the dive-site CMS (moments/creatures) and global
   catalog behind their unproven value; keep the cert-verification *seam* but shed the speculative
   per-agency plumbing.
-- Decompose the two monster pages (cleanup WP-3.3) — a precondition for building new readiness
-  surfaces without fighting 1,300-line files.
+- ✅ The oversized pages are decomposed (2026-07-20): `trips/[id]` 1,296 → 277 lines,
+  `divers/[personId]` 1,140 → 64, `schedule/[id]` 719 → 167, `gear` 526 → 84 — each now an
+  `actions.ts` plus colocated `_components/`. New readiness surfaces no longer fight 1,300-line
+  files.
 
 Outcome: less to maintain, less to confuse, a clean base to build delight on.
 

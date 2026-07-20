@@ -41,7 +41,8 @@ src/
 drizzle/        # generated SQL migrations — committed, never hand-edited
 e2e/            # Playwright specs
 docs/           # the knowledge base (see docs/README.md)
-.claude/        # skills, agents, settings for AI-driven development
+.agents/skills/ # provider-neutral agent playbooks (new-feature, verify, design-review, …)
+.claude/        # Claude-specific agents and settings
 scripts/        # dev utilities (screenshots, etc.)
 ```
 
@@ -50,6 +51,21 @@ Single app at repo root — no monorepo until a second deployable exists
 
 **Dependency direction:** `app/` may import `lib/` and `components/`; `lib/` imports neither.
 Domain logic goes in `lib/` where Vitest can reach it without a browser.
+
+## Settled shape decisions
+
+Rulings from the 2026-07-19 simplification audit (executed and closed 2026-07-20). They read like
+obvious cleanup targets and are not — do not re-litigate them without new evidence:
+
+- **`/schedule/[id]` and `/trips/[id]` stay separate pages.** Public booking view and staff ops
+  view have different audiences and different failure modes; merging them into one role-branched
+  page trades a real safety boundary for a smaller file count. Navigation directness was fixed
+  instead — staff trip cards link straight to `/trips/[id]`.
+- **PGlite stays per-test.** Test isolation beats the speed of a shared or template database. A
+  migrate-once template db is a plausible perf follow-up, but it needs its own design and ADR.
+- **The `src/lib` dive-site helpers stay split** (`dive-site-media` / `-map` / `-landmarks`) —
+  small, live, single-purpose; consolidating them is churn without payoff.
+- **Superseded ADRs are retained**, never deleted — see [decisions/README.md](decisions/README.md).
 
 ## Deferred decisions
 

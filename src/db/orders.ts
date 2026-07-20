@@ -3,7 +3,7 @@ import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/
 import type { AppDb, DbExecutor } from "./client";
 import { setBookingPayment } from "./payments";
 import type { Order, OrderLineItemKind, OrderStatus } from "./schema";
-import { bookings, orderLineItems, orders, people, trips } from "./schema";
+import { bookings, courses, orderLineItems, orders, people, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 export type NewOrderLineItem = {
@@ -150,11 +150,14 @@ export async function listOrderableCustomers(db: DbExecutor, shopId: string) {
 
 /** Trip/person context for a booking, so an order started from a roster shows what it's linked to. */
 export async function getBookingContext(db: DbExecutor, shopId: string, bookingId: string) {
+  // The course comes along so a course session can be invoiced as its two
+  // catalog lines (instruction + e-learning) instead of one trip fee.
   const [row] = await db
-    .select({ booking: bookings, person: people, trip: trips })
+    .select({ booking: bookings, person: people, trip: trips, course: courses })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(courses, eq(courses.id, trips.courseId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   return row ?? null;

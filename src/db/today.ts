@@ -254,7 +254,7 @@ export async function getTodayWork(
     tripsWithInstructor(
       db,
       shopId,
-      inWindow.filter((trip) => trip.course?.requiresInstructor).map((trip) => trip.id),
+      inWindow.filter((trip) => trip.course).map((trip) => trip.id),
     ),
     listNotificationDeliveryIssues(db, shopId),
   ]);
@@ -309,7 +309,7 @@ export async function getTodayWork(
       });
     }
 
-    if (trip.course?.requiresInstructor && !staffedTrips.has(trip.id)) {
+    if (trip.course && !staffedTrips.has(trip.id)) {
       actions.push({
         id: `instructor:${trip.id}`,
         kind: "instructor_missing",

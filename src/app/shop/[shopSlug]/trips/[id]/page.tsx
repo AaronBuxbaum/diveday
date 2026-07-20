@@ -106,7 +106,7 @@ export default async function ManageTripPage({
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
   const hasCourseInstructor = Boolean(
-    trip.course?.requiresInstructor &&
+    trip.course &&
       staff.some(
         (entry) => crewIds.includes(entry.person.id) && entry.roles.includes("instructor"),
       ),

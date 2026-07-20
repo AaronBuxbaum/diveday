@@ -28,20 +28,26 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByRole("status")).toContainText("gear request is with the crew");
 });
 
-test("staff can configure and hide a catalog course", async ({ page }) => {
+test("staff can price a catalog course in place and hide it", async ({ page }) => {
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/courses");
-  const course = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
-  await course.getByText("Edit", { exact: true }).click();
-  await course.getByLabel("Course price ($)").fill("149.00");
-  await course.getByLabel("With eLearning ($)").fill("249.00");
-  await course.getByRole("button", { name: "Save course" }).click();
-  await expect(page.getByText("Course settings saved")).toBeVisible();
-  await expect(page.getByText("Course $149.00").first()).toBeVisible();
+  const row = page.getByRole("row").filter({ hasText: "Discover Scuba Diving" });
+  await row.getByLabel("Discover Scuba Diving instruction fee in dollars").fill("149.00");
+  await row.getByLabel("Discover Scuba Diving e-learning fee in dollars").fill("100.00");
+  await row.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Course pricing saved")).toBeVisible();
+  // The two items are billed separately, so the row states what the student pays.
+  await expect(
+    page.getByRole("row").filter({ hasText: "Discover Scuba Diving" }).getByText("$249.00"),
+  ).toBeVisible();
+
   await page
-    .getByRole("listitem")
+    .getByRole("row")
     .filter({ hasText: "Discover Scuba Diving" })
     .getByRole("button", { name: "Hide" })
     .click();
   await expect(page.getByText("Course hidden")).toBeVisible();
+  await expect(
+    page.getByRole("row").filter({ hasText: "Discover Scuba Diving" }).getByText("Hidden"),
+  ).toBeVisible();
 });
