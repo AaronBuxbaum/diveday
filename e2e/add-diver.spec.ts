@@ -1,0 +1,44 @@
+import { expect, test } from "./fixtures";
+import { daysFromNow, signInAsOwner } from "./helpers";
+
+test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
+  // Unique per run: the dev database persists across e2e runs.
+  const title = `Walk-in Test Trip ${Date.now()}`;
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(3));
+  await page.getByLabel("Departs").fill("09:00");
+  await page.getByLabel("Returns").fill("11:00");
+  await page.getByLabel("Capacity").fill("1");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  // Staff view of a trip card redirects straight into the manage-trip editor.
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: title }).click();
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+
+  const addDiver = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+  await addDiver.scrollIntoViewIfNeeded();
+  await addDiver.getByLabel("Name").fill("Walk-in Wanda");
+  await addDiver.getByLabel("Email").fill(`wanda-${Date.now()}@example.com`);
+  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByText("Walk-in Wanda")).toBeVisible();
+  await expect(page.getByText("Full", { exact: true })).toBeVisible();
+
+  // Trip is now full — the same section switches to wait-listing.
+  await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
+  await addDiver.getByLabel("Name").fill("Waitlist Wally");
+  await addDiver.getByLabel("Email").fill(`wally-${Date.now()}@example.com`);
+  await addDiver.getByRole("button", { name: "Add to wait list" }).click();
+
+  await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
+  await expect(page.getByText("Wait list").first()).toBeVisible();
+  await expect(page.getByText("Waitlist Wally")).toBeVisible();
+});

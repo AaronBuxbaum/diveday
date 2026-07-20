@@ -210,10 +210,11 @@ export default async function CheckInPage({
                     </div>
                   ) : null}
                   <p className="mt-2 text-sm text-muted">
-                    <span className="font-semibold text-foreground">Gear:</span>{" "}
-                    {diver.gear.length > 0
-                      ? diver.gear.map((item) => item.label).join(", ")
-                      : "No rental assigned"}
+                    <span className="font-semibold text-foreground">Rental fit:</span>{" "}
+                    {diver.rentalFit.text}
+                    {diver.nitroxRequested ? (
+                      <span className="font-semibold text-foreground"> · Nitrox requested</span>
+                    ) : null}
                   </p>
                   {isBlocked ? (
                     <ul className="mt-2 flex flex-col gap-1 text-base text-danger">

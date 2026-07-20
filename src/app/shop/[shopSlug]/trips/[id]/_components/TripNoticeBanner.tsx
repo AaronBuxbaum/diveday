@@ -8,6 +8,27 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   crew: { tone: "success", text: "Crew updated." },
   "booking-removed": { tone: "success", text: "Booking cancelled — the spot is open again." },
   "booking-restored": { tone: "success", text: "Back on the roster." },
+  "diver-added": { tone: "success", text: "Diver added to the trip." },
+  "diver-waitlisted": { tone: "success", text: "Diver added to the wait list." },
+  "diver-invalid": { tone: "danger", text: "Enter a name and a valid email to add a diver." },
+  "diver-full": {
+    tone: "danger",
+    text: "That trip is full — add them to the wait list instead.",
+  },
+  "diver-waitlist-available": {
+    tone: "danger",
+    text: "There's room on this trip — add them to the trip instead of the wait list.",
+  },
+  "diver-already": { tone: "danger", text: "That diver already has a booking on this trip." },
+  "diver-course-unstaffed": {
+    tone: "danger",
+    text: "This course session needs an instructor assigned before you can add divers.",
+  },
+  "diver-course-prerequisite": {
+    tone: "danger",
+    text: "That diver doesn't have a verified certification on file for this course's prerequisite.",
+  },
+  "diver-unavailable": { tone: "danger", text: "This trip can't accept new divers right now." },
   "waiver-complete": { tone: "success", text: "That diver already has a completed waiver." },
   "waiver-error": {
     tone: "danger",
@@ -19,17 +40,6 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   "conditions-cleared": {
     tone: "success",
     text: "Crew prediction cleared. Divers will see the automated outlook when it is available.",
-  },
-  "gear-assigned": { tone: "success", text: "Gear added to the packing list." },
-  "gear-returned": { tone: "success", text: "Gear returned to the gear room." },
-  "gear-packed": { tone: "success", text: "Available gear was packed from diver requests." },
-  "gear-none": {
-    tone: "danger",
-    text: "Nothing was packed automatically. Check each diver’s request and live inventory.",
-  },
-  "gear-error": {
-    tone: "danger",
-    text: "That gear is no longer available. The packing list has been refreshed.",
   },
   invalid: {
     tone: "danger",

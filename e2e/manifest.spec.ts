@@ -43,8 +43,14 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
 
   await page.getByText("Add a note to this roll-call record").first().click();
   await page.getByLabel("Optional note").first().fill("Guest asked to sit out before departure.");
+  // Park the button clear of the sticky header and progress panel before
+  // sampling. Playwright scrolls a target into view as part of clicking it, so
+  // a button sitting under those overlays moves the page after the sample and
+  // the comparison is then against a position the user was never at.
+  const markNotBoarded = page.getByRole("button", { name: "Mark not boarded" }).first();
+  await markNotBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
   const rollCallScroll = await page.evaluate(() => window.scrollY);
-  await page.getByRole("button", { name: "Mark not boarded" }).first().click();
+  await markNotBoarded.click();
   await expect(page.getByText("Not-boarded status recorded.", { exact: true })).toBeVisible();
   await expect
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))

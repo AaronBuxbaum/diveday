@@ -36,8 +36,8 @@ export type TodayActionKind =
   | "payment"
   | "readiness_unavailable"
   | "requirements"
-  | "gear_packing"
-  | "gear_service"
+  | "dive_prep"
+  | "nitrox_gate"
   | "instructor_missing"
   | "waitlist_seat"
   | "email_delivery";
@@ -54,8 +54,8 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   requirements: 3,
   waiver: 4,
   instructor_missing: 5,
-  gear_service: 6,
-  gear_packing: 7,
+  nitrox_gate: 6,
+  dive_prep: 7,
   payment: 8,
   email_delivery: 9,
   waitlist_seat: 10,
@@ -73,8 +73,8 @@ export const ACTION_KIND_META = {
   requirements: { label: "Setup", tone: "warning" },
   waiver: { label: "Waiver", tone: "warning" },
   instructor_missing: { label: "Crew", tone: "warning" },
-  gear_service: { label: "Service", tone: "warning" },
-  gear_packing: { label: "Gear", tone: "neutral" },
+  nitrox_gate: { label: "Nitrox", tone: "warning" },
+  dive_prep: { label: "Prep", tone: "neutral" },
   payment: { label: "Payment", tone: "neutral" },
   email_delivery: { label: "Email", tone: "neutral" },
   waitlist_seat: { label: "Wait list", tone: "neutral" },

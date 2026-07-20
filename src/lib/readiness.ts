@@ -270,7 +270,7 @@ function specialtyBlocker(
 
 /**
  * Nitrox is a yes/no gate cleared only by a verified enriched-air card. Its
- * evidence lives in nitrox_certifications (which also gates fills), and those
+ * evidence lives in nitrox_certifications (which also gates the mix request), and those
  * cards carry no expiry — so there is no expired state, only missing/pending/
  * rejected.
  */

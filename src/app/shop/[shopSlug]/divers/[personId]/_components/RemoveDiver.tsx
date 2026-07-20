@@ -19,7 +19,7 @@ export function RemoveDiver({
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">
         This is a soft delete: the person disappears from active shop lists, while bookings, cards,
-        and gear history remain intact for records and safety review.
+        and rental fit remain intact for records and safety review.
       </p>
       <details className="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-4">
         <summary className="flex min-h-11 cursor-pointer items-center py-2 text-sm font-medium text-danger">

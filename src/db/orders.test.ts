@@ -86,7 +86,7 @@ const lineItems = [
     unitAmountCents: 18_000,
   },
   {
-    kind: "rental_gear" as const,
+    kind: "rental" as const,
     description: "Full rental set",
     quantity: 1,
     unitAmountCents: 4_000,

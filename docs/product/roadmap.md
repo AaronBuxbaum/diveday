@@ -94,7 +94,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   readiness service.
 - ✅ Specialty and site-level requirements: specialties (Deep/Wreck/Night/Drysuit) are captured and
   verified like level cards; dive sites and trips each carry a cert gate and the readiness service
-  composes them (stricter level, union of specialties), fail-closed. Nitrox stays a fill-time gate.
+  composes them (stricter level, union of specialties), fail-closed. Nitrox gates the mix request.
   See [20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md).
 - ✅ Direct card-image upload: a provider seam ([`src/lib/storage`](../../src/lib/storage)) stores a
   captured photo to Vercel Blob and saves a durable URL; validated at the seam (JPG/PNG/WebP,
@@ -109,7 +109,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   (needs a gateway + `CERT_VERIFICATION_*` env, H).
 - ✅ Person-first staff workspace: `/shop/[shopSlug]/divers` is the starting point for a diver;
   each person record owns their level and specialty cards, rental fit profile, bookings, and issued
-  gear history. The former cards-first certifications route remains a bookmark redirect. See
+  rental fit. The former cards-first certifications route remains a bookmark redirect. See
   [the person-spine ADR](../architecture/decisions/20260719-diver-person-spine.md).
 - ✅ Payment readiness: a `booking_payments` state plus a per-trip `requires_payment` flag adds a
   `payment_due` blocker to the shared roll-up (paid/deposit/waived clear; absent = unpaid; a refund
@@ -126,31 +126,28 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   (the online capture/webhook confirmation this superseded from the prior entry). Tax, deposits,
   cancellation policy, and any platform fee remain H-07.
 
-## M5 — Gear (core prep slice complete)
+## M5 — Rental fit and trip prep (gear inventory removed)
 
-- ✅ Inventory records type, size, service state, optional next-service date, and durable
-  unavailable/assigned/held status.
-- ✅ Staff can pack available equipment directly against a trip roster; the transactional gate
-  prevents an item from being claimed twice and makes a hold or retirement unassignable.
-- ✅ Returns move equipment back into the visible packing pool, while the gear-room view retains
-  checked-out equipment until it comes back.
-- ✅ A completed service event records the work, staff member, completed date, and optional next
-  due date before returning held equipment to service. Checked-out and retired gear cannot be
-  released through this path.
-- ✅ Staff can retire returned or held equipment; checked-out equipment cannot be removed from a
-  diver's active assignment.
-- ✅ Diver booking-level rental requests capture a standard set, fit preferences, usual weighting,
-  and notes; staff sees them while packing, but the request never reserves inventory or replaces a
-  dock-side fit check.
+- ✅ Equipment inventory, assignments, and service history were removed outright. Scuba does not
+  track individual items: shops that want an asset register have one, and a half-maintained
+  duplicate was worse than none. What survives is what prep actually needs — sizes.
+- ✅ A shop-scoped **rental fit** per diver records which pieces they take from the shop and in
+  what size. It is a storage concept: it never reserves anything and never replaces a dock-side fit
+  check. Divers set it themselves on their booking confirmation; staff maintain it on the diver
+  record.
+- ✅ A per-trip **prep list** is derived purely from rental fit and the dive plan: one tank per
+  diver per planned dive, split air/nitrox, plus rental kit grouped by item and size with the
+  divers each line is for. It prints. Rules in [`src/lib/dive-prep.ts`](../../src/lib/dive-prep.ts),
+  assembly in [`src/db/rental-fit.ts`](../../src/db/rental-fit.ts), page at
+  `/shop/[shopSlug]/trips/[id]/prep`.
+- ✅ The two ways the list can be wrong — a diver with no fit on file, a nitrox request whose card
+  is not verified — are stated at the top of the page and raised on Today, never buried.
 - ✅ The diver-facing packing checklist is configured once at shop level and reused across trips.
-- ✅ A shop-scoped rental size profile pre-fills a diver’s later requests. Staff can bulk-pack
-  only currently available, requested gear; sized items require an exact requested/profile match,
-  and every conditional inventory claim remains conflict-safe.
 
 ## M6 — Boat manifests (implementation complete; field validation open)
 
 - ✅ A derived per-trip manifest preserves every active booking alongside shared readiness,
-  assigned gear, emergency contacts, and crew. Missing evidence is a visible blocker, never a
+  rental fit, mix, emergency contacts, and crew. Missing evidence is a visible blocker, never a
   reason to omit a diver.
 - ✅ Sunlight/phone-ready roll call has large explicit Boarded / Not boarded controls. A boarded
   event is rejected unless the shared readiness service clears that diver at the moment of action.
@@ -175,24 +172,22 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   preparation, planning, and business tools are grouped under More. See
   [the workspace navigation ADR](../architecture/decisions/20260719-shop-owner-workspace.md).
 - ✅ Today is a work queue: a departure board for the boats sailing today, then a ranked list of
-  jobs over the next week — blocked divers (collapsed per boat and per blocker), unpacked rental
-  requests, gear whose service falls due before it sails, unstaffed course sessions, freed seats on
+  jobs over the next week — blocked divers (collapsed per boat and per blocker), divers with no
+  rental fit on file, nitrox requests with no verified card, unstaffed course sessions, freed seats on
   wait-listed trips, and failed booking emails. Every row links to the surface that clears it;
   nothing that the nav already reaches in one click appears. Rules in
   [`src/lib/today.ts`](../../src/lib/today.ts), assembly in [`src/db/today.ts`](../../src/db/today.ts).
   See [the Today work-queue ADR](../architecture/decisions/20260720-today-work-queue.md).
 - ✅ Live staff operations, merged into the daily surfaces: actionable work (readiness blockers,
-  rental requests, unstaffed instructor-required sessions) is on Today, and shop-level counts
+  missing rental fit, unstaffed instructor-required sessions) is on Today, and shop-level counts
   (departures, booked divers, open seats) are on Schedule. The standalone operations-report page was
   retired as duplication of these two surfaces.
-- ✅ Nitrox fill logs: a verified enriched-air specialty card gates every fill; staff log an
-  analyzed mix per diver/tank and the MOD is derived, not entered. Framework-free rules in
-  [`src/lib/nitrox.ts`](../../src/lib/nitrox.ts); fail-closed persistence in
-  [`src/db/nitrox.ts`](../../src/db/nitrox.ts); logged per departure at
-  `/shop/[shopSlug]/trips/[id]/nitrox` (the separate shop-wide fill-log page was retired to keep
-  nitrox's footprint proportional to a fill-station-only workflow). Provisional dive parameters are in
-  the [provisional defaults](human-decisions.md#nitrox-fills) (H-11) and still need a
-  dive-domain-expert review (V-05).
+- ✅ Nitrox as a per-booking request, billed per dive: a diver with a verified enriched-air card
+  asks for it on their booking, and the request is refused at write time without one. Fail-closed
+  persistence in [`src/db/nitrox.ts`](../../src/db/nitrox.ts); every read re-checks the card so a
+  revoked card downgrades that diver to air. The analyzed-fill log was retired with gear inventory:
+  a fill record referenced a tracked cylinder, and without one it was evidence about nothing.
+  Whether a fill/analysis log should return in some tank-free form is open (V-05, H-11).
 - ✅ Automated marine outlook: a mapped dive site supplies a clearly-labelled 10-day Open-Meteo
   water-temperature and sea-state fallback until the crew publishes its dated prediction. Underwater
   visibility remains crew-entered rather than being inferred from atmospheric visibility.

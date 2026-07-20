@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { saveRentalGearRequest } from "@/db/gear-requests";
+import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
+import { saveRentalFit } from "@/db/rental-fit";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
@@ -13,7 +14,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 
 /** Bound to each action so the public page can stay a pure renderer. */
 export type TripRef = { shopSlug: string; tripId: string };
-export type GearRef = TripRef & { shopId: string; bookingId: string };
+export type RentalFitRef = TripRef & { shopId: string; bookingId: string; personId: string };
 
 const bookSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -22,14 +23,13 @@ const bookSchema = z.object({
   buddyPreference: z.string().trim().max(300).optional(),
 });
 
-const rentalRequestSchema = z.object({
+const rentalFitSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
   wetsuit: z.string().optional(),
   maskFins: z.string().optional(),
   weights: z.string().optional(),
-  tank: z.string().optional(),
-  diveComputer: z.string().optional(),
+  nitrox: z.string().optional(),
   bcdSize: z.string().trim().max(20),
   wetsuitSize: z.string().trim().max(20),
   bootSize: z.string().trim().max(20),
@@ -144,23 +144,28 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
   redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
 }
 
-export async function saveGearRequest(
-  { shopSlug, tripId, shopId, bookingId }: GearRef,
+/**
+ * Saves the diver's reusable rental fit and, separately, whether they want
+ * enriched air on this booking. The nitrox write is card-gated in the database
+ * (src/db/nitrox.ts): if it is refused, the fit is still saved and the diver is
+ * told why the mix did not stick, rather than silently getting air.
+ */
+export async function saveRentalFitRequest(
+  { shopSlug, tripId, shopId, bookingId, personId }: RentalFitRef,
   formData: FormData,
 ) {
-  const parsed = rentalRequestSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success)
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?booking=${bookingId}&error=gear`);
-  const saved = await saveRentalGearRequest(await getDb(), {
+  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const parsed = rentalFitSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base}?booking=${bookingId}&error=fit`);
+  const db = await getDb();
+  const saved = await saveRentalFit(db, {
     shopId,
-    bookingId,
-    bcd: parsed.data.bcd === "on",
-    regulator: parsed.data.regulator === "on",
-    wetsuit: parsed.data.wetsuit === "on",
-    maskFins: parsed.data.maskFins === "on",
-    weights: parsed.data.weights === "on",
-    tank: parsed.data.tank === "on",
-    diveComputer: parsed.data.diveComputer === "on",
+    personId,
+    rentsBcd: parsed.data.bcd === "on",
+    rentsRegulator: parsed.data.regulator === "on",
+    rentsWetsuit: parsed.data.wetsuit === "on",
+    rentsMaskFins: parsed.data.maskFins === "on",
+    rentsWeights: parsed.data.weights === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     bootSize: parsed.data.bootSize,
@@ -168,8 +173,11 @@ export async function saveGearRequest(
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  revalidateAndRedirect(
-    `/shop/${shopSlug}/schedule/${tripId}`,
-    `/shop/${shopSlug}/schedule/${tripId}?booking=${bookingId}&${saved ? "gear=saved" : "error=gear"}`,
-  );
+  const nitrox = await setBookingNitrox(db, {
+    shopId,
+    bookingId,
+    wantsNitrox: parsed.data.nitrox === "on",
+  });
+  const result = !saved ? "error=fit" : nitrox.ok ? "fit=saved" : "error=nitrox-card";
+  revalidateAndRedirect(base, `${base}?booking=${bookingId}&${result}`);
 }

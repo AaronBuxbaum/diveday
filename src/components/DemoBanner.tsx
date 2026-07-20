@@ -34,8 +34,8 @@ const ROLES_INFO = [
     title: "Divemaster",
     name: "Keiko Tanaka",
     icon: "🤿",
-    desc: "Guides divers, verifies waiver paperwork, and manages rental gear rooms.",
-    tryThis: "Check Waivers or allocate gear sizes in the Gear section.",
+    desc: "Guides divers, verifies waiver paperwork, and keeps rental fit up to date.",
+    tryThis: "Check Waivers, or open a trip's prep list to see what to pull.",
   },
   {
     id: "captain",

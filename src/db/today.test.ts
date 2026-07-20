@@ -1,9 +1,11 @@
 // @vitest-environment node
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { assignGear, listAvailableGear } from "./gear";
-import { saveRentalGearRequest } from "./gear-requests";
 import { recordRollCall } from "./manifests";
+import { setBookingNitrox } from "./nitrox";
+import { saveRentalFit } from "./rental-fit";
+import { nitroxCertifications } from "./schema";
 import { getTodayWork } from "./today";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -108,41 +110,69 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(work.departures[0]?.boarded).toBe(1);
   });
 
-  it("flags a rental request with nothing packed, and clears it once gear is assigned", async () => {
+  it("flags divers with no rental fit on file, and clears it once a fit is saved", async () => {
     const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const [entry] = await getTripRoster(db, reef.id);
-    if (!entry) throw new Error("demo booking missing");
-
-    await saveRentalGearRequest(db, {
-      shopId: shop.id,
-      bookingId: entry.booking.id,
-      bcd: true,
-      regulator: true,
-      wetsuit: true,
-      maskFins: true,
-      weights: true,
-      tank: true,
-      diveComputer: false,
-    });
+    const roster = await getTripRoster(db, reef.id);
+    if (roster.length === 0) throw new Error("demo bookings missing");
 
     const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const gearAction = flagged.actions.find((action) => action.id === `gear:${reef.id}`);
-    expect(gearAction?.actionLabel).toBe("Pack gear");
-    expect(gearAction?.detail).toContain("1 diver has");
+    const prepAction = flagged.actions.find((action) => action.id === `prep:${reef.id}`);
+    expect(prepAction?.actionLabel).toBe("Open prep list");
+    expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/prep`);
 
-    const [item] = await listAvailableGear(db, shop.id);
-    if (!item) throw new Error("expected available gear in the seed");
-    await assignGear(db, {
-      shopId: shop.id,
-      bookingId: entry.booking.id,
-      gearItemId: item.id,
-    });
+    for (const entry of roster) {
+      await saveRentalFit(db, {
+        shopId: shop.id,
+        personId: entry.person.id,
+        rentsBcd: true,
+        rentsRegulator: true,
+        rentsWetsuit: true,
+        rentsMaskFins: true,
+        rentsWeights: true,
+        bcdSize: "M",
+      });
+    }
 
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(cleared.actions.some((action) => action.id === `gear:${reef.id}`)).toBe(false);
+    expect(cleared.actions.some((action) => action.id === `prep:${reef.id}`)).toBe(false);
+  });
+
+  it("raises a nitrox request whose card stopped being verified", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await getTripRoster(db, reef.id);
+    const certified = roster.find((entry) => entry.person.fullName === "Priya Sharma");
+    if (!certified) throw new Error("seeded nitrox diver missing from the reef trip");
+
+    const requested = await setBookingNitrox(db, {
+      shopId: shop.id,
+      bookingId: certified.booking.id,
+      wantsNitrox: true,
+    });
+    expect(requested.ok).toBe(true);
+
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(before.actions.some((action) => action.id === `nitrox:${reef.id}`)).toBe(false);
+
+    // The card is pulled after the request was already accepted.
+    await db
+      .update(nitroxCertifications)
+      .set({ status: "rejected" })
+      .where(
+        and(
+          eq(nitroxCertifications.shopId, shop.id),
+          eq(nitroxCertifications.personId, certified.person.id),
+        ),
+      );
+
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
+    expect(nitroxAction?.detail).toContain("without a verified card");
   });
 
   it("never looks past its one-week horizon", async () => {

@@ -28,7 +28,8 @@ describe("buildTripManifest", () => {
           emergencyContactName: "Asha Sharma",
           emergencyContactPhone: "+1-305-555-0101",
           readiness: { status: "ready", blockers: [] },
-          gear: [{ label: "BCD-12", type: "bcd" }],
+          rentalFit: { state: "rents" as const, text: "BCD M, Wetsuit 5mm M" },
+          nitroxRequested: true,
           rollCall: {
             state: "boarded",
             occurredAt: new Date("2026-07-20T11:45:00.000Z"),
@@ -42,7 +43,8 @@ describe("buildTripManifest", () => {
           email: null,
           emergencyContactName: null,
           emergencyContactPhone: null,
-          gear: [],
+          rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+          nitroxRequested: false,
         },
       ],
     });

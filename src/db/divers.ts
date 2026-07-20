@@ -6,13 +6,10 @@ import {
   bookings,
   certifications,
   courses,
-  gearAssignments,
-  gearItems,
   nitroxCertifications,
   people,
   personRoles,
-  rentalGearProfiles,
-  rentalGearRequests,
+  rentalFitProfiles,
   specialtyCertifications,
   trips,
 } from "./schema";
@@ -84,7 +81,7 @@ export async function updateDiver(
   return person ?? null;
 }
 
-/** Soft-delete a diver. Bookings, cards, and gear history stay available to operations. */
+/** Soft-delete a diver. Bookings, cards, and rental fit stay available to operations. */
 export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
   const [person] = await db
     .update(people)
@@ -117,7 +114,7 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
   const peopleRows = await diverIds(db, shopId);
   if (peopleRows.length === 0) return [];
   const ids = peopleRows.map((person) => person.id);
-  const [levelCards, specialtyCards, nitroxCards, profiles, activeAssignments] = await Promise.all([
+  const [levelCards, specialtyCards, nitroxCards, profiles] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -139,26 +136,10 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
       ),
     db
       .select()
-      .from(rentalGearProfiles)
-      .where(and(eq(rentalGearProfiles.shopId, shopId), inArray(rentalGearProfiles.personId, ids))),
-    db
-      .select({ personId: bookings.personId })
-      .from(gearAssignments)
-      .innerJoin(gearItems, eq(gearItems.id, gearAssignments.gearItemId))
-      .innerJoin(bookings, eq(bookings.id, gearAssignments.bookingId))
-      .where(
-        and(
-          eq(gearAssignments.shopId, shopId),
-          eq(gearAssignments.status, "assigned"),
-          inArray(bookings.personId, ids),
-        ),
-      ),
+      .from(rentalFitProfiles)
+      .where(and(eq(rentalFitProfiles.shopId, shopId), inArray(rentalFitProfiles.personId, ids))),
   ]);
   const profileByPerson = new Map(profiles.map((profile) => [profile.personId, profile]));
-  const assignedCount = new Map<string, number>();
-  for (const row of activeAssignments) {
-    assignedCount.set(row.personId, (assignedCount.get(row.personId) ?? 0) + 1);
-  }
   return peopleRows.map((person) => {
     const cards = levelCards.filter((card) => card.personId === person.id);
     const specialty = specialtyCards.filter((card) => card.personId === person.id);
@@ -172,8 +153,7 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
         specialty.filter((card) => card.status === "pending").length +
         nitrox.filter((card) => card.status === "pending").length,
       nitroxCertificationCount: nitrox.length,
-      gearProfile: profileByPerson.get(person.id) ?? null,
-      assignedGearCount: assignedCount.get(person.id) ?? 0,
+      rentalFit: profileByPerson.get(person.id) ?? null,
     };
   });
 }
@@ -200,8 +180,6 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     nitroxCards,
     profile,
     bookingRows,
-    gearRows,
-    requests,
     personOrders,
     personBookingPayments,
   ] = await Promise.all([
@@ -229,8 +207,8 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
       .orderBy(desc(nitroxCertifications.createdAt)),
     db
       .select()
-      .from(rentalGearProfiles)
-      .where(and(eq(rentalGearProfiles.shopId, shopId), eq(rentalGearProfiles.personId, personId)))
+      .from(rentalFitProfiles)
+      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
       .limit(1),
     db
       .select({ booking: bookings, trip: trips, course: courses })
@@ -239,21 +217,6 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
       .leftJoin(courses, eq(courses.id, trips.courseId))
       .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
       .orderBy(desc(trips.startsAt)),
-    db
-      .select({ assignment: gearAssignments, item: gearItems, trip: trips })
-      .from(gearAssignments)
-      .innerJoin(gearItems, eq(gearItems.id, gearAssignments.gearItemId))
-      .innerJoin(bookings, eq(bookings.id, gearAssignments.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(and(eq(gearAssignments.shopId, shopId), eq(bookings.personId, personId)))
-      .orderBy(desc(gearAssignments.assignedAt)),
-    db
-      .select({ request: rentalGearRequests, trip: trips })
-      .from(rentalGearRequests)
-      .innerJoin(bookings, eq(bookings.id, rentalGearRequests.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(and(eq(rentalGearRequests.shopId, shopId), eq(bookings.personId, personId)))
-      .orderBy(desc(rentalGearRequests.updatedAt)),
     listOrdersForPerson(db, shopId, personId),
     listPersonBookingPayments(db, shopId, personId),
   ]);
@@ -263,10 +226,8 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     certifications: levelCards,
     specialtyCertifications: specialtyCards,
     nitroxCertifications: nitroxCards,
-    gearProfile: profile[0] ?? null,
+    rentalFit: profile[0] ?? null,
     bookings: bookingRows,
-    gearAssignments: gearRows,
-    gearRequests: requests,
     orders: personOrders,
     bookingPayments: personBookingPayments,
   };

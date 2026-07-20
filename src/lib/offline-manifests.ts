@@ -1,6 +1,11 @@
 import type { TripManifest } from "./manifests";
 
-export const OFFLINE_MANIFEST_RECORD_VERSION = 1 as const;
+/**
+ * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
+ * data, so an older cached snapshot fails to decrypt rather than being read
+ * back into a type it no longer matches.
+ */
+export const OFFLINE_MANIFEST_RECORD_VERSION = 2 as const;
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;

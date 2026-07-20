@@ -23,7 +23,8 @@ const STATUS_LABELS: Record<string, string> = {
 const KIND_LABELS: Record<string, string> = {
   trip_fee: "Trip fee",
   course_fee: "Course fee",
-  rental_gear: "Rental gear",
+  rental: "Rental",
+  nitrox: "Nitrox",
   deposit: "Deposit",
   merchandise: "Merchandise",
   other: "Other",

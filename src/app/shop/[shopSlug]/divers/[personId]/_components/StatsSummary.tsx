@@ -1,7 +1,7 @@
 import type { DiverProfile } from "./shared";
 
 export function StatsSummary({ diver }: { diver: DiverProfile }) {
-  const profile = diver.gearProfile;
+  const profile = diver.rentalFit;
   return (
     <div className="mt-8 grid gap-3 sm:grid-cols-3">
       <div className="rounded-lg border border-border bg-surface p-4">

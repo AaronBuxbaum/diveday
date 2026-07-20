@@ -5,7 +5,6 @@ import { z } from "zod";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
-import { saveRentalGearProfile } from "@/db/gear-requests";
 import { createNitroxCertification, reviewNitroxCertification } from "@/db/nitrox";
 import { refundOrder } from "@/db/orders";
 import {
@@ -15,6 +14,7 @@ import {
   reviewSpecialtyCertification,
   verifyCertificationWithAgency,
 } from "@/db/readiness";
+import { saveRentalFit } from "@/db/rental-fit";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCardImage } from "@/lib/storage";
@@ -48,6 +48,11 @@ const specialtyCertificationSchema = z.object({
   expiresOn: dateSchema,
 });
 const profileSchema = z.object({
+  bcd: z.string().optional(),
+  regulator: z.string().optional(),
+  wetsuit: z.string().optional(),
+  maskFins: z.string().optional(),
+  weights: z.string().optional(),
   bcdSize: z.string().trim().max(40),
   wetsuitSize: z.string().trim().max(40),
   bootSize: z.string().trim().max(40),
@@ -199,10 +204,19 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
   const staff = await requireStaffSession();
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
-  const saved = await saveRentalGearProfile(await getDb(), {
+  const saved = await saveRentalFit(await getDb(), {
     shopId: staff.user.shopId,
     personId,
-    ...parsed.data,
+    rentsBcd: parsed.data.bcd === "on",
+    rentsRegulator: parsed.data.regulator === "on",
+    rentsWetsuit: parsed.data.wetsuit === "on",
+    rentsMaskFins: parsed.data.maskFins === "on",
+    rentsWeights: parsed.data.weights === "on",
+    bcdSize: parsed.data.bcdSize,
+    wetsuitSize: parsed.data.wetsuitSize,
+    bootSize: parsed.data.bootSize,
+    finSize: parsed.data.finSize,
+    weightPreference: parsed.data.weightPreference,
   });
   revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}`);
 }

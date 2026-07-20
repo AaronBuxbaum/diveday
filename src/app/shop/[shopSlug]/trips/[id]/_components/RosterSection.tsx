@@ -1,17 +1,14 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
-import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
+import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { waiverState } from "@/lib/waivers";
 import type {
-  AvailableGear,
-  GearByBooking,
-  GearProfileByBooking,
-  GearRequestByBooking,
+  NitroxByBooking,
   ReadinessByBooking,
+  RentalFitByBooking,
   RosterEntry,
   WaiverByBooking,
 } from "./types";
@@ -25,33 +22,6 @@ const PAYMENT_LABELS: Record<PaymentStatus, string> = {
   waived: "Waived",
   refunded: "Refunded",
 };
-
-function rentalRequestSummary(
-  request: RentalGearRequest | null | undefined,
-  profile: RentalGearProfile | null | undefined,
-) {
-  if (!request && !profile) return "No rental request yet.";
-  const requested = [
-    request?.bcd && "BCD",
-    request?.regulator && "regulator",
-    request?.wetsuit && "wetsuit",
-    request?.maskFins && "mask & fins",
-    request?.weights && "weights",
-    request?.tank && "tank",
-    request?.diveComputer && "computer",
-  ].filter(Boolean);
-  const fit = [
-    (request?.bcdSize ?? profile?.bcdSize) && `BCD ${request?.bcdSize ?? profile?.bcdSize}`,
-    (request?.wetsuitSize ?? profile?.wetsuitSize) &&
-      `wetsuit ${request?.wetsuitSize ?? profile?.wetsuitSize}`,
-    (request?.bootSize ?? profile?.bootSize) && `boot ${request?.bootSize ?? profile?.bootSize}`,
-    (request?.finSize ?? profile?.finSize) && `fin ${request?.finSize ?? profile?.finSize}`,
-    request?.weightPreference ?? profile?.weightPreference,
-  ].filter(Boolean);
-  return [requested.length > 0 ? requested.join(", ") : "No rental set requested", fit.join(" · ")]
-    .filter(Boolean)
-    .join(" — ");
-}
 
 // The whole waiver collapses to a single control per diver. Its face is the
 // status; its click is the only sensible next action. `action: null` means the
@@ -109,15 +79,10 @@ export function RosterSection({
   roster,
   readinessByBooking,
   waiverByBooking,
-  gearByBooking,
-  gearRequestByBooking,
-  gearProfileByBooking,
-  availableGear,
+  rentalFitByBooking,
+  nitroxByBooking,
   requiresPayment,
-  assignRecommendedGearAction,
   issueWaiverAction,
-  returnGearAction,
-  assignGearAction,
   markPaymentAction,
   removeBookingAction,
 }: {
@@ -131,15 +96,10 @@ export function RosterSection({
   roster: RosterEntry[];
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
-  gearByBooking: GearByBooking;
-  gearRequestByBooking: GearRequestByBooking;
-  gearProfileByBooking: GearProfileByBooking;
-  availableGear: AvailableGear;
+  rentalFitByBooking: RentalFitByBooking;
+  nitroxByBooking: NitroxByBooking;
   requiresPayment: boolean;
-  assignRecommendedGearAction: () => void;
   issueWaiverAction: (formData: FormData) => void;
-  returnGearAction: (formData: FormData) => void;
-  assignGearAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
 }) {
@@ -154,38 +114,21 @@ export function RosterSection({
             </span>
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Readiness, waiver, gear, and payment for each diver — together in one place.
+            Readiness, waiver, rental fit, and payment for each diver — together in one place.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <form action={assignRecommendedGearAction}>
-            <SubmitButton
-              pendingLabel="Packing…"
-              className={buttonClass({
-                variant: "secondary",
-                className: "text-foreground",
-              })}
-            >
-              Pack recommendations
-            </SubmitButton>
-          </form>
           <Link
-            href={`/shop/${shopSlug}/gear`}
+            href={`/shop/${shopSlug}/trips/${tripId}/prep`}
             className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
           >
-            Gear room
+            Prep list
           </Link>
           <Link
             href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
             className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
           >
             Boat manifest
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}/nitrox`}
-            className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Nitrox fills
           </Link>
         </div>
       </div>
@@ -205,7 +148,7 @@ export function RosterSection({
               waiverStatus === "medical_review" && currentWaiver?.medicalAnswers
                 ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
                 : [];
-            const assignedGear = gearByBooking.get(booking.id) ?? [];
+            const nitrox = nitroxByBooking.get(booking.id);
             return (
               <li
                 key={booking.id}
@@ -316,70 +259,18 @@ export function RosterSection({
 
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      Gear
+                      Rental fit
                     </p>
                     <p className="mt-2 text-sm text-muted">
-                      {rentalRequestSummary(
-                        gearRequestByBooking.get(booking.id),
-                        gearProfileByBooking.get(booking.id),
-                      )}
+                      {rentalFitLine(rentalFitByBooking.get(booking.id) ?? null).text}
                     </p>
-                    {assignedGear.length === 0 ? (
-                      <p className="mt-2 text-sm text-muted">Nothing packed yet.</p>
-                    ) : (
-                      <ul className="mt-2 flex flex-wrap gap-2">
-                        {assignedGear.map((item) => (
-                          <li
-                            key={item.assignmentId}
-                            className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 text-sm font-medium text-primary"
-                          >
-                            {item.label} <span className="font-normal">({item.type})</span>
-                            <form action={returnGearAction}>
-                              <input type="hidden" name="assignmentId" value={item.assignmentId} />
-                              <button
-                                type="submit"
-                                aria-label={`Return ${item.label}`}
-                                className="inline-flex min-h-11 items-center px-3 font-semibold hover:underline"
-                              >
-                                Return
-                              </button>
-                            </form>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {availableGear.length > 0 ? (
-                      <form action={assignGearAction} className="mt-2 flex flex-wrap gap-2">
-                        <input type="hidden" name="bookingId" value={booking.id} />
-                        <select
-                          name="gearItemId"
-                          aria-label={`Assign gear to ${person.fullName}`}
-                          defaultValue=""
-                          className={`${controlClass} min-w-44 flex-1`}
-                        >
-                          <option value="" disabled>
-                            Choose available gear
-                          </option>
-                          {availableGear.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.label} · {item.type.replace("_", " ")}
-                              {item.size ? ` · ${item.size}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <SubmitButton
-                          pendingLabel="Packing…"
-                          className={buttonClass({
-                            variant: "secondary",
-                            className: "text-foreground",
-                          })}
-                        >
-                          Pack
-                        </SubmitButton>
-                      </form>
-                    ) : (
-                      <p className="mt-2 text-sm text-muted">No available gear right now.</p>
-                    )}
+                    {nitrox ? (
+                      <p className="mt-2 text-sm font-medium text-primary">
+                        {nitrox.approved
+                          ? "Nitrox requested — verified card, billed per dive. The mix is still analyzed and signed for at the fill station."
+                          : "Nitrox requested, but no verified card. Planned as air."}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 

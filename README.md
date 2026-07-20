@@ -1,6 +1,6 @@
 # Scuba
 
-Delight-first dive shop operations: **bookings, waivers, cert checks, gear, and boat
+Delight-first dive shop operations: **bookings, waivers, cert checks, trip prep, and boat
 manifests** in one place that's a genuine pleasure to use.
 
 Built entirely by AI agents. The repo is structured for that: [`AGENTS.md`](AGENTS.md) is the

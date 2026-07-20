@@ -93,7 +93,7 @@ export default async function DiversPage({
       <ShopPageHeader
         eyebrow={shop.name}
         title="Divers"
-        description="Start with the person. Their cards, rental fit, bookings, and issued gear stay together so the front desk always has the right context."
+        description="Start with the person. Their cards, rental fit, and bookings stay together so the front desk always has the right context."
         meta={
           <span className="text-sm text-muted">
             {query
@@ -269,23 +269,16 @@ export default async function DiversPage({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-muted">
-                        {diver.gearProfile ? "Fit saved" : "No fit profile"}
+                        {diver.rentalFit ? "Fit saved" : "No fit on file"}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex flex-wrap gap-2">
-                          {diver.assignedGearCount > 0 ? (
-                            <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
-                              {diver.assignedGearCount} gear checked out
-                            </span>
-                          ) : null}
                           {pending > 0 ? (
                             <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
                               {pending} pending review
                             </span>
                           ) : null}
-                          {diver.assignedGearCount === 0 && pending === 0 ? (
-                            <span className="text-muted">None</span>
-                          ) : null}
+                          {pending === 0 ? <span className="text-muted">None</span> : null}
                         </div>
                       </td>
                     </tr>

@@ -127,8 +127,8 @@ export default async function OnboardPage({
                 <div>
                   <span className="text-sm font-medium text-foreground">Seed with demo data</span>
                   <p className="text-xs text-muted mt-0.5">
-                    Pre-populate your shop schedule with trips, bookings, rental gear requests,
-                    nitrox log fills, and customers. Recommended for a hands-on trial.
+                    Pre-populate your shop schedule with trips, bookings, rental fit, nitrox cards,
+                    and customers. Recommended for a hands-on trial.
                   </p>
                 </div>
               </label>

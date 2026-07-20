@@ -1,3 +1,4 @@
+import type { RentalFitLine } from "./dive-prep";
 import type { ReadinessResult } from "./readiness";
 import { unavailableReadiness } from "./readiness";
 
@@ -25,11 +26,6 @@ export function rollCallCheckpointLabel(checkpoint: RollCallCheckpoint): string 
   return `After dive ${checkpoint.slice("after_dive_".length)}`;
 }
 
-export type ManifestGear = {
-  label: string;
-  type: string;
-};
-
 export type ManifestDiverInput = {
   bookingId: string;
   fullName: string;
@@ -37,7 +33,14 @@ export type ManifestDiverInput = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   readiness?: ReadinessResult;
-  gear: ManifestGear[];
+  /** Rental kit line, including whether a fit was ever recorded at all. */
+  rentalFit: RentalFitLine;
+  /**
+   * The diver *asked* for enriched air and holds a verified card. It is not a
+   * record of what is in a cylinder: Scuba logs no gas analysis, so the crew
+   * still analyzes and signs for the actual mix before anyone breathes it.
+   */
+  nitroxRequested: boolean;
   rollCall?: {
     state: Exclude<RollCallState, "awaiting">;
     occurredAt: Date;

@@ -104,7 +104,7 @@ export const tripRecurrenceFrequency = pgEnum("trip_recurrence_frequency", ["wee
 /**
  * The template + cadence behind a set of repeating trips. A series does not run
  * on the boat — its instances do. Each instance is a real, independent `trips`
- * row (see `trips.series_id`) so bookings, manifests, waivers, gear, and roll
+ * row (see `trips.series_id`) so bookings, manifests, waivers, and roll
  * call all use the one operational spine and an owner can edit or cancel a
  * single date without touching the rest. The series row is provenance and the
  * cadence description, not a live scheduler: instances are materialized once at
@@ -156,14 +156,14 @@ export const certificationStatus = pgEnum("certification_status", [
  * Activity-gating specialties that attach to a site or trip ("this wreck
  * requires AOW + Deep"). Each is a distinct yes/no gate, never a ladder rung,
  * so they live apart from the recreational-level rank map in readiness.ts.
- * Nitrox is deliberately absent: it is gated per-tank at fill time
- * (nitrox_certifications / nitrox_fills), not per-site.
+ * Nitrox is deliberately absent: nitrox_certifications gates the per-booking
+ * mix request, not a site.
  */
 export const diveSpecialty = pgEnum("dive_specialty", ["deep", "wreck", "night", "drysuit"]);
 
 /**
  * Course definitions are the reusable instruction catalog. A course session
- * remains a trip so enrollment, capacity, crew, waivers, gear, and manifests
+ * remains a trip so enrollment, capacity, crew, waivers, and manifests
  * all share one operational spine.
  */
 export const courses = pgTable(
@@ -273,7 +273,7 @@ export const diveSites = pgTable(
       .default([]),
     /**
      * Whether the site demands a verified nitrox card to board. Evidence lives
-     * in nitrox_certifications (also the fill-time gate), so this is its own
+     * in nitrox_certifications (also the mix-request gate), so this is its own
      * flag, not a member of required_specialties.
      */
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
@@ -461,6 +461,13 @@ export const bookings = pgTable(
       .notNull()
       .references(() => people.id),
     buddyPreference: text("buddy_preference"),
+    /**
+     * The diver asked for enriched air on this trip — billed per dive. Only
+     * written for a diver with a verified nitrox card (src/db/nitrox.ts); the
+     * prep checklist re-checks the card so a later revocation downgrades the
+     * booking to air rather than silently trusting this flag.
+     */
+    wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     status: bookingStatus("status").notNull().default("booked"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -649,7 +656,9 @@ export const orderLineItemKind = pgEnum("order_line_item_kind", [
   "course_fee",
   /** The agency e-learning code, billed as its own line beside course_fee. */
   "e_learning_fee",
-  "rental_gear",
+  "rental",
+  /** Enriched air, charged per dive on top of the trip fee. */
+  "nitrox",
   "deposit",
   "merchandise",
   "other",
@@ -658,7 +667,7 @@ export const orderLineItemKind = pgEnum("order_line_item_kind", [
 /**
  * A shop-issued order/invoice for one customer. Local, provider-neutral
  * status mirrors the Stripe invoice it is backed by; `booking_id` is optional
- * so an order can stand alone (gear sale, walk-in air fill) or settle a
+ * so an order can stand alone (retail sale, walk-in air fill) or settle a
  * booking's payment gate through the webhook (20260719-stripe-connect-orders).
  */
 export const orders = pgTable(
@@ -945,87 +954,29 @@ export const tripRequirements = pgTable(
   (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
 );
 
-export const gearType = pgEnum("gear_type", [
-  "bcd",
-  "regulator",
-  "wetsuit",
-  "mask_fins",
-  "weights",
-  "tank",
-]);
-
-/** Service holds are a safety state, not a staff-facing warning that can be bypassed. */
-export const gearState = pgEnum("gear_state", ["available", "assigned", "service_hold", "retired"]);
-
-export const gearItems = pgTable(
-  "gear_items",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    label: text("label").notNull(),
-    type: gearType("type").notNull(),
-    size: text("size"),
-    state: gearState("state").notNull().default("available"),
-    serviceDueAt: timestamp("service_due_at", { withTimezone: true }),
-    notes: text("notes"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("gear_items_shop_label_unique").on(table.shopId, table.label),
-    index("gear_items_shop_type_state_idx").on(table.shopId, table.type, table.state),
-  ],
-);
-
-export const gearAssignmentStatus = pgEnum("gear_assignment_status", ["assigned", "returned"]);
-
-/** Immutable-ish operational history: only return timestamps/status are updated after assignment. */
-export const gearAssignments = pgTable(
-  "gear_assignments",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
-    gearItemId: uuid("gear_item_id")
-      .notNull()
-      .references(() => gearItems.id),
-    status: gearAssignmentStatus("status").notNull().default("assigned"),
-    assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
-    returnedAt: timestamp("returned_at", { withTimezone: true }),
-  },
-  (table) => [
-    index("gear_assignments_booking_status_idx").on(table.bookingId, table.status),
-    index("gear_assignments_gear_status_idx").on(table.gearItemId, table.status),
-  ],
-);
-
 /**
- * A diver's requested rental set for one booking. It is a planning input, not
- * an allocation: staff still chooses real, available inventory through
- * gear_assignments and confirms fit/weight at check-in.
+ * A diver's reusable rental fit at one shop: which pieces of kit they take
+ * from the shop and what size each is. Deliberately a storage concept — the
+ * shop tracks no equipment inventory, so this is what a diver needs prepared,
+ * never a reservation of a particular item or a substitute for a dock-side
+ * fit check. The trip prep checklist is derived entirely from these rows.
  */
-export const rentalGearRequests = pgTable(
-  "rental_gear_requests",
+export const rentalFitProfiles = pgTable(
+  "rental_fit_profiles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    bookingId: uuid("booking_id")
+    personId: uuid("person_id")
       .notNull()
-      .references(() => bookings.id),
-    bcd: boolean("bcd").notNull().default(true),
-    regulator: boolean("regulator").notNull().default(true),
-    wetsuit: boolean("wetsuit").notNull().default(true),
-    maskFins: boolean("mask_fins").notNull().default(true),
-    weights: boolean("weights").notNull().default(true),
-    tank: boolean("tank").notNull().default(true),
-    diveComputer: boolean("dive_computer").notNull().default(false),
+      .references(() => people.id),
+    /** Which pieces the shop supplies. A diver with their own kit rents none. */
+    rentsBcd: boolean("rents_bcd").notNull().default(true),
+    rentsRegulator: boolean("rents_regulator").notNull().default(true),
+    rentsWetsuit: boolean("rents_wetsuit").notNull().default(true),
+    rentsMaskFins: boolean("rents_mask_fins").notNull().default(true),
+    rentsWeights: boolean("rents_weights").notNull().default(true),
     bcdSize: text("bcd_size"),
     wetsuitSize: text("wetsuit_size"),
     bootSize: text("boot_size"),
@@ -1036,68 +987,8 @@ export const rentalGearRequests = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("rental_gear_requests_booking_unique").on(table.bookingId),
-    index("rental_gear_requests_shop_booking_idx").on(table.shopId, table.bookingId),
-  ],
-);
-
-/**
- * Reusable fit details for one diver at one shop. This is a planning aid, not
- * an equipment reservation or a substitute for a dock-side fit check.
- */
-export const rentalGearProfiles = pgTable(
-  "rental_gear_profiles",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    bcdSize: text("bcd_size"),
-    wetsuitSize: text("wetsuit_size"),
-    bootSize: text("boot_size"),
-    finSize: text("fin_size"),
-    weightPreference: text("weight_preference"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("rental_gear_profiles_shop_person_unique").on(table.shopId, table.personId),
-    index("rental_gear_profiles_shop_person_idx").on(table.shopId, table.personId),
-  ],
-);
-
-/**
- * A completed service event is durable operational history. It is distinct
- * from an item being on service hold: a hold prevents checkout; an event
- * records work that was actually completed and who released the item.
- */
-export const gearServiceEvents = pgTable(
-  "gear_service_events",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    gearItemId: uuid("gear_item_id")
-      .notNull()
-      .references(() => gearItems.id),
-    recordedByPersonId: uuid("recorded_by_person_id")
-      .notNull()
-      .references(() => people.id),
-    serviceCompletedAt: timestamp("service_completed_at", { withTimezone: true }).notNull(),
-    nextServiceDueAt: timestamp("next_service_due_at", { withTimezone: true }),
-    note: text("note").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("gear_service_events_shop_item_completed_idx").on(
-      table.shopId,
-      table.gearItemId,
-      table.serviceCompletedAt,
-    ),
+    uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
+    index("rental_fit_profiles_shop_person_idx").on(table.shopId, table.personId),
   ],
 );
 
@@ -1106,7 +997,7 @@ export const gearServiceEvents = pgTable(
  * because that table is the recreational ladder (its `level` enum feeds the
  * readiness rank map); a specialty is a distinct yes/no gate, not a ladder
  * rung. Same capture→verify workflow: evidence starts pending and only a
- * verified card lets a diver receive an enriched-air fill.
+ * verified card lets a diver request enriched air on a booking.
  */
 export const nitroxCertifications = pgTable(
   "nitrox_certifications",
@@ -1132,46 +1023,6 @@ export const nitroxCertifications = pgTable(
       table.agency,
       table.identifier,
     ),
-  ],
-);
-
-/**
- * A logged enriched-air fill for one diver's tank. Safety evidence: the diver
- * analyzed the mix and signed for it, the mix is within recreational EANx
- * limits, and — enforced at write time — the diver holds a verified nitrox
- * card. `maxDepthMeters` is the derived MOD at the stored ppO2 limit; a fill
- * is an append-only record, never mutated after logging.
- */
-export const nitroxFills = pgTable(
-  "nitrox_fills",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
-    gearItemId: uuid("gear_item_id")
-      .notNull()
-      .references(() => gearItems.id),
-    /** Whole-percent O2 fraction of the enriched-air mix (e.g. 32 for EAN32). */
-    oxygenPercent: integer("oxygen_percent").notNull(),
-    /** Max operating depth in metres, derived from the mix and the ppO2 limit. */
-    maxDepthMeters: integer("max_depth_meters").notNull(),
-    /** ppO2 ceiling used for the MOD, in hundredths of a bar (140 = 1.4 bar). */
-    maxPpO2Centibar: integer("max_ppo2_centibar").notNull(),
-    /** The diver's typed confirmation that they personally analyzed the tank. */
-    analyzerSignature: text("analyzer_signature").notNull(),
-    filledByPersonId: uuid("filled_by_person_id")
-      .notNull()
-      .references(() => people.id),
-    analyzedAt: timestamp("analyzed_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("nitrox_fills_shop_booking_idx").on(table.shopId, table.bookingId),
-    index("nitrox_fills_shop_gear_idx").on(table.shopId, table.gearItemId),
   ],
 );
 
@@ -1242,14 +1093,9 @@ export type SpecialtyCertification = typeof specialtyCertifications.$inferSelect
 export type DiveSpecialty = (typeof diveSpecialty.enumValues)[number];
 export type DiveSite = typeof diveSites.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
-export type GearItem = typeof gearItems.$inferSelect;
-export type GearAssignment = typeof gearAssignments.$inferSelect;
-export type RentalGearRequest = typeof rentalGearRequests.$inferSelect;
-export type RentalGearProfile = typeof rentalGearProfiles.$inferSelect;
-export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
+export type RentalFitProfile = typeof rentalFitProfiles.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
-export type NitroxFill = typeof nitroxFills.$inferSelect;
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
