@@ -19,7 +19,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
-  await page.getByRole("button", { name: "Book my spot" }).click();
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
   await page.getByLabel("BCD size").selectOption("L");

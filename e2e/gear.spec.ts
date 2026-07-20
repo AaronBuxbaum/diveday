@@ -18,12 +18,15 @@ test("staff can retire gear only after it is in the gear room", async ({ page })
   const label = `REG-RETIRED-${Date.now()}`;
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/gear");
+  // The add-gear form lives inside a collapsed <details>; open it first.
+  await page.locator("#add-gear > summary").click();
   await page.getByPlaceholder("BCD-12").fill(label);
-  await page.locator('select[name="type"]').selectOption("regulator");
-  await page.getByRole("button", { name: "Add inventory item" }).click();
+  await page.locator('#add-gear select[name="type"]').selectOption("regulator");
+  await page.locator('#add-gear button[type="submit"]').click();
   await expect(page.getByRole("status")).toContainText("Gear added");
 
   const row = page.locator("li").filter({ hasText: label }).first();
+  await row.getByText("Retire", { exact: true }).click(); // open the retire confirmation popover
   await row.getByRole("button", { name: "Retire item" }).click();
   await expect(page.getByRole("status")).toContainText("Gear retired");
   await expect(row.getByText("retired", { exact: true })).toBeVisible();
@@ -36,10 +39,12 @@ test("staff can bulk-pack a diver's exact-size rental request", async ({ page })
   const label = `BCD-M-BULK-${suffix}`;
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/gear");
+  // The add-gear form lives inside a collapsed <details>; open it first.
+  await page.locator("#add-gear > summary").click();
   await page.getByPlaceholder("BCD-12").fill(label);
-  await page.locator('select[name="type"]').selectOption("bcd");
-  await page.locator('input[name="size"]').fill("M");
-  await page.getByRole("button", { name: "Add inventory item" }).click();
+  await page.locator('#add-gear select[name="type"]').selectOption("bcd");
+  await page.locator('#add-gear input[name="size"]').fill("M");
+  await page.locator('#add-gear button[type="submit"]').click();
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);
@@ -54,7 +59,7 @@ test("staff can bulk-pack a diver's exact-size rental request", async ({ page })
   await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await page.getByLabel("Name").fill("Mira Diver");
   await page.getByLabel("Email").fill(`mira-${suffix}@example.com`);
-  await page.getByRole("button", { name: "Book my spot" }).click();
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await page.getByLabel("BCD size").selectOption("M");
   await page.getByRole("button", { name: "Save gear request" }).click();
 

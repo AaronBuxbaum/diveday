@@ -68,11 +68,15 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByText("Device copy · current")).toBeVisible();
+  // Offline reload serves the device copy; its freshness badge reads
+  // "current device snapshot".
+  await expect(page.getByText("current device snapshot")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
-  await expect(page.getByRole("status")).toContainText("waiting to sync");
+  // Two live regions exist here (the action message and the connectivity
+  // badge); scope to the one carrying the sync message.
+  await expect(page.getByRole("status").filter({ hasText: "waiting to sync" })).toBeVisible();
 
   await context.setOffline(false);
-  await expect(page.getByRole("status")).toContainText("reconciled");
+  await expect(page.getByRole("status").filter({ hasText: "reconciled" })).toBeVisible();
 });
