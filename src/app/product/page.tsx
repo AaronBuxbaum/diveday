@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { FrontDeskReadinessFallback } from "@/components/MarketingScreenFallbacks";
 import {
-  CaptainRollCallFallback,
-  FrontDeskReadinessFallback,
-} from "@/components/MarketingScreenFallbacks";
-import { MarketingScreenshot } from "@/components/MarketingScreenshot";
+  CaptainPhoneFrame,
+  FeatureGroupsGrid,
+  MarketingMockup,
+} from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
-import { productFeatureGroups } from "@/lib/marketing";
 
 export const metadata: Metadata = {
   title: "Product — Scuba",
@@ -65,12 +65,12 @@ export default function ProductPage() {
                 </li>
               </ul>
             </div>
-            <MarketingScreenshot
-              src="/marketing/front-desk-readiness.png"
-              alt="The real Scuba readiness section used by a dive shop's front desk."
-              fallback={<FrontDeskReadinessFallback />}
+            <MarketingMockup
+              label="The Scuba readiness section used by a dive shop's front desk."
               className="shadow-xl shadow-foreground/5"
-            />
+            >
+              <FrontDeskReadinessFallback />
+            </MarketingMockup>
           </div>
         </section>
 
@@ -84,26 +84,8 @@ export default function ProductPage() {
                 Built around how a dive shop actually works.
               </h2>
             </div>
-            <div className="mt-12 grid gap-5 md:grid-cols-2">
-              {productFeatureGroups.map((group) => (
-                <section
-                  key={group.eyebrow}
-                  className="rounded-2xl border border-border bg-background p-6 sm:p-7"
-                >
-                  <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                    {group.eyebrow}
-                  </p>
-                  <h3 className="mt-3 text-xl font-semibold tracking-tight">{group.title}</h3>
-                  <ul className="mt-5 space-y-3 text-sm leading-6 text-muted">
-                    {group.features.map((feature) => (
-                      <li key={feature} className="flex gap-3">
-                        <span className="font-semibold text-primary">✓</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+            <div className="mt-12">
+              <FeatureGroupsGrid columns={2} />
             </div>
           </div>
         </section>
@@ -111,15 +93,10 @@ export default function ProductPage() {
         <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.8fr] lg:items-center">
             <div className="order-2 lg:order-1">
-              <div className="mx-auto max-w-sm rounded-[2.5rem] border-[9px] border-foreground bg-foreground p-1.5 shadow-2xl shadow-foreground/15">
-                <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-surface-sunken" />
-                <MarketingScreenshot
-                  src="/marketing/captain-roll-call.png"
-                  alt="A captain using the real mobile roll-call view in Scuba."
-                  fallback={<CaptainRollCallFallback />}
-                  className="rounded-[1.9rem] border-0"
-                />
-              </div>
+              <CaptainPhoneFrame
+                label="A captain using the mobile roll-call view in Scuba."
+                className="mx-auto max-w-sm"
+              />
             </div>
             <div className="order-1 lg:order-2">
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">

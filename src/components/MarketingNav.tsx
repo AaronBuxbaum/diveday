@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 const links = [
   { href: "/product", label: "Product" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/sign-in", label: "Sign in" },
 ];
 
 export function MarketingNav() {
