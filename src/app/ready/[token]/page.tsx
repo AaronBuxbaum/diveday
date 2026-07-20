@@ -136,7 +136,8 @@ export default async function DiverReadinessPage({
           title={`See you ${when}, ${firstName}! 🤿`}
         >
           <p>
-            Everything’s in order — nothing to bring but yourself. Be at the dock 30 minutes early.
+            Everything’s in order for your trip. Your shop will confirm exact arrival details —
+            we’ll see you at the dock.
           </p>
         </EarnedMoment>
       ) : (

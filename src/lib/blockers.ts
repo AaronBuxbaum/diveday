@@ -53,7 +53,17 @@ export type BlockerQueueTrip = {
   divers: BlockerQueueDiver[];
 };
 
-/** Total divers still blocked across the queue — the headline number. */
+/** Total blocked rows across the queue (a diver on two boats counts twice). */
 export function totalBlockedDivers(trips: readonly BlockerQueueTrip[]): number {
   return trips.reduce((sum, trip) => sum + trip.divers.length, 0);
+}
+
+/**
+ * Distinct people still blocked — the honest headline count, since one diver
+ * can be booked (and blocked) on several upcoming departures at once.
+ */
+export function distinctBlockedDivers(trips: readonly BlockerQueueTrip[]): number {
+  const people = new Set<string>();
+  for (const trip of trips) for (const diver of trip.divers) people.add(diver.personId);
+  return people.size;
 }

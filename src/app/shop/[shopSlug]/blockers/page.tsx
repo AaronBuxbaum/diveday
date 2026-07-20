@@ -7,8 +7,8 @@ import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import type { BlockerQueueTrip } from "@/lib/blockers";
-import { totalBlockedDivers } from "@/lib/blockers";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { distinctBlockedDivers } from "@/lib/blockers";
+import { formatDateTimeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -20,7 +20,7 @@ function DiverRow({ diver }: { diver: BlockerQueueTrip["divers"][number] }) {
     <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5 sm:px-5">
       <div className="min-w-0">
         <p className="font-semibold">{diver.fullName}</p>
-        <ul className="mt-1.5 flex flex-col gap-1 text-sm text-muted">
+        <ul className="mt-1.5 flex flex-col gap-1 text-base text-muted">
           {diver.blockers.map((blocker) => (
             <li key={blocker.code} className="flex gap-2">
               <span aria-hidden="true" className="text-danger">
@@ -65,10 +65,7 @@ function TripGroup({
               <span className="text-sm font-medium text-primary">· {trip.courseTitle}</span>
             ) : null}
           </div>
-          <p className="text-sm text-muted">
-            {formatShortDate(trip.startsAt, "en-US", timeZone)} at{" "}
-            {formatTime(trip.startsAt, "en-US", timeZone)}
-          </p>
+          <p className="text-sm text-muted">{formatDateTimeTz(trip.startsAt, "en-US", timeZone)}</p>
         </div>
         <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums">
           {trip.divers.length} of {trip.booked} blocked
@@ -97,7 +94,7 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
   if (!shop) notFound();
 
   const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug);
-  const blocked = totalBlockedDivers(trips);
+  const blocked = distinctBlockedDivers(trips);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -114,9 +111,9 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
       />
 
       {trips.length === 0 ? (
-        <section className="rounded-3xl border border-accent/30 bg-accent/5 p-8 text-center sm:p-10">
+        <section className="rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
           <div
-            className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent/15 text-2xl"
+            className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
             aria-hidden="true"
           >
             🤿

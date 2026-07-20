@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockerFixFor, totalBlockedDivers } from "./blockers";
+import { blockerFixFor, distinctBlockedDivers, totalBlockedDivers } from "./blockers";
 import type { ReadinessBlocker } from "./readiness";
 
 const ctx = {
@@ -64,5 +64,30 @@ describe("totalBlockedDivers", () => {
         },
       ]),
     ).toBe(2);
+  });
+
+  it("counts a diver booked on two boats once for the headline", () => {
+    const trips = [
+      {
+        tripId: "a",
+        title: "",
+        startsAt: new Date(),
+        courseTitle: null,
+        booked: 2,
+        ready: 0,
+        divers: [{ personId: "p1" }, { personId: "p2" }] as never,
+      },
+      {
+        tripId: "b",
+        title: "",
+        startsAt: new Date(),
+        courseTitle: null,
+        booked: 1,
+        ready: 0,
+        divers: [{ personId: "p1" }] as never,
+      },
+    ];
+    expect(totalBlockedDivers(trips)).toBe(3);
+    expect(distinctBlockedDivers(trips)).toBe(2);
   });
 });

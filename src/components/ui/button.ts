@@ -33,6 +33,8 @@ const sizes = {
   lg: "px-5 py-2.5 text-sm font-medium",
   /** Marketing calls to action: reads at 16px and carries more weight. */
   cta: "px-5 py-3 text-base font-semibold",
+  /** Dock target: a 56px, 16px-label action for wet-hands boat surfaces. */
+  boat: "min-h-14 px-6 py-3.5 text-base font-semibold",
 } as const;
 
 export type ButtonVariant = keyof typeof variants;

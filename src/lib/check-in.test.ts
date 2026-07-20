@@ -49,6 +49,19 @@ describe("buildCheckInChecks", () => {
     expect(checks.find((c) => c.category === "payment")?.ok).toBe(true);
   });
 
+  it("shows a Cards row for a dive-site-composed cert gate the trip's own fields don't set", () => {
+    const checks = buildCheckInChecks(
+      requirement({ minimumCertificationLevel: null, requiresPayment: false }),
+      {
+        status: "blocked",
+        blockers: [{ code: "certification_insufficient", message: "AOW needed." }],
+      },
+    );
+    const cert = checks.find((c) => c.category === "certification");
+    expect(cert?.ok).toBe(false);
+    expect(cert?.detail).toContain("AOW");
+  });
+
   it("returns nothing when the trip has no requirement configured", () => {
     expect(buildCheckInChecks(null, ready)).toEqual([]);
   });
