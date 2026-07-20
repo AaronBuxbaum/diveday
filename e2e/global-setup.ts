@@ -12,11 +12,14 @@ export default async function globalSetup() {
     e2eWorkerIndexes.map(async (i) => {
       const context = await request.newContext({ baseURL: e2eBaseURL(i) });
       try {
-        await context.post("/api/test/reset", { timeout: 100_000 });
+        // This first reset pays the one-time migrate + seed, the heaviest
+        // single request in the run; 30s is ample and still fails fast if the
+        // server never came up.
+        await context.post("/api/test/reset", { timeout: 30_000 });
         // Warm the routes every test hits first so the first test's clock
         // doesn't absorb their one-time render cost. Best-effort.
         for (const route of ["/", "/sign-in"]) {
-          await context.get(route, { timeout: 100_000 }).catch(() => {});
+          await context.get(route, { timeout: 30_000 }).catch(() => {});
         }
       } finally {
         await context.dispose();
