@@ -1,11 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTripManifest,
+  carryForwardNotBoarded,
   isRollCallCheckpoint,
+  type RollCallRecord,
   rollCallCheckpointLabel,
   rollCallCheckpoints,
   rollCallLabel,
 } from "./manifests";
+
+const boardedAt = (recordedByName = "Dana Reyes"): RollCallRecord => ({
+  state: "boarded",
+  occurredAt: new Date("2026-07-20T11:45:00.000Z"),
+  recordedByName,
+  note: null,
+});
+const notBoardedAt = (note: string | null = null): RollCallRecord => ({
+  state: "not_boarded",
+  occurredAt: new Date("2026-07-20T11:45:00.000Z"),
+  recordedByName: "Dana Reyes",
+  note,
+});
 
 const trip = {
   id: "trip-1",
@@ -64,14 +79,31 @@ describe("buildTripManifest", () => {
 
   it("uses explicit words for every roll-call state", () => {
     expect(rollCallLabel(undefined)).toBe("Awaiting roll call");
-    expect(
-      rollCallLabel({
-        state: "not_boarded",
-        occurredAt: new Date(),
-        recordedByName: "Dana Reyes",
-        note: "Stayed ashore",
-      }),
-    ).toBe("Not boarded");
+    expect(rollCallLabel(notBoardedAt("Stayed ashore"))).toBe("Not boarded");
+    expect(rollCallLabel(boardedAt())).toBe("Boarded");
+    expect(rollCallLabel({ ...notBoardedAt(), implied: true })).toBe("Not boarded · carried");
+  });
+
+  it("carries a not-boarded result forward until a later result breaks the chain", () => {
+    // Not boarded at departure → every later checkpoint defaults to not boarded.
+    const carried = carryForwardNotBoarded([notBoardedAt("Left the boat"), undefined, undefined]);
+    expect(carried[0]).toMatchObject({ state: "not_boarded", note: "Left the boat" });
+    expect(carried[0]?.implied).toBeUndefined();
+    expect(carried[1]).toMatchObject({ state: "not_boarded", implied: true });
+    expect(carried[2]).toMatchObject({ state: "not_boarded", implied: true });
+  });
+
+  it("does not carry a boarded result forward, and an explicit later result wins", () => {
+    // Boarded is checkpoint-specific: the next list starts awaiting again.
+    expect(carryForwardNotBoarded([boardedAt(), undefined])).toEqual([boardedAt(), undefined]);
+    // A re-board after leaving stops the carry-forward from that point.
+    const reboarded = carryForwardNotBoarded([notBoardedAt(), boardedAt(), undefined]);
+    expect(reboarded[1]).toMatchObject({ state: "boarded" });
+    expect(reboarded[2]).toBeUndefined();
+    // An explicit result at a later checkpoint is never overwritten by the default.
+    const explicitLater = carryForwardNotBoarded([notBoardedAt(), notBoardedAt("Own decision")]);
+    expect(explicitLater[1]).toMatchObject({ note: "Own decision" });
+    expect(explicitLater[1]?.implied).toBeUndefined();
   });
 
   it("builds bounded departure and after-dive checkpoints", () => {

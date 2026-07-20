@@ -84,7 +84,7 @@ export function DemoBanner({
   };
 
   return (
-    <div className="border-b border-accent/40 bg-accent/5 transition-all duration-300">
+    <div className="border-b border-accent/40 bg-accent/5 transition-all duration-300 print:hidden">
       <div className="mx-auto w-full max-w-4xl px-6 py-3">
         {/* Ribbon Bar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

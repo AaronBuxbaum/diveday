@@ -6,11 +6,11 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
+import { RollCallNote } from "@/components/RollCallNote";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
-import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getTripManifests, recordRollCall } from "@/db/manifests";
+import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -29,13 +29,20 @@ export const metadata: Metadata = {
 
 const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
-  status: z.enum(["boarded", "not_boarded"]),
+  status: z.enum(["boarded", "not_boarded", "cleared"]),
   note: z.string().trim().max(300).optional(),
+});
+
+const noteSchema = z.object({
+  bookingId: z.string().uuid(),
+  checkpoint: z.string(),
+  note: z.string().max(300),
 });
 
 const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
   boarded: { tone: "success", text: "Boarding recorded." },
   "not-boarded": { tone: "success", text: "Not-boarded status recorded." },
+  cleared: { tone: "success", text: "Roll-call result cleared — back to awaiting." },
   "not-ready": {
     tone: "danger",
     text: "That diver is still blocked. Resolve the listed requirement before boarding.",
@@ -62,10 +69,10 @@ export default async function TripManifestPage({
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-  const checkpoints = rollCallCheckpoints(departureManifest.trip.plannedDives);
+  const plannedDives = departureManifest.trip.plannedDives;
+  const checkpoints = rollCallCheckpoints(plannedDives);
   const checkpoint: RollCallCheckpoint =
-    requestedCheckpoint &&
-    isRollCallCheckpoint(requestedCheckpoint, departureManifest.trip.plannedDives)
+    requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDives)
       ? requestedCheckpoint
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
@@ -92,7 +99,31 @@ export default async function TripManifestPage({
       redirect(`${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
     }
     revalidatePath(back.split("?")[0]);
-    redirect(`${back}&notice=${parsed.data.status === "boarded" ? "boarded" : "not-boarded"}`);
+    const notices = { boarded: "boarded", not_boarded: "not-boarded", cleared: "cleared" } as const;
+    redirect(`${back}&notice=${notices[parsed.data.status]}`);
+  }
+
+  async function saveRollCallNoteAction(
+    bookingId: string,
+    checkpointValue: string,
+    note: string,
+  ): Promise<{ ok: boolean; saved: boolean }> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = noteSchema.safeParse({ bookingId, checkpoint: checkpointValue, note });
+    if (!parsed.success) return { ok: false, saved: false };
+    if (!isRollCallCheckpoint(parsed.data.checkpoint, plannedDives)) {
+      return { ok: false, saved: false };
+    }
+    const saved = await updateLatestRollCallNote(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      bookingId: parsed.data.bookingId,
+      checkpoint: parsed.data.checkpoint,
+      note: parsed.data.note,
+    });
+    if (saved) revalidatePath(back.split("?")[0]);
+    return { ok: true, saved };
   }
 
   return (
@@ -291,19 +322,31 @@ export default async function TripManifestPage({
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
           {manifest.divers.map((diver, index) => {
             const ready = diver.readiness.status === "ready";
-            const boarded = diver.rollCall?.state === "boarded";
+            const rc = diver.rollCall;
+            const boarded = rc?.state === "boarded";
+            // "actioned" == a result staff recorded at *this* checkpoint. An
+            // implied not-boarded is carried forward, so it is not yet actioned.
+            const explicitNotBoarded = rc?.state === "not_boarded" && !rc.implied;
+            const impliedNotBoarded = rc?.state === "not_boarded" && rc.implied === true;
+            // Each roll-call state gets its own fill so staff can tell at a glance
+            // who has been handled: boarded (green) and not boarded (slate) read as
+            // done; awaiting (amber) and blocked (red) still need them.
+            const rowClass = boarded
+              ? "border-l-4 border-success bg-success/10 px-4 py-5 sm:px-5"
+              : explicitNotBoarded
+                ? "border-l-4 border-border-strong bg-surface-sunken px-4 py-5 sm:px-5"
+                : impliedNotBoarded
+                  ? "border-l-4 border-dashed border-border-strong bg-surface-sunken/50 px-4 py-5 sm:px-5"
+                  : ready
+                    ? "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-inset ring-warning/30 sm:px-5"
+                    : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5";
+            const rollCallPillClass = boarded
+              ? "rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
+              : explicitNotBoarded
+                ? "rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground"
+                : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted";
             return (
-              <li
-                key={diver.bookingId}
-                id={`roll-call-${diver.bookingId}`}
-                className={
-                  ready
-                    ? diver.rollCall
-                      ? "border-l-4 border-success px-4 py-5 sm:px-5"
-                      : "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-inset ring-warning/30 sm:px-5"
-                    : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5"
-                }
-              >
+              <li key={diver.bookingId} id={`roll-call-${diver.bookingId}`} className={rowClass}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -320,9 +363,7 @@ export default async function TripManifestPage({
                       >
                         {ready ? "Ready to board" : "Blocked"}
                       </span>
-                      <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium">
-                        {rollCallLabel(diver.rollCall)}
-                      </span>
+                      <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
                     <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                       <p>
@@ -351,32 +392,26 @@ export default async function TripManifestPage({
                       <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
                         Add a note to this roll-call record
                       </summary>
-                      <div className="mt-2">
-                        <label
-                          htmlFor={`roll-call-note-${diver.bookingId}`}
-                          className="text-sm font-semibold"
-                        >
-                          Optional note
-                        </label>
-                        <input
-                          id={`roll-call-note-${diver.bookingId}`}
-                          name="note"
-                          form={`not-boarded-${diver.bookingId}`}
-                          maxLength={300}
-                          placeholder="Late to the boat, medical question, kit issue…"
-                          className={`${controlClass} mt-1`}
-                        />
-                        <p className="mt-1 text-xs text-muted">
-                          This is saved with the staff audit trail.
-                        </p>
-                      </div>
+                      <RollCallNote
+                        bookingId={diver.bookingId}
+                        checkpoint={checkpoint}
+                        formId={`not-boarded-${diver.bookingId}`}
+                        initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
+                        canAutoSave={!!rc && !rc.implied}
+                        saveNote={saveRollCallNoteAction}
+                      />
                     </details>
-                    {diver.rollCall ? (
+                    {rc && !rc.implied ? (
                       <p className="mt-3 text-sm text-muted">
-                        {rollCallLabel(diver.rollCall)}{" "}
-                        {formatDateTimeTz(diver.rollCall.occurredAt, "en-US", shop.timezone)} by{" "}
-                        {diver.rollCall.recordedByName}
-                        {diver.rollCall.note ? ` · ${diver.rollCall.note}` : ""}
+                        {rollCallLabel(rc)}{" "}
+                        {formatDateTimeTz(rc.occurredAt, "en-US", shop.timezone)} by{" "}
+                        {rc.recordedByName}
+                        {rc.note ? ` · ${rc.note}` : ""}
+                      </p>
+                    ) : impliedNotBoarded ? (
+                      <p className="mt-3 text-sm text-muted">
+                        Carried forward — not boarded on an earlier checkpoint. Mark boarded to
+                        bring them back on.
                       </p>
                     ) : null}
                   </div>
@@ -384,10 +419,18 @@ export default async function TripManifestPage({
                     {ready ? (
                       <form action={rollCallAction}>
                         <input type="hidden" name="bookingId" value={diver.bookingId} />
-                        <input type="hidden" name="status" value="boarded" />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value={boarded ? "cleared" : "boarded"}
+                        />
                         <SubmitButton
                           pendingLabel="Saving…"
-                          className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          className={
+                            boarded
+                              ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-success bg-success/15 px-5 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                              : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          }
                         >
                           {boarded ? "Boarded ✓" : "Mark boarded"}
                         </SubmitButton>
@@ -395,16 +438,27 @@ export default async function TripManifestPage({
                     ) : null}
                     <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
                       <input type="hidden" name="bookingId" value={diver.bookingId} />
-                      <input type="hidden" name="status" value="not_boarded" />
+                      <input
+                        type="hidden"
+                        name="status"
+                        value={explicitNotBoarded ? "cleared" : "not_boarded"}
+                      />
                       <SubmitButton
                         pendingLabel="Saving…"
-                        className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                        className={
+                          explicitNotBoarded
+                            ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong bg-surface-sunken px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                            : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                        }
                       >
-                        {diver.rollCall?.state === "not_boarded"
-                          ? "Not boarded ✓"
-                          : "Mark not boarded"}
+                        {explicitNotBoarded ? "Not boarded ✓" : "Mark not boarded"}
                       </SubmitButton>
                     </form>
+                    {rc && !rc.implied ? (
+                      <p className="text-xs text-muted sm:basis-full">
+                        Tap the ✓ status again to undo.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </li>

@@ -1025,7 +1025,13 @@ export const nitroxCertifications = pgTable(
   ],
 );
 
-export const rollCallStatus = pgEnum("roll_call_status", ["boarded", "not_boarded"]);
+/**
+ * `cleared` is an append-only "undo": staff tapped the current status again to
+ * reset a diver to awaiting after a mistake. It is stored as its own event so
+ * the correction stays in the audit trail; the derivation collapses a latest
+ * `cleared` back to "no roll call yet" (src/db/manifests.ts).
+ */
+export const rollCallStatus = pgEnum("roll_call_status", ["boarded", "not_boarded", "cleared"]);
 export const rollCallSource = pgEnum("roll_call_source", ["live", "offline"]);
 
 /**

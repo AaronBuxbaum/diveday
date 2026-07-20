@@ -41,12 +41,20 @@ export type ManifestDiverInput = {
    * still analyzes and signs for the actual mix before anyone breathes it.
    */
   nitroxRequested: boolean;
-  rollCall?: {
-    state: Exclude<RollCallState, "awaiting">;
-    occurredAt: Date;
-    recordedByName: string;
-    note: string | null;
-  };
+  rollCall?: RollCallRecord;
+};
+
+export type RollCallRecord = {
+  state: Exclude<RollCallState, "awaiting">;
+  occurredAt: Date;
+  recordedByName: string;
+  note: string | null;
+  /**
+   * True when this result was not recorded at this checkpoint but carried
+   * forward: a diver left the boat at an earlier checkpoint, so every later
+   * checkpoint defaults to not boarded until staff say otherwise.
+   */
+  implied?: boolean;
 };
 
 export type ManifestCrewMember = {
@@ -110,5 +118,26 @@ export function buildTripManifest(input: {
 
 export function rollCallLabel(rollCall: ManifestDiverInput["rollCall"]): string {
   if (!rollCall) return "Awaiting roll call";
-  return rollCall.state === "boarded" ? "Boarded" : "Not boarded";
+  if (rollCall.state === "boarded") return "Boarded";
+  return rollCall.implied ? "Not boarded · carried" : "Not boarded";
+}
+
+/**
+ * Fills the "off the boat stays off the boat" default across one diver's
+ * ordered checkpoints. Once a diver is explicitly not boarded, every later
+ * checkpoint with no result of its own defaults to not boarded (flagged
+ * `implied`) until an explicit boarded or cleared result breaks the chain.
+ * Pure and order-sensitive: pass the checkpoints in departure→last order.
+ */
+export function carryForwardNotBoarded(
+  perCheckpoint: readonly (RollCallRecord | undefined)[],
+): (RollCallRecord | undefined)[] {
+  let carried: RollCallRecord | undefined;
+  return perCheckpoint.map((result) => {
+    if (result) {
+      carried = result.state === "not_boarded" ? result : undefined;
+      return result;
+    }
+    return carried ? { ...carried, implied: true } : undefined;
+  });
 }
