@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -132,43 +134,47 @@ export default async function EditDiveSitePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         ← Dive-site library
       </Link>
-      <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{site.name}</h1>
-          <p className="mt-1 text-muted">Changes update the briefing linked to this site.</p>
-        </div>
-        <form action={copyAction}>
-          <button
-            type="submit"
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            Copy and tailor
-          </button>
-        </form>
-        <details className="w-full sm:w-auto">
-          <summary className="flex min-h-11 cursor-pointer items-center rounded-lg border border-danger/30 px-4 py-2 text-center text-sm font-medium text-danger">
-            Archive site
-          </summary>
-          <form
-            action={deleteAction}
-            className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
-          >
-            <p className="text-muted">
-              Historical trips keep their briefing; new trips will no longer see this site.
-            </p>
-            <button
-              type="submit"
-              className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
-            >
-              Archive briefing
-            </button>
-          </form>
-        </details>
-      </header>
+      <div className="mt-4">
+        <ShopPageHeader
+          title={site.name}
+          description="Changes update the briefing linked to this site."
+          actions={
+            <>
+              <form action={copyAction}>
+                <SubmitButton
+                  pendingLabel="Copying…"
+                  className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+                >
+                  Copy and tailor
+                </SubmitButton>
+              </form>
+              <details className="w-full sm:w-auto">
+                <summary className="flex min-h-11 cursor-pointer items-center rounded-lg border border-danger/30 px-4 py-2 text-center text-sm font-medium text-danger">
+                  Archive site
+                </summary>
+                <form
+                  action={deleteAction}
+                  className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
+                >
+                  <p className="text-muted">
+                    Historical trips keep their briefing; new trips will no longer see this site.
+                  </p>
+                  <SubmitButton
+                    pendingLabel="Archiving…"
+                    className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
+                  >
+                    Archive briefing
+                  </SubmitButton>
+                </form>
+              </details>
+            </>
+          }
+        />
+      </div>
       {notice ? (
         <p
           role="status"
@@ -392,12 +398,12 @@ export default async function EditDiveSitePage({
             </div>
           </div>
         </fieldset>
-        <button
-          type="submit"
+        <SubmitButton
+          pendingLabel="Saving…"
           className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
         >
           Save briefing
-        </button>
+        </SubmitButton>
       </form>
     </main>
   );

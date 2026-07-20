@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { createBooking } from "@/db/bookings";
@@ -434,9 +435,9 @@ export default async function DiverDetailPage({
               />
             </Field>
             <FieldActions>
-              <button type="submit" className={buttonClass()}>
+              <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
                 Save details
-              </button>
+              </SubmitButton>
             </FieldActions>
           </FieldGrid>
         </details>
@@ -536,9 +537,12 @@ export default async function DiverDetailPage({
                 />
               </Field>
               <FieldActions>
-                <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                <SubmitButton
+                  pendingLabel="Capturing…"
+                  className={buttonClass({ variant: "secondary" })}
+                >
                   Capture for review
-                </button>
+                </SubmitButton>
               </FieldActions>
             </FieldGrid>
           </details>
@@ -586,32 +590,32 @@ export default async function DiverDetailPage({
                     <>
                       <form action={agencyCheckAction}>
                         <input type="hidden" name="certificationId" value={card.id} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Checking…"
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
                           Check agency
-                        </button>
+                        </SubmitButton>
                       </form>
                       <form action={reviewAction}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="status" value="verified" />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Verifying…"
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
                           Verify
-                        </button>
+                        </SubmitButton>
                       </form>
                       <form action={reviewAction}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="status" value="rejected" />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Updating…"
                           className={buttonClass({ variant: "danger", size: "sm" })}
                         >
                           Needs correction
-                        </button>
+                        </SubmitButton>
                       </form>
                     </>
                   ) : null}
@@ -683,9 +687,12 @@ export default async function DiverDetailPage({
                 />
               </Field>
               <FieldActions>
-                <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                <SubmitButton
+                  pendingLabel="Capturing…"
+                  className={buttonClass({ variant: "secondary" })}
+                >
                   Capture specialty for review
-                </button>
+                </SubmitButton>
               </FieldActions>
             </FieldGrid>
           </details>
@@ -732,22 +739,22 @@ export default async function DiverDetailPage({
                         <form action={reviewSpecialtyAction}>
                           <input type="hidden" name="certificationId" value={card.id} />
                           <input type="hidden" name="status" value="verified" />
-                          <button
-                            type="submit"
+                          <SubmitButton
+                            pendingLabel="Verifying…"
                             className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
                             Verify
-                          </button>
+                          </SubmitButton>
                         </form>
                         <form action={reviewSpecialtyAction}>
                           <input type="hidden" name="certificationId" value={card.id} />
                           <input type="hidden" name="status" value="rejected" />
-                          <button
-                            type="submit"
+                          <SubmitButton
+                            pendingLabel="Updating…"
                             className={buttonClass({ variant: "danger", size: "sm" })}
                           >
                             Needs correction
-                          </button>
+                          </SubmitButton>
                         </form>
                       </>
                     ) : null}
@@ -775,23 +782,23 @@ export default async function DiverDetailPage({
                           <input type="hidden" name="certificationId" value={card.id} />
                           <input type="hidden" name="cardType" value="nitrox" />
                           <input type="hidden" name="status" value="verified" />
-                          <button
-                            type="submit"
+                          <SubmitButton
+                            pendingLabel="Verifying…"
                             className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
                             Verify
-                          </button>
+                          </SubmitButton>
                         </form>
                         <form action={reviewSpecialtyAction}>
                           <input type="hidden" name="certificationId" value={card.id} />
                           <input type="hidden" name="cardType" value="nitrox" />
                           <input type="hidden" name="status" value="rejected" />
-                          <button
-                            type="submit"
+                          <SubmitButton
+                            pendingLabel="Updating…"
                             className={buttonClass({ variant: "danger", size: "sm" })}
                           >
                             Needs correction
-                          </button>
+                          </SubmitButton>
                         </form>
                       </>
                     ) : null}
@@ -860,9 +867,9 @@ export default async function DiverDetailPage({
             />
           </Field>
           <FieldActions>
-            <button type="submit" className={buttonClass({ size: "lg" })}>
+            <SubmitButton pendingLabel="Saving…" className={buttonClass({ size: "lg" })}>
               Save rental fit
-            </button>
+            </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </section>
@@ -902,9 +909,9 @@ export default async function DiverDetailPage({
                 </select>
               </Field>
             </FieldGrid>
-            <button type="submit" className={buttonClass({ size: "lg" })}>
+            <SubmitButton pendingLabel="Booking…" className={buttonClass({ size: "lg" })}>
               Book activity
-            </button>
+            </SubmitButton>
           </form>
         ) : (
           <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
@@ -987,12 +994,12 @@ export default async function DiverDetailPage({
                     {orderRow?.order.status === "paid" ? (
                       <form action={refundPaymentAction}>
                         <input type="hidden" name="orderId" value={orderRow.order.id} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Refunding…"
                           className={buttonClass({ variant: "danger", size: "sm" })}
                         >
                           Refund
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                     <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
@@ -1031,12 +1038,12 @@ export default async function DiverDetailPage({
                     {order.status === "paid" ? (
                       <form action={refundPaymentAction}>
                         <input type="hidden" name="orderId" value={order.id} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Refunding…"
                           className={buttonClass({ variant: "danger", size: "sm" })}
                         >
                           Refund
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                     <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
@@ -1122,9 +1129,12 @@ export default async function DiverDetailPage({
             <p className="text-sm text-muted">
               You can add them again later as a new active record.
             </p>
-            <button type="submit" className={buttonClass({ variant: "danger-solid" })}>
+            <SubmitButton
+              pendingLabel="Removing…"
+              className={buttonClass({ variant: "danger-solid" })}
+            >
               Remove diver
-            </button>
+            </SubmitButton>
           </form>
         </details>
       </section>

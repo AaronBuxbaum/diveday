@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
@@ -87,12 +88,12 @@ export default async function DiveSitesPage({
       ) : null}
 
       {sites.length === 0 ? (
-        <section className="mt-4 rounded-2xl border border-dashed border-border-strong bg-surface p-10 text-center">
+        <EmptyState className="mt-4">
           <h2 className="font-semibold">Start with a site your crew knows well</h2>
           <p className="mt-1 text-sm text-muted">
             Add a location, a map or route image, and the life divers may encounter.
           </p>
-        </section>
+        </EmptyState>
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site) => (

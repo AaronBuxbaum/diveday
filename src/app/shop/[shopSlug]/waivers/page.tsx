@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -96,16 +97,13 @@ export default async function WaiverTemplatesPage({
             : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Waiver templates</h1>
-        <p className="mt-2 text-muted">
-          New links snapshot their template, so a completed waiver always keeps the exact text a
-          diver saw.
-        </p>
-      </header>
+      <ShopPageHeader
+        eyebrow={shop.name}
+        title="Waiver templates"
+        description="New links snapshot their template, so a completed waiver always keeps the exact text a diver saw."
+      />
 
       {banner ? (
         <div className="mt-6">
@@ -139,12 +137,12 @@ export default async function WaiverTemplatesPage({
               </select>
             </Field>
           </FieldGrid>
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Saving…"
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
             Save questionnaire
-          </button>
+          </SubmitButton>
         </form>
         <p className="mt-2 text-sm text-muted">
           Current form:{" "}
@@ -183,15 +181,15 @@ export default async function WaiverTemplatesPage({
                 ) : (
                   <form action={chooseDefaultAction}>
                     <input type="hidden" name="templateId" value={template.id} />
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingLabel="Updating…"
                       className={buttonClass({
                         variant: "secondary",
                         className: "text-foreground",
                       })}
                     >
                       Make default
-                    </button>
+                    </SubmitButton>
                   </form>
                 )}
               </li>
@@ -233,9 +231,9 @@ export default async function WaiverTemplatesPage({
             Make this the default for new links
           </label>
           <div>
-            <button type="submit" className={buttonClass({ size: "lg" })}>
+            <SubmitButton pendingLabel="Saving…" className={buttonClass({ size: "lg" })}>
               Save new template
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </section>

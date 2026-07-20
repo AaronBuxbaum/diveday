@@ -564,12 +564,12 @@ export default async function ManageTripPage({
               {undoBookingId ? (
                 <form action={undoRemoveBookingAction}>
                   <input type="hidden" name="bookingId" value={undoBookingId} />
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    pendingLabel="Undoing…"
                     className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
                   >
                     Undo
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : null}
             </div>
@@ -675,9 +675,12 @@ export default async function ManageTripPage({
             </Field>
           </FieldGrid>
           <div>
-            <button type="submit" className={buttonClass({ size: "lg", className: "text-base" })}>
+            <SubmitButton
+              pendingLabel="Saving…"
+              className={buttonClass({ size: "lg", className: "text-base" })}
+            >
               Save changes
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -731,24 +734,24 @@ export default async function ManageTripPage({
               />
             </Field>
           </FieldGrid>
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Publishing…"
             className={buttonClass({
               variant: "secondary",
               className: "self-start text-foreground",
             })}
           >
             Publish crew prediction
-          </button>
+          </SubmitButton>
         </form>
         {hasCrewPrediction(trip) ? (
           <form action={clearConditionsAction} className="mt-3">
-            <button
-              type="submit"
+            <SubmitButton
+              pendingLabel="Clearing…"
               className={buttonClass({ variant: "secondary", className: "text-foreground" })}
             >
               Return to automated outlook
-            </button>
+            </SubmitButton>
           </form>
         ) : null}
       </section>
@@ -898,15 +901,15 @@ export default async function ManageTripPage({
                 . Readiness always enforces the stricter of the site and this trip.
               </p>
             ) : null}
-            <button
-              type="submit"
+            <SubmitButton
+              pendingLabel="Saving…"
               className={buttonClass({
                 variant: "secondary",
                 className: "mt-5 text-foreground",
               })}
             >
               Save requirements
-            </button>
+            </SubmitButton>
           </form>
         )}
       </section>
@@ -967,15 +970,15 @@ export default async function ManageTripPage({
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <form action={assignRecommendedGearAction}>
-              <button
-                type="submit"
+              <SubmitButton
+                pendingLabel="Packing…"
                 className={buttonClass({
                   variant: "secondary",
                   className: "text-foreground",
                 })}
               >
                 Pack recommendations
-              </button>
+              </SubmitButton>
             </form>
             <Link
               href={`/shop/${shopSlug}/gear`}
@@ -1181,15 +1184,15 @@ export default async function ManageTripPage({
                               </option>
                             ))}
                           </select>
-                          <button
-                            type="submit"
+                          <SubmitButton
+                            pendingLabel="Packing…"
                             className={buttonClass({
                               variant: "secondary",
                               className: "text-foreground",
                             })}
                           >
                             Pack
-                          </button>
+                          </SubmitButton>
                         </form>
                       ) : (
                         <p className="mt-2 text-sm text-muted">No available gear right now.</p>
@@ -1218,8 +1221,8 @@ export default async function ManageTripPage({
                             </option>
                           ))}
                         </select>
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Updating…"
                           className={buttonClass({
                             variant: "secondary",
                             size: "sm",
@@ -1227,7 +1230,7 @@ export default async function ManageTripPage({
                           })}
                         >
                           Update
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                     <Link
@@ -1257,15 +1260,15 @@ export default async function ManageTripPage({
       <section className="mt-12 border-t border-border pt-6">
         {cancelled ? (
           <form action={reinstateTripAction}>
-            <button type="submit" className={buttonClass()}>
+            <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
               Reinstate trip
-            </button>
+            </SubmitButton>
           </form>
         ) : (
           <form action={cancelTripAction} className="flex items-center gap-3">
-            <button type="submit" className={buttonClass({ variant: "danger" })}>
+            <SubmitButton pendingLabel="Cancelling…" className={buttonClass({ variant: "danger" })}>
               Cancel trip
-            </button>
+            </SubmitButton>
             <p className="text-sm text-muted">
               Takes it off the public schedule. You can reinstate it any time.
             </p>
