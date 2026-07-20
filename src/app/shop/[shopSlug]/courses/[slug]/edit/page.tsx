@@ -7,23 +7,22 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
-import { formatFaqs, formatScheduleDays, isCoursePublishable } from "@/lib/courses";
+import { formatFaqs, formatScheduleDays } from "@/lib/courses";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
-import { saveCourseContentAction, setCoursePublishedAction } from "./actions";
+import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Edit course page — Scuba" };
 
 const messages: Record<string, string> = {
   saved: "Course page saved.",
-  published: "Course page is live. Divers can read it and book a session.",
-  unpublished: "Course page hidden. Scheduled sessions are unchanged.",
+  shown: "Course page live. Divers can read it and book a session.",
+  hidden: "Course page hidden. Scheduled sessions are unchanged.",
 };
 const errors: Record<string, string> = {
   invalid: "That didn’t save. Check the fields and try again.",
   images: "You can keep up to eight gallery photos. Remove one before adding more.",
   upload: "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
-  incomplete: "Add a subhead and either an overview or a day plan before publishing.",
 };
 
 const dollarsInput = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2));
@@ -49,10 +48,9 @@ export default async function EditCoursePage({
   const course = await getCourseBySlug(db, session.user.shopId, slug);
   if (!course) notFound();
   const back = `/shop/${shopSlug}/courses`;
-  const publishable = isCoursePublishable(course);
 
   const saveAction = saveCourseContentAction.bind(null, shopSlug, slug);
-  const publishAction = setCoursePublishedAction.bind(null, shopSlug, slug);
+  const visibilityAction = setCourseVisibilityAction.bind(null, shopSlug, slug);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -65,27 +63,28 @@ export default async function EditCoursePage({
           title={course.title}
           description="Everything a diver reads before booking — the copy, the photos, and your pricing. The certification and minimum age come from the agency."
           meta={
-            <p className="text-sm text-muted">
-              {course.isPublished ? "Live at " : "Will publish to "}
-              <Link
-                href={`/shop/${shopSlug}/courses/${slug}`}
-                className="font-medium text-primary hover:underline"
-              >
-                /shop/{shopSlug}/courses/{slug}
-              </Link>
-            </p>
+            course.isActive ? (
+              <p className="text-sm text-muted">
+                Live at{" "}
+                <Link
+                  href={`/shop/${shopSlug}/courses/${slug}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  /shop/{shopSlug}/courses/{slug}
+                </Link>
+              </p>
+            ) : (
+              <p className="text-sm text-muted">Hidden from divers and the session picker.</p>
+            )
           }
           actions={
-            <form action={publishAction}>
-              <input type="hidden" name="published" value={course.isPublished ? "false" : "true"} />
+            <form action={visibilityAction}>
+              <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
               <SubmitButton
                 pendingLabel="Saving…"
-                disabled={!course.isPublished && !publishable}
-                className={buttonClass({
-                  variant: course.isPublished ? "secondary" : "primary",
-                })}
+                className={buttonClass({ variant: "secondary" })}
               >
-                {course.isPublished ? "Hide" : "Publish page"}
+                {course.isActive ? "Hide" : "Show"}
               </SubmitButton>
             </form>
           }
@@ -96,11 +95,6 @@ export default async function EditCoursePage({
       {error && errors[error] ? (
         <ShopNotice tone="danger" role="alert">
           {errors[error]}
-        </ShopNotice>
-      ) : null}
-      {!course.isPublished && !publishable ? (
-        <ShopNotice tone="neutral">
-          Draft. Add a subhead and either an overview or a day plan, then publish.
         </ShopNotice>
       ) : null}
 

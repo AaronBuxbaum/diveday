@@ -21,8 +21,9 @@ export type CourseInquiry = {
   name: string;
   /** Free prose — "the week of 12 August", "any weekend in the autumn". */
   timing: string;
-  /** How many people, including the writer. */
-  divers: number;
+  /** How many people, including the writer. Null until they type one — this
+   *  field is as optional as the rest of the contact form. */
+  divers: number | null;
   /** Where they are up to, from COURSE_INQUIRY_EXPERIENCE. */
   experience: string;
   /** Anything else they want to say. */
@@ -66,7 +67,7 @@ export function courseInquiryBody(inquiry: CourseInquiry): string {
     `I would like to take the ${inquiry.courseTitle.trim()} course.`,
     "",
     `When: ${said(inquiry.timing)}`,
-    `How many divers: ${inquiry.divers}`,
+    `How many divers: ${inquiry.divers ?? NOT_SAID}`,
     `Experience so far: ${said(inquiry.experience)}`,
   ];
   const note = inquiry.message.trim();

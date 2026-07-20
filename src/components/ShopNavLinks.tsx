@@ -75,12 +75,21 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
       </nav>
       <details ref={detailsRef} className="relative shrink-0">
         <summary
-          className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden`}
+          className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
         >
-          More{" "}
-          <span aria-hidden="true" className="ml-1 text-xs">
-            ⌄
-          </span>
+          More
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-3"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
         </summary>
         {/* One column, one link per row — a two-column grid wrapped short labels onto two lines. */}
         <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-2xl border border-border bg-surface p-2 shadow-xl">

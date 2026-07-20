@@ -11,9 +11,8 @@ import {
   telHref,
 } from "@/lib/course-inquiry";
 
-/** An emptied number box reads as NaN; the message still needs one diver in it. */
+/** Keeps a typed number sane (no "0 divers", no "400 divers"); an empty box is left alone. */
 function clampDivers(value: number): number {
-  if (Number.isNaN(value)) return 1;
   return Math.min(12, Math.max(1, Math.round(value)));
 }
 
@@ -41,11 +40,14 @@ export function CourseInquiry({
 }) {
   const [name, setName] = useState("");
   const [timing, setTiming] = useState("");
-  const [divers, setDivers] = useState(1);
+  const [diversInput, setDiversInput] = useState("");
   const [experience, setExperience] = useState("");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Optional, like every other contact field: blank is a real answer, not
+  // something to snap back to a placeholder count.
+  const divers = diversInput === "" ? null : clampDivers(Number(diversInput));
   const inquiry = { courseTitle, shopName, name, timing, divers, experience, message };
   const subject = courseInquirySubject(inquiry);
   const body = courseInquiryBody(inquiry);
@@ -87,14 +89,14 @@ export function CourseInquiry({
               className={controlClass}
             />
           </Field>
-          <Field label="How many divers">
+          <Field label="How many divers" hint="(optional)">
             <input
               name="divers"
               type="number"
               min={1}
               max={12}
-              value={divers}
-              onChange={(event) => setDivers(clampDivers(event.target.valueAsNumber))}
+              value={diversInput}
+              onChange={(event) => setDiversInput(event.target.value)}
               className={controlClass}
             />
           </Field>
@@ -134,7 +136,7 @@ export function CourseInquiry({
               maxLength={1500}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="We are on a cruise and only ashore on the Tuesday."
+              placeholder="We are on a cruise and only ashore on Tuesday."
               className={controlClass}
             />
           </Field>

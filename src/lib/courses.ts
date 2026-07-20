@@ -61,20 +61,6 @@ export function courseSlug(title: string): string {
   return RESERVED_COURSE_SEGMENTS.has(slug) ? `${slug}-course` : slug;
 }
 
-/**
- * A course page with no body is worse than no course page: it reads as a broken
- * shop. Publishing requires a subhead plus something substantial to read.
- */
-export function isCoursePublishable(course: {
-  title: string;
-  summary: string | null;
-  overview: string | null;
-  scheduleDays: CourseScheduleDay[];
-}): boolean {
-  if (!course.title.trim() || !course.summary?.trim()) return false;
-  return Boolean(course.overview?.trim()) || course.scheduleDays.length > 0;
-}
-
 /** Split a textarea into blocks on blank lines, dropping empty ones. */
 function blocks(value: string): string[][] {
   return value

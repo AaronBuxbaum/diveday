@@ -59,5 +59,8 @@ seed already did.
   pricing now finds it beside the copy, not in a table two clicks away.
 - `is_active` (scheduling) and `is_published` (public page) remain distinct; the list toggles the
   first with an eye icon, the page toggles the second with **Hide** / **Publish page**.
+  _Superseded by [20260720-course-single-visibility-state](20260720-course-single-visibility-state.md):
+  `is_published` is dropped; both the list's eye icon and the page's Hide/Show button now toggle
+  the one `is_active` column._
 - The route surface shrinks: `/shop/<slug>/courses/catalog` is gone. The auth-exempt public course
   page and the gated editor are unchanged.

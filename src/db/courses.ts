@@ -140,15 +140,6 @@ export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
   return course ?? null;
 }
 
-/** The shop's public course pages, in the order a visitor should meet them. */
-export async function listPublishedCourses(db: AppDb, shopId: string) {
-  return db
-    .select()
-    .from(courses)
-    .where(and(eq(courses.shopId, shopId), eq(courses.isPublished, true)))
-    .orderBy(asc(courses.agency), asc(courses.title));
-}
-
 /**
  * Saves the whole marketing page at once. Pricing, the cert gate, and the
  * agency's minimum age are untouched — those are not marketing prose.
@@ -174,20 +165,6 @@ export async function updateCourseContent(
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
     })
-    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
-    .returning();
-  return course ?? null;
-}
-
-export async function setCoursePublished(
-  db: AppDb,
-  shopId: string,
-  courseId: string,
-  published: boolean,
-) {
-  const [course] = await db
-    .update(courses)
-    .set({ isPublished: published })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
   return course ?? null;

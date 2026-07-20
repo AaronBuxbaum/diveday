@@ -201,12 +201,6 @@ export const courses = pgTable(
     scheduleDays: jsonb("schedule_days").$type<CourseScheduleDay[]>().notNull().default([]),
     faqs: jsonb("faqs").$type<CourseFaq[]>().notNull().default([]),
     /**
-     * Public visibility, deliberately apart from `is_active`: a shop teaches
-     * courses it never markets, and drafts a page for a course it already
-     * schedules. `is_active` gates the session picker; this gates the web page.
-     */
-    isPublished: boolean("is_published").notNull().default(false),
-    /**
      * Two additive amounts, not a price and a bundle total: an enrollment
      * invoices as `price_cents` + `e_learning_price_cents` on one bill, so
      * either line can be cleared or refunded on its own (a student who already
@@ -220,6 +214,11 @@ export const courses = pgTable(
      * the app offers to edit it.
      */
     minimumCertificationLevel: certificationLevel("minimum_certification_level"),
+    /**
+     * The one visibility switch: hides the course from the session picker and
+     * takes its public page down. There is no separate draft/publish state —
+     * a course is either offered, or it is hidden.
+     */
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

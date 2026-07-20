@@ -6,7 +6,6 @@ import {
   courseTotalCents,
   formatFaqs,
   formatScheduleDays,
-  isCoursePublishable,
   parseFaqs,
   parseLines,
   parseScheduleDays,
@@ -107,30 +106,6 @@ describe("courseSlug", () => {
 
   it("does not leave a trailing hyphen when the title is truncated mid-word", () => {
     expect(courseSlug(`${"a".repeat(79)} diver`)).toBe("a".repeat(79));
-  });
-});
-
-describe("isCoursePublishable", () => {
-  const draft = {
-    title: "Open Water Diver",
-    summary: "How to become a PADI Open Water Diver",
-    overview: null,
-    scheduleDays: [{ title: "Day 1", items: ["Academics"] }],
-  };
-
-  it("accepts a course with a subhead and a schedule", () => {
-    expect(isCoursePublishable(draft)).toBe(true);
-  });
-
-  it("accepts a course with a subhead and prose instead of a schedule", () => {
-    expect(
-      isCoursePublishable({ ...draft, scheduleDays: [], overview: "Three days in Cozumel." }),
-    ).toBe(true);
-  });
-
-  it("refuses a page with nothing to read", () => {
-    expect(isCoursePublishable({ ...draft, scheduleDays: [] })).toBe(false);
-    expect(isCoursePublishable({ ...draft, summary: "   " })).toBe(false);
   });
 });
 

@@ -23,6 +23,8 @@ free-form image URLs from the certification forms?
 - **`is_published` is separate from `is_active`.** `is_active` gates the session picker;
   `is_published` gates the public page. A shop teaches courses it does not market, and drafts a page
   for a course it already schedules.
+  _Superseded by [20260720-course-single-visibility-state](20260720-course-single-visibility-state.md):
+  `is_published` is dropped and `is_active` is now the only visibility state, gating both surfaces._
 - **Scuba publishes versioned templates; shops import copies.** `global_courses` /
   `global_course_versions` mirror the dive-site catalog exactly. An import is a one-way copy: a later
   template version never rewrites a shop's edits, and — importantly — never relaxes the cert gate
@@ -79,4 +81,6 @@ rather than quietly working around:
   (`RESERVED_COURSE_SEGMENTS`), so a course can never be slugged into shadowing a staff page.
 - Publishing is gated on `isCoursePublishable` — a subhead plus a schedule or prose — because an
   empty page reads as a broken shop rather than as a draft.
+  _Superseded by [20260720-course-single-visibility-state](20260720-course-single-visibility-state.md):
+  there is no publish gate any more — a course renders whenever it is not hidden._
 - Two upload namespaces now share one seam; a provider swap still touches one file.

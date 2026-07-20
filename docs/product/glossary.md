@@ -77,9 +77,9 @@ new domain concept, define it here in the same PR.
   sessions.
 - **Course page** — the diver-facing page for one course: subhead, overview, photos, spec chips
   (duration, group size, minimum age, prerequisite), a day-by-day plan, what the fee covers, an
-  FAQ, and the upcoming sessions it can be booked through. Published separately from being
-  **active**: active gates the session picker, **published** gates the public web page, and a shop
-  routinely has one without the other.
+  FAQ, and the upcoming sessions it can be booked through. There is no separate draft/publish
+  state: a course is either **active** or hidden, and that one switch gates both the session
+  picker and the public web page (20260720-course-single-visibility-state).
 - **Default course page** — every course arrives pre-filled with Scuba's default page copy for that
   agency course (day plan, what the fee covers, the questions divers ask). It is a starting point,
   not a binding: the shop edits from there, and nothing reaches back to rewrite the shop's words.
