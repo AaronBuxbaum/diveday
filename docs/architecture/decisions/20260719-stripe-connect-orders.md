@@ -20,8 +20,8 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
 
 ## Decision
 
-- **Stripe Connect, Standard accounts, via OAuth.** A shop clicks "Connect Stripe" on
-  `/shop/[shopSlug]/shop`; this redirects to Stripe's OAuth authorize endpoint
+- **Stripe Connect, Standard accounts, via OAuth.** A shop clicks "Connect Stripe" on the shop
+  settings page (`/shop/[shopSlug]/settings/payments`); this redirects to Stripe's OAuth authorize endpoint
   (`https://connect.stripe.com/oauth/authorize`) and the shop signs into or creates their **own**
   Stripe account. The callback exchanges the returned code for a `stripe_user_id` and stores it in
   a new `shop_stripe_accounts` row (one per shop). Standard is the correct account type for "the

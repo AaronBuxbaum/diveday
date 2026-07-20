@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -77,7 +79,7 @@ async function createOrderAction(formData: FormData) {
   );
 }
 
-const NOTICES: Record<string, string> = {
+const NOTICE_MESSAGES: Record<string, string> = {
   invalid: "Pick a customer and at least one line item with an amount.",
   not_connected: "Connect a Stripe account in Shop settings before creating an order.",
   stripe_failed: "Stripe couldn't create that invoice. Try again in a moment.",
@@ -127,6 +129,7 @@ export default async function NewOrderPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+      <FlashParams params={["notice"]} />
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopSlug}</p>
@@ -145,9 +148,11 @@ export default async function NewOrderPage({
       </div>
 
       {notice ? (
-        <p className="mb-6 rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger">
-          {NOTICES[notice] ?? "That order couldn't be created."}
-        </p>
+        <div className="mb-6">
+          <ShopNotice tone="danger" role="alert">
+            {NOTICE_MESSAGES[notice] ?? "That order couldn't be created."}
+          </ShopNotice>
+        </div>
       ) : null}
 
       {bookingContext ? (

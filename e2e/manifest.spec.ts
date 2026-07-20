@@ -14,8 +14,13 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   page,
 }) => {
   await signInAsOwner(page);
-  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
-  await page.getByRole("link", { name: "Open boat manifest" }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await page.getByRole("link", { name: "Boat manifest" }).click();
 
   await expect(page.getByRole("heading", { name: "Boat manifest" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
@@ -57,8 +62,13 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   context,
 }) => {
   await signInAsOwner(page);
-  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
-  await page.getByRole("link", { name: "Open boat manifest" }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await page.getByRole("link", { name: "Boat manifest" }).click();
 
   await page.getByRole("button", { name: "Save for offline" }).click();
   await expect(page.getByText(/Saved\. Open offline roll call/)).toBeVisible();

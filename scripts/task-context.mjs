@@ -162,8 +162,7 @@ const areas = {
       "src/db/nitrox.ts",
       "src/db/nitrox.test.ts",
       "src/lib/nitrox.ts",
-      "src/app/shop/nitrox",
-      "src/app/shop/trips/[id]/nitrox",
+      "src/app/shop/[shopSlug]/trips/[id]/nitrox",
     ],
     tests: ["src/lib/nitrox.test.ts", "src/db/nitrox.test.ts", "e2e"],
     invariants: [

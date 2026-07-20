@@ -76,7 +76,7 @@ const RENTAL_GEAR_OPTIONS = [
   { name: "diveComputer", label: "Dive computer" },
 ] as const;
 
-const ERRORS: Record<string, string> = {
+const ERROR_MESSAGES: Record<string, string> = {
   invalid: "Check your name and email and give it another go.",
   full: "Someone grabbed the last spot just before you — the boat's full.",
   available: "Good news — a spot just opened. Book it before it goes.",
@@ -149,7 +149,7 @@ export default async function TripDetailPage({
   const inPast = trip.startsAt <= new Date();
   const full = isFull(trip);
   const remaining = spotsRemaining(trip);
-  const errorMessage = error ? ERRORS[error] : undefined;
+  const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
 
   async function bookSpot(formData: FormData) {
     "use server";
