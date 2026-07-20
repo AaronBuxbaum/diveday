@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getShopById, setShopPackingList } from "@/db/shops";
+import { getShopById, setShopContact, setShopPackingList } from "@/db/shops";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,
@@ -22,6 +24,11 @@ export const metadata: Metadata = { title: "Shop settings — Scuba" };
 const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
   packing_invalid: { tone: "danger", text: "Add between one and twelve packing items." },
+  contact_saved: { tone: "success", text: "Contact details saved." },
+  contact_invalid: {
+    tone: "danger",
+    text: "Use a complete email address, or empty the box to take it off your public pages.",
+  },
   connected: { tone: "success", text: "Stripe account connected." },
   connect_failed: {
     tone: "danger",
@@ -34,6 +41,13 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   disconnected: { tone: "success", text: "Stripe account disconnected." },
   refreshed: { tone: "success", text: "Payment status refreshed from Stripe." },
 };
+
+const contactSchema = z.object({
+  // Empty clears the field; anything else must be a real address, because this
+  // one is printed on a public page for divers to write to.
+  contactEmail: z.union([z.literal(""), z.email().max(200)]),
+  contactPhone: z.string().trim().max(40),
+});
 
 async function savePackingAction(formData: FormData) {
   "use server";
@@ -54,6 +68,21 @@ async function savePackingAction(formData: FormData) {
     `/shop/${session.user.shopSlug}/settings/payments`,
     `/shop/${session.user.shopSlug}/settings/payments?notice=packing_saved`,
   );
+}
+
+/**
+ * The address a diver who is not booking yet writes to. Published, so an empty
+ * box is a real answer — it takes the "Get in touch" composer off the shop's
+ * course pages rather than publishing a blank contact.
+ */
+async function saveContactAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const parsed = contactSchema.safeParse(Object.fromEntries(formData));
+  const settings = `/shop/${session.user.shopSlug}/settings/payments`;
+  if (!parsed.success) redirect(`${settings}?notice=contact_invalid`);
+  await setShopContact(await getDb(), session.user.shopId, parsed.data);
+  revalidateAndRedirect(settings, `${settings}?notice=contact_saved`);
 }
 
 async function disconnectAction() {
@@ -143,6 +172,44 @@ export default async function PaymentsSettingsPage({
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Public contact details</h2>
+        <p className="mt-1 text-sm text-muted">
+          Printed on your course pages, where a diver who cannot find a date gets a ready-written
+          email to send you. Use a front-desk address the whole team reads, not a personal one.
+          Empty the email box to take the form down.
+        </p>
+        <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
+          <Field label="Contact email">
+            <input
+              name="contactEmail"
+              type="email"
+              maxLength={200}
+              autoComplete="email"
+              defaultValue={shop.contactEmail ?? ""}
+              placeholder="hello@yourshop.com"
+              className={controlClass}
+            />
+          </Field>
+          <Field label="Contact phone" hint="(optional)">
+            <input
+              name="contactPhone"
+              type="tel"
+              maxLength={40}
+              autoComplete="tel"
+              defaultValue={shop.contactPhone ?? ""}
+              placeholder="+1 305 555 0134"
+              className={controlClass}
+            />
+          </Field>
+          <FieldActions>
+            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
+              Save contact details
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">Trip packing checklist</h2>
         <p className="mt-1 text-sm text-muted">
           One item per line. Divers see this same concise list on every trip.

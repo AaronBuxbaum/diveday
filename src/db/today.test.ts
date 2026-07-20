@@ -31,13 +31,22 @@ describe("today's work queue (in-memory PGlite)", () => {
   it("collapses a boat's identical blockers so one busy trip cannot bury the rest", async () => {
     const { db, shop } = await seededShopContext();
 
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const blockerRows = work.actions.filter((action) => action.id.startsWith("blocker"));
-    const blockedDivers = work.departures.reduce((total, entry) => total + entry.blocked, 0);
+    const [departure] = work.departures;
+    if (!departure) throw new Error("expected today's departure");
+    // Scoped to today's boat: the shop has other trips on the books, and their
+    // blockers are their own rows. What must not happen is this boat's nine
+    // blocked divers each claiming a line of the queue.
+    const blockerRows = work.actions.filter((action) =>
+      action.id.startsWith(`blockers:${reef.id}:`),
+    );
 
-    // Nine blocked divers on today's boat must not become nine rows.
-    expect(blockedDivers).toBe(9);
-    expect(blockerRows.length).toBeLessThan(blockedDivers);
+    expect(departure.blocked).toBe(9);
+    expect(blockerRows.length).toBeGreaterThan(0);
+    expect(blockerRows.length).toBeLessThan(departure.blocked);
     expect(new Set(blockerRows.map((action) => action.id)).size).toBe(blockerRows.length);
   });
 

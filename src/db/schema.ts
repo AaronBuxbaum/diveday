@@ -31,6 +31,14 @@ export const shops = pgTable("shops", {
   timezone: text("timezone").notNull(),
   /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
   jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
+  /**
+   * Where a diver who is not booking yet should write. Published on public
+   * pages, so it is the shop's front-desk address rather than an owner's
+   * personal one — nullable because a shop that has not chosen one must not
+   * have a member of staff's address guessed on its behalf.
+   */
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
   /** Diver-facing suggestions shown on every trip; owners configure these once per shop. */
   packingList: jsonb("packing_list")
     .$type<string[]>()

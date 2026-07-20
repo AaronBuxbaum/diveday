@@ -67,11 +67,16 @@ export function CourseHero({
   );
 }
 
+/**
+ * How the course runs, not who may take it. Admission facts (the cert gate, the
+ * minimum age, the shop's own note) all live in CourseAdmission below, so a
+ * diver has exactly one place to read the answer to "can I do this?".
+ */
 export function CourseSpecs({ items }: { items: Array<{ label: string; value: string }> }) {
   if (items.length === 0) return null;
   return (
-    <section aria-label="At a glance" className="mt-8">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <section aria-label="At a glance" className="mt-8 max-w-2xl">
+      <dl className="grid grid-cols-2 gap-3">
         {items.map((item) => (
           <div key={item.label} className="rounded-2xl border border-border bg-surface p-4">
             <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
@@ -86,31 +91,51 @@ export function CourseSpecs({ items }: { items: Array<{ label: string; value: st
 }
 
 /**
- * Who may enrol. The agency's certification gate and the shop's own note are
- * two different kinds of claim, and an unlabelled paragraph under a chip
- * labelled "Prerequisite" reads as one continuous sentence — which is how a
- * diver ends up believing shop prose ("or a qualifying certification…")
- * overrides the card the desk will actually check. The gate is restated here,
- * first and in the foreground; the note is labelled as the shop talking.
+ * The single home for who may enroll. Admission used to be stated twice — a
+ * "Prerequisite" chip in the spec row and again here — which is duplication a
+ * shop can only get wrong: the two drift, and a diver reads whichever suits.
+ *
+ * What the two-block layout was protecting is kept, because it is the part that
+ * matters: the agency's certification gate and the shop's own note are
+ * different kinds of claim, and an unlabelled paragraph under a heading reading
+ * "Prerequisite" reads as one continuous sentence — which is how a diver ends
+ * up believing shop prose ("or a qualifying certification…") overrides the card
+ * the desk will actually check. So the gate is a labelled term in the
+ * foreground, and the note is labelled as the shop talking.
  */
 export function CourseAdmission({
   certificationRequired,
+  minimumAge,
   shopNote,
 }: {
   certificationRequired: string;
+  minimumAge: number | null;
   shopNote: string | null;
 }) {
   return (
     <section
-      aria-labelledby="who-can-enrol"
+      aria-labelledby="who-can-enroll"
       className="mt-6 max-w-2xl rounded-2xl border border-border bg-surface-sunken p-5"
     >
-      <h2 id="who-can-enrol" className="text-sm font-semibold tracking-wide text-muted uppercase">
-        Who can enrol
+      <h2 id="who-can-enroll" className="text-sm font-semibold tracking-wide text-muted uppercase">
+        Who can enroll
       </h2>
-      <p className="mt-2 font-medium">
-        Certification required: <strong className="font-semibold">{certificationRequired}</strong>
-      </p>
+      <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div>
+          <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
+            Certification
+          </dt>
+          <dd className="mt-1 font-semibold">{certificationRequired}</dd>
+        </div>
+        {minimumAge ? (
+          <div>
+            <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
+              Minimum age
+            </dt>
+            <dd className="mt-1 font-semibold">{minimumAge} years</dd>
+          </div>
+        ) : null}
+      </dl>
       {shopNote ? (
         <>
           <h3 className="mt-4 text-sm font-semibold tracking-wide text-muted uppercase">
@@ -241,6 +266,7 @@ export function CourseSessions({
   sessions,
   shopSlug,
   timezone,
+  inquiryHref,
 }: {
   sessions: Array<{
     id: string;
@@ -252,6 +278,8 @@ export function CourseSessions({
   }>;
   shopSlug: string;
   timezone: string;
+  /** Anchor to the "Get in touch" composer, or null when the shop published no address. */
+  inquiryHref: string | null;
 }) {
   return (
     <section id="dates" className="mt-12 scroll-mt-8">
@@ -264,8 +292,18 @@ export function CourseSessions({
             className="font-medium text-primary hover:underline"
           >
             See the full schedule
-          </Link>{" "}
-          or get in touch and we will set one.
+          </Link>
+          {inquiryHref ? (
+            <>
+              , or{" "}
+              <Link href={inquiryHref} className="font-medium text-primary hover:underline">
+                ask us to set one
+              </Link>
+              .
+            </>
+          ) : (
+            " or get in touch and we will set one."
+          )}
         </p>
       ) : (
         <ul className="mt-6 grid gap-3">
