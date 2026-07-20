@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground";
+  "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
 const primaryLinks = [
   { label: "Today", suffix: "" },
@@ -43,7 +43,7 @@ function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
 
-export function ShopNavLinks({ root }: { root: string }) {
+export function ShopNavLinks({ root, className = "" }: { root: string; className?: string }) {
   const pathname = usePathname();
   const isBoatSurface = pathname.includes("/manifest");
   const moreIsActive = moreGroups.some((group) =>
@@ -51,7 +51,7 @@ export function ShopNavLinks({ root }: { root: string }) {
   );
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className={`flex min-w-0 items-center gap-2 ${className}`}>
       {isBoatSurface ? (
         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
           <span aria-hidden="true">⚓</span>
@@ -60,7 +60,7 @@ export function ShopNavLinks({ root }: { root: string }) {
       ) : null}
       <nav
         aria-label={isBoatSurface ? "Shop and boat navigation" : "Primary"}
-        className="flex min-w-0 flex-1 snap-x items-center gap-1 overflow-x-auto scroll-px-1 pr-3"
+        className="flex min-w-0 flex-1 snap-x items-center gap-0.5 overflow-x-auto scroll-px-1 pr-2 sm:gap-1 sm:pr-3"
       >
         {primaryLinks.map(({ label, suffix }) => {
           const href = `${root}${suffix}`;
@@ -69,7 +69,7 @@ export function ShopNavLinks({ root }: { root: string }) {
             <Link
               key={href}
               href={href}
-              className={`${navClass(active)} snap-start`}
+              className={`${navClass(active)} flex-1 justify-center snap-start sm:flex-none sm:justify-start`}
               aria-current={active ? "page" : undefined}
             >
               {label}

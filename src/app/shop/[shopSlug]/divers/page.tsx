@@ -204,7 +204,7 @@ export default async function DiversPage({
             </p>
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+          <div className="relative mt-4 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
             <table className="w-full min-w-180 border-collapse text-left">
               <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
                 <tr>
