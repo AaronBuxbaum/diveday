@@ -27,6 +27,9 @@ free-form image URLs from the certification forms?
   `global_course_versions` mirror the dive-site catalog exactly. An import is a one-way copy: a later
   template version never rewrites a shop's edits, and — importantly — never relaxes the cert gate
   under a course a shop is already teaching.
+  _Superseded by [20260720-course-page-simplification](20260720-course-page-simplification.md): the
+  import step and the `global_courses` tables were removed. Every course is now pre-filled with the
+  default page copy at creation — the default is the starting point, no catalog to import from._
 - **Course media reuses the storage seam with its own key prefix.** `storeCourseImage` sits beside
   `storeCardImage` in `src/lib/storage/`, sharing validation (≤5 MB, JPG/PNG/WebP/HEIC) and writing
   under `courses/` rather than `cards/`.
@@ -67,8 +70,10 @@ rather than quietly working around:
 
 ## Consequences
 
-- A shop can publish a credible course page on day one by importing a template, and every field it
-  edits is a field the rest of the app can read later (session briefings, confirmations).
+- A shop can publish a credible course page on day one from the default page copy every course
+  ships with, and every field it edits is a field the rest of the app can read later (session
+  briefings, confirmations). (The import step this originally described was later removed — see
+  [20260720-course-page-simplification](20260720-course-page-simplification.md).)
 - The public route surface grows: `/shop/<slug>/courses/<course>` is auth-exempt while the staff
   catalog above it is not. The exemption matches exactly one segment and refuses reserved segments
   (`RESERVED_COURSE_SEGMENTS`), so a course can never be slugged into shadowing a staff page.

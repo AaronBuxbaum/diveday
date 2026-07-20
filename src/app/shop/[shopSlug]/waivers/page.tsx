@@ -163,48 +163,19 @@ export default async function WaiverTemplatesPage({
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Release text</h2>
         <p className="mt-1 text-sm text-muted">
-          This is the release every new link sends. Editing it keeps the current text intact and
-          saves your changes as the next version.
+          {current
+            ? "This is the release every new link sends. Saving replaces it for new links — waivers already signed keep the exact text they were signed against."
+            : "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."}
         </p>
-
         {current ? (
-          <article className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="font-semibold">{current.title}</h3>
-                <p className="mt-0.5 text-sm text-muted">
-                  Version {current.version} · saved{" "}
-                  {formatShortDate(current.createdAt, "en-US", shop.timezone)}
-                </p>
-              </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                Current
-              </span>
-            </div>
-            <p className="mt-4 border-t border-border pt-4 text-sm whitespace-pre-line text-foreground/90">
-              {current.body}
-            </p>
-          </article>
-        ) : (
-          <p className="mt-4 rounded-lg border border-border bg-surface p-4 text-sm text-muted">
-            No waiver saved yet. Start from the suggested release below and make it yours.
+          <p className="mt-2 text-sm text-muted">
+            Version {current.version} · saved{" "}
+            {formatShortDate(current.createdAt, "en-US", shop.timezone)}
           </p>
-        )}
-
-        <details className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
-            {current ? "Edit waiver" : "Write your waiver"}
-            <span aria-hidden="true" className="text-sm font-normal text-primary">
-              {current ? "New version" : "Get started"}
-            </span>
-          </summary>
-          <p className="mt-1 text-sm text-muted">
-            {current
-              ? "Saving replaces the current release for new links. Records already signed against earlier versions never change."
-              : "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."}
-          </p>
-          <div className="mt-5">{editForm}</div>
-        </details>
+        ) : null}
+        <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+          {editForm}
+        </div>
       </section>
     </main>
   );

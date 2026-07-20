@@ -64,14 +64,11 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Release text" }) });
 
-  // One current waiver is shown, and the editor is tucked behind a disclosure.
+  // The current version is shown, and the release text is directly editable.
   await expect(release.getByText("Version 1")).toBeVisible();
-  await expect(release.getByText("Current", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Release text")).toBeHidden();
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
-  await release.getByText("Edit waiver").click();
   const releaseTextarea = page.getByLabel("Release text");
   await expect(releaseTextarea).toHaveValue(/scuba diving/);
   await releaseTextarea.fill(

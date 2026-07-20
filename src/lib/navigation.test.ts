@@ -38,7 +38,7 @@ describe("revalidateAndRedirect", () => {
       throw new Error(`NEXT_REDIRECT:${url}`);
     });
 
-    expect(() => revalidateAndRedirect("/shop/x/gear")).toThrow("NEXT_REDIRECT:/shop/x/gear");
-    expect(mocks.redirect).toHaveBeenCalledWith("/shop/x/gear");
+    expect(() => revalidateAndRedirect("/shop/x/divers")).toThrow("NEXT_REDIRECT:/shop/x/divers");
+    expect(mocks.redirect).toHaveBeenCalledWith("/shop/x/divers");
   });
 });
