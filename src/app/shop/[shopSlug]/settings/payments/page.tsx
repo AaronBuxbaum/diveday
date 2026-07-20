@@ -6,7 +6,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getShopById, setShopPackingList } from "@/db/queries";
+import { getShopById, setShopPackingList } from "@/db/shops";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,

@@ -3,9 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBooking, createBookingParty } from "./bookings";
 import { type AppDb, createTestDb } from "./client";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import { people, personRoles } from "./schema";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
   const db = await createTestDb();
@@ -108,7 +109,7 @@ describe("createBooking (in-memory PGlite)", () => {
     const unknown = await bookVisitor(db, shop.id, "00000000-0000-4000-8000-000000000000");
     expect(unknown).toEqual({ ok: false, reason: "trip_unavailable" });
 
-    const { setTripStatus } = await import("./queries");
+    const { setTripStatus } = await import("./trips");
     await setTripStatus(db, shop.id, open.id, "cancelled");
     const onCancelled = await bookVisitor(db, shop.id, open.id);
     expect(onCancelled).toEqual({ ok: false, reason: "trip_unavailable" });

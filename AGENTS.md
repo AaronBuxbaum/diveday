@@ -46,7 +46,7 @@ adapters and must not introduce unique requirements.
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
-| Queries and seed data | `src/db/queries.ts`, `src/db/seed.ts` |
+| Queries and seed data | `src/db/trips.ts`, `src/db/shops.ts`, `src/db/seed.ts` |
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |

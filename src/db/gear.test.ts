@@ -13,8 +13,9 @@ import {
   setGearServiceHold,
 } from "./gear";
 import { saveRentalGearRequest } from "./gear-requests";
-import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 async function gearContext() {
   const db = await createTestDb();

@@ -7,7 +7,7 @@ import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeade
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility, updateCourse } from "@/db/courses";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";

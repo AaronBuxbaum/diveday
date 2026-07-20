@@ -210,7 +210,8 @@ const areas = {
     code: [
       "src/db/schema.ts",
       "src/db/client.ts",
-      "src/db/queries.ts",
+      "src/db/trips.ts",
+      "src/db/shops.ts",
       "src/db/bookings.ts",
       "src/db/seed.ts",
     ],

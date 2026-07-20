@@ -6,7 +6,7 @@ import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeade
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Dive sites — Scuba" };

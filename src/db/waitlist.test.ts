@@ -1,13 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
-import {
-  getShopBySlug,
-  getTripRoster,
-  getTripWithBooked,
-  upcomingTripsWithCounts,
-} from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, getTripWithBooked, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 
 async function seededContext() {

@@ -4,9 +4,10 @@ import { createTestDb } from "./client";
 import { assignGear, listAvailableGear } from "./gear";
 import { saveRentalGearRequest } from "./gear-requests";
 import { recordRollCall } from "./manifests";
-import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
 import { getTodayWork } from "./today";
+import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };

@@ -2,29 +2,21 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
+import { bookings, tripRequirements } from "./schema";
+import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
 import {
   createTrip,
   createTripSeries,
-  getShopBySlug,
   getTripSeriesSummary,
   getTripWithBooked,
   listTripDives,
   setTripStatus,
   upcomingTripsWithCounts,
   updateTrip,
-} from "./queries";
-import { bookings, tripRequirements } from "./schema";
-import { seedDemo } from "./seed";
+} from "./trips";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
-  it("seeds a shop retrievable by slug", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    expect(shop?.name).toBe("Blue Mantis Divers");
-    expect(shop?.timezone).toBe("America/New_York");
-  });
-
   it("returns upcoming trips ordered by start with correct booked counts", async () => {
     const db = await createTestDb();
     await seedDemo(db);

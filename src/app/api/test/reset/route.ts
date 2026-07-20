@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { getShopBySlug } from "@/db/queries";
 import { resetDemoSchedule } from "@/db/seed";
+import { getShopBySlug } from "@/db/shops";
 
 /**
  * Resets the seeded demo shop's schedule to its canonical fixture state.

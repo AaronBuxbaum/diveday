@@ -10,8 +10,8 @@ import {
   updateDiver,
 } from "./divers";
 import { saveRentalGearProfile } from "./gear-requests";
-import { getShopBySlug } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
 
 describe("person-first diver records", () => {
   it("composes cards, fit, and history from one diver record", async () => {

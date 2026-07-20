@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
-import { getShopById, getShopBySlug } from "@/db/queries";
 import { people, personRoles } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
+import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { requireStaffSession } from "@/lib/session";
 

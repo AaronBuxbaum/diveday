@@ -11,7 +11,6 @@ import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import { saveRentalGearProfile } from "@/db/gear-requests";
 import { createNitroxCertification, reviewNitroxCertification } from "@/db/nitrox";
 import { refundOrder } from "@/db/orders";
-import { getShopById, upcomingTripsWithCounts } from "@/db/queries";
 import {
   createCertification,
   createSpecialtyCertification,
@@ -19,6 +18,8 @@ import {
   reviewSpecialtyCertification,
   verifyCertificationWithAgency,
 } from "@/db/readiness";
+import { getShopById } from "@/db/shops";
+import { upcomingTripsWithCounts } from "@/db/trips";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";

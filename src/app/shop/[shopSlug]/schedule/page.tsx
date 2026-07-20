@@ -6,7 +6,8 @@ import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalend
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
+import { getShopBySlug } from "@/db/shops";
+import { upcomingTripsWithCounts } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import {

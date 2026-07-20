@@ -4,7 +4,6 @@ import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } 
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listNotificationDeliveryIssues } from "./notifications";
-import { upcomingTripsWithCounts } from "./queries";
 import { listTripReadiness } from "./readiness";
 import {
   gearAssignments,
@@ -16,6 +15,7 @@ import {
   tripAssignments,
   tripWaitlistEntries,
 } from "./schema";
+import { upcomingTripsWithCounts } from "./trips";
 
 /**
  * How many upcoming departures the queue will inspect. Readiness is a per-trip

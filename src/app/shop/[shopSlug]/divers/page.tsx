@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 

@@ -9,7 +9,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { createBookingParty } from "@/db/bookings";
+import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import {
@@ -18,14 +18,9 @@ import {
   saveRentalGearRequest,
 } from "@/db/gear-requests";
 import { sendAndRecordNotification } from "@/db/notifications";
-import {
-  getBookingForTrip,
-  getShopBySlug,
-  getTripWithBooked,
-  getWaitlistEntryForTrip,
-  listTripDives,
-} from "@/db/queries";
 import { getBookingReadiness } from "@/db/readiness";
+import { getShopBySlug } from "@/db/shops";
+import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";

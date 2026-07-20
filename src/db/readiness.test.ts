@@ -7,7 +7,6 @@ import {
   listShopNitroxCertifications,
   reviewNitroxCertification,
 } from "./nitrox";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import {
   createCertification,
   createSpecialtyCertification,
@@ -22,6 +21,8 @@ import {
 } from "./readiness";
 import { certifications as certificationsTable } from "./schema";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function readinessContext() {
   const db = await createTestDb();
