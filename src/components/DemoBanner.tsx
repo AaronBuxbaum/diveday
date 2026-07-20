@@ -8,6 +8,8 @@ interface DemoBannerProps {
   currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver";
   currentName?: string | null;
   shopSlug: string;
+  /** Roles that have a seeded person in this shop; others are hidden. */
+  availableRoles: string[];
 }
 
 const ROLES_INFO = [
@@ -53,12 +55,18 @@ const ROLES_INFO = [
   },
 ] as const;
 
-export function DemoBanner({ currentRole, currentName, shopSlug }: DemoBannerProps) {
+export function DemoBanner({
+  currentRole,
+  currentName,
+  shopSlug,
+  availableRoles,
+}: DemoBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
   const activeInfo = ROLES_INFO.find((r) => r.id === currentRole);
+  const roles = ROLES_INFO.filter((role) => availableRoles.includes(role.id));
 
   const handleRoleSwitch = (roleId: string) => {
     if (roleId === currentRole) return;
@@ -121,7 +129,7 @@ export function DemoBanner({ currentRole, currentName, shopSlug }: DemoBannerPro
               Choose a role to experience Scuba from different perspectives:
             </h3>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {ROLES_INFO.map((role) => {
+              {roles.map((role) => {
                 const isActive = role.id === currentRole;
                 const isThisSwitching = switchingTo === role.id;
                 return (
@@ -155,6 +163,7 @@ export function DemoBanner({ currentRole, currentName, shopSlug }: DemoBannerPro
                     <button
                       type="button"
                       disabled={isActive || isPending}
+                      aria-label={isActive ? undefined : `Switch to ${role.title}`}
                       onClick={() => handleRoleSwitch(role.id)}
                       className={`mt-4 w-full rounded-lg py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${
                         isActive

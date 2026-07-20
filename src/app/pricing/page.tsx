@@ -21,7 +21,7 @@ const faq = [
   {
     question: "Can I see it before I commit?",
     answer:
-      "Yes. Start a seeded trial shop or open the live demo and switch between shop-owner, instructor, divemaster, captain, and diver perspectives.",
+      "Yes. Open the live demo to switch between shop-owner, instructor, divemaster, captain, and diver perspectives, or start a trial shop of your own — optionally seeded with sample trips to explore.",
   },
   {
     question: "What about multiple locations?",
