@@ -42,9 +42,10 @@ own in-memory PGlite database.
   opt-in **and** still 404s whenever `DATABASE_URL` is set. A real deployment always has a database
   URL and never sets `SCUBA_E2E`, so the route stays unreachable in production by two independent
   guards.
-- **Warmup.** `e2e/global-setup.ts` resets each server, signs in once, and concurrently GETs the
-  heavy public and staff routes, so the first test to open one lands on a warm route. It is
-  best-effort — a warmup failure never aborts the run.
+- **Warmup.** `e2e/global-setup.ts` resets each server's database and GETs the two routes every
+  test hits first (`/` and `/sign-in`), so the first test doesn't absorb their one-time render
+  cost. The worker count budgets ~2 cores per worker (each runs a browser *and* a server), so a
+  typical 4-core runner uses a single uncontended worker and larger machines scale out.
 
 ## Alternatives considered
 
