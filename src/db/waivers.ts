@@ -10,38 +10,47 @@ import type { AppDb, DbExecutor } from "./client";
 import type { MedicalAnswers } from "./schema";
 import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
 
-export type NewWaiverTemplate = {
+export type SaveWaiverTemplateInput = {
   shopId: string;
   title: string;
   body: string;
-  makeDefault?: boolean;
 };
 
-/** Template text is an append-only history: creating the same title makes v2, v3, … */
-export async function createWaiverTemplate(db: AppDb, input: NewWaiverTemplate) {
+/**
+ * A shop has exactly one waiver, kept as an append-only chain of versions. The
+ * most recent version is what a newly issued link snapshots.
+ */
+export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
+  const [template] = await db
+    .select()
+    .from(waiverTemplates)
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
+    .orderBy(desc(waiverTemplates.createdAt))
+    .limit(1);
+  return template ?? null;
+}
+
+/** The full version history, newest first, for a read-only audit trail. */
+export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) {
+  return db
+    .select()
+    .from(waiverTemplates)
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
+    .orderBy(desc(waiverTemplates.version));
+}
+
+/**
+ * Saves an edit as the next version. Versions increment per shop — history reads
+ * v1 → v2 → v3 — and the most recent version is always what new links snapshot.
+ * The previous version stays intact so a record already signed against it is never rewritten.
+ */
+export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInput) {
   return db.transaction(async (tx) => {
-    const matching = await tx
+    const existing = await tx
       .select({ version: waiverTemplates.version })
       .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), eq(waiverTemplates.title, input.title)));
-    const nextVersion = Math.max(0, ...matching.map((template) => template.version)) + 1;
-    const defaults = await tx
-      .select({ id: waiverTemplates.id })
-      .from(waiverTemplates)
-      .where(
-        and(
-          eq(waiverTemplates.shopId, input.shopId),
-          eq(waiverTemplates.isDefault, true),
-          isNull(waiverTemplates.archivedAt),
-        ),
-      );
-    const isDefault = input.makeDefault || defaults.length === 0;
-    if (isDefault) {
-      await tx
-        .update(waiverTemplates)
-        .set({ isDefault: false })
-        .where(and(eq(waiverTemplates.shopId, input.shopId), eq(waiverTemplates.isDefault, true)));
-    }
+      .where(eq(waiverTemplates.shopId, input.shopId));
+    const nextVersion = Math.max(0, ...existing.map((row) => row.version)) + 1;
     const [template] = await tx
       .insert(waiverTemplates)
       .values({
@@ -49,50 +58,10 @@ export async function createWaiverTemplate(db: AppDb, input: NewWaiverTemplate) 
         title: input.title.trim(),
         body: input.body.trim(),
         version: nextVersion,
-        isDefault,
       })
       .returning();
-    if (!template) throw new Error("createWaiverTemplate: insert returned no row");
+    if (!template) throw new Error("saveWaiverTemplate: insert returned no row");
     return template;
-  });
-}
-
-export async function listWaiverTemplates(db: AppDb, shopId: string) {
-  return db
-    .select()
-    .from(waiverTemplates)
-    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
-    .orderBy(
-      desc(waiverTemplates.isDefault),
-      asc(waiverTemplates.title),
-      desc(waiverTemplates.version),
-    );
-}
-
-/** Staff select the one active shop default used by every newly issued link. */
-export async function setDefaultWaiverTemplate(db: AppDb, shopId: string, templateId: string) {
-  return db.transaction(async (tx) => {
-    const [template] = await tx
-      .select({ id: waiverTemplates.id })
-      .from(waiverTemplates)
-      .where(
-        and(
-          eq(waiverTemplates.id, templateId),
-          eq(waiverTemplates.shopId, shopId),
-          isNull(waiverTemplates.archivedAt),
-        ),
-      )
-      .limit(1);
-    if (!template) return false;
-    await tx
-      .update(waiverTemplates)
-      .set({ isDefault: false })
-      .where(and(eq(waiverTemplates.shopId, shopId), eq(waiverTemplates.isDefault, true)));
-    await tx
-      .update(waiverTemplates)
-      .set({ isDefault: true })
-      .where(eq(waiverTemplates.id, template.id));
-    return true;
   });
 }
 
@@ -140,13 +109,8 @@ export async function issueWaiverRequest(
     const [template] = await tx
       .select()
       .from(waiverTemplates)
-      .where(
-        and(
-          eq(waiverTemplates.shopId, input.shopId),
-          eq(waiverTemplates.isDefault, true),
-          isNull(waiverTemplates.archivedAt),
-        ),
-      )
+      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.archivedAt)))
+      .orderBy(desc(waiverTemplates.createdAt))
       .limit(1);
     if (!template) return { ok: false, reason: "template_not_found" };
 

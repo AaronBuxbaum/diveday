@@ -7,6 +7,7 @@ import {
   DEFAULT_MAX_PPO2_CENTIBAR,
   maxOperatingDepthMeters,
 } from "@/lib/nitrox";
+import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -118,8 +119,7 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
     shopId: shop.id,
     title: "Blue Mantis Diving Release",
     version: 1,
-    isDefault: true,
-    body: "I understand that scuba diving and boat travel involve inherent risks. I will follow the crew's briefing, use equipment as instructed, and tell the shop if my health changes before departure.",
+    body: DEFAULT_WAIVER_BODY,
   });
 
   const staffDefs = [
@@ -179,10 +179,9 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
 export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Promise<void> {
   await db.insert(waiverTemplates).values({
     shopId,
-    title: "Diving Release & Waiver",
+    title: DEFAULT_WAIVER_TITLE,
     version: 1,
-    isDefault: true,
-    body: "I understand that scuba diving and boat travel involve inherent risks. I will follow the crew's briefing, use equipment as instructed, and tell the shop if my health changes before departure.",
+    body: DEFAULT_WAIVER_BODY,
   });
 
   const staffDefs = [

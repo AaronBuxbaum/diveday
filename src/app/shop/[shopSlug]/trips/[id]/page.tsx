@@ -19,7 +19,7 @@ import {
   listStaff,
   listTripDives,
 } from "@/db/trips";
-import { listTripWaiverStatuses, listWaiverTemplates } from "@/db/waivers";
+import { listTripWaiverStatuses } from "@/db/waivers";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
@@ -74,7 +74,6 @@ export default async function ManageTripPage({
     staff,
     crewIds,
     roster,
-    templates,
     waiverRows,
     requirement,
     readinessRows,
@@ -88,7 +87,6 @@ export default async function ManageTripPage({
     listStaff(db, shop.id),
     getTripCrewIds(db, tripId),
     getTripRoster(db, tripId),
-    listWaiverTemplates(db, shop.id),
     listTripWaiverStatuses(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
     listTripReadiness(db, shop.id, tripId),
@@ -241,7 +239,6 @@ export default async function ManageTripPage({
         gearRequestByBooking={gearRequestByBooking}
         gearProfileByBooking={gearProfileByBooking}
         availableGear={availableGear}
-        templates={templates}
         requiresPayment={Boolean(requirement?.requiresPayment)}
         assignRecommendedGearAction={assignRecommendedGearAction.bind(null, shopSlug, tripId)}
         issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}

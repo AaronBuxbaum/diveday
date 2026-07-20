@@ -6,12 +6,12 @@ import { waiverRecords } from "./schema";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
-  createWaiverTemplate,
+  getCurrentWaiverTemplate,
   getWaiverForToken,
   issueWaiverRequest,
   listTripWaiverActivity,
-  listWaiverTemplates,
-  setDefaultWaiverTemplate,
+  listWaiverTemplateHistory,
+  saveWaiverTemplate,
 } from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
@@ -23,7 +23,7 @@ async function waiverContext() {
   if (!trip) throw new Error("demo trip missing");
   const [rosterEntry] = await getTripRoster(db, trip.id);
   if (!rosterEntry) throw new Error("demo booking missing");
-  const [template] = await listWaiverTemplates(db, shop.id);
+  const template = await getCurrentWaiverTemplate(db, shop.id);
   if (!template) throw new Error("demo waiver template missing");
   return { db, shop, trip, booking: rosterEntry.booking, template };
 }
@@ -85,11 +85,10 @@ describe("waiver records (in-memory PGlite)", () => {
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    const newer = await createWaiverTemplate(db, {
+    const newer = await saveWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
-      body: "A materially different v2 release.",
-      makeDefault: true,
+      body: "A materially different v2 release long enough to be valid.",
     });
     expect(newer.version).toBe(2);
 
@@ -158,15 +157,46 @@ describe("waiver records (in-memory PGlite)", () => {
     ).toEqual({ ok: false, reason: "booking_unavailable" });
   });
 
-  it("lets staff select a different active default template", async () => {
-    const { db, shop } = await waiverContext();
-    const other = await createWaiverTemplate(db, {
+  it("saves each edit as the next version and points new links at the current one", async () => {
+    const { db, shop, template } = await waiverContext();
+    expect(template.version).toBe(1);
+
+    const v2 = await saveWaiverTemplate(db, {
       shopId: shop.id,
-      title: "Boat Charter Release",
-      body: "Charter release.",
+      title: template.title,
+      body: "An updated release, edited by staff and long enough to be valid.",
     });
-    expect(await setDefaultWaiverTemplate(db, shop.id, other.id)).toBe(true);
-    const templates = await listWaiverTemplates(db, shop.id);
-    expect(templates.find((template) => template.isDefault)?.id).toBe(other.id);
+    expect(v2.version).toBe(2);
+
+    // The newest version is always current.
+    const currentNow = await getCurrentWaiverTemplate(db, shop.id);
+    expect(currentNow?.id).toBe(v2.id);
+    const history = await listWaiverTemplateHistory(db, shop.id);
+    expect(history.map((row) => row.version)).toEqual([2, 1]);
+  });
+
+  it("keeps a completed record faithful to the version it was signed against", async () => {
+    const { db, shop, booking, template } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+
+    // Editing the waiver after it was signed must not rewrite the evidence.
+    await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "A materially rewritten release that no signed record should adopt.",
+    });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record?.templateVersion).toBe(template.version);
+    expect(record?.templateBody).toBe(template.body);
   });
 });

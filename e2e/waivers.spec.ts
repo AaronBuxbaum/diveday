@@ -55,3 +55,31 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(diverSection.getByText("Medical review", { exact: true })).toBeVisible();
   await expect(diverSection.getByText("Follow up before boarding")).toBeVisible();
 });
+
+test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/waivers");
+
+  const release = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Release text" }) });
+
+  // One current waiver is shown, and the editor is tucked behind a disclosure.
+  await expect(release.getByText("Version 1")).toBeVisible();
+  await expect(release.getByText("Current", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Release text")).toBeHidden();
+
+  // Editing pre-fills the current text and saves a new version rather than
+  // mutating the one divers may already have signed. Title is immutable.
+  await release.getByText("Edit waiver").click();
+  const releaseTextarea = page.getByLabel("Release text");
+  await expect(releaseTextarea).toHaveValue(/scuba diving/);
+  await releaseTextarea.fill(
+    "Revised release: I accept the inherent risks of boat charters and open-water diving for this trip.",
+  );
+  await page.getByRole("button", { name: "Save new version" }).click();
+  await expect(page.getByRole("status")).toContainText("new version");
+
+  // The current card advances to v2.
+  await expect(release.getByText("Version 2")).toBeVisible();
+});

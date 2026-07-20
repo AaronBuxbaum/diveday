@@ -9,6 +9,7 @@ import { getDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { seedShopWithDemoData } from "@/db/seed";
 import { signIn } from "@/lib/auth";
+import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 const onboardSchema = z.object({
   shopName: z.string().trim().min(1, "Shop name is required").max(100),
@@ -119,10 +120,9 @@ export async function onboardAction(formData: FormData) {
       if (!seedDemoData) {
         await tx.insert(waiverTemplates).values({
           shopId: newShop.id,
-          title: "Diving Release & Waiver",
+          title: DEFAULT_WAIVER_TITLE,
           version: 1,
-          isDefault: true,
-          body: "I understand that scuba diving and boat travel involve inherent risks. I will follow the crew's briefing, use equipment as instructed, and tell the shop if my health changes before departure.",
+          body: DEFAULT_WAIVER_BODY,
         });
       } else {
         await seedShopWithDemoData(tx, newShop.id);

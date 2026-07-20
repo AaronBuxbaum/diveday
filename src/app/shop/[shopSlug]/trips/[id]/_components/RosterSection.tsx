@@ -14,7 +14,6 @@ import type {
   ReadinessByBooking,
   RosterEntry,
   WaiverByBooking,
-  WaiverTemplates,
 } from "./types";
 
 type PaymentStatus = "unpaid" | "deposit_paid" | "paid" | "waived" | "refunded";
@@ -114,7 +113,6 @@ export function RosterSection({
   gearRequestByBooking,
   gearProfileByBooking,
   availableGear,
-  templates,
   requiresPayment,
   assignRecommendedGearAction,
   issueWaiverAction,
@@ -137,7 +135,6 @@ export function RosterSection({
   gearRequestByBooking: GearRequestByBooking;
   gearProfileByBooking: GearProfileByBooking;
   availableGear: AvailableGear;
-  templates: WaiverTemplates;
   requiresPayment: boolean;
   assignRecommendedGearAction: () => void;
   issueWaiverAction: (formData: FormData) => void;
@@ -257,9 +254,7 @@ export function RosterSection({
                       Waiver
                     </p>
                     <div className="mt-2">
-                      {waiverControl.action && templates.length === 0 ? (
-                        <span className="text-sm text-muted">Add a template to send</span>
-                      ) : waiverControl.action ? (
+                      {waiverControl.action ? (
                         <form action={issueWaiverAction}>
                           <input type="hidden" name="bookingId" value={booking.id} />
                           <input type="hidden" name="shopName" value={shopName} />

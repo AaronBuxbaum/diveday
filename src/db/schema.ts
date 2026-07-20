@@ -810,7 +810,6 @@ export const waiverTemplates = pgTable(
     title: text("title").notNull(),
     version: integer("version").notNull(),
     body: text("body").notNull(),
-    isDefault: boolean("is_default").notNull().default(false),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -820,7 +819,6 @@ export const waiverTemplates = pgTable(
       table.title,
       table.version,
     ),
-    index("waiver_templates_shop_default_idx").on(table.shopId, table.isDefault),
   ],
 );
 
