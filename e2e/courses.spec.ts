@@ -50,12 +50,13 @@ test("staff set course pricing on the page and hide the course from scheduling",
   await expect(page.getByText("$249")).toBeVisible();
 
   // Back on the roster, the eye toggle hides the course from scheduling lists.
+  // No banner and no navigation — the icon and the "Hidden" badge update in
+  // place, which is also what keeps the click from jumping the page.
   await page.goto("/shop/blue-mantis/courses");
   await page.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
-  await expect(page.getByText("Course hidden")).toBeVisible();
-  await expect(
-    page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" }).getByText("Hidden"),
-  ).toBeVisible();
+  const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+  await expect(row2.getByText("Hidden")).toBeVisible();
+  await expect(row2.getByRole("button", { name: "Show Discover Scuba Diving" })).toBeVisible();
 });
 
 test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
@@ -63,7 +64,7 @@ test("staff edit a seeded course page, toggle it live, and a signed-out diver re
 }) => {
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/courses");
-  // Every course ships pre-filled and published — there is no catalog to import
+  // Every course ships pre-filled and visible — there is no catalog to import
   // from. Open Rescue Diver straight from the roster. Match the title exactly:
   // the Divemaster row names "Rescue Diver or higher" in its prerequisite line.
   const row = page
@@ -78,10 +79,10 @@ test("staff edit a seeded course page, toggle it live, and a signed-out diver re
   await page.getByRole("button", { name: "Save course page" }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
 
-  // Hide takes the published page down; Publish page brings it back.
+  // Hide takes the page down; Show brings it back.
   await page.getByRole("button", { name: "Hide" }).click();
   await expect(page.getByRole("status")).toContainText("hidden");
-  await page.getByRole("button", { name: "Publish page" }).click();
+  await page.getByRole("button", { name: "Show" }).click();
   await expect(page.getByRole("status")).toContainText("live");
 
   // A diver arrives with no session at all.

@@ -6,7 +6,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
-import { getTripWithBooked } from "@/db/trips";
+import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
@@ -35,8 +35,21 @@ export default async function TripPrepPage({
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
 
-  const divers = await listTripPrepDivers(db, shop.id, tripId);
-  const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives });
+  const [divers, staff, crewIds] = await Promise.all([
+    listTripPrepDivers(db, shop.id, tripId),
+    listStaff(db, shop.id),
+    getTripCrewIds(db, tripId),
+  ]);
+  // Only the crew who actually dive the trip need their own tank — a captain
+  // or deckhand assigned for the boat stays dry and is not part of the plan.
+  const divingCrew = staff
+    .filter(
+      (entry) =>
+        crewIds.includes(entry.person.id) &&
+        (entry.roles.includes("instructor") || entry.roles.includes("divemaster")),
+    )
+    .map((entry) => entry.person.fullName);
+  const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives, divingCrew });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
@@ -50,7 +63,16 @@ export default async function TripPrepPage({
         <ShopPageHeader
           eyebrow="Trip prep"
           title={trip.title}
-          description={`${checklist.diverCount} ${checklist.diverCount === 1 ? "diver" : "divers"} · ${checklist.diveCount} ${checklist.diveCount === 1 ? "dive" : "dives"} · one tank per diver per dive`}
+          description={[
+            `${checklist.diverCount} ${checklist.diverCount === 1 ? "diver" : "divers"}`,
+            checklist.crewCount > 0
+              ? `${checklist.crewCount} diving ${checklist.crewCount === 1 ? "crew" : "crew"}`
+              : null,
+            `${checklist.diveCount} ${checklist.diveCount === 1 ? "dive" : "dives"}`,
+            "one tank per diver per dive",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           meta={
             <span>
               {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
@@ -61,7 +83,7 @@ export default async function TripPrepPage({
         />
       </div>
 
-      {checklist.diverCount === 0 ? (
+      {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
         <p className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
           No divers booked yet — nothing to prepare.
         </p>
@@ -86,8 +108,11 @@ export default async function TripPrepPage({
               </div>
             </div>
             <p className="mt-2 text-sm text-muted">
-              Divers on the roster only — crew tanks and spares are not counted. Scuba logs no gas
-              analysis: every mix is still analyzed and signed for at the fill station.
+              {checklist.crewCount > 0
+                ? `Includes the roster and the ${checklist.crewCount === 1 ? "divemaster or instructor" : "divemasters and instructors"} assigned to this trip; spares are not counted.`
+                : "Divers on the roster only — spares are not counted. Assign a divemaster or instructor to this trip to include their tanks."}{" "}
+              Scuba logs no gas analysis: every mix is still analyzed and signed for at the fill
+              station.
             </p>
           </section>
 

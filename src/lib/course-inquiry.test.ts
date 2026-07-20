@@ -63,6 +63,13 @@ describe("courseInquiryBody", () => {
     expect(body.endsWith("Thank you,")).toBe(true);
     expect(body).not.toMatch(/: *\n/);
   });
+
+  // "How many divers" is as optional as every other contact field — leaving it
+  // blank must not force a guessed count into the message.
+  it("marks an unanswered diver count the same way as the other optional fields", () => {
+    const body = courseInquiryBody(inquiry({ divers: null }));
+    expect(body).toContain("How many divers: Not said");
+  });
 });
 
 describe("courseInquiryMailto", () => {

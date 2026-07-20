@@ -96,6 +96,26 @@ describe("buildDivePrepChecklist tanks", () => {
     expect(checklist.tanks).toEqual({ total: 0, air: 0, nitrox: 0 });
     expect(checklist.lines).toEqual([]);
   });
+
+  it("adds one air tank per planned dive for each diving crew member", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Priya Sharma" })],
+      plannedDives: 2,
+      divingCrew: ["Marcus Webb"],
+    });
+    expect(checklist.crewCount).toBe(1);
+    expect(checklist.tanks).toEqual({ total: 4, air: 4, nitrox: 0 });
+  });
+
+  it("counts crew tanks even with no divers booked yet", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [],
+      plannedDives: 2,
+      divingCrew: ["Marcus Webb", "Ana Ruiz"],
+    });
+    expect(checklist.crewCount).toBe(2);
+    expect(checklist.tanks).toEqual({ total: 4, air: 4, nitrox: 0 });
+  });
 });
 
 describe("buildDivePrepChecklist rental lines", () => {

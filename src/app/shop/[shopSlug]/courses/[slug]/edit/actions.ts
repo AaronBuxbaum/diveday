@@ -6,17 +6,11 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
   getCourseBySlug,
-  setCoursePublished,
+  setCourseVisibility,
   updateCourse,
   updateCourseContent,
 } from "@/db/courses";
-import {
-  isCoursePublishable,
-  parseFaqs,
-  parseLines,
-  parseScheduleDays,
-  splitCourseImageUrls,
-} from "@/lib/courses";
+import { parseFaqs, parseLines, parseScheduleDays, splitCourseImageUrls } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCourseImage } from "@/lib/storage";
@@ -111,19 +105,20 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   revalidateAndRedirect(base, `${base}?notice=${saved ? "saved" : "invalid"}`);
 }
 
-export async function setCoursePublishedAction(shopSlug: string, slug: string, formData: FormData) {
+export async function setCourseVisibilityAction(
+  shopSlug: string,
+  slug: string,
+  formData: FormData,
+) {
   const base = `/shop/${shopSlug}/courses/${slug}/edit`;
   const staff = await requireStaffSession();
-  const publish = formData.get("published") === "true";
+  const visible = formData.get("visible") === "true";
   const db = await getDb();
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
   if (!course) redirect(`/shop/${shopSlug}/courses?notice=invalid`);
-  // An empty page reads as a broken shop, not as a draft — refuse rather than
-  // publish something with nothing on it.
-  if (publish && !isCoursePublishable(course)) redirect(`${base}?error=incomplete`);
-  await setCoursePublished(db, staff.user.shopId, course.id, publish);
+  await setCourseVisibility(db, staff.user.shopId, course.id, visible);
   revalidateAndRedirect(
     `/shop/${shopSlug}/courses/${slug}`,
-    `${base}?notice=${publish ? "published" : "unpublished"}`,
+    `${base}?notice=${visible ? "shown" : "hidden"}`,
   );
 }
