@@ -41,7 +41,7 @@ adapters and must not introduce unique requirements.
 
 | You need | Go to |
 | --- | --- |
-| Public pages (landing, schedule, sign-in) | `src/app/` — `/trips` is the public schedule |
+| Public pages (landing, sign-in) | `src/app/` — the public schedule is `src/app/shop/[shopSlug]/schedule` (auth-exempt); staff trip management is `src/app/shop/[shopSlug]/trips/**` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
