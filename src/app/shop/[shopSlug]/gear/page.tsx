@@ -16,7 +16,7 @@ import {
   setGearServiceHold,
   updateGearItem,
 } from "@/db/gear";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";

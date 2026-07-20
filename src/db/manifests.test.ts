@@ -2,9 +2,10 @@
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
 import { getTripManifest, recordRollCall } from "./manifests";
-import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from "./queries";
 import { rollCallEvents } from "./schema";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest, listWaiverTemplates } from "./waivers";
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };

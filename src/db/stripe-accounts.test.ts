@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
-import { getShopBySlug } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,

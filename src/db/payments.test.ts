@@ -2,9 +2,10 @@
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts } from "./queries";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function paymentContext() {
   const db = await createTestDb();

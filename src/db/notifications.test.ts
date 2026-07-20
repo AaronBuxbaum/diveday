@@ -8,8 +8,9 @@ import {
   recordNotificationDelivery,
   retryBookingConfirmation,
 } from "./notifications";
-import { getShopBySlug, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
   const db = await createTestDb();

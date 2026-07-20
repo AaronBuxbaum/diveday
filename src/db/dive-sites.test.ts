@@ -8,8 +8,8 @@ import {
   listDiveSites,
   updateDiveSite,
 } from "./dive-sites";
-import { getShopBySlug } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
 
 describe("dive-site library", () => {
   it("keeps the full briefing and readiness gates through create and edit", async () => {

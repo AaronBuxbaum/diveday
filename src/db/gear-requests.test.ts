@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createBooking } from "./bookings";
+import { createBooking, getBookingForTrip } from "./bookings";
 import { createTestDb } from "./client";
 import {
   getRentalGearProfile,
@@ -8,8 +8,9 @@ import {
   listTripRentalGearRequests,
   saveRentalGearRequest,
 } from "./gear-requests";
-import { getBookingForTrip, getShopBySlug, upcomingTripsWithCounts } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { upcomingTripsWithCounts } from "./trips";
 
 describe("rental gear requests (in-memory PGlite)", () => {
   it("keeps an editable booking-level request separate from inventory allocation", async () => {

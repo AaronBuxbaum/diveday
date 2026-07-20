@@ -9,7 +9,6 @@ import {
   diveSites,
   people,
   personRoles,
-  shops,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -440,83 +439,6 @@ export async function getWaitlistEntryForTrip(db: AppDb, tripId: string, entryId
     .where(and(eq(tripWaitlistEntries.id, entryId), eq(tripWaitlistEntries.tripId, tripId)))
     .limit(1);
   return row ?? null;
-}
-
-/**
- * A booking on a specific trip, with its person — for the confirmation
- * panel, which must render from the database, never from URL params.
- */
-export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: string) {
-  const [row] = await db
-    .select({ booking: bookings, person: people })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .limit(1);
-  return row ?? null;
-}
-
-export async function restoreBooking(db: AppDb, shopId: string, bookingId: string) {
-  const [booking] = await db
-    .update(bookings)
-    .set({ status: "booked" })
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
-    .returning();
-  return booking ?? null;
-}
-
-export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
-  const [booking] = await db
-    .update(bookings)
-    .set({ status: "cancelled" })
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
-    .returning();
-  return booking ?? null;
-}
-
-export async function getShopBySlug(db: AppDb, slug: string) {
-  const [shop] = await db.select().from(shops).where(eq(shops.slug, slug)).limit(1);
-  return shop ?? null;
-}
-
-export async function getShopById(db: AppDb, id: string) {
-  const [shop] = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
-  return shop ?? null;
-}
-
-/** Sets which diver medical questionnaire the shop's waivers present. */
-export async function setShopJurisdiction(db: AppDb, shopId: string, jurisdiction: "rstc" | "uk") {
-  const [shop] = await db
-    .update(shops)
-    .set({ jurisdiction })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/** Replaces the shop-wide diver packing checklist after route-level validation. */
-export async function setShopPackingList(db: AppDb, shopId: string, packingList: string[]) {
-  const [shop] = await db
-    .update(shops)
-    .set({ packingList })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * The shop public pages serve. Single-shop instance for now — multi-shop
- * routing (slug subpaths or domains) arrives with shop onboarding.
- */
-export async function getDefaultShop(db: AppDb) {
-  const [shop] = await db.select().from(shops).orderBy(asc(shops.createdAt)).limit(1);
-  return shop ?? null;
 }
 
 export type TripWithBookedCount = typeof trips.$inferSelect & {

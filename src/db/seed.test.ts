@@ -4,9 +4,10 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
-import { getShopBySlug, listStaff, upcomingTripsWithCounts } from "./queries";
 import { bookings, people, personRoles, userAccounts } from "./schema";
 import { resetDemoSchedule, seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 
 async function seeded() {

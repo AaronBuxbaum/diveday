@@ -12,9 +12,10 @@ import {
   reviewNitroxCertification,
   verifiedNitroxPersonIds,
 } from "./nitrox";
-import { getShopBySlug, upcomingTripsWithCounts } from "./queries";
 import { gearItems, people, personRoles } from "./schema";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
   const db = await createTestDb();

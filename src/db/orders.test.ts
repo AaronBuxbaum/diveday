@@ -21,9 +21,10 @@ import {
   voidOrder,
 } from "./orders";
 import { getBookingPayment } from "./payments";
-import { getShopBySlug, getTripRoster, upcomingTripsWithCounts, updateTrip } from "./queries";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
+import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingProvider {
   let counter = 0;

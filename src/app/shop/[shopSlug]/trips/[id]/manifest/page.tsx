@@ -11,7 +11,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall } from "@/db/manifests";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   isRollCallCheckpoint,

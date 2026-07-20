@@ -6,7 +6,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getShopById, setShopJurisdiction } from "@/db/queries";
+import { getShopById, setShopJurisdiction } from "@/db/shops";
 import { createWaiverTemplate, listWaiverTemplates, setDefaultWaiverTemplate } from "@/db/waivers";
 import { MEDICAL_JURISDICTION_LABELS, questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";

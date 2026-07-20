@@ -2,9 +2,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "./client";
-import { getShopBySlug, getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./queries";
 import { waiverRecords } from "./schema";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
   createWaiverTemplate,

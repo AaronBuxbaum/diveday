@@ -13,7 +13,8 @@ import {
   logNitroxFill,
   verifiedNitroxPersonIds,
 } from "@/db/nitrox";
-import { getShopById, getTripRoster, getTripWithBooked } from "@/db/queries";
+import { getShopById } from "@/db/shops";
+import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { nitroxMixLabel, ppO2CentibarToBar } from "@/lib/nitrox";

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { importGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
-import { getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 

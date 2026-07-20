@@ -10,15 +10,10 @@ import {
   setCourseVisibility,
   updateCourse,
 } from "./courses";
-import {
-  createTrip,
-  getShopBySlug,
-  getTripWithBooked,
-  listStaff,
-  upcomingTripsWithCounts,
-} from "./queries";
 import { tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
+import { getShopBySlug } from "./shops";
+import { createTrip, getTripWithBooked, listStaff, upcomingTripsWithCounts } from "./trips";
 
 async function courseContext() {
   const db = await createTestDb();

@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { cancelBooking, getBookingForTrip, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import {
@@ -21,9 +22,14 @@ import { listTripRentalGearRequests } from "@/db/gear-requests";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { setBookingPayment } from "@/db/payments";
 import {
-  cancelBooking,
-  getBookingForTrip,
-  getShopById,
+  getTripRequirements,
+  getTripSiteRequirement,
+  listTripReadiness,
+  upsertTripRequirements,
+} from "@/db/readiness";
+import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
+import { getShopById } from "@/db/shops";
+import {
   getTripCrewIds,
   getTripRoster,
   getTripSeriesSummary,
@@ -31,19 +37,11 @@ import {
   getTripWithBooked,
   listStaff,
   listTripDives,
-  restoreBooking,
   setTripCrew,
   setTripStatus,
   updateTrip,
   updateTripConditions,
-} from "@/db/queries";
-import {
-  getTripRequirements,
-  getTripSiteRequirement,
-  listTripReadiness,
-  upsertTripRequirements,
-} from "@/db/readiness";
-import type { RentalGearProfile, RentalGearRequest } from "@/db/schema";
+} from "@/db/trips";
 import { issueWaiverRequest, listTripWaiverStatuses, listWaiverTemplates } from "@/db/waivers";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
