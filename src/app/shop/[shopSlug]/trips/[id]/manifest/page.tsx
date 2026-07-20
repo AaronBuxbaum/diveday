@@ -188,12 +188,13 @@ export default async function TripManifestPage({
         </div>
       ) : null}
 
-      <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
           ["Divers", manifest.summary.totalDivers],
           ["Ready", manifest.summary.ready],
           ["Blocked", manifest.summary.blocked],
           ["Boarded", manifest.summary.boarded],
+          ["Not boarded", manifest.summary.notBoarded],
           ["Awaiting", manifest.summary.awaiting],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-lg border border-border bg-surface px-4 py-3">

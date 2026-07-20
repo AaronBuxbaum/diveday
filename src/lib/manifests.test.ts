@@ -73,6 +73,7 @@ describe("buildTripManifest", () => {
       ready: 1,
       blocked: 1,
       boarded: 1,
+      notBoarded: 0,
       awaiting: 1,
     });
   });

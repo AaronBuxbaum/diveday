@@ -52,13 +52,12 @@ export function RollCallNote({
       <label htmlFor={`roll-call-note-${bookingId}`} className="text-sm font-semibold">
         Optional note
       </label>
-      <textarea
+      <input
         id={`roll-call-note-${bookingId}`}
         name="note"
         form={canAutoSave ? undefined : formId}
         defaultValue={initialNote}
         maxLength={300}
-        rows={3}
         placeholder="Late to the boat, medical question, kit issue…"
         className={`${controlClass} mt-1`}
         onChange={
