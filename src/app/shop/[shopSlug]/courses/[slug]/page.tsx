@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getDb } from "@/db/client";
-import { getCourseBySlug, listRelatedCourses } from "@/db/courses";
+import { getCourseBySlug } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { auth } from "@/lib/auth";
@@ -21,7 +21,6 @@ import {
   CourseSchedule,
   CourseSessions,
   CourseSpecs,
-  RelatedCourses,
 } from "./_components/CourseSections";
 
 export async function generateMetadata({
@@ -64,10 +63,7 @@ export default async function CoursePage({
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
   if (!course.isPublished && !staffView) notFound();
 
-  const [sessions, related] = await Promise.all([
-    listUpcomingSessionsForCourse(db, shop.id, course.id),
-    listRelatedCourses(db, shop.id, course.relatedCourseIds),
-  ]);
+  const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
 
   const certificationRequired = course.minimumCertificationLevel
     ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
@@ -125,7 +121,6 @@ export default async function CoursePage({
           contactPhone={shop.contactPhone}
         />
       ) : null}
-      <RelatedCourses courses={related} shopSlug={shopSlug} />
     </main>
   );
 }

@@ -1,9 +1,9 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { courses, globalCourses, globalCourseVersions } from "./schema";
+import { courses } from "./schema";
 
 export type NewCourse = {
   shopId: string;
@@ -17,13 +17,16 @@ export type NewCourse = {
 } & Partial<CourseContent>;
 
 /**
- * Title, agency, and the prerequisite card come from the agency's catalog, so
- * a shop owns its two prices, its blurb, and everything on the public page.
+ * Title, agency, the cert gate, and the minimum age come from the agency's
+ * catalog; a shop owns only its two prices, which it sets on the course page.
  */
-export type CoursePatch = Pick<NewCourse, "description" | "priceCents" | "eLearningPriceCents">;
+export type CoursePatch = Pick<NewCourse, "priceCents" | "eLearningPriceCents">;
 
-/** The diver-facing page, edited on its own screen and saved in one shot. */
-export type CourseContentPatch = CourseContent & { relatedCourseIds: string[] };
+/**
+ * The diver-facing page, edited on its own screen and saved in one shot. The
+ * minimum age is the agency's and never edited here, so it is not in the patch.
+ */
+export type CourseContentPatch = Omit<CourseContent, "minimumAge">;
 
 /**
  * The catalog owns the reusable admission baseline. A particular session
@@ -87,7 +90,6 @@ export async function updateCourse(
   const [course] = await db
     .update(courses)
     .set({
-      description: input.description?.trim() || null,
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
     })
@@ -147,24 +149,10 @@ export async function listPublishedCourses(db: AppDb, shopId: string) {
     .orderBy(asc(courses.agency), asc(courses.title));
 }
 
-/** Resolve the cross-sell cards at the foot of a course page, published ones only. */
-export async function listRelatedCourses(db: AppDb, shopId: string, courseIds: string[]) {
-  if (courseIds.length === 0) return [];
-  const rows = await db
-    .select()
-    .from(courses)
-    .where(
-      and(
-        eq(courses.shopId, shopId),
-        eq(courses.isPublished, true),
-        inArray(courses.id, courseIds),
-      ),
-    );
-  // Keep the shop's chosen order rather than whatever the index returns.
-  return courseIds.flatMap((id) => rows.filter((course) => course.id === id));
-}
-
-/** Saves the whole marketing page at once; pricing and the cert gate are untouched. */
+/**
+ * Saves the whole marketing page at once. Pricing, the cert gate, and the
+ * agency's minimum age are untouched — those are not marketing prose.
+ */
 export async function updateCourseContent(
   db: AppDb,
   shopId: string,
@@ -180,13 +168,11 @@ export async function updateCourseContent(
       imageUrls: input.imageUrls,
       durationText: input.durationText?.trim() || null,
       groupSizeText: input.groupSizeText?.trim() || null,
-      minimumAge: input.minimumAge,
       prerequisiteNote: input.prerequisiteNote?.trim() || null,
       includes: input.includes,
       excludes: input.excludes,
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
-      relatedCourseIds: input.relatedCourseIds,
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
@@ -205,83 +191,4 @@ export async function setCoursePublished(
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
   return course ?? null;
-}
-
-export async function listGlobalCourseTemplates(db: AppDb) {
-  return db
-    .select({ template: globalCourses, version: globalCourseVersions })
-    .from(globalCourses)
-    .innerJoin(
-      globalCourseVersions,
-      and(
-        eq(globalCourseVersions.globalCourseId, globalCourses.id),
-        eq(globalCourseVersions.version, globalCourses.currentVersion),
-      ),
-    )
-    .orderBy(asc(globalCourses.slug));
-}
-
-/**
- * Copy a published template into the shop's catalog as an independent row.
- * Nothing links back for reads: a later template version never rewrites what a
- * shop has edited, and never relaxes a cert gate under a live course.
- */
-export async function importGlobalCourseTemplate(db: AppDb, shopId: string, templateId: string) {
-  const [row] = await db
-    .select({ template: globalCourses, version: globalCourseVersions })
-    .from(globalCourses)
-    .innerJoin(
-      globalCourseVersions,
-      and(
-        eq(globalCourseVersions.globalCourseId, globalCourses.id),
-        eq(globalCourseVersions.version, globalCourses.currentVersion),
-      ),
-    )
-    .where(eq(globalCourses.id, templateId))
-    .limit(1);
-  if (!row) return null;
-  // A shop that already teaches this course keeps its own pricing and edits;
-  // re-importing would otherwise trip the (shop_id, title) unique index.
-  const existing = await getCourseByTitle(db, shopId, row.version.title);
-  if (existing) return existing;
-  const [course] = await db
-    .insert(courses)
-    .values({
-      shopId,
-      title: row.version.title,
-      agency: row.version.agency,
-      description: row.version.description,
-      slug: await availableCourseSlug(db, shopId, courseSlug(row.version.title)),
-      // The content blob is `$type`-asserted, not validated — a stray key in
-      // published JSON would win over anything spread above it. The admission
-      // gate goes *after* the spread so no template can ever relax it.
-      ...row.version.content,
-      minimumCertificationLevel: row.version.minimumCertificationLevel,
-      sourceTemplateId: row.template.id,
-      sourceTemplateVersion: row.version.version,
-    })
-    .returning();
-  return course ?? null;
-}
-
-async function getCourseByTitle(db: AppDb, shopId: string, title: string) {
-  const [course] = await db
-    .select()
-    .from(courses)
-    .where(and(eq(courses.shopId, shopId), eq(courses.title, title)))
-    .limit(1);
-  return course ?? null;
-}
-
-/** Suffix a slug until it is free within the shop, so an import never collides. */
-async function availableCourseSlug(db: AppDb, shopId: string, base: string) {
-  const taken = new Set(
-    (await db.select({ slug: courses.slug }).from(courses).where(eq(courses.shopId, shopId))).map(
-      (row) => row.slug,
-    ),
-  );
-  if (!taken.has(base)) return base;
-  let attempt = 2;
-  while (taken.has(`${base}-${attempt}`)) attempt += 1;
-  return `${base}-${attempt}`;
 }

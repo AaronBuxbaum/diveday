@@ -6,7 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getCourseBySlug, listCourses } from "@/db/courses";
+import { getCourseBySlug } from "@/db/courses";
 import { formatFaqs, formatScheduleDays, isCoursePublishable } from "@/lib/courses";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -16,16 +16,24 @@ export const metadata: Metadata = { title: "Edit course page — Scuba" };
 
 const messages: Record<string, string> = {
   saved: "Course page saved.",
-  imported: "Imported. Make it yours, then publish.",
   published: "Course page is live. Divers can read it and book a session.",
-  unpublished: "Course page taken down. Scheduled sessions are unchanged.",
+  unpublished: "Course page hidden. Scheduled sessions are unchanged.",
 };
 const errors: Record<string, string> = {
   invalid: "That didn’t save. Check the fields and try again.",
-  images: "Use complete HTTP(S) links or /paths, one per line, up to eight.",
+  images: "You can keep up to eight gallery photos. Remove one before adding more.",
   upload: "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
   incomplete: "Add a subhead and either an overview or a day plan before publishing.",
 };
+
+const dollarsInput = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2));
+const priceInputClass = `${controlClass} text-right tabular-nums`;
+
+/** Course media comes from the shop's own uploads; render it as it was stored. */
+function Thumb({ src, className }: { src: string; className: string }) {
+  // biome-ignore lint/performance/noImgElement: course media comes from shop-provided hosts and the blob store, which no build-time image allowlist can enumerate.
+  return <img src={src} alt="" className={className} />;
+}
 
 export default async function EditCoursePage({
   params,
@@ -40,9 +48,6 @@ export default async function EditCoursePage({
   const db = await getDb();
   const course = await getCourseBySlug(db, session.user.shopId, slug);
   if (!course) notFound();
-  const catalog = (await listCourses(db, session.user.shopId)).filter(
-    (entry) => entry.id !== course.id,
-  );
   const back = `/shop/${shopSlug}/courses`;
   const publishable = isCoursePublishable(course);
 
@@ -58,7 +63,7 @@ export default async function EditCoursePage({
         <ShopPageHeader
           eyebrow={course.agency.toUpperCase()}
           title={course.title}
-          description="The page divers read before they book. Pricing and the prerequisite card are set on the course list."
+          description="Everything a diver reads before booking — the copy, the photos, and your pricing. The certification and minimum age come from the agency."
           meta={
             <p className="text-sm text-muted">
               {course.isPublished ? "Live at " : "Will publish to "}
@@ -80,7 +85,7 @@ export default async function EditCoursePage({
                   variant: course.isPublished ? "secondary" : "primary",
                 })}
               >
-                {course.isPublished ? "Take page down" : "Publish page"}
+                {course.isPublished ? "Hide" : "Publish page"}
               </SubmitButton>
             </form>
           }
@@ -131,12 +136,52 @@ export default async function EditCoursePage({
         </fieldset>
 
         <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+          <legend className="px-1 text-sm font-semibold">Pricing</legend>
+          <p className="mt-1 text-sm text-muted">
+            Two lines on one bill: your instruction fee and the agency’s e-learning code. The diver
+            pays the total in a single payment.
+          </p>
+          <FieldGrid columns={2} className="mt-4 gap-y-5">
+            <Field label="Instruction fee" hint="(optional)">
+              <input
+                name="price"
+                inputMode="decimal"
+                defaultValue={dollarsInput(course.priceCents)}
+                placeholder="—"
+                className={priceInputClass}
+              />
+            </Field>
+            <Field label="e-Learning fee" hint="(its own invoice line)">
+              <input
+                name="eLearningPrice"
+                inputMode="decimal"
+                defaultValue={dollarsInput(course.eLearningPriceCents)}
+                placeholder="—"
+                className={priceInputClass}
+              />
+            </Field>
+          </FieldGrid>
+        </fieldset>
+
+        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
           <legend className="px-1 text-sm font-semibold">Photos</legend>
           <p className="mt-1 text-sm text-muted">
-            Uploading adds a link to the gallery below. Remove a photo by deleting its line.
+            Upload your own photos. New files are added to the gallery; tick a photo to remove it.
           </p>
           <FieldGrid columns={1} className="mt-4 gap-y-5">
-            <Field label="Hero photo" hint="(replaces the current one)">
+            <Field label="Hero photo" hint="(the wide one at the top)">
+              {course.heroImageUrl ? (
+                <div className="mb-2 flex items-center gap-3">
+                  <Thumb
+                    src={course.heroImageUrl}
+                    className="h-16 w-24 rounded-lg border border-border object-cover"
+                  />
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
+                    <input type="checkbox" name="removeHero" value="true" className="size-4" />
+                    Remove current photo
+                  </label>
+                </div>
+              ) : null}
               <input
                 name="heroImageFile"
                 type="file"
@@ -144,30 +189,33 @@ export default async function EditCoursePage({
                 className={controlClass}
               />
             </Field>
-            <Field label="Hero photo link">
-              <input
-                name="heroImageUrl"
-                maxLength={2000}
-                defaultValue={course.heroImageUrl ?? ""}
-                placeholder="/courses/open-water.jpg"
-                className={controlClass}
-              />
-            </Field>
-            <Field label="Add gallery photos" hint="(up to eight in total)">
+            <Field label="Gallery photos" hint="(up to eight in total)">
+              {course.imageUrls.length > 0 ? (
+                <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {course.imageUrls.map((url) => (
+                    <div key={url}>
+                      <Thumb
+                        src={url}
+                        className="h-24 w-full rounded-lg border border-border object-cover"
+                      />
+                      <label className="mt-1 flex items-center gap-2 text-xs text-muted">
+                        <input
+                          type="checkbox"
+                          name="removeGalleryUrls"
+                          value={url}
+                          className="size-4"
+                        />
+                        Remove
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <input
                 name="galleryImageFiles"
                 type="file"
                 multiple
                 accept="image/jpeg,image/png,image/webp,image/heic"
-                className={controlClass}
-              />
-            </Field>
-            <Field label="Gallery links" description="One link per line.">
-              <textarea
-                name="imageUrls"
-                rows={4}
-                maxLength={12000}
-                defaultValue={course.imageUrls.join("\n")}
                 className={controlClass}
               />
             </Field>
@@ -205,30 +253,18 @@ export default async function EditCoursePage({
         <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
           <legend className="px-1 text-sm font-semibold">Who can enroll</legend>
           <p className="mt-1 text-sm text-muted">
-            The one block on the page that answers “can I do this?”. The certification card is{" "}
+            The one block on the page that answers “can I do this?”. The certification and minimum
+            age are the agency’s{" "}
             <strong className="font-medium text-foreground">
               {course.minimumCertificationLevel
                 ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
                 : "open to uncertified divers"}
+              {course.minimumAge ? `, ${course.minimumAge}+` : ""}
             </strong>{" "}
-            — set on the course list, shown here automatically. Your note appears under it, labelled
-            as the shop talking, so it never reads as replacing the card the desk checks.
+            — shown here automatically and not editable. Your note appears under them, labelled as
+            the shop talking, so it never reads as replacing the card the desk checks.
           </p>
-          <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field
-              label="Minimum age"
-              hint="(optional)"
-              description="The agency's, not yours — nothing at booking checks it."
-            >
-              <input
-                name="minimumAge"
-                type="number"
-                min={8}
-                max={99}
-                defaultValue={course.minimumAge ?? ""}
-                className={controlClass}
-              />
-            </Field>
+          <FieldGrid columns={1} className="mt-4 gap-y-5">
             <Field label="Prerequisite note" hint="(optional)">
               <input
                 name="prerequisiteNote"
@@ -310,35 +346,6 @@ export default async function EditCoursePage({
             </Field>
           </FieldGrid>
         </fieldset>
-
-        {catalog.length > 0 ? (
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">What to take next</legend>
-            <p className="mt-1 text-sm text-muted">
-              Cards at the foot of the page. Only published courses appear there.
-            </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {catalog.map((entry) => (
-                <label
-                  key={entry.id}
-                  className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    name="relatedCourseIds"
-                    value={entry.id}
-                    defaultChecked={course.relatedCourseIds.includes(entry.id)}
-                    className="size-4"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{entry.title}</span>
-                  {entry.isPublished ? null : (
-                    <span className="shrink-0 text-xs text-muted">draft</span>
-                  )}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
           <SubmitButton pendingLabel="Saving…" className={buttonClass()}>

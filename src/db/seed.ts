@@ -23,8 +23,6 @@ import {
   gearAssignments,
   gearItems,
   gearServiceEvents,
-  globalCourses,
-  globalCourseVersions,
   globalDiveSites,
   globalDiveSiteVersions,
   nitroxCertifications,
@@ -393,32 +391,6 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     ]);
   }
 
-  // Scuba's published course pages, seeded once and shared by every shop.
-  // Written centrally so a shop's catalog import lands on real copy rather than
-  // an empty form (docs ADR 20260720-course-page-media).
-  const existingTemplates = new Set(
-    (await db.select({ slug: globalCourses.slug }).from(globalCourses)).map((row) => row.slug),
-  );
-  const courseTemplateBySlug = new Map<string, string>();
-  for (const template of COURSE_TEMPLATES) {
-    if (existingTemplates.has(template.slug)) continue;
-    const [row] = await db
-      .insert(globalCourses)
-      .values({ slug: template.slug, currentVersion: template.version })
-      .returning();
-    if (!row) throw new Error(`seed: course template ${template.slug} missing`);
-    courseTemplateBySlug.set(template.slug, row.id);
-    await db.insert(globalCourseVersions).values({
-      globalCourseId: row.id,
-      version: template.version,
-      title: template.title,
-      agency: template.agency,
-      description: template.description,
-      minimumCertificationLevel: template.minimumCertificationLevel,
-      content: template.content,
-    });
-  }
-
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
@@ -573,52 +545,20 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
-  // The demo shop has already done what a real shop does on day one: imported
-  // the course pages it teaches and published them. Open Water is the one a
-  // visitor is most likely to open, so it is the most complete.
+  // The demo shop starts where a real shop does: every course pre-filled with
+  // Scuba's default page copy and published. That default content is the shop's
+  // starting point — it edits from there. Open Water is the one a visitor is
+  // most likely to open, so it is the most complete.
   for (const template of COURSE_TEMPLATES) {
     const course = courseRows.find((row) => row.title === template.title);
     if (!course) continue;
     await db
       .update(courses)
-      .set({
-        ...template.content,
-        sourceTemplateId: courseTemplateBySlug.get(template.slug),
-        sourceTemplateVersion: template.version,
-        isPublished: true,
-      })
+      .set({ ...template.content, isPublished: true })
       .where(eq(courses.id, course.id));
   }
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
-
-  // "What to take next" is the shop's own teaching ladder, not a list of
-  // everything it sells: each course points at the two or three a diver
-  // realistically does after it. Only published pages render, so a title with
-  // no template content simply drops out of the cards.
   const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));
-  const nextCourses: Array<[string, string[]]> = [
-    ["Discover Scuba Diving", ["Open Water Diver"]],
-    [
-      "Open Water Diver",
-      ["Advanced Open Water Diver", "Enriched Air (Nitrox) Diver", "Peak Performance Buoyancy"],
-    ],
-    ["Advanced Open Water Diver", ["Rescue Diver", "Deep Diver", "Night Diver"]],
-    ["Rescue Diver", ["Divemaster", "Wreck Diver"]],
-    ["Scuba Refresher", ["Peak Performance Buoyancy", "Advanced Open Water Diver"]],
-    ["Peak Performance Buoyancy", ["Advanced Open Water Diver", "Night Diver"]],
-    ["Night Diver", ["Advanced Open Water Diver", "Rescue Diver"]],
-    ["Deep Diver", ["Wreck Diver", "Enriched Air (Nitrox) Diver"]],
-    ["Wreck Diver", ["Deep Diver", "Rescue Diver"]],
-    ["Enriched Air (Nitrox) Diver", ["Deep Diver", "Advanced Open Water Diver"]],
-  ];
-  for (const [title, next] of nextCourses) {
-    const courseId = courseIdByTitle.get(title);
-    const relatedCourseIds = next
-      .map((entry) => courseIdByTitle.get(entry))
-      .filter((id) => id !== undefined);
-    if (!courseId || relatedCourseIds.length === 0) continue;
-    await db.update(courses).set({ relatedCourseIds }).where(eq(courses.id, courseId));
-  }
 
   const [existingMolassesTemplate] = await db
     .select()
