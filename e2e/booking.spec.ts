@@ -1,18 +1,5 @@
-import type { Page } from "@playwright/test";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-
-async function signInAsOwner(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
-  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/shop/);
-}
-
-function daysFromNow(days: number): string {
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
+import { daysFromNow, signInAsOwner } from "./helpers";
 
 test("full loop: staff schedules, visitor books, staff sees the roster", async ({ page }) => {
   const title = `Eagle Ray Run ${Date.now()}`;

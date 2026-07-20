@@ -1,10 +1,8 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
@@ -20,10 +18,7 @@ const now = new Date("2026-07-18T12:00:00.000Z");
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
 async function waiverContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   if (!trip) throw new Error("demo trip missing");
   const [rosterEntry] = await getTripRoster(db, trip.id);

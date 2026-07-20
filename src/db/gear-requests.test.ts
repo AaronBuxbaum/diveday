@@ -1,23 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { seededShopContext } from "@/test/db";
 import { createBooking, getBookingForTrip } from "./bookings";
-import { createTestDb } from "./client";
 import {
   getRentalGearProfile,
   getRentalGearRequest,
   listTripRentalGearRequests,
   saveRentalGearRequest,
 } from "./gear-requests";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 describe("rental gear requests (in-memory PGlite)", () => {
   it("keeps an editable booking-level request separate from inventory allocation", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("demo trip missing");
     const booked = await createBooking(db, {
