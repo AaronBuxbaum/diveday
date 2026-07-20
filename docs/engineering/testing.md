@@ -38,11 +38,15 @@ pnpm check         # lint + typecheck + unit — the pre-commit bar
 - **E2E keeps real application boundaries and disables third-party HTTP.** Exercise Next, auth,
   and the isolated PGlite database together. Test provider adapters with injected fakes in Vitest;
   do not add browser-level service-worker mocks for server-side providers.
-- **E2E specs share one dev-server and one database** (`getDb()` memoizes a single connection for
-  the process's life; specs run serially, `playwright.config.ts`). Every spec imports `test`/
-  `expect` from `e2e/fixtures.ts`, not `@playwright/test` directly — its `beforeEach` resets the
-  demo shop's schedule (`POST /api/test/reset`) before each test so mutations in one spec can't
-  change what another spec asserts on.
+- **E2E runs parallel against a precompiled server fleet.** `pnpm e2e` builds once (`next build`)
+  and Playwright starts one `next start` server per worker, each with its own in-memory PGlite
+  database (`e2e/servers.ts`, `playwright.config.ts`). Precompiled routes avoid the dev-mode
+  first-hit compile; the isolated per-worker databases let specs run `fullyParallel`. Every spec
+  imports `test`/`expect` from `e2e/fixtures.ts`, not `@playwright/test` directly — the fixtures
+  point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
+  before each test, so mutations in one spec can't change what another asserts on. Iterating on a
+  single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
+  needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `SCUBA_E2E` reset opt-in, which the config supplies.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
 
@@ -51,5 +55,5 @@ pnpm check         # lint + typecheck + unit — the pre-commit bar
 Unit: create `thing.test.ts` next to `thing.ts` — Vitest picks it up. Component: same, `.tsx`,
 setup already imports jest-dom matchers. Fetch boundary: same, using `msw/node`'s `setupServer` —
 see `src/lib/offline-manifest-store.test.ts`. E2E: add `e2e/flow.spec.ts`, importing `test`/`expect`
-from `./fixtures` (not `@playwright/test`) so it gets the per-test reset; the config boots the dev
-server itself.
+from `./fixtures` (not `@playwright/test`) so it gets the per-worker server and per-test reset; the
+config builds and boots the server fleet itself.
