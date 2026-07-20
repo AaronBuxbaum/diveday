@@ -10,30 +10,36 @@ interface HomeCTAProps {
 
 export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-start gap-3">
       <div className="flex flex-col gap-3 sm:flex-row">
         <form action={enterDemoAction}>
           <SubmitButton
             pendingLabel="Spinning up your shop…"
             className={buttonClass({
-              size: "lg",
-              className: "cursor-pointer py-3 text-base disabled:opacity-70",
+              size: "cta",
+              className: "cursor-pointer disabled:opacity-70",
             })}
           >
             Try the live demo
           </SubmitButton>
         </form>
         <Link
-          href="/sign-in"
+          href="/onboard"
           className={buttonClass({
             variant: "secondary",
-            size: "lg",
-            className: "border-border-strong py-3 text-base",
+            size: "cta",
+            className: "border-border-strong",
           })}
         >
-          Sign in to your shop
+          Start a trial
         </Link>
       </div>
+      <Link
+        href="/shop/blue-mantis/schedule"
+        className="text-sm font-medium text-primary hover:underline"
+      >
+        See a live schedule →
+      </Link>
     </div>
   );
 }

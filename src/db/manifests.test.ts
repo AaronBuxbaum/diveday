@@ -1,19 +1,15 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import { getTripManifest, recordRollCall } from "./manifests";
-import { getShopBySlug, getTripRoster, listStaff, upcomingTripsWithCounts } from "./queries";
 import { rollCallEvents } from "./schema";
-import { seedDemo } from "./seed";
+import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest, listWaiverTemplates } from "./waivers";
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
 async function manifestContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");

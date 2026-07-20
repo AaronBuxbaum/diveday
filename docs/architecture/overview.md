@@ -68,3 +68,8 @@ future agents start from context, not from scratch:
   `src/lib/format.ts` only.
 - **Safety-critical surfaces** (manifests, medical flags) prefer boring, explicit code and
   exhaustive tests over cleverness.
+- **External capabilities live behind a seam**: every vendor or third-party API sits behind a small
+  interface in `src/lib/<capability>/`, selected by env var and zod-validated at the boundary, so
+  features stay fully testable with zero infrastructure and no vendor SDK or HTTP call ever appears
+  outside its seam directory. A new seam gets an ADR (see the email, payments, and marine-outlook
+  rows in [Stack](#stack)).

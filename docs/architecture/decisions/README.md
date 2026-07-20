@@ -4,7 +4,7 @@ One record per significant, hard-to-reverse choice: frameworks, storage, auth, n
 dependencies, data-model spines, external services. Not for reversible detail such as component
 naming or routine file moves.
 
-Use the `adr` skill (`.claude/skills/adr/`) or copy [0000-template.md](0000-template.md).
+Use the `adr` skill (`.agents/skills/adr/`) or copy [0000-template.md](0000-template.md).
 
 ## IDs and parallel work
 

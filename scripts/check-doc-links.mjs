@@ -29,7 +29,12 @@ function targetPath(source, rawTarget) {
 }
 
 const broken = [];
-const files = ["README.md", "AGENTS.md", ...(await walk("docs"))];
+const files = [
+  "README.md",
+  "AGENTS.md",
+  ...(await walk("docs")),
+  ...(await walk(".agents/skills")),
+];
 for (const file of files) {
   const contents = await readFile(path.join(ROOT, file), "utf8");
   for (const match of contents.matchAll(markdownLink)) {

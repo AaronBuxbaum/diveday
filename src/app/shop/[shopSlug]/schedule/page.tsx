@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { EmptyState } from "@/components/EmptyState";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getShopBySlug, upcomingTripsWithCounts } from "@/db/queries";
+import { getShopBySlug } from "@/db/shops";
+import { upcomingTripsWithCounts } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import {
@@ -150,12 +152,12 @@ export default async function TripsPage({
       ) : null}
 
       {upcoming.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border-strong bg-surface p-10 text-center">
+        <EmptyState>
           <h2 className="font-medium">No trips on the books yet</h2>
           <p className="mt-1 text-sm text-muted">
             Check back soon — or call the shop and we&apos;ll find you a boat.
           </p>
-        </div>
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-3">
           {upcoming.map((trip) => {

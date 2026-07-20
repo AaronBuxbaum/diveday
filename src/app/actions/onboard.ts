@@ -72,7 +72,11 @@ export async function onboardAction(formData: FormData) {
           name: shopName,
           slug: shopSlug,
           timezone,
-          isDemo: seedDemoData,
+          // Seeding sample data is a convenience, not demo mode: a real trial
+          // shop must not get the Demo Playground banner or the destructive
+          // "Reset demo data" button. isDemo is reserved for the canonical
+          // seeded demo tenant (seedIfEmpty / enterDemoAction).
+          isDemo: false,
         })
         .returning();
 

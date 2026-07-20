@@ -1,4 +1,4 @@
-import type { TripDiveDraft } from "@/db/queries";
+import type { TripDiveDraft } from "@/db/trips";
 
 /** Reads the ordered optional dive cards from a trip form. */
 export function tripDiveDraftsFromForm(formData: FormData, count: number): TripDiveDraft[] {

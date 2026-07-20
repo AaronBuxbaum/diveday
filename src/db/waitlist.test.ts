@@ -1,20 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
-import {
-  getShopBySlug,
-  getTripRoster,
-  getTripWithBooked,
-  upcomingTripsWithCounts,
-} from "./queries";
-import { seedDemo } from "./seed";
+import { seededShopContext } from "@/test/db";
+import { getTripRoster, getTripWithBooked, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 
 async function seededContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const fullTrip = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
   const openTrip = trips.find((trip) => trip.title === "Two-Tank Reef — Christ of the Abyss");

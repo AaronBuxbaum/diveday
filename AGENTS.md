@@ -41,12 +41,12 @@ adapters and must not introduce unique requirements.
 
 | You need | Go to |
 | --- | --- |
-| Public pages (landing, schedule, sign-in) | `src/app/` — `/trips` is the public schedule |
+| Public pages (landing, sign-in) | `src/app/` — the public schedule is `src/app/shop/[shopSlug]/schedule` (auth-exempt); staff trip management is `src/app/shop/[shopSlug]/trips/**` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
-| Queries and seed data | `src/db/queries.ts`, `src/db/seed.ts` |
+| Queries and seed data | `src/db/trips.ts`, `src/db/shops.ts`, `src/db/seed.ts` |
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |
@@ -85,7 +85,9 @@ code, the skill is stale and must be fixed in the same change.
 - **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring
   code, failure-path and adversarial tests, and a `dive-domain-expert` review.
 - **Layout**: domain logic in `src/lib/` or an approved feature module; routes in `src/app/` stay
-  thin; e2e specs live in `e2e/`; domain code never imports from `src/app/`.
+  thin; e2e specs live in `e2e/`; domain code never imports from `src/app/`. Server actions default
+  to inline `"use server"` closures for single-page mutations; `src/app/actions/` is only for actions
+  shared across pages; a large page colocates its actions/zod schemas in a sibling `actions.ts`.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
   bug fixes begin with a failing regression test.
 - **Secrets never enter the repo** — `.env*` is gitignored.

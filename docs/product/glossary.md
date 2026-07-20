@@ -113,10 +113,13 @@ new domain concept, define it here in the same PR.
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked
   to a booking, into that booking's payment gate the same way a staff mark does. A paid invoice can
   be fully refunded from the diver's payment workspace when Stripe exposes its payment intent.
-- **Demo mode** — a gated, self-serve trial: a prospective shop owner drops into the seeded
-  example shop (Blue Mantis), drives the real staff surfaces, and resets the playground back to a
-  clean slate. The Blue Mantis demo shop is bootstrapped in every environment; `isDemo` marks that
-  tenant so its banner and reset affordance remain scoped to the demo (ADR 20260718-production-demo-seed).
+- **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
+  "Reset demo data" affordance scoped to that one tenant. `isDemo` is reserved for the canonical
+  seeded example shop (Blue Mantis), bootstrapped in every environment and reached via "Try the live
+  demo". Onboarding a **trial** at `/onboard` creates a real shop that is *not* demo mode; the "Seed
+  with demo data" checkbox only preloads sample trips, and a trial never shows the playground banner
+  or a destructive reset (ADR 20260718-dynamic-demo-onboarding, revised by
+  20260720-trial-shops-are-not-demo).
 
 ## Gear
 

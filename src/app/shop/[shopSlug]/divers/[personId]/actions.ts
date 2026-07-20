@@ -1,0 +1,244 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { createBooking } from "@/db/bookings";
+import { getDb } from "@/db/client";
+import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
+import { saveRentalGearProfile } from "@/db/gear-requests";
+import { createNitroxCertification, reviewNitroxCertification } from "@/db/nitrox";
+import { refundOrder } from "@/db/orders";
+import {
+  createCertification,
+  createSpecialtyCertification,
+  reviewCertification,
+  reviewSpecialtyCertification,
+  verifyCertificationWithAgency,
+} from "@/db/readiness";
+import { revalidateAndRedirect } from "@/lib/navigation";
+import { requireStaffSession } from "@/lib/session";
+import { storeCardImage } from "@/lib/storage";
+
+const agencySchema = z.enum(["padi", "ssi", "naui", "sdi", "tdi", "other"]);
+const levelSchema = z.enum([
+  "open_water",
+  "advanced_open_water",
+  "rescue",
+  "divemaster",
+  "instructor",
+]);
+const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
+const dateSchema = z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]);
+
+const personSchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  email: z.union([z.literal(""), z.email().max(320)]),
+  phone: z.string().trim().max(40),
+});
+const certificationSchema = z.object({
+  agency: agencySchema,
+  level: levelSchema,
+  identifier: z.string().trim().min(2).max(120),
+  expiresOn: dateSchema,
+});
+const specialtyCertificationSchema = z.object({
+  agency: agencySchema,
+  specialty: specialtySchema,
+  identifier: z.string().trim().min(2).max(120),
+  expiresOn: dateSchema,
+});
+const profileSchema = z.object({
+  bcdSize: z.string().trim().max(40),
+  wetsuitSize: z.string().trim().max(40),
+  bootSize: z.string().trim().max(40),
+  finSize: z.string().trim().max(40),
+  weightPreference: z.string().trim().max(120),
+});
+
+async function resolveCardImage(formData: FormData) {
+  const file = formData.get("cardImage");
+  if (!(file instanceof File) || file.size === 0) return { url: undefined };
+  const stored = await storeCardImage({
+    keyPrefix: "cards",
+    filename: file.name,
+    contentType: file.type,
+    bytes: await file.arrayBuffer(),
+  });
+  return stored.status === "stored" ? { url: stored.url } : { failed: true };
+}
+
+function dateFromInput(value: string) {
+  return value ? new Date(`${value}T23:59:59.999Z`) : undefined;
+}
+
+export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const parsed = personSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  const saved = await updateDiver(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    ...parsed.data,
+  });
+  revalidateAndRedirect(base, `${base}?notice=${saved ? "person-saved" : "duplicate"}`);
+}
+
+export async function addCertificationAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  const image = await resolveCardImage(formData);
+  if (image.failed) redirect(`${base}?notice=image`);
+  const saved = await createCertification(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    agency: parsed.data.agency,
+    level: parsed.data.level,
+    identifier: parsed.data.identifier,
+    expiresAt: dateFromInput(parsed.data.expiresOn),
+    cardImageUrl: image.url,
+  });
+  revalidateAndRedirect(base, `${base}?notice=${saved ? "captured" : "invalid"}`);
+}
+
+export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  const image = await resolveCardImage(formData);
+  if (image.failed) redirect(`${base}?notice=image`);
+  const saved =
+    parsed.data.specialty === "nitrox"
+      ? await createNitroxCertification(await getDb(), {
+          shopId: staff.user.shopId,
+          personId,
+          agency: parsed.data.agency,
+          identifier: parsed.data.identifier,
+        })
+      : await createSpecialtyCertification(await getDb(), {
+          shopId: staff.user.shopId,
+          personId,
+          agency: parsed.data.agency,
+          specialty: parsed.data.specialty,
+          identifier: parsed.data.identifier,
+          expiresAt: dateFromInput(parsed.data.expiresOn),
+          cardImageUrl: image.url,
+        });
+  revalidateAndRedirect(base, `${base}?notice=${saved ? "captured" : "invalid"}`);
+}
+
+export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const certificationId = String(formData.get("certificationId") ?? "");
+  const status = formData.get("status") === "rejected" ? "rejected" : "verified";
+  const updated = certificationId
+    ? await reviewCertification(await getDb(), {
+        shopId: staff.user.shopId,
+        certificationId,
+        status,
+      })
+    : null;
+  revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
+}
+
+export async function agencyCheckAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const certificationId = String(formData.get("certificationId") ?? "");
+  const outcome = certificationId
+    ? await verifyCertificationWithAgency(await getDb(), staff.user.shopId, certificationId)
+    : null;
+  const result =
+    outcome === "verified"
+      ? "agency-verified"
+      : outcome === "not_found"
+        ? "agency-not-found"
+        : outcome === "mismatch"
+          ? "agency-mismatch"
+          : outcome === "unavailable"
+            ? "agency-unavailable"
+            : "invalid";
+  revalidateAndRedirect(base, `${base}?notice=${result}`);
+}
+
+export async function reviewSpecialtyAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const certificationId = String(formData.get("certificationId") ?? "");
+  const status = formData.get("status") === "rejected" ? "rejected" : "verified";
+  const updated = certificationId
+    ? formData.get("cardType") === "nitrox"
+      ? await reviewNitroxCertification(await getDb(), {
+          shopId: staff.user.shopId,
+          certificationId,
+          status,
+        })
+      : await reviewSpecialtyCertification(await getDb(), {
+          shopId: staff.user.shopId,
+          certificationId,
+          status,
+        })
+    : null;
+  revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
+}
+
+export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const parsed = profileSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  const saved = await saveRentalGearProfile(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    ...parsed.data,
+  });
+  revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}`);
+}
+
+export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const orderId = String(formData.get("orderId") ?? "");
+  const refunded = orderId ? await refundOrder(await getDb(), staff.user.shopId, orderId) : null;
+  revalidateAndRedirect(base, `${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
+}
+
+export async function bookActivityAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const tripId = String(formData.get("tripId") ?? "");
+  const current = await getDiverProfile(await getDb(), staff.user.shopId, personId);
+  if (!tripId || !current?.person.email) redirect(`${base}?notice=booking-invalid`);
+  const result = await createBooking(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId,
+    fullName: current.person.fullName,
+    email: current.person.email,
+    phone: current.person.phone ?? undefined,
+  });
+  revalidateAndRedirect(base, `${base}?notice=${result.ok ? "booked" : result.reason}`);
+}
+
+export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const deleted = await deleteDiver(await getDb(), staff.user.shopId, personId);
+  revalidateAndRedirect(
+    `/shop/${staff.user.shopSlug}/divers`,
+    deleted
+      ? `/shop/${staff.user.shopSlug}/divers?notice=deleted&deleted=${encodeURIComponent(personId)}`
+      : base,
+  );
+}

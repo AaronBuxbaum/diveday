@@ -9,7 +9,8 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
-import { createTrip, createTripSeries, getShopById } from "@/db/queries";
+import { getShopById } from "@/db/shops";
+import { createTrip, createTripSeries } from "@/db/trips";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import {

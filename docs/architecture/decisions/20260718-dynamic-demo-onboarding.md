@@ -14,6 +14,7 @@ Previously, demo mode was a global deployment-level flag (`SCUBA_DEMO`) that for
   - Automatically seeds the new shop with full demo schedules and data if "Seed with demo data" is selected, leveraging the existing parameterized `seedDemoSchedule`.
   - Signs the user in and redirects to the `/shop` staff dashboard.
 - **Isolate trials via database-level `isDemo` column**: Rather than a deployment-level flag, the `shops` table carries `is_demo`. A trial shop gets `isDemo: true`, rendering the resettable `DemoBanner` at `/shop` layout and allowing resetting that specific tenant's schedule without impacting other shops.
+  > Revised by [20260720-trial-shops-are-not-demo](20260720-trial-shops-are-not-demo.md): onboarded trials now get `isDemo: false`; `isDemo` is reserved for the canonical seeded demo tenant. The onboarding flow and routing below are unchanged.
 - **Implement path-prefixed multi-tenant routing for customer surfaces**: Move public trips lists and details from `/trips/**` to `/shop/[shopSlug]/trips/**`. Public pages fetch the shop by its slug parameter to retrieve upcoming trips and execute bookings. Staff surfaces (`/shop/**`) remain dynamically tenant-isolated by the signed-in user's `session.user.shopId` inside the JWT session.
 
 ## Alternatives considered

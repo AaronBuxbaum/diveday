@@ -2,24 +2,16 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
+import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { createTestDb } from "./client";
-import { getShopBySlug, listStaff, upcomingTripsWithCounts } from "./queries";
 import { bookings, people, personRoles, userAccounts } from "./schema";
-import { resetDemoSchedule, seedDemo } from "./seed";
+import { resetDemoSchedule } from "./seed";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
-
-async function seeded() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
-  return { db, shop };
-}
 
 describe("resetDemoSchedule", () => {
   it("restores the seeded schedule after the playground is churned", async () => {
-    const { db, shop } = await seeded();
+    const { db, shop } = await seededShopContext();
     const before = await upcomingTripsWithCounts(db, shop.id);
 
     // Simulate a prospective customer poking around: book a walk-up onto an
@@ -50,7 +42,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("clears wait-list entries so a churned playground resets cleanly", async () => {
-    const { db, shop } = await seeded();
+    const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
 
     // A wait-list entry references its trip; before the reset cleared it, that
@@ -82,7 +74,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("keeps staff and their logins intact so the demo session survives", async () => {
-    const { db, shop } = await seeded();
+    const { db, shop } = await seededShopContext();
     const staffBefore = await listStaff(db, shop.id);
     const accountsBefore = await db.select().from(userAccounts);
 
@@ -97,7 +89,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("leaves no orphaned bookings, customers, or roles after reset", async () => {
-    const { db, shop } = await seeded();
+    const { db, shop } = await seededShopContext();
     await resetDemoSchedule(db, shop.id);
 
     // Every remaining booking points at a live trip and person (no dangling rows).

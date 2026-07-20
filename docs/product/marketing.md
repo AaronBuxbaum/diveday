@@ -5,27 +5,24 @@ Scuba's public pages are the homepage (`/`), product page (`/product`), and pric
 readiness, waiver and certification evidence, gear, dive sites, nitrox logs, reporting, and an
 encrypted offline manifest with explicit reconciliation.
 
-## Screenshot assets
+## Product visuals
 
-Marketing visuals are captured from the real seeded demo, never recreated as illustrations. Run
-the application, then generate assets with:
+The public pages ship deterministic illustrated mockups as the design — not captured screenshots.
+Each visual is a small, hand-built component in `src/components/MarketingScreenFallbacks.tsx`
+(`DiverBookingFallback`, `FrontDeskReadinessFallback`, `CaptainRollCallFallback`) rendered through
+the shared wrappers in `src/components/MarketingSections.tsx`:
 
-```bash
-pnpm screenshots:marketing
-```
-
-The command writes these tracked assets to `public/marketing/`:
-
-| Asset | Real screen | Marketing use |
+| Component | Represents | Marketing use |
 | --- | --- | --- |
-| `diver-booking.png` | Public schedule | Diver booking moment |
-| `front-desk-readiness.png` | Staff trip readiness | Desk / safety explanation |
-| `captain-roll-call.png` | Captain manifest roll call on a phone viewport | Dock / captain moment |
+| `DiverBookingFallback` | Public schedule | Diver booking moment |
+| `FrontDeskReadinessFallback` | Staff trip readiness | Desk / safety explanation |
+| `CaptainRollCallFallback` | Captain manifest roll call on a phone | Dock / captain moment |
 
-Use `BASE_URL=<preview URL>` with the command to capture a Vercel preview. Regenerate the
-affected image whenever its source UI changes, then visually inspect the public page in light and
-dark modes. The marketing component has a deliberate in-app fallback so a fresh checkout is useful
-before browser-generated files exist; release screenshots should replace that fallback.
+These mockups render identically in every checkout and in both light and dark modes, and they use
+only semantic tokens, so keeping them truthful is a matter of editing the component copy when the
+product it depicts changes. There is no browser-capture step: `public/marketing/*.png` is not used.
+Reintroducing real-screenshot capture (with the tracked assets and a capture script that produced
+them) is a deliberate, ADR-gated decision if the mockups ever stop being enough.
 
 ## Pricing boundary
 

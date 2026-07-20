@@ -1,8 +1,10 @@
+import { eq } from "drizzle-orm";
 import { DemoBanner } from "@/components/DemoBanner";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
-import { getShopBySlug } from "@/db/queries";
+import { people, personRoles } from "@/db/schema";
+import { getShopBySlug } from "@/db/shops";
 import { auth } from "@/lib/auth";
 
 /**
@@ -21,6 +23,27 @@ export default async function ShopLayout({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const showBanner = shop?.isDemo ?? false;
+
+  // Owner and diver (public guest) are always offered; instructor/divemaster/
+  // captain only appear when this shop actually seeded someone in that role, so
+  // the role switcher never presents a card that would no-op.
+  let availableRoles: string[] = ["owner", "diver"];
+  if (showBanner && shop) {
+    const present = new Set(
+      (
+        await db
+          .selectDistinct({ role: personRoles.role })
+          .from(personRoles)
+          .innerJoin(people, eq(people.id, personRoles.personId))
+          .where(eq(people.shopId, shop.id))
+      ).map((row) => row.role),
+    );
+    availableRoles = [
+      "owner",
+      ...(["instructor", "divemaster", "captain"] as const).filter((role) => present.has(role)),
+      "diver",
+    ];
+  }
 
   const session = await auth();
   let currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver" = "diver";
@@ -43,6 +66,7 @@ export default async function ShopLayout({
           currentRole={currentRole}
           currentName={session?.user?.name}
           shopSlug={shopSlug}
+          availableRoles={availableRoles}
         />
       ) : null}
       {session?.user && shop ? <ShopNav shopSlug={shopSlug} shopName={shop.name} /> : null}
