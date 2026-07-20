@@ -25,7 +25,7 @@ function snapshot(): OfflineManifestSnapshot {
         },
         checkpoint: "departure",
         crew: [],
-        summary: { totalDivers: 2, ready: 1, blocked: 1, boarded: 0, awaiting: 2 },
+        summary: { totalDivers: 2, ready: 1, blocked: 1, boarded: 0, notBoarded: 0, awaiting: 2 },
         divers: [
           {
             bookingId: "ready",
