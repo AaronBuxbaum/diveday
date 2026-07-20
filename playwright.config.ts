@@ -38,14 +38,20 @@ export default defineConfig({
   fullyParallel: true,
   workers: E2E_WORKER_COUNT,
   // Precompiled servers serve routes without the dev-mode first-hit compile, so
-  // warm assertions settle in well under a second (most tests finish in 1-4s).
-  // The headroom here is only for the one-time cold render of a heavy route the
-  // warmup can't reach (dynamic [id] pages) under parallel CPU load — a ceiling,
-  // not added latency.
-  expect: { timeout: 20_000 },
-  timeout: 90_000,
+  // warm assertions settle well under a second and tests finish in 1-4s each.
+  // These timeouts are ceilings that only ever bound a *failure* — a stuck
+  // assertion or a hung navigation — never a passing test. Keep them tight so a
+  // broken test fails in seconds instead of stalling the run. 8s still clears
+  // the one-time cold render of a heavy [id] page under parallel CPU load, and
+  // 15s per test is ~4x the slowest real flow — enough headroom to never bite a
+  // passing test, tight enough that a hang surfaces fast.
+  expect: { timeout: 8_000 },
+  timeout: 15_000,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // No retries: a flake must fail the run so it gets fixed when it's found,
+  // not silently papered over by a re-run. This is what keeps the suite honest
+  // and fast — every failure is real and surfaces on the first attempt.
+  retries: 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     // Real base URL is assigned per worker in e2e/fixtures.ts; this is only a
@@ -71,7 +77,10 @@ export default defineConfig({
       url: e2eBaseURL(i),
       env: { ...serverEnv, PORT: String(port) },
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      // `next start` serves a build that already exists on disk, so it boots in
+      // seconds; 60s covers a cold, contended CI runner without making a
+      // failed boot hang the run for two minutes.
+      timeout: 60_000,
     };
   }),
 });

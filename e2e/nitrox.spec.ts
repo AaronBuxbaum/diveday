@@ -13,7 +13,6 @@ async function signInAsOwner(page: Page) {
 test("staff records and verifies a nitrox card, then logs a fill with a derived MOD", async ({
   page,
 }) => {
-  test.slow(); // several lazily-compiled routes in one flow
   // A unique card number keeps the flow self-contained and re-run safe.
   const cardNo = `EANX-T${Date.now()}`;
   await signInAsOwner(page);
@@ -59,7 +58,6 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
 });
 
 test("an uncertified diver cannot be selected for a fill", async ({ page }) => {
-  test.slow();
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
   await page
