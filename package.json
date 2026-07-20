@@ -21,7 +21,6 @@
     "check": "pnpm check:repo && pnpm lint && pnpm typecheck && pnpm test",
     "task:context": "node scripts/task-context.mjs",
     "screenshot": "node scripts/screenshot.mjs",
-    "screenshots:marketing": "node scripts/capture-marketing-screenshots.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.prod.ts",
     "db:reset": "rm -rf .pglite && echo 'Dev database cleared; next `pnpm dev` re-migrates and re-seeds.'"
