@@ -4,6 +4,27 @@ import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * A neutral starting release so a new shop is never left with a blank waiver.
+ * It is sample text, not legal advice: shops are expected to edit it (each edit
+ * is saved as a new version), and their own counsel should review the wording.
+ */
+export const DEFAULT_WAIVER_TITLE = "Diving Release & Liability Waiver";
+
+export const DEFAULT_WAIVER_BODY = [
+  "Release of Liability, Waiver of Claims, and Assumption of Risk",
+  "",
+  "I understand that scuba diving, snorkeling, and boat travel carry inherent risks — including changing weather and sea conditions, boat and equipment handling, marine life, decompression illness, barotrauma, and other hazards that can lead to serious injury or death.",
+  "",
+  "I confirm that I am in good physical and mental condition to dive, that I am not diving under the influence of alcohol or drugs, and that I will tell the crew before departure if my health, certification, or comfort changes.",
+  "",
+  "I agree to follow all briefings and instructions from the crew, to use the equipment as trained, to dive within the limits of my certification and experience, and to end any dive I am not comfortable with.",
+  "",
+  "Knowing these risks, I voluntarily assume full responsibility for them and, to the fullest extent permitted by law, release and hold harmless the dive shop, its staff, boat crew, and vessel from any claim arising from my participation, except for injury caused by their gross negligence or willful misconduct.",
+  "",
+  "I have read this release in full, understand it, and agree to it freely.",
+].join("\n");
+
 export function createWaiverToken(): string {
   return randomBytes(32).toString("base64url");
 }

@@ -4,7 +4,7 @@ import { seededShopContext } from "@/test/db";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { rollCallEvents } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
-import { completeWaiver, issueWaiverRequest, listWaiverTemplates } from "./waivers";
+import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
@@ -15,7 +15,7 @@ async function manifestContext() {
   if (!reef) throw new Error("demo reef trip missing");
   const [booking] = await getTripRoster(db, reef.id);
   if (!booking) throw new Error("demo booking missing");
-  const [template] = await listWaiverTemplates(db, shop.id);
+  const template = await getCurrentWaiverTemplate(db, shop.id);
   if (!template) throw new Error("demo waiver template missing");
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("demo staff missing");
