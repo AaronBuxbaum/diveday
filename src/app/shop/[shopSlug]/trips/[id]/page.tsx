@@ -1021,7 +1021,10 @@ export default async function ManageTripPage({
               return (
                 <li
                   key={booking.id}
-                  className="rounded-xl border border-border bg-surface p-5 shadow-sm"
+                  // Today's queue deep-links straight to the diver it is about;
+                  // scroll-mt keeps the row clear of the sticky shop header.
+                  id={`booking-${booking.id}`}
+                  className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">

@@ -68,6 +68,20 @@ function at(daysFromNow: number, hour: number, minute = 0): Date {
   return d;
 }
 
+/**
+ * Anchored to the clock rather than the calendar so one seeded trip always
+ * sails *today*, whatever time the demo is opened. Today's departure board is
+ * the first thing staff see, and a demo that never has a boat out cannot show
+ * it. Always in the future, so it never falls out of the upcoming schedule.
+ */
+function hoursFromNow(hours: number): Date {
+  const d = new Date(Date.now() + hours * 60 * 60 * 1000);
+  // Round up to the next half hour: dive boats leave at 7:30, not 7:49, and a
+  // ragged time reads as a bug in every screenshot of the demo.
+  const step = 30 * 60 * 1000;
+  return new Date(Math.ceil(d.getTime() / step) * step);
+}
+
 export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   const existing = await db.select({ id: shops.id }).from(shops).limit(1);
   if (existing.length > 0) return;
@@ -658,8 +672,8 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         diveSiteId: siteByName.get("Molasses Reef")?.id,
         title: "Two-Tank Reef — Molasses & French",
         description: "Morning double dip on the outer reef. All levels, OW required.",
-        startsAt: at(1, 11, 30), // ~7:30 AM Eastern
-        endsAt: at(1, 15, 0),
+        startsAt: hoursFromNow(5), // sails today, so Today always has a board
+        endsAt: hoursFromNow(8.5),
         capacity: 12,
       },
       {

@@ -43,6 +43,7 @@ adapters and must not introduce unique requirements.
 | --- | --- |
 | Public pages (landing, schedule, sign-in) | `src/app/` — `/trips` is the public schedule |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
+| The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/queries.ts`, `src/db/seed.ts` |

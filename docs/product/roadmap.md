@@ -170,8 +170,15 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 ## M7+ — Early operational slice shipped; integrations later
 
 - ✅ Shop-owner workspace navigation: Today, Divers, and Schedule are the primary workspaces;
-  preparation, planning, and business tools are grouped under More, with dashboard handoffs that
-  explain how the work connects. See [the workspace navigation ADR](../architecture/decisions/20260719-shop-owner-workspace.md).
+  preparation, planning, and business tools are grouped under More. See
+  [the workspace navigation ADR](../architecture/decisions/20260719-shop-owner-workspace.md).
+- ✅ Today is a work queue: a departure board for the boats sailing today, then a ranked list of
+  jobs over the next week — blocked divers (collapsed per boat and per blocker), unpacked rental
+  requests, gear whose service falls due before it sails, unstaffed course sessions, freed seats on
+  wait-listed trips, and failed booking emails. Every row links to the surface that clears it;
+  nothing that the nav already reaches in one click appears. Rules in
+  [`src/lib/today.ts`](../../src/lib/today.ts), assembly in [`src/db/today.ts`](../../src/db/today.ts).
+  See [the Today work-queue ADR](../architecture/decisions/20260720-today-work-queue.md).
 - ✅ Live staff operations report: upcoming bookings, readiness blockers, rental requests, course
   sessions, and unstaffed instructor-required sessions, all derived from source-of-truth models.
 - ✅ Nitrox fill logs: a verified enriched-air specialty card gates every fill; staff log an
