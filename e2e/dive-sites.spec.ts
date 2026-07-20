@@ -46,7 +46,9 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await page.getByLabel("Departs").fill("09:00");
   await page.getByLabel("Returns").fill("12:00");
   await page.getByRole("button", { name: "Put it on the board" }).click();
-  await page.getByRole("link", { name: new RegExp(tripTitle) }).click();
+  await expect(page.getByRole("status")).toBeVisible(); // created banner ⇒ the redirect settled
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
   const manageTripUrl = page.url();
 

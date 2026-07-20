@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -30,7 +31,7 @@ const fillSchema = z.object({
   analyzerSignature: z.string().trim().min(1).max(120),
 });
 
-const NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
+const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
   logged: { tone: "success", text: "Fill logged. The diver's MOD is set from the analyzed mix." },
   diver_not_certified: {
     tone: "danger",
@@ -73,7 +74,7 @@ export default async function TripNitroxPage({
     listTripNitroxFills(db, shop.id, tripId),
   ]);
   const back = `/shop/${shopSlug}/trips/${tripId}/nitrox`;
-  const banner = notice ? NOTICES[notice] : undefined;
+  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   const anyCertified = roster.some(({ person }) => certified.has(person.id));
 
   async function logFillAction(formData: FormData) {
@@ -112,12 +113,11 @@ export default async function TripNitroxPage({
       </header>
 
       {banner ? (
-        <p
-          role="status"
-          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${banner.tone === "success" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}
-        >
-          {banner.text}
-        </p>
+        <div className="mt-6">
+          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+            {banner.text}
+          </ShopNotice>
+        </div>
       ) : null}
 
       <section className="mt-10">

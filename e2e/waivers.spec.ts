@@ -14,7 +14,12 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   page,
 }) => {
   await signInAsOwner(page);
-  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   const staffTripUrl = page.url();
 

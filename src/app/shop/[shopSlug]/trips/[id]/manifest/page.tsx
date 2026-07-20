@@ -7,6 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RestorePreservedScroll, ScrollPreservingForm } from "@/components/ScrollPreservingForm";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -33,7 +34,7 @@ const rollCallSchema = z.object({
   note: z.string().trim().max(300).optional(),
 });
 
-const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
+const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
   boarded: { tone: "success", text: "Boarding recorded." },
   "not-boarded": { tone: "success", text: "Not-boarded status recorded." },
   "not-ready": {
@@ -71,7 +72,7 @@ export default async function TripManifestPage({
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
   const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
-  const banner = notice ? BANNERS[notice] : undefined;
+  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
   async function rollCallAction(formData: FormData) {
@@ -145,16 +146,11 @@ export default async function TripManifestPage({
       />
 
       {banner ? (
-        <p
-          role="status"
-          className={
-            banner.tone === "success"
-              ? "mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success print:hidden"
-              : "mt-6 rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger print:hidden"
-          }
-        >
-          {banner.text}
-        </p>
+        <div className="mt-6 print:hidden">
+          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+            {banner.text}
+          </ShopNotice>
+        </div>
       ) : null}
 
       <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-5">

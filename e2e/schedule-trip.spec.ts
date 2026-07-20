@@ -19,6 +19,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   const title = `Turtle Reef Special ${Date.now()}`;
 
   await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: "Schedule a trip" }).click();
   await expect(page.getByRole("heading", { name: "Schedule a trip" })).toBeVisible();
 
@@ -37,7 +38,6 @@ test("staff schedules a trip and it appears on shop and public schedules", async
 
   await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
   await expect(page.getByRole("status")).toContainText(title);
-  await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
   // View as a diver: signed in, /schedule/[id] renders the staff editor; the
   // public dive-plan briefing ("Your N-dive plan") is the signed-out view.

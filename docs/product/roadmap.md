@@ -111,11 +111,11 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   [the person-spine ADR](../architecture/decisions/20260719-diver-person-spine.md).
 - ✅ Payment readiness: a `booking_payments` state plus a per-trip `requires_payment` flag adds a
   `payment_due` blocker to the shared roll-up (paid/deposit/waived clear; absent = unpaid; a refund
-  re-opens). Staff mark payment on the roster; a Stripe checkout seam
-  ([`src/lib/payments`](../../src/lib/payments)) mints a pay link when configured. See
+  re-opens). Staff mark payment on the roster; online payment is taken by the Stripe Connect +
+  invoicing flow below (the earlier single-account checkout seam was retired). See
   [20260718-payment-readiness](../architecture/decisions/20260718-payment-readiness.md).
 - ✅ Stripe Connect + orders/invoices: a shop authorizes its own Standard Stripe account via OAuth
-  (`/shop/[shopSlug]/shop`); staff build an order from a diver's person page, invoice the connected
+  (`/shop/[shopSlug]/settings/payments`); staff build an order from a diver's person page, invoice the connected
   account, review that diver's payment history in the same context,
   and refund paid invoice payments when needed. A Connect webhook
   (`/api/webhooks/stripe`) confirms `invoice.paid`/`voided` and account status changes back into
@@ -179,13 +179,16 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   nothing that the nav already reaches in one click appears. Rules in
   [`src/lib/today.ts`](../../src/lib/today.ts), assembly in [`src/db/today.ts`](../../src/db/today.ts).
   See [the Today work-queue ADR](../architecture/decisions/20260720-today-work-queue.md).
-- ✅ Live staff operations report: upcoming bookings, readiness blockers, rental requests, course
-  sessions, and unstaffed instructor-required sessions, all derived from source-of-truth models.
+- ✅ Live staff operations, merged into the daily surfaces: actionable work (readiness blockers,
+  rental requests, unstaffed instructor-required sessions) is on Today, and shop-level counts
+  (departures, booked divers, open seats) are on Schedule. The standalone operations-report page was
+  retired as duplication of these two surfaces.
 - ✅ Nitrox fill logs: a verified enriched-air specialty card gates every fill; staff log an
   analyzed mix per diver/tank and the MOD is derived, not entered. Framework-free rules in
   [`src/lib/nitrox.ts`](../../src/lib/nitrox.ts); fail-closed persistence in
-  [`src/db/nitrox.ts`](../../src/db/nitrox.ts); surfaces at `/shop/[shopSlug]/nitrox` and
-  `/shop/[shopSlug]/trips/[id]/nitrox`. Provisional dive parameters are in
+  [`src/db/nitrox.ts`](../../src/db/nitrox.ts); logged per departure at
+  `/shop/[shopSlug]/trips/[id]/nitrox` (the separate shop-wide fill-log page was retired to keep
+  nitrox's footprint proportional to a fill-station-only workflow). Provisional dive parameters are in
   [defaults-to-verify.md](defaults-to-verify.md#nitrox-fills) (H-11) and still need a
   dive-domain-expert review (V-05).
 - ✅ Automated marine outlook: a mapped dive site supplies a clearly-labelled 10-day Open-Meteo

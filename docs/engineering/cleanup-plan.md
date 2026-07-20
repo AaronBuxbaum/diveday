@@ -108,7 +108,10 @@ Waivers, Shop) and a "New trip" button. Several routes overlap or are misnamed. 
 on `/schedule` currently land on `/schedule/[id]`, which detects staff and redirects to
 `/trips/[id]` (`src/app/shop/[shopSlug]/schedule/[id]/page.tsx:103-104`).
 
-### WP-1.1 Make trip navigation direct and consistent
+### WP-1.1 Make trip navigation direct and consistent — ✅ shipped 2026-07-20
+
+> Staff trip cards on `/schedule` link straight to `/trips/[id]`; the `/schedule/[id]` staff
+> redirect stays as a fallback; the Schedule nav tab now stays lit on `/trips/*`.
 
 Decision: `/schedule` stays the single trip **list** (dual staff/public), `/trips/[id]` stays the
 staff **detail**, `/schedule/[id]` stays the public **booking** page. Remove the indirection, not
@@ -124,7 +127,11 @@ the pages.
   --reporter=line` green. Update `e2e/booking.spec.ts:79-87` if it asserts the redirect hop
   rather than the destination.
 
-### WP-1.2 Rename the "Shop" settings surface honestly
+### WP-1.2 Rename the "Shop" settings surface honestly — ✅ shipped 2026-07-20
+
+> Nav item is "Settings" → `/settings/payments`, which is now the canonical URL (connect/callback
+> routes and the page's own actions all target it). The `/shop` alias route was **deleted** rather
+> than redirected — there are no users yet, so no bookmarks to preserve. h1 stays "Shop settings".
 
 `/shop/[shopSlug]/shop/page.tsx` is a 1-line re-export of `settings/payments/page.tsx`; the nav
 says "Shop", the page h1 says "Shop settings", the canonical URL is unlinked. Three names, one
@@ -137,7 +144,12 @@ page.
 - Keep the h1 "Shop settings".
 - Acceptance: `pnpm check` green; screenshot the nav; `pnpm e2e -- e2e/auth.spec.ts` green.
 
-### WP-1.3 Merge Reports into the dashboard
+### WP-1.3 Merge Reports into the dashboard — ✅ shipped 2026-07-20
+
+> Adapted for the post-#59 Today work queue: Today already surfaces every *actionable* report item
+> (blockers, gear, instructor, payment), so the unique descriptive aggregate (booked divers) moved
+> to the Schedule `ShopStat` snapshot, and the `/reports` route + `db/reports.ts` were **deleted**
+> (no redirect — no users). "Reports" is gone from the nav.
 
 `reports/page.tsx` (112 lines) duplicates the dashboard's operational snapshot — it even
 self-describes as "not a separate dashboard to keep in sync" while the root dashboard
@@ -150,7 +162,13 @@ self-describes as "not a separate dashboard to keep in sync" while the root dash
 - Acceptance: no data previously visible on `/reports` is lost (compare the two pages before
   deleting); `pnpm check` green; dashboard screenshots light+dark.
 
-### WP-1.4 Disambiguate the two Nitrox pages
+### WP-1.4 Disambiguate the two Nitrox pages — 🔁 superseded 2026-07-20 by a footprint cut
+
+> Instead of retitling the shop-wide fill log to "Nitrox log", the standalone `/nitrox` page, its
+> `listShopNitroxFills` query, and its dedicated nav slot were **removed** — cutting nitrox's
+> disproportionate surface down to the trip-scoped `/trips/[id]/nitrox` workflow. The safety-critical
+> fill gate, readiness blockers, math lib, and tables were kept intact. The original disambiguation
+> below is retained for history but is no longer the plan.
 
 `/nitrox` (73 lines) is a read-only shop-wide fill log; `/trips/[id]/nitrox` (253 lines) is the
 logging form. Both are titled "Nitrox fills".
@@ -161,7 +179,14 @@ logging form. Both are titled "Nitrox fills".
 - Acceptance: `pnpm e2e -- e2e/nitrox.spec.ts --reporter=line` green (update title assertions
   if any).
 
-### WP-1.5 One flash/notice system
+### WP-1.5 One flash/notice system — ✅ shipped 2026-07-20 (rendering unified)
+
+> Every staff-page banner/notice/error record and inline status `<p>` now renders through the shared
+> `ShopNotice`; `FlashParams` was added where missing (`dive-sites`, `orders/new`). No
+> `BANNERS`/`NOTICES`/`ERRORS` records remain in `src/app/`. Flash **keys** were already largely
+> `?notice=`/`?error=`; the dashboard's structured params (`?created=`/`?series=`/`?email=`) were
+> left as-is since they carry data (trip name, count) and already render via `ShopNotice`. The
+> public booking page (`schedule/[id]`) keeps its compact in-card messages by design.
 
 Today there are four mechanisms: the shared `ShopNotice` (in `ShopPageHeader.tsx`), hand-rolled
 `BANNERS`/`NOTICES`/`ERRORS` records (`trips/[id]/page.tsx:118`, `trips/[id]/manifest/page.tsx:35`,

@@ -66,7 +66,7 @@ seam directory. Zod-validate at every seam boundary. Record the pattern in an AD
 | --- | --- | --- |
 | `SignatureProvider` | M3 | create/verify a signature request; v1 draw-on-canvas + typed consent in-house, vendor API slots in later |
 | `notify()` | first outbound notification | one function owns "something happened"; v1 writes in-app/console, an email provider slides in behind it without touching call sites |
-| `PaymentProvider` | M7 | checkout/cancel/`parseWebhook` normalizing into one `applyBillingEvent()`; v1 stub treats everything as paid |
+| Payments (Connect + invoicing) | M7 | shop-owned Stripe Connect account, orders → Stripe Invoices, and a webhook normalizing paid/refunded into `setBookingPayment()`; see [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md). The earlier single-account `PaymentProvider` checkout seam was retired. |
 
 ### Adopt as the repository grows
 

@@ -6,7 +6,7 @@ import {
   ppO2BarToCentibar,
 } from "@/lib/nitrox";
 import type { AppDb } from "./client";
-import { bookings, gearItems, nitroxCertifications, nitroxFills, people, trips } from "./schema";
+import { bookings, gearItems, nitroxCertifications, nitroxFills, people } from "./schema";
 
 export type NewNitroxCertification = {
   shopId: string;
@@ -208,23 +208,4 @@ export async function listTripNitroxFills(db: AppDb, shopId: string, tripId: str
     .innerJoin(gearItems, eq(gearItems.id, nitroxFills.gearItemId))
     .where(and(eq(nitroxFills.shopId, shopId), eq(bookings.tripId, tripId)))
     .orderBy(desc(nitroxFills.analyzedAt));
-}
-
-/** Recent fills across the whole shop for the nitrox overview. */
-export async function listShopNitroxFills(db: AppDb, shopId: string, limit = 25) {
-  return db
-    .select({
-      fill: nitroxFills,
-      person: people,
-      tank: gearItems,
-      trip: trips,
-    })
-    .from(nitroxFills)
-    .innerJoin(bookings, eq(bookings.id, nitroxFills.bookingId))
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(gearItems, eq(gearItems.id, nitroxFills.gearItemId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(eq(nitroxFills.shopId, shopId))
-    .orderBy(desc(nitroxFills.analyzedAt))
-    .limit(limit);
 }

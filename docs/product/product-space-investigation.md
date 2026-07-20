@@ -102,19 +102,23 @@ should be retired, gated, or paused — not extended:
 - **The global dive-site catalog + immutable version snapshots** (`global_dive_sites`,
   `global_dive_site_versions`, `source_template_version`) — heavy provenance machinery for a
   Scuba-maintained catalog whose real inventory is the hardcoded content above.
-- **Two parallel payment paths.** The Stripe **Checkout** seam (`src/lib/payments/index.ts`,
-  self-described as deferred/link-only) is superseded by the Connect + invoicing order flow the UI
-  actually uses. Carrying both is confusion and drift risk. Pick one.
+- ~~**Two parallel payment paths.**~~ ✅ **Done (2026-07-20).** The superseded Stripe **Checkout**
+  seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
+  uses is the single payment path.
 - **The cert-verification agency-gateway plumbing** (per-agency PADI/SSI/NAUI env pairs) — **no agency
   exposes such an API today** ([H-10](human-decisions.md)), so it always resolves to the stub. Real
   as a *seam*; speculative as *plumbing*. Keep the interface, shed the per-agency machinery until an
   API is real.
-- **Nitrox's disproportionate footprint** — two tables, a cert type, a math lib, and *two* nav pages
-  for one gas-fill workflow that's gated on unapproved policy (H-11) and relevant only to shops
-  running a fill station. Genuinely correct code; wrong altitude of investment for this stage.
-- **Navigation debris** the [cleanup plan](../engineering/cleanup-plan.md) already catalogs: redirect-
-  stub routes (`certifications`, `orders`), the `shop/page.tsx` one-line alias, `reports` duplicating
-  the dashboard, four separate flash/notice systems, "Shop" meaning three different things.
+- **Nitrox's disproportionate footprint** — 🔁 **Trimmed (2026-07-20).** The standalone shop-wide
+  fill-log page and its dedicated nav slot were removed; fills are now logged per departure at
+  `/trips/[id]/nitrox`. The safety-critical parts (verified-card fill gate, readiness blockers, the
+  math lib, the two tables) were **kept intact** — the cut was surface, not the workflow. Deeper
+  reduction still waits on the H-11 policy decision.
+- **Navigation debris** the [cleanup plan](../engineering/cleanup-plan.md) catalogs — mostly ✅
+  **done (2026-07-20):** the `shop/page.tsx` alias and the `reports` duplicate page were deleted
+  (no redirects — there are no users to keep bookmarks for), the four flash/notice mechanisms were
+  unified on `ShopNotice`, and "Shop" now means one thing ("Settings" → `/settings/payments`). The
+  `certifications`/`orders` bookmark-shim routes were intentionally left in place.
 - **A `recurrence` enum with a single `weekly` value** — additive hedging for cadences that don't
   exist yet.
 
@@ -145,10 +149,13 @@ substrate into felt product, and cut the surface that isn't earning its keep.
 Shrink the surface so every later change is cheaper and the app stops contradicting itself.
 
 - Execute [cleanup plan](../engineering/cleanup-plan.md) Tracks 0–2: navigation unification, one
-  notice system, kill `reports`, fix the trial/demo split, make marketing honest.
-- Act on the cut list above: retire the superseded Checkout seam; pause/hide the dive-site CMS
-  (moments/creatures) and global catalog behind their unproven value; keep the cert-verification
-  *seam* but shed the speculative per-agency plumbing.
+  notice system, kill `reports`, fix the trial/demo split, make marketing honest. ✅ The nav +
+  notice unification (and the `reports`/`shop` cuts) shipped 2026-07-20; the trial/demo split and
+  marketing honesty remain.
+- Act on the cut list above: ✅ the superseded Checkout seam was removed and nitrox's footprint was
+  trimmed (2026-07-20). Still open: pause/hide the dive-site CMS (moments/creatures) and global
+  catalog behind their unproven value; keep the cert-verification *seam* but shed the speculative
+  per-agency plumbing.
 - Decompose the two monster pages (cleanup WP-3.3) — a precondition for building new readiness
   surfaces without fighting 1,300-line files.
 
@@ -190,7 +197,8 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 
 **P0 — simplify and unblock**
 1. Cleanup plan Track 0 (docs/dead-code/notice-system), then Tracks 1–2 (nav + public-site unification).
-2. Cut list: retire the superseded Checkout seam; pause the dive-site CMS + global catalog.
+2. Cut list: ✅ superseded Checkout seam removed and nitrox footprint trimmed (2026-07-20); still
+   to do — pause the dive-site CMS + global catalog.
 3. Decompose the two monster pages (WP-3.3).
 
 **P1 — the differentiator**

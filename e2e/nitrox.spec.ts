@@ -38,8 +38,12 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
   await expect(page.getByRole("status")).toContainText("verified");
 
   // Log a fill for that now-certified diver on the wreck trip.
-  await page.goto("/shop/blue-mantis");
-  await page.getByRole("link", { name: /Wreck Trip — Spiegel Grove/ }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+    .getByRole("link")
+    .click();
   await page.getByRole("link", { name: "Nitrox fills" }).click();
   await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
@@ -57,8 +61,12 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
 test("an uncertified diver cannot be selected for a fill", async ({ page }) => {
   test.slow();
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis");
-  await page.getByRole("link", { name: /Wreck Trip — Spiegel Grove/ }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+    .getByRole("link")
+    .click();
   await page.getByRole("link", { name: "Nitrox fills" }).click();
 
   // Sam Whitfield (seeded booking, no nitrox card) is present but disabled.

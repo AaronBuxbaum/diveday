@@ -105,12 +105,20 @@ export default async function TripsPage({
         }
       />
       {staffView ? (
-        <section aria-label="Schedule snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
+        <section
+          aria-label="Schedule snapshot"
+          className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <ShopStat
             label="Departures"
             value={upcoming.length}
             detail="Upcoming trips and sessions"
             tone="primary"
+          />
+          <ShopStat
+            label="Booked"
+            value={upcoming.reduce((total, trip) => total + trip.booked, 0)}
+            detail="Divers across all departures"
           />
           <ShopStat
             label="Open seats"
@@ -155,7 +163,14 @@ export default async function TripsPage({
             return (
               <li key={trip.id}>
                 <Link
-                  href={`/shop/${shopSlug}/schedule/${trip.id}`}
+                  // Staff manage a trip on /trips/[id]; anonymous and diver
+                  // visitors book on /schedule/[id]. Linking staff straight to
+                  // the management view removes the /schedule/[id] redirect hop.
+                  href={
+                    staffView
+                      ? `/shop/${shopSlug}/trips/${trip.id}`
+                      : `/shop/${shopSlug}/schedule/${trip.id}`
+                  }
                   className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 sm:flex-row sm:items-center"
                 >
                   <div className="shrink-0 sm:w-32">

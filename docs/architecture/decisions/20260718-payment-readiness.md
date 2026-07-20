@@ -1,6 +1,8 @@
 # 20260718-payment-readiness — Add payment to readiness behind a provider seam
 
-- **Status:** Accepted
+- **Status:** Accepted (payment-as-readiness); the `PaymentProvider`/`createCheckout` seam it
+  introduced was **retired 2026-07-20**, superseded by
+  [20260719-stripe-connect-orders](20260719-stripe-connect-orders.md).
 - **Date:** 2026-07-18
 
 ## Context
@@ -20,11 +22,14 @@ integration.
   a `refund` re-opens the gate. Payment is trip-level only (a commercial term, not a dive-site gate),
   so it is read straight off the requirement, not composed with the site.
 - **Staff mark payment today; a provider seam takes it online later.** The roster has per-diver
-  payment controls (mark paid / deposit / waived / refunded). `src/lib/payments/` defines a
-  `PaymentProvider` (Stripe Checkout over its form API, gated on `STRIPE_SECRET_KEY`) with a
-  `createCheckout` entry point; no key → a disabled provider returns `not_configured`.
-- **Deferred:** webhook confirmation of a completed online payment (auto-advancing a booking to
-  `paid`) is future work — today the seam mints a pay link and staff confirm receipt.
+  payment controls (mark paid / deposit / waived / refunded). This ADR originally shipped a
+  `PaymentProvider` seam (a single-account Stripe Checkout link over the form API, gated on
+  `STRIPE_SECRET_KEY`) as the "later" path. **That seam was never wired to a route and has been
+  removed** — [20260719-stripe-connect-orders](20260719-stripe-connect-orders.md) replaced it with
+  shop-owned Stripe Connect accounts and Stripe Invoices, which is the mechanism that actually
+  takes payment online. The `booking_payments` readiness state below is unchanged and still live.
+- **Deferred (at the time):** online-payment confirmation is now handled by the Connect/invoicing
+  webhook flow, not this ADR's seam.
 - **Human prerequisite (H):** a Stripe account + `STRIPE_SECRET_KEY` (and later a webhook secret).
 
 ## Alternatives considered
@@ -43,5 +48,7 @@ integration.
   roster, confirmation, and manifest.
 - Commits us to the fail-closed rule here too: unknown/absent payment is unpaid, and a refund
   blocks — money never silently clears a diver.
-- Escape hatch: wiring real Stripe means adding a checkout redirect + a webhook that calls
-  `setBookingPayment('paid', provider:'stripe', providerRef)`; the readiness contract is unchanged.
+- Escape hatch (as realized): real Stripe arrived via
+  [20260719-stripe-connect-orders](20260719-stripe-connect-orders.md) — a shop-owned Connect
+  account plus an invoice webhook that calls `setBookingPayment('paid', …)`; the readiness contract
+  here is unchanged.

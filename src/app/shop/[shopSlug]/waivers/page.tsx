@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -107,12 +108,14 @@ export default async function WaiverTemplatesPage({
       </header>
 
       {banner ? (
-        <p
-          role="status"
-          className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${notice === "invalid" ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
-        >
-          {banner}
-        </p>
+        <div className="mt-6">
+          <ShopNotice
+            tone={notice === "invalid" ? "danger" : "success"}
+            role={notice === "invalid" ? "alert" : "status"}
+          >
+            {banner}
+          </ShopNotice>
+        </div>
       ) : null}
 
       <section className="mt-10">

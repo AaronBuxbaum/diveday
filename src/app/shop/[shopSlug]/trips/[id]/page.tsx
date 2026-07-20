@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
@@ -116,7 +117,7 @@ const gearAssignmentSchema = z.object({
   gearItemId: z.string().uuid(),
 });
 
-const BANNERS: Record<string, { tone: "success" | "danger"; text: string }> = {
+const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
   saved: { tone: "success", text: "Changes saved." },
   cancelled: { tone: "danger", text: "Trip cancelled — it's off the public schedule." },
   reinstated: { tone: "success", text: "Back on! The trip is on the schedule again." },
@@ -273,7 +274,7 @@ export default async function ManageTripPage({
   ]);
   const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
   const series = await getTripSeriesSummary(db, shop.id, tripId);
-  const banner = notice ? BANNERS[notice] : undefined;
+  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   const undoBookingId = notice === "booking-removed" ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
@@ -558,26 +559,23 @@ export default async function ManageTripPage({
       ) : null}
 
       {banner ? (
-        <div
-          role="status"
-          className={
-            banner.tone === "success"
-              ? "mt-6 flex items-center justify-between gap-3 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
-              : "mt-6 flex items-center justify-between gap-3 rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
-          }
-        >
-          <span>{banner.text}</span>
-          {undoBookingId ? (
-            <form action={undoRemoveBookingAction}>
-              <input type="hidden" name="bookingId" value={undoBookingId} />
-              <button
-                type="submit"
-                className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
-              >
-                Undo
-              </button>
-            </form>
-          ) : null}
+        <div className="mt-6">
+          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+            <div className="flex items-center justify-between gap-3">
+              <span>{banner.text}</span>
+              {undoBookingId ? (
+                <form action={undoRemoveBookingAction}>
+                  <input type="hidden" name="bookingId" value={undoBookingId} />
+                  <button
+                    type="submit"
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
+                  >
+                    Undo
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          </ShopNotice>
         </div>
       ) : null}
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
@@ -67,7 +68,9 @@ async function refundAction(formData: FormData) {
   );
 }
 
-const NOTICES: Record<string, string> = {
+const FAILED_NOTICES = new Set(["refresh_failed", "void_failed", "refund_failed"]);
+
+const NOTICE_MESSAGES: Record<string, string> = {
   refreshed: "Status refreshed from Stripe.",
   refresh_failed: "Couldn't reach Stripe to refresh this order.",
   voided: "Order voided.",
@@ -108,16 +111,14 @@ export default async function OrderDetailPage({
       </div>
 
       {notice ? (
-        <p
-          role="status"
-          className={`mb-6 rounded-lg px-4 py-3 text-sm font-medium ${
-            notice === "refresh_failed" || notice === "void_failed" || notice === "refund_failed"
-              ? "bg-danger/10 text-danger"
-              : "bg-success/10 text-success"
-          }`}
-        >
-          {NOTICES[notice] ?? notice}
-        </p>
+        <div className="mb-6">
+          <ShopNotice
+            tone={FAILED_NOTICES.has(notice) ? "danger" : "success"}
+            role={FAILED_NOTICES.has(notice) ? "alert" : "status"}
+          >
+            {NOTICE_MESSAGES[notice] ?? notice}
+          </ShopNotice>
+        </div>
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">

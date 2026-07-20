@@ -52,10 +52,11 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   const card = page.locator("li").filter({ hasText: title });
   await expect(card.getByText("4 spots left")).toBeVisible();
 
-  // Staff sees the diver on the roster.
+  // Staff sees the diver on the roster. Today is a work queue, so open the trip
+  // from the schedule (staff cards link straight to the management view).
   await signInAsOwner(page);
-  await expect(page.getByRole("heading", { name: "Email delivery needs attention" })).toBeVisible();
-  await page.getByRole("link", { name: new RegExp(title) }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("Nora Quinn").first()).toBeVisible();
   await expect(page.getByText("Sam Quinn").first()).toBeVisible();
@@ -108,7 +109,12 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(page.getByRole("heading", { name: /You're on the wait list, Nora/ })).toBeVisible();
 
   await signInAsOwner(page);
-  await page.getByRole("link", { name: /Wreck Trip — Spiegel Grove/ }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+    .getByRole("link")
+    .click();
   await expect(page.getByRole("heading", { name: "Wait list" })).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
 });
@@ -126,8 +132,9 @@ test("staff edits a trip and cancelling removes it from the public schedule", as
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
 
-  // Edit the title from the manage page.
-  await page.getByRole("link", { name: new RegExp(title) }).click();
+  // Edit the title from the manage page (opened from the schedule).
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await page.getByLabel("Title").fill(renamed);
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("status")).toContainText("Changes saved");
