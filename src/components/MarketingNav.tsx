@@ -17,17 +17,20 @@ export function MarketingNav() {
         <Link href="/" className="text-base font-semibold tracking-tight text-foreground">
           scuba<span className="text-primary">.</span>
         </Link>
-        <div className="flex items-center gap-1 sm:gap-5">
+        <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 sm:gap-5">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-foreground"
+              className="inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors duration-200 hover:text-foreground sm:px-3"
             >
               {link.label}
             </Link>
           ))}
-          <Link href="/onboard" className={buttonClass({ className: "font-semibold" })}>
+          <Link
+            href="/onboard"
+            className={buttonClass({ className: "font-semibold whitespace-nowrap" })}
+          >
             Start a trial
           </Link>
         </div>

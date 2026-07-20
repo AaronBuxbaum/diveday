@@ -16,8 +16,8 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
           <SubmitButton
             pendingLabel="Spinning up your shop…"
             className={buttonClass({
-              size: "lg",
-              className: "cursor-pointer py-3 text-base disabled:opacity-70",
+              size: "cta",
+              className: "cursor-pointer disabled:opacity-70",
             })}
           >
             Try the live demo
@@ -27,8 +27,8 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
           href="/onboard"
           className={buttonClass({
             variant: "secondary",
-            size: "lg",
-            className: "border-border-strong py-3 text-base",
+            size: "cta",
+            className: "border-border-strong",
           })}
         >
           Start a trial
