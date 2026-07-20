@@ -19,7 +19,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
-    expect(upcoming).toHaveLength(6);
+    expect(upcoming).toHaveLength(12);
 
     const starts = upcoming.map((t) => t.startsAt.getTime());
     expect(starts).toEqual([...starts].sort((a, b) => a - b));

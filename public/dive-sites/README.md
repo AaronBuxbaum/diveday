@@ -15,7 +15,6 @@ the applicable public-domain or Creative Commons terms:
 - [French Angelfish Molasses Reef 20080309](https://commons.wikimedia.org/wiki/File:French_Angelfish_Molasses_Reef_20080309.jpg)
 - [French Angelfish Pickles Reef 20230713](https://commons.wikimedia.org/wiki/File:French_Angelfish_Pickles_Reef_20230713.jpg)
 - [Grouper 2 Molasses Reef 1999](https://commons.wikimedia.org/wiki/File:Grouper_2_Molasses_Reef_1999.jpg)
-- [Sphyraena barracuda by NOAA](https://commons.wikimedia.org/wiki/File:Sphyraena_barracuda_by_NOAA.jpg)
 - [Sponge 06 Molasses Reef 20230714](https://commons.wikimedia.org/wiki/File:Sponge_06_Molasses_Reef_20230714.jpg)
 - [Stoplight parrotfish Pickles Reef](https://commons.wikimedia.org/wiki/File:Stoplight_parrotfish_Pickles_Reef.jpg)
 - [Yellowtail Snappers Molasses Reef 1999](https://commons.wikimedia.org/wiki/File:Yellowtail_Snappers_Molasses_Reef_1999.jpg)

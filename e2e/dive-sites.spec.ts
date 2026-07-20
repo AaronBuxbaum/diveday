@@ -94,10 +94,14 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();
   await expect(page.getByText("Reef garden loop")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Landmarks that tell the story" })).toBeVisible();
+  // Both tanks of the seeded two-tank trip carry a site briefing, so this
+  // heading appears once per dive.
+  await expect(
+    page.getByRole("heading", { name: "Landmarks that tell the story" }).first(),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef Light" })).toBeVisible();
   await expect(page.getByText("11 likely sightings")).toBeVisible();
-  await expect(page.getByRole("img", { name: "Stoplight parrotfish" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Stoplight parrotfish" }).first()).toBeVisible();
   await expect(page.getByRole("img", { name: "Finger sponge" })).toHaveAttribute(
     "src",
     /\/dive-sites\//,

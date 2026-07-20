@@ -177,13 +177,8 @@ export default async function EditCoursePage({
         <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
           <legend className="px-1 text-sm font-semibold">At a glance</legend>
           <p className="mt-1 text-sm text-muted">
-            The chips across the top of the page. The prerequisite card is{" "}
-            <strong className="font-medium text-foreground">
-              {course.minimumCertificationLevel
-                ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
-                : "open to uncertified divers"}
-            </strong>{" "}
-            — set by the agency, shown automatically.
+            The chips across the top of the page — how the course runs. Who may take it is the next
+            box.
           </p>
           <FieldGrid columns={2} className="mt-4 gap-y-5">
             <Field label="Duration" hint="(optional)">
@@ -204,6 +199,22 @@ export default async function EditCoursePage({
                 className={controlClass}
               />
             </Field>
+          </FieldGrid>
+        </fieldset>
+
+        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+          <legend className="px-1 text-sm font-semibold">Who can enroll</legend>
+          <p className="mt-1 text-sm text-muted">
+            The one block on the page that answers “can I do this?”. The certification card is{" "}
+            <strong className="font-medium text-foreground">
+              {course.minimumCertificationLevel
+                ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
+                : "open to uncertified divers"}
+            </strong>{" "}
+            — set on the course list, shown here automatically. Your note appears under it, labelled
+            as the shop talking, so it never reads as replacing the card the desk checks.
+          </p>
+          <FieldGrid columns={2} className="mt-4 gap-y-5">
             <Field
               label="Minimum age"
               hint="(optional)"

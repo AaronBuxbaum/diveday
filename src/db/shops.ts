@@ -33,6 +33,27 @@ export async function setShopPackingList(db: AppDb, shopId: string, packingList:
 }
 
 /**
+ * Sets the front-desk address published on the shop's public pages. Empty
+ * strings clear the field rather than publishing a blank contact, so a shop can
+ * take itself back off the public page by emptying the box.
+ */
+export async function setShopContact(
+  db: AppDb,
+  shopId: string,
+  contact: { contactEmail: string; contactPhone: string },
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({
+      contactEmail: contact.contactEmail.trim() || null,
+      contactPhone: contact.contactPhone.trim() || null,
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * The shop public pages serve. Single-shop instance for now — multi-shop
  * routing (slug subpaths or domains) arrives with shop onboarding.
  */

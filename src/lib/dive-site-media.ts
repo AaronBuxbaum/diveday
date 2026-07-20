@@ -1,3 +1,9 @@
+/**
+ * Commons files we ship locally. A filename that leaves this set (because the
+ * image was dropped from the bundle) must leave the set too — otherwise a
+ * legacy row's Commons URL is rewritten to a local path that 404s, where
+ * falling through to Commons would still have shown the photo.
+ */
 const bundledCommonsFiles = new Set([
   "AtlanticGoliathGrouper.jpg",
   "Blue Tang Pickles 20080310.jpg",
@@ -10,7 +16,6 @@ const bundledCommonsFiles = new Set([
   "French Angelfish Molasses Reef 20080309.jpg",
   "French Angelfish Pickles Reef 20230713.jpg",
   "Grouper 2 Molasses Reef 1999.jpg",
-  "Sphyraena barracuda by NOAA.jpg",
   "Sponge 06 Molasses Reef 20230714.jpg",
   "Stoplight parrotfish Pickles Reef.jpg",
   "Yellowtail Snappers Molasses Reef 1999.jpg",

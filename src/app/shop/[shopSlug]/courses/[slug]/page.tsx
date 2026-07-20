@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
+import { CourseInquiry } from "./_components/CourseInquiry";
 import {
   CourseAdmission,
   CourseFaqs,
@@ -71,10 +72,10 @@ export default async function CoursePage({
   const certificationRequired = course.minimumCertificationLevel
     ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
     : "No certification required";
+  // Logistics only. The cert gate and the minimum age are admission facts and
+  // belong to CourseAdmission, which is the one place a diver reads them.
   const specs = [
     course.durationText ? { label: "Duration", value: course.durationText } : null,
-    { label: "Prerequisite", value: certificationRequired },
-    course.minimumAge ? { label: "Minimum age", value: `${course.minimumAge} years` } : null,
     course.groupSizeText ? { label: "Group size", value: course.groupSizeText } : null,
   ].filter((spec) => spec !== null);
 
@@ -102,14 +103,28 @@ export default async function CoursePage({
       <CourseSpecs items={specs} />
       <CourseAdmission
         certificationRequired={certificationRequired}
+        minimumAge={course.minimumAge}
         shopNote={course.prerequisiteNote}
       />
       <CourseOverview overview={course.overview} />
       <CourseGallery imageUrls={course.imageUrls} title={course.title} />
       <CourseSchedule days={course.scheduleDays} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} />
-      <CourseSessions sessions={sessions} shopSlug={shopSlug} timezone={shop.timezone} />
+      <CourseSessions
+        sessions={sessions}
+        shopSlug={shopSlug}
+        timezone={shop.timezone}
+        inquiryHref={shop.contactEmail ? "#get-in-touch" : null}
+      />
       <CourseFaqs faqs={course.faqs} />
+      {shop.contactEmail ? (
+        <CourseInquiry
+          courseTitle={course.title}
+          shopName={shop.name}
+          contactEmail={shop.contactEmail}
+          contactPhone={shop.contactPhone}
+        />
+      ) : null}
       <RelatedCourses courses={related} shopSlug={shopSlug} />
     </main>
   );

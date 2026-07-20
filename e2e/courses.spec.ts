@@ -59,7 +59,11 @@ test("staff import a course page, edit it, publish it, and a signed-out diver bo
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/courses/catalog");
   // Rescue is in the catalog but not yet a page this shop has written.
-  const card = page.getByRole("listitem").filter({ hasText: "Rescue Diver" });
+  // Match the card's own title: other templates name Rescue Diver in their
+  // prerequisite prose, and hasText would catch those too.
+  const card = page
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("heading", { name: "Rescue Diver", exact: true }) });
   await card.getByRole("button", { name: "Import and edit" }).click();
   await expect(page).toHaveURL(/\/courses\/rescue-diver\/edit/);
 
@@ -78,15 +82,13 @@ test("staff import a course page, edit it, publish it, and a signed-out diver bo
   await page.context().clearCookies();
   await page.goto("/shop/blue-mantis/courses/rescue-diver");
   await expect(page.getByRole("heading", { name: "Rescue Diver", level: 1 })).toBeVisible();
-  // The cert gate appears twice on purpose: once as a spec chip, and again in
-  // the admission block that owns the shop's own prerequisite prose, so the
-  // two can never be read as one continuous claim.
-  await expect(
-    page.getByLabel("At a glance").getByText("Advanced Open Water or higher"),
-  ).toBeVisible();
-  const admission = page.getByRole("region", { name: "Who can enrol" });
+  // Admission is stated once, in the block that also owns the shop's own
+  // prerequisite prose — labelled separately so the two can never be read as
+  // one continuous claim. The spec chips carry logistics only.
+  const admission = page.getByRole("region", { name: "Who can enroll" });
   await expect(admission.getByText("Advanced Open Water or higher")).toBeVisible();
   await expect(admission.getByRole("heading", { name: "From the shop" })).toBeVisible();
+  await expect(page.getByLabel("At a glance")).not.toContainText("Advanced Open Water or higher");
   await expect(page.getByRole("heading", { name: "Day 4" })).toBeVisible();
   await expect(page.getByText("Do I need my own gear?")).toBeVisible();
 
@@ -138,4 +140,38 @@ test("a diver books a course session from its public page", async ({ page }) => 
   await page.getByLabel("Email").fill(`ravi-${Date.now()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You're on the boat, Ravi/ })).toBeVisible();
+});
+
+test("a diver with no workable date gets a written email instead of a dead end", async ({
+  page,
+}) => {
+  // Signed out: this is the composer a prospective diver meets, not staff.
+  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+
+  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  await inquiry.scrollIntoViewIfNeeded();
+  await page.getByLabel("Your name").fill("Mira Delgado");
+  await page.getByLabel("How many divers").fill("3");
+  await page.getByLabel("When suits you").fill("the week of 12 August");
+  await page.getByLabel("Where you are up to").selectOption("I have never dived before");
+  await page.getByLabel("Anything else").fill("We are ashore only on the Tuesday.");
+
+  // The preview is the promise: what the diver reads here is exactly what the
+  // mail client will be handed.
+  const preview = inquiry.getByRole("region", { name: "Your message so far" });
+  await expect(preview.getByText("Course inquiry: Open Water Diver")).toBeVisible();
+  await expect(preview.getByText("How many divers: 3")).toBeVisible();
+  await expect(preview.getByText("When: the week of 12 August")).toBeVisible();
+  await expect(preview.getByText("We are ashore only on the Tuesday.")).toBeVisible();
+
+  const mailto = await page
+    .getByRole("link", { name: "Open in your email app" })
+    .getAttribute("href");
+  const url = new URL(mailto ?? "");
+  expect(url.protocol).toBe("mailto:");
+  expect(decodeURIComponent(url.pathname)).toBe("hello@bluemantis.example");
+  const params = new URLSearchParams(url.search);
+  expect(params.get("subject")).toBe("Course inquiry: Open Water Diver");
+  expect(params.get("body")).toContain("Experience so far: I have never dived before");
+  expect(params.get("body")).toContain("Mira Delgado");
 });

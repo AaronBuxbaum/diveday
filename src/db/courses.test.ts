@@ -228,7 +228,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
     const course = await createCourse(db, {
       shopId: shop.id,
-      title: "Deep Diver",
+      title: "Cavern Diver",
       priceCents: 32500,
       minimumCertificationLevel: "open_water",
     });
@@ -274,22 +274,24 @@ describe("course content and public pages (in-memory PGlite)", () => {
 
   it("finds a course by its public slug, scoped to the shop", async () => {
     const { db, shop } = await seededShopContext();
-    const course = await createCourse(db, { shopId: shop.id, title: "Wreck Diver" });
-    expect((await getCourseBySlug(db, shop.id, "wreck-diver"))?.id).toBe(course?.id);
-    expect(await getCourseBySlug(db, crypto.randomUUID(), "wreck-diver")).toBeNull();
+    // A title the seeded catalog does not already carry, so this exercises
+    // slug minting rather than colliding with the shop's own course list.
+    const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
+    expect((await getCourseBySlug(db, shop.id, "cavern-diver"))?.id).toBe(course?.id);
+    expect(await getCourseBySlug(db, crypto.randomUUID(), "cavern-diver")).toBeNull();
   });
 
   it("cross-sells only published courses, in the order the shop chose", async () => {
     const { db, shop } = await seededShopContext();
-    const wreck = await createCourse(db, { shopId: shop.id, title: "Wreck Diver" });
-    const deep = await createCourse(db, { shopId: shop.id, title: "Deep Diver" });
-    const draft = await createCourse(db, { shopId: shop.id, title: "Sidemount Diver" });
-    if (!wreck || !deep || !draft) throw new Error("courses not created");
-    await setCoursePublished(db, shop.id, wreck.id, true);
-    await setCoursePublished(db, shop.id, deep.id, true);
+    const sidemount = await createCourse(db, { shopId: shop.id, title: "Sidemount Diver" });
+    const cavern = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
+    const draft = await createCourse(db, { shopId: shop.id, title: "Ice Diver" });
+    if (!sidemount || !cavern || !draft) throw new Error("courses not created");
+    await setCoursePublished(db, shop.id, sidemount.id, true);
+    await setCoursePublished(db, shop.id, cavern.id, true);
 
-    const related = await listRelatedCourses(db, shop.id, [deep.id, wreck.id, draft.id]);
-    expect(related.map((entry) => entry.title)).toEqual(["Deep Diver", "Wreck Diver"]);
+    const related = await listRelatedCourses(db, shop.id, [cavern.id, sidemount.id, draft.id]);
+    expect(related.map((entry) => entry.title)).toEqual(["Cavern Diver", "Sidemount Diver"]);
   });
 
   it("lists a course's bookable sessions and leaves past ones behind", async () => {
