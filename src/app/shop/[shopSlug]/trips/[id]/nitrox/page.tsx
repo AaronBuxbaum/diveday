@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -96,7 +98,7 @@ export default async function TripNitroxPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <Link
         href={`/shop/${shopSlug}/trips/${tripId}`}
@@ -104,14 +106,18 @@ export default async function TripNitroxPage({
       >
         ← Back to the trip
       </Link>
-      <header className="mt-4">
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">Nitrox fills</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">{trip.title}</h1>
-        <p className="mt-1 text-muted">
-          {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
-        </p>
-      </header>
+      <div className="mt-4">
+        <ShopPageHeader
+          eyebrow="Nitrox fills"
+          title={trip.title}
+          description={`${formatShortDate(trip.startsAt, "en-US", shop.timezone)} · ${formatTimeRangeTz(
+            trip.startsAt,
+            trip.endsAt,
+            "en-US",
+            shop.timezone,
+          )}`}
+        />
+      </div>
 
       {banner ? (
         <div className="mt-6">
@@ -207,9 +213,9 @@ export default async function TripNitroxPage({
               />
             </Field>
             <FieldActions>
-              <button type="submit" className={buttonClass({ size: "lg" })}>
+              <SubmitButton pendingLabel="Logging…" className={buttonClass({ size: "lg" })}>
                 Log fill
-              </button>
+              </SubmitButton>
             </FieldActions>
           </FieldGrid>
         )}
@@ -218,7 +224,9 @@ export default async function TripNitroxPage({
       <section className="mt-12 border-t border-border pt-8">
         <h2 className="text-lg font-semibold">Fills on this trip</h2>
         {fills.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No fills logged for this trip yet.</p>
+          <EmptyState className="mt-4">
+            <p className="text-sm text-muted">No fills logged for this trip yet.</p>
+          </EmptyState>
         ) : (
           <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
             {fills.map(({ fill, person, tank }) => (

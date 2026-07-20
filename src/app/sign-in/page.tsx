@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { signIn } from "@/lib/auth";
@@ -67,9 +68,9 @@ export default async function SignInPage({
               />
             </Field>
           </FieldGrid>
-          <button type="submit" className={buttonClass()}>
+          <SubmitButton pendingLabel="Signing in…" className={buttonClass()}>
             Sign in
-          </button>
+          </SubmitButton>
         </form>
         <p className="mt-4 text-center text-sm text-muted">
           Need a shop?{" "}

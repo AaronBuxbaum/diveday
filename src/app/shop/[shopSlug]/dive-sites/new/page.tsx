@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -98,14 +100,16 @@ export default async function NewDiveSitePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         ← Dive-site library
       </Link>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Build a dive-site briefing</h1>
-      <p className="mt-1 text-muted">
-        Everything is optional except the name. Keep it useful, vivid, and true to the site.
-      </p>
+      <div className="mt-4">
+        <ShopPageHeader
+          title="Build a dive-site briefing"
+          description="Everything is optional except the name. Keep it useful, vivid, and true to the site."
+        />
+      </div>
       {error ? (
         <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
           {error === "images"
@@ -279,12 +283,12 @@ function SiteForm({
           </label>
         </div>
       </fieldset>
-      <button
-        type="submit"
+      <SubmitButton
+        pendingLabel="Saving…"
         className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
       >
         {submitLabel}
-      </button>
+      </SubmitButton>
     </form>
   );
 }
