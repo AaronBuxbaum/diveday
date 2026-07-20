@@ -1,10 +1,8 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import { bookings, tripRequirements } from "./schema";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
 import {
   createTrip,
   createTripSeries,
@@ -18,10 +16,7 @@ import {
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
   it("returns upcoming trips ordered by start with correct booked counts", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
     expect(upcoming).toHaveLength(5);
@@ -39,10 +34,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("frees the spot when a booking is cancelled", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const before = await upcomingTripsWithCounts(db, shop.id);
     const wreck = before.find((t) => t.title === "Wreck Trip — Spiegel Grove");
@@ -59,10 +51,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("stores an optional per-diver price and lets staff update or clear it", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const unpriced = await createTrip(db, {
       shopId: shop.id,
@@ -107,10 +96,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("stores up to four ordered dives while allowing blank dive details", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
     const existing = (await upcomingTripsWithCounts(db, shop.id)).find((trip) => trip.diveSiteId);
     if (!existing) throw new Error("seeded dive site missing");
 
@@ -150,10 +136,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("materializes a weekly series of identical, independent trips", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const result = await createTripSeries(db, {
       shopId: shop.id,
@@ -206,10 +189,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("edits and cancels one instance without touching its siblings", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const result = await createTripSeries(db, {
       shopId: shop.id,
@@ -256,10 +236,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("rejects a series with an invalid dive count", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
     expect(
       await createTripSeries(db, {
         shopId: shop.id,

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import {
   createDiver,
   deleteDiver,
@@ -10,15 +10,10 @@ import {
   updateDiver,
 } from "./divers";
 import { saveRentalGearProfile } from "./gear-requests";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
 
 describe("person-first diver records", () => {
   it("composes cards, fit, and history from one diver record", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const summaries = await listDiverSummaries(db, shop.id);
     const priya = summaries.find((row) => row.person.fullName === "Priya Sharma");
@@ -41,10 +36,7 @@ describe("person-first diver records", () => {
   });
 
   it("can add a returning diver before a booking and rejects staff-only records", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
 
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -78,10 +70,7 @@ describe("person-first diver records", () => {
   });
 
   it("soft-deletes a diver without erasing their record", async () => {
-    const db = await createTestDb();
-    await seedDemo(db);
-    const shop = await getShopBySlug(db, "blue-mantis");
-    if (!shop) throw new Error("demo shop missing");
+    const { db, shop } = await seededShopContext();
     const diver = await createDiver(db, {
       shopId: shop.id,
       fullName: "Archived Alex",

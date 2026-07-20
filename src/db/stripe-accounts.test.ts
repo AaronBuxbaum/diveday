@@ -1,8 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
+import { seededShopContext } from "@/test/db";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,
@@ -14,11 +12,7 @@ import {
 } from "./stripe-accounts";
 
 async function shopContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
-  return { db, shop };
+  return seededShopContext();
 }
 
 describe("shop stripe accounts", () => {

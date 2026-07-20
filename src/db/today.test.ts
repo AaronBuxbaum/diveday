@@ -1,28 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import { seededShopContext } from "@/test/db";
 import { assignGear, listAvailableGear } from "./gear";
 import { saveRentalGearRequest } from "./gear-requests";
 import { recordRollCall } from "./manifests";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
 import { getTodayWork } from "./today";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
-async function context() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
-  return { db, shop };
-}
-
 describe("today's work queue (in-memory PGlite)", () => {
   it("puts the seeded departure that sails today on the board with live readiness counts", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
@@ -39,7 +29,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("collapses a boat's identical blockers so one busy trip cannot bury the rest", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const blockerRows = work.actions.filter((action) => action.id.startsWith("blocker"));
@@ -52,7 +42,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("drops a diver out of the queue once their evidence clears", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -82,7 +72,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("counts a boarded diver on today's board", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -110,7 +100,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("flags a rental request with nothing packed, and clears it once gear is assigned", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -147,7 +137,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("never looks past its one-week horizon", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const horizon = Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -158,7 +148,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("points every action at a route inside this shop", async () => {
-    const { db, shop } = await context();
+    const { db, shop } = await seededShopContext();
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 

@@ -1,18 +1,14 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seededShopContext } from "@/test/db";
 import { createBooking, createBookingParty } from "./bookings";
-import { type AppDb, createTestDb } from "./client";
+import type { AppDb } from "./client";
 import { people, personRoles } from "./schema";
-import { seedDemo } from "./seed";
-import { getShopBySlug } from "./shops";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
-  const db = await createTestDb();
-  await seedDemo(db);
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   const fullTrip = trips.find((t) => t.title === "Wreck Trip — Spiegel Grove");
