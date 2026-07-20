@@ -19,7 +19,8 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   const tripTitle = `Turtle Garden charter ${Date.now()}`;
 
   await signInAsOwner(page);
-  await page.getByRole("link", { name: "Dive sites" }).click();
+  // "Dive sites" now lives in the nav's "More" group; navigate directly.
+  await page.goto("/shop/blue-mantis/dive-sites");
   await page.getByRole("link", { name: "Create a site" }).click();
   await page.getByLabel("Name").fill(siteName);
   await page.getByLabel("Location").fill("Key Largo");
@@ -55,6 +56,9 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await page.getByRole("button", { name: "Publish crew prediction" }).click();
   await expect(page.getByRole("status")).toContainText("conditions briefing updated");
 
+  // Staff are routed to the trip editor; view the public diver briefing signed
+  // out, then sign back in to finish the staff-side edits below.
+  await page.context().clearCookies();
   await page.goto("/shop/blue-mantis/schedule");
   await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
   await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
@@ -63,6 +67,7 @@ test("staff reuses a dive-site briefing on a trip that divers can explore", asyn
   await expect(page.getByText("18 m")).toBeVisible();
   await expect(page.getByText("Crew prediction")).toBeVisible();
 
+  await signInAsOwner(page);
   await page.goto(manageTripUrl);
   await page.getByRole("button", { name: "Return to automated outlook" }).click();
   await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
@@ -78,6 +83,9 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await page.getByRole("button", { name: "Reset demo data" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
 
+  // Staff are routed to the trip editor; view as a diver so the public briefing
+  // (satellite map, field guide) renders.
+  await page.context().clearCookies();
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
 
