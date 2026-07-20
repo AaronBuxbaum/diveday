@@ -204,9 +204,6 @@ export default async function DiversPage({
                   <th scope="col" className="px-4 py-3 font-medium">
                     Attention
                   </th>
-                  <th scope="col" className="px-4 py-3">
-                    <span className="sr-only">Open diver</span>
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -219,17 +216,15 @@ export default async function DiversPage({
                     >
                       <td className="relative px-4 py-3">
                         {/*
-                         * Phone-only. On desktop the explicit "Open" cell is the
-                         * target, and a second link with the same accessible name
-                         * would duplicate the row for screen readers and swallow
-                         * clicks over the person cell.
+                         * The name and avatar are the row's only link: its ::after
+                         * covers the whole cell so a tap anywhere on the person
+                         * lands on them, without a second link repeating the row
+                         * for screen readers.
                          */}
                         <Link
                           href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                          className="absolute inset-0 z-10 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary md:hidden"
-                          aria-label={`Open ${diver.person.fullName}`}
-                        />
-                        <div className="flex min-w-0 items-center gap-3">
+                          className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                        >
                           <span
                             className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
                             aria-hidden="true"
@@ -244,12 +239,18 @@ export default async function DiversPage({
                           <div className="min-w-0">
                             <p className="truncate font-semibold group-hover:text-primary">
                               {diver.person.fullName}
+                              <span
+                                aria-hidden="true"
+                                className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                →
+                              </span>
                             </p>
-                            <p className="truncate text-sm text-muted">
+                            <p className="truncate text-sm font-normal text-muted">
                               {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="inline-flex whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-primary">
@@ -284,15 +285,6 @@ export default async function DiversPage({
                             <span className="text-muted">None</span>
                           ) : null}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                          className="inline-flex min-h-11 items-center rounded-xl px-3 font-medium text-primary hover:bg-primary/10"
-                          aria-label={`Open ${diver.person.fullName}`}
-                        >
-                          Open <span aria-hidden="true">→</span>
-                        </Link>
                       </td>
                     </tr>
                   );

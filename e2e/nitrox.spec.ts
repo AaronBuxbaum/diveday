@@ -20,7 +20,7 @@ test("staff records and verifies a nitrox card, then logs a fill with a derived 
 
   // Nitrox evidence is handled with the diver's other cards, then verified there.
   await page.goto("/shop/blue-mantis/divers");
-  await page.getByRole("link", { name: "Open June Park" }).click();
+  await page.getByRole("link", { name: /June Park/ }).click();
   await page.getByText("Add specialty", { exact: true }).click();
   // The diver page has two capture forms (level card, specialty card), both
   // with name="identifier"/name="specialty" inputs; scope to the specialty
