@@ -12,9 +12,9 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/roadmap.md](product/roadmap.md) | Milestone sequencing | a milestone ships or scope shifts |
 | [product/next-steps.md](product/next-steps.md) | Prioritized product and agent-development execution plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
 | [product/product-space-investigation.md](product/product-space-investigation.md) | Strategic assessment of built vs. unbuilt surface, the cut list, and the breadth→depth pivot | the product direction is re-examined or its recommendations ship |
-| [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work | a human decision is made, assigned, implemented, or validated |
-| [product/defaults-to-verify.md](product/defaults-to-verify.md) | Provisional waiver, course, gear, and hosting baselines requiring human approval | implementation needs a practical default before policy is finalized |
+| [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work, plus the provisional waiver/course/gear/nitrox/hosting baselines awaiting that approval | a human decision is made, assigned, implemented, or validated, or a provisional default needs recording |
 | [product/marketing.md](product/marketing.md) | Public pages, real-demo screenshot capture, and provisional pricing boundary | product claims, public screenshots, or pricing change |
+| [product/brainstorm/](product/brainstorm/README.md) | Non-canonical idea backlog — unfiltered opportunity notes, not commitments or approved scope | you want raw feature ideas; never cite it as a decision |
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |

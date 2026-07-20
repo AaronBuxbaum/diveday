@@ -190,13 +190,29 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   [`src/db/nitrox.ts`](../../src/db/nitrox.ts); logged per departure at
   `/shop/[shopSlug]/trips/[id]/nitrox` (the separate shop-wide fill-log page was retired to keep
   nitrox's footprint proportional to a fill-station-only workflow). Provisional dive parameters are in
-  [defaults-to-verify.md](defaults-to-verify.md#nitrox-fills) (H-11) and still need a
+  the [provisional defaults](human-decisions.md#nitrox-fills) (H-11) and still need a
   dive-domain-expert review (V-05).
 - ✅ Automated marine outlook: a mapped dive site supplies a clearly-labelled 10-day Open-Meteo
   water-temperature and sea-state fallback until the crew publishes its dated prediction. Underwater
   visibility remains crew-entered rather than being inferred from atmospheric visibility.
 - ⬜ Payments/deposits, SMS and multi-channel notifications, deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
+
+## Delight backlog (applies across every milestone)
+
+Cross-cutting quality work to fold into slices as they are touched, not defer to a final "polish"
+pass:
+
+- global command/search for staff once there are enough entities to justify it;
+- keyboard-first staff workflows with visible shortcuts;
+- optimistic interaction only where rollback is safe and obvious;
+- undo for reversible staff actions instead of confirmation dialogs everywhere;
+- activity history written in operational language;
+- saved filters/views for common shop roles;
+- thoughtful demo data that tells a realistic story;
+- accessible motion, contrast, focus, and touch targets;
+- performance budgets for staff pages on ordinary phones and weak marina Wi-Fi;
+- event instrumentation for abandonment, blocker frequency, and staff recovery paths.
 
 ## Standing rule
 

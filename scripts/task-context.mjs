@@ -152,7 +152,6 @@ const areas = {
     docs: [
       "docs/product/roadmap.md",
       "docs/product/glossary.md",
-      "docs/product/defaults-to-verify.md",
       "docs/product/human-decisions.md",
       "docs/design/principles.md",
     ],
