@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
@@ -93,7 +94,15 @@ export default async function CoursesPage({
       <ShopPageHeader
         eyebrow={shop.name}
         title="Courses"
-        description="Your shop copy of the PADI and SSI catalog. Set local pricing and hide courses you do not offer — prerequisites, instructor, and waiver rules come from the agency."
+        description="Your shop copy of the PADI and SSI catalog. Set local pricing, write the page divers read, and hide courses you do not offer."
+        actions={
+          <Link
+            href={`/shop/${shop.slug}/courses/catalog`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            Course page catalog
+          </Link>
+        }
       />
       {notice && messages[notice] ? (
         <ShopNotice tone={notice === "invalid" ? "danger" : "success"}>
@@ -114,12 +123,12 @@ export default async function CoursesPage({
           </caption>
           {/* Fixed widths so the money columns stay a straight edge down the page. */}
           <colgroup>
-            <col className="w-[28%]" />
-            <col className="w-[17%]" />
+            <col className="w-[25%]" />
+            <col className="w-[16%]" />
             <col className="w-[13%]" />
             <col className="w-[13%]" />
             <col className="w-[12%]" />
-            <col className="w-[17%]" />
+            <col className="w-[21%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-border text-left align-bottom text-xs tracking-wide text-muted uppercase">
@@ -163,6 +172,19 @@ export default async function CoursesPage({
                           Hidden
                         </span>
                       )}
+                      {/*
+                        Two independent states, so two badges: "Hidden" is out
+                        of the session picker, "Live" is on the public web.
+                      */}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          course.isPublished
+                            ? "bg-success/10 text-success"
+                            : "bg-surface-sunken text-muted"
+                        }`}
+                      >
+                        {course.isPublished ? "Live" : "Draft"}
+                      </span>
                     </span>
                     <input
                       form={formId}
@@ -207,6 +229,12 @@ export default async function CoursesPage({
                   </td>
                   <td className="px-4 py-4 align-top">
                     <span className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
+                        className={buttonClass({ variant: "ghost", size: "sm" })}
+                      >
+                        Page
+                      </Link>
                       <form id={formId} action={updateCourseAction}>
                         <input type="hidden" name="courseId" value={course.id} />
                         <SubmitButton

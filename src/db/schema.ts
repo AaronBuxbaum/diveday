@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { CourseContent, CourseFaq, CourseScheduleDay } from "@/lib/courses";
 
 /**
  * The domain spine. Multi-tenant from day one: every domain table carries
@@ -166,7 +167,42 @@ export const courses = pgTable(
       .references(() => shops.id),
     title: text("title").notNull(),
     agency: text("agency").notNull().default("padi"),
+    /** Short internal blurb shown in staff lists and pickers; not the marketing copy. */
     description: text("description"),
+    /**
+     * URL segment for the public course page. Shop-scoped rather than global so
+     * two shops can both publish /courses/open-water-diver.
+     */
+    slug: text("slug").notNull(),
+    /**
+     * The diver-facing page. These fields only ever render — the operational
+     * course facts (prices, cert gate, isActive) stay above. Shapes and parsers
+     * live in src/lib/courses.ts.
+     */
+    summary: text("summary"),
+    overview: text("overview"),
+    heroImageUrl: text("hero_image_url"),
+    imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
+    durationText: text("duration_text"),
+    groupSizeText: text("group_size_text"),
+    minimumAge: integer("minimum_age"),
+    /** Prose beside the `minimum_certification_level` gate, never a substitute for it. */
+    prerequisiteNote: text("prerequisite_note"),
+    includes: jsonb("includes").$type<string[]>().notNull().default([]),
+    excludes: jsonb("excludes").$type<string[]>().notNull().default([]),
+    scheduleDays: jsonb("schedule_days").$type<CourseScheduleDay[]>().notNull().default([]),
+    faqs: jsonb("faqs").$type<CourseFaq[]>().notNull().default([]),
+    /** Shop-scoped course ids cross-sold at the foot of the page. */
+    relatedCourseIds: jsonb("related_course_ids").$type<string[]>().notNull().default([]),
+    /**
+     * Public visibility, deliberately apart from `is_active`: a shop teaches
+     * courses it never markets, and drafts a page for a course it already
+     * schedules. `is_active` gates the session picker; this gates the web page.
+     */
+    isPublished: boolean("is_published").notNull().default(false),
+    /** Set when imported from the Scuba catalog; later template edits never reach back. */
+    sourceTemplateId: uuid("source_template_id"),
+    sourceTemplateVersion: integer("source_template_version"),
     /**
      * Two additive amounts, not a price and a bundle total: an enrollment
      * invoices as `price_cents` + `e_learning_price_cents` on one bill, so
@@ -186,8 +222,44 @@ export const courses = pgTable(
   },
   (table) => [
     uniqueIndex("courses_shop_title_unique").on(table.shopId, table.title),
+    uniqueIndex("courses_shop_slug_unique").on(table.shopId, table.slug),
     index("courses_shop_active_idx").on(table.shopId, table.isActive),
   ],
+);
+
+/** Scuba-maintained agency course content; shops copy a published version and edit it. */
+export const globalCourses = pgTable(
+  "global_courses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    currentVersion: integer("current_version").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("global_courses_slug_idx").on(table.slug)],
+);
+
+/**
+ * Immutable published snapshots. `content` carries the marketing page only:
+ * pricing is the shop's, and the cert gate is copied as a separate column so a
+ * template correction can never silently relax a live admission requirement.
+ */
+export const globalCourseVersions = pgTable(
+  "global_course_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    globalCourseId: uuid("global_course_id")
+      .notNull()
+      .references(() => globalCourses.id),
+    version: integer("version").notNull(),
+    title: text("title").notNull(),
+    agency: text("agency").notNull(),
+    description: text("description"),
+    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
+    content: jsonb("content").$type<CourseContent>().notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("global_course_versions_unique").on(table.globalCourseId, table.version)],
 );
 
 /**
@@ -1191,6 +1263,7 @@ export type Trip = typeof trips.$inferSelect;
 export type TripSeries = typeof tripSeries.$inferSelect;
 export type TripDive = typeof tripDives.$inferSelect;
 export type Course = typeof courses.$inferSelect;
+export type GlobalCourseVersion = typeof globalCourseVersions.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type TripWaitlistEntry = typeof tripWaitlistEntries.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;

@@ -150,7 +150,15 @@ async function insertTripInstance(
     // Every trip starts waiver-gated; staff can lift it per trip, but nothing
     // in the catalog schedules an unsigned session by default.
     requiresWaiver: true,
-    minimumCertificationLevel: params.course?.minimumCertificationLevel ?? "open_water",
+    // A course session inherits its catalog baseline verbatim, including a
+    // deliberate null: uncertified students are the whole point of Discover
+    // Scuba and Open Water. `??` cannot tell "no course" from "a course open to
+    // uncertified divers", and collapsing the two put an Open Water gate on
+    // every entry-level class — which staff then clear by blanking the trip's
+    // requirements, taking the waiver gate down with it.
+    minimumCertificationLevel: params.course
+      ? params.course.minimumCertificationLevel
+      : "open_water",
   });
   return trip;
 }
@@ -474,4 +482,32 @@ export async function upcomingTripsWithCounts(
     .orderBy(asc(trips.startsAt));
 
   return rows.map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
+}
+
+/**
+ * The sessions a public course page offers to book. Seats left comes from the
+ * same booked-count shape the schedule uses, so a full session reads as full
+ * here too rather than sending a diver to a dead end.
+ */
+export async function listUpcomingSessionsForCourse(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  now: Date = new Date(),
+) {
+  const rows = await db
+    .select({ trip: trips, booked: count(bookings.id) })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.courseId, courseId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt));
+  return rows.map(({ trip, booked }) => ({ ...trip, booked }));
 }
