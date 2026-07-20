@@ -14,7 +14,9 @@ of tools instead of one operating system for the shop.
 
 Use a persistent shop shell with three primary workspaces:
 
-- **Today** — upcoming trips, delivery issues, and workspaces that need attention now.
+- **Today** — the work that needs doing before the next boats leave. Its content was later
+  narrowed to a departure board plus a ranked work queue by
+  [20260720-today-work-queue](20260720-today-work-queue.md).
 - **Divers** — the person-first customer record and its cards, fit, history, and issued gear.
 - **Schedule** — trips and course sessions as the operational spine.
 
@@ -24,8 +26,10 @@ Place the remaining tools in a grouped **More** menu:
 - **Plan:** courses, dive sites, reports.
 - **Business:** orders, payments, and schedule-trip creation.
 
-The dashboard also presents four connected workspaces as explanatory cards: People, Plan, Prepare,
-and Business. These are task-oriented handoffs, not a second navigation system.
+The dashboard also presented these connections as explanatory workspace cards. Those cards were
+removed by [20260720-today-work-queue](20260720-today-work-queue.md): every destination they
+pointed at is reachable in one click from the persistent nav, so they duplicated navigation rather
+than explaining it.
 
 ## Alternatives considered
 

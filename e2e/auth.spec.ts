@@ -25,8 +25,10 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", as
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/shop/);
-  await expect(page.getByRole("heading", { name: "Welcome back, Dana" })).toBeVisible();
-  await expect(page.getByText("of 12 booked").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Good to see you, Dana" })).toBeVisible();
+  // Today leads with the boat that sails today, not a generic trip list.
+  await expect(page.getByRole("heading", { name: "Sailing today" })).toBeVisible();
+  await expect(page.getByText("9 of 12 booked")).toBeVisible();
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/$/);
