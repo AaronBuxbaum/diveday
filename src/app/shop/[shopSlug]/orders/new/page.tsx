@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { getShopById } from "@/db/queries";
@@ -163,36 +165,35 @@ export default async function NewOrderPage({
           <input type="hidden" name="bookingId" value={prefillBookingId} />
         ) : null}
 
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Customer
-          <select
-            name="personId"
-            required
-            defaultValue={prefillPersonId ?? ""}
-            className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
-          >
-            <option value="" disabled>
-              Choose a customer
-            </option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.fullName}
-                {customer.email ? ` — ${customer.email}` : ""}
+        <FieldGrid columns={1} className="gap-y-6">
+          <Field label="Customer">
+            <select
+              name="personId"
+              required
+              defaultValue={prefillPersonId ?? ""}
+              className={controlClass}
+            >
+              <option value="" disabled>
+                Choose a customer
               </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Order note (optional)
-          <input
-            type="text"
-            name="description"
-            maxLength={200}
-            placeholder="e.g. Two-tank reef charter + rental set"
-            className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
-          />
-        </label>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.fullName}
+                  {customer.email ? ` — ${customer.email}` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Order note" hint="(optional)">
+            <input
+              type="text"
+              name="description"
+              maxLength={200}
+              placeholder="e.g. Two-tank reef charter + rental set"
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
 
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-medium">Line items</legend>
@@ -207,7 +208,7 @@ export default async function NewOrderPage({
                 <select
                   name={`kind-${i}`}
                   defaultValue={rowDefault?.kind ?? "other"}
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+                  className={controlClass}
                 >
                   {LINE_ITEM_KINDS.map((kind) => (
                     <option key={kind.value} value={kind.value}>
@@ -221,7 +222,7 @@ export default async function NewOrderPage({
                   defaultValue={rowDefault?.description}
                   placeholder="Description"
                   maxLength={200}
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+                  className={controlClass}
                 />
                 <input
                   type="number"
@@ -229,7 +230,7 @@ export default async function NewOrderPage({
                   defaultValue={1}
                   min={1}
                   aria-label="Quantity"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+                  className={controlClass}
                 />
                 <input
                   type="number"
@@ -239,17 +240,14 @@ export default async function NewOrderPage({
                   defaultValue={rowDefault?.unitAmount}
                   aria-label="Unit price (USD)"
                   placeholder="$0.00"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+                  className={controlClass}
                 />
               </div>
             );
           })}
         </fieldset>
 
-        <button
-          type="submit"
-          className="min-h-11 self-start rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
-        >
+        <button type="submit" className={buttonClass({ size: "lg", className: "self-start" })}>
           Create and send invoice
         </button>
       </form>

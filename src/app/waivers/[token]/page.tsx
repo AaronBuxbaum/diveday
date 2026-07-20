@@ -5,6 +5,8 @@ import { connection } from "next/server";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/queries";
 import type { MedicalAnswers } from "@/db/schema";
@@ -45,6 +47,14 @@ function readMedicalAnswers(
     responses,
   };
 }
+
+/**
+ * `buttonClass` bakes in `text-sm`, and a plain `text-base` in `className` loses
+ * the cascade because Tailwind emits `.text-sm` after `.text-base`. This waiver
+ * is read at arm's length on a dock, so its actions keep their 16px label via
+ * the token-valued utility, which does win.
+ */
+const labelTextBase = "text-(length:--text-base) leading-6";
 
 function RadioQuestion({
   name,
@@ -136,8 +146,6 @@ export default async function WaiverPage({
   /** Only pre-fill draft answers captured against this same questionnaire. */
   const draftResponses =
     draft && draft.questionnaireId === questionnaire.id ? draft.responses : undefined;
-  const inputClass =
-    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
   const errorText =
     error === "invalid"
       ? "Please answer every question, type your full name, and confirm your agreement."
@@ -244,23 +252,24 @@ export default async function WaiverPage({
 
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-lg font-semibold">Your signature</h2>
-          <label className="mt-4 flex flex-col gap-1 text-base font-medium">
-            Type your full name
-            <input
-              name="signerName"
-              autoComplete="name"
-              maxLength={120}
-              defaultValue={record.draftSignerName ?? ""}
-              className={inputClass}
-            />
-          </label>
-          <label className="mt-4 flex min-h-11 items-start gap-3 text-base">
+          <FieldGrid columns={1} className="mt-4">
+            <Field label="Type your full name">
+              <input
+                name="signerName"
+                autoComplete="name"
+                maxLength={120}
+                defaultValue={record.draftSignerName ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+          <label className="mt-4 flex min-h-11 items-center gap-3 text-base">
             <input
               name="acknowledged"
               type="checkbox"
               value="on"
               defaultChecked={record.draftAcknowledged}
-              className="mt-1 size-4 accent-primary"
+              className="size-4 accent-primary"
             />
             <span>I have read this waiver, understand it, and agree to it.</span>
           </label>
@@ -274,13 +283,19 @@ export default async function WaiverPage({
           <button
             type="submit"
             formAction={saveDraftAction}
-            className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-base font-medium transition-colors duration-200 hover:bg-surface-sunken"
+            className={buttonClass({
+              variant: "secondary",
+              className: `text-(color:--color-foreground) ${labelTextBase}`,
+            })}
           >
             Save and finish later
           </button>
           <SubmitButton
             pendingLabel="Signing…"
-            className="min-h-11 rounded-lg bg-primary px-5 py-2.5 text-base font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
+            className={buttonClass({
+              size: "lg",
+              className: `disabled:opacity-70 ${labelTextBase}`,
+            })}
           >
             Sign waiver
           </SubmitButton>

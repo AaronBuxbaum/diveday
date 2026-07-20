@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { onboardAction } from "@/app/actions/onboard";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 
 export const metadata: Metadata = {
   title: "Onboard your Shop — Scuba",
@@ -13,9 +15,6 @@ export default async function OnboardPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-
-  const inputClass =
-    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal focus:outline-none focus:border-primary transition-colors";
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-12 sm:py-24">
@@ -37,19 +36,17 @@ export default async function OnboardPage({
         <form action={onboardAction} className="mt-6 flex flex-col gap-5">
           <section className="flex flex-col gap-4">
             <h2 className="text-lg font-semibold border-b border-border pb-1">Shop Details</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Shop Name
+            <FieldGrid columns={2}>
+              <Field label="Shop Name">
                 <input
                   name="shopName"
                   type="text"
                   required
                   placeholder="e.g. Green Lagoon Divers"
-                  className={inputClass}
+                  className={`${controlClass} focus:outline-none`}
                 />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                URL Slug
+              </Field>
+              <Field label="URL Slug">
                 <input
                   name="shopSlug"
                   type="text"
@@ -57,65 +54,65 @@ export default async function OnboardPage({
                   placeholder="e.g. green-lagoon"
                   pattern="^[a-z0-9-]+$"
                   title="Only lowercase letters, numbers, and hyphens allowed"
-                  className={inputClass}
+                  className={`${controlClass} focus:outline-none`}
                 />
-              </label>
-            </div>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Timezone
-              <select
-                name="timezone"
-                required
-                defaultValue="America/New_York"
-                className={inputClass}
-              >
-                <option value="America/New_York">Eastern Time (New York)</option>
-                <option value="America/Chicago">Central Time (Chicago)</option>
-                <option value="America/Denver">Mountain Time (Denver)</option>
-                <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
-                <option value="Europe/London">London</option>
-                <option value="Asia/Singapore">Singapore</option>
-                <option value="Australia/Sydney">Sydney</option>
-                <option value="Pacific/Auckland">Auckland</option>
-              </select>
-            </label>
+              </Field>
+            </FieldGrid>
+            <FieldGrid columns={1}>
+              <Field label="Timezone">
+                <select
+                  name="timezone"
+                  required
+                  defaultValue="America/New_York"
+                  className={`${controlClass} focus:outline-none`}
+                >
+                  <option value="America/New_York">Eastern Time (New York)</option>
+                  <option value="America/Chicago">Central Time (Chicago)</option>
+                  <option value="America/Denver">Mountain Time (Denver)</option>
+                  <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
+                  <option value="Europe/London">London</option>
+                  <option value="Asia/Singapore">Singapore</option>
+                  <option value="Australia/Sydney">Sydney</option>
+                  <option value="Pacific/Auckland">Auckland</option>
+                </select>
+              </Field>
+            </FieldGrid>
           </section>
 
           <section className="flex flex-col gap-4 mt-2">
             <h2 className="text-lg font-semibold border-b border-border pb-1">Owner Profile</h2>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Full Name
-              <input
-                name="ownerName"
-                type="text"
-                required
-                placeholder="e.g. Dana Reyes"
-                className={inputClass}
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Email Address
+            <FieldGrid columns={1}>
+              <Field label="Full Name">
+                <input
+                  name="ownerName"
+                  type="text"
+                  required
+                  placeholder="e.g. Dana Reyes"
+                  className={`${controlClass} focus:outline-none`}
+                />
+              </Field>
+            </FieldGrid>
+            <FieldGrid columns={2}>
+              <Field label="Email Address">
                 <input
                   name="ownerEmail"
                   type="email"
                   required
                   placeholder="e.g. owner@example.com"
-                  className={inputClass}
+                  className={`${controlClass} focus:outline-none`}
                 />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Password
+              </Field>
+              <Field label="Password">
                 <input
                   name="ownerPassword"
                   type="password"
                   required
                   placeholder="At least 6 characters"
                   minLength={6}
-                  className={inputClass}
+                  className={`${controlClass} focus:outline-none`}
                 />
-              </label>
-            </div>
+              </Field>
+            </FieldGrid>
           </section>
 
           <div className="mt-2 rounded-lg border border-accent/30 bg-accent/5 p-4">
@@ -138,7 +135,9 @@ export default async function OnboardPage({
 
           <SubmitButton
             pendingLabel="Setting up your shop..."
-            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover focus:outline-none cursor-pointer mt-2"
+            className={buttonClass({
+              className: "mt-2 cursor-pointer focus:outline-none",
+            })}
           >
             Create shop & start trial
           </SubmitButton>

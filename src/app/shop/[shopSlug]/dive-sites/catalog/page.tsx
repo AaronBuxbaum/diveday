@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { importGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/queries";
@@ -44,10 +45,7 @@ export default async function CommonDiveSitesPage({
             <p className="mt-2 text-sm text-muted">{version.briefing.description}</p>
             <form action={importAction} className="mt-5">
               <input type="hidden" name="templateId" value={template.id} />
-              <button
-                type="submit"
-                className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-              >
+              <button type="submit" className={buttonClass()}>
                 Import to my library
               </button>
             </form>

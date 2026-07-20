@@ -44,7 +44,7 @@ export function CaptainRollCallFallback() {
                   <button
                     type="button"
                     disabled
-                    className="min-h-11 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
                   >
                     Mark boarded
                   </button>

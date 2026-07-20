@@ -9,6 +9,7 @@ import {
   FrontDeskReadinessFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { MarketingScreenshot } from "@/components/MarketingScreenshot";
+import { buttonClass } from "@/components/ui/button";
 import { productFeatureGroups } from "@/lib/marketing";
 
 const dailyMoments = [
@@ -134,7 +135,7 @@ export default function Home() {
               </div>
               <Link
                 href="/product"
-                className="min-h-11 self-start rounded-lg border border-border-strong px-4 py-2.5 text-sm font-semibold transition-colors duration-200 hover:bg-surface-sunken lg:self-auto"
+                className="inline-flex min-h-11 items-center justify-center self-start rounded-lg border border-border-strong px-4 py-2.5 text-sm font-semibold transition-colors duration-200 hover:bg-surface-sunken lg:self-auto"
               >
                 See the full product
               </Link>
@@ -166,13 +167,15 @@ export default function Home() {
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/onboard"
-              className="min-h-11 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+              className={buttonClass({
+                size: "cta",
+              })}
             >
               Start a trial
             </Link>
             <Link
               href="/pricing"
-              className="min-h-11 rounded-lg border border-border-strong px-5 py-3 font-semibold transition-colors duration-200 hover:bg-surface-sunken"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong px-5 py-3 font-semibold transition-colors duration-200 hover:bg-surface-sunken"
             >
               View pricing
             </Link>

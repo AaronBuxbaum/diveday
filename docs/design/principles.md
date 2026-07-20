@@ -13,7 +13,10 @@ If an interaction needs a spinner for more than a beat, redesign the interaction
 
 Primary flows work one-handed on a phone, in glare, with wet fingers: touch targets ≥ 44 px,
 critical text ≥ 16 px, strong contrast (AA minimum, AAA for manifest/roll-call surfaces),
-forgiving inputs (autocomplete, sensible defaults, no precision gestures). Roll call gets the
+forgiving inputs (autocomplete, sensible defaults, no precision gestures). A 44 px target must
+center its own label, and fields in a row must share one baseline no matter how their captions
+wrap — both come free from the primitives in
+[forms-and-controls.md](forms-and-controls.md). Roll call gets the
 most extreme version of this. Live and offline boat surfaces use an explicit light `boat-mode`
 with visible connectivity/freshness states, a sticky progress cue, and an accessible skip link so
 device dark mode or deck glare cannot hide an operational state.
@@ -57,6 +60,8 @@ sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the actio
 - [ ] Semantic tokens only (no raw hex / palette-scale classes)
 - [ ] Light **and** dark verified (screenshots)
 - [ ] Dock test: targets ≥ 44 px, text ≥ 16 px, AA contrast
+- [ ] Buttons and button-shaped links via `buttonClass()`; labels centered in the target
+- [ ] Stacked form fields via `<Field>`/`<FieldGrid>`; controls aligned across columns
 - [ ] Loading = content-shaped skeletons; no layout shift
 - [ ] Motion ≤ 250 ms, transform/opacity, reduced-motion respected
 - [ ] Copy: verbs on buttons, teaching empty state, actionable errors

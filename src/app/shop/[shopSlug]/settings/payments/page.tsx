@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById, setShopPackingList } from "@/db/queries";
 import {
@@ -165,10 +166,7 @@ export default async function PaymentsSettingsPage({
             defaultValue={shop.packingList.join("\n")}
             className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
           />
-          <SubmitButton
-            pendingLabel="Saving…"
-            className="mt-3 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-          >
+          <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
             Save packing checklist
           </SubmitButton>
         </form>
@@ -236,16 +234,16 @@ export default async function PaymentsSettingsPage({
                   <form action={refreshAction}>
                     <button
                       type="submit"
-                      className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                      className={buttonClass({
+                        variant: "secondary",
+                        className: "text-foreground",
+                      })}
                     >
                       Refresh status
                     </button>
                   </form>
                   <form action={disconnectAction}>
-                    <button
-                      type="submit"
-                      className="min-h-11 rounded-lg border border-danger/40 bg-surface px-4 py-2 text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger/10"
-                    >
+                    <button type="submit" className={buttonClass({ variant: "danger" })}>
                       Disconnect
                     </button>
                   </form>

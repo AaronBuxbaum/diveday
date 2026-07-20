@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripDiveFields } from "@/components/TripDiveFields";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
@@ -143,9 +145,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   "end-before-start": "The trip has to end after it starts — check the times.",
 };
 
-const inputClass =
-  "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
-
 export default async function NewTripPage({
   params,
   searchParams,
@@ -178,72 +177,78 @@ export default async function NewTripPage({
       ) : null}
 
       <form action={scheduleTrip} className="mt-8 flex flex-col gap-5">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Course <span className="font-normal text-muted">(optional)</span>
-          <select name="courseId" defaultValue={selectedCourse?.id ?? ""} className={inputClass}>
-            <option value="">Ordinary charter / trip</option>
-            {courseList.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.title}
-              </option>
-            ))}
-          </select>
-          {selectedCourse ? (
-            <span className="mt-1 text-sm font-normal text-muted">
-              {selectedCourse.minimumCertificationLevel
-                ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
-                : "No existing C-card required"}
-              {selectedCourse.requiresInstructor
-                ? " · add an instructor before sharing the session"
-                : ""}
-            </span>
-          ) : null}
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Title
-          <input
-            name="title"
-            type="text"
-            required
-            maxLength={120}
-            placeholder={
-              selectedCourse
-                ? `${selectedCourse.title} — Session 1`
-                : "Two-Tank Reef — Molasses & French"
+        <FieldGrid columns={1} className="gap-y-5">
+          <Field
+            label="Course"
+            hint="(optional)"
+            description={
+              selectedCourse ? (
+                <>
+                  {selectedCourse.minimumCertificationLevel
+                    ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
+                    : "No existing C-card required"}
+                  {selectedCourse.requiresInstructor
+                    ? " · add an instructor before sharing the session"
+                    : ""}
+                </>
+              ) : undefined
             }
-            className={inputClass}
-          />
-        </label>
+          >
+            <select
+              name="courseId"
+              defaultValue={selectedCourse?.id ?? ""}
+              className={controlClass}
+            >
+              <option value="">Ordinary charter / trip</option>
+              {courseList.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Title">
+            <input
+              name="title"
+              type="text"
+              required
+              maxLength={120}
+              placeholder={
+                selectedCourse
+                  ? `${selectedCourse.title} — Session 1`
+                  : "Two-Tank Reef — Molasses & French"
+              }
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
         <TripDiveFields
           diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
         />
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Description <span className="font-normal text-muted">(optional)</span>
-          <textarea
-            name="description"
-            rows={2}
-            maxLength={500}
-            placeholder="Sites, conditions, who it's for, required certs."
-            className={inputClass}
-          />
-        </label>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Date
-            <input name="date" type="date" required className={inputClass} />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Departs
-            <input name="startTime" type="time" required className={inputClass} />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Returns
-            <input name="endTime" type="time" required className={inputClass} />
-          </label>
-        </div>
-        <div className="grid grid-cols-1 gap-5 sm:w-40">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Capacity
+        <FieldGrid columns={1}>
+          <Field label="Description" hint="(optional)">
+            <textarea
+              name="description"
+              rows={2}
+              maxLength={500}
+              placeholder="Sites, conditions, who it's for, required certs."
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <FieldGrid columns={3} className="gap-y-5">
+          <Field label="Date">
+            <input name="date" type="date" required className={controlClass} />
+          </Field>
+          <Field label="Departs">
+            <input name="startTime" type="time" required className={controlClass} />
+          </Field>
+          <Field label="Returns">
+            <input name="endTime" type="time" required className={controlClass} />
+          </Field>
+        </FieldGrid>
+        <FieldGrid columns={1} className="sm:w-40">
+          <Field label="Capacity">
             <input
               name="capacity"
               type="number"
@@ -251,60 +256,61 @@ export default async function NewTripPage({
               min={1}
               max={60}
               defaultValue={12}
-              className={`${inputClass} tabular-nums`}
+              className={`${controlClass} tabular-nums`}
             />
-          </label>
-        </div>
-        <label className="flex flex-col gap-1 text-sm font-medium sm:w-40">
-          Price per diver <span className="font-normal text-muted">(optional)</span>
-          <input
-            name="priceDollars"
-            type="number"
-            step="0.01"
-            min={0}
-            placeholder="$0.00"
-            className={`${inputClass} tabular-nums`}
-          />
-          <span className="mt-1 text-sm font-normal text-muted">
-            Pre-fills the trip fee when staff invoice a diver from this trip's roster.
-          </span>
-        </label>
+          </Field>
+        </FieldGrid>
+        {/* The field is narrow; its helper text is not, so only the input is capped. */}
+        <FieldGrid columns={1}>
+          <Field
+            label="Price per diver"
+            hint="(optional)"
+            description="Pre-fills the trip fee when staff invoice a diver from this trip's roster."
+          >
+            <input
+              name="priceDollars"
+              type="number"
+              step="0.01"
+              min={0}
+              placeholder="$0.00"
+              className={`${controlClass} tabular-nums sm:w-40`}
+            />
+          </Field>
+        </FieldGrid>
         <fieldset className="rounded-lg border border-border bg-surface p-5">
           <legend className="px-1 text-sm font-medium">Repeat</legend>
           <p className="text-sm text-muted">
             Put the same trip on the board for several weeks at once. Each date is created as its
             own trip — book, crew, and edit them one at a time.
           </p>
-          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              How often
-              <select name="repeatIntervalWeeks" defaultValue="0" className={inputClass}>
+          <FieldGrid columns={2} className="mt-4 gap-y-5">
+            <Field label="How often">
+              <select name="repeatIntervalWeeks" defaultValue="0" className={controlClass}>
                 <option value="0">Doesn't repeat</option>
                 <option value="1">Every week</option>
                 <option value="2">Every 2 weeks</option>
                 <option value="4">Every 4 weeks</option>
               </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Number of trips
+            </Field>
+            <Field
+              label="Number of trips"
+              description={`Up to ${MAX_SERIES_OCCURRENCES}, counting the first. Ignored when it doesn't repeat.`}
+            >
               <input
                 name="repeatCount"
                 type="number"
                 min={MIN_SERIES_OCCURRENCES}
                 max={MAX_SERIES_OCCURRENCES}
                 defaultValue={8}
-                className={`${inputClass} tabular-nums`}
+                className={`${controlClass} tabular-nums`}
               />
-              <span className="mt-1 text-sm font-normal text-muted">
-                Up to {MAX_SERIES_OCCURRENCES}, counting the first. Ignored when it doesn't repeat.
-              </span>
-            </label>
-          </div>
+            </Field>
+          </FieldGrid>
         </fieldset>
         <div className="mt-2 flex items-center gap-3">
           <button
             type="submit"
-            className="min-h-11 rounded-xl bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover"
+            className={buttonClass({ size: "lg", className: "rounded-xl text-base" })}
           >
             Put it on the board
           </button>

@@ -86,31 +86,32 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
             ⌄
           </span>
         </summary>
-        <div className="absolute right-0 z-20 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-border bg-surface p-4 shadow-xl sm:left-0 sm:right-auto sm:grid-cols-2">
+        {/*
+         * One column, one link per row. The old two-column grid wrapped short
+         * labels ("Nitrox fills", "Dive sites") onto two lines and let a
+         * three-link group spill a stray item into a column of its own, which
+         * read as a layout bug rather than a menu.
+         */}
+        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-3 rounded-2xl border border-border bg-surface p-3 shadow-xl">
           {moreGroups.map((group) => (
-            <div
-              key={group.label}
-              className={group.label === "Business" ? "sm:col-span-2" : undefined}
-            >
-              <p className="px-3 text-xs font-semibold tracking-widest text-muted uppercase">
+            <div key={group.label} className="flex flex-col">
+              <p className="px-3 pb-1 text-xs font-semibold tracking-widest text-muted uppercase">
                 {group.label}
               </p>
-              <div className="mt-1 grid sm:grid-cols-2">
-                {group.links.map(([label, suffix]) => {
-                  const href = `${root}${suffix}`;
-                  const active = isCurrent(pathname, href, root);
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={navClass(active)}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      {label}
-                    </Link>
-                  );
-                })}
-              </div>
+              {group.links.map(([label, suffix]) => {
+                const href = `${root}${suffix}`;
+                const active = isCurrent(pathname, href, root);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`${navClass(active)} whitespace-nowrap`}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </div>

@@ -7,6 +7,8 @@ import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { DiveBriefingCard } from "@/components/DiveBriefingCard";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { createBookingParty } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
@@ -257,9 +259,6 @@ export default async function TripDetailPage({
     redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
   }
 
-  const inputClass =
-    "min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal";
-
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
       <FlashParams params={["error"]} />
@@ -295,7 +294,7 @@ export default async function TripDetailPage({
       {!confirmed && !inPast && !full ? (
         <a
           href="#book"
-          className="fixed right-4 bottom-4 z-20 min-h-11 rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg sm:hidden"
+          className="fixed right-4 bottom-4 z-20 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg sm:hidden"
         >
           Book · {remaining} left
         </a>
@@ -523,101 +522,89 @@ export default async function TripDetailPage({
                   })}
                 </div>
               </fieldset>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  BCD size
+              <FieldGrid columns={2}>
+                <Field label="BCD size">
                   <select
                     name="bcdSize"
                     defaultValue={rentalRequest?.bcdSize ?? rentalProfile?.bcdSize ?? ""}
-                    className={inputClass}
+                    className={controlClass}
                   >
                     <option value="">Not sure — help me fit it</option>
                     {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                       <option key={size}>{size}</option>
                     ))}
                   </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  Wetsuit size
+                </Field>
+                <Field label="Wetsuit size">
                   <select
                     name="wetsuitSize"
                     defaultValue={rentalRequest?.wetsuitSize ?? rentalProfile?.wetsuitSize ?? ""}
-                    className={inputClass}
+                    className={controlClass}
                   >
                     <option value="">Not sure — help me fit it</option>
                     {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                       <option key={size}>{size}</option>
                     ))}
                   </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  <span>
-                    Boot size <span className="font-normal text-muted">(optional)</span>
-                  </span>
+                </Field>
+                <Field label="Boot size" hint="(optional)">
                   <input
                     name="bootSize"
                     maxLength={20}
                     defaultValue={rentalRequest?.bootSize ?? rentalProfile?.bootSize ?? ""}
                     placeholder="US 9 / EU 42"
-                    className={inputClass}
+                    className={controlClass}
                   />
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  <span>
-                    Buddy or group notes <span className="font-normal text-muted">(optional)</span>
-                  </span>
+                </Field>
+                <Field label="Buddy or group notes" hint="(optional)">
                   <textarea
                     name="buddyPreference"
                     rows={2}
                     maxLength={300}
                     placeholder="I’m travelling with Maya; we’d love a relaxed photo pace."
-                    className={inputClass}
+                    className={controlClass}
                   />
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  <span>
-                    Fin size <span className="font-normal text-muted">(optional)</span>
-                  </span>
+                </Field>
+                <Field label="Fin size" hint="(optional)">
                   <input
                     name="finSize"
                     maxLength={20}
                     defaultValue={rentalRequest?.finSize ?? rentalProfile?.finSize ?? ""}
                     placeholder="M/L"
-                    className={inputClass}
+                    className={controlClass}
                   />
-                </label>
-              </div>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                <span>
-                  Usual weight setup <span className="font-normal text-muted">(optional)</span>
-                </span>
-                <input
-                  name="weightPreference"
-                  maxLength={80}
-                  defaultValue={
-                    rentalRequest?.weightPreference ?? rentalProfile?.weightPreference ?? ""
-                  }
-                  placeholder="e.g. 16 lb with a 3 mm suit"
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                <span>
-                  Anything else the crew should know?{" "}
-                  <span className="font-normal text-muted">(optional)</span>
-                </span>
-                <textarea
-                  name="note"
-                  rows={2}
-                  maxLength={300}
-                  defaultValue={rentalRequest?.note ?? ""}
-                  className={inputClass}
-                />
-              </label>
+                </Field>
+              </FieldGrid>
+              <FieldGrid columns={1}>
+                <Field label="Usual weight setup" hint="(optional)">
+                  <input
+                    name="weightPreference"
+                    maxLength={80}
+                    defaultValue={
+                      rentalRequest?.weightPreference ?? rentalProfile?.weightPreference ?? ""
+                    }
+                    placeholder="e.g. 16 lb with a 3 mm suit"
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label="Anything else the crew should know?" hint="(optional)">
+                  <textarea
+                    name="note"
+                    rows={2}
+                    maxLength={300}
+                    defaultValue={rentalRequest?.note ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+              </FieldGrid>
               <div>
                 <SubmitButton
                   pendingLabel="Saving gear…"
-                  className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken"
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "sm",
+                    className: "px-4 text-foreground",
+                  })}
                 >
                   Save gear request
                 </SubmitButton>
@@ -692,7 +679,9 @@ export default async function TripDetailPage({
             <div>
               <SubmitButton
                 pendingLabel="Joining…"
-                className="min-h-11 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
+                className={buttonClass({
+                  className: "px-6 py-3 text-base disabled:opacity-70",
+                })}
               >
                 Join the wait list
               </SubmitButton>
@@ -717,7 +706,9 @@ export default async function TripDetailPage({
             <div className="mt-1">
               <SubmitButton
                 pendingLabel="Booking…"
-                className="min-h-11 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-hover disabled:opacity-70"
+                className={buttonClass({
+                  className: "px-6 py-3 text-base disabled:opacity-70",
+                })}
               >
                 Book {remaining === 1 ? "the last spot" : "these spots"}
               </SubmitButton>

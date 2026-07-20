@@ -71,7 +71,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ shopSl
                   </div>
                   <Link
                     href={`/shop/${shopSlug}/trips/${session.trip.id}`}
-                    className="min-h-11 shrink-0 py-2 text-sm font-medium text-primary hover:underline"
+                    className="inline-flex min-h-11 shrink-0 items-center py-2 text-sm font-medium text-primary hover:underline"
                   >
                     Open session
                   </Link>

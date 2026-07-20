@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/queries";
@@ -39,13 +40,13 @@ export default async function DiveSitesPage({
           <>
             <Link
               href={`/shop/${shopSlug}/dive-sites/new`}
-              className="min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+              className={buttonClass({ className: "rounded-xl" })}
             >
               <span aria-hidden="true">+</span> Create a site
             </Link>
             <Link
               href={`/shop/${shopSlug}/dive-sites/catalog`}
-              className="min-h-11 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-surface-sunken"
+              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
             >
               Browse templates
             </Link>

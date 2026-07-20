@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
@@ -372,9 +374,25 @@ export default async function DiverDetailPage({
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{diver.person.fullName}</h1>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-            {diver.person.email ? <span>{diver.person.email}</span> : null}
-            {diver.person.phone ? <span>{diver.person.phone}</span> : null}
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+            {diver.person.email ? (
+              <a
+                href={`mailto:${diver.person.email}`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+              >
+                <span aria-hidden="true">✉</span>
+                {diver.person.email}
+              </a>
+            ) : null}
+            {diver.person.phone ? (
+              <a
+                href={`tel:${diver.person.phone.replace(/[^\d+]/g, "")}`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+              >
+                <span aria-hidden="true">☎</span>
+                {diver.person.phone}
+              </a>
+            ) : null}
             {!diver.person.email && !diver.person.phone ? (
               <span>No contact details yet</span>
             ) : null}
@@ -384,41 +402,42 @@ export default async function DiverDetailPage({
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
             Edit details
           </summary>
-          <form action={savePersonAction} className="mt-4 grid gap-3 sm:w-80">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Full name
+          <FieldGrid
+            as="form"
+            action={savePersonAction}
+            columns={1}
+            className="mt-4 gap-y-3 sm:w-80"
+          >
+            <Field label="Full name">
               <input
                 name="fullName"
                 required
                 defaultValue={diver.person.fullName}
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Email
+            </Field>
+            <Field label="Email">
               <input
                 name="email"
                 type="email"
                 defaultValue={diver.person.email ?? ""}
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+                className={controlClass}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Phone
+            </Field>
+            <Field label="Phone">
               <input
                 name="phone"
                 type="tel"
                 defaultValue={diver.person.phone ?? ""}
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+                className={controlClass}
               />
-            </label>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
-            >
-              Save details
-            </button>
-          </form>
+            </Field>
+            <FieldActions>
+              <button type="submit" className={buttonClass()}>
+                Save details
+              </button>
+            </FieldActions>
+          </FieldGrid>
         </details>
       </header>
 
@@ -472,70 +491,55 @@ export default async function DiverDetailPage({
             <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
               Add card
             </summary>
-            <form
+            <FieldGrid
+              as="form"
               action={addCertificationAction}
               encType="multipart/form-data"
-              className="mt-3 grid gap-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem] sm:grid-cols-2"
+              columns={2}
+              className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
             >
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Agency
-                <select
-                  name="agency"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-                >
+              <Field label="Agency">
+                <select name="agency" className={controlClass}>
                   {Object.entries(AGENCY_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Level
-                <select
-                  name="level"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-                >
+              </Field>
+              <Field label="Level">
+                <select name="level" className={controlClass}>
                   {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Card number
-                <input
-                  name="identifier"
-                  required
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Expiry <span className="font-normal text-muted">(if issued)</span>
-                <input
-                  name="expiresOn"
-                  type="date"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-                Card photo{" "}
-                <span className="font-normal text-muted">(optional; JPG, PNG, or WebP; ≤5 MB)</span>
+              </Field>
+              <Field label="Card number">
+                <input name="identifier" required className={controlClass} />
+              </Field>
+              <Field label="Expiry" hint="(if issued)">
+                <input name="expiresOn" type="date" className={controlClass} />
+              </Field>
+              <Field
+                label="Card photo"
+                hint="(optional; JPG, PNG, or WebP; ≤5 MB)"
+                className="sm:col-span-2"
+              >
                 <input
                   name="cardImage"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/heic"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
+                  className={controlClass}
                 />
-              </label>
-              <button
-                type="submit"
-                className="min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface-sunken sm:col-span-2"
-              >
-                Capture for review
-              </button>
-            </form>
+              </Field>
+              <FieldActions>
+                <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                  Capture for review
+                </button>
+              </FieldActions>
+            </FieldGrid>
           </details>
         </div>
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
@@ -583,7 +587,7 @@ export default async function DiverDetailPage({
                         <input type="hidden" name="certificationId" value={card.id} />
                         <button
                           type="submit"
-                          className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
                           Check agency
                         </button>
@@ -593,7 +597,7 @@ export default async function DiverDetailPage({
                         <input type="hidden" name="status" value="verified" />
                         <button
                           type="submit"
-                          className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
                           Verify
                         </button>
@@ -603,7 +607,7 @@ export default async function DiverDetailPage({
                         <input type="hidden" name="status" value="rejected" />
                         <button
                           type="submit"
-                          className="min-h-11 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                          className={buttonClass({ variant: "danger", size: "sm" })}
                         >
                           Needs correction
                         </button>
@@ -632,30 +636,24 @@ export default async function DiverDetailPage({
             <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
               Add specialty
             </summary>
-            <form
+            <FieldGrid
+              as="form"
               action={addSpecialtyAction}
               encType="multipart/form-data"
-              className="mt-3 grid gap-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem] sm:grid-cols-2"
+              columns={2}
+              className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
             >
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Agency
-                <select
-                  name="agency"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-                >
+              <Field label="Agency">
+                <select name="agency" className={controlClass}>
                   {Object.entries(AGENCY_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Specialty
-                <select
-                  name="specialty"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-                >
+              </Field>
+              <Field label="Specialty">
+                <select name="specialty" className={controlClass}>
                   {[...Object.entries(SPECIALTY_LABELS), ["nitrox", "Nitrox"]].map(
                     ([value, label]) => (
                       <option key={value} value={value}>
@@ -664,40 +662,31 @@ export default async function DiverDetailPage({
                     ),
                   )}
                 </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Card number
-                <input
-                  name="identifier"
-                  required
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Expiry <span className="font-normal text-muted">(if issued)</span>
-                <input
-                  name="expiresOn"
-                  type="date"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-                Card photo{" "}
-                <span className="font-normal text-muted">(optional; JPG, PNG, or WebP; ≤5 MB)</span>
+              </Field>
+              <Field label="Card number">
+                <input name="identifier" required className={controlClass} />
+              </Field>
+              <Field label="Expiry" hint="(if issued)">
+                <input name="expiresOn" type="date" className={controlClass} />
+              </Field>
+              <Field
+                label="Card photo"
+                hint="(optional; JPG, PNG, or WebP; ≤5 MB)"
+                className="sm:col-span-2"
+              >
                 <input
                   name="cardImage"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/heic"
-                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal"
+                  className={controlClass}
                 />
-              </label>
-              <button
-                type="submit"
-                className="min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface-sunken sm:col-span-2"
-              >
-                Capture specialty for review
-              </button>
-            </form>
+              </Field>
+              <FieldActions>
+                <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                  Capture specialty for review
+                </button>
+              </FieldActions>
+            </FieldGrid>
           </details>
         </div>
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
@@ -744,7 +733,7 @@ export default async function DiverDetailPage({
                           <input type="hidden" name="status" value="verified" />
                           <button
                             type="submit"
-                            className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
                             Verify
                           </button>
@@ -754,7 +743,7 @@ export default async function DiverDetailPage({
                           <input type="hidden" name="status" value="rejected" />
                           <button
                             type="submit"
-                            className="min-h-11 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                            className={buttonClass({ variant: "danger", size: "sm" })}
                           >
                             Needs correction
                           </button>
@@ -787,7 +776,7 @@ export default async function DiverDetailPage({
                           <input type="hidden" name="status" value="verified" />
                           <button
                             type="submit"
-                            className="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-sunken"
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
                             Verify
                           </button>
@@ -798,7 +787,7 @@ export default async function DiverDetailPage({
                           <input type="hidden" name="status" value="rejected" />
                           <button
                             type="submit"
-                            className="min-h-11 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                            className={buttonClass({ variant: "danger", size: "sm" })}
                           >
                             Needs correction
                           </button>
@@ -823,62 +812,58 @@ export default async function DiverDetailPage({
             check.
           </p>
         </div>
-        <form
+        <FieldGrid
+          as="form"
           action={saveProfileAction}
-          className="mt-4 grid gap-4 rounded-lg border border-border bg-surface p-5 sm:grid-cols-2"
+          columns={2}
+          className="mt-4 rounded-lg border border-border bg-surface p-5"
         >
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            BCD size
+          <Field label="BCD size">
             <input
               name="bcdSize"
               defaultValue={profile?.bcdSize ?? ""}
               placeholder="M"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              className={controlClass}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Wetsuit size
+          </Field>
+          <Field label="Wetsuit size">
             <input
               name="wetsuitSize"
               defaultValue={profile?.wetsuitSize ?? ""}
               placeholder="3 mm / M"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              className={controlClass}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Boot size
+          </Field>
+          <Field label="Boot size">
             <input
               name="bootSize"
               defaultValue={profile?.bootSize ?? ""}
               placeholder="9"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              className={controlClass}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Fin size
+          </Field>
+          <Field label="Fin size">
             <input
               name="finSize"
               defaultValue={profile?.finSize ?? ""}
               placeholder="L"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              className={controlClass}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
-            Weight preference
+          </Field>
+          <Field label="Weight preference" className="sm:col-span-2">
             <input
               name="weightPreference"
               defaultValue={profile?.weightPreference ?? ""}
               placeholder="Usually 12 lb with 3 mm suit"
-              className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
+              className={controlClass}
             />
-          </label>
-          <button
-            type="submit"
-            className="min-h-11 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground sm:col-span-2 sm:justify-self-start"
-          >
-            Save rental fit
-          </button>
-        </form>
+          </Field>
+          <FieldActions>
+            <button type="submit" className={buttonClass({ size: "lg" })}>
+              Save rental fit
+            </button>
+          </FieldActions>
+        </FieldGrid>
       </section>
 
       <section
@@ -901,29 +886,22 @@ export default async function DiverDetailPage({
             action={bookActivityAction}
             className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
           >
-            <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
-              Course or dive
-              <select
-                name="tripId"
-                required
-                defaultValue=""
-                className="min-h-11 rounded-lg border border-border-strong bg-surface px-3 text-base font-normal"
-              >
-                <option value="" disabled>
-                  Choose an available activity
-                </option>
-                {upcoming.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    {trip.course ? `${trip.course.title} — ` : ""}
-                    {trip.title} · {formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+            <FieldGrid columns={1} className="flex-1">
+              <Field label="Course or dive">
+                <select name="tripId" required defaultValue="" className={controlClass}>
+                  <option value="" disabled>
+                    Choose an available activity
                   </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="submit"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
-            >
+                  {upcoming.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.course ? `${trip.course.title} — ` : ""}
+                      {trip.title} · {formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </FieldGrid>
+            <button type="submit" className={buttonClass({ size: "lg" })}>
               Book activity
             </button>
           </form>
@@ -951,7 +929,7 @@ export default async function DiverDetailPage({
           </div>
           <Link
             href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
-            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
+            className={buttonClass()}
           >
             New payment
           </Link>
@@ -974,7 +952,12 @@ export default async function DiverDetailPage({
                   className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-medium">{trip.title}</p>
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${trip.id}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {trip.title}
+                    </Link>
                     <p className="text-sm text-muted">
                       {formatShortDate(trip.startsAt, "en-US", shop.timezone)} · booking payment
                     </p>
@@ -988,14 +971,14 @@ export default async function DiverDetailPage({
                     {orderRow ? (
                       <Link
                         href={`/shop/${shopSlug}/orders/${orderRow.order.id}`}
-                        className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-surface-sunken"
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
                       >
                         Open payment
                       </Link>
                     ) : (
                       <Link
                         href={`/shop/${shopSlug}/orders/new?personId=${personId}&bookingId=${booking.id}`}
-                        className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-surface-sunken"
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
                       >
                         Create invoice
                       </Link>
@@ -1005,7 +988,7 @@ export default async function DiverDetailPage({
                         <input type="hidden" name="orderId" value={orderRow.order.id} />
                         <button
                           type="submit"
-                          className="min-h-11 rounded-lg border border-danger/40 px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10"
+                          className={buttonClass({ variant: "danger", size: "sm" })}
                         >
                           Refund
                         </button>
@@ -1040,7 +1023,7 @@ export default async function DiverDetailPage({
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/shop/${shopSlug}/orders/${order.id}`}
-                      className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-surface-sunken"
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
                       Open payment
                     </Link>
@@ -1049,7 +1032,7 @@ export default async function DiverDetailPage({
                         <input type="hidden" name="orderId" value={order.id} />
                         <button
                           type="submit"
-                          className="min-h-11 rounded-lg border border-danger/40 px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10"
+                          className={buttonClass({ variant: "danger", size: "sm" })}
                         >
                           Refund
                         </button>
@@ -1078,7 +1061,12 @@ export default async function DiverDetailPage({
                 .map(({ assignment, item, trip }) => (
                   <li key={assignment.id}>
                     <strong>{item.label}</strong> · {item.type.replace("_", " ")}
-                    <span className="block text-muted">{trip.title}</span>
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${trip.id}`}
+                      className="block text-muted hover:text-primary hover:underline"
+                    >
+                      {trip.title}
+                    </Link>
                   </li>
                 ))}
             </ul>
@@ -1096,7 +1084,12 @@ export default async function DiverDetailPage({
                 className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="font-medium">{trip.title}</p>
+                  <Link
+                    href={`/shop/${shopSlug}/trips/${trip.id}`}
+                    className="font-medium hover:text-primary hover:underline"
+                  >
+                    {trip.title}
+                  </Link>
                   <p className="text-sm text-muted">
                     {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
                     {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
@@ -1128,10 +1121,7 @@ export default async function DiverDetailPage({
             <p className="text-sm text-muted">
               You can add them again later as a new active record.
             </p>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
+            <button type="submit" className={buttonClass({ variant: "danger-solid" })}>
               Remove diver
             </button>
           </form>
