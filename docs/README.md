@@ -11,6 +11,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them | you introduce or rename a domain concept |
 | [product/roadmap.md](product/roadmap.md) | Milestone sequencing | a milestone ships or scope shifts |
 | [product/next-steps.md](product/next-steps.md) | Prioritized product and agent-development execution plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
+| [product/product-space-investigation.md](product/product-space-investigation.md) | Strategic assessment of built vs. unbuilt surface, the cut list, and the breadth→depth pivot | the product direction is re-examined or its recommendations ship |
 | [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work | a human decision is made, assigned, implemented, or validated |
 | [product/defaults-to-verify.md](product/defaults-to-verify.md) | Provisional waiver, course, gear, and hosting baselines requiring human approval | implementation needs a practical default before policy is finalized |
 | [product/marketing.md](product/marketing.md) | Public pages, real-demo screenshot capture, and provisional pricing boundary | product claims, public screenshots, or pricing change |
