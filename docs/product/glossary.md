@@ -71,17 +71,19 @@ new domain concept, define it here in the same PR.
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.
 - **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
-  course identity, the prerequisite card, and the fact that every course session needs an
-  instructor and a signed waiver; the shop controls its description, its two prices, its course
-  page, and whether the course appears when scheduling. Hiding never rewrites existing sessions.
+  course identity, the prerequisite card (certification and minimum age), and the fact that every
+  course session needs an instructor and a signed waiver; the shop controls its two prices, its
+  course page, and whether the course appears when scheduling. Hiding never rewrites existing
+  sessions.
 - **Course page** — the diver-facing page for one course: subhead, overview, photos, spec chips
   (duration, group size, minimum age, prerequisite), a day-by-day plan, what the fee covers, an
   FAQ, and the upcoming sessions it can be booked through. Published separately from being
   **active**: active gates the session picker, **published** gates the public web page, and a shop
   routinely has one without the other.
-- **Course page template** — a Scuba-published, versioned starting point for a course page. A shop
-  imports a copy and edits it; a later template version never rewrites what the shop wrote, and
-  never changes the prerequisite card under a course the shop already teaches.
+- **Default course page** — every course arrives pre-filled with Scuba's default page copy for that
+  agency course (day plan, what the fee covers, the questions divers ask). It is a starting point,
+  not a binding: the shop edits from there, and nothing reaches back to rewrite the shop's words.
+  There is no separate import step and no course-page catalog — the default is simply already there.
 - **Prerequisite note** — shop prose beside a course's certification gate ("comfortable swimming
   200 m", "bring your logbook"). It adds to the gate and never substitutes for it: the card the desk
   checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The

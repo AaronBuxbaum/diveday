@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "248403b4-0b51-4272-87e2-eb25a5dce4ad",
+  "id": "c4f8c57d-e099-405e-a758-53fd1901f4cc",
   "prevIds": [
     "9f5faa23-1daa-4333-9fca-a05aa600a61f"
   ],
@@ -74,6 +74,39 @@
     },
     {
       "values": [
+        "assigned",
+        "returned"
+      ],
+      "name": "gear_assignment_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "available",
+        "assigned",
+        "service_hold",
+        "retired"
+      ],
+      "name": "gear_state",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "bcd",
+        "regulator",
+        "wetsuit",
+        "mask_fins",
+        "weights",
+        "tank"
+      ],
+      "name": "gear_type",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
         "rstc",
         "uk"
       ],
@@ -105,8 +138,7 @@
         "trip_fee",
         "course_fee",
         "e_learning_fee",
-        "rental",
-        "nitrox",
+        "rental_gear",
         "deposit",
         "merchandise",
         "other"
@@ -242,13 +274,19 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "global_course_versions",
+      "name": "gear_assignments",
       "entityType": "tables",
       "schema": "public"
     },
     {
       "isRlsEnabled": false,
-      "name": "global_courses",
+      "name": "gear_items",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "gear_service_events",
       "entityType": "tables",
       "schema": "public"
     },
@@ -267,6 +305,12 @@
     {
       "isRlsEnabled": false,
       "name": "nitrox_certifications",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "nitrox_fills",
       "entityType": "tables",
       "schema": "public"
     },
@@ -308,7 +352,13 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "rental_fit_profiles",
+      "name": "rental_gear_profiles",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "rental_gear_requests",
       "entityType": "tables",
       "schema": "public"
     },
@@ -594,19 +644,6 @@
       "generated": null,
       "identity": null,
       "name": "buddy_preference",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "bookings"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "wants_nitrox",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"
@@ -1041,19 +1078,6 @@
       "table": "courses"
     },
     {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'[]'",
-      "generated": null,
-      "identity": null,
-      "name": "related_course_ids",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "courses"
-    },
-    {
       "type": "boolean",
       "typeSchema": null,
       "notNull": true,
@@ -1062,32 +1086,6 @@
       "generated": null,
       "identity": null,
       "name": "is_published",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "courses"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source_template_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "courses"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source_template_version",
       "entityType": "columns",
       "schema": "public",
       "table": "courses"
@@ -1675,7 +1673,7 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
     },
     {
       "type": "uuid",
@@ -1685,88 +1683,49 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "global_course_id",
+      "name": "shop_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
     },
     {
-      "type": "integer",
+      "type": "uuid",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "version",
+      "name": "booking_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
     },
     {
-      "type": "text",
+      "type": "uuid",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "title",
+      "name": "gear_item_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
     },
     {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "agency",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "global_course_versions"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "global_course_versions"
-    },
-    {
-      "type": "certification_level",
+      "type": "gear_assignment_status",
       "typeSchema": "public",
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "minimum_certification_level",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "global_course_versions"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": null,
+      "default": "'assigned'",
       "generated": null,
       "identity": null,
-      "name": "content",
+      "name": "status",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
     },
     {
       "type": "timestamp with time zone",
@@ -1776,10 +1735,23 @@
       "default": "now()",
       "generated": null,
       "identity": null,
-      "name": "published_at",
+      "name": "assigned_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "returned_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_assignments"
     },
     {
       "type": "uuid",
@@ -1792,7 +1764,20 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_courses"
+      "table": "gear_items"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
     },
     {
       "type": "text",
@@ -1802,23 +1787,75 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "slug",
+      "name": "label",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_courses"
+      "table": "gear_items"
     },
     {
-      "type": "integer",
-      "typeSchema": null,
+      "type": "gear_type",
+      "typeSchema": "public",
       "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "current_version",
+      "name": "type",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_courses"
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "size",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "gear_state",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'available'",
+      "generated": null,
+      "identity": null,
+      "name": "state",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "service_due_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "notes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
     },
     {
       "type": "timestamp with time zone",
@@ -1831,7 +1868,111 @@
       "name": "created_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "global_courses"
+      "table": "gear_items"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "recorded_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "service_completed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "next_service_due_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
     },
     {
       "type": "uuid",
@@ -2066,6 +2207,149 @@
       "entityType": "columns",
       "schema": "public",
       "table": "nitrox_certifications"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "booking_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "oxygen_percent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "max_depth_meters",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "max_ppo2_centibar",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "analyzer_signature",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "filled_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "analyzed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_fills"
     },
     {
       "type": "uuid",
@@ -2819,7 +3103,7 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "uuid",
@@ -2832,7 +3116,7 @@
       "name": "shop_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "uuid",
@@ -2845,72 +3129,7 @@
       "name": "person_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "true",
-      "generated": null,
-      "identity": null,
-      "name": "rents_bcd",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "true",
-      "generated": null,
-      "identity": null,
-      "name": "rents_regulator",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "true",
-      "generated": null,
-      "identity": null,
-      "name": "rents_wetsuit",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "true",
-      "generated": null,
-      "identity": null,
-      "name": "rents_mask_fins",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "true",
-      "generated": null,
-      "identity": null,
-      "name": "rents_weights",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "text",
@@ -2923,7 +3142,7 @@
       "name": "bcd_size",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "text",
@@ -2936,7 +3155,7 @@
       "name": "wetsuit_size",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "text",
@@ -2949,7 +3168,7 @@
       "name": "boot_size",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "text",
@@ -2962,7 +3181,7 @@
       "name": "fin_size",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "text",
@@ -2975,20 +3194,7 @@
       "name": "weight_preference",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "note",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "timestamp with time zone",
@@ -3001,7 +3207,7 @@
       "name": "created_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "type": "timestamp with time zone",
@@ -3014,7 +3220,241 @@
       "name": "updated_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "booking_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "bcd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "regulator",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "wetsuit",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "mask_fins",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "weights",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "tank",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "dive_computer",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bcd_size",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "wetsuit_size",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "boot_size",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fin_size",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "weight_preference",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_gear_requests"
     },
     {
       "type": "uuid",
@@ -5034,35 +5474,14 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "global_course_id",
+          "value": "booking_id",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
           "opclass": null
         },
         {
-          "value": "version",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "global_course_versions_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "global_course_versions"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "slug",
+          "value": "status",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -5074,10 +5493,136 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "global_courses_slug_idx",
+      "name": "gear_assignments_booking_status_idx",
       "entityType": "indexes",
       "schema": "public",
-      "table": "global_courses"
+      "table": "gear_assignments"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_assignments_gear_status_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_assignments"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "label",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_items_shop_label_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "state",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_items_shop_type_state_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "service_completed_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_service_events_shop_item_completed_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_service_events"
     },
     {
       "nameExplicit": true,
@@ -5190,6 +5735,62 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "nitrox_certifications"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "booking_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "nitrox_fills_shop_booking_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "nitrox_fills_shop_gear_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "nitrox_fills"
     },
     {
       "nameExplicit": true,
@@ -5452,10 +6053,10 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "rental_fit_profiles_shop_person_unique",
+      "name": "rental_gear_profiles_shop_person_unique",
       "entityType": "indexes",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "nameExplicit": true,
@@ -5480,10 +6081,59 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "rental_fit_profiles_shop_person_idx",
+      "name": "rental_gear_profiles_shop_person_idx",
       "entityType": "indexes",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "booking_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "rental_gear_requests_booking_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "booking_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "rental_gear_requests_shop_booking_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "rental_gear_requests"
     },
     {
       "nameExplicit": true,
@@ -6241,19 +6891,121 @@
     {
       "nameExplicit": false,
       "columns": [
-        "global_course_id"
+        "shop_id"
       ],
       "schemaTo": "public",
-      "tableTo": "global_courses",
+      "tableTo": "shops",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
-      "name": "global_course_versions_global_course_id_global_courses_id_fkey",
+      "name": "gear_assignments_shop_id_shops_id_fk",
       "entityType": "fks",
       "schema": "public",
-      "table": "global_course_versions"
+      "table": "gear_assignments"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "booking_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "bookings",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_assignments_booking_id_bookings_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_assignments"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_assignments_gear_item_id_gear_items_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_assignments"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_items_shop_id_shops_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_service_events_shop_id_shops_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_service_events_gear_item_id_gear_items_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "recorded_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_service_events_recorded_by_person_id_people_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_service_events"
     },
     {
       "nameExplicit": false,
@@ -6305,6 +7057,74 @@
       "entityType": "fks",
       "schema": "public",
       "table": "nitrox_certifications"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "nitrox_fills_shop_id_shops_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "booking_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "bookings",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "nitrox_fills_booking_id_bookings_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "nitrox_fills_gear_item_id_gear_items_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "nitrox_fills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "filled_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "nitrox_fills_filled_by_person_id_people_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "nitrox_fills"
     },
     {
       "nameExplicit": false,
@@ -6525,7 +7345,7 @@
       "name": "rental_gear_profiles_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
     },
     {
       "nameExplicit": false,
@@ -6542,7 +7362,41 @@
       "name": "rental_gear_profiles_person_id_people_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "rental_fit_profiles"
+      "table": "rental_gear_profiles"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "rental_gear_requests_shop_id_shops_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "rental_gear_requests"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "booking_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "bookings",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "rental_gear_requests_booking_id_bookings_id_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "rental_gear_requests"
     },
     {
       "nameExplicit": false,
@@ -7083,9 +7937,9 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "global_course_versions_pkey",
+      "name": "gear_assignments_pkey",
       "schema": "public",
-      "table": "global_course_versions",
+      "table": "gear_assignments",
       "entityType": "pks"
     },
     {
@@ -7093,9 +7947,19 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "global_courses_pkey",
+      "name": "gear_items_pkey",
       "schema": "public",
-      "table": "global_courses",
+      "table": "gear_items",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "gear_service_events_pkey",
+      "schema": "public",
+      "table": "gear_service_events",
       "entityType": "pks"
     },
     {
@@ -7126,6 +7990,16 @@
       "name": "nitrox_certifications_pkey",
       "schema": "public",
       "table": "nitrox_certifications",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "nitrox_fills_pkey",
+      "schema": "public",
+      "table": "nitrox_fills",
       "entityType": "pks"
     },
     {
@@ -7185,7 +8059,17 @@
       "nameExplicit": false,
       "name": "rental_gear_profiles_pkey",
       "schema": "public",
-      "table": "rental_fit_profiles",
+      "table": "rental_gear_profiles",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "rental_gear_requests_pkey",
+      "schema": "public",
+      "table": "rental_gear_requests",
       "entityType": "pks"
     },
     {
@@ -7314,17 +8198,6 @@
         "slug"
       ],
       "nullsNotDistinct": false,
-      "name": "global_courses_slug_key",
-      "schema": "public",
-      "table": "global_courses",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "slug"
-      ],
-      "nullsNotDistinct": false,
       "name": "global_dive_sites_slug_key",
       "schema": "public",
       "table": "global_dive_sites",
@@ -7353,9 +8226,5 @@
       "entityType": "uniques"
     }
   ],
-  "renames": [
-    "public.rental_gear_profiles->public.rental_fit_profiles",
-    "public.rental_fit_profiles.rental_gear_profiles_shop_person_unique->public.rental_fit_profiles.rental_fit_profiles_shop_person_unique",
-    "public.rental_fit_profiles.rental_gear_profiles_shop_person_idx->public.rental_fit_profiles.rental_fit_profiles_shop_person_idx"
-  ]
+  "renames": []
 }

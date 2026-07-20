@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { getCourseBySlug, setCoursePublished, updateCourseContent } from "@/db/courses";
+import {
+  getCourseBySlug,
+  setCoursePublished,
+  updateCourse,
+  updateCourseContent,
+} from "@/db/courses";
 import {
   isCoursePublishable,
   parseFaqs,
@@ -16,27 +21,26 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCourseImage } from "@/lib/storage";
 
+const money = z.union([z.literal(""), z.coerce.number().nonnegative().max(100_000)]);
+const centsFromDollars = (value: number | "") => (value === "" ? null : Math.round(value * 100));
+
 /**
- * The course page saves as one document. Every field here is prose a diver
- * reads; pricing, the cert gate, and scheduling visibility deliberately live on
- * other screens, because those change what the shop *does*, not what it says.
+ * The course page saves as one document: the prose a diver reads, the photos,
+ * and the two prices. The cert gate and the agency's minimum age deliberately
+ * stay out — those are admission facts the shop does not set.
  */
 const contentSchema = z.object({
   summary: z.string().trim().max(200),
   overview: z.string().trim().max(6_000),
-  heroImageUrl: z.string().trim().max(2_000),
-  imageUrls: z.string().max(12_000),
   durationText: z.string().trim().max(120),
   groupSizeText: z.string().trim().max(120),
-  // 8 is the youngest an agency certifies anyone for anything (Bubblemaker);
-  // below that the field is a typo, not a policy. This is a floor, not
-  // enforcement — see the note in the editor.
-  minimumAge: z.union([z.literal(""), z.coerce.number().int().min(8).max(99)]),
   prerequisiteNote: z.string().trim().max(400),
   includes: z.string().max(2_000),
   excludes: z.string().max(2_000),
   scheduleDays: z.string().max(8_000),
   faqs: z.string().max(12_000),
+  price: money,
+  eLearningPrice: money,
 });
 
 /** Upload one picked file; an empty file input is "no change", not a failure. */
@@ -65,18 +69,22 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const gallery = await Promise.all(formData.getAll("galleryImageFiles").map(uploadImage));
   if (hero.failed || gallery.some((image) => image.failed)) redirect(`${base}?error=upload`);
 
+  // Photos are managed by upload now: new files append to the gallery, and the
+  // remove checkboxes drop existing ones. No pasted URLs to parse.
+  const removedGallery = new Set(formData.getAll("removeGalleryUrls").map(String));
+  const keptGallery = course.imageUrls.filter((url) => !removedGallery.has(url));
+  const addedGallery = gallery
+    .map((image) => image.url)
+    .filter((url): url is string => Boolean(url));
   let imageUrls: string[];
-  let heroImageUrl: string;
   try {
-    // An upload appends to the gallery the staff member can already see and
-    // edit, so removing a photo is deleting its line — no second control.
-    imageUrls = splitCourseImageUrls(
-      [value.imageUrls, ...gallery.map((image) => image.url ?? "")].join("\n"),
-    );
-    [heroImageUrl = ""] = splitCourseImageUrls(hero.url ?? value.heroImageUrl);
+    imageUrls = splitCourseImageUrls([...keptGallery, ...addedGallery].join("\n"));
   } catch {
     redirect(`${base}?error=images`);
   }
+
+  const removeHero = formData.get("removeHero") === "true";
+  const heroImageUrl = hero.url ?? (removeHero ? "" : (course.heroImageUrl ?? ""));
 
   const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
     summary: value.summary,
@@ -85,13 +93,17 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     imageUrls,
     durationText: value.durationText,
     groupSizeText: value.groupSizeText,
-    minimumAge: value.minimumAge === "" ? null : value.minimumAge,
     prerequisiteNote: value.prerequisiteNote,
     includes: parseLines(value.includes),
     excludes: parseLines(value.excludes),
     scheduleDays: parseScheduleDays(value.scheduleDays),
     faqs: parseFaqs(value.faqs),
-    relatedCourseIds: formData.getAll("relatedCourseIds").map(String).filter(Boolean),
+  });
+  // Pricing is a separate concern from the marketing copy, but the editor saves
+  // both in one submit, so both land together.
+  await updateCourse(db, staff.user.shopId, course.id, {
+    priceCents: centsFromDollars(value.price),
+    eLearningPriceCents: centsFromDollars(value.eLearningPrice),
   });
   // The page the diver reads is a different route from the one staff just
   // saved; both have to go stale or the edit looks like it did not take.
