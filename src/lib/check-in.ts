@@ -46,24 +46,31 @@ export function buildCheckInChecks(
     if (!messagesByCategory.has(category)) messagesByCategory.set(category, blocker.message);
   }
 
-  const categories: CheckInCheck["category"][] = [];
-  if (requirement.requiresWaiver) categories.push("waiver");
+  // Gate on the trip's own requirement OR on any blocker the engine raised, so a
+  // dive-site-composed cert gate still shows a "Cards" row instead of silently
+  // omitting it. (Boarding is fail-closed regardless — recordRollCall re-checks
+  // readiness — but the card must not lie to the person at the counter.)
+  const gated = new Set<CheckInCheck["category"]>();
+  if (requirement.requiresWaiver) gated.add("waiver");
   if (
     requirement.minimumCertificationLevel ||
     (requirement.requiredSpecialties?.length ?? 0) > 0 ||
     requirement.requiresNitrox
   ) {
-    categories.push("certification");
+    gated.add("certification");
   }
-  if (requirement.requiresPayment) categories.push("payment");
+  if (requirement.requiresPayment) gated.add("payment");
+  for (const category of messagesByCategory.keys()) gated.add(category);
 
-  return categories.map((category) => {
-    const message = messagesByCategory.get(category);
-    return {
-      category,
-      label: LABEL[category],
-      ok: !message,
-      detail: message ?? DONE[category],
-    };
-  });
+  return (["waiver", "certification", "payment"] as const)
+    .filter((category) => gated.has(category))
+    .map((category) => {
+      const message = messagesByCategory.get(category);
+      return {
+        category,
+        label: LABEL[category],
+        ok: !message,
+        detail: message ?? DONE[category],
+      };
+    });
 }

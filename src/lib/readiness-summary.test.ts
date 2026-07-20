@@ -76,6 +76,37 @@ describe("buildDiverChecklist", () => {
     expect(cert?.state).toBe("action");
   });
 
+  it("surfaces a dive-site-composed cert blocker even when the trip's own cert fields are blank", () => {
+    // The trip requires only a waiver; the dive SITE gate (composed by the
+    // engine) is what produced the certification blocker. It must still show —
+    // otherwise the diver is told "nothing to do" while missing a card.
+    const items = buildDiverChecklist(
+      requirement({ minimumCertificationLevel: null, requiresPayment: false }),
+      {
+        status: "blocked",
+        blockers: [{ code: "certification_insufficient", message: "..." }],
+      },
+    );
+    const cert = items.find((item) => item.category === "certification");
+    expect(cert).toBeDefined();
+    expect(cert?.state).toBe("action");
+    expect(nextDiverStep(items)?.category).toBe("certification");
+  });
+
+  it("tells a diver short several cards that it's more than one thing", () => {
+    const items = buildDiverChecklist(requirement({ requiresNitrox: true }), {
+      status: "blocked",
+      blockers: [
+        { code: "certification_missing", message: "..." },
+        { code: "specialty_missing", message: "..." },
+        { code: "nitrox_missing", message: "..." },
+      ],
+    });
+    const cert = items.find((item) => item.category === "certification");
+    expect(cert?.state).toBe("action");
+    expect(cert?.detail).toContain("more than one certification");
+  });
+
   it("collapses to a single reassuring line when the shop hasn't configured the trip", () => {
     const items = buildDiverChecklist(null, {
       status: "blocked",

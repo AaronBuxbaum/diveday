@@ -59,7 +59,7 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   medical_review: {
     state: "waiting",
     detail:
-      "Thanks for signing. A team member is privately reviewing one medical answer before the trip.",
+      "Thanks for signing. One medical answer needs a closer look — a doctor’s sign-off may be required, and your shop will be in touch about next steps.",
   },
   certification_missing: {
     state: "action",
@@ -70,12 +70,13 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail: "Your certification card is with the shop for verification.",
   },
   certification_rejected: {
-    state: "action",
-    detail: "Your certification card needs another look — the shop will reach out.",
+    state: "waiting",
+    detail: "Your certification card needs a second look — your shop will reach out about it.",
   },
   certification_expired: {
     state: "action",
-    detail: "Your certification on file has expired; bring a current card.",
+    detail:
+      "Your certification on file has lapsed — check with your shop about a refresher or updated proof.",
   },
   certification_insufficient: {
     state: "action",
@@ -90,12 +91,12 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail: "Your specialty card is with the shop for verification.",
   },
   specialty_rejected: {
-    state: "action",
-    detail: "Your specialty card needs another look — the shop will reach out.",
+    state: "waiting",
+    detail: "Your specialty card needs a second look — your shop will reach out about it.",
   },
   specialty_expired: {
     state: "action",
-    detail: "Your specialty card on file has expired; bring a current one.",
+    detail: "Your specialty card on file has lapsed — check with your shop about updating it.",
   },
   nitrox_missing: {
     state: "action",
@@ -106,8 +107,8 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail: "Your nitrox card is with the shop for verification.",
   },
   nitrox_rejected: {
-    state: "action",
-    detail: "Your nitrox card needs another look — the shop will reach out.",
+    state: "waiting",
+    detail: "Your nitrox card needs a second look — your shop will reach out about it.",
   },
   payment_due: {
     state: "action",
@@ -148,10 +149,11 @@ function worstBlocker(blockers: readonly ReadinessBlocker[]): ReadinessBlocker |
 }
 
 /**
- * A short, ordered checklist a diver can read at a glance. Only the categories
- * this trip actually requires appear, each as one line. A setup/unavailable
- * blocker collapses the whole checklist to a single reassuring line, because
- * there is nothing the diver can act on until the shop finishes.
+ * A short, ordered checklist a diver can read at a glance. A category appears
+ * when the trip gates on it or when the readiness engine raised a blocker for it
+ * (so a dive-site-composed cert gate is never dropped), each as one line. A
+ * setup/unavailable blocker collapses the whole checklist to a single reassuring
+ * line, because there is nothing the diver can act on until the shop finishes.
  */
 export function buildDiverChecklist(
   requirement: TripRequirement | null,
@@ -180,20 +182,30 @@ export function buildDiverChecklist(
     ];
   }
 
-  const items: DiverChecklistItem[] = [];
-  const required: Exclude<ChecklistCategory, "setup">[] = [];
-  if (requirement.requiresWaiver) required.push("waiver");
+  // Show a category when the trip gates on it OR when a blocker exists for it.
+  // The readiness engine composes the dive *site's* cert/nitrox gate into the
+  // result, so a trip whose own requirement leaves those fields blank can still
+  // block on the site's rules. Surfacing on blocker-presence keeps the diver's
+  // checklist honest instead of silently dropping a card they must bring.
+  const gated = new Set<Exclude<ChecklistCategory, "setup">>();
+  if (requirement.requiresWaiver) gated.add("waiver");
   if (
     requirement.minimumCertificationLevel ||
     (requirement.requiredSpecialties?.length ?? 0) > 0 ||
     requirement.requiresNitrox
   ) {
-    required.push("certification");
+    gated.add("certification");
   }
-  if (requirement.requiresPayment) required.push("payment");
+  if (requirement.requiresPayment) gated.add("payment");
+  for (const category of byCategory.keys()) {
+    if (category !== "setup") gated.add(category);
+  }
 
-  for (const category of required) {
-    const blocker = worstBlocker(byCategory.get(category) ?? []);
+  const items: DiverChecklistItem[] = [];
+  for (const category of ["waiver", "certification", "payment"] as const) {
+    if (!gated.has(category)) continue;
+    const blockers = byCategory.get(category) ?? [];
+    const blocker = worstBlocker(blockers);
     if (!blocker) {
       items.push({
         category,
@@ -203,7 +215,14 @@ export function buildDiverChecklist(
       });
       continue;
     }
-    const { state, detail } = DIVER_VOICE[blocker.code];
+    const { state } = DIVER_VOICE[blocker.code];
+    // A diver short several cards needs to know it's more than one thing —
+    // one generic "bring your card" line would leave them under-packed.
+    const actionable = blockers.filter((b) => DIVER_VOICE[b.code].state === "action").length;
+    const detail =
+      category === "certification" && actionable > 1
+        ? "This dive needs more than one certification on file — bring every card it calls for, and your shop will confirm you’re set."
+        : DIVER_VOICE[blocker.code].detail;
     items.push({ category, label: CATEGORY_LABEL[category], state, detail });
   }
   return items;
