@@ -64,7 +64,8 @@ test("staff can bulk-pack a diver's exact-size rental request", async ({ page })
   await page.getByRole("button", { name: "Save gear request" }).click();
 
   await signInAsOwner(page);
-  await page.getByRole("link", { name: new RegExp(title) }).click();
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: title }).getByRole("link").click();
   await page.getByRole("button", { name: "Pack recommendations" }).click();
   await expect(page.getByRole("status")).toContainText("Available gear was packed");
   await expect(page.getByText(label)).toBeVisible();

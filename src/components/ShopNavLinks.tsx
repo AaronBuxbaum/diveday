@@ -6,31 +6,26 @@ import { usePathname } from "next/navigation";
 const linkClass =
   "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
-const primaryLinks = [
+const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
   { label: "Today", suffix: "" },
   { label: "Divers", suffix: "/divers" },
-  { label: "Schedule", suffix: "/schedule" },
+  // Staff work a trip on /trips/[id], which is the Schedule surface's detail
+  // view — keep the Schedule tab lit so they don't lose their place.
+  { label: "Schedule", suffix: "/schedule", alsoMatch: "/trips" },
   { label: "Gear", suffix: "/gear" },
 ];
 
 const moreGroups = [
   {
-    label: "Prepare",
-    links: [["Nitrox fills", "/nitrox"]],
-  },
-  {
     label: "Plan",
-    links: [
-      ["Dive sites", "/dive-sites"],
-      ["Reports", "/reports"],
-    ],
+    links: [["Dive sites", "/dive-sites"]],
   },
   {
     label: "Business",
     links: [
       ["Courses", "/courses"],
       ["Waivers", "/waivers"],
-      ["Shop", "/shop"],
+      ["Settings", "/settings/payments"],
     ],
   },
 ] as const;
@@ -62,9 +57,11 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
         aria-label={isBoatSurface ? "Shop and boat navigation" : "Primary"}
         className="flex min-w-0 flex-1 snap-x items-center gap-0.5 overflow-x-auto scroll-px-1 pr-2 sm:gap-1 sm:pr-3"
       >
-        {primaryLinks.map(({ label, suffix }) => {
+        {primaryLinks.map(({ label, suffix, alsoMatch }) => {
           const href = `${root}${suffix}`;
-          const active = isCurrent(pathname, href, root);
+          const active =
+            isCurrent(pathname, href, root) ||
+            (alsoMatch ? isCurrent(pathname, `${root}${alsoMatch}`, root) : false);
           return (
             <Link
               key={href}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -33,6 +34,7 @@ export default async function DiveSitesPage({
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <FlashParams params={["notice"]} />
       <ShopPageHeader
         title="Dive-site library"
         description="Build the briefing once, then attach it to any charter. Copy a site before tailoring a special itinerary."
@@ -79,7 +81,9 @@ export default async function DiveSitesPage({
       </section>
 
       {notice === "archived" ? (
-        <ShopNotice>Site archived. Historical trip briefings are still preserved.</ShopNotice>
+        <div className="mt-4">
+          <ShopNotice>Site archived. Historical trip briefings are still preserved.</ShopNotice>
+        </div>
       ) : null}
 
       {sites.length === 0 ? (

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -16,9 +17,9 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Shop — Scuba" };
+export const metadata: Metadata = { title: "Shop settings — Scuba" };
 
-const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
+const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
   packing_invalid: { tone: "danger", text: "Add between one and twelve packing items." },
   connected: { tone: "success", text: "Stripe account connected." },
@@ -46,12 +47,12 @@ async function savePackingAction(formData: FormData) {
     packingList.length > 12 ||
     packingList.some((item) => item.length > 100)
   ) {
-    redirect(`/shop/${session.user.shopSlug}/shop?notice=packing_invalid`);
+    redirect(`/shop/${session.user.shopSlug}/settings/payments?notice=packing_invalid`);
   }
   await setShopPackingList(await getDb(), session.user.shopId, packingList);
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/shop`,
-    `/shop/${session.user.shopSlug}/shop?notice=packing_saved`,
+    `/shop/${session.user.shopSlug}/settings/payments`,
+    `/shop/${session.user.shopSlug}/settings/payments?notice=packing_saved`,
   );
 }
 
@@ -66,8 +67,8 @@ async function disconnectAction() {
     await disconnectShopStripeAccount(db, account.stripeAccountId);
   }
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/shop`,
-    `/shop/${session.user.shopSlug}/shop?notice=disconnected`,
+    `/shop/${session.user.shopSlug}/settings/payments`,
+    `/shop/${session.user.shopSlug}/settings/payments?notice=disconnected`,
   );
 }
 
@@ -82,8 +83,8 @@ async function refreshAction() {
     await refreshShopStripeAccountStatus(db, account.stripeAccountId, status);
   }
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/shop`,
-    `/shop/${session.user.shopSlug}/shop?notice=refreshed`,
+    `/shop/${session.user.shopSlug}/settings/payments`,
+    `/shop/${session.user.shopSlug}/settings/payments?notice=refreshed`,
   );
 }
 
@@ -122,7 +123,7 @@ export default async function PaymentsSettingsPage({
   const connectConfigured = Boolean(
     process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CONNECT_CLIENT_ID && process.env.APP_HOST,
   );
-  const banner = notice ? NOTICES[notice] : undefined;
+  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
@@ -139,18 +140,11 @@ export default async function PaymentsSettingsPage({
       </div>
 
       {banner ? (
-        <p
-          role="status"
-          className={`mb-6 rounded-lg px-4 py-3 text-sm font-medium ${
-            banner.tone === "success"
-              ? "bg-success/10 text-success"
-              : banner.tone === "danger"
-                ? "bg-danger/10 text-danger"
-                : "bg-warning/10 text-warning"
-          }`}
-        >
-          {banner.text}
-        </p>
+        <div className="mb-6">
+          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+            {banner.text}
+          </ShopNotice>
+        </div>
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
