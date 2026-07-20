@@ -218,9 +218,15 @@ export default async function DiversPage({
                       className="group relative transition-colors duration-200 hover:bg-surface-sunken"
                     >
                       <td className="relative px-4 py-3">
+                        {/*
+                         * Phone-only. On desktop the explicit "Open" cell is the
+                         * target, and a second link with the same accessible name
+                         * would duplicate the row for screen readers and swallow
+                         * clicks over the person cell.
+                         */}
                         <Link
                           href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                          className="absolute inset-0 z-10 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                          className="absolute inset-0 z-10 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary md:hidden"
                           aria-label={`Open ${diver.person.fullName}`}
                         />
                         <div className="flex min-w-0 items-center gap-3">
