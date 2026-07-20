@@ -111,7 +111,6 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
     shopId: shop.id,
     title: "Blue Mantis Diving Release",
     version: 1,
-    isDefault: true,
     body: DEFAULT_WAIVER_BODY,
   });
 
@@ -174,7 +173,6 @@ export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Prom
     shopId,
     title: DEFAULT_WAIVER_TITLE,
     version: 1,
-    isDefault: true,
     body: DEFAULT_WAIVER_BODY,
   });
 

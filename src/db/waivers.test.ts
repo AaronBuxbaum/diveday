@@ -167,14 +167,12 @@ describe("waiver records (in-memory PGlite)", () => {
       body: "An updated release, edited by staff and long enough to be valid.",
     });
     expect(v2.version).toBe(2);
-    expect(v2.isDefault).toBe(true);
 
-    // Exactly one version is current, and it is the newest.
+    // The newest version is always current.
     const currentNow = await getCurrentWaiverTemplate(db, shop.id);
     expect(currentNow?.id).toBe(v2.id);
     const history = await listWaiverTemplateHistory(db, shop.id);
     expect(history.map((row) => row.version)).toEqual([2, 1]);
-    expect(history.filter((row) => row.isDefault)).toHaveLength(1);
   });
 
   it("keeps a completed record faithful to the version it was signed against", async () => {
