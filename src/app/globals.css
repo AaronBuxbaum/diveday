@@ -94,6 +94,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  /*
+   * Never let a page scroll sideways. Wide surfaces (data tables, checkpoint
+   * strips) opt into their own horizontal scroll with `overflow-x-auto`; the
+   * document itself must not. `clip` (not `hidden`) contains stray overflow —
+   * including visually-hidden `sr-only` boxes that get positioned inside a wide
+   * scroll region — without creating a scroll container, so the sticky shop nav
+   * keeps sticking. Set on `body`, not `html`: the viewport takes `clip`/
+   * `visible` from the body, so a rule on `html` alone is ignored. Without this,
+   * zooming out on mobile reveals dead space to the right of the content
+   * instead of the layout filling the viewport.
+   */
+  overflow-x: clip;
 }
 
 /*
