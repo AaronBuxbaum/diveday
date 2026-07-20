@@ -20,7 +20,13 @@ test("diver schedule shows a month calendar of scheduled dives", async ({ page }
   await page.goto("/shop/blue-mantis/schedule");
   const calendar = page.getByRole("region", { name: "Dive schedule calendar" });
   await expect(calendar).toBeVisible();
-  await expect(calendar.getByRole("heading", { name: /\b2026\b/ })).toBeVisible();
+  // The calendar defaults to the current month, so the heading's year tracks
+  // whatever year the suite actually runs in — a hardcoded year here passes
+  // today and fails deterministically every New Year's.
+  const currentYear = new Date().getUTCFullYear();
+  await expect(
+    calendar.getByRole("heading", { name: new RegExp(`\\b${currentYear}\\b`) }),
+  ).toBeVisible();
   // Each dive is a link into its schedule detail (labelled by start time so it
   // doesn't collide with the titled cards in the list below).
   await expect(calendar.getByRole("link", { name: /\bdive\b/ }).first()).toBeVisible();
