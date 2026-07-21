@@ -30,6 +30,14 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   },
   "diver-unavailable": { tone: "danger", text: "This trip can't accept new divers right now." },
   "waiver-complete": { tone: "success", text: "That diver already has a completed waiver." },
+  "waiver-in-person": {
+    tone: "success",
+    text: "Paper waiver recorded — the diver's release is on file.",
+  },
+  "waiver-medical-attestation": {
+    tone: "danger",
+    text: "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
+  },
   "waiver-error": {
     tone: "danger",
     text: "That waiver link could not be created. Try a current booking and template.",

@@ -38,6 +38,88 @@ export function needsMedicalReview(answers: MedicalAnswers): boolean {
   return needsPhysicianReview(answers);
 }
 
+/**
+ * How long a signed waiver keeps satisfying a diver's *future* trips. A diver
+ * signs once; the signature carries forward until it ages out. Bounded rather
+ * than forever because the release also carries a medical questionnaire, and a
+ * medical statement a year stale is no longer trustworthy evidence of fitness.
+ */
+export const WAIVER_SIGNATURE_VALIDITY_MS = 365 * 24 * 60 * 60 * 1000;
+
+/** When a record's signature happened, for recency comparisons. */
+function signatureTime(record: WaiverRecord): number {
+  return (record.signedAt ?? record.completedAt ?? record.createdAt).getTime();
+}
+
+/**
+ * Whether a completed release still stands for a booking. It must be a clean
+ * completion (never one parked in medical review), signed against the shop's
+ * current template version (a later edit is different terms the diver never
+ * agreed to), and inside the validity window. Applied uniformly — to the
+ * booking's own record and to any carried from another booking — so a signature
+ * that is stale or against superseded terms is never treated as current, whoever
+ * it was signed for. Fails closed on anything missing.
+ */
+export function isCompletedWaiverCurrent(
+  record: WaiverRecord,
+  currentTemplateVersion: number | null,
+  now: Date = new Date(),
+): boolean {
+  if (record.status !== "completed") return false;
+  if (record.supersededAt) return false;
+  if (currentTemplateVersion !== null && record.templateVersion !== currentTemplateVersion) {
+    return false;
+  }
+  const signedAt = record.signedAt ?? record.completedAt;
+  if (!signedAt) return false;
+  return signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
+}
+
+/**
+ * The single waiver record that governs a booking's readiness once the
+ * sign-once rule is applied.
+ *
+ * A live medical hold on this booking blocks it outright. Otherwise the most
+ * recent clean, current signature — the booking's own or one carried from
+ * another of the diver's bookings — stands, unless the diver has an unresolved
+ * medical hold that is no older than it: a health disclosure made at or after
+ * the last clean signature means the signature can no longer be trusted, so it
+ * fails closed to that hold. With neither a current signature nor a hold, the
+ * booking's own live record (pending/expired) drives the send flow; a stale
+ * completed record never reads as complete.
+ *
+ * `personSignedWaivers` is the diver's signed evidence at the shop — completed
+ * and medical-review records, superseded ones excluded.
+ */
+export function effectiveWaiverForBooking(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  now?: Date;
+}): WaiverRecord | null {
+  const now = input.now ?? new Date();
+  const own = input.bookingWaiver;
+  if (own?.status === "medical_review") return own;
+
+  const clean = [
+    ...(own && isCompletedWaiverCurrent(own, input.currentTemplateVersion, now) ? [own] : []),
+    ...input.personSignedWaivers.filter((record) =>
+      isCompletedWaiverCurrent(record, input.currentTemplateVersion, now),
+    ),
+  ].sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+
+  const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
+  const hold = input.personSignedWaivers
+    .filter((record) => record.status === "medical_review" && !record.supersededAt)
+    .filter((record) => signatureTime(record) >= cleanTime)
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (hold) return hold;
+
+  if (clean) return clean;
+
+  return own && own.status !== "completed" ? own : null;
+}
+
 export type WaiverState =
   | "not_sent"
   | "awaiting_signature"

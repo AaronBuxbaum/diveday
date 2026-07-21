@@ -912,6 +912,16 @@ export const waiverRecords = pgTable(
     bookingId: uuid("booking_id")
       .notNull()
       .references(() => bookings.id),
+    /**
+     * The diver the signed release belongs to, denormalized from the booking so
+     * a completed waiver is queryable per person. A diver signs once: a current
+     * completed record satisfies the waiver gate on any of their bookings at the
+     * shop (src/lib/waivers.ts — effectiveWaiverForBooking), so this is not
+     * redundant with `bookingId`, which still records where the link was issued.
+     */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
     templateId: uuid("template_id")
       .notNull()
       .references(() => waiverTemplates.id),
@@ -929,6 +939,12 @@ export const waiverRecords = pgTable(
     draftMedicalAnswers: jsonb("draft_medical_answers").$type<MedicalAnswers>(),
     signedName: text("signed_name"),
     signatureMethod: text("signature_method"),
+    /**
+     * The staff member who attested an in-person / paper signature. Null for a
+     * diver's own self-service completion — set only when a non-diver records a
+     * release the app never saw signed, so the accountable person is on record.
+     */
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
     consentedAt: timestamp("consented_at", { withTimezone: true }),
     signedAt: timestamp("signed_at", { withTimezone: true }),
     medicalAnswers: jsonb("medical_answers").$type<MedicalAnswers>(),
@@ -939,6 +955,8 @@ export const waiverRecords = pgTable(
   (table) => [
     index("waiver_records_booking_current_idx").on(table.bookingId, table.supersededAt),
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
+    // The per-person carry-forward lookup: a diver's completed releases at a shop.
+    index("waiver_records_shop_person_status_idx").on(table.shopId, table.personId, table.status),
   ],
 );
 

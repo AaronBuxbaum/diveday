@@ -295,7 +295,9 @@ export function OfflineManifestView() {
                         {state
                           ? state.state === "boarded"
                             ? "Boarded"
-                            : "Not boarded"
+                            : state.implied
+                              ? "Not boarded · carried"
+                              : "Not boarded"
                           : "Awaiting roll call"}
                         {state?.pending ? " · waiting to send" : ""}
                       </span>
