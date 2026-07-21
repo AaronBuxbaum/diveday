@@ -1020,7 +1020,9 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         diveSiteId: siteByName.get("Molasses Reef")?.id,
         title: "Two-Tank Reef — Molasses & French",
-        description: "Morning double dip on the outer reef. All levels, OW required.",
+        // Time-neutral copy: this trip sails at whatever hour keeps it on
+        // today's board, so "morning" would read as a bug after lunch.
+        description: "Double dip on the outer reef. All levels, OW required.",
         startsAt: todaySailStart, // sails today, so Today always has a board
         endsAt: new Date(todaySailStart.getTime() + 3.5 * 60 * 60 * 1000),
         capacity: 12,
@@ -1029,8 +1031,11 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         shopId,
         title: "Night Dive — City of Washington",
         description: "Torches, tarpon, and bioluminescence. Night specialty required.",
-        startsAt: at(2, 22, 0), // ~6:00 PM Eastern
-        endsAt: at(3, 0, 30),
+        // A twilight double: depart ~7:30 PM Eastern, dive 1 at dusk (matching
+        // its "Wreck site at dusk" plan), dive 2 in full dark, 3.5 h dock to
+        // dock — two night dives plus a surface interval don't fit in less.
+        startsAt: at(2, 23, 30),
+        endsAt: at(3, 3, 0),
         capacity: 8,
       },
       {

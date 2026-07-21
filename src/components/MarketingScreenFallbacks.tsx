@@ -93,7 +93,7 @@ export function DiverBookingFallback() {
         <div className="mt-4 space-y-3">
           {[
             ["Two-Tank Reef", "Tomorrow · 7:30 AM", "3 spots left"],
-            ["Night Dive", "Friday · 6:00 PM", "5 spots left"],
+            ["Night Dive", "Friday · 7:30 PM", "5 spots left"],
           ].map(([title, time, availability]) => (
             <div key={title} className="rounded-xl border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
