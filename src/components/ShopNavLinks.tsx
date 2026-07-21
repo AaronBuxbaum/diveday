@@ -31,7 +31,15 @@ function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
 
-export function ShopNavLinks({ root, className = "" }: { root: string; className?: string }) {
+export function ShopNavLinks({
+  root,
+  boatCheckInHref,
+  className = "",
+}: {
+  root: string;
+  boatCheckInHref?: string;
+  className?: string;
+}) {
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const isBoatSurface = pathname.includes("/manifest") || pathname.includes("/check-in");
@@ -51,6 +59,16 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
           <span aria-hidden="true">⚓</span>
           <span>Boat view</span>
         </span>
+      ) : boatCheckInHref ? (
+        // On a day with a departure, the badge is a shortcut to today's boat —
+        // so the manifest is one tap from anywhere, not only Today's cards.
+        <Link
+          href={boatCheckInHref}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+        >
+          <span aria-hidden="true">⚓</span>
+          <span>Boat view</span>
+        </Link>
       ) : null}
       <nav
         aria-label={isBoatSurface ? "Shop and boat navigation" : "Primary"}

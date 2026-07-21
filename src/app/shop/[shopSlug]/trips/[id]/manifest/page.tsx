@@ -7,6 +7,7 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
@@ -129,15 +130,13 @@ export default async function TripManifestPage({
       >
         Skip to roll call
       </a>
-      <div className="print:hidden">
-        <Link
-          href={`/shop/${shopSlug}/trips/${tripId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          ← Back to trip
-        </Link>
-      </div>
-      <header className="mt-4 flex flex-wrap items-start justify-between gap-5 border-b border-border pb-7 print:mt-0">
+      <TripSubNav
+        shopSlug={shopSlug}
+        tripId={tripId}
+        current="manifest"
+        className="mb-5 print:hidden"
+      />
+      <header className="flex flex-wrap items-start justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
           <h1 className="text-sm font-medium tracking-widest text-primary uppercase">
             Boat manifest
@@ -157,12 +156,6 @@ export default async function TripManifestPage({
           <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
             Live source · offline copy available
           </span>
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}/check-in`}
-            className="text-sm font-semibold text-primary hover:underline"
-          >
-            Counter check-in →
-          </Link>
           <PrintButton />
         </div>
       </header>

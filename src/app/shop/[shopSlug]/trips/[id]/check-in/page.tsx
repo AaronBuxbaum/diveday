@@ -7,6 +7,7 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { buttonClass } from "@/components/ui/button";
@@ -114,13 +115,7 @@ export default async function CheckInPage({
       >
         Skip to boarding list
       </a>
-      <Link
-        href={`/shop/${shopSlug}/trips/${tripId}`}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        ← Back to trip
-      </Link>
-      <header className="mt-4">
+      <header>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">Check-in</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h1>
         <p className="mt-1 text-muted">
@@ -128,6 +123,8 @@ export default async function CheckInPage({
           {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, "en-US", shop.timezone)}
         </p>
       </header>
+
+      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="check-in" className="mt-5" />
 
       {allAboard ? (
         <EarnedMoment className="mt-6" eyebrow="Check-in complete" title="All divers aboard ⚓">

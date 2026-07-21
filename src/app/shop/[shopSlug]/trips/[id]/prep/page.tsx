@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
@@ -53,13 +53,8 @@ export default async function TripPrepPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
-      <Link
-        href={`/shop/${shopSlug}/trips/${tripId}`}
-        className="text-sm font-medium text-primary hover:underline print:hidden"
-      >
-        ← Back to the trip
-      </Link>
-      <div className="mt-4">
+      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="prep" className="mb-5" />
+      <div>
         <ShopPageHeader
           eyebrow="Trip prep"
           title={trip.title}

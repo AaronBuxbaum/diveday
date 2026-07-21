@@ -32,6 +32,7 @@ import { DetailsSection } from "./_components/DetailsSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { RosterSection } from "./_components/RosterSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
+import { TripSubNav } from "./_components/TripSubNav";
 import { WaitlistSection } from "./_components/WaitlistSection";
 import {
   addBookingAction,
@@ -157,6 +158,8 @@ export default async function ManageTripPage({
           . Changes here apply to this date only; {series.scheduledCount} still on the schedule.
         </p>
       ) : null}
+
+      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="overview" className="mt-5" />
 
       <TripNoticeBanner
         notice={notice}

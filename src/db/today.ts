@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -13,9 +13,43 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   tripAssignments,
+  trips,
   tripWaitlistEntries,
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Today's boat: the trip id staff would check in for right now, or null on a
+ * day the shop has no departure. The nav uses it to turn "Boat view" into a
+ * live link. Deliberately lightweight — a bounded scan of scheduled trips
+ * around now, filtered to the shop's calendar day, preferring a boat that
+ * hasn't finished over one that already sailed.
+ */
+export async function todayNextDepartureTripId(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date = new Date(),
+): Promise<string | null> {
+  const today = shopDay(now, timeZone);
+  const rows = await db
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, new Date(now.getTime() - 18 * HOUR_MS)),
+        lte(trips.startsAt, new Date(now.getTime() + 30 * HOUR_MS)),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  const todays = rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
+  const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
+  return active?.id ?? null;
+}
 
 /**
  * How many upcoming departures the queue will inspect. Readiness is a per-trip
