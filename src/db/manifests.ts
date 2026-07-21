@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
@@ -207,7 +208,7 @@ export async function recordRollCall(
   return db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? new Date();
+    const occurredAt = input.occurredAt ?? nowDate();
     const [staff] = await tx
       .select({ id: people.id })
       .from(people)
@@ -257,7 +258,7 @@ export async function recordRollCall(
 
     if (source === "offline") {
       const savedAt = input.offlineSnapshotSavedAt;
-      const now = new Date();
+      const now = nowDate();
       if (
         !input.clientEventId ||
         !savedAt ||

@@ -1,3 +1,4 @@
+import { nowDate } from "./clock";
 /** Open-Meteo supplies sea-surface temperature only ten days ahead. */
 export const AUTOMATED_FORECAST_WINDOW_DAYS = 10;
 
@@ -39,7 +40,7 @@ type MarineResponse = {
   };
 };
 
-export function shouldShowAutomatedForecast(startsAt: Date, now = new Date()) {
+export function shouldShowAutomatedForecast(startsAt: Date, now = nowDate()) {
   const leadTime = startsAt.getTime() - now.getTime();
   return leadTime > 0 && leadTime <= AUTOMATED_FORECAST_WINDOW_DAYS * MILLISECONDS_PER_DAY;
 }

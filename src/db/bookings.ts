@@ -1,4 +1,5 @@
 import { and, count, eq, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import {
@@ -84,7 +85,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     .from(trips)
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
     .limit(1);
-  if (trip?.status !== "scheduled" || trip.startsAt <= new Date()) {
+  if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
   }
 

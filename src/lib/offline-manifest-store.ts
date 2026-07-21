@@ -1,4 +1,5 @@
 "use client";
+import { nowDate } from "./clock";
 
 import {
   canRecordOfflineStatus,
@@ -114,7 +115,7 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
   try {
     const record = await readStoredRecord(db, tripId);
     if (!record) return null;
-    if (new Date(record.expiresAt) <= new Date()) {
+    if (new Date(record.expiresAt) <= nowDate()) {
       await deleteOfflineManifest(tripId, db);
       return null;
     }
@@ -136,7 +137,7 @@ export async function saveOfflineManifest(
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   const existing = await loadOfflineManifest(trip.id);
-  const savedAt = new Date();
+  const savedAt = nowDate();
   const envelope: OfflineManifestEnvelope = {
     snapshot: {
       ...payload,
@@ -185,7 +186,7 @@ export async function appendOfflineRollCall(
     snapshotId: envelope.snapshot.snapshotId,
     snapshotSavedAt: envelope.snapshot.savedAt,
     tripId,
-    occurredAt: new Date().toISOString(),
+    occurredAt: nowDate().toISOString(),
     syncStatus: "pending",
   });
   const db = await openDatabase();

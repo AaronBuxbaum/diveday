@@ -1,4 +1,5 @@
 import { and, eq, gt, inArray, lte, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   type NotificationDelivery,
@@ -90,7 +91,7 @@ export async function sendDueReminders(
   db: AppDb,
   options: SendDueRemindersOptions = {},
 ): Promise<ReminderRunSummary> {
-  const now = options.now ?? new Date();
+  const now = options.now ?? nowDate();
   const emailProvider = options.emailProvider ?? notificationProviderFromEnvironment();
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;

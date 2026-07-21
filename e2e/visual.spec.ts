@@ -17,6 +17,18 @@ import { signedInAsOwner, test } from "./fixtures";
  * Screenshots are always captured; the Argos reporter in playwright.config.ts
  * only uploads when ARGOS_TOKEN is present, so the suite stays green (and
  * local runs stay offline) without an Argos account.
+ *
+ * Stability: these are captured full-page with nothing masked, so a
+ * regression anywhere — including in a time or a date — is caught. That is
+ * only safe because the clock is frozen on both sides: the server by
+ * DIVEDAY_CLOCK (playwright.config.ts → src/lib/clock.ts), so the clock-anchored
+ * seed and every render resolve to one fixed instant; the browser by the
+ * context-fixture init script in e2e/fixtures.ts, so client-side relative time
+ * ("3m ago") agrees with the server. Freeze the clock, never mask the output —
+ * masking
+ * hides the very pixels a regression would move, and never stabilised the
+ * layout shifts (a reordered queue, a trip crossing from upcoming to sailed)
+ * that a moving clock actually causes.
  */
 
 // Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
@@ -27,32 +39,10 @@ const VIEWPORTS = [
   { width: 1280, height: 800 }, // desktop
 ] as const;
 
-/**
- * The demo seed is clock-anchored — the "sails today" departure moves to the
- * next half-hour slot every 30 minutes, and card dates track the calendar.
- * Mask time/date text so a baseline built this morning still matches a build
- * from this afternoon; layout, color, and everything else stays asserted.
- */
-function dynamicText(page: Page) {
-  return [
-    page.getByText(/\d{1,2}:\d{2}\s*(AM|PM)?/), // clock times
-    page.getByText(
-      /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}\b/,
-    ), // "Jul 21"-style dates
-    page.getByText(/\d{1,2}\/\d{1,2}\/\d{2,4}/), // "7/21/2026"-style dates (e.g. cert expiry)
-    page.locator("time"),
-    // The month calendar is calendar-driven by nature: the current-day marker
-    // and which cells hold dive chips shift every day. Mask the whole region;
-    // the trip list below it carries the schedule page's visual assertion.
-    page.getByRole("region", { name: "Dive schedule calendar" }),
-  ];
-}
-
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
   await argosScreenshot(page, `${name}-${scheme}`, {
     fullPage: true,
     viewports: [...VIEWPORTS],
-    mask: dynamicText(page),
   });
 }
 

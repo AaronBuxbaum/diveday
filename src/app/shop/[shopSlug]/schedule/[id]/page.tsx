@@ -16,6 +16,7 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   fetchAutomatedMarineForecast,
@@ -115,7 +116,7 @@ export default async function TripDetailPage({
     ? (await verifiedNitroxPersonIds(db, shop.id)).has(confirmed.person.id)
     : false;
 
-  const inPast = trip.startsAt <= new Date();
+  const inPast = trip.startsAt <= nowDate();
   const full = isFull(trip);
   const remaining = spotsRemaining(trip);
   const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
@@ -252,7 +253,7 @@ async function resolvePaymentPanel(
   if (
     checkout?.status === "pending" &&
     checkout.checkoutUrl &&
-    (!checkout.expiresAt || checkout.expiresAt > new Date())
+    (!checkout.expiresAt || checkout.expiresAt > nowDate())
   ) {
     return { state: "pending", checkoutUrl: checkout.checkoutUrl };
   }

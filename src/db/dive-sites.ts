@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import {
@@ -115,7 +116,7 @@ export async function updateDiveSite(
 export async function deleteDiveSite(db: AppDb, shopId: string, siteId: string) {
   const [site] = await db
     .update(diveSites)
-    .set({ deletedAt: new Date() })
+    .set({ deletedAt: nowDate() })
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .returning({ id: diveSites.id });
   return Boolean(site);

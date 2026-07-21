@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
+import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { summarizeDay } from "@/lib/today";
@@ -37,7 +38,7 @@ export default async function ShopPage({
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
 
-  const now = new Date();
+  const now = nowDate();
   const { departures, actions, nextDeparture } = await getTodayWork(
     db,
     shop.id,

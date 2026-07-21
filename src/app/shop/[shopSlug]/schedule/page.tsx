@@ -19,6 +19,7 @@ import {
   monthLabel,
   parseMonthKey,
 } from "@/lib/calendar";
+import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -66,7 +67,7 @@ export default async function TripsPage({
     tripsByDay.set(iso, list);
     tripMonths.push({ year: wall.year, month: wall.month });
   }
-  const todayWall = utcToWallTime(new Date(), tz);
+  const todayWall = utcToWallTime(nowDate(), tz);
   const todayIso = toDateInputValue(todayWall);
   const firstTripMonth = tripMonths.reduce<MonthRef | null>(
     (min, m) => (!min || ordinal(m) < ordinal(min) ? m : min),

@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
@@ -72,7 +73,7 @@ export async function startBookingCheckout(
   if (
     existing?.status === "pending" &&
     existing.checkoutUrl &&
-    (!existing.expiresAt || existing.expiresAt > new Date())
+    (!existing.expiresAt || existing.expiresAt > nowDate())
   ) {
     return { ok: true, checkout: existing, reused: true };
   }
@@ -170,7 +171,7 @@ export async function markCheckoutPaidBySessionId(
 
   const [updated] = await db
     .update(bookingCheckouts)
-    .set({ status: "completed", completedAt: new Date() })
+    .set({ status: "completed", completedAt: nowDate() })
     .where(eq(bookingCheckouts.id, checkout.id))
     .returning();
   if (!updated) return null;

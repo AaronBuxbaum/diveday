@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -105,7 +106,7 @@ export function RosterSection({
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
 }) {
-  const refundEligible = cancellationDeadline !== null && cancellationDeadline > new Date();
+  const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">

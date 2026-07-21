@@ -1,3 +1,4 @@
+import { nowDate } from "./clock";
 /**
  * The provider seam for signature capture. V1 keeps the evidence local and
  * deterministic; a vendor adapter must normalize into this shape (ADR 20260718).
@@ -25,7 +26,7 @@ export const localTypedConsentProvider: SignatureProvider = {
   capture(input) {
     const signerName = input.signerName.trim();
     if (!input.agreed || signerName.length < 2) return null;
-    const signedAt = input.signedAt ?? new Date();
+    const signedAt = input.signedAt ?? nowDate();
     return {
       method: "typed_consent",
       signerName,
@@ -45,7 +46,7 @@ export const inPersonAttestationProvider: SignatureProvider = {
   capture(input) {
     const signerName = input.signerName.trim();
     if (!input.agreed || signerName.length < 2) return null;
-    const signedAt = input.signedAt ?? new Date();
+    const signedAt = input.signedAt ?? nowDate();
     return {
       method: "in_person_attested",
       signerName,

@@ -1,6 +1,7 @@
 import { hash } from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -57,7 +58,7 @@ function commonsImage(filename: string): string {
 
 /** n days from now at the given local-ish hour/minute (UTC-anchored; demo data). */
 function at(daysFromNow: number, hour: number, minute = 0): Date {
-  const d = new Date(Date.now() + daysFromNow * DAY_MS);
+  const d = new Date(nowMs() + daysFromNow * DAY_MS);
   d.setUTCHours(hour, minute, 0, 0);
   return d;
 }
@@ -68,7 +69,7 @@ function at(daysFromNow: number, hour: number, minute = 0): Date {
  * the first thing staff see, and a demo that never has a boat out cannot show
  * it. Always in the future, so it never falls out of the upcoming schedule.
  */
-function hoursFromNow(hours: number, from = new Date()): Date {
+function hoursFromNow(hours: number, from = nowDate()): Date {
   const d = new Date(from.getTime() + hours * 60 * 60 * 1000);
   // Round up to the next half hour: dive boats leave at 7:30, not 7:49, and a
   // ragged time reads as a bug in every screenshot of the demo.
@@ -87,7 +88,7 @@ const DEMO_SHOP_TIMEZONE = "America/New_York";
  * trip concede to tomorrow morning: "today, in the future" has run out of room.
  */
 export function demoTodayDepartureStart(
-  now = new Date(),
+  now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
 ): Date {
   const localDay = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
@@ -1331,7 +1332,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     if (!trip) continue;
     await db
       .update(trips)
-      .set({ ...values, conditionsUpdatedAt: new Date() })
+      .set({ ...values, conditionsUpdatedAt: nowDate() })
       .where(eq(trips.id, trip.id));
   }
 
@@ -1451,7 +1452,7 @@ async function seedFrontDesk(
     kind: "booking_confirmation" as const,
     status: "sent" as const,
     providerMessageId: `demo-msg-${index}`,
-    attemptedAt: new Date(Date.now() - (index + 1) * 60 * 60 * 1000),
+    attemptedAt: new Date(nowMs() - (index + 1) * 60 * 60 * 1000),
   }));
   if (deliveries.length > 0) {
     await db.insert(notificationDeliveries).values(deliveries);
@@ -1537,7 +1538,7 @@ async function seedNitrox(
       agency: "padi" as const,
       identifier: "EANX-0001",
       status: "verified" as const,
-      reviewedAt: new Date(),
+      reviewedAt: nowDate(),
     },
     {
       shopId,
@@ -1545,7 +1546,7 @@ async function seedNitrox(
       agency: "ssi" as const,
       identifier: "EANX-0002",
       status: "verified" as const,
-      reviewedAt: new Date(),
+      reviewedAt: nowDate(),
     },
     {
       shopId,

@@ -1,3 +1,4 @@
+import { nowDate } from "./clock";
 import type { TripManifest } from "./manifests";
 
 /**
@@ -111,7 +112,7 @@ export function offlineManifestExpiresAt(savedAt: Date, tripEndsAt: Date): Date 
 
 export function offlineManifestFreshness(
   savedAt: Date,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): OfflineManifestFreshness {
   const age = Math.max(0, now.getTime() - savedAt.getTime());
   if (age <= OFFLINE_MANIFEST_CURRENT_MS) return "current";

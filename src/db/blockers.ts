@@ -1,4 +1,5 @@
 import { annotateAlsoOn, type BlockerQueueTrip, blockerFixFor } from "@/lib/blockers";
+import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { listTripReadiness } from "./readiness";
 import { upcomingTripsWithCounts } from "./trips";
@@ -25,7 +26,7 @@ export async function getBlockerQueue(
   db: AppDb,
   shopId: string,
   shopSlug: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): Promise<BlockerQueue> {
   const upcoming = await upcomingTripsWithCounts(db, shopId, now);
   const inspected = upcoming.slice(0, MAX_TRIPS);

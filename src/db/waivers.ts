@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import {
   createWaiverToken,
@@ -86,7 +87,7 @@ export async function issueWaiverRequest(
   db: AppDb,
   input: { shopId: string; bookingId: string; now?: Date },
 ): Promise<IssueWaiverOutcome> {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
   const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
@@ -169,7 +170,7 @@ async function currentRecordForToken(db: AppDb, token: string) {
 export async function getWaiverForToken(
   db: AppDb,
   token: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): Promise<TokenWaiverState> {
   const record = await currentRecordForToken(db, token);
   if (!record) return { state: "unavailable" };
@@ -185,7 +186,7 @@ export async function saveWaiverDraft(
 ): Promise<boolean> {
   const state = await getWaiverForToken(db, token, input.now);
   if (state.state !== "available") return false;
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   const [saved] = await db
     .update(waiverRecords)
     .set({
@@ -295,7 +296,7 @@ export async function completeWaiver(
     now?: Date;
   },
 ): Promise<CompleteWaiverOutcome> {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   const evidence = localTypedConsentProvider.capture({
     signerName: input.signerName,
     agreed: input.agreed,
@@ -417,7 +418,7 @@ export async function recordInPersonWaiver(
     now?: Date;
   },
 ): Promise<InPersonWaiverOutcome> {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
   return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
     const [staff] = await tx

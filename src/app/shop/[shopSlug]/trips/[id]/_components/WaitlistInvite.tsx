@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { nowDate } from "@/lib/clock";
 
-function relativeTime(from: Date, now = new Date()): string {
+function relativeTime(from: Date, now = nowDate()): string {
   const mins = Math.max(0, Math.round((now.getTime() - from.getTime()) / 60000));
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;

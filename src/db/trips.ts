@@ -1,5 +1,6 @@
 import { and, asc, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import type { Course } from "./schema";
@@ -376,7 +377,7 @@ export async function updateTripConditions(
       waterTemperatureC: patch.waterTemperatureC ?? null,
       visibilityMeters: patch.visibilityMeters ?? null,
       surfaceConditions: patch.surfaceConditions || null,
-      conditionsUpdatedAt: new Date(),
+      conditionsUpdatedAt: nowDate(),
     })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
     .returning();
@@ -478,7 +479,7 @@ export type TripWithBookedCount = typeof trips.$inferSelect & {
 export async function upcomingTripsWithCounts(
   db: AppDb,
   shopId: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): Promise<TripWithBookedCount[]> {
   const rows = await db
     .select({
@@ -507,7 +508,7 @@ export async function listUpcomingSessionsForCourse(
   db: AppDb,
   shopId: string,
   courseId: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ) {
   const rows = await db
     .select({ trip: trips, booked: count(bookings.id) })
