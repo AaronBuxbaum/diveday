@@ -1,0 +1,61 @@
+name: Code Review
+
+on:
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: code-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Automated review (Codex)
+    runs-on: ubuntu-latest
+    if: ${{ secrets.OPENAI_API_KEY != '' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch main for diff
+        run: git fetch --no-tags origin main
+
+      - name: Run Codex review
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          permission-profile: ":workspace"
+          safety-strategy: drop-sudo
+          prompt: |
+            Review the changes on this branch that are not yet on main for
+            ${{ github.repository }}.
+
+            Diff to review:
+              git diff origin/main...HEAD
+
+            Focus on correctness, safety-critical surfaces (manifests, roll call,
+            cert gating, medical flags), and this repo's conventions in AGENTS.md
+            (semantic design tokens only, forms/buttons through the Field /
+            buttonClass / controlClass wrappers, tests travel with behavior).
+            Be concise and specific. Skip praise and skip anything you are not
+            confident about.
+
+      - name: Post review as a commit comment
+        if: steps.codex.outputs.final-message != ''
+        uses: actions/github-script@v7
+        env:
+          CODEX_FINAL_MESSAGE: ${{ steps.codex.outputs.final-message }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: process.env.CODEX_FINAL_MESSAGE,
+            });
