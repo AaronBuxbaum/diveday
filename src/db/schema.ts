@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
@@ -1000,15 +1001,18 @@ export const certifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** Soft-archive: a deleted card keeps its row for safety history but drops
+     * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
-    uniqueIndex("certifications_shop_agency_identifier_unique").on(
-      table.shopId,
-      table.agency,
-      table.identifier,
-    ),
+    // Partial on the live rows only, so archiving a card frees its number for
+    // re-entry (e.g. a renewed card carrying the same identifier).
+    uniqueIndex("certifications_shop_agency_identifier_unique")
+      .on(table.shopId, table.agency, table.identifier)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
@@ -1038,15 +1042,15 @@ export const specialtyCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** Soft-archive, mirroring `certifications.deletedAt`. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
-    uniqueIndex("specialty_certifications_shop_agency_identifier_unique").on(
-      table.shopId,
-      table.agency,
-      table.identifier,
-    ),
+    uniqueIndex("specialty_certifications_shop_agency_identifier_unique")
+      .on(table.shopId, table.agency, table.identifier)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
@@ -1144,15 +1148,15 @@ export const nitroxCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** Soft-archive, mirroring `certifications.deletedAt`. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
-    uniqueIndex("nitrox_certifications_shop_agency_identifier_unique").on(
-      table.shopId,
-      table.agency,
-      table.identifier,
-    ),
+    uniqueIndex("nitrox_certifications_shop_agency_identifier_unique")
+      .on(table.shopId, table.agency, table.identifier)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
