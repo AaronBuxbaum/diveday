@@ -114,27 +114,39 @@ export function BookSpotSection({
   tripRef,
   remaining,
   errorMessage,
+  payAtBooking,
+  perDiverPriceCents,
 }: {
   trip: Trip;
   tripRef: TripRef;
   remaining: number;
   errorMessage?: string;
+  payAtBooking: boolean;
+  perDiverPriceCents: number | null;
 }) {
+  const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
   return (
     <section id="book" className="mt-10">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold">Grab a spot</h2>
         <span className="text-sm font-medium text-primary tabular-nums">{capacityLabel(trip)}</span>
       </div>
+      {payAtBooking && perDiverPriceCents ? (
+        <p className="mt-1 text-sm text-muted">
+          {usd.format(perDiverPriceCents / 100)} per diver — paid securely when you book.
+        </p>
+      ) : null}
       <ErrorNotice message={errorMessage} />
       <form action={bookSpot.bind(null, tripRef)} className="mt-4 flex flex-col gap-4">
         <BookingPartyFields maxPartySize={remaining} />
         <div className="mt-1">
           <SubmitButton
-            pendingLabel="Booking…"
+            pendingLabel={payAtBooking ? "Heading to payment…" : "Booking…"}
             className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
           >
-            Book {remaining === 1 ? "the last spot" : "these spots"}
+            {payAtBooking
+              ? `Book and pay${remaining === 1 ? " — last spot" : ""}`
+              : `Book ${remaining === 1 ? "the last spot" : "these spots"}`}
           </SubmitButton>
         </div>
         <p className="text-sm text-muted">

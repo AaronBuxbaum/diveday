@@ -125,6 +125,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md)
   (the online capture/webhook confirmation this superseded from the prior entry). Tax, deposits,
   cancellation policy, and any platform fee remain H-07.
+- ✅ Checkout at booking: a public booking (or party) on a priced trip at a Stripe-connected shop
+  ends on the shop's own hosted Stripe Checkout; the webhook (or a direct API read when the diver
+  beats it home) marks the bookings paid through the shared payment gate. Abandonment degrades to
+  the ordinary unpaid booking, and an open session is reused via "Finish paying" on the
+  confirmation. Provisional full-price policy pending H-07. See
+  [20260721-checkout-at-booking](../architecture/decisions/20260721-checkout-at-booking.md).
 
 ## M5 — Rental fit and trip prep (gear inventory removed)
 
