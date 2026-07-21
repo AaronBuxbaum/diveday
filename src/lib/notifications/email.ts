@@ -20,6 +20,8 @@ type BookingConfirmationEmailInput = {
   startsAt: Date;
   endsAt: Date;
   timezone: string;
+  /** The diver's readiness page, so a closed tab never loses it. */
+  readinessUrl?: string;
 };
 
 type WaiverRequestEmailInput = {
@@ -43,11 +45,17 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
+  const readyText = input.readinessUrl
+    ? `\n\nTrack what's left before you sail:\n${input.readinessUrl}\n`
+    : "\n";
+  const readyHtml = input.readinessUrl
+    ? `<p><a href="${escapeHtml(input.readinessUrl)}">Track what's left before you sail</a>.</p>`
+    : "";
 
   return {
     subject: `You're on the boat — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early. ${input.shopName} will take it from there.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early. ${shop} will take it from there.</p>`,
+    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early. ${input.shopName} will take it from there.${readyText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early. ${shop} will take it from there.</p>${readyHtml}`,
   };
 }
 

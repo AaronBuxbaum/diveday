@@ -4,7 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { readinessLinkPath } from "@/lib/readiness-links";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
-import { payForBooking, type RentalFitRef } from "../actions";
+import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
 import { RentalFitForm } from "./RentalFitForm";
 import type {
   Confirmed,
@@ -142,7 +142,7 @@ export function BookingConfirmation({
       </div>
 
       <RentalFitForm
-        fitRef={fitRef}
+        action={saveRentalFitRequest.bind(null, fitRef)}
         rentalFit={rentalFit}
         wantsNitrox={confirmed.booking.wantsNitrox}
         nitroxCardVerified={nitroxCardVerified}

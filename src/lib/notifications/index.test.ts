@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { waiverRequestEmail } from "./email";
+import { bookingConfirmationEmail, waiverRequestEmail } from "./email";
 import {
   notificationProviderFromEnvironment,
   notify,
@@ -19,6 +19,24 @@ const booking = {
   endsAt: new Date("2026-08-01T15:00:00.000Z"),
   timezone: "America/New_York",
 };
+
+describe("bookingConfirmationEmail", () => {
+  it("folds the readiness link into the confirmation when one is supplied", () => {
+    const email = bookingConfirmationEmail({
+      ...booking,
+      readinessUrl: "https://scuba.example/ready/abc.def",
+    });
+    expect(email.text).toContain("Track what's left before you sail");
+    expect(email.text).toContain("https://scuba.example/ready/abc.def");
+    expect(email.html).toContain('href="https://scuba.example/ready/abc.def"');
+  });
+
+  it("omits the readiness line entirely when there is no link (no dead 'coming soon')", () => {
+    const email = bookingConfirmationEmail(booking);
+    expect(email.text).not.toContain("Track what's left");
+    expect(email.html).not.toContain("Track what's left");
+  });
+});
 
 describe("notify", () => {
   it("sends a booking confirmation through Resend with an idempotency key", async () => {
