@@ -5,15 +5,14 @@ import Link from "next/link";
  * wanders can always reach the other three in a tap. Overview holds the roster
  * and setup; the rest are the dock surfaces. Current page is marked and inert.
  *
- * The `check-in` page key is kept (and its `/check-in` route) but reads
- * "Boarding" to divers and crew — it is the fast pre-departure boarding pass,
- * distinct from the Manifest (the full safety document).
+ * Boarding is the fast pre-departure boarding pass, distinct from the Manifest
+ * (the full safety document).
  */
-export type TripSubNavPage = "overview" | "check-in" | "manifest" | "prep";
+export type TripSubNavPage = "overview" | "boarding" | "manifest" | "prep";
 
 const TABS: { page: TripSubNavPage; label: string; suffix: string }[] = [
   { page: "overview", label: "Overview", suffix: "" },
-  { page: "check-in", label: "Boarding", suffix: "/check-in" },
+  { page: "boarding", label: "Boarding", suffix: "/boarding" },
   { page: "manifest", label: "Manifest", suffix: "/manifest" },
   { page: "prep", label: "Prep", suffix: "/prep" },
 ];

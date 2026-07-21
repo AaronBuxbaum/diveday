@@ -33,16 +33,16 @@ function navClass(active: boolean) {
 
 export function ShopNavLinks({
   root,
-  boatCheckInHref,
+  boatBoardingHref,
   className = "",
 }: {
   root: string;
-  boatCheckInHref?: string;
+  boatBoardingHref?: string;
   className?: string;
 }) {
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const isBoatSurface = pathname.includes("/manifest") || pathname.includes("/check-in");
+  const isBoatSurface = pathname.includes("/manifest") || pathname.includes("/boarding");
   const moreIsActive = moreLinks.some(([, suffix]) =>
     isCurrent(pathname, `${root}${suffix}`, root),
   );
@@ -59,11 +59,11 @@ export function ShopNavLinks({
           <span aria-hidden="true">⚓</span>
           <span>Boat view</span>
         </span>
-      ) : boatCheckInHref ? (
+      ) : boatBoardingHref ? (
         // On a day with a departure, the badge is a shortcut to today's boat —
         // so the manifest is one tap from anywhere, not only Today's cards.
         <Link
-          href={boatCheckInHref}
+          href={boatBoardingHref}
           className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
         >
           <span aria-hidden="true">⚓</span>

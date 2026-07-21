@@ -42,7 +42,7 @@ const ROLES_INFO = [
     title: "Captain",
     name: "Sal Moretti",
     icon: "⚓",
-    desc: "Runs the boat — check-in, the manifest, and the final roll call before departure.",
+    desc: "Runs the boat — boarding, the manifest, and the final roll call before departure.",
     tryThis: "Open an upcoming trip manifest and run the passenger roll call.",
   },
   {
