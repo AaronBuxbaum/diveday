@@ -61,8 +61,8 @@ export function PaymentsSection({
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {bookingPayment
-                      ? `Payment gate: ${PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ?? bookingPayment.payment.status}`
-                      : "Payment gate: not recorded"}
+                      ? `Payment: ${PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ?? bookingPayment.payment.status}`
+                      : "Payment: not recorded"}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

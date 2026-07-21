@@ -21,17 +21,17 @@ const faq = [
   {
     question: "Can I see it before I commit?",
     answer:
-      "Yes. Open the live demo to switch between shop-owner, instructor, divemaster, captain, and diver perspectives, or start a trial shop of your own — optionally seeded with sample trips to explore.",
+      "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — or start a trial shop of your own, with sample trips ready to explore if you want them.",
   },
   {
     question: "What about multiple locations?",
     answer:
-      "Each DiveDay workspace is a shop today. Multi-location operating views are future work, so we will scope that with you instead of implying it is already available.",
+      "Each DiveDay workspace runs one shop today. If you operate more than one location, talk to us — we'd rather build that with you than pretend it's already here.",
   },
   {
     question: "Does the manifest work offline?",
     answer:
-      "Yes. Staff explicitly saves an encrypted device copy before leaving service. Departure and after-dive roll calls work from that copy, show freshness and pending changes, and reconcile against live safety data when service returns.",
+      "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts.",
   },
 ] as const;
 
@@ -92,8 +92,8 @@ export default function PricingPage() {
             </Link>
           </div>
           <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-6 text-muted">
-            External-provider charges, such as payment processing, remain between you and that
-            provider. We will make any new integration cost explicit before it is enabled.
+            Payment-processing fees stay between you and your payment provider. If a future
+            integration ever costs extra, we&apos;ll say so clearly before you turn it on.
           </p>
         </section>
 

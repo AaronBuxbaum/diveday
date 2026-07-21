@@ -129,7 +129,8 @@ export function BookingConfirmation({
           <>
             <h3 className="font-semibold">You're booked — the shop takes it from here</h3>
             <p className="mt-1 text-sm text-muted">
-              We're finishing the last checks on our end. Nothing you need to do right now.
+              We're double-checking a couple of things on our side. Nothing you need to do right
+              now.
             </p>
           </>
         )}

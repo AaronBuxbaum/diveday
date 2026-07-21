@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 
 export const metadata: Metadata = {
-  title: "Onboard your Shop — DiveDay",
+  title: "Set up your shop — DiveDay",
 };
 
 export default async function OnboardPage({
@@ -23,9 +23,9 @@ export default async function OnboardPage({
       <MarketingNav />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-12 sm:py-24">
         <div className="rounded-lg border border-border bg-surface p-6 sm:p-8 shadow-sm">
-          <h1 className="text-3xl font-semibold tracking-tight">Onboard your shop</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Set up your shop</h1>
           <p className="mt-1.5 text-sm text-muted">
-            Create a new tenant shop and owner profile to get started.
+            A few details and you&apos;ll be looking at your own working shop.
           </p>
 
           {error ? (
@@ -36,9 +36,9 @@ export default async function OnboardPage({
 
           <form action={onboardAction} className="mt-6 flex flex-col gap-5">
             <section className="flex flex-col gap-4">
-              <h2 className="text-lg font-semibold border-b border-border pb-1">Shop Details</h2>
+              <h2 className="text-lg font-semibold border-b border-border pb-1">Your shop</h2>
               <FieldGrid columns={2}>
-                <Field label="Shop Name">
+                <Field label="Shop name">
                   <input
                     name="shopName"
                     type="text"
@@ -47,14 +47,14 @@ export default async function OnboardPage({
                     className={`${controlClass} focus:outline-none`}
                   />
                 </Field>
-                <Field label="URL Slug">
+                <Field label="Shop link">
                   <input
                     name="shopSlug"
                     type="text"
                     required
                     placeholder="e.g. green-lagoon"
                     pattern="^[a-z0-9-]+$"
-                    title="Only lowercase letters, numbers, and hyphens allowed"
+                    title="Lowercase letters, numbers, and hyphens — this becomes your shop's web address"
                     className={`${controlClass} focus:outline-none`}
                   />
                 </Field>
@@ -81,9 +81,9 @@ export default async function OnboardPage({
             </section>
 
             <section className="flex flex-col gap-4 mt-2">
-              <h2 className="text-lg font-semibold border-b border-border pb-1">Owner Profile</h2>
+              <h2 className="text-lg font-semibold border-b border-border pb-1">You</h2>
               <FieldGrid columns={1}>
-                <Field label="Full Name">
+                <Field label="Full name">
                   <input
                     name="ownerName"
                     type="text"
@@ -94,7 +94,7 @@ export default async function OnboardPage({
                 </Field>
               </FieldGrid>
               <FieldGrid columns={2}>
-                <Field label="Email Address">
+                <Field label="Email">
                   <input
                     name="ownerEmail"
                     type="email"
@@ -125,17 +125,19 @@ export default async function OnboardPage({
                   className="mt-1 h-4 w-4 rounded border-border-strong text-primary focus:ring-primary"
                 />
                 <div>
-                  <span className="text-sm font-medium text-foreground">Seed with demo data</span>
+                  <span className="text-sm font-medium text-foreground">
+                    Start with sample trips
+                  </span>
                   <p className="text-xs text-muted mt-0.5">
-                    Pre-populate your shop schedule with trips, bookings, rental fit, nitrox cards,
-                    and customers. Recommended for a hands-on trial.
+                    We&apos;ll fill your schedule with realistic trips, bookings, gear requests, and
+                    divers so you can try the whole day before adding your own.
                   </p>
                 </div>
               </label>
             </div>
 
             <SubmitButton
-              pendingLabel="Setting up your shop..."
+              pendingLabel="Setting up your shop…"
               className={buttonClass({
                 className: "mt-2 cursor-pointer focus:outline-none",
               })}
