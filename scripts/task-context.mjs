@@ -92,7 +92,7 @@ const areas = {
     ],
     tests: ["src/lib/dive-prep.test.ts", "src/db/nitrox.test.ts", "e2e/nitrox.spec.ts"],
     invariants: [
-      "Scuba tracks no equipment inventory: a fit is a size record, never an allocation.",
+      "DiveDay tracks no equipment inventory: a fit is a size record, never an allocation.",
       "One tank per diver per planned dive — the count is never short of the dive plan.",
       "A nitrox request requires a verified card at write time, and is re-checked on every read.",
       "A diver with no fit on file is named on the prep list, never silently omitted.",
@@ -176,7 +176,7 @@ const areas = {
     ],
   },
   design: {
-    goal: "Deliver a calm, clear, accessible interface that follows Scuba's semantic design system.",
+    goal: "Deliver a calm, clear, accessible interface that follows DiveDay's semantic design system.",
     docs: [
       "docs/design/principles.md",
       "docs/product/vision.md",

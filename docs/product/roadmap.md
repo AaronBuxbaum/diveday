@@ -134,7 +134,7 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 
 ## M5 — Rental fit and trip prep (gear inventory removed)
 
-- ✅ Equipment inventory, assignments, and service history were removed outright. Scuba does not
+- ✅ Equipment inventory, assignments, and service history were removed outright. DiveDay does not
   track individual items: shops that want an asset register have one, and a half-maintained
   duplicate was worse than none. What survives is what prep actually needs — sizes.
 - ✅ A shop-scoped **rental fit** per diver records which pieces they take from the shop and in

@@ -2,7 +2,7 @@
 
 **Lens:** the compounding layer. The other four documents explore *surfaces*; this one explores the
 *substrate* — the data model's reach, automation and AI, integrations, and the agent-native
-development platform that lets many short-lived AI agents build Scuba safely and in parallel. The
+development platform that lets many short-lived AI agents build DiveDay safely and in parallel. The
 north star's fourth outcome is *faster agent delivery* ([next-steps](../next-steps.md)); this is
 where that lives, alongside the intelligence features that make the product smarter over time.
 
@@ -14,7 +14,7 @@ person, many roles; everything hangs off the trip/session spine).
 
 ## The platform thesis
 
-Scuba's data is unusually *connected*: bookings, waivers, certs, gear, and manifests all hang off one
+DiveDay's data is unusually *connected*: bookings, waivers, certs, gear, and manifests all hang off one
 trip/session spine, and one person plays many roles. That connectedness is a moat — it lets the app
 answer questions no spreadsheet can, automate what shops do by hand, and let agents build features
 without re-deriving where anything lives. Every idea is judged on: does it make the data compound, or

@@ -8,7 +8,7 @@ is working.
 
 ## North star
 
-Scuba should feel calmer, faster, and more trustworthy than the software a dive shop uses today, and
+DiveDay should feel calmer, faster, and more trustworthy than the software a dive shop uses today, and
 the repository should make the correct implementation path easier than an expedient wrong one. Every
 meaningful increment must improve at least one of:
 

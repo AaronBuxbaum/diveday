@@ -1,6 +1,6 @@
 # Product-space investigation — what to do next
 
-> A strategic read of where Scuba actually is versus where the vision says it should be, and an
+> A strategic read of where DiveDay actually is versus where the vision says it should be, and an
 > opinionated recommendation for the next arc of work. Written 2026-07-20 from a full pass over
 > [vision](vision.md), [roadmap](roadmap.md), [next-steps](next-steps.md),
 > [human-decisions](human-decisions.md), [glossary](glossary.md),
@@ -15,7 +15,7 @@
 
 ## The finding in one paragraph
 
-Scuba has **over-built the table stakes and under-built the differentiator.** The vision is explicit:
+DiveDay has **over-built the table stakes and under-built the differentiator.** The vision is explicit:
 feature parity on the five pillars is *table stakes*; we win because staff **want** to open the app
 ([vision](vision.md#the-bet)). Seven milestones later, the pillars are done — and then some: nitrox
 fill logging, an automated marine outlook, Stripe Connect orders/invoices, a dive-site content
@@ -109,7 +109,7 @@ should be retired, gated, or paused — not extended:
   the seed shop.
 - **The global dive-site catalog + immutable version snapshots** (`global_dive_sites`,
   `global_dive_site_versions`, `source_template_version`) — heavy provenance machinery for a
-  Scuba-maintained catalog whose real inventory is the hardcoded content above.
+  DiveDay-maintained catalog whose real inventory is the hardcoded content above.
 - ~~**Two parallel payment paths.**~~ ✅ **Done (2026-07-20).** The superseded Stripe **Checkout**
   seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
   uses is the single payment path.

@@ -32,7 +32,7 @@ describe("shouldShowAutomatedForecast", () => {
 
 describe("fetchAutomatedMarineForecast", () => {
   it("skips live provider traffic when external HTTP is disabled", async () => {
-    vi.stubEnv("SCUBA_DISABLE_EXTERNAL_HTTP", "1");
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
     const fetcher = vi.spyOn(globalThis, "fetch");
 
     await expect(

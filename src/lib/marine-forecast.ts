@@ -92,7 +92,7 @@ export async function fetchAutomatedMarineForecast(
 ): Promise<AutomatedMarineForecast | null> {
   // Browser tests exercise our full Next/database stack, but must not wait on or depend on a
   // third-party forecast. Passing an explicit fetcher still exercises the adapter in unit tests.
-  if (process.env.SCUBA_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
+  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
 
   const params = new URLSearchParams({
     latitude: String(point.latitude),

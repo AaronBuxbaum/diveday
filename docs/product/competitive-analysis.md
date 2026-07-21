@@ -1,6 +1,6 @@
 # Competitive analysis — the buyer's view
 
-> A buyer-perspective assessment of Scuba against the dive-shop software market, written 2026-07-20
+> A buyer-perspective assessment of DiveDay against the dive-shop software market, written 2026-07-20
 > from external research (vendor sites, pricing pages, ScubaBoard buyer threads) plus a hands-on pass
 > through the running product (public pages, demo shop, staff surfaces, manifest). Companion to
 > [product-space-investigation.md](product-space-investigation.md), which reads the product from the
@@ -24,7 +24,7 @@ A small shop's realistic all-in budget is **$50–200/month**. The long tail (Sc
 DiveCentres, original Bookadive) is a graveyard — vendor-longevity fear is a real buying factor, and
 so is lock-in: owners on ScubaBoard stay on software they hate because migration hurts.
 
-## What a buyer likes about Scuba
+## What a buyer likes about DiveDay
 
 Verified hands-on against the demo shop, not from our own marketing:
 
@@ -102,7 +102,7 @@ not. This needs a product-owner decision before any customer-facing publication 
 
 ## Critical vs. differentiator
 
-| Capability | Market status | Scuba today | Verdict |
+| Capability | Market status | DiveDay today | Verdict |
 | --- | --- | --- | --- |
 | Online booking w/ real-time capacity | Universal | ✅ Best-in-class flow | Critical — done |
 | **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../architecture/decisions/20260721-checkout-at-booking.md)); deposit tier and cancellation policy still H-07 | Critical — mechanism done; policy open |

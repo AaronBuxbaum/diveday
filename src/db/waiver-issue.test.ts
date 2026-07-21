@@ -37,9 +37,9 @@ afterEach(() => {
 
 describe("issueAndDeliverWaiver", () => {
   it("emails the link and reports it sent when delivery is configured", async () => {
-    vi.stubEnv("APP_HOST", "https://scuba.example");
+    vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("RESEND_FROM_EMAIL", "shop@scuba.example");
+    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }));
@@ -58,7 +58,7 @@ describe("issueAndDeliverWaiver", () => {
   });
 
   it("surfaces the private link when email is not configured", async () => {
-    vi.stubEnv("APP_HOST", "https://scuba.example");
+    vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("RESEND_FROM_EMAIL", "");
 
@@ -70,7 +70,7 @@ describe("issueAndDeliverWaiver", () => {
   });
 
   it("reports no_email when the diver has no address on file", async () => {
-    vi.stubEnv("APP_HOST", "https://scuba.example");
+    vi.stubEnv("APP_HOST", "https://diveday.example");
     const { db, shop, bookingId } = await seededBooking(null);
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 

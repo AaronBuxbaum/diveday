@@ -12,8 +12,8 @@ const request = {
   unitAmountCents: 18_000,
   quantity: 2,
   customerEmail: "diver@example.com",
-  successUrl: "https://scuba.example/shop/reef/schedule/t1?booking=b1",
-  cancelUrl: "https://scuba.example/shop/reef/schedule/t1?booking=b1&pay=cancelled",
+  successUrl: "https://diveday.example/shop/reef/schedule/t1?booking=b1",
+  cancelUrl: "https://diveday.example/shop/reef/schedule/t1?booking=b1&pay=cancelled",
 };
 
 function ok(json: unknown) {

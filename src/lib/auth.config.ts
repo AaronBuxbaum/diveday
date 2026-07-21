@@ -13,7 +13,7 @@ import { RESERVED_COURSE_SEGMENTS } from "@/lib/courses";
 // set AUTH_SECRET (NextAuth fails loudly without it there).
 export const authSecret =
   process.env.AUTH_SECRET ??
-  (process.env.NODE_ENV === "production" ? undefined : "scuba-dev-secret-not-for-production");
+  (process.env.NODE_ENV === "production" ? undefined : "diveday-dev-secret-not-for-production");
 
 const STAFF_PREFIX = "/shop";
 
