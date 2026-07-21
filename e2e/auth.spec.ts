@@ -9,6 +9,8 @@ test("unauthenticated /shop redirects to sign-in", async ({ page }) => {
 
 test("wrong password shows a friendly error and stays signed out", async ({ page }) => {
   await page.goto("/sign-in");
+  // Sign-in is for staff; the demo playground entry stays on the homepage only.
+  await expect(page.getByRole("button", { name: "Explore the demo shop" })).toHaveCount(0);
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill("wrong-password");
   await page.getByRole("button", { name: "Sign in" }).click();

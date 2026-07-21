@@ -1,11 +1,12 @@
-import { expect, test } from "./fixtures";
-import { daysFromNow, signInAsOwner } from "./helpers";
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow } from "./helpers";
+
+signedInAsOwner();
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
   // Unique per run: the dev database persists across e2e runs.
   const title = `Walk-in Test Trip ${Date.now()}`;
 
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(3));

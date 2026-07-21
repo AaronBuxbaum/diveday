@@ -1,19 +1,10 @@
-import type { Page } from "@playwright/test";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
-async function signInAsOwner(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
-  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/shop/);
-}
+signedInAsOwner();
 
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")
@@ -60,7 +51,6 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/waivers");
 
   const release = page

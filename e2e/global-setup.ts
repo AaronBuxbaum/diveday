@@ -18,7 +18,7 @@ export default async function globalSetup() {
         await context.post("/api/test/reset", { timeout: 30_000 });
         // Warm the routes every test hits first so the first test's clock
         // doesn't absorb their one-time render cost. Best-effort.
-        for (const route of ["/", "/sign-in"]) {
+        for (const route of ["/", "/sign-in", "/shop/blue-mantis/schedule"]) {
           await context.get(route, { timeout: 30_000 }).catch(() => {});
         }
       } finally {

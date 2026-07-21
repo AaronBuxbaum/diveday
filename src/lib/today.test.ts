@@ -69,7 +69,6 @@ describe("primaryBlocker", () => {
     const chosen = primaryBlocker([blocker("waiver_pending"), blocker("waiver_expired")]);
     expect(chosen?.code).toBe("waiver_pending");
   });
-
 });
 
 describe("diverBlockerAction", () => {

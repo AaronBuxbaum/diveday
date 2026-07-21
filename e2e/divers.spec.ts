@@ -1,19 +1,10 @@
-import type { Page } from "@playwright/test";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
-async function signInAsOwner(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
-  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/shop/);
-}
+signedInAsOwner();
 
 test("staff opens a diver from their avatar and can reach them from the header", async ({
   page,
 }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/divers");
 
   // The whole person cell is one link, so the initials avatar opens the diver

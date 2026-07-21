@@ -57,6 +57,11 @@ IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock o
 - **E2E keeps real application boundaries and disables third-party HTTP.** Exercise Next, auth,
   and the isolated PGlite database together. Test provider adapters with injected fakes in Vitest;
   do not add browser-level service-worker mocks for server-side providers.
+- **E2E staff tests reuse a per-worker session.** Each worker signs in through the real form
+  once (`ownerStorageState` in `e2e/fixtures.ts`) and staff specs opt in with
+  `signedInAsOwner()` at file or describe scope instead of walking the sign-in form per test.
+  `auth.spec.ts` — and the mid-flow sign-out/sign-in legs of the booking loop — still exercise
+  the live form; tests that must start signed out simply don't opt in.
 - **E2E runs parallel against a precompiled server fleet.** `pnpm e2e` builds once (`next build`)
   and Playwright starts one `next start` server per worker, each with its own in-memory PGlite
   database (`e2e/servers.ts`, `playwright.config.ts`). Precompiled routes avoid the dev-mode

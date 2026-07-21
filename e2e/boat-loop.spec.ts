@@ -1,8 +1,11 @@
-import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
-test("the trip sub-nav reaches all four boat surfaces in one tap", async ({ page }) => {
-  await signInAsOwner(page);
+signedInAsOwner();
+
+test("the trip sub-nav reaches all four boat surfaces, and the nav's Boat view shortcut lands on check-in", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis");
 
   // Today's departure card drops staff straight onto check-in.
   await page.getByRole("link", { name: "Check in" }).first().click();
@@ -28,11 +31,9 @@ test("the trip sub-nav reaches all four boat surfaces in one tap", async ({ page
     .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
-});
 
-test("the nav offers a Boat view shortcut to today's departure", async ({ page }) => {
-  await signInAsOwner(page);
   // The seed sails a boat today, so the nav badge is a live link to its check-in.
+  await page.goto("/shop/blue-mantis");
   await page.getByRole("link", { name: "Boat view" }).click();
   await expect(page).toHaveURL(/\/check-in/);
 });
