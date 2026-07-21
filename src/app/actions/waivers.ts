@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
 import { requireStaffSession } from "@/lib/session";
+import {
+  type WaiverSendState,
+  type WaiverSendSurface,
+} from "./waiver-send-types";
 
 /**
  * One-tap waiver send, shared by the Today queue and the Blockers page (the two
@@ -14,33 +18,10 @@ import { requireStaffSession } from "@/lib/session";
  *
  * Batch is the same action with several `bookingId` values, so "Send waiver" and
  * "Send all 9 waivers" are one code path with one summary.
+ *
+ * State shapes live in `./waiver-send-types` — a `"use server"` file may only
+ * export async functions.
  */
-
-/** Where the send happened, so the right route is revalidated after it lands. */
-export type WaiverSendSurface = "today" | "blockers";
-
-/** A private fallback link staff must hand over when email did not go out. */
-export type WaiverFallbackLink = { name: string; token: string };
-
-export type WaiverSendState = {
-  status: "idle" | "done";
-  /** Divers the email actually reached. */
-  sent: string[];
-  /** Divers with no email / no delivery configured — link shown to copy. */
-  links: WaiverFallbackLink[];
-  /** Divers who already have a signed waiver; nothing was reissued. */
-  alreadyDone: string[];
-  /** Divers whose send failed outright (no current booking/template). */
-  errors: string[];
-};
-
-export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
-  status: "idle",
-  sent: [],
-  links: [],
-  alreadyDone: [],
-  errors: [],
-};
 
 const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string) => string> = {
   today: (shopSlug) => `/shop/${shopSlug}`,
