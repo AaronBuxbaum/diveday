@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// Browser-side store: exercises navigator.onLine, IndexedDB, and fetch paths.
 import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
