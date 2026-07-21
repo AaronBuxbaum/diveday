@@ -12,12 +12,12 @@ async function signOutAction() {
 export function ShopNav({
   shopSlug,
   shopName,
-  boatCheckInHref,
+  boatBoardingHref,
 }: {
   shopSlug: string;
   shopName: string;
-  /** Today's next departure's check-in, when the shop has a boat out today. */
-  boatCheckInHref?: string;
+  /** Today's next departure's boarding, when the shop has a boat out today. */
+  boatBoardingHref?: string;
 }) {
   const root = `/shop/${shopSlug}`;
   return (
@@ -42,7 +42,7 @@ export function ShopNav({
         </Link>
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
-          <CommandPalette shopSlug={shopSlug} boatCheckInHref={boatCheckInHref} />
+          <CommandPalette shopSlug={shopSlug} boatBoardingHref={boatBoardingHref} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
@@ -55,7 +55,7 @@ export function ShopNav({
         </div>
         <ShopNavLinks
           root={root}
-          boatCheckInHref={boatCheckInHref}
+          boatBoardingHref={boatBoardingHref}
           className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"
         />
       </div>

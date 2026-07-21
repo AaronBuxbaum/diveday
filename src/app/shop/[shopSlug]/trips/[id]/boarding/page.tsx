@@ -15,7 +15,7 @@ import { getDb } from "@/db/client";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
-import { buildCheckInChecks, type CheckInCheck } from "@/lib/check-in";
+import { type BoardingCheck, buildBoardingChecks } from "@/lib/boarding";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import { requireStaffSession } from "@/lib/session";
@@ -32,13 +32,13 @@ const boardSchema = z.object({
 });
 
 /** Board the ready divers first; blocked ones sit below until cleared. */
-function checkInRank(diver: TripManifest["divers"][number]): number {
+function boardingRank(diver: TripManifest["divers"][number]): number {
   if (diver.rollCall?.state === "boarded") return 2;
   if (diver.readiness.status === "blocked") return 1;
   return 0;
 }
 
-function Check({ check }: { check: CheckInCheck }) {
+function Check({ check }: { check: BoardingCheck }) {
   return (
     <span
       className={
@@ -54,7 +54,7 @@ function Check({ check }: { check: CheckInCheck }) {
   );
 }
 
-export default async function CheckInPage({
+export default async function BoardingPage({
   params,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
@@ -71,11 +71,11 @@ export default async function CheckInPage({
   if (!manifest) notFound();
 
   const now = new Date();
-  const back = `/shop/${shopSlug}/trips/${tripId}/check-in`;
+  const back = `/shop/${shopSlug}/trips/${tripId}/boarding`;
   const { totalDivers, boarded, blocked } = manifest.summary;
   const allAboard = totalDivers > 0 && boarded === totalDivers;
   const remaining = Math.max(0, totalDivers - boarded - blocked);
-  const divers = [...manifest.divers].sort((a, b) => checkInRank(a) - checkInRank(b));
+  const divers = [...manifest.divers].sort((a, b) => boardingRank(a) - boardingRank(b));
 
   async function boardAction(_prev: RollCallResult, formData: FormData): Promise<RollCallResult> {
     "use server";
@@ -135,7 +135,7 @@ export default async function CheckInPage({
         </p>
       </header>
 
-      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="check-in" className="mt-5" />
+      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="boarding" className="mt-5" />
 
       {allAboard ? (
         <EarnedMoment className="mt-6" eyebrow="Boarding complete" title="All divers aboard ⚓">
@@ -153,11 +153,11 @@ export default async function CheckInPage({
         </EarnedMoment>
       ) : (
         <section
-          aria-labelledby="checkin-progress"
+          aria-labelledby="boarding-progress"
           className="sticky top-16 z-10 mt-6 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur sm:p-5"
         >
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <p id="checkin-progress" className="text-lg font-bold">
+            <p id="boarding-progress" className="text-lg font-bold">
               <span className="tabular-nums">{boarded}</span> of{" "}
               <span className="tabular-nums">{totalDivers}</span> aboard
             </p>
@@ -189,7 +189,7 @@ export default async function CheckInPage({
         {divers.map((diver) => {
           const isBoarded = diver.rollCall?.state === "boarded";
           const isBlocked = diver.readiness.status === "blocked";
-          const checks = buildCheckInChecks(requirement, diver.readiness);
+          const checks = buildBoardingChecks(requirement, diver.readiness);
           return (
             <li
               key={diver.bookingId}

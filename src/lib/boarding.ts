@@ -9,7 +9,7 @@ import { BLOCKER_CATEGORY, type ReadinessResult } from "./readiness";
  * category reads as a tick and a blocked one carries the exact staff reason.
  */
 
-export type CheckInCheck = {
+export type BoardingCheck = {
   category: "waiver" | "certification" | "payment";
   label: string;
   ok: boolean;
@@ -17,13 +17,13 @@ export type CheckInCheck = {
   detail: string;
 };
 
-const LABEL: Record<CheckInCheck["category"], string> = {
+const LABEL: Record<BoardingCheck["category"], string> = {
   waiver: "Waiver",
   certification: "Cards",
   payment: "Payment",
 };
 
-const DONE: Record<CheckInCheck["category"], string> = {
+const DONE: Record<BoardingCheck["category"], string> = {
   waiver: "Signed",
   certification: "Verified",
   payment: "Settled",
@@ -33,12 +33,12 @@ const DONE: Record<CheckInCheck["category"], string> = {
  * One row per gated requirement. Absent categories (a trip with no payment gate)
  * are simply not shown, so the card never implies a check that doesn't apply.
  */
-export function buildCheckInChecks(
+export function buildBoardingChecks(
   requirement: TripRequirement | null,
   readiness: ReadinessResult,
-): CheckInCheck[] {
+): BoardingCheck[] {
   if (!requirement) return [];
-  const messagesByCategory = new Map<CheckInCheck["category"], string>();
+  const messagesByCategory = new Map<BoardingCheck["category"], string>();
   for (const blocker of readiness.blockers) {
     const category = BLOCKER_CATEGORY[blocker.code];
     // "setup" isn't a per-diver check; it means the trip itself isn't configured.
@@ -50,7 +50,7 @@ export function buildCheckInChecks(
   // dive-site-composed cert gate still shows a "Cards" row instead of silently
   // omitting it. (Boarding is fail-closed regardless — recordRollCall re-checks
   // readiness — but the card must not lie to the person at the counter.)
-  const gated = new Set<CheckInCheck["category"]>();
+  const gated = new Set<BoardingCheck["category"]>();
   if (requirement.requiresWaiver) gated.add("waiver");
   if (
     requirement.minimumCertificationLevel ||

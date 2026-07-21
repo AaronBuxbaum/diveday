@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TripRequirement } from "@/db/schema";
-import { buildCheckInChecks } from "./check-in";
+import { buildBoardingChecks } from "./boarding";
 import type { ReadinessResult } from "./readiness";
 
 function requirement(overrides: Partial<TripRequirement> = {}): TripRequirement {
@@ -20,15 +20,15 @@ function requirement(overrides: Partial<TripRequirement> = {}): TripRequirement 
 
 const ready: ReadinessResult = { status: "ready", blockers: [] };
 
-describe("buildCheckInChecks", () => {
+describe("buildBoardingChecks", () => {
   it("ticks every gated category for a ready diver", () => {
-    const checks = buildCheckInChecks(requirement(), ready);
+    const checks = buildBoardingChecks(requirement(), ready);
     expect(checks.map((c) => c.category)).toEqual(["waiver", "certification", "payment"]);
     expect(checks.every((c) => c.ok)).toBe(true);
   });
 
   it("only shows the categories the trip gates on", () => {
-    const checks = buildCheckInChecks(
+    const checks = buildBoardingChecks(
       requirement({ minimumCertificationLevel: null, requiresPayment: false }),
       ready,
     );
@@ -36,7 +36,7 @@ describe("buildCheckInChecks", () => {
   });
 
   it("carries the staff blocker reason on a failed check", () => {
-    const checks = buildCheckInChecks(requirement(), {
+    const checks = buildBoardingChecks(requirement(), {
       status: "blocked",
       blockers: [
         { code: "waiver_pending", message: "Waiver is waiting for the diver’s signature." },
@@ -50,7 +50,7 @@ describe("buildCheckInChecks", () => {
   });
 
   it("shows a Cards row for a dive-site-composed cert gate the trip's own fields don't set", () => {
-    const checks = buildCheckInChecks(
+    const checks = buildBoardingChecks(
       requirement({ minimumCertificationLevel: null, requiresPayment: false }),
       {
         status: "blocked",
@@ -63,6 +63,6 @@ describe("buildCheckInChecks", () => {
   });
 
   it("returns nothing when the trip has no requirement configured", () => {
-    expect(buildCheckInChecks(null, ready)).toEqual([]);
+    expect(buildBoardingChecks(null, ready)).toEqual([]);
   });
 });

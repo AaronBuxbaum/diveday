@@ -130,11 +130,11 @@ new domain concept, define it here in the same PR.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
   duplicate events are idempotent and an older device event cannot replace newer live history.
-- **Boarding** (the `check-in` surface) — the fast pre-departure pass: get every ready diver aboard
+- **Boarding** (the `/boarding` surface) — the fast pre-departure pass: get every ready diver aboard
   before the boat leaves, waiver/cert/payment confirmed at a glance. It is the departure checkpoint of
   the **Manifest** viewed readiness-first — boarding a diver here is the same roll-call event — so it
   reads "Boarding" to avoid reading as a second, separate roster. Crew, emergency contacts, after-dive
-  roll call, print, and the offline snapshot live on the Manifest. (The route stays `/check-in`.)
+  roll call, print, and the offline snapshot live on the Manifest.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. DiveDay keeps one versioned release per shop: editing it saves a new immutable version
   and new links snapshot the current one. The exact template version is snapshotted into each issued
@@ -247,7 +247,7 @@ new domain concept, define it here in the same PR.
 - A **person** may be simultaneously a customer, a student, and staff — model roles, not
   separate person types.
 - Cert requirements attach to **sites/activities** ("this wreck requires AOW + Deep"), and are
-  checked against a diver's **verified** cards at booking *and* at check-in. A dive site carries an
+  checked against a diver's **verified** cards at booking *and* at boarding. A dive site carries an
   inherent gate (minimum level + required specialties); a trip carries its own; the readiness
   service composes them — the **stricter** minimum level and the **union** of specialties
   ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).

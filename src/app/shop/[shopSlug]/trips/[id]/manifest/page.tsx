@@ -155,7 +155,7 @@ export default async function TripManifestPage({
             The authoritative roster: everyone aboard — divers and crew — with emergency contacts,
             at every checkpoint. To just get divers aboard before departure, use{" "}
             <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/check-in`}
+              href={`/shop/${shopSlug}/trips/${tripId}/boarding`}
               className="font-semibold text-primary hover:underline"
             >
               Boarding

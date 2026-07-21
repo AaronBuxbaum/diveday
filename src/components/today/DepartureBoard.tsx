@@ -64,7 +64,7 @@ function DepartureCard({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}/check-in`}
+            href={`/shop/${shopSlug}/trips/${departure.tripId}/boarding`}
             className={buttonClass()}
           >
             Boarding

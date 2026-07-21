@@ -36,7 +36,7 @@ diver-medical forms are customarily dated within 12 months); the liability relea
 statement are bundled into one window for simplicity.
 
 This resolution lives in exactly one place — `listTripReadiness` (`src/db/readiness.ts`) — which
-already feeds the roster, the Today queue, the manifest, the check-in screen, and the fail-closed
+already feeds the roster, the Today queue, the manifest, the boarding screen, and the fail-closed
 boarding gate, so every surface agrees. The rule never lowers the bar: it only lets an existing
 valid signature satisfy a new booking; it never invents readiness.
 

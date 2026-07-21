@@ -9,7 +9,7 @@ test("the trip sub-nav reaches all four boat surfaces, and the nav's Boat view s
 
   // Today's departure card drops staff straight onto boarding.
   await page.getByRole("link", { name: "Boarding" }).first().click();
-  await expect(page).toHaveURL(/\/check-in/);
+  await expect(page).toHaveURL(/\/boarding/);
 
   const subNav = page.getByRole("navigation", { name: "Trip" });
   for (const tab of ["Overview", "Boarding", "Manifest", "Prep"]) {
@@ -32,8 +32,8 @@ test("the trip sub-nav reaches all four boat surfaces, and the nav's Boat view s
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
 
-  // The seed sails a boat today, so the nav badge is a live link to its check-in.
+  // The seed sails a boat today, so the nav badge is a live link to its boarding.
   await page.goto("/shop/blue-mantis");
   await page.getByRole("link", { name: "Boat view" }).click();
-  await expect(page).toHaveURL(/\/check-in/);
+  await expect(page).toHaveURL(/\/boarding/);
 });
