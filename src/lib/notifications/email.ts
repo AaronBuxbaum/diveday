@@ -20,6 +20,8 @@ type BookingConfirmationEmailInput = {
   startsAt: Date;
   endsAt: Date;
   timezone: string;
+  /** Minutes before departure to be at the dock; the shop's call, default 30. */
+  dockCallMinutes?: number;
   /** The diver's readiness page, so a closed tab never loses it. */
   readinessUrl?: string;
 };
@@ -53,9 +55,42 @@ type TripReminderEmailInput = {
   timezone: string;
   /** How the reminder reads: "in a week" vs "tomorrow". */
   lead: "week" | "day";
+  /** Minutes before departure to be at the dock; the shop's call, default 30. */
+  dockCallMinutes?: number;
+  /**
+   * The diver's own outstanding items, as short imperatives ("sign your
+   * waiver"), so the reminder names what's left rather than a generic nudge.
+   */
+  outstanding?: string[];
+  /** True when a medical answer may need a doctor's sign-off before boarding. */
+  medicalReview?: boolean;
   /** The diver's readiness page, so they can finish what's outstanding. */
   readinessUrl?: string;
 };
+
+/** "30 minutes" today, whatever the shop set otherwise. */
+function dockCallPhrase(dockCallMinutes: number | undefined): string {
+  return `${dockCallMinutes ?? 30} minutes`;
+}
+
+/** The diver's outstanding items as one bullet list, or empty when nothing's left. */
+function outstandingLines(outstanding: string[] | undefined, medicalReview: boolean | undefined) {
+  const todo = [...(outstanding ?? [])];
+  if (medicalReview) {
+    todo.push("check whether a medical answer needs a doctor's sign-off before you travel");
+  }
+  const capitalized = todo.map((item) => item.charAt(0).toUpperCase() + item.slice(1));
+  return {
+    text: capitalized.length
+      ? `\n\nStill to sort before you board:\n${capitalized.map((t) => `- ${t}`).join("\n")}\n`
+      : "",
+    html: capitalized.length
+      ? `<p>Still to sort before you board:</p><ul>${capitalized
+          .map((t) => `<li>${escapeHtml(t)}</li>`)
+          .join("")}</ul>`
+      : "",
+  };
+}
 
 export type NotificationEmail = {
   subject: string;
@@ -76,10 +111,11 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     ? `<p><a href="${escapeHtml(input.readinessUrl)}">Track what's left before you sail</a>.</p>`
     : "";
 
+  const dock = dockCallPhrase(input.dockCallMinutes);
   return {
     subject: `You're on the boat — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early. ${input.shopName} will take it from there.${readyText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early. ${shop} will take it from there.</p>${readyHtml}`,
+    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early. ${input.shopName} will take it from there.${readyText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early. ${shop} will take it from there.</p>${readyHtml}`,
   };
 }
 
@@ -111,19 +147,15 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   const readyHtml = input.readinessUrl
     ? `<p><a href="${escapeHtml(input.readinessUrl)}">See what's left before you sail</a>.</p>`
     : "";
-  // The last automated touch before the dock is the last chance to clear a
-  // waiver or medical that would keep a diver off the boat (dive-domain review).
-  const safety =
-    input.lead === "day"
-      ? "If your waiver or a medical/physician form is still outstanding, please finish it before you travel — it's needed to board."
-      : "";
-  const safetyText = safety ? `\n\n${safety}` : "";
-  const safetyHtml = safety ? `<p>${escapeHtml(safety)}</p>` : "";
+  // Name the diver's own outstanding items — the last automated chance to clear
+  // a waiver or medical that would keep them off the boat (dive-domain review).
+  const todo = outstandingLines(input.outstanding, input.medicalReview);
+  const dock = dockCallPhrase(input.dockCallMinutes);
 
   return {
     subject: `You sail ${when} — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early.${safetyText}${readyText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early.</p>${safetyHtml}${readyHtml}`,
+    text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early.${todo.text}${readyText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early.</p>${todo.html}${readyHtml}`,
   };
 }
 

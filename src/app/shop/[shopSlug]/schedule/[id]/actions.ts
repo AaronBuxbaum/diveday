@@ -136,6 +136,7 @@ export async function bookSpot(
         startsAt: tripNow.startsAt,
         endsAt: tripNow.endsAt,
         timezone: shopNow.timezone,
+        dockCallMinutes: shopNow.dockCallMinutes,
         readinessUrl: readinessEmailUrl(primaryBookingId),
       });
       if (delivery.status === "failed") {

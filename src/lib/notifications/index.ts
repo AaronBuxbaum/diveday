@@ -20,6 +20,7 @@ const bookingConfirmationSchema = z.object({
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  dockCallMinutes: z.number().int().min(5).max(180).optional(),
   readinessUrl: z.url().max(2_000).optional(),
 });
 
@@ -63,6 +64,9 @@ const tripReminderFields = {
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  outstanding: z.array(z.string().trim().min(1).max(120)).max(8).optional(),
+  medicalReview: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),
 };
 
