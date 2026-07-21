@@ -15,6 +15,9 @@ semantics consistently.
 Every active staff entity gets a create, edit, and deliberate remove action. Removal is soft:
 
 - Divers use `people.deleted_at`; their bookings, certifications, and gear history remain intact.
+- Certification cards (level, specialty, nitrox) use `deleted_at`; a deleted card leaves the diver's
+  card list and stops counting toward readiness, but the row is retained for safety history. The
+  identifier uniqueness index is partial on the live rows, so a renewed card can reuse the number.
 - Dive sites use `dive_sites.deleted_at`; historical trip briefings remain readable, while new-trip
   pickers exclude the archived site.
 - Courses archive with `courses.is_active = false`; existing sessions retain their admission

@@ -33,21 +33,54 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   refunded: "Refunded",
 };
 
+/** The stored card status. `rejected` is legacy: the desk no longer marks cards
+ * for correction (staff delete a bad card instead), but old records may carry it. */
+export type CardStatus = "pending" | "verified" | "rejected";
+
 /**
- * Staff-facing card states. A card is "certified" once staff confirm it (they
- * look the number up with the issuing agency and click Mark certified); the
- * stored status is still `verified`, which is what readiness reads.
+ * What the badge shows: the stored status, or `expired` when a verified card has
+ * lapsed. Expiry is a display overlay, not a stored state — the same card is
+ * "certified" until its expiry passes, then "expired".
  */
-export const CARD_STATUS_LABELS: Record<"pending" | "verified" | "rejected", string> = {
+export type CardDisplayStatus = CardStatus | "expired";
+
+/**
+ * Staff-facing card labels. A card is "certified" once staff confirm it (they
+ * look the number up with the issuing agency and click Mark certified); the
+ * stored status is still `verified`, which is what readiness reads. An expired
+ * card reads as "expired" and no longer counts as valid.
+ */
+export const CARD_STATUS_LABELS: Record<CardDisplayStatus, string> = {
   pending: "pending",
   verified: "certified",
   rejected: "needs correction",
+  expired: "expired",
 };
 
-export function statusTone(status: "pending" | "verified" | "rejected") {
-  return status === "verified"
-    ? "bg-success/10 text-success"
-    : status === "rejected"
-      ? "bg-danger/10 text-danger"
-      : "bg-warning/10 text-warning";
+/**
+ * A card past its expiry no longer counts as a valid certification — the same
+ * rule the readiness engine applies in `validVerifiedCertification`.
+ */
+export function isCardExpired(card: { expiresAt?: Date | null }, now: Date): boolean {
+  return Boolean(card.expiresAt && card.expiresAt <= now);
+}
+
+/** An expired verified card reads as `expired`; every other state is unchanged. */
+export function cardDisplayStatus(
+  card: { status: CardStatus; expiresAt?: Date | null },
+  now: Date,
+): CardDisplayStatus {
+  return card.status === "verified" && isCardExpired(card, now) ? "expired" : card.status;
+}
+
+export function statusTone(status: CardDisplayStatus) {
+  switch (status) {
+    case "verified":
+      return "bg-success/10 text-success";
+    case "rejected":
+    case "expired":
+      return "bg-danger/10 text-danger";
+    default:
+      return "bg-warning/10 text-warning";
+  }
 }

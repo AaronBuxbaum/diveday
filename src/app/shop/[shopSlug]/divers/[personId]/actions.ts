@@ -5,9 +5,15 @@ import { z } from "zod";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
-import { createNitroxCertification, reviewNitroxCertification } from "@/db/nitrox";
+import {
+  archiveNitroxCertification,
+  createNitroxCertification,
+  reviewNitroxCertification,
+} from "@/db/nitrox";
 import { refundOrder } from "@/db/orders";
 import {
+  archiveCertification,
+  archiveSpecialtyCertification,
   createCertification,
   createSpecialtyCertification,
   reviewCertification,
@@ -61,7 +67,15 @@ const profileSchema = z.object({
   weightPreference: z.string().trim().max(120),
 });
 
-async function resolveCardImage(formData: FormData) {
+type ResolvedCardImage =
+  /** No file offered, or one stored successfully (url undefined when none given). */
+  | { url: string | undefined }
+  /** Storage isn't set up for this deployment — keep the card, just without a photo. */
+  | { unconfigured: true }
+  /** The file itself was rejected (wrong type, too large, or the provider failed). */
+  | { failed: true };
+
+async function resolveCardImage(formData: FormData): Promise<ResolvedCardImage> {
   const file = formData.get("cardImage");
   if (!(file instanceof File) || file.size === 0) return { url: undefined };
   const stored = await storeCardImage({
@@ -70,6 +84,9 @@ async function resolveCardImage(formData: FormData) {
     contentType: file.type,
     bytes: await file.arrayBuffer(),
   });
+  // `not_configured` is not a bad photo: no blob storage is wired up, so we save
+  // the card without the image rather than rejecting a perfectly valid upload.
+  if (stored.status === "not_configured") return { unconfigured: true };
   return stored.status === "stored" ? { url: stored.url } : { failed: true };
 }
 
@@ -100,7 +117,7 @@ export async function addCertificationAction(
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
   const image = await resolveCardImage(formData);
-  if (image.failed) redirect(`${base}?notice=image`);
+  if ("failed" in image) redirect(`${base}?notice=image`);
   const saved = await createCertification(await getDb(), {
     shopId: staff.user.shopId,
     personId,
@@ -108,9 +125,10 @@ export async function addCertificationAction(
     level: parsed.data.level,
     identifier: parsed.data.identifier,
     expiresAt: dateFromInput(parsed.data.expiresOn),
-    cardImageUrl: image.url,
+    cardImageUrl: "url" in image ? image.url : undefined,
   });
-  revalidateAndRedirect(base, `${base}?notice=${saved ? "captured" : "invalid"}`);
+  const notice = saved ? ("unconfigured" in image ? "captured-no-photo" : "captured") : "invalid";
+  revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
 export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
@@ -119,7 +137,7 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
   const image = await resolveCardImage(formData);
-  if (image.failed) redirect(`${base}?notice=image`);
+  if ("failed" in image) redirect(`${base}?notice=image`);
   const saved =
     parsed.data.specialty === "nitrox"
       ? await createNitroxCertification(await getDb(), {
@@ -135,24 +153,25 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
           specialty: parsed.data.specialty,
           identifier: parsed.data.identifier,
           expiresAt: dateFromInput(parsed.data.expiresOn),
-          cardImageUrl: image.url,
+          cardImageUrl: "url" in image ? image.url : undefined,
         });
-  revalidateAndRedirect(base, `${base}?notice=${saved ? "captured" : "invalid"}`);
+  const notice = saved ? ("unconfigured" in image ? "captured-no-photo" : "captured") : "invalid";
+  revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
+/** The only review outcome is "certified" — a bad card is deleted, not marked for correction. */
 export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
-  const status = formData.get("status") === "rejected" ? "rejected" : "verified";
   const updated = certificationId
     ? await reviewCertification(await getDb(), {
         shopId: staff.user.shopId,
         certificationId,
-        status,
+        status: "verified",
       })
     : null;
-  revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
+  revalidateAndRedirect(base, `${base}?notice=${updated ? "verified" : "invalid"}`);
 }
 
 export async function reviewSpecialtyAction(
@@ -163,21 +182,57 @@ export async function reviewSpecialtyAction(
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
-  const status = formData.get("status") === "rejected" ? "rejected" : "verified";
   const updated = certificationId
     ? formData.get("cardType") === "nitrox"
       ? await reviewNitroxCertification(await getDb(), {
           shopId: staff.user.shopId,
           certificationId,
-          status,
+          status: "verified",
         })
       : await reviewSpecialtyCertification(await getDb(), {
           shopId: staff.user.shopId,
           certificationId,
-          status,
+          status: "verified",
         })
     : null;
-  revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
+  revalidateAndRedirect(base, `${base}?notice=${updated ? "verified" : "invalid"}`);
+}
+
+/**
+ * Delete a level card. It is a soft-archive: the card leaves the diver's list
+ * and stops counting toward readiness, but the row is kept for safety history
+ * (ADR 20260719-crud-archive-semantics). Replaces the old "needs correction" flow.
+ */
+export async function deleteCertificationAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const certificationId = String(formData.get("certificationId") ?? "");
+  const deleted = certificationId
+    ? await archiveCertification(await getDb(), { shopId: staff.user.shopId, certificationId })
+    : false;
+  revalidateAndRedirect(base, `${base}?notice=${deleted ? "card-deleted" : "invalid"}`);
+}
+
+/** Delete a specialty or nitrox card (soft-archive; dispatched by the hidden `cardType`). */
+export async function deleteSpecialtyAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const certificationId = String(formData.get("certificationId") ?? "");
+  const db = await getDb();
+  const deleted = certificationId
+    ? formData.get("cardType") === "nitrox"
+      ? await archiveNitroxCertification(db, { shopId: staff.user.shopId, certificationId })
+      : await archiveSpecialtyCertification(db, { shopId: staff.user.shopId, certificationId })
+    : false;
+  revalidateAndRedirect(base, `${base}?notice=${deleted ? "card-deleted" : "invalid"}`);
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {
