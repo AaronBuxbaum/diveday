@@ -68,3 +68,9 @@ Add [Argos](https://argos-ci.com) visual regression via `@argos-ci/playwright` (
 - The masked regions (time/date text) are excluded from visual assertions on those surfaces —
   regressions purely inside masked text (e.g. a wrong time format) still rely on the text-level
   e2e assertions that already cover them.
+- Argos diffs a PR build against a build on the base branch (`main`), not against the PR's own
+  history. CI originally triggered only on `pull_request`, so `main` never got an Argos build of
+  its own and every PR build showed up as all-new screenshots with nothing to compare against
+  ("changes-detected" with zero `changed`, only `added`). `.github/workflows/ci.yml` also triggers
+  on `push` to `main` so every merge uploads a baseline build automatically — no manual e2e rerun
+  required to seed it.
