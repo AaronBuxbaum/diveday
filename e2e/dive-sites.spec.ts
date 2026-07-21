@@ -55,6 +55,8 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/schedule");
     await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
+    // Marine life folds behind the per-dive "look for" tap (P2 content fold).
+    await page.getByText("What to look for down there").first().click();
     await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
     await expect(page.getByText("27°C")).toBeVisible();
     await expect(page.getByText("18 m")).toBeVisible();
@@ -80,6 +82,11 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();
   await expect(page.getByText("Reef garden loop")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
+  // Landmarks, the field guide, and diver moments fold behind one tap per
+  // dive so the page stays a briefing; open both tanks' folds to read them.
+  for (const summary of await page.getByText("What to look for down there").all()) {
+    await summary.click();
+  }
   // Both tanks of the seeded two-tank trip carry a site briefing, so this
   // heading appears once per dive.
   await expect(

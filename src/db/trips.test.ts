@@ -9,7 +9,10 @@ import {
   getTripSeriesSummary,
   getTripWithBooked,
   listTripDives,
+  pagedUpcomingTripsWithCounts,
   setTripStatus,
+  upcomingScheduleRange,
+  upcomingScheduleStats,
   upcomingTripsWithCounts,
   updateTrip,
 } from "./trips";
@@ -257,5 +260,44 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
         ],
       }),
     ).toBeNull();
+  });
+});
+
+describe("paged schedule queries", () => {
+  it("pages the board with a keyset cursor, in departure order, without gaps", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    for (let hops = 0; hops < 20; hops++) {
+      const page = await pagedUpcomingTripsWithCounts(db, shop.id, { cursor, limit: 5 });
+      expect(page.trips.length).toBeLessThanOrEqual(5);
+      seen.push(...page.trips.map((t) => t.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(all.map((t) => t.id));
+
+    const onePage = await pagedUpcomingTripsWithCounts(db, shop.id);
+    expect(onePage.nextCursor).toBeNull(); // seed fits one default page
+    expect(onePage.trips.map((t) => t.id)).toEqual(all.map((t) => t.id));
+  });
+
+  it("computes board-wide stats that match the full list", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    const stats = await upcomingScheduleStats(db, shop.id);
+
+    expect(stats.departures).toBe(all.length);
+    expect(stats.booked).toBe(all.reduce((sum, t) => sum + t.booked, 0));
+    expect(stats.openSeats).toBe(
+      all.reduce((sum, t) => sum + Math.max(0, t.capacity - t.booked), 0),
+    );
+    expect(stats.atCapacity).toBe(all.filter((t) => t.booked >= t.capacity).length);
+
+    const range = await upcomingScheduleRange(db, shop.id);
+    expect(range.first?.getTime()).toBe(all[0]?.startsAt.getTime());
+    expect(range.last?.getTime()).toBe(all.at(-1)?.startsAt.getTime());
   });
 });

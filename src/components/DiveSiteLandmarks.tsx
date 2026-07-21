@@ -4,7 +4,7 @@ export function DiveSiteLandmarks({ landmarks }: { landmarks: DiveSiteLandmark[]
   if (landmarks.length === 0) return null;
 
   return (
-    <section className="mt-8 border-t border-border pt-8">
+    <section className="pt-2">
       <p className="text-sm font-medium tracking-widest text-primary uppercase">Look for these</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
         <h3 className="text-xl font-semibold tracking-tight">Landmarks that tell the story</h3>

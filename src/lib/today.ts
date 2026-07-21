@@ -1,3 +1,4 @@
+import type { Role } from "./authz";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 
 /**
@@ -468,4 +469,31 @@ export function summarizeDay(
     return `${boats}. ${urgent} ${urgent === 1 ? "job" : "jobs"} to clear before they sail.`;
   }
   return `${boats}. Nothing is urgent; ${actions.length} ${actions.length === 1 ? "job" : "jobs"} to work ahead.`;
+}
+
+export type RoleLens = "boat" | "sessions" | null;
+
+/**
+ * Which lens Today leads with for the signed-in staffer
+ * (20260721-role-aware-landing). Owners and managers triage the whole shop, so
+ * they get no lens; instructors lead with their sessions; divemasters and
+ * captains lead with their boat. Instructor wins for people holding both,
+ * matching the demo switcher's precedence.
+ */
+export function roleLensFor(roles: readonly Role[]): RoleLens {
+  if (roles.includes("owner") || roles.includes("manager")) return null;
+  if (roles.includes("instructor")) return "sessions";
+  if (roles.includes("divemaster") || roles.includes("captain")) return "boat";
+  return null;
+}
+
+/** Crewed departures first, original sailing order within each half. */
+export function leadWithCrewed<T extends { tripId: string }>(
+  departures: readonly T[],
+  crewedTripIds: ReadonlySet<string>,
+): T[] {
+  return [
+    ...departures.filter((departure) => crewedTripIds.has(departure.tripId)),
+    ...departures.filter((departure) => !crewedTripIds.has(departure.tripId)),
+  ];
 }

@@ -22,7 +22,7 @@ export function DiveSiteFieldGuide({
   const tips = [...new Set(creatures.map((creature) => creature.preparationTip).filter(Boolean))];
 
   return (
-    <section className="mt-8 border-t border-border pt-8">
+    <section className="mt-6 first:mt-0 first:pt-2">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">
