@@ -15,7 +15,7 @@ import {
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
-import { joinTripWaitlist, recordWaitlistInvite } from "@/db/waitlist";
+import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -34,6 +34,14 @@ const detailsSchema = z.object({
   priceDollars: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.coerce.number().nonnegative().finite().optional(),
+  ),
+  depositDollars: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().nonnegative().finite().optional(),
+  ),
+  cancellationWindowHours: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(0).max(720).optional(),
   ),
 });
 
@@ -81,8 +89,18 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const s = await requireStaffSession();
   const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}?notice=invalid`);
-  const { title, description, date, startTime, endTime, capacity, plannedDives, priceDollars } =
-    parsed.data;
+  const {
+    title,
+    description,
+    date,
+    startTime,
+    endTime,
+    capacity,
+    plannedDives,
+    priceDollars,
+    depositDollars,
+    cancellationWindowHours,
+  } = parsed.data;
   const sw = parseWallTime(date, startTime);
   const ew = parseWallTime(date, endTime);
   if (!sw || !ew) redirect(`${back}?notice=invalid`);
@@ -100,6 +118,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     capacity,
     plannedDives,
     priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
+    depositCents: depositDollars === undefined ? null : Math.round(depositDollars * 100),
+    cancellationWindowHours: cancellationWindowHours ?? null,
     diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
     dives: tripDiveDraftsFromForm(formData, plannedDives),
   });
@@ -199,15 +219,34 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
 }
 
 /**
- * Record that staff invited a wait-list diver to grab a freed seat. Called
- * imperatively from the one-tap invite control (which also opens the mail
- * composer); this just stamps `invitedAt` and refreshes the roster so the
- * entry reads "Invited just now" and nobody double-invites.
+ * What a one-tap wait-list invite reports back to the control: `sent` when the
+ * freed-seat email actually went out through the notification seam, `fallback`
+ * when it didn't (no provider configured, or the diver has no address on file)
+ * so the UI opens the prewritten mailto/copy composer instead of pretending
+ * mail is on its way. Either way the invite is stamped so nobody double-invites.
  */
-export async function inviteWaitlistAction(shopSlug: string, tripId: string, entryId: string) {
+export type WaitlistInviteResult = "sent" | "fallback";
+
+/**
+ * Invite a wait-list diver to grab a freed seat: stamps `invitedAt` (so the
+ * entry reads "Invited just now" and two staff don't both reach out) and emails
+ * them the trip's booking link through the shared notification seam. When email
+ * isn't wired up, the control falls back to the composer — the send is the
+ * default now, the composer is the safety net.
+ */
+export async function inviteWaitlistAction(
+  shopSlug: string,
+  tripId: string,
+  entryId: string,
+): Promise<WaitlistInviteResult> {
   const s = await requireStaffSession();
-  await recordWaitlistInvite(await getDb(), { shopId: s.user.shopId, entryId });
+  const result = await inviteWaitlistDiver(await getDb(), {
+    shopId: s.user.shopId,
+    shopSlug,
+    entryId,
+  });
   revalidatePath(backPath(shopSlug, tripId));
+  return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {

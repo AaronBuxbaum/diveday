@@ -81,6 +81,7 @@ export function RosterSection({
   rentalFitByBooking,
   nitroxByBooking,
   requiresPayment,
+  cancellationDeadline,
   issueWaiverAction,
   markWaiverInPersonAction,
   markPaymentAction,
@@ -97,11 +98,14 @@ export function RosterSection({
   rentalFitByBooking: RentalFitByBooking;
   nitroxByBooking: NitroxByBooking;
   requiresPayment: boolean;
+  /** When free cancellation closes, so staff see a refund cue on paid seats; null = no stated window. */
+  cancellationDeadline: Date | null;
   issueWaiverAction: (formData: FormData) => void;
   markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
 }) {
+  const refundEligible = cancellationDeadline !== null && cancellationDeadline > new Date();
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -326,6 +330,15 @@ export function RosterSection({
                         Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
                         {paymentSource ? (
                           <span className="text-muted"> · {paymentSource}</span>
+                        ) : null}
+                        {refundEligible &&
+                        cancellationDeadline &&
+                        (paymentStatus === "paid" || paymentStatus === "deposit_paid") ? (
+                          <span className="text-muted">
+                            {" "}
+                            · Refund-eligible until{" "}
+                            {formatDateTimeTz(cancellationDeadline, "en-US", shopTimezone)}
+                          </span>
                         ) : null}
                       </span>
                       <select

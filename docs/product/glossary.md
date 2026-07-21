@@ -184,6 +184,18 @@ new domain concept, define it here in the same PR.
   never from the return URL — and cascades into the booking's payment gate like any other payment.
   An abandoned checkout costs nothing: the booking simply stays unpaid, exactly as if the shop had
   no checkout. See [20260721-checkout-at-booking](../architecture/decisions/20260721-checkout-at-booking.md).
+- **Deposit** — an optional per-diver amount (`trips.deposit_cents`) a shop may take at booking
+  checkout instead of the full fare. Charged now and labelled a deposit on the Stripe page; the
+  booking becomes **deposit paid** (which clears the readiness payment gate) with the balance still
+  owed and collected later by a staff order or a full checkout. Off by default; only ever a *partial*
+  of the fare (a value at or above the price charges full). DiveDay ships no default amount — the
+  value is the shop's commercial term. See
+  [20260721-deposit-cancellation-policy](../architecture/decisions/20260721-deposit-cancellation-policy.md).
+- **Cancellation window** — an optional count of hours before departure (`trips.cancellation_window_hours`)
+  during which a diver may cancel for a refund. It is **declarative**: shown to divers at booking and
+  on the confirmation ("Free cancellation until …") and to staff as a "refund-eligible until" cue on
+  paid seats. It moves no money — refunds stay staff-initiated. Off by default; DiveDay ships no
+  default window.
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. `isDemo` is reserved for the canonical
   seeded example shop (Blue Mantis), bootstrapped in every environment and reached via "Try the live

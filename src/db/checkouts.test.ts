@@ -227,6 +227,49 @@ describe("startBookingCheckout", () => {
   });
 });
 
+describe("deposit checkout", () => {
+  const DEPOSIT_CENTS = 5_000;
+
+  /** Set a per-diver deposit on the context's reef trip. */
+  async function withDeposit(
+    db: Awaited<ReturnType<typeof checkoutContext>>["db"],
+    shopId: string,
+    reef: Awaited<ReturnType<typeof checkoutContext>>["reef"],
+  ) {
+    await updateTrip(db, shopId, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: REEF_PRICE_CENTS,
+      depositCents: DEPOSIT_CENTS,
+    });
+  }
+
+  it("charges the deposit and settles covered bookings to deposit_paid", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await withDeposit(db, shop.id, reef);
+
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.amountPerDiverCents).toBe(DEPOSIT_CENTS);
+    expect(start.checkout.isDeposit).toBe(true);
+    expect(start.checkout.totalCents).toBe(DEPOSIT_CENTS * 2);
+
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    for (const bookingId of bookingIds) {
+      const payment = await getBookingPayment(db, shop.id, bookingId);
+      expect(payment?.status).toBe("deposit_paid");
+      expect(payment?.amountCents).toBe(DEPOSIT_CENTS);
+    }
+  });
+});
+
 describe("checkout completion", () => {
   it("marks every covered booking paid through the shared payment gate", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();

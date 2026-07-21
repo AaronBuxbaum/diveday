@@ -38,6 +38,14 @@ const formSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.coerce.number().nonnegative().finite().optional(),
   ),
+  depositDollars: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().nonnegative().finite().optional(),
+  ),
+  cancellationWindowHours: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(0).max(720).optional(),
+  ),
   courseId: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
@@ -68,6 +76,8 @@ async function scheduleTrip(formData: FormData) {
     capacity,
     plannedDives,
     priceDollars,
+    depositDollars,
+    cancellationWindowHours,
     courseId,
     repeatIntervalWeeks,
     repeatCount,
@@ -90,6 +100,8 @@ async function scheduleTrip(formData: FormData) {
 
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
   const priceCents = priceDollars === undefined ? null : Math.round(priceDollars * 100);
+  const depositCents = depositDollars === undefined ? null : Math.round(depositDollars * 100);
+  const cancellationWindowHoursValue = cancellationWindowHours ?? null;
   const shopHref = `/shop/${session.user.shopSlug}`;
 
   if (repeatIntervalWeeks > 0) {
@@ -111,6 +123,8 @@ async function scheduleTrip(formData: FormData) {
       plannedDives,
       dives,
       priceCents,
+      depositCents,
+      cancellationWindowHours: cancellationWindowHoursValue,
       frequency: "weekly",
       intervalWeeks: repeatIntervalWeeks,
       occurrences: occurrenceWalls.map((occurrence) => ({
@@ -136,6 +150,8 @@ async function scheduleTrip(formData: FormData) {
     plannedDives,
     dives,
     priceCents,
+    depositCents,
+    cancellationWindowHours: cancellationWindowHoursValue,
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
   revalidateAndRedirect(shopHref, `${shopHref}?created=${encodeURIComponent(title)}`);
@@ -276,6 +292,47 @@ export default async function NewTripPage({
             />
           </Field>
         </FieldGrid>
+        <fieldset className="rounded-lg border border-border bg-surface p-5">
+          <legend className="px-1 text-sm font-medium">Pay at booking</legend>
+          <p className="text-sm text-muted">
+            Optional. When the trip is priced and the shop takes card payments, divers pay online as
+            they book. Leave the deposit blank to charge the full fare up front.
+          </p>
+          <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+            <Field
+              label="Deposit per diver"
+              hint="(optional)"
+              description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price."
+            >
+              <input
+                name="depositDollars"
+                type="number"
+                step="0.01"
+                min={0}
+                placeholder="$0.00"
+                className={`${controlClass} tabular-nums sm:w-40`}
+              />
+            </Field>
+            <Field
+              label="Free cancellation window"
+              hint="(optional)"
+              description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run."
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  name="cancellationWindowHours"
+                  type="number"
+                  step={1}
+                  min={0}
+                  max={720}
+                  placeholder="48"
+                  className={`${controlClass} tabular-nums sm:w-28`}
+                />
+                <span className="text-sm text-muted">hours</span>
+              </div>
+            </Field>
+          </FieldGrid>
+        </fieldset>
         <fieldset className="rounded-lg border border-border bg-surface p-5">
           <legend className="px-1 text-sm font-medium">Repeat</legend>
           <p className="text-sm text-muted">
