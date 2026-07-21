@@ -48,7 +48,12 @@ export default async function DiverDetailPage({
       <StatsSummary diver={diver} />
       <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} />
       <SpecialtyCards diver={diver} shopSlug={shopSlug} personId={personId} />
-      <RentalFit diver={diver} shopSlug={shopSlug} personId={personId} />
+      <RentalFit
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        rentalItems={shop.rentalItems}
+      />
       <BookActivity
         diver={diver}
         shop={shop}

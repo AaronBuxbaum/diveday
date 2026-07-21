@@ -2,17 +2,17 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
 
-test("the trip sub-nav reaches all four boat surfaces, and the nav's Boat view shortcut lands on check-in", async ({
+test("the trip sub-nav reaches all four boat surfaces, and the nav's Boat view shortcut lands on boarding", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis");
 
-  // Today's departure card drops staff straight onto check-in.
-  await page.getByRole("link", { name: "Check in" }).first().click();
+  // Today's departure card drops staff straight onto boarding.
+  await page.getByRole("link", { name: "Boarding" }).first().click();
   await expect(page).toHaveURL(/\/check-in/);
 
   const subNav = page.getByRole("navigation", { name: "Trip" });
-  for (const tab of ["Overview", "Check-in", "Manifest", "Prep"]) {
+  for (const tab of ["Overview", "Boarding", "Manifest", "Prep"]) {
     await expect(subNav.getByText(tab, { exact: true })).toBeVisible();
   }
 
