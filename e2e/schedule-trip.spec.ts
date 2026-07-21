@@ -1,11 +1,12 @@
-import { expect, test } from "./fixtures";
-import { daysFromNow, signInAsOwner } from "./helpers";
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow } from "./helpers";
+
+signedInAsOwner();
 
 test("staff schedules a trip and it appears on shop and public schedules", async ({ page }) => {
   // Unique per run: the dev database persists across e2e runs.
   const title = `Turtle Reef Special ${Date.now()}`;
 
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: "Schedule a trip" }).click();
   await expect(page.getByRole("heading", { name: "Schedule a trip" })).toBeVisible();
@@ -41,7 +42,6 @@ test("staff schedules a trip and it appears on shop and public schedules", async
 });
 
 test("end-before-start is rejected with a friendly message", async ({ page }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill("Backwards Trip");
   await page.getByLabel("Date").fill(daysFromNow(4));

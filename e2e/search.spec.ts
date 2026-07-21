@@ -1,8 +1,11 @@
-import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
-test("the command palette pulls up a diver by name and lands on their record", async ({ page }) => {
-  await signInAsOwner(page);
+signedInAsOwner();
+
+test("the command palette finds a diver by name and ⌘K jumps to a page shortcut", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis");
 
   // The nav Search button opens the palette (phone users have no ⌘K).
   await page.getByRole("button", { name: "Search" }).click();
@@ -17,21 +20,17 @@ test("the command palette pulls up a diver by name and lands on their record", a
   await box.press("Enter");
   await expect(page).toHaveURL(/\/divers\/[a-f0-9-]+$/);
   await expect(page.getByRole("heading", { name: /Priya Sharma/ })).toBeVisible();
-});
 
-test("⌘K opens the palette and a 'Go to' shortcut jumps to a page", async ({ page }) => {
-  await signInAsOwner(page);
+  // ⌘K reopens the palette anywhere, and a "Go to" shortcut jumps to a page.
   await page.keyboard.press("ControlOrMeta+k");
-  const box = page.getByRole("combobox", { name: /Search divers/ });
-  await expect(box).toBeFocused();
-
-  await box.fill("Blockers");
+  const reopened = page.getByRole("combobox", { name: /Search divers/ });
+  await expect(reopened).toBeFocused();
+  await reopened.fill("Blockers");
   await page.getByRole("option", { name: "Blockers" }).click();
   await expect(page).toHaveURL(/\/blockers$/);
 });
 
 test("the divers list filters live as you type, no submit", async ({ page }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/divers");
   const search = page.getByRole("searchbox", { name: "Search divers" });
   await expect(page.getByRole("cell", { name: /Priya Sharma/ })).toBeVisible();

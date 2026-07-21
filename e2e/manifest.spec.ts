@@ -1,19 +1,10 @@
-import type { Page } from "@playwright/test";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
-async function signInAsOwner(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
-  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/shop/);
-}
+signedInAsOwner();
 
 test("live manifest retains blocked divers and records an explicit not-boarded result", async ({
   page,
 }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")
@@ -68,7 +59,6 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   page,
   context,
 }) => {
-  await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")

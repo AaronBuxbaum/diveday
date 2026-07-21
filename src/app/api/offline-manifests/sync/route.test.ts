@@ -1,12 +1,12 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type AppDb, createTestDb } from "@/db/client";
+import type { AppDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
-import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { STAFF_ROLES } from "@/lib/authz";
+import { seededTestDb } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -37,8 +37,7 @@ function postRequest(body: unknown, headers: Record<string, string> = {}) {
 }
 
 async function seededContext() {
-  const db: AppDb = await createTestDb();
-  await seedDemo(db);
+  const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   const trips = await upcomingTripsWithCounts(db, shop.id);

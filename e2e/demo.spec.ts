@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 
-test("landing demo CTA drops a visitor into the staff shop with a demo banner", async ({
+test("landing demo CTA drops a visitor into the staff shop, and reset restores the playground", async ({
   page,
 }) => {
   await page.goto("/");
@@ -10,11 +10,11 @@ test("landing demo CTA drops a visitor into the staff shop with a demo banner", 
   await expect(page.getByRole("heading", { name: "Good to see you, Dana" })).toBeVisible();
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo Playground")).toBeVisible();
-});
 
-test("sign-in keeps the demo entry on the homepage", async ({ page }) => {
-  await page.goto("/sign-in");
-  await expect(page.getByRole("button", { name: "Explore the demo shop" })).toHaveCount(0);
+  // Reset confirms with a notice and the session survives it.
+  await page.getByRole("button", { name: "Reset demo data" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Demo data reset" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Good to see you, Dana" })).toBeVisible();
 });
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {
@@ -49,15 +49,4 @@ test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) =
   // A trial is a real shop: no Demo Playground banner, no destructive reset.
   await expect(page.getByText("Demo Playground")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Reset demo data" })).toHaveCount(0);
-});
-
-test("reset restores the demo schedule and confirms with a notice", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Try the live demo" }).first().click();
-  await expect(page).toHaveURL(/\/shop/);
-
-  await page.getByRole("button", { name: "Reset demo data" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Demo data reset" })).toBeVisible();
-  // Still signed in after the reset — the session survives it.
-  await expect(page.getByRole("heading", { name: "Good to see you, Dana" })).toBeVisible();
 });

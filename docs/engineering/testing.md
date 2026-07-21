@@ -24,6 +24,25 @@ pnpm e2e           # Playwright (auto-detects sandbox Chromium; CI installs its 
 pnpm check         # lint + typecheck + unit — the pre-commit bar
 ```
 
+## The test database is a snapshot, not a boot
+
+Database-backed tests call `seededTestDb()` / `seededShopContext()` from `@/test/db`. They still
+get a fully isolated in-memory PGlite database per test — but it is hydrated from a template
+snapshot (migrated + demo-seeded, built once per run by `src/test/global-setup.ts` and cached in
+`node_modules/.cache/diveday/`), not by replaying migrations per test. Replaying was ~3s per test;
+hydrating is a few hundred milliseconds. Two rules keep this sound:
+
+- Never cache or share a database across tests; call the helper per test.
+- Don't call `createTestDb()` + `seedDemo()` directly in tests — that's the slow path the helper
+  exists to avoid. (`createTestDb()` alone is fine for the rare test that wants an *unseeded* db.)
+
+The snapshot is keyed on a content hash of `drizzle/` and `src/db/` and expires after 10 minutes,
+because the demo seed is clock-anchored (one trip always sails *today*); staleness cannot outlive
+the shortest seeded future departure.
+
+Vitest defaults to the `node` environment. A test that exercises browser APIs (DOM rendering,
+IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock on line 1.
+
 ## Conventions
 
 - **Test behavior, not implementation.** Query the DOM by role/label, assert outcomes; don't
@@ -38,6 +57,11 @@ pnpm check         # lint + typecheck + unit — the pre-commit bar
 - **E2E keeps real application boundaries and disables third-party HTTP.** Exercise Next, auth,
   and the isolated PGlite database together. Test provider adapters with injected fakes in Vitest;
   do not add browser-level service-worker mocks for server-side providers.
+- **E2E staff tests reuse a per-worker session.** Each worker signs in through the real form
+  once (`ownerStorageState` in `e2e/fixtures.ts`) and staff specs opt in with
+  `signedInAsOwner()` at file or describe scope instead of walking the sign-in form per test.
+  `auth.spec.ts` — and the mid-flow sign-out/sign-in legs of the booking loop — still exercise
+  the live form; tests that must start signed out simply don't opt in.
 - **E2E runs parallel against a precompiled server fleet.** `pnpm e2e` builds once (`next build`)
   and Playwright starts one `next start` server per worker, each with its own in-memory PGlite
   database (`e2e/servers.ts`, `playwright.config.ts`). Precompiled routes avoid the dev-mode

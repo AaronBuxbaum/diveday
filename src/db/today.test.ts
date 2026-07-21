@@ -64,10 +64,10 @@ describe("today's work queue (in-memory PGlite)", () => {
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const waiverRow = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
       work.actions.find((action) => action.id === `blockers:${reef.id}:waiver_not_sent`);
+    // Exact roster-abbreviation copy is pinned in src/lib/today.test.ts; here
+    // only the assembled counts matter.
     expect(waiverRow(before)?.subject).toBe("9 divers");
-    expect(waiverRow(before)?.detail).toBe(
-      "Waiver has not been sent. Diego Alvarez, Ines Costa and 7 others.",
-    );
+    expect(waiverRow(before)?.detail).toContain("Waiver has not been sent.");
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
