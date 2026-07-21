@@ -10,7 +10,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { signIn } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Sign in — Scuba",
+  title: "Sign in — DiveDay",
 };
 
 async function authenticate(formData: FormData) {

@@ -19,7 +19,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Edit dive site — Scuba" };
+export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
 
 const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);

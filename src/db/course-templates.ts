@@ -2,7 +2,7 @@ import type { CourseContent } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 
 /**
- * Scuba's published course pages: the words a shop starts from, not the words
+ * DiveDay's published course pages: the words a shop starts from, not the words
  * it must keep. Every number here comes from the agency's own published
  * standards (minimum age, dive counts, depth limits) because a shop that edits
  * nothing must still be telling divers the truth. Everything else — the day

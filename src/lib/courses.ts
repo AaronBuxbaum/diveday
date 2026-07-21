@@ -18,7 +18,7 @@ export type CourseFaq = { question: string; answer: string };
  * The marketing surface of a course: everything a diver reads before booking,
  * and nothing an operation depends on. Prices, the cert gate, and scheduling
  * live on the course row itself because they carry operational weight; these
- * fields only ever render. Kept as one shape so a Scuba-published template and
+ * fields only ever render. Kept as one shape so a DiveDay-published template and
  * a shop's own copy are the same thing (src/db/courses.ts).
  */
 export type CourseContent = {

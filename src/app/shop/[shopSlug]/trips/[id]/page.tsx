@@ -52,7 +52,7 @@ import {
 } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Manage trip — Scuba",
+  title: "Manage trip — DiveDay",
 };
 
 export default async function ManageTripPage({

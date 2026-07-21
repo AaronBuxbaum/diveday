@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Scuba — dive shop operations, delightfully",
+  title: "DiveDay — dive shop operations, delightfully",
   description:
     "Bookings, waivers, cert checks, trip prep, and boat manifests for dive shops — delight-first.",
 };

@@ -4,7 +4,7 @@ import { OfflineManifestView } from "@/components/OfflineManifestView";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Offline boat manifest — Scuba",
+  title: "Offline boat manifest — DiveDay",
   robots: { index: false, follow: false },
 };
 

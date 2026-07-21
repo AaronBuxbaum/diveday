@@ -32,9 +32,9 @@ export async function generateMetadata({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const course = shop ? await getCourseBySlug(db, shop.id, slug) : null;
-  if (!course) return { title: "Course — Scuba" };
+  if (!course) return { title: "Course — DiveDay" };
   return {
-    title: `${course.title} — ${shop?.name ?? "Scuba"}`,
+    title: `${course.title} — ${shop?.name ?? "DiveDay"}`,
     description: course.summary ?? course.description ?? undefined,
   };
 }

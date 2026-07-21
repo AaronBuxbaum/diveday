@@ -126,7 +126,7 @@ export function DemoBanner({
         {isExpanded ? (
           <div className="mt-4 border-t border-border/60 pt-4">
             <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              Choose a role to experience Scuba from different perspectives:
+              Choose a role to experience DiveDay from different perspectives:
             </h3>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {roles.map((role) => {

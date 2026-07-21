@@ -11,7 +11,7 @@ import {
 import { buttonClass } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Product — Scuba",
+  title: "Product — DiveDay",
   description: "The dive-shop operating system for bookings, readiness, trip prep, and the boat.",
 };
 
@@ -29,7 +29,7 @@ export default function ProductPage() {
               Everything the shop needs to make a safe departure feel easy.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              Scuba is organized around the trip itself. Every booking, waiver, certification,
+              DiveDay is organized around the trip itself. Every booking, waiver, certification,
               payment, packing decision, and roll-call event stays attached to the people going out
               on the boat.
             </p>
@@ -66,7 +66,7 @@ export default function ProductPage() {
               </ul>
             </div>
             <MarketingMockup
-              label="The Scuba readiness section used by a dive shop's front desk."
+              label="The DiveDay readiness section used by a dive shop's front desk."
               className="shadow-xl shadow-foreground/5"
             >
               <FrontDeskReadinessFallback />
@@ -94,7 +94,7 @@ export default function ProductPage() {
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.8fr] lg:items-center">
             <div className="order-2 lg:order-1">
               <CaptainPhoneFrame
-                label="A captain using the mobile roll-call view in Scuba."
+                label="A captain using the mobile roll-call view in DiveDay."
                 className="mx-auto max-w-sm"
               />
             </div>
@@ -112,7 +112,7 @@ export default function ProductPage() {
               </p>
               <p className="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm leading-6 text-muted">
                 Save an encrypted device copy before leaving service. Every offline change stays
-                visibly pending until Scuba rechecks live readiness and reconciles it; newer live
+                visibly pending until DiveDay rechecks live readiness and reconciles it; newer live
                 events are never silently overwritten.
               </p>
             </div>

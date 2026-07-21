@@ -54,7 +54,7 @@ test("a verified nitrox card turns a diver's tanks to enriched air on the prep l
   const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
   await expect(tanks).toContainText("Nitrox");
   // Nothing on this page claims to know what is in a cylinder.
-  await expect(page.getByText("Scuba logs no gas analysis")).toBeVisible();
+  await expect(page.getByText("DiveDay logs no gas analysis")).toBeVisible();
 });
 
 test("a nitrox request without a verified card is planned as air and called out", async ({

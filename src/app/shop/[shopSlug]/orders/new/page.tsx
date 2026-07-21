@@ -16,7 +16,7 @@ import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "New order — Scuba" };
+export const metadata: Metadata = { title: "New order — DiveDay" };
 
 const LINE_ITEM_KINDS = [
   { value: "trip_fee", label: "Trip fee" },

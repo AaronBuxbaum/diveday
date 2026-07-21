@@ -13,7 +13,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Blockers — Scuba",
+  title: "Blockers — DiveDay",
 };
 
 function DiverRow({

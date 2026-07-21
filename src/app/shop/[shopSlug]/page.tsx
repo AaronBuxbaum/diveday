@@ -13,7 +13,7 @@ import { requireStaffSession } from "@/lib/session";
 import { summarizeDay } from "@/lib/today";
 
 export const metadata: Metadata = {
-  title: "Today — Scuba",
+  title: "Today — DiveDay",
 };
 
 /**

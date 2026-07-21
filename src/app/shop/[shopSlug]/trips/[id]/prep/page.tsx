@@ -12,7 +12,7 @@ import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Trip prep — Scuba",
+  title: "Trip prep — DiveDay",
 };
 
 /**
@@ -106,7 +106,7 @@ export default async function TripPrepPage({
               {checklist.crewCount > 0
                 ? `Includes the roster and the ${checklist.crewCount === 1 ? "divemaster or instructor" : "divemasters and instructors"} assigned to this trip; spares are not counted.`
                 : "Divers on the roster only — spares are not counted. Assign a divemaster or instructor to this trip to include their tanks."}{" "}
-              Scuba logs no gas analysis: every mix is still analyzed and signed for at the fill
+              DiveDay logs no gas analysis: every mix is still analyzed and signed for at the fill
               station.
             </p>
           </section>

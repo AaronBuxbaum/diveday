@@ -23,7 +23,7 @@ import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 export const metadata: Metadata = {
-  title: "Schedule a trip — Scuba",
+  title: "Schedule a trip — DiveDay",
 };
 
 const formSchema = z.object({

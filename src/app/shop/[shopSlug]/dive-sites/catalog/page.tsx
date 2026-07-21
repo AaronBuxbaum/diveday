@@ -36,7 +36,7 @@ export default async function CommonDiveSitesPage({
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          title="Scuba common dive sites"
+          title="DiveDay common dive sites"
           description="Published, versioned starting points. Importing makes an independent shop briefing; later template updates never overwrite your edits."
         />
       </div>

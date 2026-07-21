@@ -561,7 +561,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
   // The demo shop starts where a real shop does: every course pre-filled with
-  // Scuba's default page copy. That default content is the shop's starting
+  // DiveDay's default page copy. That default content is the shop's starting
   // point — it edits from there. Open Water is the one a visitor is most
   // likely to open, so it is the most complete.
   for (const template of COURSE_TEMPLATES) {

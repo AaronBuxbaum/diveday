@@ -12,7 +12,7 @@ import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
-export const metadata: Metadata = { title: "Edit course page — Scuba" };
+export const metadata: Metadata = { title: "Edit course page — DiveDay" };
 
 const messages: Record<string, string> = {
   saved: "Course page saved.",

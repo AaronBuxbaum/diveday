@@ -15,7 +15,7 @@ export function MarketingNav() {
         className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4"
       >
         <Link href="/" className="text-base font-semibold tracking-tight text-foreground">
-          scuba<span className="text-primary">.</span>
+          DiveDay<span className="text-primary">.</span>
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 sm:gap-5">
           {links.map((link) => (

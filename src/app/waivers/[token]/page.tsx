@@ -23,7 +23,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { readinessLinkPath } from "@/lib/readiness-links";
 
 export const metadata: Metadata = {
-  title: "Complete your waiver — Scuba",
+  title: "Complete your waiver — DiveDay",
   robots: { index: false, follow: false },
 };
 

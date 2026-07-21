@@ -21,7 +21,7 @@ import type { TripManifest } from "@/lib/manifests";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Check-in — Scuba",
+  title: "Check-in — DiveDay",
 };
 
 // "cleared" is the un-board: staff re-tapped "Aboard ✓" to correct a mis-tap,

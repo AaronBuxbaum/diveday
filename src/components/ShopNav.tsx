@@ -35,10 +35,10 @@ export function ShopNav({
         >
           <span className="grid size-9 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
             <span aria-hidden="true">✦</span>
-            <span className="sr-only">Scuba home</span>
+            <span className="sr-only">DiveDay home</span>
           </span>
           <span className="hidden max-w-40 truncate sm:inline">{shopName}</span>
-          <span className="sm:hidden">Scuba</span>
+          <span className="sm:hidden">DiveDay</span>
         </Link>
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">

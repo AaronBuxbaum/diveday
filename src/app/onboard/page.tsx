@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 
 export const metadata: Metadata = {
-  title: "Onboard your Shop — Scuba",
+  title: "Onboard your Shop — DiveDay",
 };
 
 export default async function OnboardPage({

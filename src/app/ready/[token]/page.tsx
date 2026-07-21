@@ -26,7 +26,7 @@ import {
 } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Your trip readiness — Scuba",
+  title: "Your trip readiness — DiveDay",
   robots: { index: false, follow: false },
 };
 

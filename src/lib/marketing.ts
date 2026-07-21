@@ -1,7 +1,7 @@
 /**
  * Public-facing product language lives here so the homepage, product, and
  * pricing pages always describe the same product. Keep claims constrained to
- * workflows that are available in Scuba today.
+ * workflows that are available in DiveDay today.
  */
 
 export const productFeatureGroups = [

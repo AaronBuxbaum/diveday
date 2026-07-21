@@ -10,7 +10,7 @@ import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/order
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Order — Scuba" };
+export const metadata: Metadata = { title: "Order — DiveDay" };
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Open — awaiting payment",
