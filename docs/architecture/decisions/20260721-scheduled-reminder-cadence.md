@@ -33,9 +33,12 @@ cadence rules and the missing scheduling mechanism.
   tracked channel for a phone-only diver. Re-running only sends what is newly due.
 - **An external scheduler drives the clock; the app still holds no timer.** `GET /api/cron/reminders`
   is the entry point, guarded by a required `CRON_SECRET` bearer token (503 when unset, so a
-  deployment that forgot the secret can't be triggered). Vercel Cron (`vercel.json`) calls it hourly
-  — hourly granularity matches hour/day-scale buckets. This keeps the "no timer in-process" property:
-  the mechanism is a stateless, idempotent endpoint plus an out-of-band caller.
+  deployment that forgot the secret can't be triggered). Vercel Cron (`vercel.json`) calls it once a
+  day (14:00 UTC) — the Hobby plan caps crons at daily, and the cadence buckets are each ≥24h wide
+  (7-day: 144h, 24-hour: 24h), so a daily run lands in each booking's active bucket exactly once and
+  no reminder is missed. A shorter interval (on a paid plan) only makes the same idempotent scan more
+  responsive; it never double-sends. This keeps the "no timer in-process" property: the mechanism is
+  a stateless, idempotent endpoint plus an out-of-band caller.
 
 ## Alternatives considered
 
