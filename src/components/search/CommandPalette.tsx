@@ -28,10 +28,10 @@ const EMPTY: SearchResults = { divers: [], trips: [] };
  */
 export function CommandPalette({
   shopSlug,
-  boatCheckInHref,
+  boatBoardingHref,
 }: {
   shopSlug: string;
-  boatCheckInHref?: string;
+  boatBoardingHref?: string;
 }) {
   const router = useRouter();
   const listId = useId();
@@ -88,8 +88,8 @@ export function CommandPalette({
   const groups = useMemo<PaletteGroup[]>(() => {
     const q = query.trim().toLowerCase();
     const goto: PaletteItem[] = [];
-    if (boatCheckInHref && ("check-in".includes(q) || "boat".includes(q) || q === "")) {
-      goto.push({ key: "goto:checkin", label: "Check-in — today's boat", href: boatCheckInHref });
+    if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
+      goto.push({ key: "goto:boarding", label: "Boarding — today's boat", href: boatBoardingHref });
     }
     for (const entry of GO_TO) {
       if (q === "" || entry.label.toLowerCase().includes(q)) {
@@ -125,7 +125,7 @@ export function CommandPalette({
     }
     if (goto.length > 0) out.push({ heading: "Go to", items: goto });
     return out;
-  }, [results, query, boatCheckInHref, root]);
+  }, [results, query, boatBoardingHref, root]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

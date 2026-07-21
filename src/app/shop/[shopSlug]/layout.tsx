@@ -32,7 +32,7 @@ export default async function ShopLayout({
     slug: string,
   ): Promise<string | undefined> {
     const tripId = await todayNextDepartureTripId(dbi, shopId, timeZone);
-    return tripId ? `/shop/${slug}/trips/${tripId}/check-in` : undefined;
+    return tripId ? `/shop/${slug}/trips/${tripId}/boarding` : undefined;
   }
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
@@ -84,7 +84,7 @@ export default async function ShopLayout({
         <ShopNav
           shopSlug={shopSlug}
           shopName={shop.name}
-          boatCheckInHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
+          boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
         />
       ) : null}
       <PreserveFormScroll />

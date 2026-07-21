@@ -6,7 +6,7 @@ export function ConnectivityStatus({
   offlineLabel = "No signal · device copy",
 }: {
   /** What "offline" means on this surface (the manifest has a device copy; a
-   * live-only surface like check-in warns its board may be stale instead). */
+   * live-only surface like boarding warns its board may be stale instead). */
   offlineLabel?: string;
 } = {}) {
   // Start "online" so the server render and the first client render agree — a

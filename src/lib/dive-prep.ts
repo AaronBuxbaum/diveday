@@ -223,7 +223,7 @@ export function buildDivePrepChecklist(input: {
 }
 
 /**
- * One-line fit for a manifest, check-in, or roster row.
+ * One-line fit for a manifest, boarding, or roster row.
  *
  * The three states are deliberately distinct. "Own kit" is something a diver
  * told us; "not asked" is something nobody has done yet. Collapsing them reads
