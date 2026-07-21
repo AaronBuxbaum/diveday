@@ -1,0 +1,2 @@
+ALTER TABLE "waiver_records" ADD COLUMN "recorded_by_person_id" uuid;--> statement-breakpoint
+ALTER TABLE "waiver_records" ADD CONSTRAINT "waiver_records_recorded_by_person_id_people_id_fkey" FOREIGN KEY ("recorded_by_person_id") REFERENCES "people"("id");

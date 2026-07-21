@@ -8,8 +8,10 @@ export type SignatureCaptureInput = {
   signedAt?: Date;
 };
 
+export type SignatureMethod = "typed_consent" | "in_person_attested";
+
 export type SignatureEvidence = {
-  method: "typed_consent";
+  method: SignatureMethod;
   signerName: string;
   consentedAt: Date;
   signedAt: Date;
@@ -26,6 +28,26 @@ export const localTypedConsentProvider: SignatureProvider = {
     const signedAt = input.signedAt ?? new Date();
     return {
       method: "typed_consent",
+      signerName,
+      consentedAt: signedAt,
+      signedAt,
+    };
+  },
+};
+
+/**
+ * A staff member recording that a diver signed a release on paper — in the shop
+ * or on shore — where the app never sees the diver directly. The diver remains
+ * the signer; which staff member attested is accountability the caller stores on
+ * the record (waiver_records.recordedByPersonId), not in this evidence shape.
+ */
+export const inPersonAttestationProvider: SignatureProvider = {
+  capture(input) {
+    const signerName = input.signerName.trim();
+    if (!input.agreed || signerName.length < 2) return null;
+    const signedAt = input.signedAt ?? new Date();
+    return {
+      method: "in_person_attested",
       signerName,
       consentedAt: signedAt,
       signedAt,

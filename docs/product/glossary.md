@@ -134,6 +134,15 @@ new domain concept, define it here in the same PR.
   and new links snapshot the current one. The exact template version is snapshotted into each issued
   record; a signed record is immutable and a replacement link creates a new record. Some answers on the
   medical form require a physician sign-off — that's a blocking state, not a checkbox.
+- **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
+  against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
+  their bookings while it stays **current**: signed against the shop's current release version and
+  within a year of signing. A medical-review record never carries; a stale or old-version signature
+  falls back to "send a fresh link." See [20260721-waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md).
+- **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
+  paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
+  immutable completed record, marked as staff-attested and stamped with the staff member who recorded
+  it, and carries forward like any other signature.
 - **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
   shop's **jurisdiction** (RSTC/WRSTC by default, or a UK variant). Defined as data in
   `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version it was answered
