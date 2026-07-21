@@ -44,6 +44,12 @@ one readiness engine, multi-tenant to the core. Concretely shipped and working:
 The engine room is well-built. That is exactly why the imbalance matters: the substrate is ready to
 be turned into felt product, and it mostly hasn't been.
 
+> **Update 2026-07-21:** the three "unbuilt limbs" below have since shipped — the staff blocker
+> queue (`/shop/[shopSlug]/blockers`), one-screen check-in (`/trips/[id]/check-in`), and the
+> no-login diver readiness page (`/ready/[token]`) all exist. The current state and the next work
+> arc are assessed in [ux-audit-20260721.md](ux-audit-20260721.md); this section stands as the
+> historical rationale.
+
 ## The core problem: the spine has no limbs
 
 The single most-cited idea across all five brainstorm lenses is **one readiness engine, three
