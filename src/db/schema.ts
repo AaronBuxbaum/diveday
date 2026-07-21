@@ -53,6 +53,13 @@ export const shops = pgTable("shops", {
     .$type<string[]>()
     .notNull()
     .default(["bcd", "regulator", "wetsuit", "mask_fins", "weights"]),
+  /**
+   * How many minutes before departure divers are asked to be at the dock. The
+   * shop's real muster time varies (gear setup, cert check, briefing), so it is
+   * configurable rather than a hardcoded "30 minutes" in every confirmation and
+   * reminder. Defaults to 30.
+   */
+  dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
   isDemo: boolean("is_demo").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

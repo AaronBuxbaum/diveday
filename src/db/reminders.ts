@@ -14,6 +14,7 @@ import {
   smsRecipient,
 } from "@/lib/notifications/sms";
 import { readinessLinkPath } from "@/lib/readiness-links";
+import { buildDiverChecklist, reminderReadiness } from "@/lib/readiness-summary";
 import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/reminders";
 import type { AppDb } from "./client";
 import { recordNotificationDelivery } from "./notifications";
+import { getBookingReadinessDetail } from "./readiness";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
@@ -47,7 +49,7 @@ export type SendDueRemindersOptions = {
   appOrigin?: string | null;
 };
 
-/** A short one-segment text; the email carries the full detail and the link. */
+/** A short text; the email carries the full detail and the link. */
 function reminderSmsBody(input: {
   shopName: string;
   tripTitle: string;
@@ -55,13 +57,18 @@ function reminderSmsBody(input: {
   endsAt: Date;
   timezone: string;
   lead: "week" | "day";
+  dockCallMinutes: number;
+  outstanding: string[];
+  medicalReview: boolean;
 }): string {
   const when = input.lead === "week" ? "this week" : "tomorrow";
   const date = formatShortDate(input.startsAt, "en-US", input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
-  // On the last reminder, name the waiver/medical that can keep a diver ashore.
-  const safety = input.lead === "day" ? " Finish any waiver or medical form before you come." : "";
-  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock 30 min early.${safety}`;
+  // Name the diver's own outstanding items rather than a generic nudge.
+  const todo = [...input.outstanding];
+  if (input.medicalReview) todo.push("check if a medical answer needs a doctor's sign-off");
+  const todoText = todo.length ? ` Still to sort before you board: ${todo.join("; ")}.` : "";
+  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock ${input.dockCallMinutes} min early.${todoText}`;
 }
 
 /**
@@ -143,6 +150,24 @@ export async function sendDueReminders(
       : undefined;
     const phone = smsRecipient(person.phone);
 
+    // Name the diver's own outstanding items from the same checklist the diver
+    // page shows, so the reminder never diverges from the readiness engine.
+    const detail = await getBookingReadinessDetail(db, booking.id);
+    const { outstanding, medicalReview } = detail
+      ? reminderReadiness(buildDiverChecklist(detail.requirement, detail.readiness))
+      : { outstanding: [], medicalReview: false };
+    const smsBody = reminderSmsBody({
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      timezone: shop.timezone,
+      lead,
+      dockCallMinutes: shop.dockCallMinutes,
+      outstanding,
+      medicalReview,
+    });
+
     let delivery: NotificationDelivery;
     if (person.email) {
       delivery = await notify(
@@ -157,6 +182,9 @@ export async function sendDueReminders(
           startsAt: trip.startsAt,
           endsAt: trip.endsAt,
           timezone: shop.timezone,
+          dockCallMinutes: shop.dockCallMinutes,
+          outstanding,
+          medicalReview,
           readinessUrl,
         },
         emailProvider,
@@ -164,40 +192,12 @@ export async function sendDueReminders(
       // A textable phone gets a courtesy SMS only when the email actually sent,
       // so the once-per-booking dedup row keeps it from re-firing next run.
       if (delivery.status === "sent" && phone) {
-        await notifySms(
-          {
-            channel: "sms",
-            to: phone,
-            body: reminderSmsBody({
-              shopName: shop.name,
-              tripTitle: trip.title,
-              startsAt: trip.startsAt,
-              endsAt: trip.endsAt,
-              timezone: shop.timezone,
-              lead,
-            }),
-          },
-          smsProvider,
-        );
+        await notifySms({ channel: "sms", to: phone, body: smsBody }, smsProvider);
       }
     } else if (phone) {
       // Phone-only diver: SMS is the tracked channel. SmsDelivery is the same
       // shape as NotificationDelivery, so it records through the same seam.
-      delivery = await notifySms(
-        {
-          channel: "sms",
-          to: phone,
-          body: reminderSmsBody({
-            shopName: shop.name,
-            tripTitle: trip.title,
-            startsAt: trip.startsAt,
-            endsAt: trip.endsAt,
-            timezone: shop.timezone,
-            lead,
-          }),
-        },
-        smsProvider,
-      );
+      delivery = await notifySms({ channel: "sms", to: phone, body: smsBody }, smsProvider);
     } else {
       // No reachable channel — record it so staff can see the gap.
       delivery = { status: "not_configured" };

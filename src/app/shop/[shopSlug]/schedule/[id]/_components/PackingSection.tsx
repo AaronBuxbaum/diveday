@@ -12,7 +12,7 @@ export function PackingSection({ shop, trip }: { shop: Shop; trip: Trip }) {
       </ul>
       <h3 className="mt-5 font-semibold">Your dock-day rhythm</h3>
       <ol className="mt-2 space-y-1 text-sm text-muted">
-        {dockDayTimeline(trip.startsAt).map((step) => (
+        {dockDayTimeline(trip.startsAt, shop.dockCallMinutes).map((step) => (
           <li key={step.label}>
             {step.label} ·{" "}
             {step.at.toLocaleTimeString("en-US", {

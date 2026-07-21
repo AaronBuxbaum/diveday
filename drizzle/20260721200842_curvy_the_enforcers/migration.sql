@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "dock_call_minutes" integer DEFAULT 30 NOT NULL;

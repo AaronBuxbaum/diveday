@@ -149,6 +149,7 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
       startsAt: row.trip.startsAt,
       endsAt: row.trip.endsAt,
       timezone: row.shop.timezone,
+      dockCallMinutes: row.shop.dockCallMinutes,
       readinessUrl: origin
         ? new URL(readinessLinkPath(row.booking.id), `${origin}/`).toString()
         : undefined,

@@ -58,6 +58,11 @@ new domain concept, define it here in the same PR.
   [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md).
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
+- **Dock call time** — how many minutes before departure a shop asks divers to arrive, for gear
+  setup, cert checks, and the briefing (`shops.dock_call_minutes`, default 30). Configurable per
+  shop in settings because real muster times vary; it drives the arrival copy on booking
+  confirmations, the diver's dock-day rhythm, and every pre-trip reminder, so no surface hardcodes
+  "30 minutes".
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
   route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
   attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
