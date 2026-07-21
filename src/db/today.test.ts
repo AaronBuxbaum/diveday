@@ -197,10 +197,21 @@ describe("today's work queue (in-memory PGlite)", () => {
     // Never a boarding blocker; it points at the roster to settle at the counter.
     expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
+    // A name with no phone is unreachable in an incident — still flagged.
     for (const entry of roster) {
       await db
         .update(people)
-        .set({ emergencyContactName: "Kin Ashford" })
+        .set({ emergencyContactName: "Kin Ashford", emergencyContactPhone: null })
+        .where(eq(people.id, entry.person.id));
+    }
+    const nameOnly = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(nameOnly.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(true);
+
+    // A contact is only "on file" with a reachable number, so fill both.
+    for (const entry of roster) {
+      await db
+        .update(people)
+        .set({ emergencyContactName: "Kin Ashford", emergencyContactPhone: "+1 305 555 0175" })
         .where(eq(people.id, entry.person.id));
     }
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);

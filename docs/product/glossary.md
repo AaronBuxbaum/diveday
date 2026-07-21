@@ -99,6 +99,13 @@ new domain concept, define it here in the same PR.
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly.
+- **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
+  an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
+  invented, and it is **only "on file" when both the name and the phone are present** — a name with
+  no number is unreachable when it matters, so it counts as missing on the manifest and in the
+  Today nudge. It is never a boarding blocker: a missing contact is an administrative gap, not a
+  fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
+  three days.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and any note. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the

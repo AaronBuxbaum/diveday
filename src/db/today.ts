@@ -176,11 +176,19 @@ async function missingEmergencyContactByTrip(
   const missing = new Map<string, number>();
   if (bookingIds.length === 0) return missing;
   const rows = await db
-    .select({ bookingId: bookings.id, contactName: people.emergencyContactName })
+    .select({
+      bookingId: bookings.id,
+      contactName: people.emergencyContactName,
+      contactPhone: people.emergencyContactPhone,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
-  const without = new Set(rows.filter((row) => !row.contactName).map((row) => row.bookingId));
+  // A contact is only usable if the crew can dial it: both a name and a phone.
+  // A name with no number reads as "on file" but is unreachable in an incident.
+  const without = new Set(
+    rows.filter((row) => !row.contactName || !row.contactPhone).map((row) => row.bookingId),
+  );
   for (const [tripId, ids] of bookingIdsByTrip) {
     const count = ids.filter((id) => without.has(id)).length;
     if (count > 0) missing.set(tripId, count);
