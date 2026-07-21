@@ -18,7 +18,7 @@ function SendButton({ label, pendingLabel }: { label: string; pendingLabel: stri
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className={buttonClass({ variant: "secondary", className: "shrink-0" })}
+      className={buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -137,7 +137,7 @@ export function WaiverSendControl({
 
   return (
     <div className="sm:text-right">
-      <form action={formAction} className="inline-flex">
+      <form action={formAction} className="flex sm:inline-flex">
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}

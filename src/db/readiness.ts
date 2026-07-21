@@ -3,6 +3,7 @@ import type { CertVerificationProvider, CertVerificationResult } from "@/lib/cer
 import { verifyCard } from "@/lib/cert-verification";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
+import { effectiveWaiverForBooking } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import { paymentsByBooking } from "./payments";
 import type { DiveSpecialty } from "./schema";
@@ -18,7 +19,11 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
-import { listTripWaiverStatuses } from "./waivers";
+import {
+  getCurrentWaiverTemplate,
+  listSignedWaiversByPerson,
+  listTripWaiverStatuses,
+} from "./waivers";
 
 export async function getTripRequirements(db: DbExecutor, shopId: string, tripId: string) {
   const [requirement] = await db
@@ -297,18 +302,24 @@ export async function listShopDivers(db: AppDb, shopId: string) {
 }
 
 /** The exact same result drives staff rosters today and diver/manifest views later. */
-export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: string) {
-  const [requirement, siteRequirement, waiverRows] = await Promise.all([
+export async function listTripReadiness(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  now: Date = new Date(),
+) {
+  const [requirement, siteRequirement, waiverRows, currentTemplate] = await Promise.all([
     getTripRequirements(db, shopId, tripId),
     getTripSiteRequirement(db, shopId, tripId),
     listTripWaiverStatuses(db, shopId, tripId),
+    getCurrentWaiverTemplate(db, shopId),
   ]);
   const bookingIds = waiverRows.map((row) => row.booking.id);
   const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
-  const [certificationRows, specialtyRows, nitroxRows] =
+  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson] =
     personIds.length === 0
-      ? [[], [], []]
+      ? [[], [], [], new Map<string, never[]>()]
       : await Promise.all([
           db
             .select()
@@ -334,7 +345,9 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
                 inArray(nitroxCertifications.personId, personIds),
               ),
             ),
+          listSignedWaiversByPerson(db, shopId, personIds),
         ]);
+  const currentTemplateVersion = currentTemplate?.version ?? null;
   const certificationsByPerson = new Map<string, typeof certificationRows>();
   for (const certification of certificationRows) {
     const current = certificationsByPerson.get(certification.personId) ?? [];
@@ -354,25 +367,42 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     nitroxByPerson.set(card.personId, current);
   }
 
-  return waiverRows.map((row) => ({
-    ...row,
-    requirement,
-    siteRequirement,
-    certifications: certificationsByPerson.get(row.person.id) ?? [],
-    specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
-    nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
-    paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
-    paymentProvider: paymentByBooking.get(row.booking.id)?.provider ?? null,
-    readiness: calculateReadiness({
+  return waiverRows.map((row) => {
+    // Sign-once: a diver's own signed/in-review record wins; otherwise a current
+    // completed release from any of their bookings carries over. This is the one
+    // place the rule is applied, so readiness, the roster, the Today queue, the
+    // manifest, and the fail-closed boarding gate all agree.
+    const effectiveWaiver = effectiveWaiverForBooking({
+      bookingWaiver: row.waiver,
+      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
+      currentTemplateVersion,
+      now,
+    });
+    return {
+      ...row,
+      /** The booking's own current record (where the link was issued). */
+      bookingWaiver: row.waiver,
+      /** The record that actually governs readiness after the sign-once rule. */
+      waiver: effectiveWaiver,
       requirement,
       siteRequirement,
-      waiver: row.waiver,
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
       paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
-    }),
-  }));
+      paymentProvider: paymentByBooking.get(row.booking.id)?.provider ?? null,
+      readiness: calculateReadiness({
+        requirement,
+        siteRequirement,
+        waiver: effectiveWaiver,
+        certifications: certificationsByPerson.get(row.person.id) ?? [],
+        specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
+        nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
+        paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
+        now,
+      }),
+    };
+  });
 }
 
 export async function getBookingReadiness(db: DbExecutor, shopId: string, bookingId: string) {

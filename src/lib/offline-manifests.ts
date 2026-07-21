@@ -4,8 +4,12 @@ import type { TripManifest } from "./manifests";
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
  * data, so an older cached snapshot fails to decrypt rather than being read
  * back into a type it no longer matches.
+ *
+ * v3 adds the carried-forward (`implied`) flag to roll-call records so a diver
+ * who left the boat earlier reads as "not boarded · carried" offline, matching
+ * the live manifest, instead of a fabricated explicit result.
  */
-export const OFFLINE_MANIFEST_RECORD_VERSION = 2 as const;
+export const OFFLINE_MANIFEST_RECORD_VERSION = 3 as const;
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -28,6 +32,8 @@ export type OfflineManifestPayload = {
             occurredAt: string;
             recordedByName: string;
             note: string | null;
+            /** Carried forward from an earlier checkpoint, not recorded here. */
+            implied?: boolean;
           };
         }
       >;
@@ -79,7 +85,15 @@ export function serializeManifests(
         // Email is not needed for dock-side roll call; minimize retained private data.
         email: null,
         rollCall: diver.rollCall
-          ? { ...diver.rollCall, occurredAt: diver.rollCall.occurredAt.toISOString() }
+          ? {
+              state: diver.rollCall.state,
+              occurredAt: diver.rollCall.occurredAt.toISOString(),
+              recordedByName: diver.rollCall.recordedByName,
+              note: diver.rollCall.note,
+              // Preserve the carried-forward default so it never reads as an
+              // explicit dock-side result the crew did not actually record.
+              implied: diver.rollCall.implied ?? false,
+            }
           : undefined,
       })),
     })),
@@ -120,7 +134,9 @@ export function latestOfflineRollCall(
   events: readonly OfflineRollCallEvent[],
   bookingId: string,
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
-): { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean } | undefined {
+):
+  | { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean; implied: boolean }
+  | undefined {
   const local = events
     .filter(
       (event) =>
@@ -130,16 +146,23 @@ export function latestOfflineRollCall(
     )
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
   if (local) {
+    // A result recorded on this device at this checkpoint is always explicit.
     return {
       state: local.status,
       occurredAt: local.occurredAt,
       pending: local.syncStatus === "pending",
+      implied: false,
     };
   }
   const server = snapshot.manifests
     .find((manifest) => manifest.checkpoint === checkpoint)
     ?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall;
   return server
-    ? { state: server.state, occurredAt: server.occurredAt, pending: false }
+    ? {
+        state: server.state,
+        occurredAt: server.occurredAt,
+        pending: false,
+        implied: server.implied ?? false,
+      }
     : undefined;
 }
