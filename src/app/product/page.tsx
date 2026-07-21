@@ -52,16 +52,16 @@ export default function ProductPage() {
               </p>
               <ul className="mt-7 space-y-3 text-sm leading-6 text-muted">
                 <li className="flex gap-3">
-                  <span className="font-semibold text-primary">01</span> Requirements compose from
-                  the trip and dive site.
+                  <span className="font-semibold text-primary">01</span> The trip and the dive site
+                  decide what each diver needs.
                 </li>
                 <li className="flex gap-3">
-                  <span className="font-semibold text-primary">02</span> Unknown evidence fails
-                  closed with a human-readable reason.
+                  <span className="font-semibold text-primary">02</span> If something can&apos;t be
+                  verified, DiveDay says so plainly — no silent passes.
                 </li>
                 <li className="flex gap-3">
-                  <span className="font-semibold text-primary">03</span> Staff can resolve the right
-                  exception before it becomes a dockside problem.
+                  <span className="font-semibold text-primary">03</span> Staff fix the problem at
+                  the desk, not at the dock.
                 </li>
               </ul>
             </div>
@@ -106,14 +106,14 @@ export default function ProductPage() {
                 A manifest that stays useful after the signal disappears.
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
-                The crew gets big, explicit phone controls, per-dive head counts, readiness blockers
-                that cannot be ignored, append-only boarding history, and a print view from the same
-                manifest.
+                The crew gets big phone controls, head counts for every dive, blockers that
+                can&apos;t be ignored, a boarding history that keeps every correction, and a print
+                view straight from the same manifest.
               </p>
               <p className="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm leading-6 text-muted">
-                Save an encrypted device copy before leaving service. Every offline change stays
-                visibly pending until DiveDay rechecks live readiness and reconciles it; newer live
-                events are never silently overwritten.
+                The crew saves the manifest to their phone before leaving the dock. Anything marked
+                offline stays clearly labeled until DiveDay is back in service and double-checks it
+                against the live manifest — nothing is ever quietly overwritten.
               </p>
             </div>
           </div>

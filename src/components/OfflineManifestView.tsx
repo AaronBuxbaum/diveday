@@ -22,16 +22,23 @@ import {
 } from "@/lib/offline-manifests";
 
 const FRESHNESS_COPY = {
-  current: "Current device copy",
-  aging: "Aging device copy — compare with the live manifest when service returns",
-  stale: "Stale device copy — use visible caution and reconcile before relying on it again",
+  current: "This copy was saved in the last few minutes",
+  aging:
+    "This copy was saved a while ago — check it against the live manifest when you're back in signal",
+  stale: "This copy is old — don't rely on it until you've refreshed it from the live manifest",
+} as const;
+
+const FRESHNESS_PILL = {
+  current: "Fresh copy",
+  aging: "Aging copy",
+  stale: "Stale copy",
 } as const;
 
 export function OfflineManifestView() {
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
-  const [message, setMessage] = useState("Opening encrypted device copy…");
+  const [message, setMessage] = useState("Opening the manifest saved on this device…");
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
@@ -46,14 +53,14 @@ export function OfflineManifestView() {
       const pending = next.events.filter((event) => event.syncStatus === "pending").length;
       setMessage(
         rejected > 0
-          ? `${rejected} change${rejected === 1 ? " conflicts" : "s conflict"} with live safety data. Open the live manifest to review.`
+          ? `${rejected} change${rejected === 1 ? " doesn't" : "s don't"} match the live manifest. Open the live manifest to sort it out.`
           : pending > 0
-            ? `${pending} change${pending === 1 ? " is" : "s are"} still waiting to sync.`
-            : "All offline changes are reconciled with the live manifest.",
+            ? `${pending} change${pending === 1 ? " is" : "s are"} still waiting to send.`
+            : "All offline changes are caught up with the live manifest.",
       );
     } catch {
       setMessage(
-        "Still using the device copy. Reconciliation will retry when DiveDay is reachable.",
+        "Couldn't reach DiveDay just now — your changes are still saved on this phone and will try to send again on the next change or reconnect.",
       );
     }
   }, [tripId]);
@@ -68,12 +75,16 @@ export function OfflineManifestView() {
         setEnvelope(saved);
         setMessage(
           saved
-            ? "Encrypted device copy is ready."
-            : "No unexpired manifest is saved for this trip.",
+            ? "The manifest saved on this device is ready."
+            : "There's no current saved manifest for this trip on this device.",
         );
         if (saved && navigator.onLine) void reconcile();
       })
-      .catch(() => setMessage("This device could not decrypt the saved manifest."));
+      .catch(() =>
+        setMessage(
+          "This device couldn't open its saved manifest. Save a fresh copy while you have signal.",
+        ),
+      );
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
   }, [reconcile, tripId]);
@@ -84,9 +95,13 @@ export function OfflineManifestView() {
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           Offline manifest
         </p>
-        <h1 className="mt-3 text-3xl font-semibold">No device copy available</h1>
+        <h1 className="mt-3 text-3xl font-semibold">Nothing saved on this phone yet</h1>
         <p className="mt-3 text-muted" role="status">
           {message}
+        </p>
+        <p className="mt-2 text-muted">
+          While you still have signal, open the trip&apos;s live manifest and tap “Save for offline”
+          — then roll call works all the way out to the site.
         </p>
       </main>
     );
@@ -116,11 +131,13 @@ export function OfflineManifestView() {
         note: note.trim() || null,
       });
       setEnvelope(next);
-      setMessage("Saved on this device · waiting to sync.");
+      setMessage("Saved on this phone — it'll send when you're back in service.");
       if (navigator.onLine) await reconcile();
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "That offline change could not be saved.",
+        error instanceof Error
+          ? error.message
+          : "That change couldn't be saved on this device — try it again.",
       );
     } finally {
       setBusyBooking(null);
@@ -169,19 +186,19 @@ export function OfflineManifestView() {
                     : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
               }
             >
-              {freshness} device snapshot
+              {FRESHNESS_PILL[freshness]}
             </span>
           </div>
         </div>
         <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
-          {FRESHNESS_COPY[freshness]}. Boarding uses readiness as saved; live readiness is checked
-          again during sync.
+          {FRESHNESS_COPY[freshness]}. Boarding goes by readiness as it stood when this copy was
+          saved — DiveDay checks everything again once you&apos;re back in service.
         </p>
         <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
           {message}
         </p>
         <p className="mt-1 text-sm text-muted">
-          {pending} pending · {rejected} conflicts
+          {pending} waiting to send · {rejected} need a look
         </p>
       </header>
 
@@ -229,7 +246,9 @@ export function OfflineManifestView() {
         </h2>
         {rollCallComplete ? (
           <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
-            Everyone has an explicit result for this checkpoint.
+            {boarded === manifest.summary.totalDivers
+              ? "Every diver has a result — everyone's aboard."
+              : `Every diver has a result — ${manifest.summary.totalDivers - boarded} marked not boarded. Confirm they're accounted for before moving on.`}
           </p>
         ) : null}
         <ul
@@ -270,7 +289,7 @@ export function OfflineManifestView() {
                             : "rounded-full bg-danger/10 px-3 py-1 text-sm font-semibold text-danger"
                         }
                       >
-                        {ready ? "Ready in snapshot" : "Blocked in snapshot"}
+                        {ready ? "Ready when saved" : "Blocked when saved"}
                       </span>
                       <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold">
                         {state
@@ -278,15 +297,16 @@ export function OfflineManifestView() {
                             ? "Boarded"
                             : "Not boarded"
                           : "Awaiting roll call"}
-                        {state?.pending ? " · pending sync" : ""}
+                        {state?.pending ? " · waiting to send" : ""}
                       </span>
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
                         <span className="font-bold">Emergency contact</span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.emergencyContactName ?? "Not on file"}
-                          {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
+                          {diver.emergencyContactName && diver.emergencyContactPhone
+                            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                            : "Not on file"}
                         </span>
                       </p>
                       <p>
@@ -329,7 +349,7 @@ export function OfflineManifestView() {
                           className={`${controlClass} mt-1`}
                         />
                         <p className="mt-1 text-xs text-muted">
-                          This stays encrypted with the pending event.
+                          The note travels with this roll-call record.
                         </p>
                       </div>
                     </details>

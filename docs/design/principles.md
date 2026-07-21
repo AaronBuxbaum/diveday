@@ -35,6 +35,22 @@ states teach ("No trips yet — schedule your first charter"); errors say what h
 to do next; buttons are verbs ("Add diver", not "Submit"). No jargon divers don't use; correct
 use of the jargon they do (see [product/glossary.md](../product/glossary.md)).
 
+**Never surface the implementation.** Encryption, sync, snapshots, envelopes, reconciliation,
+tokens, caching, tenancy, "fail-closed", and database words stay out of user-facing copy. Say what
+the person gets — "saved on this phone", "works without signal", "DiveDay double-checks it when
+you're back in service" — not how we built it. Two carve-outs:
+
+- **Payment** may say "pay securely" — that is the reassurance people expect at a checkout, and
+  nothing more technical than that.
+- **Safety surfaces keep their precision, in human words.** A stale device copy must never look
+  current — but the label is "Saved 4 hours ago — refresh before you rely on it", not "stale
+  snapshot". Translating jargon is never license to blur an operational state.
+
+**The name is DiveDay** — one word, two capitals. Use it as the actor when the system does
+something on the user's behalf ("DiveDay will catch up when you're back in service"), and
+otherwise stay out of the way: the product speaks as the shop's own tool, not as a character
+with a personality.
+
 ## 5. Motion has a job
 
 Animation exists to explain (where did it go, what changed), 150–250 ms, ease-out

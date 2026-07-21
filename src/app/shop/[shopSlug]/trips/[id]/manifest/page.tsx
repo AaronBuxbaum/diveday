@@ -154,7 +154,7 @@ export default async function TripManifestPage({
         </div>
         <div className="flex flex-wrap items-center gap-3 print:hidden">
           <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-            Live source · offline copy available
+            Live manifest · save an offline copy below
           </span>
           <PrintButton />
         </div>
@@ -249,11 +249,11 @@ export default async function TripManifestPage({
         </div>
         <p className="mt-2 text-sm font-semibold text-muted" aria-live="polite">
           {manifest.summary.awaiting === 0
-            ? "Everyone has an explicit roll-call result. You’re ready for the next check."
+            ? "Everyone’s accounted for — ready for the next check."
             : String(manifest.summary.awaiting) +
               " " +
-              (manifest.summary.awaiting === 1 ? "diver is" : "divers are") +
-              " still awaiting a result."}
+              (manifest.summary.awaiting === 1 ? "diver" : "divers") +
+              " still to call."}
         </p>
       </section>
 
@@ -271,7 +271,9 @@ export default async function TripManifestPage({
       <section className="mt-9">
         <h2 className="text-lg font-semibold">Crew</h2>
         {manifest.crew.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No crew has been assigned to this trip yet.</p>
+          <p className="mt-3 text-sm text-muted">
+            No crew on this trip yet — assign instructors and crew from the trip page.
+          </p>
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {manifest.crew.map((member) => (
@@ -293,7 +295,7 @@ export default async function TripManifestPage({
               {rollCallCheckpointLabel(checkpoint)} roll call
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Check each diver here before departure. Every change is time-stamped with the staff
+              Check each diver at this checkpoint. Every change is time-stamped with the staff
               member who made it.
             </p>
           </div>

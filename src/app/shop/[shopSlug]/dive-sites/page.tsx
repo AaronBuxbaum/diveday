@@ -57,7 +57,7 @@ export default async function DiveSitesPage({
         }
       />
 
-      <section aria-label="Dive-site snapshot" className="mb-8 grid gap-3 sm:grid-cols-3">
+      <section aria-label="Dive-site overview" className="mb-8 grid gap-3 sm:grid-cols-3">
         <ShopStat
           label="Saved sites"
           value={sites.length}
@@ -133,8 +133,8 @@ export default async function DiveSitesPage({
                   ) : null}
                   {site.requiredSpecialties.length > 0 ? (
                     <span className="rounded-full bg-surface-sunken px-2.5 py-1 text-muted">
-                      {site.requiredSpecialties.length} specialty gate
-                      {site.requiredSpecialties.length === 1 ? "" : "s"}
+                      {site.requiredSpecialties.length} required specialt
+                      {site.requiredSpecialties.length === 1 ? "y" : "ies"}
                     </span>
                   ) : null}
                 </div>

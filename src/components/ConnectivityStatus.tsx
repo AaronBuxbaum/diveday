@@ -30,7 +30,7 @@ export function ConnectivityStatus({
     <span
       role="status"
       aria-live="polite"
-      title={online ? "This browser reports a connection." : "This browser reports no connection."}
+      title={online ? "This device is online." : "This device has no connection right now."}
       className={
         online
           ? "inline-flex min-h-9 items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
@@ -40,7 +40,7 @@ export function ConnectivityStatus({
       <span aria-hidden="true" className="text-base leading-none">
         {online ? "●" : "×"}
       </span>
-      {online ? "Connection available" : offlineLabel}
+      {online ? "Online" : offlineLabel}
     </span>
   );
 }

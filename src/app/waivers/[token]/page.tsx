@@ -145,11 +145,13 @@ export default async function WaiverPage({
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
         <section className="rise-in rounded-lg border border-accent/40 bg-accent/10 p-7">
           <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Waiver received</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+            {needsReview ? "Waiver received" : "That’s the paperwork done ✓"}
+          </h1>
           <p className="mt-3 text-base text-muted">
             {needsReview
               ? "Thanks — a team member will privately review one of your answers before the trip. Please don’t assume you’re cleared until they confirm."
-              : "You’re all set on the waiver. We’ll see you at the dock; your shop will let you know if anything else is needed."}
+              : "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed."}
           </p>
           <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
             See what’s left before you sail

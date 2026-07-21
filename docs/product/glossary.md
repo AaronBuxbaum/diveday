@@ -120,7 +120,10 @@ new domain concept, define it here in the same PR.
   can never imply "present," and staff can override it at any checkpoint.
 - **Offline manifest snapshot** — an explicit, time-stamped, encrypted device copy of the complete
   derived manifest and every checkpoint. It is safety evidence as saved, never an editable roster
-  or a claim that server-side readiness has not changed.
+  or a claim that server-side readiness has not changed. In the UI its freshness tiers surface as
+  **Fresh copy** (saved within 15 minutes), **Aging copy** (within 4 hours), and **Stale copy**
+  (older) — the user-facing words for the current/aging/stale thresholds; "snapshot" itself never
+  appears in user copy.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
   duplicate events are idempotent and an older device event cannot replace newer live history.

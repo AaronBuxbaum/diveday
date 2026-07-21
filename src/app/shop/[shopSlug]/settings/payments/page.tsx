@@ -36,7 +36,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   },
   not_configured: {
     tone: "warning",
-    text: "Stripe Connect isn't configured yet — an operator needs to set STRIPE_SECRET_KEY, STRIPE_CONNECT_CLIENT_ID, and APP_HOST.",
+    text: "Online payments aren't switched on for this DiveDay setup yet. Whoever runs your DiveDay hosting needs to finish the Stripe configuration first.",
   },
   disconnected: { tone: "success", text: "Stripe account disconnected." },
   refreshed: { tone: "success", text: "Payment status refreshed from Stripe." },
@@ -245,7 +245,8 @@ export default async function PaymentsSettingsPage({
               </Link>
             ) : (
               <p className="mt-4 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-                Stripe Connect isn't configured for this environment yet.
+                Online payments aren't switched on for this DiveDay setup yet — ask whoever runs
+                your hosting to finish the Stripe configuration.
               </p>
             )}
           </div>

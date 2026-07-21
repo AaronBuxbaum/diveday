@@ -249,7 +249,7 @@ function SiteForm({
         </Field>
       </FieldGrid>
       <fieldset className="rounded-2xl border border-border bg-surface-sunken p-5">
-        <legend className="px-1 text-sm font-medium">Readiness gates</legend>
+        <legend className="px-1 text-sm font-medium">Site requirements</legend>
         <p className="text-sm text-muted">
           These requirements travel with the site into every new trip that uses it.
         </p>

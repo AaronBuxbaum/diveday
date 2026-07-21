@@ -31,7 +31,11 @@ early-access starting point, not an implemented checkout or signed commercial po
 amount, included support, billing terms, taxes, and any multi-location offer with the product owner
 before publishing customer-facing pricing beyond this trial surface.
 
-Offline claims must stay precise: staff explicitly saves an encrypted device copy; the product does
-not invisibly cache an authenticated page, transfer a copy across devices, or guarantee that stale
-snapshot readiness is still live. Multi-location operating views and unconfigured provider
-integrations remain out of scope and must not be claimed.
+Offline claims must stay precise *and* human: staff explicitly saves a copy to the device; the
+product does not invisibly cache an authenticated page, transfer a copy across devices, or
+guarantee that stale saved readiness is still live. Describe those boundaries in the words a
+captain would use ("saved to this phone", "checked again when service returns") — the encryption
+and reconciliation machinery is an engineering detail that lives in ADRs and docs, never in
+customer-facing copy (see [design/principles.md](../design/principles.md) §4). Multi-location
+operating views and unconfigured provider integrations remain out of scope and must not be
+claimed.

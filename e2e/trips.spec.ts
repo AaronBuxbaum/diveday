@@ -14,7 +14,7 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await expect(page.getByText("3 spots left")).toHaveCount(1); // 9 of 12 booked
   await expect(page.getByText("Full")).toHaveCount(1); // sold-out wreck trip
   await expect(page.getByRole("link", { name: "Schedule a trip" })).toHaveCount(0);
-  await expect(page.getByLabel("Schedule snapshot")).toHaveCount(0);
+  await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   await expect(page.getByText(/reserve your spot/i)).toBeVisible();
 
   // The month calendar shows scheduled dives alongside the list.

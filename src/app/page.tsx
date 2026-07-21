@@ -45,9 +45,8 @@ export default function Home() {
                 Run the whole dive day, from booking to head count.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-                DiveDay puts bookings, readiness, trip prep, and an offline-ready boat manifest in
-                one considered system — so your crew can spend less time chasing details and more
-                time taking care of divers.
+                DiveDay puts bookings, readiness, trip prep, and the boat manifest in one place — so
+                your crew spends less time chasing paperwork and more time taking care of divers.
               </p>
               <div className="mt-8">
                 <HomeCTA enterDemoAction={enterDemoAction} />
@@ -65,7 +64,7 @@ export default function Home() {
                   At the dock
                 </p>
                 <p className="mt-1 text-sm font-medium">
-                  Big roll-call controls, encrypted offline, for a captain&apos;s phone.
+                  Roll-call buttons big enough for wet thumbs — with or without signal.
                 </p>
               </div>
             </div>
@@ -81,8 +80,8 @@ export default function Home() {
               The right view for the person holding the work.
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
-              DiveDay uses the same operational truth across the shop, so the front desk does not
-              have to reconstruct it for the boat crew.
+              Everyone works from the same day — what the front desk checks in the morning is
+              exactly what the captain sees at the dock.
             </p>
           </div>
 
@@ -137,7 +136,7 @@ export default function Home() {
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <form action={enterDemoAction}>
                 <SubmitButton
-                  pendingLabel="Spinning up your shop…"
+                  pendingLabel="Getting your shop ready…"
                   className={buttonClass({
                     size: "cta",
                     className: "cursor-pointer disabled:opacity-70",

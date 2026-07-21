@@ -20,8 +20,8 @@ export function RequirementsSection({
       <h2 className="text-lg font-semibold">Readiness requirements</h2>
       <p className="mt-1 text-sm text-muted">
         {trip.course
-          ? "This session snapshots the course catalog’s admission rules so a later catalog edit cannot change enrolled students’ requirements."
-          : "These are explicit trip rules. A diver is blocked until the shared readiness service can prove each one."}
+          ? "This session keeps the admission rules it was created with — editing the course later won’t change what enrolled students need."
+          : "These are the trip’s rules. A diver stays blocked until every one of them checks out."}
       </p>
       {trip.course ? (
         <div className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm">

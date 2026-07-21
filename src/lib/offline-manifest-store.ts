@@ -208,7 +208,9 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     body: JSON.stringify({ events: pending }),
   });
   if (!response.ok)
-    throw new Error("Reconnect succeeded, but DiveDay could not reconcile roll call");
+    throw new Error(
+      "Back online, but your roll-call changes couldn't be checked against the live manifest yet.",
+    );
   const body = (await response.json()) as { results: OfflineSyncResult[] };
   const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
   envelope.events = envelope.events.map((event) => {

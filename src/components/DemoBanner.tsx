@@ -42,7 +42,7 @@ const ROLES_INFO = [
     title: "Captain",
     name: "Sal Moretti",
     icon: "⚓",
-    desc: "Vessel safety and passenger manifests. Performs check-in and final roll call.",
+    desc: "Runs the boat — check-in, the manifest, and the final roll call before departure.",
     tryThis: "Open an upcoming trip manifest and run the passenger roll call.",
   },
   {
@@ -50,7 +50,7 @@ const ROLES_INFO = [
     title: "Diver",
     name: "Public Guest",
     icon: "🐬",
-    desc: "The public-facing booking flow. Browse schedules, submit waivers, and request rentals.",
+    desc: "What your customers see — book a trip, sign the waiver, request rental gear.",
     tryThis: "Pick a trip on the schedule and book a spot.",
   },
 ] as const;
@@ -90,7 +90,7 @@ export function DemoBanner({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="inline-flex items-center rounded-md border border-accent/30 bg-accent/15 px-2 py-0.5 text-xs font-semibold tracking-wide text-foreground uppercase">
-              Demo Playground
+              Demo shop
             </span>
             <p className="text-sm text-foreground">
               Viewing as{" "}
@@ -109,7 +109,7 @@ export function DemoBanner({
               onClick={() => setIsExpanded(!isExpanded)}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-all duration-200 hover:bg-surface-sunken cursor-pointer"
             >
-              Switch Role {isExpanded ? "▲" : "▼"}
+              Switch role {isExpanded ? "▲" : "▼"}
             </button>
             <form action={resetDemoAction} className="shrink-0">
               <SubmitButton

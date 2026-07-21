@@ -108,7 +108,7 @@ export default async function TripsPage({
       />
       {staffView ? (
         <section
-          aria-label="Schedule snapshot"
+          aria-label="Schedule overview"
           className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
           <ShopStat

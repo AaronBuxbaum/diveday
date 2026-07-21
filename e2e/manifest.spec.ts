@@ -68,7 +68,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await page.getByRole("link", { name: "Boat manifest" }).click();
 
   await page.getByRole("button", { name: "Save for offline" }).click();
-  await expect(page.getByText(/Saved\. Open offline roll call/)).toBeVisible();
+  await expect(page.getByText(/Saved\. Open the offline roll call/)).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
@@ -76,14 +76,16 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await context.setOffline(true);
   await page.reload();
   // Offline reload serves the device copy; its freshness badge reads
-  // "current device snapshot".
-  await expect(page.getByText("current device snapshot")).toBeVisible();
+  // "Fresh copy".
+  await expect(page.getByText("Fresh copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   // Two live regions exist here (the action message and the connectivity
   // badge); scope to the one carrying the sync message.
-  await expect(page.getByRole("status").filter({ hasText: "waiting to sync" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "when you're back in service" }),
+  ).toBeVisible();
 
   await context.setOffline(false);
-  await expect(page.getByRole("status").filter({ hasText: "reconciled" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "caught up" })).toBeVisible();
 });
