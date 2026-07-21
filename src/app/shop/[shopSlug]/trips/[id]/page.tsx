@@ -94,7 +94,13 @@ export default async function ManageTripPage({
   ]);
   const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
   const series = await getTripSeriesSummary(db, shop.id, tripId);
-  const undoBookingId = notice === "booking-removed" ? bid : undefined;
+  // Undo is safe for every money-neutral removal but must never appear after a
+  // real refund: restoreBooking can't un-refund, so it would re-seat a diver
+  // whose money is already gone (dive-domain review).
+  const undoBookingId =
+    notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
+      ? bid
+      : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
