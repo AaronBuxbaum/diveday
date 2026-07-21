@@ -250,15 +250,26 @@ export async function inviteWaitlistAction(
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
-const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
-  refunded: "booking-removed-refunded",
-  forfeit: "booking-removed-forfeit",
-  manual: "booking-removed-refund-manual",
-  failed: "booking-removed-refund-failed",
-  // No stated window, or nothing captured: today's plain "spot is open" notice.
-  no_policy: "booking-removed",
-  unpaid: "booking-removed",
-};
+function refundNotice(refund: CancellationRefundOutcome): string {
+  switch (refund.status) {
+    case "refunded":
+      return "booking-removed-refunded";
+    case "forfeit":
+      return "booking-removed-forfeit";
+    case "failed":
+      return "booking-removed-refund-failed";
+    case "manual":
+      // `not_refundable` is a data mismatch (local row says paid, Stripe
+      // captured nothing) — a "review", not the "refund owed by hand" claim the
+      // counter/disconnected cases make.
+      return refund.reason === "not_refundable"
+        ? "booking-removed-refund-review"
+        : "booking-removed-refund-manual";
+    default:
+      // no_policy or unpaid: nothing owed, today's plain "spot is open" notice.
+      return "booking-removed";
+  }
+}
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
@@ -275,7 +286,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
     shopId: s.user.shopId,
     bookingId,
   });
-  revalidateAndRedirect(back, `${back}?notice=${REFUND_NOTICE[refund.status]}&bid=${bookingId}`);
+  revalidateAndRedirect(back, `${back}?notice=${refundNotice(refund)}&bid=${bookingId}`);
 }
 
 export async function undoRemoveBookingAction(

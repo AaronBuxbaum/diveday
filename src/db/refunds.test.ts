@@ -139,6 +139,35 @@ describe("refundBookingOnCancellation", () => {
     expect(outcome).toEqual({ status: "manual", reason: "not_stripe" });
   });
 
+  it("hands a counter payment with no recorded amount to staff, never silently drops it", async () => {
+    // The realistic manual mark: staff record "paid" with no amount. A cancel
+    // inside the window still owes the diver a refund — it must reach staff.
+    const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      note: "cash at counter",
+    });
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow },
+      fakeCheckout({ status: "refunded" }),
+    );
+    expect(outcome).toEqual({ status: "manual", reason: "not_stripe" });
+  });
+
+  it("routes a Stripe not_refundable (record/Stripe mismatch) to staff review", async () => {
+    const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow },
+      fakeCheckout({ status: "not_refundable" }),
+    );
+    expect(outcome).toEqual({ status: "manual", reason: "not_refundable" });
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
   it("reports unpaid when nothing was captured", async () => {
     const { db, shop, reef, insideWindow } = await paidBookingContext(48);
     const party = await createBookingParty(db, [

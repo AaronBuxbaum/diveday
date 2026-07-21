@@ -177,9 +177,15 @@ export function stripeCheckoutProvider(
 
         const form = new URLSearchParams({ payment_intent: paymentIntentId });
         if (amountCents !== undefined) form.set("amount", String(amountCents));
+        // Deterministic key so a retry after a lost response — or a later manual
+        // re-issue through this same path — collapses to one Stripe refund
+        // rather than paying the diver twice.
         const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
           method: "POST",
-          headers: headersFor(config.secretKey, stripeAccountId),
+          headers: {
+            ...headersFor(config.secretKey, stripeAccountId),
+            "Idempotency-Key": `refund:${paymentIntentId}:${amountCents ?? "full"}`,
+          },
           body: form.toString(),
         });
         if (!response.ok) return { status: "failed" };

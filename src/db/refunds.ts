@@ -70,10 +70,18 @@ export async function refundBookingOnCancellation(
   const decision = refundOnCancellation(row.trip, payment.amountCents ?? 0, now);
   if (decision.outcome === "no_policy") return { status: "no_policy" };
   if (decision.outcome === "forfeit") return { status: "forfeit" };
-  if (decision.refundCents <= 0) return { status: "unpaid" };
 
+  // A refund is owed. Only a Stripe-captured payment can be auto-reversed here;
+  // a counter/cash mark (provider not "stripe", commonly with no recorded
+  // amount) is owed a refund too but staff must issue it — never silently drop
+  // it as "unpaid" just because the amount wasn't recorded.
   if (payment.provider !== "stripe" || !payment.providerRef) {
     return { status: "manual", reason: "not_stripe" };
+  }
+  if (decision.refundCents <= 0) {
+    // A Stripe payment with no recorded amount shouldn't happen; don't fire a
+    // zero/blank refund — hand it to staff to reconcile.
+    return { status: "manual", reason: "not_refundable" };
   }
 
   const account = await getShopStripeAccount(db, input.shopId);
