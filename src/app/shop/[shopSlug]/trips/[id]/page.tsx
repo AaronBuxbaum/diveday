@@ -68,7 +68,6 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const tripTitle = trip.title;
   const [
     staff,
     crewIds,
@@ -220,10 +219,8 @@ export default async function ManageTripPage({
 
       <RosterSection
         shopSlug={shopSlug}
-        shopName={shop.name}
         shopTimezone={shop.timezone}
         tripId={tripId}
-        tripTitle={tripTitle}
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}

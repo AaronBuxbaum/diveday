@@ -130,7 +130,7 @@ export default async function ShopPage({
         </section>
       ) : null}
 
-      <TodayQueue actions={actions} />
+      <TodayQueue actions={actions} shopSlug={shopSlug} />
     </main>
   );
 }

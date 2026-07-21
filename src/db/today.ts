@@ -304,7 +304,7 @@ export async function getTodayWork(
         subject: trip.title,
         context: when,
         detail: "This course session has no instructor assigned and cannot take enrolments.",
-        actionLabel: "Assign instructor",
+        actionLabel: "Open trip",
         href: tripHref,
         dueAt: trip.startsAt,
       });

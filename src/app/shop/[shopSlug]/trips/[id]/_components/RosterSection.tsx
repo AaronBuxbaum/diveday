@@ -70,10 +70,8 @@ const WAIVER_CONTROLS: Record<ReturnType<typeof waiverState>, WaiverControl> = {
 
 export function RosterSection({
   shopSlug,
-  shopName,
   shopTimezone,
   tripId,
-  tripTitle,
   booked,
   capacity,
   roster,
@@ -87,10 +85,8 @@ export function RosterSection({
   removeBookingAction,
 }: {
   shopSlug: string;
-  shopName: string;
   shopTimezone: string;
   tripId: string;
-  tripTitle: string;
   booked: number;
   capacity: number;
   roster: RosterEntry[];
@@ -200,9 +196,6 @@ export function RosterSection({
                       {waiverControl.action ? (
                         <form action={issueWaiverAction}>
                           <input type="hidden" name="bookingId" value={booking.id} />
-                          <input type="hidden" name="shopName" value={shopName} />
-                          <input type="hidden" name="tripTitle" value={tripTitle} />
-                          <input type="hidden" name="shopTimezone" value={shopTimezone} />
                           <SubmitButton
                             pendingLabel={
                               waiverControl.action === "send" ? "Sending…" : "Resending…"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { ACTION_KIND_META, groupActions, type TodayAction } from "@/lib/today";
+import { WaiverSendControl } from "./WaiverSendControl";
 
 const CHIP_TONES = {
   danger: "border-danger/30 bg-danger/10 text-danger",
@@ -19,10 +20,10 @@ function KindChip({ kind }: { kind: TodayAction["kind"] }) {
   );
 }
 
-function ActionRow({ action }: { action: TodayAction }) {
+function ActionRow({ action, shopSlug }: { action: TodayAction; shopSlug: string }) {
   return (
     <li className="rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <KindChip kind={action.kind} />
@@ -31,12 +32,21 @@ function ActionRow({ action }: { action: TodayAction }) {
           </div>
           <p className="mt-1.5 text-muted">{action.detail}</p>
         </div>
-        <Link
-          href={action.href}
-          className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-        >
-          {action.actionLabel}
-        </Link>
+        {action.waiver ? (
+          <WaiverSendControl
+            shopSlug={shopSlug}
+            surface="today"
+            bookingIds={action.waiver.bookingIds}
+            label={action.actionLabel}
+          />
+        ) : (
+          <Link
+            href={action.href}
+            className={buttonClass({ variant: "secondary", className: "shrink-0" })}
+          >
+            {action.actionLabel}
+          </Link>
+        )}
       </div>
     </li>
   );
@@ -47,7 +57,13 @@ function ActionRow({ action }: { action: TodayAction }) {
  * each group, one row per person or per boat — never one row per blocker, or a
  * single diver with three problems would bury everyone else.
  */
-export function TodayQueue({ actions }: { actions: readonly TodayAction[] }) {
+export function TodayQueue({
+  actions,
+  shopSlug,
+}: {
+  actions: readonly TodayAction[];
+  shopSlug: string;
+}) {
   const groups = groupActions(actions);
 
   if (groups.length === 0) {
@@ -94,7 +110,7 @@ export function TodayQueue({ actions }: { actions: readonly TodayAction[] }) {
             </div>
             <ul className="mt-3 flex flex-col gap-3">
               {group.actions.map((action) => (
-                <ActionRow key={action.id} action={action} />
+                <ActionRow key={action.id} action={action} shopSlug={shopSlug} />
               ))}
             </ul>
           </div>

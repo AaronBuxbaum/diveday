@@ -89,22 +89,26 @@ describe("diverBlockerAction", () => {
     blockers: [blocker("waiver_not_sent", "Waiver has not been sent.")],
   };
 
-  it("points waiver work at the trip roster row for that booking", () => {
+  it("sends waiver work in place, keeping the verb and the booking payload", () => {
     const result = diverBlockerAction(input, "blue-reef", NOW);
+    // href stays as the no-JS fallback to the roster row.
     expect(result?.href).toBe("/shop/blue-reef/trips/t1#booking-b1");
     expect(result?.actionLabel).toBe("Send waiver");
+    expect(result?.waiver).toEqual({ bookingIds: ["b1"] });
     expect(result?.subject).toBe("Maya Alvarez");
     expect(result?.urgency).toBe("now");
   });
 
-  it("points card work at the person record, where cards live", () => {
+  it("points card work at the person record instead of pretending to act", () => {
     const result = diverBlockerAction(
       { ...input, blockers: [blocker("certification_pending")] },
       "blue-reef",
       NOW,
     );
     expect(result?.href).toBe("/shop/blue-reef/divers/p1");
-    expect(result?.actionLabel).toBe("Verify card");
+    // The tap only opens the record, so the label points rather than commands.
+    expect(result?.actionLabel).toBe("Open Maya’s record");
+    expect(result?.waiver).toBeUndefined();
   });
 
   it("collapses a diver's other blockers into the detail instead of extra rows", () => {
@@ -160,9 +164,23 @@ describe("collapseDiverActions", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.subject).toBe("3 divers");
     expect(result[0]?.actionLabel).toBe("Send waivers");
+    // A batch send carries every diver's booking, so one tap sends all three.
+    expect(result[0]?.waiver).toEqual({
+      bookingIds: ["b-Ana Ruiz", "b-Ben Cole", "b-Cara Diaz"],
+    });
     expect(result[0]?.detail).toBe("Waiver has not been sent. Ana Ruiz, Ben Cole and Cara Diaz.");
     // The roster is the only screen that shows all of them at once.
     expect(result[0]?.href).toBe("/shop/blue-reef/trips/t1");
+  });
+
+  it("does not turn a grouped non-waiver blocker into a batch send", () => {
+    const result = collapseDiverActions(
+      ["Ana Ruiz", "Ben Cole"].map((name) => diver(name, "payment_due")),
+      "blue-reef",
+      NOW,
+    );
+    expect(result[0]?.actionLabel).toBe("Open roster");
+    expect(result[0]?.waiver).toBeUndefined();
   });
 
   it("abbreviates a long roster instead of listing everyone", () => {

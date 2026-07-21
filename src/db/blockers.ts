@@ -53,7 +53,13 @@ export async function getBlockerQueue(
           tripId: trip.id,
           personId: row.person.id,
           bookingId: row.booking.id,
-        }) ?? { label: "Open trip", href: `/shop/${shopSlug}/trips/${trip.id}` },
+          fullName: row.person.fullName,
+        }) ?? {
+          label: "Open roster",
+          href: `/shop/${shopSlug}/trips/${trip.id}`,
+          sendsWaiver: false,
+          bookingId: row.booking.id,
+        },
       }))
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
     if (divers.length === 0) continue;

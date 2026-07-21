@@ -94,12 +94,43 @@ export type TodayAction = {
   context: string | null;
   /** What is wrong, in staff language. */
   detail: string;
-  /** A verb. What the button does. */
+  /**
+   * The button label. A verb *only* when the tap performs that verb (waiver
+   * sends do; everything else points — "Open Priya's record", "Open roster").
+   */
   actionLabel: string;
   href: string;
+  /**
+   * Present when the tap issues and sends a waiver in place rather than
+   * navigating. `href` stays as the no-JS fallback to the roster row.
+   */
+  waiver?: { bookingIds: string[] };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
+
+/** The three blocker codes a one-tap send actually resolves. */
+const WAIVER_CODES = new Set<ReadinessBlockerCode>([
+  "waiver_not_sent",
+  "waiver_pending",
+  "waiver_expired",
+]);
+
+function isWaiverCode(code: ReadinessBlockerCode): boolean {
+  return WAIVER_CODES.has(code);
+}
+
+function firstNameOf(fullName: string): string {
+  return fullName.split(" ")[0] || fullName;
+}
+
+/**
+ * A label for a row whose fix lives on another screen: it points, it does not
+ * command. Card work waits on the person record; everything else on the roster.
+ */
+function pointingLabel(target: "trip" | "diver", fullName: string): string {
+  return target === "diver" ? `Open ${firstNameOf(fullName)}’s record` : "Open roster";
+}
 
 /**
  * Blocked divers are the reason this page exists, so each blocker resolves to
@@ -282,6 +313,8 @@ export function diverBlockerAction(
   if (!blocker) return null;
   const { kind, actionLabel, target } = BLOCKER_ACTIONS[blocker.code];
   const remaining = input.blockers.length - 1;
+  const rosterRow = `/shop/${shopSlug}/trips/${input.tripId}#booking-${input.bookingId}`;
+  const waiver = isWaiverCode(blocker.code);
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,
     kind,
@@ -292,11 +325,11 @@ export function diverBlockerAction(
       remaining > 0
         ? `${blocker.message} ${remaining} other ${remaining === 1 ? "blocker" : "blockers"} to clear too.`
         : blocker.message,
-    actionLabel,
-    href:
-      target === "diver"
-        ? `/shop/${shopSlug}/divers/${input.personId}`
-        : `/shop/${shopSlug}/trips/${input.tripId}#booking-${input.bookingId}`,
+    // Waiver rows send in place, so they keep the verb; a card row only opens
+    // the person record, so it points instead of pretending to act.
+    actionLabel: waiver ? actionLabel : pointingLabel(target, input.fullName),
+    href: target === "diver" ? `/shop/${shopSlug}/divers/${input.personId}` : rosterRow,
+    ...(waiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     dueAt: input.startsAt,
   };
 }
@@ -345,6 +378,7 @@ export function collapseDiverActions(
     }
     const { kind, groupLabel } = BLOCKER_ACTIONS[blocker.code];
     const names = rows.map((row) => row.fullName).sort((a, b) => a.localeCompare(b));
+    const waiver = isWaiverCode(blocker.code);
     actions.push({
       id: `blockers:${key}`,
       kind,
@@ -352,9 +386,12 @@ export function collapseDiverActions(
       subject: `${rows.length} divers`,
       context: first.tripTitle,
       detail: `${blocker.message} ${nameList(names)}.`,
-      actionLabel: groupLabel,
+      // A batch waiver send keeps the verb ("Send waivers"); any other grouped
+      // fix only opens the roster, the one screen that shows all of them.
+      actionLabel: waiver ? groupLabel : "Open roster",
       // Always the roster: it is the one screen that shows all of them at once.
       href: `/shop/${shopSlug}/trips/${first.tripId}`,
+      ...(waiver ? { waiver: { bookingIds: rows.map((row) => row.bookingId) } } : {}),
       dueAt: first.startsAt,
     });
   }

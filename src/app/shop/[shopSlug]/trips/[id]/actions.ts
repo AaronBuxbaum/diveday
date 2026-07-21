@@ -2,9 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { cancelBooking, createBooking, getBookingForTrip, restoreBooking } from "@/db/bookings";
+import { cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { sendAndRecordNotification } from "@/db/notifications";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
@@ -16,9 +15,8 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
-import { issueWaiverRequest } from "@/db/waivers";
+import { issueAndDeliverWaiver } from "@/db/waiver-issue";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -224,51 +222,14 @@ export async function issueWaiverAction(shopSlug: string, tripId: string, formDa
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(`${back}?notice=waiver-error`);
-  // Render-time snapshots threaded through hidden inputs, matching the former
-  // closure over `shop` and the trip title.
-  const shopName = String(formData.get("shopName") ?? "");
-  const tripTitle = String(formData.get("tripTitle") ?? "");
-  const timezone = String(formData.get("shopTimezone") ?? "");
-  const db = await getDb();
-  const outcome = await issueWaiverRequest(db, {
-    shopId: s.user.shopId,
-    bookingId,
-  });
+  // Same issue-and-deliver path the Today/Blockers one-tap sends use, so the
+  // roster never diverges from the queue. The private link is always surfaced
+  // here so staff can hand it over when email delivery isn't `sent`.
+  const outcome = await issueAndDeliverWaiver(await getDb(), s.user.shopId, bookingId);
   if (!outcome.ok) {
     redirect(
       `${back}?notice=${outcome.reason === "already_completed" ? "waiver-complete" : "waiver-error"}`,
     );
-  }
-  const origin = publicAppUrl();
-  if (origin) {
-    const booking = await getBookingForTrip(db, tripId, bookingId);
-    if (booking?.person.email) {
-      try {
-        const delivery = await sendAndRecordNotification(db, {
-          kind: "waiver_request",
-          waiverRecordId: outcome.recordId,
-          bookingId,
-          shopId: s.user.shopId,
-          to: booking.person.email,
-          diverName: booking.person.fullName,
-          shopName,
-          tripTitle,
-          completionUrl: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
-          expiresAt: outcome.expiresAt,
-          timezone,
-        });
-        if (delivery.status === "failed") {
-          console.error("Waiver request notification failed", {
-            waiverRecordId: outcome.recordId,
-          });
-        }
-      } catch {
-        // Keep the staff-visible one-time link available if email delivery is unavailable.
-        console.error("Waiver request notification could not be prepared", {
-          waiverRecordId: outcome.recordId,
-        });
-      }
-    }
   }
   revalidateAndRedirect(
     back,

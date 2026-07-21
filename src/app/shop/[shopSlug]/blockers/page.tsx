@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
 import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import type { BlockerQueueTrip } from "@/lib/blockers";
-import { distinctBlockedDivers } from "@/lib/blockers";
+import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 
@@ -15,7 +16,13 @@ export const metadata: Metadata = {
   title: "Blockers — Scuba",
 };
 
-function DiverRow({ diver }: { diver: BlockerQueueTrip["divers"][number] }) {
+function DiverRow({
+  diver,
+  shopSlug,
+}: {
+  diver: BlockerQueueTrip["divers"][number];
+  shopSlug: string;
+}) {
   return (
     <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5 sm:px-5">
       <div className="min-w-0">
@@ -31,12 +38,21 @@ function DiverRow({ diver }: { diver: BlockerQueueTrip["divers"][number] }) {
           ))}
         </ul>
       </div>
-      <Link
-        href={diver.fix.href}
-        className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-      >
-        {diver.fix.label}
-      </Link>
+      {diver.fix.sendsWaiver ? (
+        <WaiverSendControl
+          shopSlug={shopSlug}
+          surface="blockers"
+          bookingIds={[diver.fix.bookingId]}
+          label={diver.fix.label}
+        />
+      ) : (
+        <Link
+          href={diver.fix.href}
+          className={buttonClass({ variant: "secondary", className: "shrink-0" })}
+        >
+          {diver.fix.label}
+        </Link>
+      )}
     </li>
   );
 }
@@ -50,6 +66,7 @@ function TripGroup({
   shopSlug: string;
   timeZone: string;
 }) {
+  const batchIds = waiverBookingIds(trip);
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-surface-sunken px-4 py-3 sm:px-5">
@@ -67,13 +84,24 @@ function TripGroup({
           </div>
           <p className="text-sm text-muted">{formatDateTimeTz(trip.startsAt, "en-US", timeZone)}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums">
-          {trip.divers.length} of {trip.booked} blocked
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+          <span className="rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums">
+            {trip.divers.length} of {trip.booked} blocked
+          </span>
+          {batchIds.length > 1 ? (
+            <WaiverSendControl
+              shopSlug={shopSlug}
+              surface="blockers"
+              bookingIds={batchIds}
+              label={`Send all ${batchIds.length} waivers`}
+              pendingLabel="Sending all…"
+            />
+          ) : null}
+        </div>
       </header>
       <ul className="divide-y divide-border">
         {trip.divers.map((diver) => (
-          <DiverRow key={diver.bookingId} diver={diver} />
+          <DiverRow key={diver.bookingId} diver={diver} shopSlug={shopSlug} />
         ))}
       </ul>
     </section>
