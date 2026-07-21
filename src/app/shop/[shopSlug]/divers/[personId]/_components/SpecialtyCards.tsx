@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { SPECIALTY_LABELS } from "@/lib/readiness";
 import { addSpecialtyAction, reviewSpecialtyAction } from "../actions";
-import { AGENCY_LABELS, type DiverProfile, statusTone } from "./shared";
+import { AGENCY_LABELS, CARD_STATUS_LABELS, type DiverProfile, statusTone } from "./shared";
 
 export function SpecialtyCards({
   diver,
@@ -123,7 +123,7 @@ export function SpecialtyCards({
                   <span
                     className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
                   >
-                    {card.status}
+                    {CARD_STATUS_LABELS[card.status]}
                   </span>
                   {card.status === "pending" ? (
                     <>
@@ -131,10 +131,10 @@ export function SpecialtyCards({
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="status" value="verified" />
                         <SubmitButton
-                          pendingLabel="Verifying…"
+                          pendingLabel="Marking certified…"
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          Verify
+                          Mark certified
                         </SubmitButton>
                       </form>
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
@@ -165,7 +165,7 @@ export function SpecialtyCards({
                   <span
                     className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
                   >
-                    {card.status}
+                    {CARD_STATUS_LABELS[card.status]}
                   </span>
                   {card.status === "pending" ? (
                     <>
@@ -174,10 +174,10 @@ export function SpecialtyCards({
                         <input type="hidden" name="cardType" value="nitrox" />
                         <input type="hidden" name="status" value="verified" />
                         <SubmitButton
-                          pendingLabel="Verifying…"
+                          pendingLabel="Marking certified…"
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          Verify
+                          Mark certified
                         </SubmitButton>
                       </form>
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>

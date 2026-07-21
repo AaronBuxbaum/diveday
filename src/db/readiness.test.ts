@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
@@ -20,9 +19,7 @@ import {
   reviewCertification,
   reviewSpecialtyCertification,
   upsertTripRequirements,
-  verifyCertificationWithAgency,
 } from "./readiness";
-import { certifications as certificationsTable } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -240,47 +237,6 @@ describe("trip readiness (in-memory PGlite)", () => {
       status: "ready",
       blockers: [],
     });
-  });
-
-  it("auto-verifies on an agency match but only warns on a miss", async () => {
-    const { db, shop, rosterEntry } = await readinessContext();
-    const pending = await createCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "padi",
-      level: "open_water",
-      identifier: "PADI-CHECK-1",
-    });
-    if (!pending) throw new Error("expected certification to insert");
-
-    // A confirmed agency match verifies the card and records the source.
-    const matched = await verifyCertificationWithAgency(db, shop.id, pending.id, {
-      verify: async () => ({ status: "verified", reference: "AG-1" }),
-    });
-    expect(matched).toBe("verified");
-    let [row] = await db
-      .select()
-      .from(certificationsTable)
-      .where(eq(certificationsTable.id, pending.id));
-    expect(row?.status).toBe("verified");
-    expect(row?.reviewNote).toContain("PADI");
-
-    // A not_found result is assistive only: it warns, never auto-rejects.
-    const other = await createCertification(db, {
-      shopId: shop.id,
-      personId: rosterEntry.person.id,
-      agency: "ssi",
-      level: "open_water",
-      identifier: "SSI-CHECK-2",
-    });
-    if (!other) throw new Error("expected certification to insert");
-    const missed = await verifyCertificationWithAgency(db, shop.id, other.id, {
-      verify: async () => ({ status: "not_found" }),
-    });
-    expect(missed).toBe("not_found");
-    [row] = await db.select().from(certificationsTable).where(eq(certificationsTable.id, other.id));
-    expect(row?.status).toBe("pending");
-    expect(row?.reviewNote).toContain("could not find");
   });
 
   it("does not leak specialty certifications across shops", async () => {

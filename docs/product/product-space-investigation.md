@@ -113,9 +113,12 @@ should be retired, gated, or paused — not extended:
 - ~~**Two parallel payment paths.**~~ ✅ **Done (2026-07-20).** The superseded Stripe **Checkout**
   seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
   uses is the single payment path.
-- **The cert-verification agency-gateway plumbing** (per-agency PADI/SSI/NAUI env pairs) — **no agency
-  exposes such an API today** ([H-10](human-decisions.md)), so it always resolves to the stub. Real
-  as a *seam*; speculative as *plumbing*. Keep the interface, shed the per-agency machinery until an
+- ~~**The cert-verification agency-gateway plumbing**~~ ✅ **Removed (2026-07-21).** No agency
+  exposed such an API ([H-10](human-decisions.md)), so the per-agency PADI/SSI/NAUI plumbing always
+  resolved to the stub. The whole seam was removed in favour of manual staff certification (staff
+  look the number up and click Mark certified) — see
+  [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md). The
+  original note read: keep the interface, shed the per-agency machinery until an
   API is real.
 - **Nitrox's disproportionate footprint** — 🔁 **Trimmed (2026-07-20).** The standalone shop-wide
   fill-log page and its dedicated nav slot were removed; fills are now logged per departure at
@@ -161,9 +164,9 @@ Shrink the surface so every later change is cheaper and the app stops contradict
   fixed, marketing made honest, `db/queries.ts` split, a shared db/e2e test context, and the
   server-action convention documented.
 - Act on the cut list above: ✅ the superseded Checkout seam was removed and nitrox's footprint was
-  trimmed (2026-07-20). Still open: pause/hide the dive-site CMS (moments/creatures) and global
-  catalog behind their unproven value; keep the cert-verification *seam* but shed the speculative
-  per-agency plumbing.
+  trimmed (2026-07-20); ✅ the cert-verification agency plumbing was removed for manual certification
+  (2026-07-21). Still open: pause/hide the dive-site CMS (moments/creatures) and global catalog
+  behind their unproven value.
 - ✅ The oversized pages are decomposed (2026-07-20): `trips/[id]` 1,296 → 277 lines,
   `divers/[personId]` 1,140 → 64, `schedule/[id]` 719 → 167, `gear` 526 → 84 — each now an
   `actions.ts` plus colocated `_components/`. New readiness surfaces no longer fight 1,300-line
