@@ -99,12 +99,18 @@ new domain concept, define it here in the same PR.
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly.
-- **Roll-call event** — an append-only record that a staff member marked one booking boarded or
-  not boarded, including the time and any note. Its newest event is the current state; older events
-  remain evidence of what the crew recorded.
+- **Roll-call event** — an append-only record that a staff member marked one booking boarded,
+  not boarded, or cleared, including the time and any note. Its newest event is the current state;
+  older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
+  current status again to correct a mistake, and the diver returns to awaiting. It is stored as its
+  own event so the correction stays in the audit trail rather than deleting history.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
-  A two-tank charter has three checkpoints. A diver's state at one checkpoint never silently carries
-  into the next.
+  A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
+  boat; a **boarded** result never carries into the next. The one deliberate exception is
+  **not boarded**: once a diver is marked not boarded, later checkpoints default to not boarded
+  (shown as "carried forward") until staff explicitly re-board them — a diver who left the boat is
+  presumed still ashore rather than resetting to awaiting. The default is always flagged as carried,
+  can never imply "present," and staff can override it at any checkpoint.
 - **Offline manifest snapshot** — an explicit, time-stamped, encrypted device copy of the complete
   derived manifest and every checkpoint. It is safety evidence as saved, never an editable roster
   or a claim that server-side readiness has not changed.

@@ -187,21 +187,29 @@ export default async function EditCoursePage({
               {course.imageUrls.length > 0 ? (
                 <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {course.imageUrls.map((url) => (
-                    <div key={url}>
+                    // The whole cell is one label wrapping its own checkbox, so a
+                    // tap on the photo toggles *that* photo — not the first one.
+                    <label key={url} className="relative block cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="removeGalleryUrls"
+                        value={url}
+                        className="peer sr-only"
+                      />
                       <Thumb
                         src={url}
-                        className="h-24 w-full rounded-lg border border-border object-cover"
+                        className="h-24 w-full rounded-lg border-2 border-border object-cover transition peer-checked:border-danger peer-checked:opacity-50"
                       />
-                      <label className="mt-1 flex items-center gap-2 text-xs text-muted">
-                        <input
-                          type="checkbox"
-                          name="removeGalleryUrls"
-                          value={url}
-                          className="size-4"
-                        />
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
+                      >
+                        ✓
+                      </span>
+                      <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
                         Remove
-                      </label>
-                    </div>
+                      </span>
+                    </label>
                   ))}
                 </div>
               ) : null}
@@ -260,8 +268,9 @@ export default async function EditCoursePage({
           </p>
           <FieldGrid columns={1} className="mt-4 gap-y-5">
             <Field label="Prerequisite note" hint="(optional)">
-              <input
+              <textarea
                 name="prerequisiteNote"
+                rows={4}
                 maxLength={400}
                 defaultValue={course.prerequisiteNote ?? ""}
                 placeholder="Comfortable swimming 200 m"

@@ -1,0 +1,1 @@
+ALTER TYPE "roll_call_status" ADD VALUE 'cleared';
