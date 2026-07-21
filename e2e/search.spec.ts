@@ -1,9 +1,7 @@
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
 
-test("the command palette pulls up a diver by name and lands on their record", async ({
-  page,
-}) => {
+test("the command palette pulls up a diver by name and lands on their record", async ({ page }) => {
   await signInAsOwner(page);
 
   // The nav Search button opens the palette (phone users have no ⌘K).
