@@ -374,11 +374,15 @@ export default async function TripManifestPage({
                           {diver.nitroxRequested ? " · Nitrox requested" : ""}
                         </span>
                       </p>
-                      {diver.medicalWaiverSignedAt ? (
+                      {diver.medicalWaiver ? (
                         <p>
-                          <span className="font-bold">Medical waiver signed</span>
+                          <span className="font-bold">
+                            {diver.medicalWaiver.source === "paper"
+                              ? "Medical reviewed (paper)"
+                              : "Medical waiver signed"}
+                          </span>
                           <span className="mt-0.5 block text-muted">
-                            {formatShortDate(diver.medicalWaiverSignedAt, "en-US", shop.timezone)}
+                            {formatShortDate(diver.medicalWaiver.at, "en-US", shop.timezone)}
                           </span>
                         </p>
                       ) : null}

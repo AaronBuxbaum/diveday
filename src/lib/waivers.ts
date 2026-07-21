@@ -135,18 +135,32 @@ export function waiverState(record: WaiverRecord | null, now: Date = new Date())
   return record.expiresAt <= now ? "expired" : "awaiting_signature";
 }
 
+export type MedicalWaiverMark = {
+  at: Date;
+  /**
+   * "digital" — the diver answered the medical questionnaire themselves.
+   * "paper" — staff attested a reviewed paper medical (in person). Both are a
+   * real review dated on the same 365-day clock; the source only changes wording.
+   */
+  source: "digital" | "paper";
+};
+
 /**
- * The signing date of a completed *medical* waiver — one that actually captured
- * a medical questionnaire — or null. Staff-recorded paper signatures
- * (`in_person_attested`) carry no medical answers, so they never surface a date:
- * the point of showing it is letting the crew spot a medical statement drifting
- * toward a year stale, and there is no questionnaire on file to age.
+ * When and how a diver's medical currency was last established, for spotting a
+ * statement drifting toward a year stale. A digital completion carries the
+ * questionnaire; a staff paper attestation (`in_person_attested`) carries a
+ * staff-affirmed review with the same validity clock — so both surface a date,
+ * *distinctly*, rather than a paper record reading as a missing medical next to
+ * a dated one. Only a clean completion counts; a pending or in-review record has
+ * no settled medical to show.
  */
-export function medicalWaiverSignedAt(record: WaiverRecord | null): Date | null {
-  if (record === null) return null;
-  if (record.status !== "completed") return null;
-  if (!record.medicalAnswers) return null;
-  return record.signedAt ?? record.completedAt ?? null;
+export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMark | null {
+  if (record === null || record.status !== "completed") return null;
+  const at = record.signedAt ?? record.completedAt;
+  if (!at) return null;
+  if (record.medicalAnswers) return { at, source: "digital" };
+  if (record.signatureMethod === "in_person_attested") return { at, source: "paper" };
+  return null;
 }
 
 export type WaiverActivityEntry = {
