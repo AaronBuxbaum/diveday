@@ -2,13 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { sendWaiversAction } from "@/app/actions/waivers";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverFallbackLink,
   type WaiverSendState,
   type WaiverSendSurface,
 } from "@/app/actions/waiver-send-types";
+import { sendWaiversAction } from "@/app/actions/waivers";
 import { buttonClass } from "@/components/ui/button";
 
 function SendButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {

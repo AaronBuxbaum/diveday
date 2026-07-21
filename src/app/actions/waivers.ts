@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
 import { requireStaffSession } from "@/lib/session";
-import {
-  type WaiverSendState,
-  type WaiverSendSurface,
-} from "./waiver-send-types";
+import type { WaiverSendState, WaiverSendSurface } from "./waiver-send-types";
 
 /**
  * One-tap waiver send, shared by the Today queue and the Blockers page (the two
