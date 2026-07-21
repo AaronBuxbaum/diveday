@@ -400,6 +400,22 @@ export const trips = pgTable(
     plannedDives: integer("planned_dives").notNull().default(2),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
     priceCents: integer("price_cents"),
+    /**
+     * Optional per-diver deposit taken at pay-at-booking checkout, in minor
+     * units. Null (the default) charges the full fare, exactly as before. A
+     * value below the per-diver price charges that much now and marks the
+     * booking `deposit_paid` with the balance still due; a value at or above the
+     * fare is treated as no deposit (charge full) rather than a bad request
+     * (src/lib/deposits.ts). Provisional H-07 policy — off unless a shop opts in.
+     */
+    depositCents: integer("deposit_cents"),
+    /**
+     * Optional free-cancellation window, in hours before departure. Declarative
+     * only: shown to divers at booking and surfaced to staff as a
+     * "refund-eligible until" cue. Refunds stay staff-initiated — no automated
+     * money movement in this slice. Null means the shop states no window (H-07).
+     */
+    cancellationWindowHours: integer("cancellation_window_hours"),
     status: tripStatus("status").notNull().default("scheduled"),
     conditionsSummary: text("conditions_summary"),
     waterTemperatureC: integer("water_temperature_c"),
@@ -740,6 +756,12 @@ export const bookingCheckouts = pgTable(
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
+    /**
+     * True when the amount charged is a deposit (a balance is still due), so a
+     * completed session settles the covered bookings to `deposit_paid` rather
+     * than `paid`. False (the default) is the full-fare checkout.
+     */
+    isDeposit: boolean("is_deposit").notNull().default(false),
     /** Stripe expires unfinished Checkout sessions; kept so the UI can be honest about a dead link. */
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),

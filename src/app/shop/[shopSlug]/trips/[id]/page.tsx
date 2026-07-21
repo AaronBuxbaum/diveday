@@ -19,6 +19,7 @@ import {
   listTripDives,
 } from "@/db/trips";
 import { listTripWaiverStatuses } from "@/db/waivers";
+import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -241,6 +242,7 @@ export default async function ManageTripPage({
         rentalFitByBooking={rentalFitByBooking}
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
+        cancellationDeadline={cancellationDeadline(trip)}
         issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}

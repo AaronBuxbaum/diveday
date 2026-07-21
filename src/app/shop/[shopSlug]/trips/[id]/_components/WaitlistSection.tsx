@@ -16,7 +16,7 @@ export function WaitlistSection({
   shopName: string;
   tripTitle: string;
   tripWhen: string;
-  inviteAction: (entryId: string) => Promise<void>;
+  inviteAction: (entryId: string) => Promise<"sent" | "fallback">;
 }) {
   const bookingPath = `/shop/${shopSlug}/schedule/${tripId}`;
   return (

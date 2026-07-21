@@ -105,6 +105,50 @@ export function DetailsSection({
             />
           </Field>
         </FieldGrid>
+        <fieldset className="rounded-lg border border-border bg-surface p-5">
+          <legend className="px-1 text-sm font-medium">Pay at booking</legend>
+          <p className="text-sm text-muted">
+            Optional. Leave the deposit blank to charge the full fare when a diver books online.
+          </p>
+          <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+            <Field
+              label="Deposit per diver"
+              hint="(optional)"
+              description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price."
+            >
+              <input
+                name="depositDollars"
+                type="number"
+                step="0.01"
+                min={0}
+                placeholder="$0.00"
+                defaultValue={
+                  trip.depositCents === null ? "" : (trip.depositCents / 100).toFixed(2)
+                }
+                className={`${controlClass} tabular-nums sm:w-40`}
+              />
+            </Field>
+            <Field
+              label="Free cancellation window"
+              hint="(optional)"
+              description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run."
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  name="cancellationWindowHours"
+                  type="number"
+                  step={1}
+                  min={0}
+                  max={720}
+                  placeholder="48"
+                  defaultValue={trip.cancellationWindowHours ?? ""}
+                  className={`${controlClass} tabular-nums sm:w-28`}
+                />
+                <span className="text-sm text-muted">hours</span>
+              </div>
+            </Field>
+          </FieldGrid>
+        </fieldset>
         <div>
           <SubmitButton
             pendingLabel="Saving…"

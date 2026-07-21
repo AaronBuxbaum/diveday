@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
-import { perDiverBookingPriceCents } from "@/lib/courses";
+import { checkoutCharge } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
 import { setBookingPayment } from "./payments";
@@ -51,10 +51,9 @@ export async function startBookingCheckout(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
     .limit(1);
   if (!tripRow) return { ok: false, reason: "invalid" };
-  const amountPerDiverCents = perDiverBookingPriceCents(tripRow.trip, tripRow.course);
-  if (amountPerDiverCents === null || amountPerDiverCents <= 0) {
-    return { ok: false, reason: "unpriced" };
-  }
+  const charge = checkoutCharge(tripRow.trip, tripRow.course);
+  if (charge === null) return { ok: false, reason: "unpriced" };
+  const amountPerDiverCents = charge.amountCents;
 
   const bookingRows = await db
     .select({ id: bookings.id })
@@ -81,7 +80,9 @@ export async function startBookingCheckout(
   const session = await checkout.createCheckoutSession({
     stripeAccountId,
     currency: "usd",
-    description: tripRow.trip.title,
+    // A deposit is labelled as one on the hosted page so the diver knows a
+    // balance is still due, not that this is the whole fare.
+    description: charge.isDeposit ? `Deposit — ${tripRow.trip.title}` : tripRow.trip.title,
     unitAmountCents: amountPerDiverCents,
     quantity: input.bookingIds.length,
     customerEmail: input.customerEmail,
@@ -102,6 +103,7 @@ export async function startBookingCheckout(
         currency: "usd",
         amountPerDiverCents,
         totalCents: amountPerDiverCents * input.bookingIds.length,
+        isDeposit: charge.isDeposit,
         expiresAt: session.expiresAt,
       })
       .returning();
@@ -181,7 +183,9 @@ export async function markCheckoutPaidBySessionId(
     await setBookingPayment(db, {
       shopId: checkout.shopId,
       bookingId,
-      status: "paid",
+      // A deposit checkout clears the readiness gate as deposit_paid; the
+      // balance is collected later (staff order or a full checkout).
+      status: checkout.isDeposit ? "deposit_paid" : "paid",
       amountCents: checkout.amountPerDiverCents,
       currency: checkout.currency,
       provider: "stripe",

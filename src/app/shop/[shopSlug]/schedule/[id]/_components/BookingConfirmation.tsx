@@ -30,13 +30,20 @@ function PaymentSection({
   if (!payment) return null;
 
   if (payment.state === "paid") {
+    const depositWithBalance = payment.isDeposit && payment.balanceDueCents > 0;
     return (
       <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
         <h3 className="font-semibold text-success">
-          Payment received
+          {depositWithBalance ? "Deposit received" : "Payment received"}
           {payment.amountCents !== null ? ` — ${usd.format(payment.amountCents / 100)}` : ""} ✓
         </h3>
-        <p className="mt-1 text-sm text-muted">You're square with the shop for this trip.</p>
+        <p className="mt-1 text-sm text-muted">
+          {depositWithBalance
+            ? `Your seat's locked in. The ${usd.format(
+                payment.balanceDueCents / 100,
+              )} balance is due at the dock.`
+            : "You're square with the shop for this trip."}
+        </p>
       </div>
     );
   }

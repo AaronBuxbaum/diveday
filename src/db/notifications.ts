@@ -16,10 +16,18 @@ import {
   trips,
 } from "./schema";
 
+/**
+ * Notifications whose delivery is tracked per booking. Waitlist invites are not
+ * here: they have no booking, so their record is the entry's `invitedAt` stamp,
+ * not a `notification_deliveries` row.
+ */
+type TrackedNotification = Extract<Notification, { bookingId: string }>;
+type TrackedNotificationKind = TrackedNotification["kind"];
+
 type RecordNotificationDeliveryInput = {
   shopId: string;
   bookingId: string;
-  kind: Notification["kind"];
+  kind: TrackedNotificationKind;
   delivery: NotificationDelivery;
   isRetry?: boolean;
 };
@@ -79,7 +87,7 @@ export async function recordNotificationDelivery(
  */
 export async function sendAndRecordNotification(
   db: AppDb,
-  input: Notification,
+  input: TrackedNotification,
   options: { isRetry?: boolean } = {},
 ) {
   let delivery: NotificationDelivery;
@@ -186,7 +194,7 @@ export async function listDeliveryAttempts(
   db: AppDb,
   shopId: string,
   bookingId: string,
-  kind: Notification["kind"],
+  kind: TrackedNotificationKind,
 ) {
   return db
     .select()

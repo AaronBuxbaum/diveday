@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bookingConfirmationEmail, waiverRequestEmail } from "./email";
+import { bookingConfirmationEmail, waitlistInviteEmail, waiverRequestEmail } from "./email";
 import {
   notificationProviderFromEnvironment,
   notify,
@@ -117,12 +117,74 @@ describe("notify", () => {
     );
   });
 
+  it("keys a wait-list invite by its stamp so a genuine re-invite is a fresh send", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "resend-waitlist-id" }), { status: 200 }),
+      );
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(
+      notify(
+        {
+          kind: "waitlist_invite",
+          waitlistEntryId: "00000000-0000-4000-8000-000000000003",
+          shopId: "00000000-0000-4000-8000-000000000010",
+          to: "nora@example.com",
+          diverName: "Nora Quinn",
+          shopName: "Blue Mantis",
+          tripTitle: "Two-Tank Reef",
+          startsAt: new Date("2026-08-01T12:00:00.000Z"),
+          endsAt: new Date("2026-08-01T15:00:00.000Z"),
+          timezone: "America/New_York",
+          bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+          invitedAt: new Date("2026-07-21T10:00:00.000Z"),
+        },
+        provider,
+      ),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-waitlist-id" });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Idempotency-Key":
+            "waitlist-invite/00000000-0000-4000-8000-000000000003/2026-07-21T10:00:00.000Z",
+        }),
+      }),
+    );
+  });
+
   it("does not attempt delivery when production email configuration is absent", async () => {
     const fetchImpl = vi.fn();
     const provider = notificationProviderFromEnvironment({}, fetchImpl);
 
     await expect(notify(booking, provider)).resolves.toEqual({ status: "not_configured" });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("waitlistInviteEmail", () => {
+  it("carries the booking link and escapes staff-entered text", () => {
+    const email = waitlistInviteEmail({
+      diverName: "Nora Quinn",
+      shopName: "Blue Mantis & Co.",
+      tripTitle: '<Reef "Special">',
+      startsAt: new Date("2026-08-01T12:00:00.000Z"),
+      endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      timezone: "America/New_York",
+      bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+    });
+
+    expect(email.subject).toContain('<Reef "Special">');
+    expect(email.text).toContain("https://diveday.example/shop/blue-mantis/schedule/trip-1");
+    expect(email.html).toContain('href="https://diveday.example/shop/blue-mantis/schedule/trip-1"');
+    expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
+    expect(email.html).toContain("Blue Mantis &amp; Co.");
   });
 });
 

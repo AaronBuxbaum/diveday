@@ -105,7 +105,7 @@ export default async function TripDetailPage({
     perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
   const payment = confirmed
-    ? await resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking)
+    ? await resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents)
     : null;
 
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
@@ -216,10 +216,28 @@ async function resolvePaymentPanel(
   shopId: string,
   bookingId: string,
   payAtBooking: boolean,
+  fullPriceCents: number | null,
 ): Promise<PaymentPanel> {
+  const paidPanel = (
+    settled: Awaited<ReturnType<typeof getBookingPayment>>,
+  ): PaymentPanel & { state: "paid" } => {
+    const isDeposit = settled?.status === "deposit_paid";
+    const balanceDueCents =
+      isDeposit && fullPriceCents !== null
+        ? Math.max(0, fullPriceCents - (settled?.amountCents ?? 0))
+        : 0;
+    return {
+      state: "paid",
+      amountCents: settled?.amountCents ?? null,
+      currency: settled?.currency ?? "usd",
+      isDeposit,
+      balanceDueCents,
+    };
+  };
+
   const settled = await getBookingPayment(db, shopId, bookingId);
   if (settled?.status === "paid" || settled?.status === "deposit_paid") {
-    return { state: "paid", amountCents: settled.amountCents, currency: settled.currency };
+    return paidPanel(settled);
   }
   if (settled?.status === "waived") return null;
 
@@ -228,12 +246,7 @@ async function resolvePaymentPanel(
     // The diver may have just paid and beaten the webhook home; ask Stripe.
     checkout = await refreshCheckoutFromStripe(db, shopId, checkout.id);
     if (checkout?.status === "completed") {
-      const paid = await getBookingPayment(db, shopId, bookingId);
-      return {
-        state: "paid",
-        amountCents: paid?.amountCents ?? null,
-        currency: paid?.currency ?? "usd",
-      };
+      return paidPanel(await getBookingPayment(db, shopId, bookingId));
     }
   }
   if (

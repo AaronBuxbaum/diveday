@@ -14,11 +14,12 @@ function relativeTime(from: Date, now = new Date()): string {
 }
 
 /**
- * One-tap seat recovery: emails a wait-list diver an invite to the freed seat
- * and records that it happened so two staff don't both reach out. When email
- * isn't wired up (or the diver has no address), it falls back to a copyable
- * prewritten message with the booking link — same composer idea as the course
- * inquiry form, so an invite always goes out one way or another.
+ * One-tap seat recovery: sends a wait-list diver the freed-seat invite through
+ * the server notification seam (real email, by default) and records that it
+ * happened so two staff don't both reach out. Only when the server reports it
+ * could not send — no provider configured, or no address on file — does the
+ * control fall back to a copyable/mailto composer with the same booking link,
+ * so an invite always goes out one way or another.
  */
 export function WaitlistInvite({
   entryId,
@@ -39,10 +40,11 @@ export function WaitlistInvite({
   shopName: string;
   tripTitle: string;
   tripWhen: string;
-  invite: (entryId: string) => Promise<void>;
+  invite: (entryId: string) => Promise<"sent" | "fallback">;
 }) {
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+  const [emailed, setEmailed] = useState(false);
   const invited = invitedAt ? new Date(invitedAt) : null;
   const firstName = personName.split(" ")[0] || personName;
 
@@ -56,19 +58,7 @@ export function WaitlistInvite({
     ? `mailto:${encodeURIComponent(personEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     : null;
 
-  function record() {
-    startTransition(async () => {
-      await invite(entryId);
-    });
-  }
-
-  function emailInvite() {
-    record();
-    if (mailto) window.location.href = mailto;
-  }
-
-  async function copyInvite() {
-    record();
+  async function copyMessage() {
     try {
       await navigator.clipboard.writeText(`${subject}\n\n${body}`);
       setCopied(true);
@@ -76,6 +66,28 @@ export function WaitlistInvite({
     } catch {
       setCopied(false);
     }
+  }
+
+  // Email present: try the real server send first; only open the local composer
+  // when the server says it could not send.
+  function emailInvite() {
+    startTransition(async () => {
+      const result = await invite(entryId);
+      if (result === "sent") {
+        setEmailed(true);
+        setTimeout(() => setEmailed(false), 4000);
+        return;
+      }
+      if (mailto) window.location.href = mailto;
+    });
+  }
+
+  // No address on file: record the invite and hand staff the copyable message.
+  function copyInvite() {
+    startTransition(async () => {
+      await invite(entryId);
+      await copyMessage();
+    });
   }
 
   return (
@@ -87,7 +99,13 @@ export function WaitlistInvite({
           disabled={pending}
           className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
         >
-          {invited ? "Re-send invite" : `Email ${firstName} an invite`}
+          <span aria-live="polite">
+            {emailed
+              ? "Invite emailed"
+              : invited
+                ? "Re-send invite"
+                : `Email ${firstName} an invite`}
+          </span>
         </button>
       ) : (
         <button

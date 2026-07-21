@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { bookingConfirmationEmail, type NotificationEmail, waiverRequestEmail } from "./email";
+import {
+  bookingConfirmationEmail,
+  type NotificationEmail,
+  waitlistInviteEmail,
+  waiverRequestEmail,
+} from "./email";
 
 const emailAddressSchema = z.email().max(200);
 
@@ -31,9 +36,26 @@ const waiverRequestSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+const waitlistInviteSchema = z.object({
+  kind: z.literal("waitlist_invite"),
+  waitlistEntryId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  bookingUrl: z.url().max(2_000),
+  /** The invite timestamp, so each explicit re-invite is a distinct send. */
+  invitedAt: z.date(),
+});
+
 export const notificationSchema = z.discriminatedUnion("kind", [
   bookingConfirmationSchema,
   waiverRequestSchema,
+  waitlistInviteSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -64,13 +86,21 @@ const resendResponseSchema = z.object({ id: z.string().min(1) });
 
 function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
+  if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
   return waiverRequestEmail(notification);
 }
 
 function idempotencyKeyFor(notification: Notification): string {
-  return notification.kind === "booking_confirmation"
-    ? `booking-confirmation/${notification.bookingId}`
-    : `waiver-request/${notification.waiverRecordId}`;
+  switch (notification.kind) {
+    case "booking_confirmation":
+      return `booking-confirmation/${notification.bookingId}`;
+    case "waiver_request":
+      return `waiver-request/${notification.waiverRecordId}`;
+    // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
+    // fresh send, while a double-submit of the same tap still dedups at Resend.
+    case "waitlist_invite":
+      return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
+  }
 }
 
 export function resendNotificationProvider(

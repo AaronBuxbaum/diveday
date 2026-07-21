@@ -7,7 +7,7 @@ import {
   getTripWithBooked,
   upcomingTripsWithCounts,
 } from "./trips";
-import { joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
+import { inviteWaitlistDiver, joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
 
 async function seededContext() {
   const { db, shop } = await seededShopContext();
@@ -92,5 +92,49 @@ describe("recordWaitlistInvite", () => {
         entryId: joined.entryId,
       }),
     ).resolves.toBe(false);
+  });
+});
+
+describe("inviteWaitlistDiver", () => {
+  it("stamps the entry and reports the composer fallback when email isn't configured", async () => {
+    // The test environment sets neither APP_HOST nor RESEND_*, so a real send
+    // can't happen and the delivery degrades to the fallback — while the invite
+    // is still durably recorded.
+    const { db, shop, fullTrip } = await seededContext();
+    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+
+    const now = new Date("2026-07-21T10:00:00.000Z");
+    const result = await inviteWaitlistDiver(db, {
+      shopId: shop.id,
+      shopSlug: "blue-mantis",
+      entryId: joined.entryId,
+      now,
+    });
+
+    expect(result).toEqual({ ok: true, delivery: "unconfigured", invitedAt: now });
+    const entry = (await getTripWaitlist(db, fullTrip.id)).find(
+      (row) => row.entry.id === joined.entryId,
+    );
+    expect(entry?.entry.invitedAt?.toISOString()).toBe(now.toISOString());
+  });
+
+  it("does not stamp or invite an entry from another shop", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+
+    await expect(
+      inviteWaitlistDiver(db, {
+        shopId: "00000000-0000-4000-8000-000000000099",
+        shopSlug: "blue-mantis",
+        entryId: joined.entryId,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "not_found" });
+
+    const entry = (await getTripWaitlist(db, fullTrip.id)).find(
+      (row) => row.entry.id === joined.entryId,
+    );
+    expect(entry?.entry.invitedAt).toBeNull();
   });
 });
