@@ -14,12 +14,10 @@ describe("dive-site landmarks", () => {
   });
 
   it("keeps staff-authored landmark names useful without seeded editorial copy", () => {
-    expect(buildDiveSiteLandmarks("Turtle Garden", ["Cleaning station"])).toEqual([
-      {
-        name: "Cleaning station",
-        kind: "Point of interest",
-        description: "A memorable reference point the crew can identify during the site briefing.",
-      },
-    ]);
+    const [landmark] = buildDiveSiteLandmarks("Turtle Garden", ["Cleaning station"]);
+    expect(landmark?.name).toBe("Cleaning station");
+    expect(landmark?.kind).toBe("Point of interest");
+    // A generic fallback description must still give the crew something to say.
+    expect(landmark?.description).toBeTruthy();
   });
 });

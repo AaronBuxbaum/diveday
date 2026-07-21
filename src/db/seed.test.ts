@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { STAFF_ROLES } from "@/lib/authz";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -102,18 +101,13 @@ describe("resetDemoSchedule", () => {
     const allBookings = await db.select().from(bookings).where(eq(bookings.shopId, shop.id));
     expect(roster).toHaveLength(allBookings.length);
 
-    // Only staff carry non-customer roles; no customer role is orphaned.
-    const customerRoles = await db
+    // No role row survives without its person.
+    const roles = await db.select({ personId: personRoles.personId }).from(personRoles);
+    const orphanedRoles = await db
       .select({ personId: personRoles.personId })
       .from(personRoles)
-      .innerJoin(people, eq(people.id, personRoles.personId))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "diver")));
-    for (const { personId } of customerRoles) {
-      const [row] = await db.select().from(people).where(eq(people.id, personId));
-      expect(row).toBeDefined();
-    }
-    // Sanity: STAFF_ROLES is what we preserved by.
-    expect(STAFF_ROLES).toContain("owner");
+      .innerJoin(people, eq(people.id, personRoles.personId));
+    expect(orphanedRoles).toHaveLength(roles.length);
   });
 });
 

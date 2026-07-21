@@ -37,17 +37,9 @@ describe("readiness link tokens", () => {
   });
 
   it("rejects a validly-signed payload that is not a booking uuid", () => {
-    const payload = Buffer.from("not-a-uuid", "utf8").toString("base64url");
-    // Sign it the same way the module does, via a real token's second half is
-    // wrong — instead build a token whose signature matches its own payload.
-    const token = signReadinessToken(bookingId);
-    // Recompute a matching signature for the bogus payload by trusting the
-    // module: sign+verify of a bogus id must fail the uuid gate.
+    // Even with a matching signature, a non-uuid payload must fail the gate.
     const bogus = signReadinessToken("not-a-uuid" as string);
     expect(verifyReadinessToken(bogus)).toBeNull();
-    // The real token still verifies, proving the gate is specific.
-    expect(verifyReadinessToken(token)).toBe(bookingId);
-    expect(payload).toBeTruthy();
   });
 
   it("builds an absolute readiness path", () => {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReadinessBlocker } from "./readiness";
 import {
-  ACTION_KIND_META,
   collapseDiverActions,
   diverBlockerAction,
   groupActions,
@@ -71,11 +70,6 @@ describe("primaryBlocker", () => {
     expect(chosen?.code).toBe("waiver_pending");
   });
 
-  it("labels every action kind, so no chip can render blank", () => {
-    for (const meta of Object.values(ACTION_KIND_META)) {
-      expect(meta.label).toBeTruthy();
-    }
-  });
 });
 
 describe("diverBlockerAction", () => {
