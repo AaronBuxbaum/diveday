@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { e2eNow } from "./helpers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule");
@@ -62,7 +63,10 @@ test("a diver without a verified card is not offered nitrox at booking", async (
     .getByRole("link")
     .click();
   await page.getByLabel("Name").fill("Nora Quinn");
-  await page.getByLabel("Email").fill(`nora+${Date.now()}@example.com`);
+  // Frozen-clock suffix, not Date.now(): this diver lands on the shared demo
+  // shop's People list, which the visual suite screenshots — a real-time
+  // suffix here made that snapshot diff on nothing but the clock every run.
+  await page.getByLabel("Email").fill(`nora+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
