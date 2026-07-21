@@ -7,6 +7,8 @@ const fullFit: RentalFit = {
   rentsWetsuit: true,
   rentsMaskFins: true,
   rentsWeights: true,
+  rentsDiveComputer: false,
+  rentsGopro: false,
   bcdSize: "M",
   wetsuitSize: "5mm M",
   bootSize: "9",
@@ -32,6 +34,37 @@ function lineFor(
 ) {
   return checklist.lines.find((line) => line.kind === kind && line.size === size);
 }
+
+describe("rented add-ons on the prep list", () => {
+  it("packs a dive computer and a GoPro, unsized, only when rented", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Priya Sharma",
+          fit: { ...fullFit, rentsDiveComputer: true, rentsGopro: true },
+        }),
+        // Ana rents neither add-on.
+        diver({ bookingId: "b2", fullName: "Ana Ruiz" }),
+      ],
+      plannedDives: 1,
+    });
+    expect(lineFor(checklist, "dive_computer", null)).toMatchObject({
+      count: 1,
+      divers: ["Priya Sharma"],
+    });
+    expect(lineFor(checklist, "gopro", null)).toMatchObject({ count: 1, divers: ["Priya Sharma"] });
+  });
+
+  it("reads the add-ons in the one-line fit summary", () => {
+    expect(rentalFitLine({ ...fullFit, rentsDiveComputer: true, rentsGopro: true }).text).toContain(
+      "Dive computer",
+    );
+    expect(rentalFitLine({ ...fullFit, rentsDiveComputer: true, rentsGopro: true }).text).toContain(
+      "GoPro",
+    );
+  });
+});
 
 describe("buildDivePrepChecklist tanks", () => {
   it("plans one tank per diver per planned dive", () => {

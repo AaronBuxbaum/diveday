@@ -1,6 +1,7 @@
 import type { RentalFitLine } from "./dive-prep";
 import type { ReadinessResult } from "./readiness";
 import { unavailableReadiness } from "./readiness";
+import type { MedicalWaiverMark } from "./waivers";
 
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
@@ -41,6 +42,13 @@ export type ManifestDiverInput = {
    * still analyzes and signs for the actual mix before anyone breathes it.
    */
   nitroxRequested: boolean;
+  /**
+   * When and how the diver's medical currency was last established, for spotting
+   * a statement going stale. Null unless the governing waiver is a clean
+   * completion — digital (questionnaire) or a staff-attested paper review. Not
+   * carried into the offline snapshot (dock roll call doesn't need it).
+   */
+  medicalWaiver?: MedicalWaiverMark | null;
   rollCall?: RollCallRecord;
 };
 

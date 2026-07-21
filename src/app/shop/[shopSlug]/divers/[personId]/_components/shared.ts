@@ -33,6 +33,17 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   refunded: "Refunded",
 };
 
+/**
+ * Staff-facing card states. A card is "certified" once staff confirm it (they
+ * look the number up with the issuing agency and click Mark certified); the
+ * stored status is still `verified`, which is what readiness reads.
+ */
+export const CARD_STATUS_LABELS: Record<"pending" | "verified" | "rejected", string> = {
+  pending: "pending",
+  verified: "certified",
+  rejected: "needs correction",
+};
+
 export function statusTone(status: "pending" | "verified" | "rejected") {
   return status === "verified"
     ? "bg-success/10 text-success"

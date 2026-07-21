@@ -12,8 +12,11 @@ new domain concept, define it here in the same PR.
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
   may require a refresher after long inactivity.
 - **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
-  until staff verify it; only a verified, unexpired card at or above a trip’s required level can
-  satisfy readiness.
+  until staff certify it — staff look the card number up with the issuing agency (in the agency's
+  own portal, outside DiveDay) and click **Mark certified**. There is no automated agency
+  integration. Only a certified, unexpired card at or above a trip’s required level can satisfy
+  readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
+  what readiness reads.)
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
@@ -127,8 +130,11 @@ new domain concept, define it here in the same PR.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
   duplicate events are idempotent and an older device event cannot replace newer live history.
-- **Check-in** — the front-desk step where waiver, cert, and rental fit are confirmed before a diver
-  boards. The app's job is making "ready to board" a single glance.
+- **Boarding** (the `check-in` surface) — the fast pre-departure pass: get every ready diver aboard
+  before the boat leaves, waiver/cert/payment confirmed at a glance. It is the departure checkpoint of
+  the **Manifest** viewed readiness-first — boarding a diver here is the same roll-call event — so it
+  reads "Boarding" to avoid reading as a second, separate roster. Crew, emergency contacts, after-dive
+  roll call, print, and the offline snapshot live on the Manifest. (The route stays `/check-in`.)
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. DiveDay keeps one versioned release per shop: editing it saves a new immutable version
   and new links snapshot the current one. The exact template version is snapshotted into each issued
@@ -225,11 +231,18 @@ new domain concept, define it here in the same PR.
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, and a
-  **tank/cylinder** (e.g. AL80 aluminum 80 cu ft).
+  **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). Some shops also rent a **dive computer** or a
+  **GoPro** — optional add-ons, off by default.
+- **Rental catalog** — the shop-level list of gear a shop actually rents (`shops.rental_items`,
+  `src/lib/rentals.ts`). It gates the rental-fit forms: a diver is only offered — and only sees size
+  fields for — gear the shop stocks, so a shop that doesn't rent GoPros never offers one. Defaults to
+  the core kit; add-ons are opt-in in shop settings. Editing the catalog changes what is offered going
+  forward; it does not rewrite a fit a diver already recorded.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, boot, fin, and usual weighting). It is a storage concept: DiveDay
-  tracks no equipment inventory, so a fit never reserves an item, is never evidence, and never
-  replaces a dock-side fit check. It is the single input to the trip prep list.
+  and in *what size* (BCD, wetsuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
+  It is a storage concept: DiveDay tracks no equipment inventory, so a fit never reserves an item, is
+  never evidence, and never replaces a dock-side fit check. It is the single input to the trip prep
+  list.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned

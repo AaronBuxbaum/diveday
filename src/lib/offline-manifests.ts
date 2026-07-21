@@ -26,7 +26,7 @@ export type OfflineManifestPayload = {
         endsAt: string;
       };
       divers: Array<
-        Omit<TripManifest["divers"][number], "rollCall"> & {
+        Omit<TripManifest["divers"][number], "rollCall" | "medicalWaiver"> & {
           rollCall?: {
             state: "boarded" | "not_boarded";
             occurredAt: string;
@@ -80,7 +80,7 @@ export function serializeManifests(
         startsAt: manifest.trip.startsAt.toISOString(),
         endsAt: manifest.trip.endsAt.toISOString(),
       },
-      divers: manifest.divers.map((diver) => ({
+      divers: manifest.divers.map(({ medicalWaiver: _medicalWaiver, ...diver }) => ({
         ...diver,
         // Email is not needed for dock-side roll call; minimize retained private data.
         email: null,

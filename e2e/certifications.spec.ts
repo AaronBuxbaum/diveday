@@ -33,8 +33,8 @@ test("staff captures and verifies level and specialty cards before either can be
   await expect(page.getByRole("status")).toContainText("pending");
 
   const pendingRow = page.locator("li").filter({ hasText: "pending" }).last();
-  await pendingRow.getByRole("button", { name: "Verify" }).click();
-  await expect(page.getByRole("status")).toContainText("verified");
+  await pendingRow.getByRole("button", { name: "Mark certified" }).click();
+  await expect(page.getByRole("status")).toContainText("certified");
 
   // Specialty card: gated exactly the same way, on the same record.
   await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
@@ -49,6 +49,6 @@ test("staff captures and verifies level and specialty cards before either can be
   // Scope to this card's row by its unique number; the specialty card shows
   // "<agency> · <specialty>", not the literal word "specialty".
   const specialtyRow = page.locator("li").filter({ hasText: cardNo }).last();
-  await specialtyRow.getByRole("button", { name: "Verify" }).click();
-  await expect(page.getByRole("status")).toContainText("verified");
+  await specialtyRow.getByRole("button", { name: "Mark certified" }).click();
+  await expect(page.getByRole("status")).toContainText("certified");
 });

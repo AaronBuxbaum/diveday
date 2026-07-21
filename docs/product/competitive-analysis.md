@@ -76,9 +76,10 @@ In rough order of how often it would kill the deal:
    position around it; for the classic shop it is a disqualifier. A lightweight who-has-what +
    service-due register (not a POS) is likely the minimum re-entry.
 4. **No agency-ecosystem hooks.** Buyers ask "does it talk to PADI?" DiveShop360 sells PADI
-   eLearning code integration; DiveAdmin advertises a mySSI connection. We have a cert-verification
-   seam no agency can fill (H-10 — no such API exists) and no eLearning/roster hooks. The honest
-   near-term version is course rosters and student progress that *feel* agency-aware, plus painless
+   eLearning code integration; DiveAdmin advertises a mySSI connection. We have neither — no agency
+   exposes a usable C-card API (H-10), so certification is a manual staff lookup, and there are no
+   eLearning/roster hooks. The honest near-term version is course rosters and student progress that
+   *feel* agency-aware, plus painless
    CSV/export interop — not speculative API plumbing.
 5. **No owner reporting.** The buyer is often the owner; "how's my month" (bookings, revenue,
    fill rate, waiver completion) has no surface. Even a modest dashboard removes a checklist zero.

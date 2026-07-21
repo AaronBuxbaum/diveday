@@ -44,6 +44,15 @@ export const shops = pgTable("shops", {
     .$type<string[]>()
     .notNull()
     .default(["Certification card", "Swimsuit and towel", "Reef-safe sun protection"]),
+  /**
+   * The gear this shop rents (RentableItemKind values, src/lib/rentals.ts). Gates
+   * which items a diver can pick in the rental-fit forms — a shop that doesn't
+   * rent GoPros never offers one. Defaults to the core kit; add-ons are opt-in.
+   */
+  rentalItems: jsonb("rental_items")
+    .$type<string[]>()
+    .notNull()
+    .default(["bcd", "regulator", "wetsuit", "mask_fins", "weights"]),
   isDemo: boolean("is_demo").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -1088,6 +1097,9 @@ export const rentalFitProfiles = pgTable(
     rentsWetsuit: boolean("rents_wetsuit").notNull().default(true),
     rentsMaskFins: boolean("rents_mask_fins").notNull().default(true),
     rentsWeights: boolean("rents_weights").notNull().default(true),
+    /** Optional add-ons — a diver usually owns a computer and may not want a GoPro. */
+    rentsDiveComputer: boolean("rents_dive_computer").notNull().default(false),
+    rentsGopro: boolean("rents_gopro").notNull().default(false),
     bcdSize: text("bcd_size"),
     wetsuitSize: text("wetsuit_size"),
     bootSize: text("boot_size"),

@@ -21,7 +21,7 @@ import type { TripManifest } from "@/lib/manifests";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Check-in — DiveDay",
+  title: "Boarding — DiveDay",
 };
 
 // "cleared" is the un-board: staff re-tapped "Aboard ✓" to correct a mis-tap,
@@ -116,18 +116,29 @@ export default async function CheckInPage({
         Skip to boarding list
       </a>
       <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">Check-in</p>
+        <p className="text-sm font-medium tracking-widest text-primary uppercase">Boarding</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h1>
         <p className="mt-1 text-muted">
           {formatShortDate(manifest.trip.startsAt, "en-US", shop.timezone)} ·{" "}
           {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, "en-US", shop.timezone)}
+        </p>
+        <p className="mt-2 max-w-prose text-sm text-muted">
+          The fast pre-departure pass: get every ready diver aboard before the boat leaves. Crew,
+          emergency contacts, after-dive roll call, and print live on the{" "}
+          <Link
+            href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
+            className="font-semibold text-primary hover:underline"
+          >
+            manifest
+          </Link>
+          .
         </p>
       </header>
 
       <TripSubNav shopSlug={shopSlug} tripId={tripId} current="check-in" className="mt-5" />
 
       {allAboard ? (
-        <EarnedMoment className="mt-6" eyebrow="Check-in complete" title="All divers aboard ⚓">
+        <EarnedMoment className="mt-6" eyebrow="Boarding complete" title="All divers aboard ⚓">
           <p>
             All {totalDivers} {totalDivers === 1 ? "diver is" : "divers are"} boarded. Crew, notes,
             and after-dive roll call live on the{" "}
@@ -207,6 +218,16 @@ export default async function CheckInPage({
                       <span className="font-semibold text-foreground"> · Nitrox requested</span>
                     ) : null}
                   </p>
+                  {diver.medicalWaiver ? (
+                    <p className="mt-1 text-sm text-muted">
+                      <span className="font-semibold text-foreground">
+                        {diver.medicalWaiver.source === "paper"
+                          ? "Medical reviewed (paper):"
+                          : "Medical waiver signed:"}
+                      </span>{" "}
+                      {formatShortDate(diver.medicalWaiver.at, "en-US", shop.timezone)}
+                    </p>
+                  ) : null}
                   {isBlocked ? (
                     <ul className="mt-2 flex flex-col gap-1 text-base text-danger">
                       {diver.readiness.blockers.map((blocker) => (
@@ -262,7 +283,7 @@ export default async function CheckInPage({
 
       {totalDivers === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center text-muted">
-          No one is booked on this departure yet. Bookings show up here ready to check in.
+          No one is booked on this departure yet. Bookings show up here ready to board.
         </p>
       ) : null}
     </main>

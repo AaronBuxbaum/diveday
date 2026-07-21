@@ -12,7 +12,6 @@ import {
   createSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
-  verifyCertificationWithAgency,
 } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -53,6 +52,8 @@ const profileSchema = z.object({
   wetsuit: z.string().optional(),
   maskFins: z.string().optional(),
   weights: z.string().optional(),
+  diveComputer: z.string().optional(),
+  gopro: z.string().optional(),
   bcdSize: z.string().trim().max(40),
   wetsuitSize: z.string().trim().max(40),
   bootSize: z.string().trim().max(40),
@@ -154,26 +155,6 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
   revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
 }
 
-export async function agencyCheckAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
-  const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
-  const outcome = certificationId
-    ? await verifyCertificationWithAgency(await getDb(), staff.user.shopId, certificationId)
-    : null;
-  const result =
-    outcome === "verified"
-      ? "agency-verified"
-      : outcome === "not_found"
-        ? "agency-not-found"
-        : outcome === "mismatch"
-          ? "agency-mismatch"
-          : outcome === "unavailable"
-            ? "agency-unavailable"
-            : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${result}`);
-}
-
 export async function reviewSpecialtyAction(
   shopSlug: string,
   personId: string,
@@ -212,6 +193,8 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsWetsuit: parsed.data.wetsuit === "on",
     rentsMaskFins: parsed.data.maskFins === "on",
     rentsWeights: parsed.data.weights === "on",
+    rentsDiveComputer: parsed.data.diveComputer === "on",
+    rentsGopro: parsed.data.gopro === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     bootSize: parsed.data.bootSize,

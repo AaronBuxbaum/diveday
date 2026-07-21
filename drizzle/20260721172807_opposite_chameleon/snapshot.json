@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "5ba36a43-ba35-41d7-90ee-2c080e98db44",
+  "id": "6856b128-4965-4744-996f-3aad6422e713",
   "prevIds": [
-    "34baea35-424e-4e3b-8cee-c32ac318a58c"
+    "34baea35-424e-4e3b-8cee-c32ac318a58c",
+    "367459ce-169e-48cb-8325-edcb32b25886"
   ],
   "ddl": [
     {
@@ -2939,6 +2940,32 @@
       "table": "rental_fit_profiles"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "rents_dive_computer",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "rents_gopro",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -3415,6 +3442,19 @@
       "generated": null,
       "identity": null,
       "name": "packing_list",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'[\"bcd\",\"regulator\",\"wetsuit\",\"mask_fins\",\"weights\"]'",
+      "generated": null,
+      "identity": null,
+      "name": "rental_items",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"

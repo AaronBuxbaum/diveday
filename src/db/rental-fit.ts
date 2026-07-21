@@ -12,6 +12,8 @@ export type RentalFitInput = {
   rentsWetsuit: boolean;
   rentsMaskFins: boolean;
   rentsWeights: boolean;
+  rentsDiveComputer: boolean;
+  rentsGopro: boolean;
   bcdSize?: string;
   wetsuitSize?: string;
   bootSize?: string;
@@ -43,6 +45,8 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     rentsWetsuit: input.rentsWetsuit,
     rentsMaskFins: input.rentsMaskFins,
     rentsWeights: input.rentsWeights,
+    rentsDiveComputer: input.rentsDiveComputer,
+    rentsGopro: input.rentsGopro,
     bcdSize: optional(input.bcdSize),
     wetsuitSize: optional(input.wetsuitSize),
     bootSize: optional(input.bootSize),

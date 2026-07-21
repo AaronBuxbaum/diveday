@@ -5,6 +5,7 @@ import { localTypedConsentProvider } from "./signatures";
 import {
   effectiveWaiverForBooking,
   isCompletedWaiverCurrent,
+  medicalWaiverMark,
   needsMedicalReview,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverActivityTimeline,
@@ -125,6 +126,51 @@ describe("waiver signature currency", () => {
       signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS + 1000),
     });
     expect(isCompletedWaiverCurrent(justInside, 1, SIGN_NOW)).toBe(true);
+  });
+});
+
+describe("medical waiver mark", () => {
+  const answers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+
+  it("marks a digital completion with its questionnaire date", () => {
+    const signedAt = new Date(SIGN_NOW.getTime() - 60_000);
+    expect(medicalWaiverMark(completedWaiver({ medicalAnswers: answers, signedAt }))).toEqual({
+      at: signedAt,
+      source: "digital",
+    });
+  });
+
+  it("marks a staff paper attestation distinctly, so it never reads as missing", () => {
+    const signedAt = new Date(SIGN_NOW.getTime() - 60_000);
+    expect(
+      medicalWaiverMark(
+        completedWaiver({
+          medicalAnswers: null,
+          signatureMethod: "in_person_attested",
+          signedAt,
+        }),
+      ),
+    ).toEqual({ at: signedAt, source: "paper" });
+  });
+
+  it("surfaces nothing for an in-review, unrecognised, or absent record", () => {
+    expect(
+      medicalWaiverMark(completedWaiver({ status: "medical_review", medicalAnswers: answers })),
+    ).toBeNull();
+    // A completion with neither a questionnaire nor the paper method is unknown.
+    expect(
+      medicalWaiverMark(
+        completedWaiver({ medicalAnswers: null, signatureMethod: "typed_consent" }),
+      ),
+    ).toBeNull();
+    expect(medicalWaiverMark(null)).toBeNull();
+  });
+
+  it("falls back to completedAt when signedAt is somehow missing", () => {
+    const completedAt = new Date(SIGN_NOW.getTime() - 5_000);
+    expect(
+      medicalWaiverMark(completedWaiver({ medicalAnswers: answers, signedAt: null, completedAt })),
+    ).toEqual({ at: completedAt, source: "digital" });
   });
 });
 
