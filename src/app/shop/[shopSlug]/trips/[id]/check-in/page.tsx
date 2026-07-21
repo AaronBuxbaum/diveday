@@ -23,7 +23,12 @@ export const metadata: Metadata = {
   title: "Check-in — Scuba",
 };
 
-const boardSchema = z.object({ bookingId: z.string().uuid() });
+// "cleared" is the un-board: staff re-tapped "Aboard ✓" to correct a mis-tap,
+// recorded as its own event so the audit trail keeps the correction.
+const boardSchema = z.object({
+  bookingId: z.string().uuid(),
+  status: z.enum(["boarded", "cleared"]),
+});
 
 /** Board the ready divers first; blocked ones sit below until cleared. */
 function checkInRank(diver: TripManifest["divers"][number]): number {
@@ -86,7 +91,7 @@ export default async function CheckInPage({
         tripId,
         bookingId: parsed.data.bookingId,
         recordedByPersonId: staff.user.personId,
-        status: "boarded",
+        status: parsed.data.status,
         checkpoint: "departure",
       });
       if (!outcome.ok) {
@@ -213,11 +218,19 @@ export default async function CheckInPage({
                     </ul>
                   ) : null}
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 sm:text-right">
                   {isBoarded ? (
-                    <span className="inline-flex min-h-14 items-center justify-center gap-1 rounded-lg bg-success/10 px-6 text-base font-semibold text-success">
-                      Aboard ✓
-                    </span>
+                    <>
+                      <RollCallButton
+                        action={boardAction}
+                        bookingId={diver.bookingId}
+                        status="cleared"
+                        label="Aboard ✓"
+                        pendingLabel="Undoing…"
+                        className="inline-flex min-h-14 w-full touch-manipulation items-center justify-center gap-1 rounded-lg bg-success/10 px-6 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                      />
+                      <p className="mt-1 text-sm text-muted">Tap to undo.</p>
+                    </>
                   ) : isBlocked ? (
                     <Link
                       href={`/shop/${shopSlug}/trips/${tripId}#booking-${diver.bookingId}`}

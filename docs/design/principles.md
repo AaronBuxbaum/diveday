@@ -47,6 +47,21 @@ This app handles safety documents. Manifests and cert checks look exact: tabular
 counts, unambiguous states (never color alone — icon + label), timestamps with timezone, print
 output as considered as screen output.
 
+## 7. Undo over confirm — one model everywhere it's safe
+
+A reversible mutation gets an **undo**, never a blocking `confirm()` dialog. Two shapes:
+
+- **High-frequency toggles** (board / not-board / aboard) use **re-tap**: tapping the confirmed
+  "Aboard ✓" state clears it, with a "Tap to undo" hint. The correction is its own event, so the
+  audit trail keeps it (never a delete).
+- **Destructive or rare** actions (remove a booking, delete a diver) confirm *after* the fact with
+  an **Undo banner** — the action lands immediately and the banner offers a one-tap reversal.
+
+A blocking `confirm()` is reserved for what is genuinely **irreversible or a send** — issuing or
+reissuing a waiver link (the old link stops working, an email may go out). A `confirm()` on a
+reversible action is a bug: it slows the common path to guard against a mistake that undo already
+handles calmly.
+
 ## Tokens (the mechanics)
 
 Defined in `src/app/globals.css`, bound to Tailwind — see
