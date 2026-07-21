@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { ShopNavLinks } from "./ShopNavLinks";
+import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
 
 async function signOutAction() {
@@ -41,6 +42,7 @@ export function ShopNav({
         </Link>
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
+          <CommandPalette shopSlug={shopSlug} boatCheckInHref={boatCheckInHref} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
