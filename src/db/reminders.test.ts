@@ -7,6 +7,7 @@ import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
 import { notificationDeliveries, people } from "./schema";
+import { setShopDockCallMinutes } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 // The seeded shop already has bookings on several future trips, so
@@ -134,6 +135,24 @@ describe("sendDueReminders", () => {
     expect(emailsFor(email, bookingId)).toHaveLength(0);
     const rows = await rowsFor(db, bookingId);
     expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "SM_only" });
+  });
+
+  it("carries the shop's dock call time and readiness fields into the reminder", async () => {
+    const { db, shop, bookingId, inWeekBucket } = await reminderContext();
+    await setShopDockCallMinutes(db, shop.id, 45);
+    const email = fakeEmail();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    });
+    const [reminder] = emailsFor(email, bookingId);
+    expect(reminder.kind).toBe("trip_reminder_7d");
+    if (reminder.kind !== "trip_reminder_7d") return;
+    expect(reminder.dockCallMinutes).toBe(45);
+    expect(Array.isArray(reminder.outstanding)).toBe(true);
+    expect(typeof reminder.medicalReview).toBe("boolean");
   });
 
   it("records not_configured for a booking with no reachable channel", async () => {

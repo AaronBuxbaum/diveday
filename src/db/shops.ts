@@ -32,6 +32,16 @@ export async function setShopPackingList(db: AppDb, shopId: string, packingList:
   return shop ?? null;
 }
 
+/** Sets how many minutes before departure divers are asked to be at the dock. */
+export async function setShopDockCallMinutes(db: AppDb, shopId: string, dockCallMinutes: number) {
+  const [shop] = await db
+    .update(shops)
+    .set({ dockCallMinutes })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
 /**
  * Replaces the shop's rental catalog — which gear it rents. The route narrows
  * the incoming values to known kinds (src/lib/rentals.ts) before calling this,

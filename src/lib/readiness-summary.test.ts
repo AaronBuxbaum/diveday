@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TripRequirement } from "@/db/schema";
 import type { ReadinessResult } from "./readiness";
-import { buildDiverChecklist, nextDiverStep } from "./readiness-summary";
+import { buildDiverChecklist, nextDiverStep, reminderReadiness } from "./readiness-summary";
 
 function requirement(overrides: Partial<TripRequirement> = {}): TripRequirement {
   return {
@@ -143,5 +143,41 @@ describe("nextDiverStep", () => {
 
   it("returns null when everything is done or on the shop", () => {
     expect(nextDiverStep(buildDiverChecklist(requirement(), ready))).toBeNull();
+  });
+});
+
+describe("reminderReadiness", () => {
+  const from = (result: ReadinessResult) =>
+    reminderReadiness(buildDiverChecklist(requirement(), result));
+
+  it("names the diver's own outstanding actions as terse imperatives", () => {
+    const { outstanding, medicalReview } = from({
+      status: "blocked",
+      blockers: [
+        { code: "waiver_pending", message: "..." },
+        { code: "payment_due", message: "..." },
+      ],
+    });
+    expect(outstanding).toEqual(["sign your waiver", "settle your balance"]);
+    expect(medicalReview).toBe(false);
+  });
+
+  it("flags a medical review the diver can't clear without naming a to-do", () => {
+    const { outstanding, medicalReview } = from({
+      status: "blocked",
+      blockers: [{ code: "medical_review", message: "..." }],
+    });
+    expect(outstanding).toEqual([]);
+    expect(medicalReview).toBe(true);
+  });
+
+  it("stays empty for a shop-side (waiting) blocker the diver cannot act on", () => {
+    expect(
+      from({ status: "blocked", blockers: [{ code: "certification_pending", message: "..." }] }),
+    ).toEqual({ outstanding: [], medicalReview: false });
+  });
+
+  it("is empty for a fully-ready diver", () => {
+    expect(from(ready)).toEqual({ outstanding: [], medicalReview: false });
   });
 });

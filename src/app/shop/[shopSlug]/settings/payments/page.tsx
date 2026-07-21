@@ -8,7 +8,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getShopById, setShopContact, setShopPackingList, setShopRentalItems } from "@/db/shops";
+import {
+  getShopById,
+  setShopContact,
+  setShopDockCallMinutes,
+  setShopPackingList,
+  setShopRentalItems,
+} from "@/db/shops";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,
@@ -25,6 +31,11 @@ export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
   packing_invalid: { tone: "danger", text: "Add between one and twelve packing items." },
+  dock_saved: {
+    tone: "success",
+    text: "Dock call time saved for every confirmation and reminder.",
+  },
+  dock_invalid: { tone: "danger", text: "Enter a dock call time between 5 and 180 minutes." },
   rentals_saved: { tone: "success", text: "Rental catalog saved." },
   contact_saved: { tone: "success", text: "Contact details saved." },
   contact_invalid: {
@@ -70,6 +81,19 @@ async function savePackingAction(formData: FormData) {
     `/shop/${session.user.shopSlug}/settings/payments`,
     `/shop/${session.user.shopSlug}/settings/payments?notice=packing_saved`,
   );
+}
+
+/** How many minutes before departure divers are asked to be at the dock. */
+async function saveDockCallAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings/payments`;
+  const minutes = Number(formData.get("dockCallMinutes"));
+  if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
+    redirect(`${settings}?notice=dock_invalid`);
+  }
+  await setShopDockCallMinutes(await getDb(), session.user.shopId, minutes);
+  revalidateAndRedirect(settings, `${settings}?notice=dock_saved`);
 }
 
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
@@ -243,6 +267,34 @@ export default async function PaymentsSettingsPage({
             Save packing checklist
           </SubmitButton>
         </form>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Dock call time</h2>
+        <p className="mt-1 text-sm text-muted">
+          How early divers are asked to arrive before departure — for gear setup, cert checks, and
+          the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip
+          reminder.
+        </p>
+        <FieldGrid as="form" action={saveDockCallAction} columns={2} className="mt-4">
+          <Field label="Minutes before departure">
+            <input
+              name="dockCallMinutes"
+              type="number"
+              inputMode="numeric"
+              min={5}
+              max={180}
+              step={5}
+              defaultValue={shop.dockCallMinutes}
+              className={controlClass}
+            />
+          </Field>
+          <FieldActions>
+            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
+              Save dock call time
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
       </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">

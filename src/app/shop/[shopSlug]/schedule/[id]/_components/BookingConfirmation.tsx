@@ -116,8 +116,8 @@ export function BookingConfirmation({
       </h2>
       <p className="mt-2 text-muted">
         {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
-        {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock 30
-        minutes early and we'll take it from there.
+        {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock{" "}
+        {shop.dockCallMinutes} minutes early and we'll take it from there.
       </p>
 
       <PaymentSection payment={payment} payCancelled={payCancelled} payRef={fitRef} />
