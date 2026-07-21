@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { z } from "zod";
+import {
+  RollCallButton,
+  type RollCallResult,
+} from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EarnedMoment } from "@/components/EarnedMoment";
-import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
@@ -23,15 +24,6 @@ export const metadata: Metadata = {
 };
 
 const boardSchema = z.object({ bookingId: z.string().uuid() });
-
-const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
-  boarded: { tone: "success", text: "Aboard — next diver." },
-  "not-ready": {
-    tone: "danger",
-    text: "That diver is still blocked. Clear the listed requirement before boarding.",
-  },
-  error: { tone: "danger", text: "That didn’t save. Refresh and try again." },
-};
 
 /** Board the ready divers first; blocked ones sit below until cleared. */
 function checkInRank(diver: TripManifest["divers"][number]): number {
@@ -58,14 +50,11 @@ function Check({ check }: { check: CheckInCheck }) {
 
 export default async function CheckInPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -77,30 +66,39 @@ export default async function CheckInPage({
 
   const now = new Date();
   const back = `/shop/${shopSlug}/trips/${tripId}/check-in`;
-  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   const { totalDivers, boarded, blocked } = manifest.summary;
   const allAboard = totalDivers > 0 && boarded === totalDivers;
   const remaining = Math.max(0, totalDivers - boarded - blocked);
   const divers = [...manifest.divers].sort((a, b) => checkInRank(a) - checkInRank(b));
 
-  async function boardAction(formData: FormData) {
+  async function boardAction(_prev: RollCallResult, formData: FormData): Promise<RollCallResult> {
     "use server";
     const staff = await requireStaffSession();
     const parsed = boardSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`${back}?notice=error`);
-    const outcome = await recordRollCall(await getDb(), {
-      shopId: staff.user.shopId,
-      tripId,
-      bookingId: parsed.data.bookingId,
-      recordedByPersonId: staff.user.personId,
-      status: "boarded",
-      checkpoint: "departure",
-    });
-    if (!outcome.ok) {
-      redirect(`${back}?notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
+    if (!parsed.success) return { ok: false, reason: "error" };
+    // Readiness is re-checked here, on the server, at board time — the pending
+    // card on the client is only ever a hint until this returns. A dropped
+    // connection or a throw returns the worded rollback rather than rejecting
+    // (which would leave the card silently reverted on flaky marina Wi-Fi).
+    try {
+      const outcome = await recordRollCall(await getDb(), {
+        shopId: staff.user.shopId,
+        tripId,
+        bookingId: parsed.data.bookingId,
+        recordedByPersonId: staff.user.personId,
+        status: "boarded",
+        checkpoint: "departure",
+      });
+      if (!outcome.ok) {
+        return { ok: false, reason: outcome.reason === "not_ready" ? "not_ready" : "error" };
+      }
+    } catch {
+      return { ok: false, reason: "error" };
     }
+    // Settle in place — no redirect, so the card flips to Aboard ✓ without a
+    // full-page round trip.
     revalidatePath(back);
-    redirect(`${back}?notice=boarded`);
+    return { ok: true };
   }
 
   return (
@@ -111,7 +109,6 @@ export default async function CheckInPage({
       >
         Skip to boarding list
       </a>
-      <FlashParams params={["notice"]} />
       <Link
         href={`/shop/${shopSlug}/trips/${tripId}`}
         className="text-sm font-medium text-primary hover:underline"
@@ -126,14 +123,6 @@ export default async function CheckInPage({
           {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, "en-US", shop.timezone)}
         </p>
       </header>
-
-      {banner ? (
-        <div className="mt-6">
-          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.text}
-          </ShopNotice>
-        </div>
-      ) : null}
 
       {allAboard ? (
         <EarnedMoment className="mt-6" eyebrow="Check-in complete" title="All divers aboard ⚓">
@@ -241,19 +230,18 @@ export default async function CheckInPage({
                       Resolve blockers
                     </Link>
                   ) : (
-                    <form action={boardAction}>
-                      <input type="hidden" name="bookingId" value={diver.bookingId} />
-                      <SubmitButton
-                        pendingLabel="Boarding…"
-                        className={buttonClass({
-                          size: "boat",
-                          className:
-                            "w-full touch-manipulation transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto",
-                        })}
-                      >
-                        Board
-                      </SubmitButton>
-                    </form>
+                    <RollCallButton
+                      action={boardAction}
+                      bookingId={diver.bookingId}
+                      status="boarded"
+                      label="Board"
+                      pendingLabel="Boarding…"
+                      className={buttonClass({
+                        size: "boat",
+                        className:
+                          "w-full touch-manipulation transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto",
+                      })}
+                    />
                   )}
                 </div>
               </div>

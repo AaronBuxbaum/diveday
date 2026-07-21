@@ -51,12 +51,13 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await markNotBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
   const rollCallScroll = await page.evaluate(() => window.scrollY);
   await markNotBoarded.click();
-  await expect(page.getByText("Not-boarded status recorded.", { exact: true })).toBeVisible();
+  // WP-6: the card settles in place — the button flips to the confirmed state
+  // without a full-page redirect, so the roster position never jumps.
+  await expect(page.getByRole("button", { name: "Not boarded ✓" }).first()).toBeVisible();
   await expect
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
   await expect(page).not.toHaveURL(/#roll-call-/);
-  await expect(page.getByRole("button", { name: "Not boarded ✓" }).first()).toBeVisible();
   await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
