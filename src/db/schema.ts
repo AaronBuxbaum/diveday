@@ -565,6 +565,10 @@ export const bookingPayments = pgTable(
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
+  // Scheduled pre-trip reminders; one delivery row per booking per cadence
+  // (src/lib/reminders.ts) means each cadence sends at most once.
+  "trip_reminder_7d",
+  "trip_reminder_24h",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [

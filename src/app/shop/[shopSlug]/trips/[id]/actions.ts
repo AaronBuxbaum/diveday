@@ -7,6 +7,7 @@ import { cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
+import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { getShopById } from "@/db/shops";
 import {
   getTripWithBooked,
@@ -249,13 +250,32 @@ export async function inviteWaitlistAction(
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
+const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
+  refunded: "booking-removed-refunded",
+  forfeit: "booking-removed-forfeit",
+  manual: "booking-removed-refund-manual",
+  failed: "booking-removed-refund-failed",
+  // No stated window, or nothing captured: today's plain "spot is open" notice.
+  no_policy: "booking-removed",
+  unpaid: "booking-removed",
+};
+
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
-  await cancelBooking(await getDb(), s.user.shopId, bookingId);
-  revalidateAndRedirect(back, `${back}?notice=booking-removed&bid=${bookingId}`);
+  const dbi = await getDb();
+  await cancelBooking(dbi, s.user.shopId, bookingId);
+  // A cancel inside the shop's stated window auto-refunds a Stripe payment;
+  // everything else (no window, counter payment, Stripe off) degrades to the
+  // staff-run refund the notice calls out. The seat is already freed above, so
+  // a refund failure never blocks the cancellation (docs H-07).
+  const refund = await refundBookingOnCancellation(dbi, {
+    shopId: s.user.shopId,
+    bookingId,
+  });
+  revalidateAndRedirect(back, `${back}?notice=${REFUND_NOTICE[refund.status]}&bid=${bookingId}`);
 }
 
 export async function undoRemoveBookingAction(

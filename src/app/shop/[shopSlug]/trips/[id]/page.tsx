@@ -94,7 +94,7 @@ export default async function ManageTripPage({
   ]);
   const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
   const series = await getTripSeriesSummary(db, shop.id, tripId);
-  const undoBookingId = notice === "booking-removed" ? bid : undefined;
+  const undoBookingId = notice?.startsWith("booking-removed") ? bid : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";

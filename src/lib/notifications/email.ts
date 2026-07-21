@@ -44,6 +44,19 @@ type WaitlistInviteEmailInput = {
   bookingUrl: string;
 };
 
+type TripReminderEmailInput = {
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  /** How the reminder reads: "in a week" vs "tomorrow". */
+  lead: "week" | "day";
+  /** The diver's readiness page, so they can finish what's outstanding. */
+  readinessUrl?: string;
+};
+
 export type NotificationEmail = {
   subject: string;
   text: string;
@@ -82,6 +95,27 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
     subject: `A spot opened up on ${input.tripTitle}`,
     text: `Hi ${firstName},\n\nA seat just opened on ${input.tripTitle} with ${input.shopName}, and you're next on the wait list.\n\n${date}\n${time}\n\nClaim it before it's gone:\n${input.bookingUrl}\n\nSeats go first-come, so don't wait too long. See you on the boat!\n`,
     html: `<p>Hi ${escapeHtml(firstName)},</p><p>A seat just opened on <strong>${title}</strong> with ${shop}, and you're next on the wait list.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Claim your spot</a></p><p>Seats go first-come, so don't wait too long. See you on the boat!</p>`,
+  };
+}
+
+export function tripReminderEmail(input: TripReminderEmailInput): NotificationEmail {
+  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
+  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const shop = escapeHtml(input.shopName);
+  const when = input.lead === "week" ? "this week" : "tomorrow";
+  const readyText = input.readinessUrl
+    ? `\n\nSee what's left before you sail:\n${input.readinessUrl}\n`
+    : "\n";
+  const readyHtml = input.readinessUrl
+    ? `<p><a href="${escapeHtml(input.readinessUrl)}">See what's left before you sail</a>.</p>`
+    : "";
+
+  return {
+    subject: `You sail ${when} — ${input.tripTitle}`,
+    text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early.${readyText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early.</p>${readyHtml}`,
   };
 }
 

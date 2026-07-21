@@ -192,10 +192,27 @@ new domain concept, define it here in the same PR.
   value is the shop's commercial term. See
   [20260721-deposit-cancellation-policy](../architecture/decisions/20260721-deposit-cancellation-policy.md).
 - **Cancellation window** — an optional count of hours before departure (`trips.cancellation_window_hours`)
-  during which a diver may cancel for a refund. It is **declarative**: shown to divers at booking and
-  on the confirmation ("Free cancellation until …") and to staff as a "refund-eligible until" cue on
-  paid seats. It moves no money — refunds stay staff-initiated. Off by default; DiveDay ships no
-  default window.
+  during which a diver may cancel for a refund. Shown to divers at booking and on the confirmation
+  ("Free cancellation until …") and to staff as a "refund-eligible until" cue on paid seats. Off by
+  default; DiveDay ships no default window. Cancelling a paid seat inside it triggers an **automated
+  cancellation refund**.
+- **Automated cancellation refund** — when a paid booking is cancelled *inside* the shop's stated
+  cancellation window, its Stripe payment is refunded automatically through the shop's own connected
+  account and the booking settles to `refunded`. Money moves only on a confirmed Stripe reversal; a
+  counter/cash payment, a disconnected account, a past-deadline (forfeit) cancel, or a Stripe failure
+  degrade to a staff-run refund surfaced in the trip notice. No stated window means no automation.
+  See [20260721-automated-cancellation-refund](../architecture/decisions/20260721-automated-cancellation-refund.md).
+- **Reminder cadence** — a scheduled pre-trip nudge sent once per booking at a fixed lead time: a
+  7-day and a 24-hour reminder, each its own `notification_kind` so it is deduped like any other
+  send. The rule for which reminder is due (`src/lib/reminders.ts`) partitions the run-up to
+  departure into buckets, so a late booking gets only the accurate reminder, never a stale one. An
+  external scheduler drives an idempotent cron endpoint; the app holds no timer. See
+  [20260721-scheduled-reminder-cadence](../architecture/decisions/20260721-scheduled-reminder-cadence.md).
+- **SMS / WhatsApp channel** — an optional text channel for notifications, delivered through a
+  fetch-based Twilio seam (`notifySms()`). A number is texted only if it is already E.164, and a
+  channel with no configured sender degrades to `not_configured`, exactly like the email seam. Used
+  today as a courtesy channel alongside reminder email. See
+  [20260721-sms-whatsapp-notifications](../architecture/decisions/20260721-sms-whatsapp-notifications.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. `isDemo` is reserved for the canonical
   seeded example shop (Blue Mantis), bootstrapped in every environment and reached via "Try the live

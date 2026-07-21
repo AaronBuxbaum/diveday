@@ -7,6 +7,22 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   reinstated: { tone: "success", text: "Back on! The trip is on the schedule again." },
   crew: { tone: "success", text: "Crew updated." },
   "booking-removed": { tone: "success", text: "Booking cancelled — the spot is open again." },
+  "booking-removed-refunded": {
+    tone: "success",
+    text: "Booking cancelled and the payment refunded — the spot is open again.",
+  },
+  "booking-removed-forfeit": {
+    tone: "success",
+    text: "Booking cancelled — the spot is open again. It was past the cancellation window, so the seat was non-refundable.",
+  },
+  "booking-removed-refund-manual": {
+    tone: "danger",
+    text: "Booking cancelled — a refund is owed but must be issued by hand (counter payment, or Stripe isn't connected). Refund from the diver's payments.",
+  },
+  "booking-removed-refund-failed": {
+    tone: "danger",
+    text: "Booking cancelled, but the automatic refund didn't go through — issue it from the diver's payments.",
+  },
   "booking-restored": { tone: "success", text: "Back on the roster." },
   "diver-added": { tone: "success", text: "Diver added to the trip." },
   "diver-waitlisted": { tone: "success", text: "Diver added to the wait list." },

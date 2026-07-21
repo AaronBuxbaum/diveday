@@ -41,6 +41,11 @@ export type CheckoutSessionLookupResult =
   | { status: "not_configured" }
   | { status: "failed" };
 
+export type RefundCheckoutResult = {
+  status: "refunded" | "not_configured" | "not_refundable" | "failed";
+  refundId?: string;
+};
+
 export interface CheckoutProvider {
   createCheckoutSession(
     request: CreateCheckoutSessionRequest,
@@ -49,6 +54,17 @@ export interface CheckoutProvider {
     stripeAccountId: string,
     stripeSessionId: string,
   ): Promise<CheckoutSessionLookupResult>;
+  /**
+   * Refund a completed checkout on the shop's connected account. `amountCents`
+   * refunds that much (a partial refund); omitted refunds the full charge.
+   * `not_refundable` means the session never captured a payment intent — there
+   * is nothing to reverse, so staff owe the diver nothing through Stripe.
+   */
+  refundCheckoutSession(
+    stripeAccountId: string,
+    stripeSessionId: string,
+    amountCents?: number,
+  ): Promise<RefundCheckoutResult>;
 }
 
 type Fetch = typeof fetch;
@@ -63,7 +79,19 @@ const sessionResponseSchema = z.object({
   url: z.string().url().nullable().optional(),
   amount_total: z.number().int().nullable(),
   expires_at: z.number().int().optional(),
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
 });
+
+const refundResponseSchema = z.object({ id: z.string().min(1) });
+
+function paymentIntentIdOf(body: z.infer<typeof sessionResponseSchema>): string | null {
+  const paymentIntent = body.payment_intent;
+  if (!paymentIntent) return null;
+  return typeof paymentIntent === "string" ? paymentIntent : paymentIntent.id;
+}
 
 function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessionSnapshot {
   return {
@@ -129,6 +157,40 @@ export function stripeCheckoutProvider(
         return { status: "failed" };
       }
     },
+
+    async refundCheckoutSession(stripeAccountId, stripeSessionId, amountCents) {
+      try {
+        // The session id alone can't be refunded — the money lives on its
+        // payment intent, so expand it, then reverse that. Same shape as
+        // invoicing.ts refundInvoice.
+        const sessionResponse = await fetchImpl(
+          `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(
+            stripeSessionId,
+          )}?expand[]=payment_intent`,
+          { headers: headersFor(config.secretKey, stripeAccountId) },
+        );
+        if (!sessionResponse.ok) return { status: "failed" };
+        const body = sessionResponseSchema.safeParse(await sessionResponse.json());
+        if (!body.success) return { status: "failed" };
+        const paymentIntentId = paymentIntentIdOf(body.data);
+        if (!paymentIntentId) return { status: "not_refundable" };
+
+        const form = new URLSearchParams({ payment_intent: paymentIntentId });
+        if (amountCents !== undefined) form.set("amount", String(amountCents));
+        const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
+          method: "POST",
+          headers: headersFor(config.secretKey, stripeAccountId),
+          body: form.toString(),
+        });
+        if (!response.ok) return { status: "failed" };
+        const refund = refundResponseSchema.safeParse(await response.json());
+        return refund.success
+          ? { status: "refunded", refundId: refund.data.id }
+          : { status: "failed" };
+      } catch {
+        return { status: "failed" };
+      }
+    },
   };
 }
 
@@ -137,6 +199,9 @@ const disabledCheckoutProvider: CheckoutProvider = {
     return { status: "not_configured" };
   },
   async retrieveCheckoutSession() {
+    return { status: "not_configured" };
+  },
+  async refundCheckoutSession() {
     return { status: "not_configured" };
   },
 };
