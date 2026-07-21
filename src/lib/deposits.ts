@@ -67,3 +67,35 @@ export function withinCancellationWindow(trip: CancellationTrip, now: Date): boo
   const deadline = cancellationDeadline(trip);
   return deadline !== null && now < deadline;
 }
+
+export type RefundDecision = {
+  /** Cents to return to the diver now; 0 means nothing is refunded automatically. */
+  refundCents: number;
+  /**
+   * - `refund`: inside a stated window — return what was paid.
+   * - `forfeit`: past a stated window's deadline — the seat is non-refundable.
+   * - `no_policy`: the trip states no window, so automation stays out of it and
+   *   any goodwill refund is a staff decision (pre-automation behavior).
+   */
+  outcome: "refund" | "forfeit" | "no_policy";
+};
+
+/**
+ * What an automated cancellation refund returns, framework-free. Automation is
+ * gated on the shop having *stated* a cancellation window: with none, this
+ * declines to move money (`no_policy`) and refunds stay staff-run exactly as
+ * before. Inside the window the full amount paid comes back; past the deadline
+ * the seat is forfeit. Never returns more than was paid, and a non-positive
+ * `paidCents` always yields a zero refund (docs H-07 automated-refund slice).
+ */
+export function refundOnCancellation(
+  trip: CancellationTrip,
+  paidCents: number,
+  now: Date,
+): RefundDecision {
+  const deadline = cancellationDeadline(trip);
+  if (deadline === null) return { refundCents: 0, outcome: "no_policy" };
+  if (now >= deadline) return { refundCents: 0, outcome: "forfeit" };
+  const refundCents = Math.max(0, Math.trunc(paidCents));
+  return { refundCents, outcome: "refund" };
+}

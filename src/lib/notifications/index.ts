@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   bookingConfirmationEmail,
   type NotificationEmail,
+  tripReminderEmail,
   waitlistInviteEmail,
   waiverRequestEmail,
 } from "./email";
@@ -52,10 +53,36 @@ const waitlistInviteSchema = z.object({
   invitedAt: z.date(),
 });
 
+const tripReminderFields = {
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  readinessUrl: z.url().max(2_000).optional(),
+};
+
+// One literal per cadence so the delivery row's `kind` is the cadence itself,
+// which is what dedups a reminder to once-per-booking (src/lib/reminders.ts).
+const tripReminder7dSchema = z.object({
+  kind: z.literal("trip_reminder_7d"),
+  ...tripReminderFields,
+});
+const tripReminder24hSchema = z.object({
+  kind: z.literal("trip_reminder_24h"),
+  ...tripReminderFields,
+});
+
 export const notificationSchema = z.discriminatedUnion("kind", [
   bookingConfirmationSchema,
   waiverRequestSchema,
   waitlistInviteSchema,
+  tripReminder7dSchema,
+  tripReminder24hSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -87,6 +114,12 @@ const resendResponseSchema = z.object({ id: z.string().min(1) });
 function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
   if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
+  if (notification.kind === "trip_reminder_7d") {
+    return tripReminderEmail({ ...notification, lead: "week" });
+  }
+  if (notification.kind === "trip_reminder_24h") {
+    return tripReminderEmail({ ...notification, lead: "day" });
+  }
   return waiverRequestEmail(notification);
 }
 
@@ -100,6 +133,10 @@ function idempotencyKeyFor(notification: Notification): string {
     // fresh send, while a double-submit of the same tap still dedups at Resend.
     case "waitlist_invite":
       return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
+    // One reminder per booking per cadence — the kind alone keys it.
+    case "trip_reminder_7d":
+    case "trip_reminder_24h":
+      return `${notification.kind}/${notification.bookingId}`;
   }
 }
 

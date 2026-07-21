@@ -7,6 +7,7 @@ import { cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
+import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { getShopById } from "@/db/shops";
 import {
   getTripWithBooked,
@@ -249,13 +250,43 @@ export async function inviteWaitlistAction(
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
+function refundNotice(refund: CancellationRefundOutcome): string {
+  switch (refund.status) {
+    case "refunded":
+      return "booking-removed-refunded";
+    case "forfeit":
+      return "booking-removed-forfeit";
+    case "failed":
+      return "booking-removed-refund-failed";
+    case "manual":
+      // `not_refundable` is a data mismatch (local row says paid, Stripe
+      // captured nothing) — a "review", not the "refund owed by hand" claim the
+      // counter/disconnected cases make.
+      return refund.reason === "not_refundable"
+        ? "booking-removed-refund-review"
+        : "booking-removed-refund-manual";
+    default:
+      // no_policy or unpaid: nothing owed, today's plain "spot is open" notice.
+      return "booking-removed";
+  }
+}
+
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
-  await cancelBooking(await getDb(), s.user.shopId, bookingId);
-  revalidateAndRedirect(back, `${back}?notice=booking-removed&bid=${bookingId}`);
+  const dbi = await getDb();
+  await cancelBooking(dbi, s.user.shopId, bookingId);
+  // A cancel inside the shop's stated window auto-refunds a Stripe payment;
+  // everything else (no window, counter payment, Stripe off) degrades to the
+  // staff-run refund the notice calls out. The seat is already freed above, so
+  // a refund failure never blocks the cancellation (docs H-07).
+  const refund = await refundBookingOnCancellation(dbi, {
+    shopId: s.user.shopId,
+    bookingId,
+  });
+  revalidateAndRedirect(back, `${back}?notice=${refundNotice(refund)}&bid=${bookingId}`);
 }
 
 export async function undoRemoveBookingAction(

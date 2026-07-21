@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cancellationDeadline, checkoutCharge, withinCancellationWindow } from "./deposits";
+import {
+  cancellationDeadline,
+  checkoutCharge,
+  refundOnCancellation,
+  withinCancellationWindow,
+} from "./deposits";
 
 describe("checkoutCharge", () => {
   it("returns null for an unpriced trip so checkout never fires a $0 charge", () => {
@@ -74,5 +79,43 @@ describe("withinCancellationWindow", () => {
         new Date("2026-07-01T12:00:00.000Z"),
       ),
     ).toBe(false);
+  });
+});
+
+describe("refundOnCancellation", () => {
+  const startsAt = new Date("2026-08-01T12:00:00.000Z");
+  const trip = { startsAt, cancellationWindowHours: 48 };
+
+  it("declines to automate when the trip states no window (staff decides)", () => {
+    expect(
+      refundOnCancellation({ startsAt, cancellationWindowHours: null }, 5000, startsAt),
+    ).toEqual({ refundCents: 0, outcome: "no_policy" });
+  });
+
+  it("refunds the full amount paid inside the window", () => {
+    expect(refundOnCancellation(trip, 5000, new Date("2026-07-29T12:00:00.000Z"))).toEqual({
+      refundCents: 5000,
+      outcome: "refund",
+    });
+  });
+
+  it("forfeits the seat once the deadline has passed", () => {
+    expect(refundOnCancellation(trip, 5000, new Date("2026-07-31T12:00:00.000Z"))).toEqual({
+      refundCents: 0,
+      outcome: "forfeit",
+    });
+  });
+
+  it("treats the deadline instant itself as past the window", () => {
+    // Deadline is exactly 2026-07-30T12:00 — a cancel at that instant forfeits.
+    expect(refundOnCancellation(trip, 5000, new Date("2026-07-30T12:00:00.000Z")).outcome).toBe(
+      "forfeit",
+    );
+  });
+
+  it("never refunds more than was paid and clamps a non-positive amount to zero", () => {
+    const now = new Date("2026-07-29T12:00:00.000Z");
+    expect(refundOnCancellation(trip, 0, now).refundCents).toBe(0);
+    expect(refundOnCancellation(trip, -100, now).refundCents).toBe(0);
   });
 });

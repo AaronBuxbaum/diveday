@@ -37,6 +37,9 @@ function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvid
     async retrieveCheckoutSession(): Promise<CheckoutSessionLookupResult> {
       return { status: "failed" };
     },
+    async refundCheckoutSession() {
+      return { status: "refunded", refundId: "re_test" };
+    },
     ...overrides,
   };
 }
