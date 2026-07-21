@@ -82,6 +82,7 @@ export function RosterSection({
   nitroxByBooking,
   requiresPayment,
   issueWaiverAction,
+  markWaiverInPersonAction,
   markPaymentAction,
   removeBookingAction,
 }: {
@@ -97,6 +98,7 @@ export function RosterSection({
   nitroxByBooking: NitroxByBooking;
   requiresPayment: boolean;
   issueWaiverAction: (formData: FormData) => void;
+  markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
 }) {
@@ -231,9 +233,27 @@ export function RosterSection({
                         </span>
                       )}
                     </div>
+                    {waiverControl.action ? (
+                      // A diver who signed on paper or on shore: let a non-diver
+                      // record it so the waiver gate isn't held up by a signature
+                      // the app never sees. Same immutable record, staff-attested.
+                      <form action={markWaiverInPersonAction} className="mt-2">
+                        <input type="hidden" name="bookingId" value={booking.id} />
+                        <SubmitButton
+                          pendingLabel="Recording…"
+                          confirmMessage={`Record that ${person.fullName} signed the paper waiver in person? Only do this if you have their signed release — including the medical questionnaire — on file.`}
+                          className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+                        >
+                          Mark signed on paper
+                        </SubmitButton>
+                      </form>
+                    ) : null}
                     {currentWaiver?.completedAt && waiverStatus === "complete" ? (
                       <p className="mt-2 text-sm text-muted">
                         Signed {formatDateTimeTz(currentWaiver.completedAt, "en-US", shopTimezone)}
+                        {currentWaiver.signatureMethod === "in_person_attested"
+                          ? " · recorded from a paper copy"
+                          : ""}
                       </p>
                     ) : null}
                     {waiverStatus === "medical_review" ? (

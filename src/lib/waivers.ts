@@ -38,6 +38,69 @@ export function needsMedicalReview(answers: MedicalAnswers): boolean {
   return needsPhysicianReview(answers);
 }
 
+/**
+ * How long a signed waiver keeps satisfying a diver's *future* trips. A diver
+ * signs once; the signature carries forward until it ages out. Bounded rather
+ * than forever because the release also carries a medical questionnaire, and a
+ * medical statement a year stale is no longer trustworthy evidence of fitness.
+ */
+export const WAIVER_SIGNATURE_VALIDITY_MS = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * Whether a completed release still stands on its own for a booking it was not
+ * signed against. It must be a clean completion (never one parked in medical
+ * review), signed against the shop's current template version (a later edit is
+ * different terms the diver never agreed to), and inside the validity window.
+ * Fails closed on anything missing.
+ */
+export function isCompletedWaiverCurrent(
+  record: WaiverRecord,
+  currentTemplateVersion: number | null,
+  now: Date = new Date(),
+): boolean {
+  if (record.status !== "completed") return false;
+  if (record.supersededAt) return false;
+  if (currentTemplateVersion !== null && record.templateVersion !== currentTemplateVersion) {
+    return false;
+  }
+  const signedAt = record.signedAt ?? record.completedAt;
+  if (!signedAt) return false;
+  return signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
+}
+
+/**
+ * The single waiver record that governs a booking's readiness once the
+ * sign-once rule is applied.
+ *
+ * A booking already covered by its own signed or in-review record keeps that
+ * record — a stale clean waiver must never override a live medical hold. Only
+ * when the booking has no signature of its own does a current completed release
+ * signed for any of the diver's other bookings carry over. Falling back to the
+ * booking's own record (pending/expired/none) drives the normal send flow. This
+ * never lowers the bar: a carried release must pass `isCompletedWaiverCurrent`,
+ * and a medical-review record never carries.
+ */
+export function effectiveWaiverForBooking(input: {
+  bookingWaiver: WaiverRecord | null;
+  personCompletedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  now?: Date;
+}): WaiverRecord | null {
+  const now = input.now ?? new Date();
+  const own = input.bookingWaiver;
+  if (own && (own.status === "completed" || own.status === "medical_review")) {
+    return own;
+  }
+  const carried = input.personCompletedWaivers
+    .filter((record) => isCompletedWaiverCurrent(record, input.currentTemplateVersion, now))
+    .sort(
+      (a, b) =>
+        (b.signedAt ?? b.completedAt ?? b.createdAt).getTime() -
+        (a.signedAt ?? a.completedAt ?? a.createdAt).getTime(),
+    )[0];
+  return carried ?? own ?? null;
+}
+
 export type WaiverState =
   | "not_sent"
   | "awaiting_signature"

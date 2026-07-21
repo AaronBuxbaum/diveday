@@ -2,8 +2,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { getBookingReadiness } from "./readiness";
 import { people, waiverRecords } from "./schema";
-import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
   getCurrentWaiverTemplate,
@@ -12,6 +13,7 @@ import {
   issueWaiverRequest,
   listTripWaiverActivity,
   listWaiverTemplateHistory,
+  recordInPersonWaiver,
   saveWaiverTemplate,
 } from "./waivers";
 
@@ -199,6 +201,109 @@ describe("waiver records (in-memory PGlite)", () => {
       .where(eq(waiverRecords.id, issued.recordId));
     expect(record?.templateVersion).toBe(template.version);
     expect(record?.templateBody).toBe(template.body);
+  });
+});
+
+describe("staff records a paper / in-person signature", () => {
+  async function staffPerson(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {
+    const [staff] = await listStaff(db, shopId);
+    if (!staff) throw new Error("demo staff missing");
+    return staff.person;
+  }
+
+  it("stores an immutable staff-attested record that clears the waiver gate", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    const before = await getBookingReadiness(db, shop.id, booking.id);
+    expect(before?.blockers).toContainEqual(expect.objectContaining({ code: "waiver_not_sent" }));
+
+    const outcome = await recordInPersonWaiver(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      now,
+    });
+    expect(outcome).toMatchObject({ ok: true, alreadySigned: false });
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, booking.id));
+    expect(record).toMatchObject({
+      status: "completed",
+      signatureMethod: "in_person_attested",
+      recordedByPersonId: staff.id,
+      personId: booking.personId,
+      medicalReviewRequired: false,
+    });
+
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "waiver_not_sent" }),
+    );
+  });
+
+  it("is idempotent — a booking already signed keeps its single record", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+
+    const outcome = await recordInPersonWaiver(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      now,
+    });
+    expect(outcome).toMatchObject({ ok: true, alreadySigned: true });
+    const rows = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, booking.id));
+    expect(rows.filter((row) => row.status === "completed")).toHaveLength(1);
+  });
+
+  it("retires a live pending link so its token can never complete a second record", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+
+    await recordInPersonWaiver(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      now,
+    });
+    expect(await getWaiverForToken(db, issued.token, now)).toEqual({ state: "unavailable" });
+  });
+
+  it("refuses a recorder who is not shop staff, failing closed", async () => {
+    const { db, shop, booking } = await waiverContext();
+    // The booking's own diver is not staff, and a stranger id is not in the shop.
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: booking.personId,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+    const staff = await staffPerson(db, shop.id);
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        now,
+      }),
+    ).toMatchObject({ ok: false });
   });
 });
 

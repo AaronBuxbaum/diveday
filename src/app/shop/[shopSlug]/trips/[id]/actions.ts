@@ -17,6 +17,7 @@ import {
 } from "@/db/trips";
 import { joinTripWaitlist, recordWaitlistInvite } from "@/db/waitlist";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
+import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -247,6 +248,31 @@ export async function issueWaiverAction(shopSlug: string, tripId: string, formDa
   revalidateAndRedirect(
     back,
     `${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`,
+  );
+}
+
+/**
+ * Staff records that a diver signed a paper release in person or on shore, for a
+ * diver the app never sees sign. Same shop-scoped session gate as every other
+ * roster action; the accountable staff member is stamped on the record.
+ */
+export async function markWaiverInPersonAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!bookingId) redirect(`${back}?notice=waiver-error`);
+  const outcome = await recordInPersonWaiver(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    recordedByPersonId: s.user.personId,
+  });
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${outcome.ok ? "waiver-in-person" : "waiver-error"}&bid=${bookingId}`,
   );
 }
 
