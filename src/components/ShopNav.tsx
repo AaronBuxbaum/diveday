@@ -11,7 +11,7 @@ async function signOutAction() {
 export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: string }) {
   const root = `/shop/${shopSlug}`;
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur print:hidden sm:px-6">
       {/*
        * On phones the primary links wrap to their own full-width row below the
        * logo instead of being crushed into whatever slice of the top row is

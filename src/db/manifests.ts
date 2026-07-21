@@ -3,6 +3,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
+  carryForwardNotBoarded,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
@@ -65,15 +66,20 @@ async function listLatestRollCallByBooking(
       note: string | null;
     }
   >();
+  // Rows are newest-first, so the first row per booking wins. A latest `cleared`
+  // event is staff undoing a mistake: record the booking as seen so no older
+  // event resurfaces, but leave it out of the map so the diver reads as awaiting.
+  const seen = new Set<string>();
   for (const { event, recorder } of rows) {
-    if (!latest.has(event.bookingId)) {
-      latest.set(event.bookingId, {
-        state: event.status,
-        occurredAt: event.occurredAt,
-        recordedByName: recorder.fullName,
-        note: event.note,
-      });
-    }
+    if (seen.has(event.bookingId)) continue;
+    seen.add(event.bookingId);
+    if (event.status === "cleared") continue;
+    latest.set(event.bookingId, {
+      state: event.status,
+      occurredAt: event.occurredAt,
+      recordedByName: recorder.fullName,
+      note: event.note,
+    });
   }
   return latest;
 }
@@ -120,18 +126,27 @@ export async function getTripManifests(
     // The card is re-checked here, so a revoked card takes the request off the manifest.
     nitroxRequested: booking.wantsNitrox && certified.has(person.id),
   }));
-  return checkpoints.map((checkpoint, index) => {
-    const rollCallByBooking = rollCalls[index] ?? new Map();
-    return buildTripManifest({
+  // Carry a not-boarded result forward across the ordered checkpoints so an
+  // after-dive list doesn't reset to "awaiting" for a diver who already left.
+  const effectiveByBooking = new Map(
+    diverInputs.map((diver) => [
+      diver.bookingId,
+      carryForwardNotBoarded(
+        checkpoints.map((_, index) => (rollCalls[index] ?? new Map()).get(diver.bookingId)),
+      ),
+    ]),
+  );
+  return checkpoints.map((checkpoint, index) =>
+    buildTripManifest({
       trip: tripInput,
       checkpoint,
       crew,
       divers: diverInputs.map((diver) => ({
         ...diver,
-        rollCall: rollCallByBooking.get(diver.bookingId),
+        rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
       })),
-    });
-  });
+    }),
+  );
 }
 
 export async function getTripManifest(
@@ -172,7 +187,7 @@ export async function recordRollCall(
     tripId: string;
     bookingId: string;
     recordedByPersonId: string;
-    status: "boarded" | "not_boarded";
+    status: "boarded" | "not_boarded" | "cleared";
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
@@ -285,4 +300,42 @@ export async function recordRollCall(
     if (!event) throw new Error("recordRollCall: insert returned no row");
     return { ok: true, eventId: event.id };
   });
+}
+
+/**
+ * Annotate the diver's current roll-call result at a checkpoint. The note is an
+ * annotation on the latest decision, not a decision of its own, so it updates
+ * that event in place rather than appending — the recorded boarded/not-boarded
+ * fact is never rewritten. Returns false when there is nothing to annotate yet
+ * (the diver is awaiting, or the latest event is a `cleared` undo).
+ */
+export async function updateLatestRollCallNote(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    bookingId: string;
+    checkpoint: RollCallCheckpoint;
+    note: string;
+  },
+): Promise<boolean> {
+  const [latest] = await db
+    .select({ id: rollCallEvents.id, status: rollCallEvents.status })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, input.shopId),
+        eq(rollCallEvents.tripId, input.tripId),
+        eq(rollCallEvents.bookingId, input.bookingId),
+        eq(rollCallEvents.checkpoint, input.checkpoint),
+      ),
+    )
+    .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt))
+    .limit(1);
+  if (!latest || latest.status === "cleared") return false;
+  await db
+    .update(rollCallEvents)
+    .set({ note: input.note.trim() || null })
+    .where(eq(rollCallEvents.id, latest.id));
+  return true;
 }

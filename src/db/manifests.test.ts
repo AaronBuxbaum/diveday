@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { getTripManifest, recordRollCall } from "./manifests";
+import { getTripManifest, recordRollCall, updateLatestRollCallNote } from "./manifests";
 import { rollCallEvents } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
@@ -118,6 +118,97 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(
       afterDive?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall,
     ).toBeUndefined();
+  });
+
+  it("clears a recorded roll call back to awaiting when staff tap the status again", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      occurredAt: new Date("2026-07-20T11:00:00.000Z"),
+    });
+    const marked = await getTripManifest(db, shop.id, reef.id);
+    expect(
+      marked?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall?.state,
+    ).toBe("not_boarded");
+
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "cleared",
+      occurredAt: new Date("2026-07-20T11:05:00.000Z"),
+    });
+    const cleared = await getTripManifest(db, shop.id, reef.id);
+    expect(
+      cleared?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall,
+    ).toBeUndefined();
+    // A cleared result has nothing to annotate, so the note save is a no-op.
+    await expect(
+      updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "late edit",
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it("defaults later checkpoints to not boarded once a diver is left off", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+      occurredAt: new Date("2026-07-20T11:00:00.000Z"),
+    });
+    const afterDive = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    expect(
+      afterDive?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall,
+    ).toMatchObject({ state: "not_boarded", implied: true });
+  });
+
+  it("saves a note onto the diver's latest result and no-ops while awaiting", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await expect(
+      updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "nothing recorded yet",
+      }),
+    ).resolves.toBe(false);
+
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+    });
+    await expect(
+      updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "Forgot fins — chasing them down",
+      }),
+    ).resolves.toBe(true);
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    expect(
+      manifest?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall?.note,
+    ).toBe("Forgot fins — chasing them down");
   });
 
   it("applies an offline event once and rejects a delayed event behind newer live history", async () => {

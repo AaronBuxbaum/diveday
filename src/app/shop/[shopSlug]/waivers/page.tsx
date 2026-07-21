@@ -74,7 +74,7 @@ export default async function WaiverTemplatesPage({
   const banner =
     notice === "saved"
       ? current
-        ? "Saved as a new version. Waivers already signed keep the exact text they were signed against."
+        ? "Saved as a new version."
         : "Your waiver is saved. Every future edit is kept as a new version."
       : notice === "jurisdiction"
         ? "Medical questionnaire updated for new waivers."
@@ -111,7 +111,7 @@ export default async function WaiverTemplatesPage({
       <ShopPageHeader
         eyebrow={shop.name}
         title="Waiver"
-        description="Every diver signs this one release. New links snapshot it, so a completed waiver always keeps the exact text a diver saw."
+        description="Every diver signs this one release. Edit it to fit your shop."
       />
 
       {banner ? (
@@ -129,7 +129,7 @@ export default async function WaiverTemplatesPage({
         <h2 className="text-lg font-semibold">Medical questionnaire</h2>
         <p className="mt-1 text-sm text-muted">
           Which diver medical form waivers present. A “yes” to any question is a physician-referral
-          blocker, not a checkbox. Completed waivers keep the exact questionnaire version answered.
+          blocker, not a checkbox.
         </p>
         <form
           action={chooseJurisdictionAction}

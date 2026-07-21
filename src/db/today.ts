@@ -76,8 +76,12 @@ async function boardedCountsByTrip(db: AppDb, shopId: string, tripIds: string[])
       ),
     )
     .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt));
-  // Ordered oldest-first, so the last write per booking wins.
-  const latest = new Map<string, { tripId: string; status: "boarded" | "not_boarded" }>();
+  // Ordered oldest-first, so the last write per booking wins. A latest `cleared`
+  // event is an undo, so it simply never counts as boarded below.
+  const latest = new Map<
+    string,
+    { tripId: string; status: "boarded" | "not_boarded" | "cleared" }
+  >();
   for (const row of rows) latest.set(row.bookingId, { tripId: row.tripId, status: row.status });
   for (const { tripId, status } of latest.values()) {
     if (status === "boarded") counts.set(tripId, (counts.get(tripId) ?? 0) + 1);
