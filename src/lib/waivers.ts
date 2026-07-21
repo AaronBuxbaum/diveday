@@ -46,12 +46,19 @@ export function needsMedicalReview(answers: MedicalAnswers): boolean {
  */
 export const WAIVER_SIGNATURE_VALIDITY_MS = 365 * 24 * 60 * 60 * 1000;
 
+/** When a record's signature happened, for recency comparisons. */
+function signatureTime(record: WaiverRecord): number {
+  return (record.signedAt ?? record.completedAt ?? record.createdAt).getTime();
+}
+
 /**
- * Whether a completed release still stands on its own for a booking it was not
- * signed against. It must be a clean completion (never one parked in medical
- * review), signed against the shop's current template version (a later edit is
- * different terms the diver never agreed to), and inside the validity window.
- * Fails closed on anything missing.
+ * Whether a completed release still stands for a booking. It must be a clean
+ * completion (never one parked in medical review), signed against the shop's
+ * current template version (a later edit is different terms the diver never
+ * agreed to), and inside the validity window. Applied uniformly — to the
+ * booking's own record and to any carried from another booking — so a signature
+ * that is stale or against superseded terms is never treated as current, whoever
+ * it was signed for. Fails closed on anything missing.
  */
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
@@ -72,33 +79,45 @@ export function isCompletedWaiverCurrent(
  * The single waiver record that governs a booking's readiness once the
  * sign-once rule is applied.
  *
- * A booking already covered by its own signed or in-review record keeps that
- * record — a stale clean waiver must never override a live medical hold. Only
- * when the booking has no signature of its own does a current completed release
- * signed for any of the diver's other bookings carry over. Falling back to the
- * booking's own record (pending/expired/none) drives the normal send flow. This
- * never lowers the bar: a carried release must pass `isCompletedWaiverCurrent`,
- * and a medical-review record never carries.
+ * A live medical hold on this booking blocks it outright. Otherwise the most
+ * recent clean, current signature — the booking's own or one carried from
+ * another of the diver's bookings — stands, unless the diver has an unresolved
+ * medical hold that is no older than it: a health disclosure made at or after
+ * the last clean signature means the signature can no longer be trusted, so it
+ * fails closed to that hold. With neither a current signature nor a hold, the
+ * booking's own live record (pending/expired) drives the send flow; a stale
+ * completed record never reads as complete.
+ *
+ * `personSignedWaivers` is the diver's signed evidence at the shop — completed
+ * and medical-review records, superseded ones excluded.
  */
 export function effectiveWaiverForBooking(input: {
   bookingWaiver: WaiverRecord | null;
-  personCompletedWaivers: readonly WaiverRecord[];
+  personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
   now?: Date;
 }): WaiverRecord | null {
   const now = input.now ?? new Date();
   const own = input.bookingWaiver;
-  if (own && (own.status === "completed" || own.status === "medical_review")) {
-    return own;
-  }
-  const carried = input.personCompletedWaivers
-    .filter((record) => isCompletedWaiverCurrent(record, input.currentTemplateVersion, now))
-    .sort(
-      (a, b) =>
-        (b.signedAt ?? b.completedAt ?? b.createdAt).getTime() -
-        (a.signedAt ?? a.completedAt ?? a.createdAt).getTime(),
-    )[0];
-  return carried ?? own ?? null;
+  if (own?.status === "medical_review") return own;
+
+  const clean = [
+    ...(own && isCompletedWaiverCurrent(own, input.currentTemplateVersion, now) ? [own] : []),
+    ...input.personSignedWaivers.filter((record) =>
+      isCompletedWaiverCurrent(record, input.currentTemplateVersion, now),
+    ),
+  ].sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+
+  const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
+  const hold = input.personSignedWaivers
+    .filter((record) => record.status === "medical_review" && !record.supersededAt)
+    .filter((record) => signatureTime(record) >= cleanTime)
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (hold) return hold;
+
+  if (clean) return clean;
+
+  return own && own.status !== "completed" ? own : null;
 }
 
 export type WaiverState =

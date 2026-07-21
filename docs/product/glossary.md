@@ -142,7 +142,11 @@ new domain concept, define it here in the same PR.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded
-  it, and carries forward like any other signature.
+  it, and carries forward like any other signature. The app captures **no medical questionnaire** for
+  these records, so recording one requires an explicit staff attestation that the paper medical form
+  was reviewed and no answer needs physician sign-off. A flagged medical must instead go through the
+  diver-facing link, which captures the questionnaire and routes to review — the medical block is
+  never a checkbox.
 - **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
   shop's **jurisdiction** (RSTC/WRSTC by default, or a UK variant). Defined as data in
   `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version it was answered

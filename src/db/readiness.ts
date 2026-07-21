@@ -21,7 +21,7 @@ import {
 } from "./schema";
 import {
   getCurrentWaiverTemplate,
-  listCompletedWaiversByPerson,
+  listSignedWaiversByPerson,
   listTripWaiverStatuses,
 } from "./waivers";
 
@@ -317,7 +317,7 @@ export async function listTripReadiness(
   const bookingIds = waiverRows.map((row) => row.booking.id);
   const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
-  const [certificationRows, specialtyRows, nitroxRows, completedWaiversByPerson] =
+  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson] =
     personIds.length === 0
       ? [[], [], [], new Map<string, never[]>()]
       : await Promise.all([
@@ -345,7 +345,7 @@ export async function listTripReadiness(
                 inArray(nitroxCertifications.personId, personIds),
               ),
             ),
-          listCompletedWaiversByPerson(db, shopId, personIds),
+          listSignedWaiversByPerson(db, shopId, personIds),
         ]);
   const currentTemplateVersion = currentTemplate?.version ?? null;
   const certificationsByPerson = new Map<string, typeof certificationRows>();
@@ -374,7 +374,7 @@ export async function listTripReadiness(
     // manifest, and the fail-closed boarding gate all agree.
     const effectiveWaiver = effectiveWaiverForBooking({
       bookingWaiver: row.waiver,
-      personCompletedWaivers: completedWaiversByPerson.get(row.person.id) ?? [],
+      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion,
       now,
     });

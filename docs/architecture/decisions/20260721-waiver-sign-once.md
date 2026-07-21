@@ -20,13 +20,20 @@ Denormalize `person_id` onto `waiver_records` (backfilled from the booking) so a
 release is queryable per diver, and resolve the record that governs a booking's readiness through
 one pure function, `effectiveWaiverForBooking` (`src/lib/waivers.ts`):
 
-- A booking already covered by **its own** signed or in-medical-review record keeps that record —
-  a stale clean waiver never overrides a live medical hold.
-- Otherwise a diver's **current completed** release from any of their bookings carries over.
-  "Current" (`isCompletedWaiverCurrent`) means: status `completed` (never `medical_review`), not
-  superseded, signed against the shop's **current template version**, and within
-  `WAIVER_SIGNATURE_VALIDITY_MS` (365 days) of `signedAt`.
-- Otherwise the booking's own record (pending/expired/none) drives the normal send flow.
+- A **live medical hold on this booking** (`medical_review`) blocks it outright.
+- Otherwise the most recent **current completed** release — the booking's own or one carried from
+  any of the diver's bookings — stands. "Current" (`isCompletedWaiverCurrent`, applied uniformly to
+  the own record too) means: status `completed`, not superseded, signed against the shop's
+  **current template version**, and within `WAIVER_SIGNATURE_VALIDITY_MS` (365 days) of `signedAt`.
+- **Fail closed on a newer hold:** if the diver has an unresolved `medical_review` on any booking
+  that is no older than that clean signature, the booking blocks on the hold instead — a health
+  disclosure made at or after the last clean signing means the signature can no longer be trusted.
+- Otherwise the booking's own record (pending/expired/none) drives the normal send flow; a stale
+  completed record never reads as complete.
+
+The 365-day window follows the operator norm for the medical statement a release carries (RSTC/WRSTC
+diver-medical forms are customarily dated within 12 months); the liability release and the medical
+statement are bundled into one window for simplicity.
 
 This resolution lives in exactly one place — `listTripReadiness` (`src/db/readiness.ts`) — which
 already feeds the roster, the Today queue, the manifest, the check-in screen, and the fail-closed
@@ -39,6 +46,13 @@ inserts a `completed` record snapshotting the current template, marked with a ne
 supersedes any live pending link and is idempotent. The provider seam
 (`inPersonAttestationProvider` in `src/lib/signatures.ts`) keeps the retention ADR's rule that no
 route or query fabricates evidence outside a provider.
+
+Because this path records a clean release with no captured medical questionnaire, the medical block
+cannot be conjured from thin air: the caller must pass an explicit `medicalAttested` — staff
+affirming, in a required control of its own (not a buried confirm), that they reviewed the paper
+medical form and no answer needs physician sign-off. Without it the record is refused. A flagged
+medical must go through the diver-facing link, which captures the questionnaire and routes to
+`medical_review`.
 
 ## Alternatives considered
 

@@ -343,12 +343,14 @@ export async function completeWaiver(
 }
 
 /**
- * Every completed release on file for a set of divers at a shop, grouped by
- * person — the evidence the sign-once carry-forward draws on. Superseded and
- * non-completed records are excluded here; the caller decides currency (current
- * template version, age) per booking via `isCompletedWaiverCurrent`.
+ * Every *signed* release on file for a set of divers at a shop, grouped by
+ * person — the evidence the sign-once rule draws on. Includes both `completed`
+ * and `medical_review` records (superseded ones excluded): the caller needs the
+ * medical holds too, so a stale clean signature can never carry a diver past a
+ * newer, unresolved medical review. Currency (template version, age) is decided
+ * per booking by `effectiveWaiverForBooking`.
  */
-export async function listCompletedWaiversByPerson(
+export async function listSignedWaiversByPerson(
   db: DbExecutor,
   shopId: string,
   personIds: string[],
@@ -362,7 +364,7 @@ export async function listCompletedWaiversByPerson(
       and(
         eq(waiverRecords.shopId, shopId),
         inArray(waiverRecords.personId, personIds),
-        eq(waiverRecords.status, "completed"),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
         isNull(waiverRecords.supersededAt),
       ),
     );
@@ -383,6 +385,7 @@ export type InPersonWaiverOutcome =
         | "booking_unavailable"
         | "template_not_found"
         | "staff_not_found"
+        | "medical_attestation_required"
         | "invalid_signature";
     };
 
@@ -394,15 +397,28 @@ export type InPersonWaiverOutcome =
  * `in_person_attested` and stamped with the accountable staff member. Because
  * the record is person-scoped it carries forward like any other signature.
  *
- * Guards match `issueWaiverRequest`: the booking must be live, the actor a
- * staff member of the shop. Idempotent — a booking already signed or in medical
- * review keeps its existing record rather than stacking a second one.
+ * The medical block is load-bearing and cannot be conjured from thin air: this
+ * path records a clean release only, so the caller must pass an explicit
+ * `medicalAttested` — staff affirming they reviewed the paper medical form and
+ * no answer needs physician sign-off. Without it the record is refused, and a
+ * flagged medical must go through the diver-facing link, which captures the
+ * questionnaire and routes to review. Guards otherwise match
+ * `issueWaiverRequest`: the booking must be live, the actor a staff member of
+ * the shop. Idempotent — a booking already signed or in medical review keeps its
+ * existing record rather than stacking a second one.
  */
 export async function recordInPersonWaiver(
   db: AppDb,
-  input: { shopId: string; bookingId: string; recordedByPersonId: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    recordedByPersonId: string;
+    medicalAttested: boolean;
+    now?: Date;
+  },
 ): Promise<InPersonWaiverOutcome> {
   const now = input.now ?? new Date();
+  if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
   return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
     const [staff] = await tx
       .select({ id: people.id })
