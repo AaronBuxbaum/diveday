@@ -9,6 +9,7 @@ import {
   rollCallCheckpoints,
   type TripManifest,
 } from "@/lib/manifests";
+import { medicalWaiverSignedAt } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
@@ -108,6 +109,11 @@ export async function getTripManifests(
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
   );
+  // Signing date of a completed medical waiver, for spotting a stale medical.
+  // Paper (in-person) records carry no questionnaire, so they resolve to null.
+  const medicalSignedByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, medicalWaiverSignedAt(row.waiver)] as const),
+  );
   const tripInput = {
     id: trip.id,
     title: trip.title,
@@ -125,6 +131,7 @@ export async function getTripManifests(
     rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
     // The card is re-checked here, so a revoked card takes the request off the manifest.
     nitroxRequested: booking.wantsNitrox && certified.has(person.id),
+    medicalWaiverSignedAt: medicalSignedByBooking.get(booking.id) ?? null,
   }));
   // Carry a not-boarded result forward across the ordered checkpoints so an
   // after-dive list doesn't reset to "awaiting" for a diver who already left.

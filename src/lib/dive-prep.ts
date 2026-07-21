@@ -17,7 +17,15 @@
  *     counted.
  */
 
-export type RentalItemKind = "bcd" | "regulator" | "wetsuit" | "boots" | "mask_fins" | "weights";
+export type RentalItemKind =
+  | "bcd"
+  | "regulator"
+  | "wetsuit"
+  | "boots"
+  | "mask_fins"
+  | "weights"
+  | "dive_computer"
+  | "gopro";
 
 export type RentalFit = {
   rentsBcd: boolean;
@@ -25,6 +33,8 @@ export type RentalFit = {
   rentsWetsuit: boolean;
   rentsMaskFins: boolean;
   rentsWeights: boolean;
+  rentsDiveComputer: boolean;
+  rentsGopro: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
   bootSize: string | null;
@@ -84,10 +94,16 @@ export const RENTAL_ITEM_LABELS: Record<RentalItemKind, string> = {
   boots: "Boots",
   mask_fins: "Mask & fins",
   weights: "Weights",
+  dive_computer: "Dive computer",
+  gopro: "GoPro",
 };
 
 /** Kit that has no size to record, so a blank is expected rather than a gap. */
-export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = ["regulator"];
+export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = [
+  "regulator",
+  "dive_computer",
+  "gopro",
+];
 
 /** Fixed order so the list reads the same way every morning. */
 const KIND_ORDER: RentalItemKind[] = [
@@ -97,6 +113,8 @@ const KIND_ORDER: RentalItemKind[] = [
   "boots",
   "mask_fins",
   "weights",
+  "dive_computer",
+  "gopro",
 ];
 
 function size(value: string | null): string | null {
@@ -118,6 +136,8 @@ function rentedItems(fit: RentalFit): { kind: RentalItemKind; size: string | nul
   }
   if (fit.rentsMaskFins) items.push({ kind: "mask_fins", size: size(fit.finSize) });
   if (fit.rentsWeights) items.push({ kind: "weights", size: size(fit.weightPreference) });
+  if (fit.rentsDiveComputer) items.push({ kind: "dive_computer", size: null });
+  if (fit.rentsGopro) items.push({ kind: "gopro", size: null });
   return items;
 }
 

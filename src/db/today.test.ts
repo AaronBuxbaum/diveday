@@ -133,6 +133,8 @@ describe("today's work queue (in-memory PGlite)", () => {
         rentsWetsuit: true,
         rentsMaskFins: true,
         rentsWeights: true,
+        rentsDiveComputer: false,
+        rentsGopro: false,
         bcdSize: "M",
       });
     }

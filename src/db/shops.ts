@@ -33,6 +33,20 @@ export async function setShopPackingList(db: AppDb, shopId: string, packingList:
 }
 
 /**
+ * Replaces the shop's rental catalog — which gear it rents. The route narrows
+ * the incoming values to known kinds (src/lib/rentals.ts) before calling this,
+ * so an unknown string can never be stored.
+ */
+export async function setShopRentalItems(db: AppDb, shopId: string, rentalItems: string[]) {
+  const [shop] = await db
+    .update(shops)
+    .set({ rentalItems })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * Sets the front-desk address published on the shop's public pages. Empty
  * strings clear the field rather than publishing a blank contact, so a shop can
  * take itself back off the public page by emptying the box.
