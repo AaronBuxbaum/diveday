@@ -1,4 +1,4 @@
-# 20260721-argos-visual-regression — Argos visual regression on six key surfaces
+# 20260721-argos-visual-regression — Argos visual regression on ten key surfaces, phone + desktop
 
 - **Status:** Accepted
 - **Date:** 2026-07-21
@@ -20,11 +20,14 @@ clock-anchored seed itself — dates and times move with the wall clock.
 
 Add [Argos](https://argos-ci.com) visual regression via `@argos-ci/playwright` (dev dependency):
 
-- `e2e/visual.spec.ts` captures six key surfaces — landing, public schedule, course page, Today,
-  trip manage, boat manifest — in light and dark at one desktop viewport: **12 screenshots per
-  run**, sized to stay inside Argos's free tier (~5,000/month) at ~10 pushes/day.
-- Clock-derived text (times, dates) is masked so the moving seed cannot produce spurious diffs;
-  layout, spacing, and color remain fully asserted.
+- `e2e/visual.spec.ts` captures ten key surfaces — landing, sign-in, public schedule, the public
+  reef briefing, course page, Today, the divers roster, a diver profile, trip manage, and boat
+  manifest — in light and dark at **both** a phone (390) and a desktop (1280) viewport, matching the
+  widths in `scripts/screenshot.mjs`: **40 screenshots per run**. Both viewports come from one
+  `argosScreenshot` call via its `viewports` option, which suffixes each name with ` vw-<width>`.
+- Clock-derived text (times, month-name dates, and numeric `M/D/YYYY` dates such as cert expiry) is
+  masked so the moving seed cannot produce spurious diffs; layout, spacing, and color remain fully
+  asserted.
 - The Argos reporter in `playwright.config.ts` uploads only when `ARGOS_TOKEN` is set (a GitHub
   Actions secret). Without it — local runs, forks, before the Argos project exists — capture
   still happens and the reporter is a no-op, so the suite never depends on the service to pass.
@@ -43,18 +46,23 @@ Add [Argos](https://argos-ci.com) visual regression via `@argos-ci/playwright` (
   first paid tier is ~$199/month; poorest fit for a cost-sensitive repo.
 - **Chromatic** — Storybook-first; this repo has no Storybook, and its paid tier is similarly
   expensive.
-- **Full matrix (both viewports)** — 24 screenshots/run overshoots the free tier at the expected
-  push rate. Phone-viewport coverage can be added to specific surfaces later if a paid plan is
-  ever justified.
+- **Single desktop viewport** — the original decision (12 screenshots/run) kept the footprint
+  minimal but never looked at the phone layout, where DiveDay's dock-side and diver-facing surfaces
+  actually get used. Reversed here: experience is the product, and mobile is where much of it is
+  lived, so both viewports are worth the screenshot budget.
 
 ## Consequences
 
 - New dev dependency `@argos-ci/playwright`; screenshots ride the existing e2e job, adding a few
   seconds per run.
+- At 40 screenshots/run the free ~5,000/month tier comfortably covers ~4 pushes/day; a busier
+  cadence than that is the point at which trimming surfaces, dropping to one viewport, or moving to
+  a paid tier becomes the lever. The `viewports`-suffixed names (` vw-390` / ` vw-1280`) mean the
+  first run after this change re-establishes every baseline for a human to approve.
 - Activation requires a one-time manual step: create the Argos project (GitHub sign-in at
   argos-ci.com, import the repo) and add `ARGOS_TOKEN` to the repository's Actions secrets. Until
   then the integration is dormant and CI is unaffected.
-- Visual changes to the six covered surfaces now require an explicit approval in Argos once the
+- Visual changes to the ten covered surfaces now require an explicit approval in Argos once the
   token is live; agents making intentional UI changes should note this in the PR so the reviewer
   approves the diff alongside the code.
 - The masked regions (time/date text) are excluded from visual assertions on those surfaces —
