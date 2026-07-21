@@ -246,3 +246,44 @@ export function buildDiverChecklist(
 export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverChecklistItem | null {
   return items.find((item) => item.state === "action") ?? null;
 }
+
+/**
+ * Terse imperatives for a reminder — only the codes a diver can act on before
+ * the dock. A "waiting" blocker (verification, medical review) is the shop's to
+ * finish, so it never appears here as a to-do the diver can't complete.
+ */
+const REMINDER_ACTION: Partial<Record<ReadinessBlockerCode, string>> = {
+  waiver_pending: "sign your waiver",
+  certification_missing: "bring your certification card",
+  certification_expired: "sort out your lapsed certification with the shop",
+  certification_insufficient: "check your certification level with the shop",
+  specialty_missing: "bring your specialty card",
+  specialty_expired: "update your specialty card with the shop",
+  nitrox_missing: "bring your nitrox card",
+  payment_due: "settle your balance",
+};
+
+export type ReminderReadiness = {
+  /** Short imperatives for what's still on the diver, e.g. "sign your waiver". */
+  outstanding: string[];
+  /** True when a medical answer needs review — a doctor's sign-off may block boarding. */
+  medicalReview: boolean;
+};
+
+/**
+ * What a pre-trip reminder should name for one booking: the diver's own
+ * outstanding actions and whether a medical answer is under review. Derived from
+ * the same checklist the diver page shows, so the reminder never diverges from
+ * what the engine decided. A fully-ready diver yields no items and no medical
+ * flag, so the reminder stays a warm nudge instead of a false to-do.
+ */
+export function reminderReadiness(items: readonly DiverChecklistItem[]): ReminderReadiness {
+  const outstanding: string[] = [];
+  let medicalReview = false;
+  for (const item of items) {
+    if (item.code === "medical_review") medicalReview = true;
+    const phrase = item.state === "action" && item.code ? REMINDER_ACTION[item.code] : undefined;
+    if (phrase) outstanding.push(phrase);
+  }
+  return { outstanding, medicalReview };
+}
