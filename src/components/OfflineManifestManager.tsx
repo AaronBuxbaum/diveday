@@ -27,9 +27,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
     if (!tripId) return;
     const envelope = await loadOfflineManifest(tripId);
     setSaved(envelope);
-    setMessage(
-      envelope ? "Encrypted copy saved on this device." : "No offline copy on this device yet.",
-    );
+    setMessage(envelope ? "Manifest saved on this device." : "No offline copy on this device yet.");
   }, [tripId]);
 
   const reconcile = useCallback(async () => {
@@ -42,16 +40,18 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
         const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
         setMessage(
           rejected > 0
-            ? `${rejected} offline change${rejected === 1 ? " needs" : "s need"} review; the live manifest was not overwritten.`
+            ? `${rejected} offline change${rejected === 1 ? " didn't" : "s didn't"} match the live manifest and ${rejected === 1 ? "wasn't" : "weren't"} applied — open the live manifest to sort it out.`
             : pending > 0
-              ? `${pending} offline change${pending === 1 ? " is" : "s are"} waiting to sync.`
-              : "Offline roll call is reconciled with the live manifest.",
+              ? `${pending} offline change${pending === 1 ? " is" : "s are"} still waiting to send.`
+              : "Offline roll call is all caught up with the live manifest.",
         );
         router.refresh();
       }
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Offline changes could not be reconciled.",
+        error instanceof Error
+          ? error.message
+          : "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
       );
     }
   }, [router, tripId]);
@@ -59,24 +59,26 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   useEffect(() => {
     refresh()
       .then(reconcile)
-      .catch(() => setMessage("This browser could not read its offline copy."));
+      .catch(() => setMessage("This device couldn't open its saved copy. Save a fresh one."));
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
   }, [reconcile, refresh]);
 
   async function save() {
     setBusy(true);
-    setMessage("Encrypting the latest manifest and preparing offline mode…");
+    setMessage("Saving the latest manifest to this device…");
     try {
       await primeOfflineManifestShell();
       const envelope = await saveOfflineManifest(payload);
       setSaved(envelope);
       setMessage(
-        "Saved. Open offline roll call once before leaving service to verify this device.",
+        "Saved. Open the offline roll call once before you lose signal, so you know this phone has it.",
       );
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "This device could not save the manifest.",
+        error instanceof Error
+          ? error.message
+          : "This device couldn't save the manifest. Try again while you still have signal.",
       );
     } finally {
       setBusy(false);
@@ -98,11 +100,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
   const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
   const freshnessLabel =
-    freshness === "current"
-      ? "Fresh snapshot"
-      : freshness === "aging"
-        ? "Aging snapshot"
-        : "Stale snapshot";
+    freshness === "current" ? "Fresh copy" : freshness === "aging" ? "Aging copy" : "Stale copy";
 
   return (
     <section
@@ -115,12 +113,12 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
             Offline safety copy
           </h2>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Save an encrypted copy to this device before leaving service. It includes every
-            roll-call checkpoint; changes wait here until the live manifest can verify and reconcile
-            them.
+            Save the manifest to this phone before you head out of signal. Roll call keeps working
+            offline, and every change is double-checked against the live manifest once you&apos;re
+            back.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ConnectivityStatus />
+            <ConnectivityStatus offlineLabel={saved ? "No signal · device copy" : "No signal"} />
             {freshness ? (
               <span
                 className={
@@ -140,8 +138,8 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
           </p>
           {saved ? (
             <p className="mt-1 text-xs text-muted">
-              Saved {new Date(saved.snapshot.savedAt).toLocaleString()} · {pending} pending ·{" "}
-              {rejected} conflicts
+              Saved {new Date(saved.snapshot.savedAt).toLocaleString()} · {pending} waiting to send
+              · {rejected} need a look
             </p>
           ) : null}
         </div>

@@ -132,7 +132,7 @@ describe("syncOfflineManifest", () => {
     );
 
     await expect(syncOfflineManifest(payload.manifests[0].trip.id)).rejects.toThrow(
-      /could not reconcile/,
+      /couldn't be checked against the live manifest/,
     );
 
     const reloaded = await loadOfflineManifest(payload.manifests[0].trip.id);

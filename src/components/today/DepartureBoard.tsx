@@ -73,13 +73,13 @@ function DepartureCard({
             href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
             className={buttonClass({ variant: "secondary" })}
           >
-            Manifest
+            Open manifest
           </Link>
           <Link
             href={`/shop/${shopSlug}/trips/${departure.tripId}`}
             className={buttonClass({ variant: "secondary" })}
           >
-            Roster
+            Open roster
           </Link>
         </div>
       </div>
@@ -95,7 +95,9 @@ function DepartureCard({
           list below.
         </p>
       ) : booked === 0 ? (
-        <p className="mt-3 text-sm text-muted">No one is booked on this departure.</p>
+        <p className="mt-3 text-sm text-muted">
+          No one&apos;s booked yet — share the trip page and they&apos;ll show up here.
+        </p>
       ) : (
         <p className="mt-3 text-sm font-semibold text-success">
           <span aria-hidden="true">✓ </span>

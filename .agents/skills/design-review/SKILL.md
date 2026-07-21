@@ -29,7 +29,16 @@ Delight is this product's differentiator — this review is where that stops bei
    git diff main --unified=0 | grep -nE '#[0-9a-fA-F]{3,8}|-(red|blue|cyan|teal|zinc|gray|slate|orange|amber)-[0-9]'
    ```
    Raw hex or palette-scale classes in components are findings (ADR-0004).
-6. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
+6. Grep the changed files for implementation jargon leaking into user-facing strings
+   (principles §4 — "never surface the implementation"):
+   ```bash
+   git diff main --unified=0 -- 'src/app' 'src/components' 'src/lib' \
+     | grep -inE 'encrypt|decrypt|snapshot|sync(ing|ed)?\b|reconcil|fail[- ]closed|multi-tenant|tenant|token|cache|envelope|payload'
+   ```
+   Hits inside JSX text, string literals shown to users, or `aria-` labels are findings; hits in
+   identifiers, imports, or comments are fine. The fix is the human translation ("saved on this
+   phone", "DiveDay double-checks it when you're back in service"), never a vaguer claim.
+7. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
    the screenshot paths.
 
 ## Output

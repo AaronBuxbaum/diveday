@@ -23,7 +23,7 @@ export function NoticeBanner({ notice }: { notice?: string }) {
                         : notice === "duplicate"
                           ? "Another diver already uses that email in this shop."
                           : notice === "refunded"
-                            ? "Payment refunded and the diver's trip payment gate was reopened."
+                            ? "Payment refunded — the trip now shows as unpaid for this diver."
                             : notice === "booked"
                               ? "Activity booked. Review it below, then create and send the invoice."
                               : notice === "trip_full"

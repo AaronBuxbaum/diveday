@@ -14,7 +14,7 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
       <div className="flex flex-col gap-3 sm:flex-row">
         <form action={enterDemoAction}>
           <SubmitButton
-            pendingLabel="Spinning up your shop…"
+            pendingLabel="Getting your shop ready…"
             className={buttonClass({
               size: "cta",
               className: "cursor-pointer disabled:opacity-70",

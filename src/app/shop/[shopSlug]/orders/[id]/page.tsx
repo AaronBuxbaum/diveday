@@ -77,7 +77,7 @@ const NOTICE_MESSAGES: Record<string, string> = {
   refresh_failed: "Couldn't reach Stripe to refresh this order.",
   voided: "Order voided.",
   void_failed: "Couldn't void this order — it may already be paid or void.",
-  refunded: "Payment refunded and the diver's trip payment gate was reopened.",
+  refunded: "Payment refunded — the trip now shows as unpaid for this diver.",
   refund_failed: "Couldn't refund this order — it may not have a refundable payment yet.",
 };
 

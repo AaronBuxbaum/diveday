@@ -10,7 +10,7 @@ function AppBar({ label }: { label: string }) {
 export function CaptainRollCallFallback() {
   return (
     <div className="bg-background">
-      <AppBar label="Encrypted offline copy · current" />
+      <AppBar label="Offline copy · up to date" />
       <div className="space-y-4 p-4">
         <div>
           <p className="text-xs font-medium tracking-widest text-primary uppercase">
@@ -65,7 +65,7 @@ export function FrontDeskReadinessFallback() {
       <div className="p-5">
         <p className="text-xs font-medium tracking-widest text-primary uppercase">Readiness</p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight">The answer before the dock</h3>
-        <p className="mt-1 text-sm text-muted">Unknown evidence never clears a diver.</p>
+        <p className="mt-1 text-sm text-muted">No diver clears until everything checks out.</p>
         <div className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
           {[
             ["Priya Sharma", "Waiver needs attention", "text-danger"],

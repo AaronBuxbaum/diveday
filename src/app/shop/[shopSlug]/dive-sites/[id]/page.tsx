@@ -350,8 +350,8 @@ export default async function EditDiveSitePage({
         <fieldset className="rounded-lg border border-border bg-surface-sunken p-5">
           <legend className="px-1 text-sm font-medium">Certification requirements</legend>
           <p className="text-sm text-muted">
-            The site's own gate. Every trip that visits this site enforces at least this — the
-            readiness service takes the stricter of the site and the trip.
+            What this site itself demands. Every trip that visits enforces at least this — when the
+            trip asks for more, the stricter rule wins.
           </p>
           <FieldGrid columns={1} className="mt-4">
             <Field label="Minimum certification">
