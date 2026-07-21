@@ -39,6 +39,7 @@ import {
   addToWaitlistAction,
   cancelTripAction,
   clearConditionsAction,
+  inviteWaitlistAction,
   issueWaiverAction,
   markPaymentAction,
   reinstateTripAction,
@@ -195,7 +196,15 @@ export default async function ManageTripPage({
         trip={trip}
       />
 
-      <WaitlistSection waitlist={waitlist} />
+      <WaitlistSection
+        waitlist={waitlist}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        shopName={shop.name}
+        tripTitle={trip.title}
+        tripWhen={formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+        inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
+      />
 
       {cancelled ? null : (
         <AddDiverSection

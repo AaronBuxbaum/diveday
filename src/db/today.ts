@@ -416,8 +416,9 @@ export async function getTodayWork(
         subject: trip.title,
         context: when,
         detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} opened up and ${waiting} ${waiting === 1 ? "person is" : "people are"} on the wait list.`,
-        actionLabel: "Offer the seat",
-        href: tripHref,
+        // Lands right on the wait-list, where one tap invites the next in line.
+        actionLabel: "Invite from wait list",
+        href: `${tripHref}#waitlist`,
         dueAt: trip.startsAt,
       });
     }

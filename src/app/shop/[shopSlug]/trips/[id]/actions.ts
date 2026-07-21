@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
@@ -14,7 +15,7 @@ import {
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
-import { joinTripWaitlist } from "@/db/waitlist";
+import { joinTripWaitlist, recordWaitlistInvite } from "@/db/waitlist";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -194,6 +195,18 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
         ? "diver-already"
         : "diver-unavailable";
   redirect(`${back}?notice=${code}`);
+}
+
+/**
+ * Record that staff invited a wait-list diver to grab a freed seat. Called
+ * imperatively from the one-tap invite control (which also opens the mail
+ * composer); this just stamps `invitedAt` and refreshes the roster so the
+ * entry reads "Invited just now" and nobody double-invites.
+ */
+export async function inviteWaitlistAction(shopSlug: string, tripId: string, entryId: string) {
+  const s = await requireStaffSession();
+  await recordWaitlistInvite(await getDb(), { shopId: s.user.shopId, entryId });
+  revalidatePath(backPath(shopSlug, tripId));
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {

@@ -224,6 +224,7 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
   const parsed = bookSchema.safeParse({
     fullName: formData.get("fullName-0"),
     email: formData.get("email-0"),
+    phone: formData.get("phone") || undefined,
   });
   if (!parsed.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
   const dbi = await getDb();
