@@ -59,7 +59,9 @@ function reminderSmsBody(input: {
   const when = input.lead === "week" ? "this week" : "tomorrow";
   const date = formatShortDate(input.startsAt, "en-US", input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
-  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock 30 min early.`;
+  // On the last reminder, name the waiver/medical that can keep a diver ashore.
+  const safety = input.lead === "day" ? " Finish any waiver or medical form before you come." : "";
+  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock 30 min early.${safety}`;
 }
 
 /**

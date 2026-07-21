@@ -23,6 +23,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     tone: "danger",
     text: "Booking cancelled, but the automatic refund didn't go through — issue it from the diver's payments.",
   },
+  "booking-removed-refund-review": {
+    tone: "danger",
+    text: "Booking cancelled. The payment record and Stripe disagree on what was captured — review the diver's payments before issuing any refund.",
+  },
   "booking-restored": { tone: "success", text: "Back on the roster." },
   "diver-added": { tone: "success", text: "Diver added to the trip." },
   "diver-waitlisted": { tone: "success", text: "Diver added to the wait list." },

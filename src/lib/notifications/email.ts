@@ -111,11 +111,19 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   const readyHtml = input.readinessUrl
     ? `<p><a href="${escapeHtml(input.readinessUrl)}">See what's left before you sail</a>.</p>`
     : "";
+  // The last automated touch before the dock is the last chance to clear a
+  // waiver or medical that would keep a diver off the boat (dive-domain review).
+  const safety =
+    input.lead === "day"
+      ? "If your waiver or a medical/physician form is still outstanding, please finish it before you travel — it's needed to board."
+      : "";
+  const safetyText = safety ? `\n\n${safety}` : "";
+  const safetyHtml = safety ? `<p>${escapeHtml(safety)}</p>` : "";
 
   return {
     subject: `You sail ${when} — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early.${readyText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early.</p>${readyHtml}`,
+    text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early.${safetyText}${readyText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early.</p>${safetyHtml}${readyHtml}`,
   };
 }
 
