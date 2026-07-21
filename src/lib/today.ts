@@ -109,6 +109,11 @@ export type TodayAction = {
    * navigating. `href` stays as the no-JS fallback to the roster row.
    */
   waiver?: { bookingIds: string[] };
+  /**
+   * Present when the tap re-sends a failed booking confirmation in place. `href`
+   * stays as the no-JS fallback to the trip.
+   */
+  resend?: { bookingId: string };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };

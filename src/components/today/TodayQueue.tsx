@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { ACTION_KIND_META, groupActions, type TodayAction } from "@/lib/today";
+import { ResendConfirmationControl } from "./ResendConfirmationControl";
 import { WaiverSendControl } from "./WaiverSendControl";
 
 const CHIP_TONES = {
@@ -37,6 +38,12 @@ function ActionRow({ action, shopSlug }: { action: TodayAction; shopSlug: string
             shopSlug={shopSlug}
             surface="today"
             bookingIds={action.waiver.bookingIds}
+            label={action.actionLabel}
+          />
+        ) : action.resend ? (
+          <ResendConfirmationControl
+            shopSlug={shopSlug}
+            bookingId={action.resend.bookingId}
             label={action.actionLabel}
           />
         ) : (

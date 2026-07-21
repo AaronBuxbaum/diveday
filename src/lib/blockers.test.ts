@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { blockerFixFor, distinctBlockedDivers, totalBlockedDivers } from "./blockers";
+import {
+  annotateAlsoOn,
+  type BlockerQueueTrip,
+  blockerFixFor,
+  distinctBlockedDivers,
+  totalBlockedDivers,
+} from "./blockers";
 import type { ReadinessBlocker } from "./readiness";
 
 const ctx = {
@@ -94,5 +100,38 @@ describe("totalBlockedDivers", () => {
     ];
     expect(totalBlockedDivers(trips)).toBe(3);
     expect(distinctBlockedDivers(trips)).toBe(2);
+  });
+});
+
+describe("annotateAlsoOn", () => {
+  const trip = (tripId: string, title: string, personIds: string[]): BlockerQueueTrip => ({
+    tripId,
+    title,
+    startsAt: new Date(),
+    courseTitle: null,
+    booked: personIds.length,
+    ready: 0,
+    divers: personIds.map((personId) => ({ personId, alsoOn: [] }) as never),
+  });
+
+  it("ties a repeat diver's rows together with the other trip titles", () => {
+    const trips = [
+      trip("a", "Wreck Trip", ["p1", "p2"]),
+      trip("b", "Reef Dive", ["p1"]),
+      trip("c", "Night Dive", ["p1"]),
+    ];
+    annotateAlsoOn(trips);
+    // p1 is on all three: each row lists the other two.
+    expect(trips[0].divers[0].alsoOn).toEqual(["Reef Dive", "Night Dive"]);
+    expect(trips[1].divers[0].alsoOn).toEqual(["Wreck Trip", "Night Dive"]);
+    // p2 is only on one boat — no cross-reference.
+    expect(trips[0].divers[1].alsoOn).toEqual([]);
+  });
+
+  it("dedupes by trip identity, not title, so same-named departures stay distinct", () => {
+    const trips = [trip("a", "Two-Tank Reef", ["p1"]), trip("b", "Two-Tank Reef", ["p1"])];
+    annotateAlsoOn(trips);
+    expect(trips[0].divers[0].alsoOn).toEqual(["Two-Tank Reef"]);
+    expect(trips[1].divers[0].alsoOn).toEqual(["Two-Tank Reef"]);
   });
 });

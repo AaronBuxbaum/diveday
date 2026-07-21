@@ -20,6 +20,7 @@ import {
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { readinessLinkPath } from "@/lib/readiness-links";
 
 export const metadata: Metadata = {
   title: "Complete your waiver — Scuba",
@@ -136,6 +137,10 @@ export default async function WaiverPage({
   const shopName = shop.name;
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
+    // The token knows its booking, so send them onward to their own readiness
+    // page rather than dead-ending on the shop home — that's where the rest of
+    // their pre-trip prep (payment, rentals, nitrox) lives.
+    const readyPath = readinessLinkPath(state.record.bookingId);
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
         <section className="rise-in rounded-lg border border-accent/40 bg-accent/10 p-7">
@@ -146,6 +151,9 @@ export default async function WaiverPage({
               ? "Thanks — a team member will privately review one of your answers before the trip. Please don’t assume you’re cleared until they confirm."
               : "You’re all set on the waiver. We’ll see you at the dock; your shop will let you know if anything else is needed."}
           </p>
+          <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
+            See what’s left before you sail
+          </Link>
         </section>
       </main>
     );
@@ -233,15 +241,6 @@ export default async function WaiverPage({
           link before it expires.
         </p>
       </header>
-
-      <ol
-        className="mt-8 grid grid-cols-3 gap-2 text-center text-sm font-medium text-muted"
-        aria-label="Waiver progress"
-      >
-        <li className="rounded-lg bg-primary/10 px-2 py-2 text-primary">1. Read</li>
-        <li className="rounded-lg bg-surface-sunken px-2 py-2">2. Confirm</li>
-        <li className="rounded-lg bg-surface-sunken px-2 py-2">3. Ready</li>
-      </ol>
 
       {saved ? (
         <p
