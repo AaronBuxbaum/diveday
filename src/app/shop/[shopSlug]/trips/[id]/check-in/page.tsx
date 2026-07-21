@@ -218,10 +218,14 @@ export default async function CheckInPage({
                       <span className="font-semibold text-foreground"> · Nitrox requested</span>
                     ) : null}
                   </p>
-                  {diver.medicalWaiverSignedAt ? (
+                  {diver.medicalWaiver ? (
                     <p className="mt-1 text-sm text-muted">
-                      <span className="font-semibold text-foreground">Medical waiver signed:</span>{" "}
-                      {formatShortDate(diver.medicalWaiverSignedAt, "en-US", shop.timezone)}
+                      <span className="font-semibold text-foreground">
+                        {diver.medicalWaiver.source === "paper"
+                          ? "Medical reviewed (paper):"
+                          : "Medical waiver signed:"}
+                      </span>{" "}
+                      {formatShortDate(diver.medicalWaiver.at, "en-US", shop.timezone)}
                     </p>
                   ) : null}
                   {isBlocked ? (
@@ -279,7 +283,7 @@ export default async function CheckInPage({
 
       {totalDivers === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center text-muted">
-          No one is booked on this departure yet. Bookings show up here ready to check in.
+          No one is booked on this departure yet. Bookings show up here ready to board.
         </p>
       ) : null}
     </main>
