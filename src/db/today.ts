@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -31,7 +32,7 @@ export async function todayNextDepartureTripId(
   db: AppDb,
   shopId: string,
   timeZone: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): Promise<string | null> {
   const today = shopDay(now, timeZone);
   const rows = await db
@@ -272,7 +273,7 @@ export async function getTodayWork(
   shopId: string,
   shopSlug: string,
   timeZone: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
   const upcoming = await upcomingTripsWithCounts(db, shopId, now);

@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_WORKER_COUNT, e2eBaseURL, e2ePort, e2eWorkerIndexes } from "./e2e/servers";
+import {
+  E2E_FROZEN_CLOCK,
+  E2E_WORKER_COUNT,
+  e2eBaseURL,
+  e2ePort,
+  e2eWorkerIndexes,
+} from "./e2e/servers";
 
 // Sandboxed agent environments pre-install Chromium (often a different revision
 // than this Playwright version expects) and block browser downloads. Prefer an
@@ -23,6 +29,12 @@ const serverEnv = {
   DATABASE_URL_UNPOOLED: "",
   PGLITE_DATA_DIR: "memory",
   DIVEDAY_E2E: "1",
+  // Freeze the server clock so the clock-anchored seed and every relative
+  // render resolve to one fixed instant on every run — the server half of what
+  // keeps Argos baselines stable (the browser half is page.clock in
+  // e2e/visual.spec.ts). src/lib/clock.ts reads this and, as a guard, ignores
+  // it whenever a real DATABASE_URL is set, so it can never freeze production.
+  DIVEDAY_CLOCK: E2E_FROZEN_CLOCK,
   AUTH_TRUST_HOST: "true",
   AUTH_SECRET: process.env.AUTH_SECRET ?? "diveday-e2e-secret",
   // External providers are unit-tested through injected fetchers. Keeping them

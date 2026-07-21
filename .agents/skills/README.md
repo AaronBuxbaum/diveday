@@ -17,6 +17,7 @@ under the same sync duties (docs/README.md).
 | `design-review` | After building or changing any user-facing surface |
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
+| `e2e-and-argos` | Adding/changing a user-facing flow or surface; a visual baseline diffing on time; deciding what needs an e2e spec or Argos snapshot |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`

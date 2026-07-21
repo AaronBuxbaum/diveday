@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
@@ -63,7 +64,7 @@ export async function upsertTripRequirements(
         requiredSpecialties: input.requiredSpecialties,
         requiresNitrox: input.requiresNitrox,
         requiresPayment: input.requiresPayment,
-        updatedAt: new Date(),
+        updatedAt: nowDate(),
       },
     })
     .returning();
@@ -143,7 +144,7 @@ export async function reviewCertification(
     .set({
       status: input.status,
       reviewNote: input.reviewNote?.trim() || null,
-      reviewedAt: new Date(),
+      reviewedAt: nowDate(),
     })
     .where(
       and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
@@ -204,7 +205,7 @@ export async function reviewSpecialtyCertification(
     .set({
       status: input.status,
       reviewNote: input.reviewNote?.trim() || null,
-      reviewedAt: new Date(),
+      reviewedAt: nowDate(),
     })
     .where(
       and(
@@ -240,7 +241,7 @@ export async function listTripReadiness(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ) {
   const [requirement, siteRequirement, waiverRows, currentTemplate] = await Promise.all([
     getTripRequirements(db, shopId, tripId),

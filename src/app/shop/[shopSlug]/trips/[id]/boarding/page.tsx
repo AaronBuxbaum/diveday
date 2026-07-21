@@ -16,6 +16,7 @@ import { getTripManifest, recordRollCall } from "@/db/manifests";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
 import { type BoardingCheck, buildBoardingChecks } from "@/lib/boarding";
+import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import { requireStaffSession } from "@/lib/session";
@@ -70,7 +71,7 @@ export default async function BoardingPage({
   ]);
   if (!manifest) notFound();
 
-  const now = new Date();
+  const now = nowDate();
   const back = `/shop/${shopSlug}/trips/${tripId}/boarding`;
   const { totalDivers, boarded, blocked } = manifest.summary;
   const allAboard = totalDivers > 0 && boarded === totalDivers;

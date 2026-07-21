@@ -59,9 +59,9 @@ adapters and must not introduce unique requirements.
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
 in [.agents/skills/README.md](.agents/skills/README.md): **new-feature**, **verify**,
-**design-review**, **schema-change**, **debug**, and **adr**. Other providers should read the
-corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical docs, tests, or
-code, the skill is stale and must be fixed in the same change.
+**design-review**, **schema-change**, **debug**, **e2e-and-argos**, and **adr**. Other providers
+should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical
+docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 ## Parallel work
 
@@ -90,7 +90,16 @@ code, the skill is stale and must be fixed in the same change.
   to inline `"use server"` closures for single-page mutations; `src/app/actions/` is only for actions
   shared across pages; a large page colocates its actions/zod schemas in a sibling `actions.ts`.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
-  bug fixes begin with a failing regression test.
+  bug fixes begin with a failing regression test. Every important **flow** a user runs (booking,
+  waivers, cert/nitrox gating, manifest/roll call, refunds, scheduling, sign-in) gets an `e2e/`
+  spec, and every important **surface** they look at gets an Argos snapshot in `e2e/visual.spec.ts`
+  — especially when introducing a feature. See the **e2e-and-argos** skill; if unsure whether
+  something qualifies, it does.
+- **Read time through the clock.** `src/lib` and `src/db` never call `new Date()` / `Date.now()`
+  directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
+  This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render
+  stay pixel-stable for Argos; in production the clock is the native call, unchanged. `pnpm
+  check:clock` enforces it. Never stabilise a visual test by masking moving text — freeze the clock.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->

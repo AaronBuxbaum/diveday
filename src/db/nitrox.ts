@@ -1,4 +1,5 @@
 import { and, asc, eq, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { bookings, nitroxCertifications, people } from "./schema";
 
@@ -43,7 +44,7 @@ export async function reviewNitroxCertification(
     .set({
       status: input.status,
       reviewNote: input.reviewNote?.trim() || null,
-      reviewedAt: new Date(),
+      reviewedAt: nowDate(),
     })
     .where(
       and(

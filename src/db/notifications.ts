@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import {
   type Notification,
   type NotificationDelivery,
@@ -48,7 +49,7 @@ export async function recordNotificationDelivery(
     .limit(1);
   if (!booking) return null;
 
-  const attemptedAt = new Date();
+  const attemptedAt = nowDate();
   const providerMessageId =
     input.delivery.status === "sent" ? input.delivery.providerMessageId : null;
   const latest = {

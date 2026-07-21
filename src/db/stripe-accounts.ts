@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { AccountStatusResult } from "@/lib/payments/connect";
 import type { AppDb, DbExecutor } from "./client";
 import type { ShopStripeAccount } from "./schema";
@@ -37,9 +38,9 @@ export async function upsertShopStripeAccount(
   const values = {
     shopId,
     stripeAccountId,
-    connectedAt: new Date(),
+    connectedAt: nowDate(),
     disconnectedAt: null,
-    updatedAt: new Date(),
+    updatedAt: nowDate(),
   };
   const [row] = await db
     .insert(shopStripeAccounts)
@@ -57,7 +58,7 @@ export async function setShopStripeAccountStatus(
 ): Promise<ShopStripeAccount | null> {
   const [row] = await db
     .update(shopStripeAccounts)
-    .set({ ...status, updatedAt: new Date() })
+    .set({ ...status, updatedAt: nowDate() })
     .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
     .returning();
   return row ?? null;
@@ -70,10 +71,10 @@ export async function disconnectShopStripeAccount(
   const [row] = await db
     .update(shopStripeAccounts)
     .set({
-      disconnectedAt: new Date(),
+      disconnectedAt: nowDate(),
       chargesEnabled: false,
       payoutsEnabled: false,
-      updatedAt: new Date(),
+      updatedAt: nowDate(),
     })
     .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
     .returning();

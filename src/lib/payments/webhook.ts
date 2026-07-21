@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { nowMs } from "../clock";
 
 /**
  * Stripe Connect webhook signature verification, done by hand against the
@@ -64,7 +65,7 @@ export function verifyStripeWebhook(
   });
   if (!matches) return { status: "invalid_signature" };
 
-  const ageSeconds = Math.abs(Date.now() / 1000 - Number(timestamp));
+  const ageSeconds = Math.abs(nowMs() / 1000 - Number(timestamp));
   if (!Number.isFinite(ageSeconds) || ageSeconds > toleranceSeconds) {
     return { status: "invalid_signature" };
   }

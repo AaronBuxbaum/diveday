@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb } from "./client";
@@ -52,7 +53,7 @@ export async function refundBookingOnCancellation(
   input: RefundOnCancellationInput,
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
 ): Promise<CancellationRefundOutcome> {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
 
   const [row] = await db
     .select({ trip: trips })
