@@ -118,7 +118,10 @@ new domain concept, define it here in the same PR.
   not boarded, or cleared, including the time and any note. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
   current status again to correct a mistake, and the diver returns to awaiting. It is stored as its
-  own event so the correction stays in the audit trail rather than deleting history.
+  own event so the correction stays in the audit trail rather than deleting history. A note still
+  being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
+  connection never loses it; that device draft is transient and unencrypted — separate from, and not
+  protected like, the encrypted **offline manifest snapshot**.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. The one deliberate exception is

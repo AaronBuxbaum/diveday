@@ -136,7 +136,7 @@ export default async function TripManifestPage({
         current="manifest"
         className="mb-5 print:hidden"
       />
-      <header className="flex flex-wrap items-start justify-between gap-5 border-b border-border pb-7 print:mt-0">
+      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
           <h1 className="text-sm font-medium tracking-widest text-primary uppercase">
             Boat manifest
@@ -162,11 +162,13 @@ export default async function TripManifestPage({
             </Link>
             .
           </p>
+          <p className="mt-3 print:hidden">
+            <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              Live manifest · save an offline copy below
+            </span>
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 print:hidden">
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-            Live manifest · save an offline copy below
-          </span>
+        <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
           <PrintButton />
         </div>
       </header>
@@ -416,12 +418,13 @@ export default async function TripManifestPage({
                       </p>
                     ) : impliedNotBoarded ? (
                       <p className="mt-3 text-sm text-muted">
-                        Carried forward — not boarded on an earlier checkpoint. Mark boarded to
-                        bring them back on.
+                        {ready
+                          ? "Carried forward — not boarded on an earlier checkpoint. Mark boarded to bring them back on."
+                          : "Carried forward — not boarded on an earlier checkpoint. Clear the blockers above before they can board again."}
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap">
+                  <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-56">
                     {ready ? (
                       <RollCallButton
                         action={rollCallAction}
@@ -431,8 +434,8 @@ export default async function TripManifestPage({
                         pendingLabel={boarded ? "Undoing…" : "Boarding…"}
                         className={
                           boarded
-                            ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-success bg-success/15 px-5 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                            : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                            ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-success bg-success/15 px-5 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
+                            : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
                         }
                       />
                     ) : null}
@@ -445,14 +448,12 @@ export default async function TripManifestPage({
                       formId={`not-boarded-${diver.bookingId}`}
                       className={
                         explicitNotBoarded
-                          ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong bg-surface-sunken px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                          : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong bg-surface-sunken px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
+                          : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
                       }
                     />
                     {rc && !rc.implied ? (
-                      <p className="text-xs text-muted sm:basis-full">
-                        Tap the ✓ status again to undo.
-                      </p>
+                      <p className="text-xs text-muted">Tap the ✓ status again to undo.</p>
                     ) : null}
                   </div>
                 </div>
