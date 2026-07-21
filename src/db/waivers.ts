@@ -1,5 +1,6 @@
-import { and, asc, desc, eq, isNull, ne } from "drizzle-orm";
-import { localTypedConsentProvider } from "@/lib/signatures";
+import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { STAFF_ROLES } from "@/lib/authz";
+import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import {
   createWaiverToken,
   hashWaiverToken,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import type { MedicalAnswers } from "./schema";
-import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
+import { bookings, people, personRoles, trips, waiverRecords, waiverTemplates } from "./schema";
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
@@ -92,7 +93,7 @@ export async function issueWaiverRequest(
 
   return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
     const [booking] = await tx
-      .select({ id: bookings.id, tripStatus: trips.status })
+      .select({ id: bookings.id, personId: bookings.personId, tripStatus: trips.status })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(
@@ -133,6 +134,7 @@ export async function issueWaiverRequest(
       .values({
         shopId: input.shopId,
         bookingId: booking.id,
+        personId: booking.personId,
         templateId: template.id,
         templateTitle: template.title,
         templateVersion: template.version,
@@ -338,6 +340,184 @@ export async function completeWaiver(
     return { ok: true, status: completedStatus(current.status), idempotent: true };
   }
   return { ok: false, reason: "unavailable" };
+}
+
+/**
+ * Every *signed* release on file for a set of divers at a shop, grouped by
+ * person — the evidence the sign-once rule draws on. Includes both `completed`
+ * and `medical_review` records (superseded ones excluded): the caller needs the
+ * medical holds too, so a stale clean signature can never carry a diver past a
+ * newer, unresolved medical review. Currency (template version, age) is decided
+ * per booking by `effectiveWaiverForBooking`.
+ */
+export async function listSignedWaiversByPerson(
+  db: DbExecutor,
+  shopId: string,
+  personIds: string[],
+): Promise<Map<string, (typeof waiverRecords.$inferSelect)[]>> {
+  const byPerson = new Map<string, (typeof waiverRecords.$inferSelect)[]>();
+  if (personIds.length === 0) return byPerson;
+  const rows = await db
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        inArray(waiverRecords.personId, personIds),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
+        isNull(waiverRecords.supersededAt),
+      ),
+    );
+  for (const row of rows) {
+    const list = byPerson.get(row.personId) ?? [];
+    list.push(row);
+    byPerson.set(row.personId, list);
+  }
+  return byPerson;
+}
+
+export type InPersonWaiverOutcome =
+  | { ok: true; recordId: string; alreadySigned: boolean }
+  | {
+      ok: false;
+      reason:
+        | "booking_not_found"
+        | "booking_unavailable"
+        | "template_not_found"
+        | "staff_not_found"
+        | "medical_attestation_required"
+        | "invalid_signature";
+    };
+
+/**
+ * A staff member records that a diver signed the release on paper — a copy on
+ * the boat or handed over on shore — for a diver the app never sees sign. The
+ * result is the same immutable completed record a diver self-service completion
+ * produces (ADR 20260718), snapshotting the current template, but marked
+ * `in_person_attested` and stamped with the accountable staff member. Because
+ * the record is person-scoped it carries forward like any other signature.
+ *
+ * The medical block is load-bearing and cannot be conjured from thin air: this
+ * path records a clean release only, so the caller must pass an explicit
+ * `medicalAttested` — staff affirming they reviewed the paper medical form and
+ * no answer needs physician sign-off. Without it the record is refused, and a
+ * flagged medical must go through the diver-facing link, which captures the
+ * questionnaire and routes to review. Guards otherwise match
+ * `issueWaiverRequest`: the booking must be live, the actor a staff member of
+ * the shop. Idempotent — a booking already signed or in medical review keeps its
+ * existing record rather than stacking a second one.
+ */
+export async function recordInPersonWaiver(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    recordedByPersonId: string;
+    medicalAttested: boolean;
+    now?: Date;
+  },
+): Promise<InPersonWaiverOutcome> {
+  const now = input.now ?? new Date();
+  if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
+  return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
+    const [staff] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          eq(people.id, input.recordedByPersonId),
+          eq(people.shopId, input.shopId),
+          inArray(personRoles.role, [...STAFF_ROLES]),
+        ),
+      )
+      .limit(1);
+    if (!staff) return { ok: false, reason: "staff_not_found" };
+
+    const [booking] = await tx
+      .select({
+        id: bookings.id,
+        personId: bookings.personId,
+        fullName: people.fullName,
+        tripStatus: trips.status,
+      })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1);
+    if (!booking) return { ok: false, reason: "booking_not_found" };
+    if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };
+
+    const current = await tx
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.bookingId, booking.id), isNull(waiverRecords.supersededAt)));
+    const alreadyDone = current.find(
+      (record) => record.status === "completed" || record.status === "medical_review",
+    );
+    if (alreadyDone) return { ok: true, recordId: alreadyDone.id, alreadySigned: true };
+
+    const [template] = await tx
+      .select()
+      .from(waiverTemplates)
+      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.archivedAt)))
+      .orderBy(desc(waiverTemplates.createdAt))
+      .limit(1);
+    if (!template) return { ok: false, reason: "template_not_found" };
+
+    const evidence = inPersonAttestationProvider.capture({
+      signerName: booking.fullName,
+      agreed: true,
+      signedAt: now,
+    });
+    if (!evidence) return { ok: false, reason: "invalid_signature" };
+
+    // Retire any live pending link so its bearer token can never complete a
+    // second record after the shop has already recorded the paper copy.
+    await tx
+      .update(waiverRecords)
+      .set({ supersededAt: now })
+      .where(
+        and(
+          eq(waiverRecords.bookingId, booking.id),
+          eq(waiverRecords.status, "pending"),
+          isNull(waiverRecords.supersededAt),
+        ),
+      );
+
+    const [record] = await tx
+      .insert(waiverRecords)
+      .values({
+        shopId: input.shopId,
+        bookingId: booking.id,
+        personId: booking.personId,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "completed",
+        // No link is ever handed out for a paper record; a random unusable hash
+        // keeps the unique token column satisfied without granting bearer access.
+        tokenHash: hashWaiverToken(createWaiverToken()),
+        expiresAt: now,
+        signedName: evidence.signerName,
+        signatureMethod: evidence.method,
+        recordedByPersonId: staff.id,
+        consentedAt: evidence.consentedAt,
+        signedAt: evidence.signedAt,
+        completedAt: now,
+      })
+      .returning();
+    if (!record) throw new Error("recordInPersonWaiver: insert returned no row");
+    return { ok: true, recordId: record.id, alreadySigned: false };
+  });
 }
 
 /** Staff roster view: only the current record joins each active booking. */

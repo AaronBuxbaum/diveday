@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
 import {
   createNitroxCertification,
   listShopNitroxCertifications,
@@ -22,6 +24,7 @@ import {
 } from "./readiness";
 import { certifications as certificationsTable } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function readinessContext() {
   const { db, shop } = await seededShopContext();
@@ -44,6 +47,60 @@ describe("trip readiness (in-memory PGlite)", () => {
 
     const oneBooking = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
     expect(oneBooking).toEqual(diver?.readiness);
+  });
+
+  it("carries a signed waiver across a diver's other bookings (sign once)", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    const email = rosterEntry.person.email;
+    if (!email) throw new Error("demo diver has no email to rebook under");
+
+    // The same diver grabs a spot on a second, non-course trip.
+    const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const other = upcoming.find(
+      (trip) => trip.id !== reef.id && !trip.course && trip.booked < trip.capacity,
+    );
+    if (!other) throw new Error("expected a second open non-course trip in the seed");
+    const booked = await createBooking(db, {
+      shopId: shop.id,
+      tripId: other.id,
+      fullName: rosterEntry.person.fullName,
+      email,
+    });
+    if (!booked.ok) throw new Error(`second booking failed: ${booked.reason}`);
+
+    // Isolate the waiver gate on the second trip so the assertion is unambiguous.
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: other.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    expect((await getBookingReadiness(db, shop.id, booked.bookingId))?.blockers).toContainEqual(
+      expect.objectContaining({ code: "waiver_not_sent" }),
+    );
+
+    // Sign the waiver once, on the reef booking.
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: rosterEntry.booking.id,
+    });
+    if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
+    const completion = await completeWaiver(db, issued.token, {
+      signerName: rosterEntry.person.fullName,
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    expect(completion).toMatchObject({ ok: true, status: "completed" });
+
+    // The second booking is now covered without ever being sent its own link.
+    const second = await getBookingReadiness(db, shop.id, booked.bookingId);
+    expect(second?.blockers).not.toContainEqual(
+      expect.objectContaining({ code: "waiver_not_sent" }),
+    );
+    expect(second).toEqual({ status: "ready", blockers: [] });
   });
 
   it("resolves a booking's full readiness detail for the no-login diver page", async () => {

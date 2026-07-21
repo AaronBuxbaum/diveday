@@ -13,7 +13,7 @@ function ResendButton({ label }: { label: string }) {
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className={buttonClass({ variant: "secondary", className: "shrink-0" })}
+      className={buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })}
     >
       {pending ? "Resending…" : label}
     </button>
@@ -66,7 +66,7 @@ export function ResendConfirmationControl({
 
   return (
     <div className="sm:text-right">
-      <form action={formAction} className="inline-flex">
+      <form action={formAction} className="flex sm:inline-flex">
         <input type="hidden" name="bookingId" value={bookingId} />
         <ResendButton label={label} />
       </form>

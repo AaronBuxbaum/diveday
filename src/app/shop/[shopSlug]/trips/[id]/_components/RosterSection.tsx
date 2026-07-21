@@ -82,6 +82,7 @@ export function RosterSection({
   nitroxByBooking,
   requiresPayment,
   issueWaiverAction,
+  markWaiverInPersonAction,
   markPaymentAction,
   removeBookingAction,
 }: {
@@ -97,6 +98,7 @@ export function RosterSection({
   nitroxByBooking: NitroxByBooking;
   requiresPayment: boolean;
   issueWaiverAction: (formData: FormData) => void;
+  markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
 }) {
@@ -231,9 +233,53 @@ export function RosterSection({
                         </span>
                       )}
                     </div>
+                    {waiverControl.action ? (
+                      // A diver who signed on paper or on shore: let a non-diver
+                      // record it so the waiver gate isn't held up by a signature
+                      // the app never sees. Same immutable record, staff-attested.
+                      // The medical clearance is its own required control, not a
+                      // buried confirm — a flagged medical must use the digital
+                      // link, which captures the questionnaire and routes to review.
+                      <details className="mt-2">
+                        <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
+                          Mark signed on paper
+                        </summary>
+                        <form
+                          action={markWaiverInPersonAction}
+                          className="mt-2 max-w-md rounded-lg border border-border bg-surface-sunken/50 p-3"
+                        >
+                          <input type="hidden" name="bookingId" value={booking.id} />
+                          <label className="flex items-start gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              name="medicalAttested"
+                              required
+                              className="mt-1 size-4 shrink-0"
+                            />
+                            <span>
+                              I have this diver&apos;s signed release on file and have reviewed
+                              their medical questionnaire — no answer needs physician sign-off.
+                            </span>
+                          </label>
+                          <SubmitButton
+                            pendingLabel="Recording…"
+                            className={buttonClass({
+                              variant: "secondary",
+                              size: "sm",
+                              className: "mt-3",
+                            })}
+                          >
+                            Record paper signature
+                          </SubmitButton>
+                        </form>
+                      </details>
+                    ) : null}
                     {currentWaiver?.completedAt && waiverStatus === "complete" ? (
                       <p className="mt-2 text-sm text-muted">
                         Signed {formatDateTimeTz(currentWaiver.completedAt, "en-US", shopTimezone)}
+                        {currentWaiver.signatureMethod === "in_person_attested"
+                          ? " · recorded from a paper copy"
+                          : ""}
                       </p>
                     ) : null}
                     {waiverStatus === "medical_review" ? (
