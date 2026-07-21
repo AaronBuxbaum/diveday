@@ -370,8 +370,9 @@ export default async function TripManifestPage({
                       <p>
                         <span className="font-bold">Emergency contact</span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.emergencyContactName ?? "Not on file"}
-                          {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
+                          {diver.emergencyContactName && diver.emergencyContactPhone
+                            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                            : "Not on file"}
                         </span>
                       </p>
                       <p>

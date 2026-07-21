@@ -92,8 +92,8 @@ export async function onboardAction(formData: FormData) {
           shopId: newShop.id,
           fullName: ownerName,
           email: ownerEmail.toLowerCase(),
-          emergencyContactName: "On file",
-          emergencyContactPhone: "On file",
+          // No placeholder emergency contact: a literal "On file" reads as a real
+          // contact on the manifest and hides the gap. Left null until captured.
         })
         .returning();
 

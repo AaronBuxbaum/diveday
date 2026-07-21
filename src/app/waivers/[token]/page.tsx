@@ -14,6 +14,7 @@ import {
   completeWaiver,
   getEmergencyContactForBooking,
   getWaiverForToken,
+  saveBookingEmergencyContact,
   saveWaiverDraft,
 } from "@/db/waivers";
 import type { MedicalQuestionnaire } from "@/lib/medical";
@@ -169,11 +170,23 @@ export default async function WaiverPage({
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
-    const savedDraft = await saveWaiverDraft(await getDb(), token, {
+    const db = await getDb();
+    const savedDraft = await saveWaiverDraft(db, token, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
     });
+    // Persist the contact now too, so "save and finish later" keeps it — blanks
+    // never overwrite what's on file.
+    const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+    if (savedDraft && contact.success) {
+      await saveBookingEmergencyContact(db, {
+        shopId: record.shopId,
+        bookingId: record.bookingId,
+        name: contact.data.emergencyContactName,
+        phone: contact.data.emergencyContactPhone,
+      });
+    }
     revalidateAndRedirect(
       `/waivers/${token}`,
       `/waivers/${token}${savedDraft ? "?saved=1" : "?error=unavailable"}`,
