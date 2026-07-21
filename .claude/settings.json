@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "ScheduleWakeup",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
       "Bash(pnpm format)",
