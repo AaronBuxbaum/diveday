@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow } from "./helpers";
+import { daysFromNow, e2eNow } from "./helpers";
 
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
@@ -27,7 +27,11 @@ test.describe("staff-prepared trip", () => {
     // The booking form is controlled, so wait for hydration before typing.
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Nemo Quinn");
-    await page.getByLabel("Email", { exact: true }).fill(`nemo-${Date.now()}@example.com`);
+    // Frozen-clock suffix, not Date.now(): this diver lands on the shared
+    // demo shop's People list, which the visual suite screenshots — a
+    // real-time suffix here made that snapshot diff on nothing but the clock
+    // every run.
+    await page.getByLabel("Email", { exact: true }).fill(`nemo-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
 
