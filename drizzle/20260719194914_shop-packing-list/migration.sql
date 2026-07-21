@@ -1,1 +1,0 @@
-ALTER TABLE "shops" ADD COLUMN "packing_list" jsonb DEFAULT '["Certification card","Swimsuit and towel","Reef-safe sun protection"]' NOT NULL;
