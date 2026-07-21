@@ -1,4 +1,5 @@
 import { and, count, eq, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
 import { bookings, people, personRoles, shops, trips, tripWaitlistEntries } from "./schema";
@@ -19,7 +20,7 @@ export async function recordWaitlistInvite(
 ): Promise<boolean> {
   const [updated] = await db
     .update(tripWaitlistEntries)
-    .set({ invitedAt: input.now ?? new Date() })
+    .set({ invitedAt: input.now ?? nowDate() })
     .where(
       and(eq(tripWaitlistEntries.id, input.entryId), eq(tripWaitlistEntries.shopId, input.shopId)),
     )
@@ -67,7 +68,7 @@ export async function inviteWaitlistDiver(
     .limit(1);
   if (!ctx) return { ok: false, reason: "not_found" };
 
-  const invitedAt = input.now ?? new Date();
+  const invitedAt = input.now ?? nowDate();
   await recordWaitlistInvite(db, { shopId: input.shopId, entryId: input.entryId, now: invitedAt });
 
   const origin = publicAppUrl();
@@ -129,7 +130,7 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       .from(trips)
       .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
       .limit(1);
-    if (trip?.status !== "scheduled" || trip.startsAt <= new Date()) {
+    if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
       return { ok: false, reason: "trip_unavailable" };
     }
 

@@ -20,7 +20,9 @@ pnpm check        # biome lint + tsc + vitest
 pnpm e2e          # config auto-detects the sandbox Chromium; no install needed
 ```
 
-If new user-facing flows were added, extend `e2e/` with a smoke spec for them first.
+If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add an
+Argos snapshot in `e2e/visual.spec.ts` for any new surface (see the `e2e-and-argos` skill). `pnpm
+check` includes `check:clock`, which fails if domain/data code reads the wall clock directly.
 
 ## 3. UI changed: look at it
 

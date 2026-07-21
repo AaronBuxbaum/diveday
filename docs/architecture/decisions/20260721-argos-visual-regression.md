@@ -1,6 +1,6 @@
 # 20260721-argos-visual-regression — Argos visual regression on ten key surfaces, phone + desktop
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260721-argos-frozen-clock
 - **Date:** 2026-07-21
 
 ## Context

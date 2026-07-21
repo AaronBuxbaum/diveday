@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { e2eNow } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
   page,
@@ -20,10 +21,11 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   // The month calendar shows scheduled dives alongside the list.
   const calendar = page.getByRole("region", { name: "Dive schedule calendar" });
   await expect(calendar).toBeVisible();
-  // The calendar defaults to the current month, so the heading's year tracks
-  // whatever year the suite actually runs in — a hardcoded year here passes
-  // today and fails deterministically every New Year's.
-  const currentYear = new Date().getUTCFullYear();
+  // The calendar defaults to the current month, and the server clock is frozen
+  // (E2E_FROZEN_CLOCK), so the heading's year is whatever year that instant
+  // falls in — read it from the same source rather than the real wall clock,
+  // which would diverge once real time passes the frozen year.
+  const currentYear = e2eNow().getUTCFullYear();
   await expect(
     calendar.getByRole("heading", { name: new RegExp(`\\b${currentYear}\\b`) }),
   ).toBeVisible();

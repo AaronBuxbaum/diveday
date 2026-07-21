@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { listPersonBookingPayments } from "./payments";
@@ -85,7 +86,7 @@ export async function updateDiver(
 export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
   const [person] = await db
     .update(people)
-    .set({ deletedAt: new Date() })
+    .set({ deletedAt: nowDate() })
     .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
     .returning({ id: people.id });
   return Boolean(person);

@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import type { PaymentStatus } from "./schema";
 import { bookingPayments, bookings, trips } from "./schema";
@@ -35,7 +36,7 @@ export async function setBookingPayment(db: AppDb, input: SetPaymentInput) {
     provider: input.provider ?? null,
     providerRef: input.providerRef ?? null,
     note: input.note ?? null,
-    updatedAt: new Date(),
+    updatedAt: nowDate(),
   };
   const [payment] = await db
     .insert(bookingPayments)

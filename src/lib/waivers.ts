@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
+import { nowDate } from "./clock";
 import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -63,7 +64,7 @@ function signatureTime(record: WaiverRecord): number {
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
   currentTemplateVersion: number | null,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): boolean {
   if (record.status !== "completed") return false;
   if (record.supersededAt) return false;
@@ -97,7 +98,7 @@ export function effectiveWaiverForBooking(input: {
   currentTemplateVersion: number | null;
   now?: Date;
 }): WaiverRecord | null {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   const own = input.bookingWaiver;
   if (own?.status === "medical_review") return own;
 
@@ -128,7 +129,7 @@ export type WaiverState =
   | "medical_review";
 
 /** Presentational state stays derived so an expired pending record fails closed. */
-export function waiverState(record: WaiverRecord | null, now: Date = new Date()): WaiverState {
+export function waiverState(record: WaiverRecord | null, now: Date = nowDate()): WaiverState {
   if (!record) return "not_sent";
   if (record.status === "completed") return "complete";
   if (record.status === "medical_review") return "medical_review";

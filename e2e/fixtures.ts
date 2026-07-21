@@ -1,7 +1,7 @@
 import path from "node:path";
 import { test as base, expect } from "@playwright/test";
 import { signInAsOwner } from "./helpers";
-import { e2eBaseURL } from "./servers";
+import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 
 /**
  * Each Playwright worker owns a private Next server + in-memory database (see
@@ -11,6 +11,33 @@ import { e2eBaseURL } from "./servers";
  * mutation leaking into another's assertions.
  */
 export const test = base.extend<object, { workerBaseURL: string; ownerStorageState: string }>({
+  // Pin the browser clock to the same instant the server is frozen at
+  // (DIVEDAY_CLOCK, see src/lib/clock.ts) at context creation, so the override
+  // is in place before the first navigation of every test — including the first
+  // test after a `signedInAsOwner` (storageState) context, where registering it
+  // in a beforeEach raced the initial navigation and let one test through on the
+  // real clock. With the server render, the clock-anchored seed, and the browser
+  // all on one instant, relative-time UI is stable for Argos and browser-stamped
+  // events (offline roll-call sync, signatures) never look "future" to the
+  // server's frozen clock and get rejected as stale.
+  //
+  // Only argless `new Date()` / `Date.now()` are pinned; parsing (`new
+  // Date(iso)`), every Date method, and `instanceof Date` are inherited
+  // unchanged, and real timers are left alone — so event- and timer-driven UI
+  // (the offline reconcile, debounced search) behaves exactly as in production.
+  context: async ({ context }, use) => {
+    await context.addInitScript((iso) => {
+      const fixed = new Date(iso).getTime();
+      const RealDate = Date;
+      globalThis.Date = new Proxy(RealDate, {
+        construct: (target, args) => Reflect.construct(target, args.length === 0 ? [fixed] : args),
+        get: (target, prop, receiver) =>
+          prop === "now" ? () => fixed : Reflect.get(target, prop, receiver),
+      });
+    }, E2E_FROZEN_CLOCK);
+    await use(context);
+  },
+
   // Playwright derives fixture dependencies from the first argument's
   // destructuring pattern, so it must stay an object pattern even though this
   // worker fixture depends on nothing but its worker index.
@@ -64,7 +91,8 @@ export function signedInAsOwner() {
 /**
  * Reset this worker's demo shop to the seeded fixture before every test so each
  * starts from the same baseline regardless of order. It runs against the
- * worker's own database, so parallel resets never interfere.
+ * worker's own database, so parallel resets never interfere. (The browser clock
+ * is frozen in the `context` fixture above, before this runs.)
  */
 test.beforeEach(async ({ request }) => {
   await request.post("/api/test/reset");

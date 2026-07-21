@@ -1,4 +1,5 @@
 import { and, asc, desc, eq } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
 import { setBookingPayment } from "./payments";
@@ -84,7 +85,7 @@ export async function createOrder(
   if (result.status !== "created") return { ok: false, reason: "stripe_failed" };
 
   const status = mapStripeStatus(result.stripeStatus);
-  const now = new Date();
+  const now = nowDate();
 
   const order = await db.transaction(async (tx) => {
     const [created] = await tx
@@ -209,7 +210,7 @@ async function applyOrderUpdate(
     invoicePdfUrl?: string | null;
   },
 ): Promise<Order | null> {
-  const now = new Date();
+  const now = nowDate();
   const [updated] = await db
     .update(orders)
     .set({

@@ -7,6 +7,7 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import { nowDate } from "./clock";
 import { waiverState } from "./waivers";
 
 /** Payment states that clear the "ready to board" payment gate. */
@@ -174,7 +175,7 @@ export function validVerifiedCertification(certification: Certification, now: Da
 export function hasVerifiedCertificationAtLeast(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
-  now: Date = new Date(),
+  now: Date = nowDate(),
 ): boolean {
   return certifications.some(
     (certification) =>
@@ -301,7 +302,7 @@ function nitroxBlocker(
  * human-readable blocker; only explicit evidence can produce `ready`.
  */
 export function calculateReadiness(input: ReadinessInput): ReadinessResult {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   const blockers: ReadinessBlocker[] = [];
   if (!input.requirement) {
     return {

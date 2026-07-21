@@ -1,4 +1,5 @@
 import { and, asc, eq, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -52,7 +53,7 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     bootSize: optional(input.bootSize),
     finSize: optional(input.finSize),
     weightPreference: optional(input.weightPreference),
-    updatedAt: new Date(),
+    updatedAt: nowDate(),
   };
   // The note is the diver's own words to the crew ("titanium hip, I run heavy").
   // Only a form that actually carries it may write it — otherwise staff nudging
