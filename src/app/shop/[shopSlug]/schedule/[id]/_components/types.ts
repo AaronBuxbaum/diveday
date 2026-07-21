@@ -47,7 +47,15 @@ export const ERROR_MESSAGES: Record<string, string> = {
 
 /** What the confirmation's payment panel shows; null hides the panel entirely. */
 export type PaymentPanel =
-  | { state: "paid"; amountCents: number | null; currency: string }
+  | {
+      state: "paid";
+      amountCents: number | null;
+      currency: string;
+      /** True when only a deposit has been paid; a balance is still owed. */
+      isDeposit: boolean;
+      /** The per-diver balance still due after a deposit, or 0 when paid in full. */
+      balanceDueCents: number;
+    }
   | { state: "pending"; checkoutUrl: string }
   | { state: "payable" }
   | null;

@@ -3,6 +3,14 @@
  * display dates to divers, so keep every user-facing date/time format here.
  */
 
+/** Minor units (cents) to a localized currency string, e.g. 13000 → "$130.00". */
+export function formatMoneyCents(cents: number, currency = "usd", locale = "en-US"): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(cents / 100);
+}
+
 export function formatShortDate(date: Date, locale = "en-US", timeZone?: string): string {
   return new Intl.DateTimeFormat(locale, {
     weekday: "short",

@@ -1,6 +1,7 @@
 import { and, count, eq, ne } from "drizzle-orm";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
-import { bookings, people, personRoles, trips, tripWaitlistEntries } from "./schema";
+import { bookings, people, personRoles, shops, trips, tripWaitlistEntries } from "./schema";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -24,6 +25,77 @@ export async function recordWaitlistInvite(
     )
     .returning({ id: tripWaitlistEntries.id });
   return Boolean(updated);
+}
+
+/**
+ * How the freed-seat invite actually reached (or did not reach) the diver.
+ * Anything but `sent` means the UI must hand staff the composer fallback (a
+ * prewritten mailto/copy message) rather than pretend an email went out —
+ * the exact mirror of `WaiverDelivery`.
+ */
+export type WaitlistInviteDelivery = "sent" | "no_email" | "unconfigured";
+
+export type InviteWaitlistDiverResult =
+  | { ok: true; delivery: WaitlistInviteDelivery; invitedAt: Date }
+  | { ok: false; reason: "not_found" };
+
+/**
+ * Stamp a wait-list entry as invited *and* email the diver the freed-seat link
+ * through the shared notification seam. Sending is best-effort: a missing
+ * address, missing app origin, or a disabled/failed provider all resolve to a
+ * non-`sent` delivery so the caller surfaces the copyable composer instead of
+ * claiming mail went out. The invite is recorded either way — the durable
+ * "Invited 2h ago" cue is the stamp, not the email.
+ *
+ * This is Stage 1 of seat recovery (WP-9); Stage 2 (auto-invite position 1 on a
+ * cancellation) still hangs off this same `invitedAt` column when the H-09
+ * policy row lands.
+ */
+export async function inviteWaitlistDiver(
+  db: AppDb,
+  input: { shopId: string; shopSlug: string; entryId: string; now?: Date },
+): Promise<InviteWaitlistDiverResult> {
+  const [ctx] = await db
+    .select({ entry: tripWaitlistEntries, person: people, trip: trips, shop: shops })
+    .from(tripWaitlistEntries)
+    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
+    .innerJoin(trips, eq(trips.id, tripWaitlistEntries.tripId))
+    .innerJoin(shops, eq(shops.id, tripWaitlistEntries.shopId))
+    .where(
+      and(eq(tripWaitlistEntries.id, input.entryId), eq(tripWaitlistEntries.shopId, input.shopId)),
+    )
+    .limit(1);
+  if (!ctx) return { ok: false, reason: "not_found" };
+
+  const invitedAt = input.now ?? new Date();
+  await recordWaitlistInvite(db, { shopId: input.shopId, entryId: input.entryId, now: invitedAt });
+
+  const origin = publicAppUrl();
+  let delivery: WaitlistInviteDelivery = "unconfigured";
+  if (!ctx.person.email) {
+    delivery = "no_email";
+  } else if (origin) {
+    const result = await notify({
+      kind: "waitlist_invite",
+      waitlistEntryId: ctx.entry.id,
+      shopId: input.shopId,
+      to: ctx.person.email,
+      diverName: ctx.person.fullName,
+      shopName: ctx.shop.name,
+      tripTitle: ctx.trip.title,
+      startsAt: ctx.trip.startsAt,
+      endsAt: ctx.trip.endsAt,
+      timezone: ctx.shop.timezone,
+      bookingUrl: new URL(
+        `/shop/${input.shopSlug}/schedule/${ctx.trip.id}`,
+        `${origin}/`,
+      ).toString(),
+      invitedAt,
+    }).catch(() => ({ status: "failed" as const }));
+    delivery = result.status === "sent" ? "sent" : "unconfigured";
+  }
+
+  return { ok: true, delivery, invitedAt };
 }
 
 export type WaitlistRequest = {

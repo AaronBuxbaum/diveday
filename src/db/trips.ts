@@ -29,6 +29,8 @@ export type NewTrip = {
   plannedDives?: number;
   dives?: TripDiveDraft[];
   priceCents?: number | null;
+  depositCents?: number | null;
+  cancellationWindowHours?: number | null;
 };
 
 export type TripDiveDraft = {
@@ -123,6 +125,8 @@ async function insertTripInstance(
     capacity: number;
     plannedDives: number;
     priceCents?: number | null;
+    depositCents?: number | null;
+    cancellationWindowHours?: number | null;
     drafts: ReturnType<typeof normalizedDiveDrafts>;
   },
 ) {
@@ -138,6 +142,8 @@ async function insertTripInstance(
       endsAt: params.endsAt,
       capacity: params.capacity,
       priceCents: params.priceCents,
+      depositCents: params.depositCents,
+      cancellationWindowHours: params.cancellationWindowHours,
       plannedDives: params.plannedDives,
       diveSiteId: params.drafts[0]?.diveSiteId ?? null,
     })
@@ -185,6 +191,8 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       capacity: input.capacity,
       plannedDives,
       priceCents: input.priceCents,
+      depositCents: input.depositCents,
+      cancellationWindowHours: input.cancellationWindowHours,
       drafts,
     });
   });
@@ -244,6 +252,8 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
           capacity: input.capacity,
           plannedDives,
           priceCents: input.priceCents,
+          depositCents: input.depositCents,
+          cancellationWindowHours: input.cancellationWindowHours,
           drafts,
         }),
       );
@@ -299,6 +309,8 @@ export type TripPatch = {
   dives?: TripDiveDraft[];
   diveSiteId?: string | null;
   priceCents?: number | null;
+  depositCents?: number | null;
+  cancellationWindowHours?: number | null;
 };
 
 export async function updateTrip(db: AppDb, shopId: string, tripId: string, patch: TripPatch) {
@@ -317,6 +329,8 @@ export async function updateTrip(db: AppDb, shopId: string, tripId: string, patc
         endsAt: patch.endsAt,
         capacity: patch.capacity,
         priceCents: patch.priceCents ?? null,
+        depositCents: patch.depositCents ?? null,
+        cancellationWindowHours: patch.cancellationWindowHours ?? null,
         plannedDives,
         ...(patch.diveSiteId === undefined
           ? {}

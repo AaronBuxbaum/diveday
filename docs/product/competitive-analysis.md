@@ -55,12 +55,16 @@ In rough order of how often it would kill the deal:
 
 1. ~~**We don't take the diver's money.**~~ ✅ **Closed 2026-07-21** — the public flow now hands the
    diver the shop's own hosted Stripe Checkout right after the seats commit
-   ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)). Remaining from the buyer's
-   chair: a deposit-only option and cancellation/refund policy (H-07), plus live Connect platform
-   credentials in production.
-2. **Messages don't send in a default deploy** (H-09). "Send waivers" is on-screen but hollow until
-   Resend is wired; there is no SMS/WhatsApp at all, while DiveAdmin ships a unified
-   email/SMS/WhatsApp inbox. The blocker queue's one-tap actions need a real channel to be believed.
+   ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)), and the **deposit + declarative
+   cancellation-window mechanisms** now ship on top of it (opt-in, off by default,
+   [ADR](../architecture/decisions/20260721-deposit-cancellation-policy.md)). Remaining from the
+   buyer's chair is now *policy, not mechanism*: the deposit/window values shops should be guided
+   toward, whether refunds automate, and live Connect platform credentials in production (all H-07).
+2. **Messages don't send in a default deploy** (H-09). Booking confirmation, the waiver link, and the
+   wait-list freed-seat invite all now go through one `notify()` seam and send for real once Resend
+   is configured — degrading to a copyable/mailto composer when it isn't. Still open: SMS/WhatsApp
+   (DiveAdmin ships a unified email/SMS/WhatsApp inbox), scheduled reminder cadences, and the H-09
+   consent/copy/sender ownership policy. The blocker queue's one-tap actions now have a real channel.
 3. **No equipment inventory or service tracking.** Rental *fit* (sizes) is genuinely useful, but
    "who has what, what's due for service" is table stakes for gear-heavy shops — DiveAdmin,
    Bloowatch, DiveShop360, and EVE all have it. We removed it (M5). For dive *charter* ops we can
@@ -105,13 +109,13 @@ not. This needs a product-owner decision before any customer-facing publication 
 | Capability | Market status | DiveDay today | Verdict |
 | --- | --- | --- | --- |
 | Online booking w/ real-time capacity | Universal | ✅ Best-in-class flow | Critical — done |
-| **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../architecture/decisions/20260721-checkout-at-booking.md)); deposit tier and cancellation policy still H-07 | Critical — mechanism done; policy open |
+| **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../architecture/decisions/20260721-checkout-at-booking.md)); deposit + cancellation-window mechanisms shipped opt-in ([ADR](../architecture/decisions/20260721-deposit-cancellation-policy.md)); only the policy *values* remain H-07 | Critical — mechanism done; policy open |
 | Digital waivers + medical, auto-sent | Universal (often add-on) | ✅ Versioned, immutable, included | Critical — done; needs sending to be real |
 | Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; no rosters/progress/eLearning | Critical — partial |
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
 | Rental equipment tracking | Universal | ❌ Sizes only, no inventory/service | Critical — gap |
-| Notifications (email min., SMS/WhatsApp rising) | Universal | ⚠️ Stub without keys; email only | Critical — config gap |
+| Notifications (email min., SMS/WhatsApp rising) | Universal | ⚠️ Email sends for real through one seam (confirmation, waiver, wait-list invite), composer fallback when unconfigured; no SMS/WhatsApp, no scheduled cadences | Critical — email done; SMS + policy open |
 | Owner reporting | Expected | ❌ | Critical-lite — gap |
 | Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
 | Fail-closed readiness engine | **No one has it** | ✅ | **Differentiator #1** |
@@ -128,12 +132,16 @@ Consistent with the [breadth→depth pivot](product-space-investigation.md#recom
 with one material re-ranking from the buyer's chair:
 
 1. ✅ **Elevate checkout-at-booking (H-07) from P2 to the front of P1** — shipped 2026-07-21: the
-   public flow now ends on the shop's own hosted Stripe Checkout, full price per diver, webhook
-   confirmed ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)). Still open from
-   the buyer's chair: a deposit option and cancellation/refund policy (H-07), and live Connect
-   platform credentials.
-2. Real notifications (H-09) stays P1 — it is both an internal multiplier and an external
-   credibility line.
+   public flow now ends on the shop's own hosted Stripe Checkout, webhook confirmed
+   ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)), and the deposit +
+   declarative-cancellation mechanisms now layer on it opt-in
+   ([ADR](../architecture/decisions/20260721-deposit-cancellation-policy.md)). Still open from the
+   buyer's chair, and now *policy not mechanism*: the deposit/window values, whether refunds
+   automate, and live Connect platform credentials (H-07).
+2. ✅ **Real notifications (H-09)** — the wait-list freed-seat invite now sends through the same
+   `notify()` seam as booking confirmations and waiver links, so all three transactional emails send
+   by default when Resend is configured (composer fallback otherwise). Still P1 for its remaining
+   scope: SMS/WhatsApp, scheduled reminder cadences, and the H-09 consent/copy/sender policy.
 3. Field-validate the manifest (V-02) before marketing leans on safety.
 4. Decide the pricing posture (owner decision) before publishing beyond the trial surface.
 5. Re-scope a *minimal* gear register (who-has-what + service-due, not POS) as the answer to the

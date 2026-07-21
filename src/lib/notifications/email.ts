@@ -33,6 +33,17 @@ type WaiverRequestEmailInput = {
   timezone: string;
 };
 
+type WaitlistInviteEmailInput = {
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  /** The public trip page where the freed seat can be claimed. */
+  bookingUrl: string;
+};
+
 export type NotificationEmail = {
   subject: string;
   text: string;
@@ -56,6 +67,21 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     subject: `You're on the boat — ${input.tripTitle}`,
     text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock 30 minutes early. ${input.shopName} will take it from there.${readyText}`,
     html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock 30 minutes early. ${shop} will take it from there.</p>${readyHtml}`,
+  };
+}
+
+export function waitlistInviteEmail(input: WaitlistInviteEmailInput): NotificationEmail {
+  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
+  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const shop = escapeHtml(input.shopName);
+  const url = escapeHtml(input.bookingUrl);
+
+  return {
+    subject: `A spot opened up on ${input.tripTitle}`,
+    text: `Hi ${firstName},\n\nA seat just opened on ${input.tripTitle} with ${input.shopName}, and you're next on the wait list.\n\n${date}\n${time}\n\nClaim it before it's gone:\n${input.bookingUrl}\n\nSeats go first-come, so don't wait too long. See you on the boat!\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A seat just opened on <strong>${title}</strong> with ${shop}, and you're next on the wait list.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Claim your spot</a></p><p>Seats go first-come, so don't wait too long. See you on the boat!</p>`,
   };
 }
 
