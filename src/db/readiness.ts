@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
@@ -153,12 +153,35 @@ export async function reviewCertification(
   return certification ?? null;
 }
 
+/**
+ * Soft-archive a level card: it drops out of every readiness/roster read but the
+ * row is kept for safety history (ADR 20260719-crud-archive-semantics). Shop-scoped
+ * so one shop can never touch another's evidence; a no-op on an already-archived card.
+ */
+export async function archiveCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+) {
+  const [row] = await db
+    .update(certifications)
+    .set({ deletedAt: nowDate() })
+    .where(
+      and(
+        eq(certifications.id, input.certificationId),
+        eq(certifications.shopId, input.shopId),
+        isNull(certifications.deletedAt),
+      ),
+    )
+    .returning({ id: certifications.id });
+  return Boolean(row);
+}
+
 export async function listShopCertifications(db: AppDb, shopId: string) {
   return db
     .select({ certification: certifications, person: people })
     .from(certifications)
     .innerJoin(people, eq(people.id, certifications.personId))
-    .where(eq(certifications.shopId, shopId))
+    .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)))
     .orderBy(asc(people.fullName), asc(certifications.createdAt));
 }
 
@@ -217,12 +240,33 @@ export async function reviewSpecialtyCertification(
   return certification ?? null;
 }
 
+/** Soft-archive a specialty card. Shop-scoped, mirroring `archiveCertification`. */
+export async function archiveSpecialtyCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+) {
+  const [row] = await db
+    .update(specialtyCertifications)
+    .set({ deletedAt: nowDate() })
+    .where(
+      and(
+        eq(specialtyCertifications.id, input.certificationId),
+        eq(specialtyCertifications.shopId, input.shopId),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .returning({ id: specialtyCertifications.id });
+  return Boolean(row);
+}
+
 export async function listShopSpecialtyCertifications(db: AppDb, shopId: string) {
   return db
     .select({ certification: specialtyCertifications, person: people })
     .from(specialtyCertifications)
     .innerJoin(people, eq(people.id, specialtyCertifications.personId))
-    .where(eq(specialtyCertifications.shopId, shopId))
+    .where(
+      and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
+    )
     .orderBy(asc(people.fullName), asc(specialtyCertifications.createdAt));
 }
 
@@ -260,7 +304,11 @@ export async function listTripReadiness(
             .select()
             .from(certifications)
             .where(
-              and(eq(certifications.shopId, shopId), inArray(certifications.personId, personIds)),
+              and(
+                eq(certifications.shopId, shopId),
+                inArray(certifications.personId, personIds),
+                isNull(certifications.deletedAt),
+              ),
             ),
           db
             .select()
@@ -269,6 +317,7 @@ export async function listTripReadiness(
               and(
                 eq(specialtyCertifications.shopId, shopId),
                 inArray(specialtyCertifications.personId, personIds),
+                isNull(specialtyCertifications.deletedAt),
               ),
             ),
           db
@@ -278,6 +327,7 @@ export async function listTripReadiness(
               and(
                 eq(nitroxCertifications.shopId, shopId),
                 inArray(nitroxCertifications.personId, personIds),
+                isNull(nitroxCertifications.deletedAt),
               ),
             ),
           listSignedWaiversByPerson(db, shopId, personIds),

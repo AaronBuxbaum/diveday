@@ -5,6 +5,7 @@ import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
+  archiveNitroxCertification,
   createNitroxCertification,
   reviewNitroxCertification,
   setBookingNitrox,
@@ -176,5 +177,38 @@ describe("setBookingNitrox", () => {
       wantsNitrox: true,
     });
     expect(outcome).toEqual({ ok: false, reason: "booking_unavailable" });
+  });
+
+  it("archiving the card drops the fill gate, so an existing request fails closed", async () => {
+    const ctx = await context();
+    const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: true,
+    });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(true);
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
+
+    expect(
+      await archiveNitroxCertification(ctx.db, {
+        shopId: ctx.shopId,
+        certificationId: cert.id,
+      }),
+    ).toBe(true);
+    // The gate reads the card live: with it archived the diver is no longer certified.
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
+  });
+
+  it("refuses to archive a card through another shop's id", async () => {
+    const ctx = await context();
+    const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    expect(
+      await archiveNitroxCertification(ctx.db, {
+        shopId: crypto.randomUUID(),
+        certificationId: cert.id,
+      }),
+    ).toBe(false);
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
   });
 });

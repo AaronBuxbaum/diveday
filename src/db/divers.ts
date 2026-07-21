@@ -190,7 +190,13 @@ async function summarizeDivers(
     db
       .select()
       .from(certifications)
-      .where(and(eq(certifications.shopId, shopId), inArray(certifications.personId, ids))),
+      .where(
+        and(
+          eq(certifications.shopId, shopId),
+          inArray(certifications.personId, ids),
+          isNull(certifications.deletedAt),
+        ),
+      ),
     db
       .select()
       .from(specialtyCertifications)
@@ -198,13 +204,18 @@ async function summarizeDivers(
         and(
           eq(specialtyCertifications.shopId, shopId),
           inArray(specialtyCertifications.personId, ids),
+          isNull(specialtyCertifications.deletedAt),
         ),
       ),
     db
       .select()
       .from(nitroxCertifications)
       .where(
-        and(eq(nitroxCertifications.shopId, shopId), inArray(nitroxCertifications.personId, ids)),
+        and(
+          eq(nitroxCertifications.shopId, shopId),
+          inArray(nitroxCertifications.personId, ids),
+          isNull(nitroxCertifications.deletedAt),
+        ),
       ),
     db
       .select()
@@ -260,7 +271,13 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     db
       .select()
       .from(certifications)
-      .where(and(eq(certifications.shopId, shopId), eq(certifications.personId, personId)))
+      .where(
+        and(
+          eq(certifications.shopId, shopId),
+          eq(certifications.personId, personId),
+          isNull(certifications.deletedAt),
+        ),
+      )
       .orderBy(desc(certifications.createdAt)),
     db
       .select()
@@ -269,6 +286,7 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
         and(
           eq(specialtyCertifications.shopId, shopId),
           eq(specialtyCertifications.personId, personId),
+          isNull(specialtyCertifications.deletedAt),
         ),
       )
       .orderBy(desc(specialtyCertifications.createdAt)),
@@ -276,7 +294,11 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
       .select()
       .from(nitroxCertifications)
       .where(
-        and(eq(nitroxCertifications.shopId, shopId), eq(nitroxCertifications.personId, personId)),
+        and(
+          eq(nitroxCertifications.shopId, shopId),
+          eq(nitroxCertifications.personId, personId),
+          isNull(nitroxCertifications.deletedAt),
+        ),
       )
       .orderBy(desc(nitroxCertifications.createdAt)),
     db

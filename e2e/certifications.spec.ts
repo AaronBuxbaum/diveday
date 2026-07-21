@@ -51,4 +51,32 @@ test("staff captures and verifies level and specialty cards before either can be
   const specialtyRow = page.locator("li").filter({ hasText: cardNo }).last();
   await specialtyRow.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("certified");
+
+  // The specialty card can be deleted outright (replaces the old "needs
+  // correction" flow). Accept the confirm dialog the delete button raises.
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .locator("li")
+    .filter({ hasText: cardNo })
+    .last()
+    .getByRole("button", {
+      name: "Delete",
+    })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Card deleted");
+  await expect(page.locator("li").filter({ hasText: cardNo })).toHaveCount(0);
+});
+
+test("an expired certification reads as expired and no longer counts as valid", async ({
+  page,
+}) => {
+  // Yusuf Demir carries a verified card that lapsed weeks ago (see the seed).
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: /Yusuf Demir/ }).click();
+  await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
+
+  const expiredRow = page.locator("li").filter({ hasText: "expired" }).first();
+  await expect(expiredRow).toBeVisible();
+  // It reads as "expired", never "certified".
+  await expect(expiredRow).not.toContainText("certified");
 });

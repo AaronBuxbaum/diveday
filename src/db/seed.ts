@@ -346,22 +346,22 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   );
 
   // The rest of the regulars, carrying the states a desk actually sees: cards
-  // still queued for review, one that came back rejected, one expiring inside
-  // the month, and agencies beyond the two the shop teaches. Kept separate from
-  // the block above because that block's ten divers crew today's boat and their
-  // readiness is asserted exactly.
+  // still queued for review, one expiring inside the month, one already lapsed
+  // (shown red and not counted as valid), and agencies beyond the two the shop
+  // teaches. Kept separate from the block above because that block's ten divers
+  // crew today's boat and their readiness is asserted exactly.
   const laterCerts: Array<{
     index: number;
     agency: "padi" | "ssi" | "naui" | "sdi" | "tdi";
     level: "open_water" | "advanced_open_water" | "rescue" | "divemaster";
-    status: "verified" | "pending" | "rejected";
+    status: "verified" | "pending";
     expiresAt?: Date;
   }> = [
     { index: 12, agency: "padi", level: "advanced_open_water", status: "verified" },
     { index: 13, agency: "ssi", level: "open_water", status: "pending" },
     { index: 14, agency: "padi", level: "rescue", status: "verified", expiresAt: at(26, 12) },
-    // The card did not match the name on the booking; the desk sent it back.
-    { index: 15, agency: "naui", level: "open_water", status: "rejected" },
+    // Certified once, but the card lapsed a few weeks ago — no longer valid.
+    { index: 15, agency: "naui", level: "open_water", status: "verified", expiresAt: at(-24, 12) },
     { index: 16, agency: "sdi", level: "open_water", status: "verified" },
     { index: 17, agency: "tdi", level: "divemaster", status: "verified" },
   ];

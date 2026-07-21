@@ -3,8 +3,8 @@ import type { Page } from "@playwright/test";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Ten key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 40 screenshots per run (see ADR
+ * Visual regression coverage (Argos). Eleven key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 44 screenshots per run (see ADR
  * 20260721-argos-visual-regression).
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
@@ -91,6 +91,17 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await capture(page, "diver-profile", scheme);
+
+        // A diver holding a lapsed card: the expired badge renders red and the
+        // card no longer counts as valid — the safety-relevant new state.
+        await page.goto("/shop/blue-mantis/divers");
+        await page
+          .getByRole("row")
+          .filter({ hasText: "Yusuf Demir" })
+          .getByText("YD", { exact: true })
+          .click();
+        await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
+        await capture(page, "diver-profile-expired", scheme);
 
         // The seeded reef trip: schedule card → staff manage view → manifest.
         await page.goto("/shop/blue-mantis/schedule");

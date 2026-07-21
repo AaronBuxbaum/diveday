@@ -1,4 +1,4 @@
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -122,7 +122,13 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     const cardRows = await tx
       .select()
       .from(certifications)
-      .where(and(eq(certifications.shopId, req.shopId), eq(certifications.personId, person.id)));
+      .where(
+        and(
+          eq(certifications.shopId, req.shopId),
+          eq(certifications.personId, person.id),
+          isNull(certifications.deletedAt),
+        ),
+      );
     if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
       return { ok: false, reason: "course_prerequisite" };
     }

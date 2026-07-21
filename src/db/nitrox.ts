@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { bookings, nitroxCertifications, people } from "./schema";
@@ -56,12 +56,37 @@ export async function reviewNitroxCertification(
   return certification ?? null;
 }
 
+/**
+ * Soft-archive a nitrox card: the row is kept for safety history but drops out
+ * of every read (ADR 20260719-crud-archive-semantics). Shop-scoped. Safe by
+ * construction: the fill gate (`verifiedNitroxPersonIds`, `setBookingNitrox`)
+ * and the manifest read the card live, so a booking that requested enriched air
+ * fails closed the moment its backing card is archived.
+ */
+export async function archiveNitroxCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+) {
+  const [row] = await db
+    .update(nitroxCertifications)
+    .set({ deletedAt: nowDate() })
+    .where(
+      and(
+        eq(nitroxCertifications.id, input.certificationId),
+        eq(nitroxCertifications.shopId, input.shopId),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    )
+    .returning({ id: nitroxCertifications.id });
+  return Boolean(row);
+}
+
 export async function listShopNitroxCertifications(db: AppDb, shopId: string) {
   return db
     .select({ certification: nitroxCertifications, person: people })
     .from(nitroxCertifications)
     .innerJoin(people, eq(people.id, nitroxCertifications.personId))
-    .where(eq(nitroxCertifications.shopId, shopId))
+    .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)))
     .orderBy(asc(people.fullName), asc(nitroxCertifications.createdAt));
 }
 
@@ -71,7 +96,11 @@ export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promis
     .select({ personId: nitroxCertifications.personId })
     .from(nitroxCertifications)
     .where(
-      and(eq(nitroxCertifications.shopId, shopId), eq(nitroxCertifications.status, "verified")),
+      and(
+        eq(nitroxCertifications.shopId, shopId),
+        eq(nitroxCertifications.status, "verified"),
+        isNull(nitroxCertifications.deletedAt),
+      ),
     );
   return new Set(rows.map((r) => r.personId));
 }
@@ -115,6 +144,7 @@ export async function setBookingNitrox(
             eq(nitroxCertifications.shopId, input.shopId),
             eq(nitroxCertifications.personId, booking.personId),
             eq(nitroxCertifications.status, "verified"),
+            isNull(nitroxCertifications.deletedAt),
           ),
         )
         .limit(1);

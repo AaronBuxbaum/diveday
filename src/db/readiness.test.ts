@@ -9,6 +9,8 @@ import {
   reviewNitroxCertification,
 } from "./nitrox";
 import {
+  archiveCertification,
+  archiveSpecialtyCertification,
   createCertification,
   createSpecialtyCertification,
   getBookingReadiness,
@@ -267,5 +269,103 @@ describe("trip readiness (in-memory PGlite)", () => {
       }),
     ).toBeNull();
     expect(await listShopCertifications(db, "00000000-0000-4000-8000-000000000000")).toEqual([]);
+  });
+
+  it("archives a level card so it stops counting and drops out of the shop list", async () => {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: "rescue",
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESCUE-DELETE",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+    expect(await getBookingReadiness(db, shop.id, rosterEntry.booking.id)).toEqual({
+      status: "ready",
+      blockers: [],
+    });
+
+    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      true,
+    );
+    const after = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    // With the rescue card archived the diver falls back to their lower seeded
+    // card, so readiness re-blocks — an archived card no longer counts.
+    expect(after?.status).toBe("blocked");
+    expect(after?.blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_insufficient" }),
+    );
+    // It leaves the active shop list…
+    expect(await listShopCertifications(db, shop.id)).not.toContainEqual(
+      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
+    );
+    // …but the archived slot is freed, so the same card number can be recaptured.
+    const recaptured = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESCUE-DELETE",
+    });
+    expect(recaptured).not.toBeNull();
+  });
+
+  it("refuses to archive a level card through another shop's id", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-OW-KEEP",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    expect(
+      await archiveCertification(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        certificationId: card.id,
+      }),
+    ).toBe(false);
+    expect(await listShopCertifications(db, shop.id)).toContainEqual(
+      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
+    );
+  });
+
+  it("archives a specialty card, shop-scoped", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "wreck",
+      identifier: "PADI-WRECK-DELETE",
+    });
+    if (!card) throw new Error("expected specialty certification to insert");
+    expect(
+      await archiveSpecialtyCertification(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        certificationId: card.id,
+      }),
+    ).toBe(false);
+    expect(
+      await archiveSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+    ).toBe(true);
+    const remaining = await listShopSpecialtyCertifications(db, shop.id);
+    expect(remaining.map((row) => row.certification.id)).not.toContain(card.id);
   });
 });

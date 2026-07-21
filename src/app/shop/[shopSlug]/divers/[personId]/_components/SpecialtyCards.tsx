@@ -1,9 +1,16 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { nowDate } from "@/lib/clock";
 import { SPECIALTY_LABELS } from "@/lib/readiness";
-import { addSpecialtyAction, reviewSpecialtyAction } from "../actions";
-import { AGENCY_LABELS, CARD_STATUS_LABELS, type DiverProfile, statusTone } from "./shared";
+import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
+import {
+  AGENCY_LABELS,
+  CARD_STATUS_LABELS,
+  cardDisplayStatus,
+  type DiverProfile,
+  statusTone,
+} from "./shared";
 
 export function SpecialtyCards({
   diver,
@@ -14,6 +21,7 @@ export function SpecialtyCards({
   shopSlug: string;
   personId: string;
 }) {
+  const now = nowDate();
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -93,43 +101,46 @@ export function SpecialtyCards({
           </li>
         ) : (
           <>
-            {diver.specialtyCertifications.map((card) => (
-              <li
-                key={card.id}
-                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-medium">
-                    {AGENCY_LABELS[card.agency]} · {SPECIALTY_LABELS[card.specialty]}
-                  </p>
-                  <p className="mt-1 break-all text-sm text-muted">
-                    {card.identifier}
-                    {card.expiresAt
-                      ? ` · expires ${card.expiresAt.toLocaleDateString("en-US")}`
-                      : ""}
-                  </p>
-                  {card.cardImageUrl ? (
-                    <a
-                      href={card.cardImageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+            {diver.specialtyCertifications.map((card) => {
+              const display = cardDisplayStatus(card, now);
+              const expired = display === "expired";
+              return (
+                <li
+                  key={card.id}
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {AGENCY_LABELS[card.agency]} · {SPECIALTY_LABELS[card.specialty]}
+                    </p>
+                    <p className="mt-1 break-all text-sm text-muted">
+                      {card.identifier}
+                      {card.expiresAt ? (
+                        <span className={expired ? "font-medium text-danger" : undefined}>
+                          {` · ${expired ? "expired" : "expires"} ${card.expiresAt.toLocaleDateString("en-US")}`}
+                        </span>
+                      ) : null}
+                    </p>
+                    {card.cardImageUrl ? (
+                      <a
+                        href={card.cardImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+                      >
+                        View card photo
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(display)}`}
                     >
-                      View card photo
-                    </a>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
-                  >
-                    {CARD_STATUS_LABELS[card.status]}
-                  </span>
-                  {card.status === "pending" ? (
-                    <>
+                      {CARD_STATUS_LABELS[display]}
+                    </span>
+                    {card.status === "pending" ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="status" value="verified" />
                         <SubmitButton
                           pendingLabel="Marking certified…"
                           className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -137,21 +148,21 @@ export function SpecialtyCards({
                           Mark certified
                         </SubmitButton>
                       </form>
-                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="status" value="rejected" />
-                        <SubmitButton
-                          pendingLabel="Updating…"
-                          className={buttonClass({ variant: "danger", size: "sm" })}
-                        >
-                          Needs correction
-                        </SubmitButton>
-                      </form>
-                    </>
-                  ) : null}
-                </div>
-              </li>
-            ))}
+                    ) : null}
+                    <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
+                      <input type="hidden" name="certificationId" value={card.id} />
+                      <SubmitButton
+                        pendingLabel="Deleting…"
+                        confirmMessage="Delete this specialty card? It stops counting toward readiness; its history is kept for records."
+                        className={buttonClass({ variant: "danger", size: "sm" })}
+                      >
+                        Delete
+                      </SubmitButton>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
             {diver.nitroxCertifications.map((card) => (
               <li
                 key={card.id}
@@ -168,31 +179,28 @@ export function SpecialtyCards({
                     {CARD_STATUS_LABELS[card.status]}
                   </span>
                   {card.status === "pending" ? (
-                    <>
-                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="cardType" value="nitrox" />
-                        <input type="hidden" name="status" value="verified" />
-                        <SubmitButton
-                          pendingLabel="Marking certified…"
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          Mark certified
-                        </SubmitButton>
-                      </form>
-                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="cardType" value="nitrox" />
-                        <input type="hidden" name="status" value="rejected" />
-                        <SubmitButton
-                          pendingLabel="Updating…"
-                          className={buttonClass({ variant: "danger", size: "sm" })}
-                        >
-                          Needs correction
-                        </SubmitButton>
-                      </form>
-                    </>
+                    <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
+                      <input type="hidden" name="certificationId" value={card.id} />
+                      <input type="hidden" name="cardType" value="nitrox" />
+                      <SubmitButton
+                        pendingLabel="Marking certified…"
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        Mark certified
+                      </SubmitButton>
+                    </form>
                   ) : null}
+                  <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
+                    <input type="hidden" name="certificationId" value={card.id} />
+                    <input type="hidden" name="cardType" value="nitrox" />
+                    <SubmitButton
+                      pendingLabel="Deleting…"
+                      confirmMessage="Delete this nitrox card? It stops counting toward readiness; its history is kept for records."
+                      className={buttonClass({ variant: "danger", size: "sm" })}
+                    >
+                      Delete
+                    </SubmitButton>
+                  </form>
                 </div>
               </li>
             ))}

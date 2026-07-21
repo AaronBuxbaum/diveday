@@ -1,9 +1,16 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { nowDate } from "@/lib/clock";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
-import { addCertificationAction, reviewAction } from "../actions";
-import { AGENCY_LABELS, CARD_STATUS_LABELS, type DiverProfile, statusTone } from "./shared";
+import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
+import {
+  AGENCY_LABELS,
+  CARD_STATUS_LABELS,
+  cardDisplayStatus,
+  type DiverProfile,
+  statusTone,
+} from "./shared";
 
 export function CertificationCards({
   diver,
@@ -14,6 +21,7 @@ export function CertificationCards({
   shopSlug: string;
   personId: string;
 }) {
+  const now = nowDate();
   return (
     <section className="mt-10" aria-labelledby="cards-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -90,44 +98,49 @@ export function CertificationCards({
             No level cards yet — add their first card above so it can make them trip-ready.
           </li>
         ) : (
-          diver.certifications.map((card) => (
-            <li
-              key={card.id}
-              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-medium">
-                  {AGENCY_LABELS[card.agency]} · {CERTIFICATION_LEVEL_LABELS[card.level]}
-                </p>
-                <p className="mt-1 break-all text-sm text-muted">
-                  {card.identifier}
-                  {card.expiresAt ? ` · expires ${card.expiresAt.toLocaleDateString("en-US")}` : ""}
-                </p>
-                {card.reviewNote ? (
-                  <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
-                ) : null}
-                {card.cardImageUrl ? (
-                  <a
-                    href={card.cardImageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+          diver.certifications.map((card) => {
+            const display = cardDisplayStatus(card, now);
+            const expired = display === "expired";
+            return (
+              <li
+                key={card.id}
+                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-medium">
+                    {AGENCY_LABELS[card.agency]} · {CERTIFICATION_LEVEL_LABELS[card.level]}
+                  </p>
+                  <p className="mt-1 break-all text-sm text-muted">
+                    {card.identifier}
+                    {card.expiresAt ? (
+                      <span className={expired ? "font-medium text-danger" : undefined}>
+                        {` · ${expired ? "expired" : "expires"} ${card.expiresAt.toLocaleDateString("en-US")}`}
+                      </span>
+                    ) : null}
+                  </p>
+                  {card.reviewNote ? (
+                    <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
+                  ) : null}
+                  {card.cardImageUrl ? (
+                    <a
+                      href={card.cardImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+                    >
+                      View card photo
+                    </a>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(display)}`}
                   >
-                    View card photo
-                  </a>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
-                >
-                  {CARD_STATUS_LABELS[card.status]}
-                </span>
-                {card.status === "pending" ? (
-                  <>
+                    {CARD_STATUS_LABELS[display]}
+                  </span>
+                  {card.status === "pending" ? (
                     <form action={reviewAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
-                      <input type="hidden" name="status" value="verified" />
                       <SubmitButton
                         pendingLabel="Marking certified…"
                         className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -135,21 +148,21 @@ export function CertificationCards({
                         Mark certified
                       </SubmitButton>
                     </form>
-                    <form action={reviewAction.bind(null, shopSlug, personId)}>
-                      <input type="hidden" name="certificationId" value={card.id} />
-                      <input type="hidden" name="status" value="rejected" />
-                      <SubmitButton
-                        pendingLabel="Updating…"
-                        className={buttonClass({ variant: "danger", size: "sm" })}
-                      >
-                        Needs correction
-                      </SubmitButton>
-                    </form>
-                  </>
-                ) : null}
-              </div>
-            </li>
-          ))
+                  ) : null}
+                  <form action={deleteCertificationAction.bind(null, shopSlug, personId)}>
+                    <input type="hidden" name="certificationId" value={card.id} />
+                    <SubmitButton
+                      pendingLabel="Deleting…"
+                      confirmMessage="Delete this certification card? It stops counting toward readiness; its history is kept for records."
+                      className={buttonClass({ variant: "danger", size: "sm" })}
+                    >
+                      Delete
+                    </SubmitButton>
+                  </form>
+                </div>
+              </li>
+            );
+          })
         )}
       </ul>
     </section>
