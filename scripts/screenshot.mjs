@@ -44,6 +44,7 @@ for (const route of routes) {
       const context = await browser.newContext({ viewport, colorScheme: scheme });
       const page = await context.newPage();
       await page.goto(new URL(route, BASE_URL).href, { waitUntil: "networkidle" });
+      await page.evaluate(() => document.fonts.ready);
       const file = `${OUT_DIR}/${slug}--${scheme}-${device}.png`;
       await page.screenshot({ path: file, fullPage: true });
       console.log(file);
