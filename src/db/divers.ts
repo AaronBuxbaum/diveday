@@ -1,6 +1,20 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import { listOrdersForPerson } from "./orders";
 import { listPersonBookingPayments } from "./payments";
 import {
@@ -101,18 +115,75 @@ export async function restoreDiver(db: AppDb, shopId: string, personId: string) 
   return Boolean(person);
 }
 
-async function diverIds(db: AppDb, shopId: string) {
-  const rows = await db
-    .select({ person: people })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver"), isNull(people.deletedAt)))
-    .orderBy(asc(people.fullName));
-  return rows.map(({ person }) => person);
+export const DIVER_PAGE_SIZE = 50;
+
+/**
+ * The diver roster stays server-fed: search is indexed `ilike` over the
+ * columns the front desk actually types (name, email, phone — same shape as
+ * the command palette in `search.ts`), and pages are keyset-bounded so a shop
+ * with thousands of records costs one page, not the whole table.
+ */
+export async function listDiverSummaries(
+  db: AppDb,
+  shopId: string,
+  options: { query?: string; cursor?: string; limit?: number } = {},
+) {
+  const query = options.query?.trim() ?? "";
+  const limit = options.limit ?? DIVER_PAGE_SIZE;
+  const like = query ? `%${query}%` : null;
+  const after = decodeCursor(options.cursor);
+
+  const scope = and(
+    eq(people.shopId, shopId),
+    eq(personRoles.role, "diver"),
+    isNull(people.deletedAt),
+    like
+      ? or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like))
+      : undefined,
+  );
+
+  const [rows, [counted]] = await Promise.all([
+    db
+      .select({ person: people })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          scope,
+          after
+            ? or(
+                gt(people.fullName, after[0]),
+                and(eq(people.fullName, after[0]), gt(people.id, after[1])),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(asc(people.fullName), asc(people.id))
+      .limit(limit + 1),
+    db
+      .select({ total: count() })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(scope),
+  ]);
+
+  const pageRows = rows.slice(0, limit).map(({ person }) => person);
+  const last = pageRows.at(-1);
+  const nextCursor = rows.length > limit && last ? encodeCursor(last.fullName, last.id) : null;
+  const total = counted?.total ?? 0;
+
+  return {
+    divers: await summarizeDivers(db, shopId, pageRows),
+    nextCursor,
+    total,
+  };
 }
 
-export async function listDiverSummaries(db: AppDb, shopId: string) {
-  const peopleRows = await diverIds(db, shopId);
+async function summarizeDivers(
+  db: AppDb,
+  shopId: string,
+  peopleRows: (typeof people.$inferSelect)[],
+) {
   if (peopleRows.length === 0) return [];
   const ids = peopleRows.map((person) => person.id);
   const [levelCards, specialtyCards, nitroxCards, profiles] = await Promise.all([

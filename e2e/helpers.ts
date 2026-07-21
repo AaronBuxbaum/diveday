@@ -27,3 +27,12 @@ export function e2eNow(): Date {
 export function daysFromNow(days: number): string {
   return new Date(e2eNow().getTime() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
+
+/** Sign in through the dev credential form as any seeded staff login. */
+export async function signInAs(page: Page, login: { email: string; password: string }) {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(login.email);
+  await page.getByLabel("Password").fill(login.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/shop/);
+}

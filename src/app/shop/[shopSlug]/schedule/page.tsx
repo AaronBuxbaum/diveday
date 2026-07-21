@@ -8,7 +8,12 @@ import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import {
+  pagedUpcomingTripsWithCounts,
+  upcomingScheduleRange,
+  upcomingScheduleStats,
+  upcomingTripsForCalendar,
+} from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import {
@@ -22,7 +27,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
-import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 export const metadata: Metadata = {
   title: "Schedule — DiveDay",
@@ -33,50 +38,43 @@ export default async function TripsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; after?: string }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month } = await searchParams;
+  const { month, after } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
     notFound();
   }
-  const upcoming = await upcomingTripsWithCounts(db, shop.id);
   const session = await auth();
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
 
-  // Diver-facing month calendar: place each upcoming dive on its shop-local day
-  // (storage is UTC; the diver thinks in the shop's wall clock), then page
-  // through the months that actually have dives on the books.
+  // The board is served in pages: the list is one keyset page, the stat tiles
+  // and calendar come from bounded queries — nothing loads every trip at once,
+  // so a shop with hundreds of departures on the books stays quick.
   const tz = shop.timezone;
+  const now = nowDate();
+  const [range, stats, { trips: upcoming, nextCursor }] = await Promise.all([
+    upcomingScheduleRange(db, shop.id, now),
+    staffView ? upcomingScheduleStats(db, shop.id, now) : null,
+    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+  ]);
+  const hasUpcoming = range.first !== null;
+
+  // Diver-facing month calendar: place the month's dives on their shop-local
+  // day (storage is UTC; the diver thinks in the shop's wall clock), and page
+  // through the months that actually have dives on the books.
   const ordinal = (ref: MonthRef) => ref.year * 12 + (ref.month - 1);
-  const tripsByDay = new Map<string, CalendarTrip[]>();
-  const tripMonths: MonthRef[] = [];
-  for (const trip of upcoming) {
-    const wall = utcToWallTime(trip.startsAt, tz);
-    const iso = toDateInputValue(wall);
-    const list = tripsByDay.get(iso) ?? [];
-    list.push({
-      id: trip.id,
-      title: trip.title,
-      time: formatTime(trip.startsAt, "en-US", tz),
-      full: isFull(trip),
-    });
-    tripsByDay.set(iso, list);
-    tripMonths.push({ year: wall.year, month: wall.month });
-  }
-  const todayWall = utcToWallTime(nowDate(), tz);
+  const monthOf = (date: Date): MonthRef => {
+    const wall = utcToWallTime(date, tz);
+    return { year: wall.year, month: wall.month };
+  };
+  const todayWall = utcToWallTime(now, tz);
   const todayIso = toDateInputValue(todayWall);
-  const firstTripMonth = tripMonths.reduce<MonthRef | null>(
-    (min, m) => (!min || ordinal(m) < ordinal(min) ? m : min),
-    null,
-  );
-  const lastTripMonth = tripMonths.reduce<MonthRef | null>(
-    (max, m) => (!max || ordinal(m) > ordinal(max) ? m : max),
-    null,
-  );
+  const firstTripMonth = range.first ? monthOf(range.first) : null;
+  const lastTripMonth = range.last ? monthOf(range.last) : null;
   const currentMonth: MonthRef = parseMonthKey(month) ??
     firstTripMonth ?? { year: todayWall.year, month: todayWall.month };
   const prev = addMonths(currentMonth, -1);
@@ -85,6 +83,31 @@ export default async function TripsPage({
     firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
+
+  const tripsByDay = new Map<string, CalendarTrip[]>();
+  if (!staffView && hasUpcoming) {
+    const monthStart = wallTimeToUtc(
+      { year: currentMonth.year, month: currentMonth.month, day: 1, hour: 0, minute: 0 },
+      tz,
+    );
+    const nextRef = addMonths(currentMonth, 1);
+    const monthEnd = wallTimeToUtc(
+      { year: nextRef.year, month: nextRef.month, day: 1, hour: 0, minute: 0 },
+      tz,
+    );
+    const monthTrips = await upcomingTripsForCalendar(db, shop.id, monthStart, monthEnd, now);
+    for (const trip of monthTrips) {
+      const iso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
+      const list = tripsByDay.get(iso) ?? [];
+      list.push({
+        id: trip.id,
+        title: trip.title,
+        time: formatTime(trip.startsAt, "en-US", tz),
+        full: isFull(trip),
+      });
+      tripsByDay.set(iso, list);
+    }
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -107,40 +130,33 @@ export default async function TripsPage({
           ) : undefined
         }
       />
-      {staffView ? (
+      {staffView && stats ? (
         <section
           aria-label="Schedule overview"
           className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
           <ShopStat
             label="Departures"
-            value={upcoming.length}
+            value={stats.departures}
             detail="Upcoming trips and sessions"
             tone="primary"
           />
-          <ShopStat
-            label="Booked"
-            value={upcoming.reduce((total, trip) => total + trip.booked, 0)}
-            detail="Divers across all departures"
-          />
+          <ShopStat label="Booked" value={stats.booked} detail="Divers across all departures" />
           <ShopStat
             label="Open seats"
-            value={upcoming.reduce(
-              (total, trip) => total + Math.max(0, trip.capacity - trip.booked),
-              0,
-            )}
+            value={stats.openSeats}
             detail="Available across the board"
             tone="success"
           />
           <ShopStat
             label="At capacity"
-            value={upcoming.filter(isFull).length}
+            value={stats.atCapacity}
             detail="Trips with no open seats"
           />
         </section>
       ) : null}
 
-      {!staffView && upcoming.length > 0 ? (
+      {!staffView && hasUpcoming ? (
         <ScheduleCalendar
           shopSlug={shopSlug}
           label={monthLabel(currentMonth)}
@@ -152,7 +168,7 @@ export default async function TripsPage({
         />
       ) : null}
 
-      {upcoming.length === 0 ? (
+      {!hasUpcoming ? (
         <EmptyState>
           <h2 className="font-medium">No trips on the books yet</h2>
           {staffView ? (
@@ -243,6 +259,26 @@ export default async function TripsPage({
           })}
         </ul>
       )}
+      {nextCursor || after ? (
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {nextCursor ? (
+            <Link
+              href={`/shop/${shopSlug}/schedule?after=${encodeURIComponent(nextCursor)}${month ? `&month=${month}` : ""}`}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              Show later departures
+            </Link>
+          ) : null}
+          {after ? (
+            <Link
+              href={`/shop/${shopSlug}/schedule${month ? `?month=${month}` : ""}`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              ← Back to the next departure
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }

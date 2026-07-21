@@ -1,8 +1,9 @@
-import { and, asc, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import type { Course } from "./schema";
 import {
   bookings,
@@ -497,6 +498,159 @@ export async function upcomingTripsWithCounts(
     .orderBy(asc(trips.startsAt));
 
   return rows.map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
+}
+
+export const SCHEDULE_PAGE_SIZE = 50;
+
+/**
+ * The schedule page's list, one keyset page at a time (ordered by departure,
+ * then id for a stable tiebreak). `upcomingTripsWithCounts` stays for callers
+ * that genuinely need every upcoming trip in memory; the page never should —
+ * a busy shop's board grows without bound.
+ */
+export async function pagedUpcomingTripsWithCounts(
+  db: AppDb,
+  shopId: string,
+  options: { cursor?: string; limit?: number; now?: Date } = {},
+): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
+  const now = options.now ?? nowDate();
+  const limit = options.limit ?? SCHEDULE_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+  const afterDate = after ? new Date(after[0]) : null;
+
+  const rows = await db
+    .select({
+      trip: trips,
+      course: courses,
+      diveSite: diveSites,
+      booked: count(bookings.id),
+    })
+    .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, now),
+        afterDate && after && !Number.isNaN(afterDate.getTime())
+          ? or(
+              gt(trips.startsAt, afterDate),
+              and(eq(trips.startsAt, afterDate), gt(trips.id, after[1])),
+            )
+          : undefined,
+      ),
+    )
+    .groupBy(trips.id, courses.id, diveSites.id)
+    .orderBy(asc(trips.startsAt), asc(trips.id))
+    .limit(limit + 1);
+
+  const page = rows
+    .slice(0, limit)
+    .map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
+  const last = page.at(-1);
+  return {
+    trips: page,
+    nextCursor:
+      rows.length > limit && last ? encodeCursor(last.startsAt.toISOString(), last.id) : null,
+  };
+}
+
+/**
+ * Board-wide aggregates for the staff stat tiles, computed in the database so
+ * they stay exact when the list itself is paged.
+ */
+export async function upcomingScheduleStats(
+  db: AppDb,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<{ departures: number; booked: number; openSeats: number; atCapacity: number }> {
+  const perTrip = db
+    .select({
+      tripId: trips.id,
+      capacity: trips.capacity,
+      booked: count(bookings.id).as("booked"),
+    })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)))
+    .groupBy(trips.id)
+    .as("per_trip");
+
+  const [row] = await db
+    .select({
+      departures: count(),
+      booked: sql<number>`coalesce(sum(${perTrip.booked}), 0)::int`,
+      capacity: sql<number>`coalesce(sum(${perTrip.capacity}), 0)::int`,
+      atCapacity: sql<number>`count(*) filter (where ${perTrip.booked} >= ${perTrip.capacity})::int`,
+    })
+    .from(perTrip);
+
+  const departures = row?.departures ?? 0;
+  const booked = row?.booked ?? 0;
+  return {
+    departures,
+    booked,
+    openSeats: Math.max(0, (row?.capacity ?? 0) - booked),
+    atCapacity: row?.atCapacity ?? 0,
+  };
+}
+
+/**
+ * First and last upcoming departure, to pick the calendar's default month and
+ * bound its pager without loading a single trip row.
+ */
+export async function upcomingScheduleRange(
+  db: AppDb,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<{ first: Date | null; last: Date | null }> {
+  const [range] = await db
+    .select({
+      first: sql<string | null>`min(${trips.startsAt})`,
+      last: sql<string | null>`max(${trips.startsAt})`,
+    })
+    .from(trips)
+    .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)));
+  return {
+    first: range?.first ? new Date(range.first) : null,
+    last: range?.last ? new Date(range.last) : null,
+  };
+}
+
+/**
+ * The diver calendar's month of trips, bounded to the shop-local month so the
+ * grid stays complete no matter how the list below it is paged.
+ */
+export async function upcomingTripsForCalendar(
+  db: AppDb,
+  shopId: string,
+  monthStartUtc: Date,
+  monthEndUtc: Date,
+  now: Date = nowDate(),
+): Promise<{ id: string; title: string; startsAt: Date; capacity: number; booked: number }[]> {
+  const from = monthStartUtc > now ? monthStartUtc : now;
+  return db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      capacity: trips.capacity,
+      booked: count(bookings.id),
+    })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, from),
+        lt(trips.startsAt, monthEndUtc),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt));
 }
 
 /**

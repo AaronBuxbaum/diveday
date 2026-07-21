@@ -4,6 +4,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
 import { TodayQueue } from "@/components/today/TodayQueue";
+import { YourSessions } from "@/components/today/YourSessions";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -11,7 +12,7 @@ import { getTodayWork } from "@/db/today";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { summarizeDay } from "@/lib/today";
+import { leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 
 export const metadata: Metadata = {
   title: "Today — DiveDay",
@@ -39,13 +40,24 @@ export default async function ShopPage({
   if (!shop) return null;
 
   const now = nowDate();
-  const { departures, actions, nextDeparture } = await getTodayWork(
+  // The lens (20260721-role-aware-landing): a captain or divemaster's Today
+  // leads with the boat they crew; an instructor's with their sessions.
+  const lens = roleLensFor(session.user.roles);
+  const work = await getTodayWork(
     db,
     shop.id,
     shopSlug,
     shop.timezone,
     now,
+    lens ? session.user.personId : undefined,
   );
+  const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
+  const crewedSet = new Set(crewedTripIds);
+  const departures = lens === "boat" ? leadWithCrewed(work.departures, crewedSet) : work.departures;
+  const yourBoat =
+    lens === "boat"
+      ? (departures.find((departure) => crewedSet.has(departure.tripId)) ?? null)
+      : null;
   const firstName = session.user.name?.split(" ")[0] ?? "there";
 
   return (
@@ -65,6 +77,9 @@ export default async function ShopPage({
             departures.length,
             departures.reduce((total, departure) => total + departure.blocked, 0),
           )}
+          {yourBoat
+            ? ` You’re crewing the ${formatTime(yourBoat.startsAt, "en-US", shop.timezone)} ${yourBoat.title}.`
+            : ""}
         </p>
       </header>
 
@@ -92,7 +107,16 @@ export default async function ShopPage({
         </div>
       ) : null}
 
-      <DepartureBoard departures={departures} shopSlug={shopSlug} timeZone={shop.timezone} />
+      {lens === "sessions" ? (
+        <YourSessions sessions={crewedSessions} shopSlug={shopSlug} timeZone={shop.timezone} />
+      ) : null}
+
+      <DepartureBoard
+        departures={departures}
+        shopSlug={shopSlug}
+        timeZone={shop.timezone}
+        crewedTripIds={crewedTripIds}
+      />
 
       {departures.length === 0 ? (
         <section

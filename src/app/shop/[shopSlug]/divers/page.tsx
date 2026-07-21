@@ -26,15 +26,16 @@ export default async function DiversPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; deleted?: string }>;
+  searchParams: Promise<{ notice?: string; deleted?: string; q?: string; after?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, deleted } = await searchParams;
+  const { notice, deleted, q, after } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
-  const divers = await listDiverSummaries(db, shop.id);
+  const query = q?.trim() ?? "";
+  const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after });
 
   async function addDiverAction(formData: FormData) {
     "use server";
@@ -85,7 +86,11 @@ export default async function DiversPage({
         eyebrow={shop.name}
         title="Divers"
         description="Start with the person. Their cards, rental fit, and bookings stay together so the front desk always has the right context."
-        meta={<span className="text-sm text-muted">{divers.length} on file</span>}
+        meta={
+          <span className="text-sm text-muted">
+            {query ? `${diverPage.total} matching` : `${diverPage.total} on file`}
+          </span>
+        }
       />
 
       {noticeText ? (
@@ -139,7 +144,7 @@ export default async function DiversPage({
         </FieldGrid>
       </details>
 
-      <DiverList divers={divers} shopSlug={shopSlug} />
+      <DiverList page={diverPage} shopSlug={shopSlug} query={query} cursorActive={Boolean(after)} />
     </main>
   );
 }

@@ -27,6 +27,22 @@ export function DiveBriefingCard({
 }) {
   const heading = title || site?.name || `Dive ${diveNumber}`;
   const landmarks = site ? buildDiveSiteLandmarks(site.name, site.landmarks) : [];
+  // The long-tail site content folds behind one tap so the page stays a
+  // briefing, not a scroll marathon — the essentials above stay in view.
+  const hasSiteExtras =
+    landmarks.length > 0 ||
+    creatures.length > 0 ||
+    Boolean(site?.marineLifeDescription) ||
+    Boolean(site?.marineLife) ||
+    Boolean(moments[0]);
+  const extrasHint = [
+    landmarks.length > 0
+      ? `${landmarks.length} landmark${landmarks.length === 1 ? "" : "s"}`
+      : null,
+    creatures.length > 0 ? `${creatures.length} species` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
@@ -79,29 +95,46 @@ export function DiveBriefingCard({
             <p className="mt-2 leading-relaxed text-muted">{site.divePlan}</p>
           </section>
         ) : null}
-        <DiveSiteLandmarks landmarks={landmarks} />
-        {site ? (
-          <DiveSiteFieldGuide
-            creatures={creatures}
-            summary={site.marineLifeDescription}
-            highlights={site.marineLife}
-          />
-        ) : null}
-        {moments[0] ? (
-          <figure className="mt-6 overflow-hidden rounded-lg bg-accent/10 sm:grid sm:grid-cols-[12rem_1fr]">
-            {moments[0].imageUrl ? (
-              // biome-ignore lint/performance/noImgElement: moderated dive-site media supports approved external hosts.
-              <img
-                src={resolveDiveSiteImageUrl(moments[0].imageUrl) ?? undefined}
-                alt={`A recent diver moment at ${site?.name ?? heading}`}
-                className="aspect-video h-full w-full object-cover sm:aspect-square"
+        {hasSiteExtras ? (
+          <details className="group mt-7 border-t border-border">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+              <span className="font-semibold">What to look for down there</span>
+              <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
+                {extrasHint ? <span className="tabular-nums">{extrasHint}</span> : null}
+                <span
+                  aria-hidden="true"
+                  className="transition-transform duration-200 ease-out group-open:rotate-180"
+                >
+                  ▾
+                </span>
+              </span>
+            </summary>
+            <DiveSiteLandmarks landmarks={landmarks} />
+            {site ? (
+              <DiveSiteFieldGuide
+                creatures={creatures}
+                summary={site.marineLifeDescription}
+                highlights={site.marineLife}
               />
             ) : null}
-            <figcaption className="p-4 sm:self-center">
-              <h4 className="font-semibold">A recent diver moment</h4>
-              <p className="mt-1 text-sm text-muted">{moments[0].caption}</p>
-            </figcaption>
-          </figure>
+            {moments[0] ? (
+              <figure className="mt-6 overflow-hidden rounded-lg bg-accent/10 sm:grid sm:grid-cols-[12rem_1fr]">
+                {moments[0].imageUrl ? (
+                  // biome-ignore lint/performance/noImgElement: moderated dive-site media supports approved external hosts.
+                  <img
+                    src={resolveDiveSiteImageUrl(moments[0].imageUrl) ?? undefined}
+                    alt={`A recent diver moment at ${site?.name ?? heading}`}
+                    loading="lazy"
+                    className="aspect-video h-full w-full object-cover sm:aspect-square"
+                  />
+                ) : null}
+                <figcaption className="p-4 sm:self-center">
+                  <h4 className="font-semibold">A recent diver moment</h4>
+                  <p className="mt-1 text-sm text-muted">{moments[0].caption}</p>
+                </figcaption>
+              </figure>
+            ) : null}
+          </details>
         ) : null}
       </div>
     </article>

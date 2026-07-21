@@ -4,7 +4,9 @@ import {
   collapseDiverActions,
   diverBlockerAction,
   groupActions,
+  leadWithCrewed,
   primaryBlocker,
+  roleLensFor,
   sortActions,
   summarizeDay,
   type TodayAction,
@@ -329,5 +331,34 @@ describe("summarizeDay", () => {
       3,
     );
     expect(summary).toBe("3 departures today. Nothing is urgent; 2 jobs to work ahead.");
+  });
+});
+
+describe("roleLensFor", () => {
+  it("gives owners and managers no lens, whatever else they hold", () => {
+    expect(roleLensFor(["owner"])).toBeNull();
+    expect(roleLensFor(["manager", "instructor", "captain"])).toBeNull();
+  });
+
+  it("leads instructors with sessions, boat crew with their boat", () => {
+    expect(roleLensFor(["instructor"])).toBe("sessions");
+    expect(roleLensFor(["captain"])).toBe("boat");
+    expect(roleLensFor(["divemaster"])).toBe("boat");
+    // Instructor wins for someone holding both, matching switcher precedence.
+    expect(roleLensFor(["captain", "instructor"])).toBe("sessions");
+    expect(roleLensFor(["diver"])).toBeNull();
+    expect(roleLensFor([])).toBeNull();
+  });
+});
+
+describe("leadWithCrewed", () => {
+  it("moves crewed departures first without reordering within each half", () => {
+    const departures = [{ tripId: "a" }, { tripId: "b" }, { tripId: "c" }];
+    expect(leadWithCrewed(departures, new Set(["c"])).map((d) => d.tripId)).toEqual([
+      "c",
+      "a",
+      "b",
+    ]);
+    expect(leadWithCrewed(departures, new Set()).map((d) => d.tripId)).toEqual(["a", "b", "c"]);
   });
 });

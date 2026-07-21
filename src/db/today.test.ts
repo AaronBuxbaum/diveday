@@ -280,3 +280,45 @@ describe("today's work queue (in-memory PGlite)", () => {
     }
   });
 });
+
+describe("role lens raw material", () => {
+  it("marks the trips a captain crews and the sessions an instructor teaches", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const captain = staff.find((entry) => entry.roles.includes("captain"))?.person;
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"))?.person;
+    if (!captain || !instructor) throw new Error("seed staff missing");
+
+    const forCaptain = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      undefined,
+      captain.id,
+    );
+    // The seed assigns the captain to every charter, so today's boat is theirs.
+    for (const departure of forCaptain.departures.filter((d) => !d.courseTitle)) {
+      expect(forCaptain.crewedTripIds).toContain(departure.tripId);
+    }
+    expect(forCaptain.crewedSessions).toHaveLength(0); // captain teaches nothing
+
+    const forInstructor = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      undefined,
+      instructor.id,
+    );
+    expect(forInstructor.crewedSessions.length).toBeGreaterThan(0);
+    for (const session of forInstructor.crewedSessions) {
+      expect(session.courseTitle).toBeTruthy();
+      expect(session.ready + session.blocked).toBeLessThanOrEqual(session.booked);
+    }
+
+    const anonymous = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(anonymous.crewedTripIds).toHaveLength(0);
+    expect(anonymous.crewedSessions).toHaveLength(0);
+  });
+});

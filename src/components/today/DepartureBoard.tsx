@@ -36,18 +36,25 @@ function DepartureCard({
   departure,
   shopSlug,
   timeZone,
+  crewed = false,
 }: {
   departure: DepartureSummary;
   shopSlug: string;
   timeZone: string;
+  crewed?: boolean;
 }) {
   const { blocked, ready, boarded, booked, capacity } = departure;
   return (
     <li className="rounded-2xl border border-border bg-surface-sunken p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-2xl font-bold tracking-tight tabular-nums">
+          <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
             {formatTime(departure.startsAt, "en-US", timeZone)}
+            {crewed ? (
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                You’re crewing
+              </span>
+            ) : null}
           </p>
           <h3 className="mt-0.5 font-semibold">{departure.title}</h3>
           {departure.courseTitle ? (
@@ -116,12 +123,16 @@ export function DepartureBoard({
   departures,
   shopSlug,
   timeZone,
+  crewedTripIds,
 }: {
   departures: readonly DepartureSummary[];
   shopSlug: string;
   timeZone: string;
+  /** Trips the signed-in staffer crews — badged so their boat reads first. */
+  crewedTripIds?: readonly string[];
 }) {
   if (departures.length === 0) return null;
+  const crewed = new Set(crewedTripIds ?? []);
   return (
     <section aria-labelledby="departures-heading" className="mb-10">
       <h2 id="departures-heading" className="text-lg font-semibold">
@@ -138,6 +149,7 @@ export function DepartureBoard({
             departure={departure}
             shopSlug={shopSlug}
             timeZone={timeZone}
+            crewed={crewed.has(departure.tripId)}
           />
         ))}
       </ul>
