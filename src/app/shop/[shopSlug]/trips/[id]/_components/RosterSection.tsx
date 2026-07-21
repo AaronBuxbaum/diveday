@@ -303,11 +303,12 @@ export function RosterSection({
                   >
                     Create order
                   </Link>
+                  {/* Reversible: removal shows an Undo banner, so it takes no
+                      blocking confirm (docs/design/principles.md §7). */}
                   <form action={removeBookingAction} className="sm:ml-auto">
                     <input type="hidden" name="bookingId" value={booking.id} />
                     <SubmitButton
                       pendingLabel="Removing…"
-                      confirmMessage={`Remove ${person.fullName} from this trip? Their spot opens back up.`}
                       className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
                     >
                       Remove booking
