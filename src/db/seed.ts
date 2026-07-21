@@ -64,6 +64,21 @@ function at(daysFromNow: number, hour: number, minute = 0): Date {
 }
 
 /**
+ * Distinct, clock-anchored `createdAt` stamps for seed rows whose render
+ * order depends on insertion order (a trip roster, a diver's card history).
+ * Left to the column's `defaultNow()`, every row in the same multi-row
+ * INSERT ties on one transaction-start instant — real wall-clock time, not
+ * `DIVEDAY_CLOCK` — and Postgres does not promise a stable order for ties,
+ * so which diver renders first drifts between runs. Handing out strictly
+ * increasing instants removes the tie.
+ */
+let seedClockTick = 0;
+function nextCreatedAt(): Date {
+  seedClockTick += 1;
+  return new Date(nowMs() + seedClockTick);
+}
+
+/**
  * Anchored to the clock rather than the calendar so one seeded trip always
  * sails *today*, whatever time the demo is opened. Today's departure board is
  * the first thing staff see, and a demo that never has a boat out cannot show
@@ -379,6 +394,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         specialty: "deep" as const,
         identifier: "DEMO-SPEC-DEEP-2",
         status: "verified" as const,
+        createdAt: nextCreatedAt(),
       },
       {
         shopId,
@@ -387,6 +403,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         specialty: "wreck" as const,
         identifier: "DEMO-SPEC-WRECK-2",
         status: "verified" as const,
+        createdAt: nextCreatedAt(),
       },
       {
         shopId,
@@ -395,6 +412,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         specialty: "night" as const,
         identifier: "DEMO-SPEC-NIGHT-2",
         status: "verified" as const,
+        createdAt: nextCreatedAt(),
       },
       {
         shopId,
@@ -403,6 +421,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
         specialty: "deep" as const,
         identifier: "DEMO-SPEC-DEEP-3",
         status: "pending" as const,
+        createdAt: nextCreatedAt(),
       },
     ]);
   }
@@ -1381,6 +1400,7 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       bookingRows.map((row) => ({
         shopId,
         status: "booked" as const,
+        createdAt: nextCreatedAt(),
         ...row,
       })),
     )
@@ -1435,9 +1455,14 @@ async function seedFrontDesk(
   if (wreckId) {
     const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
     if (waiting.length > 0) {
-      await db
-        .insert(tripWaitlistEntries)
-        .values(waiting.map((person) => ({ shopId, tripId: wreckId, personId: person.id })));
+      await db.insert(tripWaitlistEntries).values(
+        waiting.map((person) => ({
+          shopId,
+          tripId: wreckId,
+          personId: person.id,
+          createdAt: nextCreatedAt(),
+        })),
+      );
     }
   }
 
