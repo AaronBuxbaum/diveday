@@ -135,6 +135,20 @@ export function waiverState(record: WaiverRecord | null, now: Date = new Date())
   return record.expiresAt <= now ? "expired" : "awaiting_signature";
 }
 
+/**
+ * The signing date of a completed *medical* waiver — one that actually captured
+ * a medical questionnaire — or null. Staff-recorded paper signatures
+ * (`in_person_attested`) carry no medical answers, so they never surface a date:
+ * the point of showing it is letting the crew spot a medical statement drifting
+ * toward a year stale, and there is no questionnaire on file to age.
+ */
+export function medicalWaiverSignedAt(record: WaiverRecord | null): Date | null {
+  if (record === null) return null;
+  if (record.status !== "completed") return null;
+  if (!record.medicalAnswers) return null;
+  return record.signedAt ?? record.completedAt ?? null;
+}
+
 export type WaiverActivityEntry = {
   recordId: string;
   at: Date;

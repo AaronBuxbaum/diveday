@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getShopById, setShopContact, setShopPackingList } from "@/db/shops";
+import { getShopById, setShopContact, setShopPackingList, setShopRentalItems } from "@/db/shops";
 import {
   canAcceptPayments,
   disconnectShopStripeAccount,
@@ -17,6 +17,7 @@ import {
 } from "@/db/stripe-accounts";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
+import { RENTABLE_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
@@ -24,6 +25,7 @@ export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
   packing_invalid: { tone: "danger", text: "Add between one and twelve packing items." },
+  rentals_saved: { tone: "success", text: "Rental catalog saved." },
   contact_saved: { tone: "success", text: "Contact details saved." },
   contact_invalid: {
     tone: "danger",
@@ -67,6 +69,20 @@ async function savePackingAction(formData: FormData) {
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings/payments`,
     `/shop/${session.user.shopSlug}/settings/payments?notice=packing_saved`,
+  );
+}
+
+/** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
+async function saveRentalItemsAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const selected = RENTABLE_ITEMS.filter((item) => formData.get(item.name) === "on").map(
+    (item) => item.kind,
+  );
+  await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
+  revalidateAndRedirect(
+    `/shop/${session.user.shopSlug}/settings/payments`,
+    `/shop/${session.user.shopSlug}/settings/payments?notice=rentals_saved`,
   );
 }
 
@@ -147,6 +163,7 @@ export default async function PaymentsSettingsPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect("/");
+  const offeredKinds = new Set(toRentableKinds(shop.rentalItems));
   const account = await getShopStripeAccount(db, session.user.shopId);
   const ready = canAcceptPayments(account);
   const connectConfigured = Boolean(
@@ -224,6 +241,39 @@ export default async function PaymentsSettingsPage({
           />
           <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
             Save packing checklist
+          </SubmitButton>
+        </form>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">What we rent</h2>
+        <p className="mt-1 text-sm text-muted">
+          The gear divers can ask for when they set their rental fit. Untick anything you don't rent
+          — a shop that doesn't stock GoPros never offers one, and it drops off the kit form and the
+          prep list.
+        </p>
+        <form action={saveRentalItemsAction} className="mt-4">
+          <fieldset>
+            <legend className="sr-only">Rentable gear</legend>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {RENTABLE_ITEMS.map((item) => (
+                <label
+                  key={item.kind}
+                  className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                >
+                  <input
+                    name={item.name}
+                    type="checkbox"
+                    defaultChecked={offeredKinds.has(item.kind)}
+                    className="size-4 accent-primary"
+                  />
+                  {item.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
+            Save rental catalog
           </SubmitButton>
         </form>
       </section>

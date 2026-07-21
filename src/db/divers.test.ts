@@ -28,6 +28,8 @@ describe("person-first diver records", () => {
       rentsWetsuit: true,
       rentsMaskFins: true,
       rentsWeights: true,
+      rentsDiveComputer: false,
+      rentsGopro: false,
       bcdSize: "M",
       wetsuitSize: "3 mm / M",
       finSize: "L",

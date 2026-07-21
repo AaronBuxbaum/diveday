@@ -20,15 +20,6 @@ export type DiveBriefing = TripDive & {
   moments: Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>;
 };
 
-/** Form field name ↔ stored column, so the checkbox set has one definition. */
-export const RENTAL_FIT_OPTIONS = [
-  { name: "bcd", field: "rentsBcd", label: "BCD" },
-  { name: "regulator", field: "rentsRegulator", label: "Regulator" },
-  { name: "wetsuit", field: "rentsWetsuit", label: "Wetsuit" },
-  { name: "maskFins", field: "rentsMaskFins", label: "Mask & fins" },
-  { name: "weights", field: "rentsWeights", label: "Weights" },
-] as const;
-
 export const ERROR_MESSAGES: Record<string, string> = {
   invalid: "Check your name and email and give it another go.",
   full: "Someone grabbed the last spot just before you — the boat's full.",

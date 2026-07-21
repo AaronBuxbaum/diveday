@@ -41,6 +41,13 @@ export type ManifestDiverInput = {
    * still analyzes and signs for the actual mix before anyone breathes it.
    */
   nitroxRequested: boolean;
+  /**
+   * When the diver's medical waiver was signed, for spotting a statement going
+   * stale. Null unless the governing waiver is a completed medical completion —
+   * a staff-recorded paper signature has no questionnaire to age. Not carried
+   * into the offline snapshot (dock roll call doesn't need it).
+   */
+  medicalWaiverSignedAt?: Date | null;
   rollCall?: RollCallRecord;
 };
 

@@ -5,6 +5,7 @@ import { localTypedConsentProvider } from "./signatures";
 import {
   effectiveWaiverForBooking,
   isCompletedWaiverCurrent,
+  medicalWaiverSignedAt,
   needsMedicalReview,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverActivityTimeline,
@@ -125,6 +126,37 @@ describe("waiver signature currency", () => {
       signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS + 1000),
     });
     expect(isCompletedWaiverCurrent(justInside, 1, SIGN_NOW)).toBe(true);
+  });
+});
+
+describe("medical waiver signed date", () => {
+  const answers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+
+  it("returns the signing date only for a completed medical completion", () => {
+    const signedAt = new Date(SIGN_NOW.getTime() - 60_000);
+    expect(medicalWaiverSignedAt(completedWaiver({ medicalAnswers: answers, signedAt }))).toEqual(
+      signedAt,
+    );
+    // A staff paper record has no questionnaire on file — nothing to age.
+    expect(
+      medicalWaiverSignedAt(
+        completedWaiver({ medicalAnswers: null, signatureMethod: "in_person_attested" }),
+      ),
+    ).toBeNull();
+    // Not-yet-cleared and absent records surface no date.
+    expect(
+      medicalWaiverSignedAt(completedWaiver({ status: "medical_review", medicalAnswers: answers })),
+    ).toBeNull();
+    expect(medicalWaiverSignedAt(null)).toBeNull();
+  });
+
+  it("falls back to completedAt when signedAt is somehow missing", () => {
+    const completedAt = new Date(SIGN_NOW.getTime() - 5_000);
+    expect(
+      medicalWaiverSignedAt(
+        completedWaiver({ medicalAnswers: answers, signedAt: null, completedAt }),
+      ),
+    ).toEqual(completedAt);
   });
 });
 

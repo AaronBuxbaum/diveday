@@ -315,6 +315,7 @@ export default async function DiverReadinessPage({
         <RentalFitForm
           action={saveFitFromReady.bind(null, token)}
           rentalFit={data.rentalFit}
+          rentalItems={data.shop.rentalItems}
           wantsNitrox={data.wantsNitrox}
           nitroxCardVerified={data.nitroxCardVerified}
           plannedDives={data.trip.plannedDives}

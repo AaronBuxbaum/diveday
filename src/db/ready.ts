@@ -25,6 +25,7 @@ export type ReadyPageData = {
     slug: string;
     contactEmail: string | null;
     contactPhone: string | null;
+    rentalItems: string[];
   };
   trip: { id: string; plannedDives: number };
   person: {
@@ -56,6 +57,7 @@ export async function getReadyPageData(
       slug: shops.slug,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
+      rentalItems: shops.rentalItems,
       personEmail: people.email,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
@@ -89,6 +91,7 @@ export async function getReadyPageData(
       slug: row.slug,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
+      rentalItems: row.rentalItems,
     },
     trip: { id: row.tripId, plannedDives: trip.plannedDives },
     person: {

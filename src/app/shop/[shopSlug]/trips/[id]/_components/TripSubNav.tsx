@@ -4,12 +4,16 @@ import Link from "next/link";
  * The boat loop's spine: one compact bar on every trip surface so a captain who
  * wanders can always reach the other three in a tap. Overview holds the roster
  * and setup; the rest are the dock surfaces. Current page is marked and inert.
+ *
+ * The `check-in` page key is kept (and its `/check-in` route) but reads
+ * "Boarding" to divers and crew — it is the fast pre-departure boarding pass,
+ * distinct from the Manifest (the full safety document).
  */
 export type TripSubNavPage = "overview" | "check-in" | "manifest" | "prep";
 
 const TABS: { page: TripSubNavPage; label: string; suffix: string }[] = [
   { page: "overview", label: "Overview", suffix: "" },
-  { page: "check-in", label: "Check-in", suffix: "/check-in" },
+  { page: "check-in", label: "Boarding", suffix: "/check-in" },
   { page: "manifest", label: "Manifest", suffix: "/manifest" },
   { page: "prep", label: "Prep", suffix: "/prep" },
 ];

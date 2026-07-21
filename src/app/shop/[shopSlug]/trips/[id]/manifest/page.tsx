@@ -151,6 +151,17 @@ export default async function TripManifestPage({
               shop.timezone,
             )}
           </p>
+          <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
+            The authoritative roster: everyone aboard — divers and crew — with emergency contacts,
+            at every checkpoint. To just get divers aboard before departure, use{" "}
+            <Link
+              href={`/shop/${shopSlug}/trips/${tripId}/check-in`}
+              className="font-semibold text-primary hover:underline"
+            >
+              Boarding
+            </Link>
+            .
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 print:hidden">
           <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
@@ -363,6 +374,14 @@ export default async function TripManifestPage({
                           {diver.nitroxRequested ? " · Nitrox requested" : ""}
                         </span>
                       </p>
+                      {diver.medicalWaiverSignedAt ? (
+                        <p>
+                          <span className="font-bold">Medical waiver signed</span>
+                          <span className="mt-0.5 block text-muted">
+                            {formatShortDate(diver.medicalWaiverSignedAt, "en-US", shop.timezone)}
+                          </span>
+                        </p>
+                      ) : null}
                     </div>
                     {!ready ? (
                       <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">

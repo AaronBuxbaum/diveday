@@ -67,7 +67,7 @@ function DepartureCard({
             href={`/shop/${shopSlug}/trips/${departure.tripId}/check-in`}
             className={buttonClass()}
           >
-            Check in
+            Boarding
           </Link>
           <Link
             href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
