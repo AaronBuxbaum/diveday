@@ -100,13 +100,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   captured photo to Vercel Blob and saves a durable URL; validated at the seam (JPG/PNG/WebP,
   ≤5 MB). The staff form is upload-only, with no pasted-URL alternative. See
   [20260719-card-photo-only](../architecture/decisions/20260719-card-photo-only.md).
-- ✅ Agency cert verification: an assistive provider seam
-  ([`src/lib/cert-verification`](../../src/lib/cert-verification)) checks a C-card against its
-  issuing agency. A confirmed match auto-verifies (recording the source); not-found/mismatch only
-  warn and leave the card pending; it fails closed to "unavailable". Human review stays
-  authoritative. See
-  [20260718-agency-cert-verification](../architecture/decisions/20260718-agency-cert-verification.md)
-  (needs a gateway + `CERT_VERIFICATION_*` env, H).
+- ✅ Manual certification: certifying a C-card is a staff step, not an integration. Staff look the
+  card number up with the issuing agency and click **Mark certified**; the card only affects
+  readiness once certified. The earlier assistive agency-verification seam was removed — no agency
+  exposes a usable C-card API, so it was speculative plumbing on a safety surface. See
+  [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)
+  (supersedes [20260718-agency-cert-verification](../architecture/decisions/20260718-agency-cert-verification.md)).
 - ✅ Person-first staff workspace: `/shop/[shopSlug]/divers` is the starting point for a diver;
   each person record owns their level and specialty cards, rental fit profile, bookings, and issued
   rental fit. The former cards-first certifications route remains a bookmark redirect. See
