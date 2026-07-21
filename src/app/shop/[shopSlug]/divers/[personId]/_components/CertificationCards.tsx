@@ -2,8 +2,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
-import { addCertificationAction, agencyCheckAction, reviewAction } from "../actions";
-import { AGENCY_LABELS, type DiverProfile, statusTone } from "./shared";
+import { addCertificationAction, reviewAction } from "../actions";
+import { AGENCY_LABELS, CARD_STATUS_LABELS, type DiverProfile, statusTone } from "./shared";
 
 export function CertificationCards({
   diver,
@@ -22,7 +22,8 @@ export function CertificationCards({
             Certification cards
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Evidence starts pending. Only verified cards affect readiness.
+            Evidence starts pending. Look the card number up with the issuing agency, then mark it
+            certified — only certified cards affect readiness.
           </p>
         </div>
         <details>
@@ -120,27 +121,18 @@ export function CertificationCards({
                 <span
                   className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(card.status)}`}
                 >
-                  {card.status}
+                  {CARD_STATUS_LABELS[card.status]}
                 </span>
                 {card.status === "pending" ? (
                   <>
-                    <form action={agencyCheckAction.bind(null, shopSlug, personId)}>
-                      <input type="hidden" name="certificationId" value={card.id} />
-                      <SubmitButton
-                        pendingLabel="Checking…"
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        Check agency
-                      </SubmitButton>
-                    </form>
                     <form action={reviewAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       <input type="hidden" name="status" value="verified" />
                       <SubmitButton
-                        pendingLabel="Verifying…"
+                        pendingLabel="Marking certified…"
                         className={buttonClass({ variant: "secondary", size: "sm" })}
                       >
-                        Verify
+                        Mark certified
                       </SubmitButton>
                     </form>
                     <form action={reviewAction.bind(null, shopSlug, personId)}>

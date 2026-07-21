@@ -23,7 +23,6 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [design/forms-and-controls.md](design/forms-and-controls.md) | Field alignment and touch-target primitives, and the checks that enforce them | you build a form, a button, or a menu |
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
-| [integrations/certification-agencies.md](integrations/certification-agencies.md) | Agency verification API research and credential setup runbook | agency capability or verification configuration changes |
 
 ## Rules
 

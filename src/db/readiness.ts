@@ -1,6 +1,4 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { CertVerificationProvider, CertVerificationResult } from "@/lib/cert-verification";
-import { verifyCard } from "@/lib/cert-verification";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
@@ -161,70 +159,6 @@ export async function listShopCertifications(db: AppDb, shopId: string) {
     .innerJoin(people, eq(people.id, certifications.personId))
     .where(eq(certifications.shopId, shopId))
     .orderBy(asc(people.fullName), asc(certifications.createdAt));
-}
-
-const AGENCY_NAMES: Record<string, string> = {
-  padi: "PADI",
-  ssi: "SSI",
-  naui: "NAUI",
-  sdi: "SDI",
-  tdi: "TDI",
-  other: "the agency",
-};
-
-/**
- * Check a certification against its issuing agency and apply the result. A
- * confirmed match verifies the card (recording the source); anything else is
- * assistive only — the card stays pending with a note, never auto-cleared or
- * auto-rejected. Fails closed to `unavailable`.
- */
-export async function verifyCertificationWithAgency(
-  db: AppDb,
-  shopId: string,
-  certificationId: string,
-  provider?: CertVerificationProvider,
-): Promise<CertVerificationResult["status"] | null> {
-  const [row] = await db
-    .select({ certification: certifications, person: people })
-    .from(certifications)
-    .innerJoin(people, eq(people.id, certifications.personId))
-    .where(and(eq(certifications.id, certificationId), eq(certifications.shopId, shopId)))
-    .limit(1);
-  if (!row) return null;
-  const { certification, person } = row;
-
-  const result = await verifyCard(
-    {
-      agency: certification.agency,
-      level: certification.level,
-      identifier: certification.identifier,
-      holderName: person.fullName,
-    },
-    provider,
-  );
-
-  const agencyName = AGENCY_NAMES[certification.agency] ?? certification.agency;
-  if (result.status === "verified") {
-    await db
-      .update(certifications)
-      .set({
-        status: "verified",
-        reviewNote: `Confirmed via ${agencyName} verification${result.reference ? ` (ref ${result.reference})` : ""}`,
-        reviewedAt: new Date(),
-      })
-      .where(and(eq(certifications.id, certificationId), eq(certifications.shopId, shopId)));
-  } else if (result.status === "not_found" || result.status === "mismatch") {
-    // Assistive only: warn, do not auto-reject a possibly-valid card.
-    const note =
-      result.status === "not_found"
-        ? `${agencyName} verification could not find this card. Review manually.`
-        : `${agencyName} verification returned a mismatch. Review manually.`;
-    await db
-      .update(certifications)
-      .set({ reviewNote: note })
-      .where(and(eq(certifications.id, certificationId), eq(certifications.shopId, shopId)));
-  }
-  return result.status;
 }
 
 export type NewSpecialtyCertification = {

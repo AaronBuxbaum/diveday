@@ -12,8 +12,11 @@ new domain concept, define it here in the same PR.
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
   may require a refresher after long inactivity.
 - **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
-  until staff verify it; only a verified, unexpired card at or above a trip’s required level can
-  satisfy readiness.
+  until staff certify it — staff look the card number up with the issuing agency (in the agency's
+  own portal, outside DiveDay) and click **Mark certified**. There is no automated agency
+  integration. Only a certified, unexpired card at or above a trip’s required level can satisfy
+  readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
+  what readiness reads.)
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”

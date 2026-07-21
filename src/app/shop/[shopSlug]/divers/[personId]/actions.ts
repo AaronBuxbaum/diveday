@@ -12,7 +12,6 @@ import {
   createSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
-  verifyCertificationWithAgency,
 } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -154,26 +153,6 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
       })
     : null;
   revalidateAndRedirect(base, `${base}?notice=${updated ? status : "invalid"}`);
-}
-
-export async function agencyCheckAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
-  const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
-  const outcome = certificationId
-    ? await verifyCertificationWithAgency(await getDb(), staff.user.shopId, certificationId)
-    : null;
-  const result =
-    outcome === "verified"
-      ? "agency-verified"
-      : outcome === "not_found"
-        ? "agency-not-found"
-        : outcome === "mismatch"
-          ? "agency-mismatch"
-          : outcome === "unavailable"
-            ? "agency-unavailable"
-            : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${result}`);
 }
 
 export async function reviewSpecialtyAction(

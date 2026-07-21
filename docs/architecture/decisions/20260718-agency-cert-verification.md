@@ -1,7 +1,12 @@
 # 20260718-agency-cert-verification — Verify C-cards against the agency behind an assistive seam
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260721-manual-certification](20260721-manual-certification.md)
 - **Date:** 2026-07-18
+
+> **Superseded (2026-07-21).** No agency exposed a usable C-card verification API, so the automated
+> seam described below never had a real gateway to call. It has been removed in favour of manual
+> staff certification: staff look the number up with the issuing agency and mark the card certified.
+> The record below is retained for history.
 
 ## Context
 
@@ -21,8 +26,7 @@ there is no live agency integration yet (a per-agency, credential-gated human pr
 - **No scraping or reverse-engineering.** Agency-facing card forms, digital-card apps, and Pro
   portals remain human interfaces. The per-agency URL is set only after the agency supplies a
   supported contract, or after an approved server-side broker translates its documented contract.
-  The exact setup and contacts live in
-  [the agency integration runbook](../../integrations/certification-agencies.md).
+  (The agency integration runbook that described this setup was removed when the seam was.)
 - **The check is assistive, and human review stays authoritative.** Applied in
   `verifyCertificationWithAgency`: a **confirmed match** verifies the card and records the source in
   the review note; **not_found / mismatch** only attach a warning note and leave the card
