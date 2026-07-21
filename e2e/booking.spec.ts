@@ -34,6 +34,14 @@ test("full loop: staff schedules, visitor books, staff sees the roster", async (
   await page.getByRole("button", { name: "Book these spots" }).click();
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
+  // WP-3: the confirmation takes the top — it sits above the pre-trip content
+  // (pack list, briefings), not buried at the bottom of a long page.
+  const confirmationBox = await page
+    .getByRole("heading", { name: /You're on the boat, Nora/ })
+    .boundingBox();
+  const packBox = await page.getByRole("heading", { name: "Pack with confidence" }).boundingBox();
+  expect(confirmationBox?.y ?? 0).toBeLessThan(packBox?.y ?? Number.POSITIVE_INFINITY);
+
   // Both named spots are held atomically.
   await page.goto("/shop/blue-mantis/schedule");
   const card = page.locator("li").filter({ hasText: title });
