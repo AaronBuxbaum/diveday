@@ -221,6 +221,7 @@ describe("staff records a paper / in-person signature", () => {
       shopId: shop.id,
       bookingId: booking.id,
       recordedByPersonId: staff.id,
+      medicalAttested: true,
       now,
     });
     expect(outcome).toMatchObject({ ok: true, alreadySigned: false });
@@ -259,6 +260,7 @@ describe("staff records a paper / in-person signature", () => {
       shopId: shop.id,
       bookingId: booking.id,
       recordedByPersonId: staff.id,
+      medicalAttested: true,
       now,
     });
     expect(outcome).toMatchObject({ ok: true, alreadySigned: true });
@@ -279,6 +281,7 @@ describe("staff records a paper / in-person signature", () => {
       shopId: shop.id,
       bookingId: booking.id,
       recordedByPersonId: staff.id,
+      medicalAttested: true,
       now,
     });
     expect(await getWaiverForToken(db, issued.token, now)).toEqual({ state: "unavailable" });
@@ -292,6 +295,7 @@ describe("staff records a paper / in-person signature", () => {
         shopId: shop.id,
         bookingId: booking.id,
         recordedByPersonId: booking.personId,
+        medicalAttested: true,
         now,
       }),
     ).toEqual({ ok: false, reason: "staff_not_found" });
@@ -301,9 +305,30 @@ describe("staff records a paper / in-person signature", () => {
         shopId: "00000000-0000-4000-8000-000000000000",
         bookingId: booking.id,
         recordedByPersonId: staff.id,
+        medicalAttested: true,
         now,
       }),
     ).toMatchObject({ ok: false });
+  });
+
+  it("refuses to record a paper waiver without a medical-clear attestation", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        medicalAttested: false,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "medical_attestation_required" });
+    // Nothing is written — the booking still needs a waiver.
+    const rows = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, booking.id));
+    expect(rows).toHaveLength(0);
   });
 });
 

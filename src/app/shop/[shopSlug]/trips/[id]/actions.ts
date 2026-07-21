@@ -254,7 +254,9 @@ export async function issueWaiverAction(shopSlug: string, tripId: string, formDa
 /**
  * Staff records that a diver signed a paper release in person or on shore, for a
  * diver the app never sees sign. Same shop-scoped session gate as every other
- * roster action; the accountable staff member is stamped on the record.
+ * roster action; the accountable staff member is stamped on the record. Requires
+ * an explicit medical-clear attestation — a flagged medical must go through the
+ * diver-facing link, which captures the questionnaire and routes to review.
  */
 export async function markWaiverInPersonAction(
   shopSlug: string,
@@ -269,11 +271,14 @@ export async function markWaiverInPersonAction(
     shopId: s.user.shopId,
     bookingId,
     recordedByPersonId: s.user.personId,
+    medicalAttested: formData.get("medicalAttested") === "on",
   });
-  revalidateAndRedirect(
-    back,
-    `${back}?notice=${outcome.ok ? "waiver-in-person" : "waiver-error"}&bid=${bookingId}`,
-  );
+  const notice = outcome.ok
+    ? "waiver-in-person"
+    : outcome.reason === "medical_attestation_required"
+      ? "waiver-medical-attestation"
+      : "waiver-error";
+  revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
 }
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {

@@ -131,7 +131,7 @@ describe("waiver signature currency", () => {
 describe("effective waiver (sign once per diver)", () => {
   const args = (over: Partial<Parameters<typeof effectiveWaiverForBooking>[0]>) => ({
     bookingWaiver: null,
-    personCompletedWaivers: [],
+    personSignedWaivers: [],
     currentTemplateVersion: 1 as number | null,
     now: SIGN_NOW,
     ...over,
@@ -139,18 +139,18 @@ describe("effective waiver (sign once per diver)", () => {
 
   it("carries a current completed release onto a booking with no signature", () => {
     const carried = completedWaiver({ bookingId: "other-booking" });
-    const effective = effectiveWaiverForBooking(args({ personCompletedWaivers: [carried] }));
+    const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [carried] }));
     expect(effective).toBe(carried);
     expect(waiverState(effective, SIGN_NOW)).toBe("complete");
   });
 
   it("does not carry a stale or wrong-version release — the booking still needs one", () => {
     const staleVersion = completedWaiver({ templateVersion: 0, bookingId: "other" });
-    expect(effectiveWaiverForBooking(args({ personCompletedWaivers: [staleVersion] }))).toBeNull();
+    expect(effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] }))).toBeNull();
     // Falls through to not_sent, so staff are prompted to send a fresh link.
     expect(
       waiverState(
-        effectiveWaiverForBooking(args({ personCompletedWaivers: [staleVersion] })),
+        effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] })),
         SIGN_NOW,
       ),
     ).toBe("not_sent");
@@ -160,7 +160,7 @@ describe("effective waiver (sign once per diver)", () => {
     const ownReview = completedWaiver({ status: "medical_review", bookingId: "booking-1" });
     const carried = completedWaiver({ bookingId: "other" });
     const effective = effectiveWaiverForBooking(
-      args({ bookingWaiver: ownReview, personCompletedWaivers: [carried] }),
+      args({ bookingWaiver: ownReview, personSignedWaivers: [carried] }),
     );
     expect(effective).toBe(ownReview);
     expect(waiverState(effective, SIGN_NOW)).toBe("medical_review");
@@ -173,7 +173,7 @@ describe("effective waiver (sign once per diver)", () => {
     } as WaiverRecord;
     const carried = completedWaiver({ bookingId: "other" });
     const effective = effectiveWaiverForBooking(
-      args({ bookingWaiver: pending, personCompletedWaivers: [carried] }),
+      args({ bookingWaiver: pending, personSignedWaivers: [carried] }),
     );
     expect(effective).toBe(carried);
   });
@@ -184,7 +184,58 @@ describe("effective waiver (sign once per diver)", () => {
       signedAt: new Date(SIGN_NOW.getTime() - 200_000),
     });
     const newer = completedWaiver({ id: "newer", signedAt: new Date(SIGN_NOW.getTime() - 10_000) });
-    const effective = effectiveWaiverForBooking(args({ personCompletedWaivers: [older, newer] }));
+    const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [older, newer] }));
     expect(effective?.id).toBe("newer");
+  });
+
+  it("does not let a clean signature carry a diver past a newer medical hold", () => {
+    const cleanJan = completedWaiver({
+      id: "clean-jan",
+      bookingId: "a",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    const holdJun = completedWaiver({
+      id: "hold-jun",
+      bookingId: "c",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 50_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 50_000),
+    });
+    // Booking D has no record of its own; the clean January signature would
+    // carry, but the unresolved June hold is newer, so it must block instead.
+    const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [cleanJan, holdJun] }));
+    expect(effective?.id).toBe("hold-jun");
+    expect(waiverState(effective, SIGN_NOW)).toBe("medical_review");
+  });
+
+  it("lets a clean signature made after a hold supersede it", () => {
+    const holdOld = completedWaiver({
+      id: "hold-old",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    const cleanNew = completedWaiver({
+      id: "clean-new",
+      signedAt: new Date(SIGN_NOW.getTime() - 10_000),
+    });
+    const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [holdOld, cleanNew] }));
+    expect(effective?.id).toBe("clean-new");
+  });
+
+  it("stops trusting the booking's own signature once it ages out or the release changes", () => {
+    const staleOwn = completedWaiver({
+      id: "own-stale",
+      signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+      completedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+    });
+    expect(effectiveWaiverForBooking(args({ bookingWaiver: staleOwn }))).toBeNull();
+
+    const oldVersionOwn = completedWaiver({ id: "own-v0", templateVersion: 0 });
+    expect(effectiveWaiverForBooking(args({ bookingWaiver: oldVersionOwn }))).toBeNull();
+
+    // A current own signature still stands.
+    const currentOwn = completedWaiver({ id: "own-current" });
+    expect(effectiveWaiverForBooking(args({ bookingWaiver: currentOwn }))?.id).toBe("own-current");
   });
 });
