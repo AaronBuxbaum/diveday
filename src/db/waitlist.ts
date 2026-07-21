@@ -2,6 +2,30 @@ import { and, count, eq, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
 import { bookings, people, personRoles, trips, tripWaitlistEntries } from "./schema";
 
+/**
+ * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
+ * two staff don't both reach out. Shop-scoped, idempotent (a re-invite just
+ * moves the timestamp forward). Stage 1 of seat recovery: the actual invite is
+ * a one-tap email/composer in the UI; this records that it happened.
+ *
+ * Stage 2 (auto-invite position 1 on a cancellation, with an expiring window)
+ * is deliberately not built here — it is blocked on the H-09 notification
+ * policy decision. When that lands, it hangs off this same `invitedAt` column.
+ */
+export async function recordWaitlistInvite(
+  db: AppDb,
+  input: { shopId: string; entryId: string; now?: Date },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(tripWaitlistEntries)
+    .set({ invitedAt: input.now ?? new Date() })
+    .where(
+      and(eq(tripWaitlistEntries.id, input.entryId), eq(tripWaitlistEntries.shopId, input.shopId)),
+    )
+    .returning({ id: tripWaitlistEntries.id });
+  return Boolean(updated);
+}
+
 export type WaitlistRequest = {
   shopId: string;
   tripId: string;

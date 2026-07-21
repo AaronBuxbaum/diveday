@@ -1,0 +1,1 @@
+ALTER TABLE "trip_waitlist_entries" ADD COLUMN "invited_at" timestamp with time zone;

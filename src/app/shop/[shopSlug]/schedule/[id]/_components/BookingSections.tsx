@@ -98,7 +98,7 @@ export function TripFullSection({
             If a spot opens, the shop will have your details ready.
           </p>
         </div>
-        <BookingPartyFields maxPartySize={remaining} />
+        <BookingPartyFields maxPartySize={remaining} leadPhone />
         <div>
           <SubmitButton
             pendingLabel="Joining…"

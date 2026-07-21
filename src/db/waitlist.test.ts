@@ -1,8 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { getTripRoster, getTripWithBooked, upcomingTripsWithCounts } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
+import {
+  getTripRoster,
+  getTripWaitlist,
+  getTripWithBooked,
+  upcomingTripsWithCounts,
+} from "./trips";
+import { joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
 
 async function seededContext() {
   const { db, shop } = await seededShopContext();
@@ -53,5 +58,39 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
     const trip = await getTripWithBooked(db, shop.id, openTrip.id);
     expect(trip?.booked).toBe(openTrip.booked);
+  });
+});
+
+describe("recordWaitlistInvite", () => {
+  it("stamps an entry as invited, scoped to the shop, and is idempotent", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+
+    const findEntry = async () =>
+      (await getTripWaitlist(db, fullTrip.id)).find((row) => row.entry.id === joined.entryId);
+
+    const t0 = new Date("2026-07-21T10:00:00.000Z");
+    await expect(
+      recordWaitlistInvite(db, { shopId: shop.id, entryId: joined.entryId, now: t0 }),
+    ).resolves.toBe(true);
+    expect((await findEntry())?.entry.invitedAt?.toISOString()).toBe(t0.toISOString());
+
+    // A re-invite just moves the timestamp forward (no double-entry).
+    const t1 = new Date("2026-07-21T12:00:00.000Z");
+    await recordWaitlistInvite(db, { shopId: shop.id, entryId: joined.entryId, now: t1 });
+    expect((await findEntry())?.entry.invitedAt?.toISOString()).toBe(t1.toISOString());
+  });
+
+  it("refuses to stamp an entry from another shop", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+    await expect(
+      recordWaitlistInvite(db, {
+        shopId: "00000000-0000-4000-8000-000000000099",
+        entryId: joined.entryId,
+      }),
+    ).resolves.toBe(false);
   });
 });
