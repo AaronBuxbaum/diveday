@@ -73,11 +73,29 @@ export type DepartureSummary = {
   courseTitle: string | null;
 };
 
+export type CrewedSessionSummary = {
+  tripId: string;
+  title: string;
+  courseTitle: string | null;
+  startsAt: Date;
+  booked: number;
+  ready: number;
+  blocked: number;
+};
+
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
   /** Shown only when nothing sails today, so the page still orients the crew. */
   nextDeparture: { tripId: string; title: string; startsAt: Date } | null;
+  /**
+   * The role lens's raw material (20260721-role-aware-landing): which of the
+   * window's trips the signed-in person crews, and a per-session readiness
+   * summary for the course sessions among them. Empty unless a personId was
+   * passed.
+   */
+  crewedTripIds: string[];
+  crewedSessions: CrewedSessionSummary[];
 };
 
 function shopDay(date: Date, timeZone: string): string {
@@ -274,6 +292,8 @@ export async function getTodayWork(
   shopSlug: string,
   timeZone: string,
   now: Date = nowDate(),
+  /** When set, the result carries which in-window trips this person crews. */
+  personId?: string,
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
   const upcoming = await upcomingTripsWithCounts(db, shopId, now);
@@ -470,9 +490,44 @@ export async function getTodayWork(
 
   const next = todayTrips.length === 0 ? upcoming[0] : null;
 
+  let crewedTripIds: string[] = [];
+  let crewedSessions: CrewedSessionSummary[] = [];
+  if (personId && inWindow.length > 0) {
+    const assignments = await db
+      .select({ tripId: tripAssignments.tripId })
+      .from(tripAssignments)
+      .where(
+        and(
+          eq(tripAssignments.personId, personId),
+          inArray(
+            tripAssignments.tripId,
+            inWindow.map((trip) => trip.id),
+          ),
+        ),
+      );
+    const crewed = new Set(assignments.map((row) => row.tripId));
+    crewedTripIds = inWindow.filter((trip) => crewed.has(trip.id)).map((trip) => trip.id);
+    crewedSessions = inWindow
+      .filter((trip) => trip.course && crewed.has(trip.id))
+      .map((trip) => {
+        const rows = readinessByTrip.get(trip.id) ?? [];
+        return {
+          tripId: trip.id,
+          title: trip.title,
+          courseTitle: trip.course?.title ?? null,
+          startsAt: trip.startsAt,
+          booked: trip.booked,
+          ready: rows.filter((row) => row.readiness.status === "ready").length,
+          blocked: rows.filter((row) => row.readiness.status === "blocked").length,
+        };
+      });
+  }
+
   return {
     departures,
     actions,
     nextDeparture: next ? { tripId: next.id, title: next.title, startsAt: next.startsAt } : null,
+    crewedTripIds,
+    crewedSessions,
   };
 }
