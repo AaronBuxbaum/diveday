@@ -8,6 +8,7 @@
 | Component | Vitest + Testing Library | colocated | interactive components behave (role-based queries) |
 | Fetch boundary | Vitest + MSW | colocated, e.g. `offline-manifest-store.test.ts` | client code that calls a real `/api/*` route — narrow, see [ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md) |
 | E2E | Playwright | `e2e/*.spec.ts` | critical user flows survive integration |
+| Visual | Playwright + Argos | `e2e/visual.spec.ts` | six key surfaces (light + dark) still look right — see [ADR 20260721](../architecture/decisions/20260721-argos-visual-regression.md) |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
 mutating through inline `"use server"` closures — not a client fetching JSON. That's exactly the
@@ -73,6 +74,11 @@ IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock o
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
+- **Visual snapshots stay inside the free-tier budget.** `e2e/visual.spec.ts` captures 12
+  screenshots per run (6 surfaces × light/dark, one desktop viewport). Clock-derived text and the
+  month calendar are masked because the demo seed moves with the wall clock. Uploads happen only
+  when `ARGOS_TOKEN` is set; without it the spec still runs and CI is unaffected. Adding a
+  surface costs 2 screenshots per CI run — do the quota math before widening the matrix.
 
 ## Adding a test
 

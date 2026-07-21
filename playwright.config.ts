@@ -52,7 +52,19 @@ export default defineConfig({
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
   retries: 0,
-  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  // The Argos reporter collects the screenshots argosScreenshot() captures and
+  // uploads them for visual diffing only when a token is configured — without
+  // ARGOS_TOKEN (forks, local runs, pre-signup) it is a no-op and CI stays
+  // green. See docs/architecture/decisions/20260721-argos-visual-regression.md.
+  reporter: [
+    ...(process.env.CI
+      ? ([["github"], ["html", { open: "never" }]] as const)
+      : ([["list"]] as const)),
+    [
+      "@argos-ci/playwright/reporter",
+      { uploadToArgos: !!process.env.CI && !!process.env.ARGOS_TOKEN },
+    ],
+  ],
   use: {
     // Real base URL is assigned per worker in e2e/fixtures.ts; this is only a
     // sensible default for any context created outside a worker fixture.
