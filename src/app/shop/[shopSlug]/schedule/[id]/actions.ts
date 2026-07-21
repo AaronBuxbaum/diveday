@@ -14,7 +14,14 @@ import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { readinessLinkPath } from "@/lib/readiness-links";
 import { ERROR_MESSAGES } from "./_components/types";
+
+/** Absolute readiness link for the confirmation email, or undefined with no origin. */
+function readinessEmailUrl(bookingId: string): string | undefined {
+  const origin = publicAppUrl();
+  return origin ? new URL(readinessLinkPath(bookingId), `${origin}/`).toString() : undefined;
+}
 
 /** Bound to each action so the public page can stay a pure renderer. */
 export type TripRef = { shopSlug: string; tripId: string };
@@ -127,6 +134,7 @@ export async function bookSpot(
         startsAt: tripNow.startsAt,
         endsAt: tripNow.endsAt,
         timezone: shopNow.timezone,
+        readinessUrl: readinessEmailUrl(primaryBookingId),
       });
       if (delivery.status === "failed") {
         console.error("Booking confirmation notification failed", {
