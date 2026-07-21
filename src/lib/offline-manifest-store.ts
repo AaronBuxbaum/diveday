@@ -9,7 +9,7 @@ import {
   offlineManifestExpiresAt,
 } from "./offline-manifests";
 
-const DB_NAME = "scuba-offline-manifests";
+const DB_NAME = "diveday-offline-manifests";
 const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
@@ -207,7 +207,8 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ events: pending }),
   });
-  if (!response.ok) throw new Error("Reconnect succeeded, but Scuba could not reconcile roll call");
+  if (!response.ok)
+    throw new Error("Reconnect succeeded, but DiveDay could not reconcile roll call");
   const body = (await response.json()) as { results: OfflineSyncResult[] };
   const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
   envelope.events = envelope.events.map((event) => {

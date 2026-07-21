@@ -14,6 +14,7 @@ const bookingConfirmationSchema = z.object({
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  readinessUrl: z.url().max(2_000).optional(),
 });
 
 const waiverRequestSchema = z.object({

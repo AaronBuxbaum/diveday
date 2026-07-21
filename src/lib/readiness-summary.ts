@@ -26,6 +26,11 @@ export type DiverChecklistItem = {
   state: ChecklistState;
   /** One warm sentence in the diver's own language. */
   detail: string;
+  /**
+   * The worst blocker's code, so a transactional surface can offer the exact
+   * action it enables (sign the waiver, pay the balance). Absent on a done item.
+   */
+  code?: ReadinessBlockerCode;
 };
 
 /**
@@ -44,17 +49,22 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail: "Your shop is confirming your readiness. Check back shortly.",
   },
   waiver_not_sent: {
+    // Honest: in a default deployment nothing is auto-sent, so never claim an
+    // email is coming. The shop issues the link; until then there's no button.
     state: "waiting",
-    detail: "Your waiver link is on its way from the shop.",
+    detail:
+      "The shop hasn’t sent your waiver yet — you can ask for it when you arrive, or reach them below.",
   },
   waiver_pending: {
+    // No email claim: in a no-email deployment the link was issued but never
+    // sent, and on the readiness page the button hands it over in place.
     state: "action",
-    detail:
-      "Sign your waiver — the link is in your email from the shop. It takes about two minutes.",
+    detail: "Sign your waiver — it only takes about two minutes.",
   },
   waiver_expired: {
+    // Don't promise an outbound send the shop may never make.
     state: "waiting",
-    detail: "Your waiver link expired; the shop will send a fresh one.",
+    detail: "Your waiver link expired — ask the shop for a fresh one.",
   },
   medical_review: {
     state: "waiting",
@@ -223,7 +233,7 @@ export function buildDiverChecklist(
       category === "certification" && actionable > 1
         ? "This dive needs more than one certification on file — bring every card it calls for, and your shop will confirm you’re set."
         : DIVER_VOICE[blocker.code].detail;
-    items.push({ category, label: CATEGORY_LABEL[category], state, detail });
+    items.push({ category, label: CATEGORY_LABEL[category], state, detail, code: blocker.code });
   }
   return items;
 }

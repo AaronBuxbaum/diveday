@@ -19,7 +19,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Shop settings — Scuba" };
+export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
 const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
@@ -233,7 +233,7 @@ export default async function PaymentsSettingsPage({
           <div>
             <h2 className="font-medium">No Stripe account connected</h2>
             <p className="mt-1 text-sm text-muted">
-              Connect a Stripe account you own — Scuba never touches your money, and payments for
+              Connect a Stripe account you own — DiveDay never touches your money, and payments for
               orders and invoices go straight into your own Stripe balance.
             </p>
             {connectConfigured ? (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { ShopNavLinks } from "./ShopNavLinks";
+import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
 
 async function signOutAction() {
@@ -8,7 +9,16 @@ async function signOutAction() {
   await signOut({ redirectTo: "/" });
 }
 
-export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: string }) {
+export function ShopNav({
+  shopSlug,
+  shopName,
+  boatCheckInHref,
+}: {
+  shopSlug: string;
+  shopName: string;
+  /** Today's next departure's check-in, when the shop has a boat out today. */
+  boatCheckInHref?: string;
+}) {
   const root = `/shop/${shopSlug}`;
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur print:hidden sm:px-6">
@@ -25,13 +35,14 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
         >
           <span className="grid size-9 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
             <span aria-hidden="true">✦</span>
-            <span className="sr-only">Scuba home</span>
+            <span className="sr-only">DiveDay home</span>
           </span>
           <span className="hidden max-w-40 truncate sm:inline">{shopName}</span>
-          <span className="sm:hidden">Scuba</span>
+          <span className="sm:hidden">DiveDay</span>
         </Link>
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
+          <CommandPalette shopSlug={shopSlug} boatCheckInHref={boatCheckInHref} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
@@ -42,7 +53,11 @@ export function ShopNav({ shopSlug, shopName }: { shopSlug: string; shopName: st
             </button>
           </form>
         </div>
-        <ShopNavLinks root={root} className="order-last w-full sm:order-2 sm:w-auto sm:flex-1" />
+        <ShopNavLinks
+          root={root}
+          boatCheckInHref={boatCheckInHref}
+          className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"
+        />
       </div>
     </header>
   );

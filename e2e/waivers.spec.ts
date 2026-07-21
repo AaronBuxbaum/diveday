@@ -48,6 +48,9 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await page.getByRole("button", { name: "Sign waiver" }).click();
   await expect(page.getByRole("heading", { name: "Waiver received" })).toBeVisible();
   await expect(page.getByText(/will privately review one of your answers/)).toBeVisible();
+  // The done screen sends the diver onward to their readiness page, not a dead
+  // end back to the shop home.
+  await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
 
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.

@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
+import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
 import type {
   NitroxByBooking,
@@ -70,10 +71,8 @@ const WAIVER_CONTROLS: Record<ReturnType<typeof waiverState>, WaiverControl> = {
 
 export function RosterSection({
   shopSlug,
-  shopName,
   shopTimezone,
   tripId,
-  tripTitle,
   booked,
   capacity,
   roster,
@@ -87,10 +86,8 @@ export function RosterSection({
   removeBookingAction,
 }: {
   shopSlug: string;
-  shopName: string;
   shopTimezone: string;
   tripId: string;
-  tripTitle: string;
   booked: number;
   capacity: number;
   roster: RosterEntry[];
@@ -141,6 +138,10 @@ export function RosterSection({
           {roster.map(({ booking, person }) => {
             const readiness = readinessByBooking.get(booking.id)?.readiness;
             const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
+            const paymentSource = paymentSourceLine(
+              paymentStatus,
+              readinessByBooking.get(booking.id)?.paymentProvider,
+            );
             const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
             const waiverStatus = waiverState(currentWaiver);
             const waiverControl = WAIVER_CONTROLS[waiverStatus];
@@ -200,9 +201,6 @@ export function RosterSection({
                       {waiverControl.action ? (
                         <form action={issueWaiverAction}>
                           <input type="hidden" name="bookingId" value={booking.id} />
-                          <input type="hidden" name="shopName" value={shopName} />
-                          <input type="hidden" name="tripTitle" value={tripTitle} />
-                          <input type="hidden" name="shopTimezone" value={shopTimezone} />
                           <SubmitButton
                             pendingLabel={
                               waiverControl.action === "send" ? "Sending…" : "Resending…"
@@ -280,6 +278,9 @@ export function RosterSection({
                       <input type="hidden" name="bookingId" value={booking.id} />
                       <span className="text-sm text-muted">
                         Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
+                        {paymentSource ? (
+                          <span className="text-muted"> · {paymentSource}</span>
+                        ) : null}
                       </span>
                       <select
                         name="status"
@@ -310,11 +311,12 @@ export function RosterSection({
                   >
                     Create order
                   </Link>
+                  {/* Reversible: removal shows an Undo banner, so it takes no
+                      blocking confirm (docs/design/principles.md §7). */}
                   <form action={removeBookingAction} className="sm:ml-auto">
                     <input type="hidden" name="bookingId" value={booking.id} />
                     <SubmitButton
                       pendingLabel="Removing…"
-                      confirmMessage={`Remove ${person.fullName} from this trip? Their spot opens back up.`}
                       className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
                     >
                       Remove booking

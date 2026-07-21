@@ -286,7 +286,7 @@ export const diveSites = pgTable(
   ],
 );
 
-/** Scuba-maintained common-site catalog; shops copy a published version into their own library. */
+/** DiveDay-maintained common-site catalog; shops copy a published version into their own library. */
 export const globalDiveSites = pgTable(
   "global_dive_sites",
   {
@@ -495,6 +495,9 @@ export const tripWaitlistEntries = pgTable(
       .notNull()
       .references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // When staff last invited this diver to grab a freed seat. Null until the
+    // first invite; shown as "Invited 2h ago" so two staff don't double-invite.
+    invitedAt: timestamp("invited_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("trip_waitlist_entries_trip_person_unique").on(table.tripId, table.personId),

@@ -10,7 +10,7 @@ import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Courses — Scuba" };
+export const metadata: Metadata = { title: "Courses — DiveDay" };
 
 /** A closed eye — shown for a course currently hidden from scheduling lists. */
 function EyeOffIcon() {

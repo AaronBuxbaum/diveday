@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
@@ -12,7 +12,7 @@ import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Trip prep — Scuba",
+  title: "Trip prep — DiveDay",
 };
 
 /**
@@ -53,13 +53,8 @@ export default async function TripPrepPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
-      <Link
-        href={`/shop/${shopSlug}/trips/${tripId}`}
-        className="text-sm font-medium text-primary hover:underline print:hidden"
-      >
-        ← Back to the trip
-      </Link>
-      <div className="mt-4">
+      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="prep" className="mb-5" />
+      <div>
         <ShopPageHeader
           eyebrow="Trip prep"
           title={trip.title}
@@ -111,7 +106,7 @@ export default async function TripPrepPage({
               {checklist.crewCount > 0
                 ? `Includes the roster and the ${checklist.crewCount === 1 ? "divemaster or instructor" : "divemasters and instructors"} assigned to this trip; spares are not counted.`
                 : "Divers on the roster only — spares are not counted. Assign a divemaster or instructor to this trip to include their tanks."}{" "}
-              Scuba logs no gas analysis: every mix is still analyzed and signed for at the fill
+              DiveDay logs no gas analysis: every mix is still analyzed and signed for at the fill
               station.
             </p>
           </section>

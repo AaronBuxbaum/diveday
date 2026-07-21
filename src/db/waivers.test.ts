@@ -2,11 +2,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { waiverRecords } from "./schema";
+import { people, waiverRecords } from "./schema";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
   getCurrentWaiverTemplate,
+  getEmergencyContactForBooking,
   getWaiverForToken,
   issueWaiverRequest,
   listTripWaiverActivity,
@@ -198,5 +199,50 @@ describe("waiver records (in-memory PGlite)", () => {
       .where(eq(waiverRecords.id, issued.recordId));
     expect(record?.templateVersion).toBe(template.version);
     expect(record?.templateBody).toBe(template.body);
+  });
+});
+
+describe("emergency contact captured with the waiver", () => {
+  it("writes the diver's emergency contact to their person record on completion", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+
+    const outcome = await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      emergencyContact: { name: "Sam Quinn", phone: "+1 305 555 0114" },
+      now,
+    });
+    expect(outcome.ok).toBe(true);
+
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Sam Quinn",
+      phone: "+1 305 555 0114",
+    });
+  });
+
+  it("never wipes a contact already on file when the diver leaves it blank", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Existing Contact", emergencyContactPhone: "555-0000" })
+      .where(eq(people.id, booking.personId));
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      emergencyContact: { name: "", phone: "" },
+      now,
+    });
+
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Existing Contact",
+      phone: "555-0000",
+    });
   });
 });

@@ -5,6 +5,7 @@ import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { todayNextDepartureTripId } from "@/db/today";
 import { auth } from "@/lib/auth";
 
 /**
@@ -23,6 +24,16 @@ export default async function ShopLayout({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const showBanner = shop?.isDemo ?? false;
+
+  async function todayBoatHref(
+    dbi: typeof db,
+    shopId: string,
+    timeZone: string,
+    slug: string,
+  ): Promise<string | undefined> {
+    const tripId = await todayNextDepartureTripId(dbi, shopId, timeZone);
+    return tripId ? `/shop/${slug}/trips/${tripId}/check-in` : undefined;
+  }
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
   // captain only appear when this shop actually seeded someone in that role, so
@@ -69,7 +80,13 @@ export default async function ShopLayout({
           availableRoles={availableRoles}
         />
       ) : null}
-      {session?.user && shop ? <ShopNav shopSlug={shopSlug} shopName={shop.name} /> : null}
+      {session?.user && shop ? (
+        <ShopNav
+          shopSlug={shopSlug}
+          shopName={shop.name}
+          boatCheckInHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
+        />
+      ) : null}
       <PreserveFormScroll />
       <div className="flex-1">{children}</div>
     </>

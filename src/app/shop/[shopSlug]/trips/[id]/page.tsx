@@ -32,12 +32,14 @@ import { DetailsSection } from "./_components/DetailsSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { RosterSection } from "./_components/RosterSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
+import { TripSubNav } from "./_components/TripSubNav";
 import { WaitlistSection } from "./_components/WaitlistSection";
 import {
   addBookingAction,
   addToWaitlistAction,
   cancelTripAction,
   clearConditionsAction,
+  inviteWaitlistAction,
   issueWaiverAction,
   markPaymentAction,
   reinstateTripAction,
@@ -50,7 +52,7 @@ import {
 } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Manage trip — Scuba",
+  title: "Manage trip — DiveDay",
 };
 
 export default async function ManageTripPage({
@@ -68,7 +70,6 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const tripTitle = trip.title;
   const [
     staff,
     crewIds,
@@ -159,6 +160,8 @@ export default async function ManageTripPage({
         </p>
       ) : null}
 
+      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="overview" className="mt-5" />
+
       <TripNoticeBanner
         notice={notice}
         undoBookingId={undoBookingId}
@@ -193,7 +196,15 @@ export default async function ManageTripPage({
         trip={trip}
       />
 
-      <WaitlistSection waitlist={waitlist} />
+      <WaitlistSection
+        waitlist={waitlist}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        shopName={shop.name}
+        tripTitle={trip.title}
+        tripWhen={formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+        inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
+      />
 
       {cancelled ? null : (
         <AddDiverSection
@@ -220,10 +231,8 @@ export default async function ManageTripPage({
 
       <RosterSection
         shopSlug={shopSlug}
-        shopName={shop.name}
         shopTimezone={shop.timezone}
         tripId={tripId}
-        tripTitle={tripTitle}
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}

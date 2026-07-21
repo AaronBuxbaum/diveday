@@ -1,6 +1,6 @@
 # Agency certification verification
 
-Scuba can assist staff in validating PADI, SSI, and NAUI C-cards. It is not an authority to
+DiveDay can assist staff in validating PADI, SSI, and NAUI C-cards. It is not an authority to
 issue a certification, decide equivalency, or reject a card. A confirmed response changes a card
 from pending to verified; `not_found`, `mismatch`, timeout, bad response, and no configuration all
 leave it pending for a human.
@@ -24,7 +24,7 @@ regional PADI contact route; SSI documents digital cards and Center-assisted his
 NAUI’s lookup form asks for a diver’s name and date of birth. None publishes an API contract on
 those pages.
 
-## What Scuba is ready for
+## What DiveDay is ready for
 
 Each agency has a separate, server-only configuration pair:
 
@@ -39,7 +39,7 @@ NAUI_CERT_VERIFICATION_URL=https://your-authorized-gateway.example/verify
 NAUI_CERT_VERIFICATION_API_KEY=replace-with-naui-or-gateway-secret
 ```
 
-Only configure an agency after its provider has supplied and authorized the endpoint. Scuba selects
+Only configure an agency after its provider has supplied and authorized the endpoint. DiveDay selects
 the matching agency pair first, so an SSI secret is never sent with a PADI or NAUI lookup. The
 legacy shared `CERT_VERIFICATION_URL` / `CERT_VERIFICATION_API_KEY` remains available when one
 approved broker handles more than one agency.
@@ -55,7 +55,7 @@ The configured endpoint must be a server-side endpoint that accepts this request
 }
 ```
 
-Scuba sends `POST`, JSON, and `Authorization: Bearer <agency API key>`. It expects one of:
+DiveDay sends `POST`, JSON, and `Authorization: Bearer <agency API key>`. It expects one of:
 
 ```json
 { "status": "verified", "reference": "provider-correlation-id" }
@@ -65,7 +65,7 @@ Scuba sends `POST`, JSON, and `Authorization: Bearer <agency API key>`. It expec
 
 If an agency offers a different protocol (OAuth, mTLS, different fields, or a different response),
 put a small server-side adapter in front of it. The adapter owns the agency-specific protocol and
-returns the contract above; Scuba continues to have one stable, tested safety boundary.
+returns the contract above; DiveDay continues to have one stable, tested safety boundary.
 
 ## Credential setup checklist
 
@@ -76,7 +76,7 @@ returns the contract above; Scuba continues to have one stable, tested safety bo
    method, scopes, token rotation/expiry rules, and a known valid test record. Do not use a real
    diver’s data for an unapproved test.
 3. If the response is not already the contract above, deploy a server-only adapter. Keep provider
-   credentials in that adapter; configure Scuba with the adapter URL and its own rotation-capable
+   credentials in that adapter; configure DiveDay with the adapter URL and its own rotation-capable
    bearer secret.
 4. Add the matching two variables to Vercel’s **Preview** environment, use the authorized test
    record from the Certifications page, and verify that a positive match records the provider

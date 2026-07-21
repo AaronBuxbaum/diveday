@@ -41,4 +41,15 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
   await expect(page.getByText("Wait list").first()).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
+
+  // One-tap seat recovery: inviting the next-in-line stamps the entry so a
+  // second staffer sees it's already handled. The button opens the mail
+  // composer (mailto:) which the test can't follow, so we only assert the
+  // recorded state lands.
+  const waitlist = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Wait list" }) });
+  await waitlist.getByRole("button", { name: /Email .* an invite/ }).click();
+  await expect(waitlist.getByText(/Invited/)).toBeVisible();
+  await expect(waitlist.getByRole("button", { name: "Re-send invite" })).toBeVisible();
 });

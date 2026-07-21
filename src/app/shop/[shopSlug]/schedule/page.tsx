@@ -24,7 +24,7 @@ import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
 export const metadata: Metadata = {
-  title: "Schedule — Scuba",
+  title: "Schedule — DiveDay",
 };
 
 export default async function TripsPage({
@@ -154,9 +154,23 @@ export default async function TripsPage({
       {upcoming.length === 0 ? (
         <EmptyState>
           <h2 className="font-medium">No trips on the books yet</h2>
-          <p className="mt-1 text-sm text-muted">
-            Check back soon — or call the shop and we&apos;ll find you a boat.
-          </p>
+          {staffView ? (
+            <>
+              <p className="mt-1 text-sm text-muted">
+                The board is clear. Schedule your first departure and divers can start booking.
+              </p>
+              <Link
+                href={`/shop/${shopSlug}/trips/new`}
+                className={buttonClass({ className: "mt-4 rounded-xl" })}
+              >
+                Schedule a trip
+              </Link>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-muted">
+              Check back soon — or call the shop and we&apos;ll find you a boat.
+            </p>
+          )}
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-3">

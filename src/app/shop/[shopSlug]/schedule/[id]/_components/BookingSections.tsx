@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useActionState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { capacityLabel } from "@/lib/trips";
-import { bookSpot, joinWaitlist, type TripRef } from "../actions";
+import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import type { Trip } from "./types";
 
 function ErrorNotice({ message }: { message?: string }) {
@@ -95,7 +98,7 @@ export function TripFullSection({
             If a spot opens, the shop will have your details ready.
           </p>
         </div>
-        <BookingPartyFields maxPartySize={remaining} />
+        <BookingPartyFields maxPartySize={remaining} leadPhone />
         <div>
           <SubmitButton
             pendingLabel="Joining…"
@@ -108,6 +111,8 @@ export function TripFullSection({
     </section>
   );
 }
+
+const INITIAL_BOOKING_STATE: BookingFormState = {};
 
 export function BookSpotSection({
   trip,
@@ -125,6 +130,7 @@ export function BookSpotSection({
   perDiverPriceCents: number | null;
 }) {
   const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
   return (
     <section id="book" className="mt-10">
       <div className="flex items-baseline justify-between gap-3">
@@ -136,9 +142,9 @@ export function BookSpotSection({
           {usd.format(perDiverPriceCents / 100)} per diver — paid securely when you book.
         </p>
       ) : null}
-      <ErrorNotice message={errorMessage} />
-      <form action={bookSpot.bind(null, tripRef)} className="mt-4 flex flex-col gap-4">
-        <BookingPartyFields maxPartySize={remaining} />
+      <ErrorNotice message={state.error ?? errorMessage} />
+      <form action={formAction} className="mt-4 flex flex-col gap-4">
+        <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
         <div className="mt-1">
           <SubmitButton
             pendingLabel={payAtBooking ? "Heading to payment…" : "Booking…"}

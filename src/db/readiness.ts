@@ -361,7 +361,8 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
     certifications: certificationsByPerson.get(row.person.id) ?? [],
     specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
     nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
-    paymentStatus: paymentByBooking.get(row.booking.id) ?? null,
+    paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
+    paymentProvider: paymentByBooking.get(row.booking.id)?.provider ?? null,
     readiness: calculateReadiness({
       requirement,
       siteRequirement,
@@ -369,7 +370,7 @@ export async function listTripReadiness(db: DbExecutor, shopId: string, tripId: 
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
-      paymentStatus: paymentByBooking.get(row.booking.id) ?? null,
+      paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
     }),
   }));
 }

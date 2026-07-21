@@ -1,4 +1,4 @@
-const CACHE_NAME = "scuba-offline-manifest-shell-v1";
+const CACHE_NAME = "diveday-offline-manifest-shell-v1";
 const OFFLINE_SHELL = "/offline-manifest";
 
 async function cacheOfflineShell() {
@@ -34,7 +34,7 @@ self.addEventListener("activate", (event) => {
           Promise.all(
             keys
               .filter(
-                (key) => key.startsWith("scuba-offline-manifest-shell-") && key !== CACHE_NAME,
+                (key) => key.startsWith("diveday-offline-manifest-shell-") && key !== CACHE_NAME,
               )
               .map((key) => caches.delete(key)),
           ),

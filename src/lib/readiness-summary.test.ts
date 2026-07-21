@@ -35,7 +35,7 @@ describe("buildDiverChecklist", () => {
     expect(items.map((item) => item.category)).toEqual(["waiver", "certification", "payment"]);
   });
 
-  it("routes a pending waiver to the diver as an action", () => {
+  it("routes a pending waiver to the diver as an action and carries the code", () => {
     const items = buildDiverChecklist(requirement(), {
       status: "blocked",
       blockers: [{ code: "waiver_pending", message: "..." }],
@@ -43,6 +43,20 @@ describe("buildDiverChecklist", () => {
     const waiver = items.find((item) => item.category === "waiver");
     expect(waiver?.state).toBe("action");
     expect(waiver?.detail.toLowerCase()).toContain("sign your waiver");
+    // The code lets the /ready page render the exact "Sign your waiver" action.
+    expect(waiver?.code).toBe("waiver_pending");
+  });
+
+  it("never claims an email is coming for an unsent waiver", () => {
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [{ code: "waiver_not_sent", message: "..." }],
+    });
+    const waiver = items.find((item) => item.category === "waiver");
+    // The old copy said "on its way from the shop" — a lie with no auto-send.
+    expect(waiver?.detail.toLowerCase()).not.toContain("on its way");
+    expect(waiver?.detail.toLowerCase()).toContain("hasn’t sent");
+    expect(waiver?.code).toBe("waiver_not_sent");
   });
 
   it("routes a card pending verification to the shop as waiting, not a diver action", () => {

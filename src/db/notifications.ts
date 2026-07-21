@@ -1,5 +1,11 @@
 import { and, asc, count, desc, eq, inArray, ne } from "drizzle-orm";
-import { type Notification, type NotificationDelivery, notify } from "@/lib/notifications";
+import {
+  type Notification,
+  type NotificationDelivery,
+  notify,
+  publicAppUrl,
+} from "@/lib/notifications";
+import { readinessLinkPath } from "@/lib/readiness-links";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -121,6 +127,7 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
     )
     .limit(1);
   if (!row?.person.email) return null;
+  const origin = publicAppUrl();
   return sendAndRecordNotification(
     db,
     {
@@ -134,6 +141,9 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
       startsAt: row.trip.startsAt,
       endsAt: row.trip.endsAt,
       timezone: row.shop.timezone,
+      readinessUrl: origin
+        ? new URL(readinessLinkPath(row.booking.id), `${origin}/`).toString()
+        : undefined,
     },
     { isRetry: true },
   );

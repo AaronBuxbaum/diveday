@@ -13,7 +13,7 @@ import { requireStaffSession } from "@/lib/session";
 import { summarizeDay } from "@/lib/today";
 
 export const metadata: Metadata = {
-  title: "Today — Scuba",
+  title: "Today — DiveDay",
 };
 
 /**
@@ -130,7 +130,7 @@ export default async function ShopPage({
         </section>
       ) : null}
 
-      <TodayQueue actions={actions} />
+      <TodayQueue actions={actions} shopSlug={shopSlug} />
     </main>
   );
 }

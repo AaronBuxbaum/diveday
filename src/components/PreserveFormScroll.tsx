@@ -3,7 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect } from "react";
 
-const storageKey = "scuba:form-scroll";
+const storageKey = "diveday:form-scroll";
 
 /**
  * Server-action redirects refresh the current route, which normally puts the

@@ -10,13 +10,20 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import type { MedicalAnswers } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "@/db/waivers";
+import {
+  completeWaiver,
+  getEmergencyContactForBooking,
+  getWaiverForToken,
+  saveBookingEmergencyContact,
+  saveWaiverDraft,
+} from "@/db/waivers";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { readinessLinkPath } from "@/lib/readiness-links";
 
 export const metadata: Metadata = {
-  title: "Complete your waiver — Scuba",
+  title: "Complete your waiver — DiveDay",
   robots: { index: false, follow: false },
 };
 
@@ -28,6 +35,11 @@ const signatureSchema = z.object({
 const completeSignatureSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
   acknowledged: z.literal("on"),
+});
+
+const emergencyContactSchema = z.object({
+  emergencyContactName: z.string().trim().max(120).optional(),
+  emergencyContactPhone: z.string().trim().max(40).optional(),
 });
 
 /** Reads every question's yes/no answer for the presented questionnaire. */
@@ -125,6 +137,10 @@ export default async function WaiverPage({
   const shopName = shop.name;
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
+    // The token knows its booking, so send them onward to their own readiness
+    // page rather than dead-ending on the shop home — that's where the rest of
+    // their pre-trip prep (payment, rentals, nitrox) lives.
+    const readyPath = readinessLinkPath(state.record.bookingId);
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
         <section className="rise-in rounded-lg border border-accent/40 bg-accent/10 p-7">
@@ -135,12 +151,16 @@ export default async function WaiverPage({
               ? "Thanks — a team member will privately review one of your answers before the trip. Please don’t assume you’re cleared until they confirm."
               : "You’re all set on the waiver. We’ll see you at the dock; your shop will let you know if anything else is needed."}
           </p>
+          <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
+            See what’s left before you sail
+          </Link>
         </section>
       </main>
     );
   }
 
   const { record } = state;
+  const emergencyContact = await getEmergencyContactForBooking(db, record.bookingId);
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
@@ -158,11 +178,23 @@ export default async function WaiverPage({
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
-    const savedDraft = await saveWaiverDraft(await getDb(), token, {
+    const db = await getDb();
+    const savedDraft = await saveWaiverDraft(db, token, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
     });
+    // Persist the contact now too, so "save and finish later" keeps it — blanks
+    // never overwrite what's on file.
+    const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+    if (savedDraft && contact.success) {
+      await saveBookingEmergencyContact(db, {
+        shopId: record.shopId,
+        bookingId: record.bookingId,
+        name: contact.data.emergencyContactName,
+        phone: contact.data.emergencyContactPhone,
+      });
+    }
     revalidateAndRedirect(
       `/waivers/${token}`,
       `/waivers/${token}${savedDraft ? "?saved=1" : "?error=unavailable"}`,
@@ -174,10 +206,19 @@ export default async function WaiverPage({
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
+    const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
     const outcome = await completeWaiver(await getDb(), token, {
       signerName: parsed.data.signerName,
       agreed: true,
       medicalAnswers: answers,
+      // Optional — a diver who skips it still signs; blanks never clobber a
+      // value already on file.
+      emergencyContact: contact.success
+        ? {
+            name: contact.data.emergencyContactName,
+            phone: contact.data.emergencyContactPhone,
+          }
+        : undefined,
     });
     if (!outcome.ok) {
       redirect(
@@ -200,15 +241,6 @@ export default async function WaiverPage({
           link before it expires.
         </p>
       </header>
-
-      <ol
-        className="mt-8 grid grid-cols-3 gap-2 text-center text-sm font-medium text-muted"
-        aria-label="Waiver progress"
-      >
-        <li className="rounded-lg bg-primary/10 px-2 py-2 text-primary">1. Read</li>
-        <li className="rounded-lg bg-surface-sunken px-2 py-2">2. Confirm</li>
-        <li className="rounded-lg bg-surface-sunken px-2 py-2">3. Ready</li>
-      </ol>
 
       {saved ? (
         <p
@@ -248,6 +280,36 @@ export default async function WaiverPage({
               />
             ))}
           </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-surface p-5">
+          <h2 className="text-lg font-semibold">Emergency contact</h2>
+          <p className="mt-1 text-sm text-muted">
+            Someone we can reach for you on the day — optional, but it’s what the crew has if
+            anything happens on the water.
+          </p>
+          <FieldGrid columns={2} className="mt-4">
+            <Field label="Contact name">
+              <input
+                name="emergencyContactName"
+                autoComplete="name"
+                maxLength={120}
+                defaultValue={emergencyContact?.name ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label="Contact phone">
+              <input
+                name="emergencyContactPhone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                maxLength={40}
+                defaultValue={emergencyContact?.phone ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">

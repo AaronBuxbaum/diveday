@@ -16,7 +16,7 @@ import { requireStaffSession } from "@/lib/session";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export const metadata: Metadata = {
-  title: "Waiver — Scuba",
+  title: "Waiver — DiveDay",
 };
 
 const templateSchema = z.object({

@@ -7,16 +7,16 @@ import { buttonClass } from "@/components/ui/button";
 import { earlyAccessPrice } from "@/lib/marketing";
 
 export const metadata: Metadata = {
-  title: "Pricing — Scuba",
+  title: "Pricing — DiveDay",
   description:
-    "Straightforward early-access pricing for Scuba's complete dive-shop operating system.",
+    "Straightforward early-access pricing for DiveDay's complete dive-shop operating system.",
 };
 
 const faq = [
   {
     question: "What is included?",
     answer:
-      "The founding-shop price covers every currently available Scuba workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons.",
+      "The founding-shop price covers every currently available DiveDay workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons.",
   },
   {
     question: "Can I see it before I commit?",
@@ -26,7 +26,7 @@ const faq = [
   {
     question: "What about multiple locations?",
     answer:
-      "Each Scuba workspace is a shop today. Multi-location operating views are future work, so we will scope that with you instead of implying it is already available.",
+      "Each DiveDay workspace is a shop today. Multi-location operating views are future work, so we will scope that with you instead of implying it is already available.",
   },
   {
     question: "Does the manifest work offline?",
@@ -47,7 +47,7 @@ export default function PricingPage() {
               One shop price. Every operational workflow.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              Simple early-access pricing for the complete Scuba system — without turning the
+              Simple early-access pricing for the complete DiveDay system — without turning the
               essential safety workflow into a stack of add-ons.
             </p>
           </div>
@@ -104,7 +104,7 @@ export default function PricingPage() {
                 Included now
               </p>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                Everything needed to run the current Scuba workflow.
+                Everything needed to run the current DiveDay workflow.
               </h2>
             </div>
             <div className="mt-10">

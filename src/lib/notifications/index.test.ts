@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { waiverRequestEmail } from "./email";
+import { bookingConfirmationEmail, waiverRequestEmail } from "./email";
 import {
   notificationProviderFromEnvironment,
   notify,
@@ -19,6 +19,24 @@ const booking = {
   endsAt: new Date("2026-08-01T15:00:00.000Z"),
   timezone: "America/New_York",
 };
+
+describe("bookingConfirmationEmail", () => {
+  it("folds the readiness link into the confirmation when one is supplied", () => {
+    const email = bookingConfirmationEmail({
+      ...booking,
+      readinessUrl: "https://diveday.example/ready/abc.def",
+    });
+    expect(email.text).toContain("Track what's left before you sail");
+    expect(email.text).toContain("https://diveday.example/ready/abc.def");
+    expect(email.html).toContain('href="https://diveday.example/ready/abc.def"');
+  });
+
+  it("omits the readiness line entirely when there is no link (no dead 'coming soon')", () => {
+    const email = bookingConfirmationEmail(booking);
+    expect(email.text).not.toContain("Track what's left");
+    expect(email.html).not.toContain("Track what's left");
+  });
+});
 
 describe("notify", () => {
   it("sends a booking confirmation through Resend with an idempotency key", async () => {
@@ -81,7 +99,7 @@ describe("notify", () => {
           diverName: "Nora Quinn",
           shopName: "Blue Mantis",
           tripTitle: "Two-Tank Reef",
-          completionUrl: "https://scuba.example/waivers/private-token",
+          completionUrl: "https://diveday.example/waivers/private-token",
           expiresAt: new Date("2026-08-02T12:00:00.000Z"),
           timezone: "America/New_York",
         },
@@ -114,7 +132,7 @@ describe("email rendering", () => {
       diverName: "Nora Quinn",
       shopName: "Blue Mantis & Co.",
       tripTitle: '<Reef "Special">',
-      completionUrl: "https://scuba.example/waivers/private-token",
+      completionUrl: "https://diveday.example/waivers/private-token",
       expiresAt: new Date("2026-08-02T12:00:00.000Z"),
       timezone: "America/New_York",
     });
@@ -126,7 +144,7 @@ describe("email rendering", () => {
 
 describe("publicAppUrl", () => {
   it("accepts a configured canonical origin and rejects an unconfigured one", () => {
-    expect(publicAppUrl({ APP_HOST: "https://scuba.example/" })).toBe("https://scuba.example");
+    expect(publicAppUrl({ APP_HOST: "https://diveday.example/" })).toBe("https://diveday.example");
     expect(publicAppUrl({})).toBeNull();
   });
 });

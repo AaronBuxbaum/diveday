@@ -1,4 +1,4 @@
-import { type BlockerQueueTrip, blockerFixFor } from "@/lib/blockers";
+import { annotateAlsoOn, type BlockerQueueTrip, blockerFixFor } from "@/lib/blockers";
 import type { AppDb } from "./client";
 import { listTripReadiness } from "./readiness";
 import { upcomingTripsWithCounts } from "./trips";
@@ -53,7 +53,15 @@ export async function getBlockerQueue(
           tripId: trip.id,
           personId: row.person.id,
           bookingId: row.booking.id,
-        }) ?? { label: "Open trip", href: `/shop/${shopSlug}/trips/${trip.id}` },
+          fullName: row.person.fullName,
+        }) ?? {
+          label: "Open roster",
+          href: `/shop/${shopSlug}/trips/${trip.id}`,
+          sendsWaiver: false,
+          bookingId: row.booking.id,
+        },
+        // Filled once the whole queue is built (a repeat diver spans trips).
+        alsoOn: [],
       }))
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
     if (divers.length === 0) continue;
@@ -68,5 +76,6 @@ export async function getBlockerQueue(
     });
   }
 
+  annotateAlsoOn(trips);
   return { trips, truncated: upcoming.length > inspected.length };
 }

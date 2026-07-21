@@ -11,7 +11,7 @@ new domain concept, define it here in the same PR.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
   may require a refresher after long inactivity.
-- **Verified certification** — a card is evidence, not clearance. Scuba records it as pending
+- **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
   until staff verify it; only a verified, unexpired card at or above a trip’s required level can
   satisfy readiness.
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
@@ -20,11 +20,11 @@ new domain concept, define it here in the same PR.
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **PADI Scuba Diver** — a real certification one rung *below* Open Water: limited to 12 m and
-  required to dive under the direct supervision of a PADI Professional. Scuba's ladder has no rung
+  required to dive under the direct supervision of a PADI Professional. DiveDay's ladder has no rung
   for it, so any course whose agency floor is Scuba Diver (ReActivate, for one) is gated at Open
   Water instead. That gate is the **shop's**, not the agency's, and diver-facing copy must say so.
 - **Adventure Diver** — the PADI sub-level between Open Water and AOW, earned with three Adventure
-  Dives. It is the agency's real prerequisite for Deep, Wreck, and Rescue. Scuba's ladder cannot
+  Dives. It is the agency's real prerequisite for Deep, Wreck, and Rescue. DiveDay's ladder cannot
   record it, so those courses are gated at AOW — again a **shop-set** gate, and a valid Adventure
   Diver deserves to be told the difference is ours and invited to ask.
 - **Junior certification** — the age-linked form of a level for divers under 15: **Junior Open
@@ -80,7 +80,7 @@ new domain concept, define it here in the same PR.
   FAQ, and the upcoming sessions it can be booked through. There is no separate draft/publish
   state: a course is either **active** or hidden, and that one switch gates both the session
   picker and the public web page (20260720-course-single-visibility-state).
-- **Default course page** — every course arrives pre-filled with Scuba's default page copy for that
+- **Default course page** — every course arrives pre-filled with DiveDay's default page copy for that
   agency course (day plan, what the fee covers, the questions divers ask). It is a starting point,
   not a binding: the shop edits from there, and nothing reaches back to rewrite the shop's words.
   There is no separate import step and no course-page catalog — the default is simply already there.
@@ -99,6 +99,13 @@ new domain concept, define it here in the same PR.
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly.
+- **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
+  an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
+  invented, and it is **only "on file" when both the name and the phone are present** — a name with
+  no number is unreachable when it matters, so it counts as missing on the manifest and in the
+  Today nudge. It is never a boarding blocker: a missing contact is an administrative gap, not a
+  fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
+  three days.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and any note. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
@@ -120,7 +127,7 @@ new domain concept, define it here in the same PR.
 - **Check-in** — the front-desk step where waiver, cert, and rental fit are confirmed before a diver
   boards. The app's job is making "ready to board" a single glance.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
-  statement**. Scuba keeps one versioned release per shop: editing it saves a new immutable version
+  statement**. DiveDay keeps one versioned release per shop: editing it saves a new immutable version
   and new links snapshot the current one. The exact template version is snapshotted into each issued
   record; a signed record is immutable and a replacement link creates a new record. Some answers on the
   medical form require a physician sign-off — that's a blocking state, not a checkbox.
@@ -142,7 +149,7 @@ new domain concept, define it here in the same PR.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
   a feature.
 - **Connected Stripe account** — a shop's own Standard Stripe account, authorized once via OAuth.
-  The shop keeps its own Stripe dashboard, payouts, and tax reporting; Scuba never holds the money
+  The shop keeps its own Stripe dashboard, payouts, and tax reporting; DiveDay never holds the money
   and acts on the shop's behalf only through the `Stripe-Account` header the OAuth grant enables.
   See [20260719-stripe-connect-orders](../architecture/decisions/20260719-stripe-connect-orders.md).
 - **Order** — a shop-issued bill for a customer: one or more line items (a trip fee, course fee,
@@ -175,7 +182,7 @@ new domain concept, define it here in the same PR.
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, and a
   **tank/cylinder** (e.g. AL80 aluminum 80 cu ft).
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, boot, fin, and usual weighting). It is a storage concept: Scuba
+  and in *what size* (BCD, wetsuit, boot, fin, and usual weighting). It is a storage concept: DiveDay
   tracks no equipment inventory, so a fit never reserves an item, is never evidence, and never
   replaces a dock-side fit check. It is the single input to the trip prep list.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
@@ -187,7 +194,7 @@ new domain concept, define it here in the same PR.
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
-  (recreationally 22–40% O₂). Scuba models the **nitrox specialty card** separately from the
+  (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.
 - **Nitrox request** — a per-booking ask for enriched air, billed per dive. Writing it on requires
   a **verified** nitrox card at write time; clearing it is always allowed. Because a card can be

@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { z } from "zod";
-import { FlashParams } from "@/components/FlashParams";
+import {
+  RollCallButton,
+  type RollCallResult,
+} from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
-import { ShopNotice } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
@@ -24,7 +26,7 @@ import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Boat manifest — Scuba",
+  title: "Boat manifest — DiveDay",
 };
 
 const rollCallSchema = z.object({
@@ -39,30 +41,16 @@ const noteSchema = z.object({
   note: z.string().max(300),
 });
 
-const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
-  boarded: { tone: "success", text: "Boarding recorded." },
-  "not-boarded": { tone: "success", text: "Not-boarded status recorded." },
-  cleared: { tone: "success", text: "Roll-call result cleared — back to awaiting." },
-  "not-ready": {
-    tone: "danger",
-    text: "That diver is still blocked. Resolve the listed requirement before boarding.",
-  },
-  error: {
-    tone: "danger",
-    text: "That roll-call update could not be recorded. Refresh and try again.",
-  },
-};
-
 export default async function TripManifestPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; checkpoint?: string }>;
+  searchParams: Promise<{ checkpoint?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, checkpoint: requestedCheckpoint } = await searchParams;
+  const { checkpoint: requestedCheckpoint } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -78,29 +66,37 @@ export default async function TripManifestPage({
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
   const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
-  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
-  async function rollCallAction(formData: FormData) {
+  async function rollCallAction(
+    _prev: RollCallResult,
+    formData: FormData,
+  ): Promise<RollCallResult> {
     "use server";
     const staff = await requireStaffSession();
     const parsed = rollCallSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`${back}&notice=error`);
-    const outcome = await recordRollCall(await getDb(), {
-      shopId: staff.user.shopId,
-      tripId,
-      bookingId: parsed.data.bookingId,
-      recordedByPersonId: staff.user.personId,
-      status: parsed.data.status,
-      checkpoint,
-      note: parsed.data.note,
-    });
-    if (!outcome.ok) {
-      redirect(`${back}&notice=${outcome.reason === "not_ready" ? "not-ready" : "error"}`);
+    if (!parsed.success) return { ok: false, reason: "error" };
+    // A throw or dropped connection returns the worded rollback rather than
+    // rejecting the action, which would silently revert the card on flaky Wi-Fi.
+    try {
+      const outcome = await recordRollCall(await getDb(), {
+        shopId: staff.user.shopId,
+        tripId,
+        bookingId: parsed.data.bookingId,
+        recordedByPersonId: staff.user.personId,
+        status: parsed.data.status,
+        checkpoint,
+        note: parsed.data.note,
+      });
+      if (!outcome.ok) {
+        return { ok: false, reason: outcome.reason === "not_ready" ? "not_ready" : "error" };
+      }
+    } catch {
+      return { ok: false, reason: "error" };
     }
+    // Settle the card in place instead of a full-page redirect per tap.
     revalidatePath(back.split("?")[0]);
-    const notices = { boarded: "boarded", not_boarded: "not-boarded", cleared: "cleared" } as const;
-    redirect(`${back}&notice=${notices[parsed.data.status]}`);
+    return { ok: true };
   }
 
   async function saveRollCallNoteAction(
@@ -134,16 +130,13 @@ export default async function TripManifestPage({
       >
         Skip to roll call
       </a>
-      <FlashParams params={["notice"]} />
-      <div className="print:hidden">
-        <Link
-          href={`/shop/${shopSlug}/trips/${tripId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          ← Back to trip
-        </Link>
-      </div>
-      <header className="mt-4 flex flex-wrap items-start justify-between gap-5 border-b border-border pb-7 print:mt-0">
+      <TripSubNav
+        shopSlug={shopSlug}
+        tripId={tripId}
+        current="manifest"
+        className="mb-5 print:hidden"
+      />
+      <header className="flex flex-wrap items-start justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
           <h1 className="text-sm font-medium tracking-widest text-primary uppercase">
             Boat manifest
@@ -163,12 +156,6 @@ export default async function TripManifestPage({
           <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
             Live source · offline copy available
           </span>
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}/check-in`}
-            className="text-sm font-semibold text-primary hover:underline"
-          >
-            Counter check-in →
-          </Link>
           <PrintButton />
         </div>
       </header>
@@ -179,14 +166,6 @@ export default async function TripManifestPage({
           timezone: shop.timezone,
         })}
       />
-
-      {banner ? (
-        <div className="mt-6 print:hidden">
-          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.text}
-          </ShopNotice>
-        </div>
-      ) : null}
 
       <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
@@ -370,8 +349,9 @@ export default async function TripManifestPage({
                       <p>
                         <span className="font-bold">Emergency contact</span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.emergencyContactName ?? "Not on file"}
-                          {diver.emergencyContactPhone ? ` · ${diver.emergencyContactPhone}` : ""}
+                          {diver.emergencyContactName && diver.emergencyContactPhone
+                            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                            : "Not on file"}
                         </span>
                       </p>
                       <p>
@@ -418,43 +398,32 @@ export default async function TripManifestPage({
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap">
                     {ready ? (
-                      <form action={rollCallAction}>
-                        <input type="hidden" name="bookingId" value={diver.bookingId} />
-                        <input
-                          type="hidden"
-                          name="status"
-                          value={boarded ? "cleared" : "boarded"}
-                        />
-                        <SubmitButton
-                          pendingLabel="Saving…"
-                          className={
-                            boarded
-                              ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-success bg-success/15 px-5 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                              : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                          }
-                        >
-                          {boarded ? "Boarded ✓" : "Mark boarded"}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                    <form id={`not-boarded-${diver.bookingId}`} action={rollCallAction}>
-                      <input type="hidden" name="bookingId" value={diver.bookingId} />
-                      <input
-                        type="hidden"
-                        name="status"
-                        value={explicitNotBoarded ? "cleared" : "not_boarded"}
-                      />
-                      <SubmitButton
-                        pendingLabel="Saving…"
+                      <RollCallButton
+                        action={rollCallAction}
+                        bookingId={diver.bookingId}
+                        status={boarded ? "cleared" : "boarded"}
+                        label={boarded ? "Boarded ✓" : "Mark boarded"}
+                        pendingLabel={boarded ? "Undoing…" : "Boarding…"}
                         className={
-                          explicitNotBoarded
-                            ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong bg-surface-sunken px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                            : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          boarded
+                            ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-success bg-success/15 px-5 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                            : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         }
-                      >
-                        {explicitNotBoarded ? "Not boarded ✓" : "Mark not boarded"}
-                      </SubmitButton>
-                    </form>
+                      />
+                    ) : null}
+                    <RollCallButton
+                      action={rollCallAction}
+                      bookingId={diver.bookingId}
+                      status={explicitNotBoarded ? "cleared" : "not_boarded"}
+                      label={explicitNotBoarded ? "Not boarded ✓" : "Mark not boarded"}
+                      pendingLabel="Saving…"
+                      formId={`not-boarded-${diver.bookingId}`}
+                      className={
+                        explicitNotBoarded
+                          ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong bg-surface-sunken px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                      }
+                    />
                     {rc && !rc.implied ? (
                       <p className="text-xs text-muted sm:basis-full">
                         Tap the ✓ status again to undo.

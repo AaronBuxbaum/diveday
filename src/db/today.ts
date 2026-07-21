@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -13,9 +13,43 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   tripAssignments,
+  trips,
   tripWaitlistEntries,
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Today's boat: the trip id staff would check in for right now, or null on a
+ * day the shop has no departure. The nav uses it to turn "Boat view" into a
+ * live link. Deliberately lightweight — a bounded scan of scheduled trips
+ * around now, filtered to the shop's calendar day, preferring a boat that
+ * hasn't finished over one that already sailed.
+ */
+export async function todayNextDepartureTripId(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date = new Date(),
+): Promise<string | null> {
+  const today = shopDay(now, timeZone);
+  const rows = await db
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, new Date(now.getTime() - 18 * HOUR_MS)),
+        lte(trips.startsAt, new Date(now.getTime() + 30 * HOUR_MS)),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  const todays = rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
+  const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
+  return active?.id ?? null;
+}
 
 /**
  * How many upcoming departures the queue will inspect. Readiness is a per-trip
@@ -161,6 +195,41 @@ async function ungatedNitroxByTrip(
   return ungated;
 }
 
+/**
+ * Booked divers with no emergency contact name on file, per trip. This is never
+ * a boarding blocker — it is a low-priority, dock-settleable nudge — so it is
+ * derived here rather than through the readiness engine, and the caller only
+ * surfaces it for boats close enough to matter.
+ */
+async function missingEmergencyContactByTrip(
+  db: AppDb,
+  shopId: string,
+  bookingIdsByTrip: Map<string, string[]>,
+) {
+  const bookingIds = [...bookingIdsByTrip.values()].flat();
+  const missing = new Map<string, number>();
+  if (bookingIds.length === 0) return missing;
+  const rows = await db
+    .select({
+      bookingId: bookings.id,
+      contactName: people.emergencyContactName,
+      contactPhone: people.emergencyContactPhone,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
+  // A contact is only usable if the crew can dial it: both a name and a phone.
+  // A name with no number reads as "on file" but is unreachable in an incident.
+  const without = new Set(
+    rows.filter((row) => !row.contactName || !row.contactPhone).map((row) => row.bookingId),
+  );
+  for (const [tripId, ids] of bookingIdsByTrip) {
+    const count = ids.filter((id) => without.has(id)).length;
+    if (count > 0) missing.set(tripId, count);
+  }
+  return missing;
+}
+
 /** Wait-list depth per trip, so a freed seat can be offered to a real person. */
 async function waitlistCountsByTrip(db: AppDb, shopId: string, tripIds: string[]) {
   const counts = new Map<string, number>();
@@ -225,27 +294,35 @@ export async function getTodayWork(
     ]),
   );
 
-  const [boarded, missingFit, ungatedNitrox, waitlisted, staffedTrips, deliveryIssues] =
-    await Promise.all([
-      boardedCountsByTrip(
-        db,
-        shopId,
-        todayTrips.map((trip) => trip.id),
-      ),
-      missingFitByTrip(db, shopId, bookingIdsByTrip),
-      ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
-      waitlistCountsByTrip(
-        db,
-        shopId,
-        inWindow.map((trip) => trip.id),
-      ),
-      tripsWithInstructor(
-        db,
-        shopId,
-        inWindow.filter((trip) => trip.course).map((trip) => trip.id),
-      ),
-      listNotificationDeliveryIssues(db, shopId),
-    ]);
+  const [
+    boarded,
+    missingFit,
+    ungatedNitrox,
+    missingContact,
+    waitlisted,
+    staffedTrips,
+    deliveryIssues,
+  ] = await Promise.all([
+    boardedCountsByTrip(
+      db,
+      shopId,
+      todayTrips.map((trip) => trip.id),
+    ),
+    missingFitByTrip(db, shopId, bookingIdsByTrip),
+    ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
+    missingEmergencyContactByTrip(db, shopId, bookingIdsByTrip),
+    waitlistCountsByTrip(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+    ),
+    tripsWithInstructor(
+      db,
+      shopId,
+      inWindow.filter((trip) => trip.course).map((trip) => trip.id),
+    ),
+    listNotificationDeliveryIssues(db, shopId),
+  ]);
 
   const actions: TodayAction[] = [];
 
@@ -304,7 +381,26 @@ export async function getTodayWork(
         subject: trip.title,
         context: when,
         detail: "This course session has no instructor assigned and cannot take enrolments.",
-        actionLabel: "Assign instructor",
+        actionLabel: "Open trip",
+        href: tripHref,
+        dueAt: trip.startsAt,
+      });
+    }
+
+    // Emergency contact is a dock-settleable nudge, not a blocker, and only
+    // worth surfacing once a boat is close (within three days). Beyond that it
+    // is queue noise a diver still has time to fill in themselves.
+    const withoutContact =
+      urgencyFor(trip.startsAt, now) !== "later" ? (missingContact.get(trip.id) ?? 0) : 0;
+    if (withoutContact > 0) {
+      actions.push({
+        id: `contact:${trip.id}`,
+        kind: "emergency_contact",
+        urgency: urgencyFor(trip.startsAt, now),
+        subject: trip.title,
+        context: when,
+        detail: `${withoutContact} ${withoutContact === 1 ? "diver has" : "divers have"} no emergency contact on file — ask at the counter; it prints on the manifest.`,
+        actionLabel: "Open roster",
         href: tripHref,
         dueAt: trip.startsAt,
       });
@@ -320,8 +416,9 @@ export async function getTodayWork(
         subject: trip.title,
         context: when,
         detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} opened up and ${waiting} ${waiting === 1 ? "person is" : "people are"} on the wait list.`,
-        actionLabel: "Offer the seat",
-        href: tripHref,
+        // Lands right on the wait-list, where one tap invites the next in line.
+        actionLabel: "Invite from wait list",
+        href: `${tripHref}#waitlist`,
         dueAt: trip.startsAt,
       });
     }
@@ -329,8 +426,9 @@ export async function getTodayWork(
 
   for (const issue of deliveryIssues) {
     if (issue.trip.startsAt < now || issue.trip.startsAt > horizon) continue;
-    const what =
-      issue.delivery.kind === "booking_confirmation" ? "booking confirmation" : "waiver link";
+    const isWaiver = issue.delivery.kind !== "booking_confirmation";
+    const what = isWaiver ? "waiver link" : "booking confirmation";
+    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`;
     actions.push({
       id: `email:${issue.delivery.id}`,
       kind: "email_delivery",
@@ -341,8 +439,14 @@ export async function getTodayWork(
         issue.delivery.status === "not_configured"
           ? `Their ${what} never sent — email is not configured.`
           : `Their ${what} could not be delivered${issue.attempts > 1 ? ` after ${issue.attempts} attempts` : ""}.`,
-      actionLabel: "Open trip",
-      href: `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`,
+      // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver path
+      // (a fresh link, since the token is never stored); a confirmation retries
+      // from the stored booking. `href` is the no-JS fallback to the roster row.
+      actionLabel: isWaiver ? "Resend waiver link" : "Resend confirmation",
+      ...(isWaiver
+        ? { waiver: { bookingIds: [issue.booking.id] } }
+        : { resend: { bookingId: issue.booking.id } }),
+      href: roster,
       dueAt: issue.trip.startsAt,
     });
   }

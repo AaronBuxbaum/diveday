@@ -14,17 +14,37 @@ import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { readinessLinkPath } from "@/lib/readiness-links";
+import { ERROR_MESSAGES } from "./_components/types";
+
+/** Absolute readiness link for the confirmation email, or undefined with no origin. */
+function readinessEmailUrl(bookingId: string): string | undefined {
+  const origin = publicAppUrl();
+  return origin ? new URL(readinessLinkPath(bookingId), `${origin}/`).toString() : undefined;
+}
 
 /** Bound to each action so the public page can stay a pure renderer. */
 export type TripRef = { shopSlug: string; tripId: string };
 export type RentalFitRef = TripRef & { shopId: string; bookingId: string; personId: string };
 
+/**
+ * What a failed booking submit hands back to the form. A validation failure
+ * returns per-field messages so the client re-renders in place with everything
+ * still typed, instead of the old redirect that discarded the whole party.
+ * Success never returns — it redirects to the confirmation (or Stripe).
+ */
+export type BookingFormState = {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
+
 const bookSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
   email: z.email().max(200),
   phone: z.string().trim().max(30).optional(),
-  buddyPreference: z.string().trim().max(300).optional(),
 });
+
+const emailField = z.email().max(200);
 
 const rentalFitSchema = z.object({
   bcd: z.string().optional(),
@@ -41,28 +61,45 @@ const rentalFitSchema = z.object({
   note: z.string().trim().max(300),
 });
 
-export async function bookSpot({ shopSlug, tripId }: TripRef, formData: FormData) {
+export async function bookSpot(
+  { shopSlug, tripId }: TripRef,
+  _prev: BookingFormState,
+  formData: FormData,
+): Promise<BookingFormState> {
   const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
-  if (!partySize.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
-  const party = Array.from({ length: partySize.data }, (_, index) =>
-    bookSchema.safeParse({
-      fullName: formData.get(`fullName-${index}`),
-      email: formData.get(`email-${index}`),
-    }),
-  );
-  const validParty = party.flatMap((entry) => (entry.success ? [entry.data] : []));
-  if (validParty.length !== partySize.data)
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
+  if (!partySize.success) return { error: ERROR_MESSAGES.invalid };
+
+  // Validate per field so the form can point at the exact box that is wrong,
+  // and keep everything else the diver typed.
+  const fieldErrors: Record<string, string> = {};
+  const validParty: { fullName: string; email: string }[] = [];
+  for (let index = 0; index < partySize.data; index++) {
+    const fullName = String(formData.get(`fullName-${index}`) ?? "").trim();
+    const email = String(formData.get(`email-${index}`) ?? "").trim();
+    if (!fullName) fieldErrors[`fullName-${index}`] = "Enter a name.";
+    if (fullName.length > 120) fieldErrors[`fullName-${index}`] = "That name is too long.";
+    if (!emailField.safeParse(email).success)
+      fieldErrors[`email-${index}`] = "Enter a valid email address.";
+    validParty.push({ fullName, email });
+  }
+  const phone = String(formData.get("phone") ?? "").trim();
+  if (phone.length > 30) fieldErrors.phone = "That phone number is too long.";
+  if (Object.keys(fieldErrors).length > 0) {
+    return { error: "Check the highlighted fields and try again.", fieldErrors };
+  }
+
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
-  if (!shopNow) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
+  if (!shopNow) return { error: ERROR_MESSAGES.unavailable };
   const outcome = await createBookingParty(
     dbi,
-    validParty.map((entry) => ({
+    validParty.map((entry, index) => ({
       shopId: shopNow.id,
       tripId,
       fullName: entry.fullName,
       email: entry.email,
+      // Only the lead booker's phone is collected, so the crew can reach the party.
+      phone: index === 0 && phone ? phone : undefined,
     })),
   );
   if (!outcome.ok) {
@@ -76,7 +113,7 @@ export async function bookSpot({ shopSlug, tripId }: TripRef, formData: FormData
             : outcome.reason === "course_prerequisite"
               ? "course-prerequisite"
               : "unavailable";
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
+    return { error: ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unavailable };
   }
   const primaryBookingId = outcome.bookings[0]?.bookingId;
   if (!primaryBookingId) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
@@ -97,6 +134,7 @@ export async function bookSpot({ shopSlug, tripId }: TripRef, formData: FormData
         startsAt: tripNow.startsAt,
         endsAt: tripNow.endsAt,
         timezone: shopNow.timezone,
+        readinessUrl: readinessEmailUrl(primaryBookingId),
       });
       if (delivery.status === "failed") {
         console.error("Booking confirmation notification failed", {
@@ -186,6 +224,7 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
   const parsed = bookSchema.safeParse({
     fullName: formData.get("fullName-0"),
     email: formData.get("email-0"),
+    phone: formData.get("phone") || undefined,
   });
   if (!parsed.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
   const dbi = await getDb();

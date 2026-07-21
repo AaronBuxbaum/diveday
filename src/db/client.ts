@@ -16,7 +16,7 @@ export type AppTransaction = TransactionCallback extends (tx: infer T) => Promis
 export type DbExecutor = AppDb | AppTransaction;
 
 // Survive Next.js dev-server HMR: module state resets on reload, globalThis doesn't.
-const globalForDb = globalThis as unknown as { scubaDbPromise?: Promise<AppDb> };
+const globalForDb = globalThis as unknown as { divedayDbPromise?: Promise<AppDb> };
 
 /**
  * Embedded Postgres (PGlite) and Neon Postgres are both bootstrapped with the
@@ -25,8 +25,8 @@ const globalForDb = globalThis as unknown as { scubaDbPromise?: Promise<AppDb> }
  * not schema migration work.
  */
 export function getDb(): Promise<AppDb> {
-  globalForDb.scubaDbPromise ??= init();
-  return globalForDb.scubaDbPromise;
+  globalForDb.divedayDbPromise ??= init();
+  return globalForDb.divedayDbPromise;
 }
 
 async function init(): Promise<AppDb> {

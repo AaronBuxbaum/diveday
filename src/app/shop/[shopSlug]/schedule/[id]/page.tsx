@@ -38,7 +38,7 @@ import { TripHeader } from "./_components/TripHeader";
 import { ERROR_MESSAGES, type PaymentPanel } from "./_components/types";
 
 export const metadata: Metadata = {
-  title: "Trip — Scuba",
+  title: "Trip — DiveDay",
 };
 
 export default async function TripDetailPage({
@@ -141,15 +141,13 @@ export default async function TripDetailPage({
         </a>
       ) : null}
 
-      <DiveBriefingsSection briefings={diveBriefings} trip={trip} />
-      <PackingSection shop={shop} trip={trip} />
-      <ForecastSection
-        shop={shop}
-        trip={trip}
-        crewPrediction={crewPrediction}
-        automatedForecast={automatedForecast}
-      />
-
+      {/*
+        The seat comes first. Booking (or, once booked, the confirmation) sits
+        directly under the hero so a diver reaches the form in one flick and a
+        just-paid diver lands on their confirmation without scrolling past a
+        creature gallery. The dive-site content is good pre-trip reading, so it
+        follows for the now-committed diver rather than standing in the way.
+      */}
       {confirmed ? (
         <BookingConfirmation
           shop={shop}
@@ -195,6 +193,15 @@ export default async function TripDetailPage({
           perDiverPriceCents={perDiverPriceCents}
         />
       )}
+
+      <ForecastSection
+        shop={shop}
+        trip={trip}
+        crewPrediction={crewPrediction}
+        automatedForecast={automatedForecast}
+      />
+      <PackingSection shop={shop} trip={trip} />
+      <DiveBriefingsSection briefings={diveBriefings} trip={trip} />
     </main>
   );
 }

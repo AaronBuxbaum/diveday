@@ -51,7 +51,7 @@ afterAll(() => server.close());
 afterEach(
   () =>
     new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase("scuba-offline-manifests");
+      const request = indexedDB.deleteDatabase("diveday-offline-manifests");
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error ?? new Error("failed to reset IndexedDB"));
     }),

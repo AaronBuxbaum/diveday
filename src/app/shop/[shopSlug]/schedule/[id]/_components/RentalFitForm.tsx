@@ -1,20 +1,24 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { type RentalFitRef, saveRentalFitRequest } from "../actions";
 import { RENTAL_FIT_OPTIONS, type RentalFit } from "./types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
+/**
+ * The diver's rental-fit capture, reused by the booking confirmation and the
+ * `/ready` page. The submit target is passed in as `action` so each surface
+ * binds its own (page-scoped or token-scoped) server action.
+ */
 export function RentalFitForm({
-  fitRef,
+  action,
   rentalFit,
   wantsNitrox,
   nitroxCardVerified,
   plannedDives,
   saved,
 }: {
-  fitRef: RentalFitRef;
+  action: (formData: FormData) => void;
   rentalFit: RentalFit;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
@@ -36,7 +40,7 @@ export function RentalFitForm({
           Saved. The crew will see this when they pack, and check the fit with you at the dock.
         </p>
       ) : null}
-      <form action={saveRentalFitRequest.bind(null, fitRef)} className="mt-4 flex flex-col gap-4">
+      <form action={action} className="mt-4 flex flex-col gap-4">
         <fieldset>
           <legend className="text-sm font-medium">What should we plan to have ready?</legend>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
