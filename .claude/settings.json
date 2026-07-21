@@ -1,6 +1,8 @@
 {
   "permissions": {
     "allow": [
+      "ScheduleWakeup",
+      "mcp__claude_code_remote__unsubscribe_pr_activity",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
       "Bash(pnpm format)",
