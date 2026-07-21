@@ -24,7 +24,7 @@ import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
 export const metadata: Metadata = {
-  title: "Schedule — Scuba",
+  title: "Schedule — DiveDay",
 };
 
 export default async function TripsPage({

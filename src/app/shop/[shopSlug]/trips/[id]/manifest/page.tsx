@@ -26,7 +26,7 @@ import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Boat manifest — Scuba",
+  title: "Boat manifest — DiveDay",
 };
 
 const rollCallSchema = z.object({

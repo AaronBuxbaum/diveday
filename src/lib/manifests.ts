@@ -37,7 +37,7 @@ export type ManifestDiverInput = {
   rentalFit: RentalFitLine;
   /**
    * The diver *asked* for enriched air and holds a verified card. It is not a
-   * record of what is in a cylinder: Scuba logs no gas analysis, so the crew
+   * record of what is in a cylinder: DiveDay logs no gas analysis, so the crew
    * still analyzes and signs for the actual mix before anyone breathes it.
    */
   nitroxRequested: boolean;

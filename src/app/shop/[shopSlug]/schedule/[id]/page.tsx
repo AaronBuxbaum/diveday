@@ -38,7 +38,7 @@ import { TripHeader } from "./_components/TripHeader";
 import { ERROR_MESSAGES, type PaymentPanel } from "./_components/types";
 
 export const metadata: Metadata = {
-  title: "Trip — Scuba",
+  title: "Trip — DiveDay",
 };
 
 export default async function TripDetailPage({

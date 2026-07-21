@@ -10,7 +10,7 @@ import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { requireStaffSession } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Dive sites — Scuba" };
+export const metadata: Metadata = { title: "Dive sites — DiveDay" };
 
 export default async function DiveSitesPage({
   params,
@@ -117,7 +117,7 @@ export default async function DiveSitesPage({
                     {(currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0) >
                     site.sourceTemplateVersion
                       ? `Template update v${currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? ""} ready — your edits are safe.`
-                      : `Scuba template v${site.sourceTemplateVersion}`}
+                      : `DiveDay template v${site.sourceTemplateVersion}`}
                   </p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">

@@ -17,7 +17,7 @@ import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
 
-export const metadata: Metadata = { title: "Diver — Scuba" };
+export const metadata: Metadata = { title: "Diver — DiveDay" };
 
 export default async function DiverDetailPage({
   params,

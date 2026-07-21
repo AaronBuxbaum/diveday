@@ -52,7 +52,9 @@ export function OfflineManifestView() {
             : "All offline changes are reconciled with the live manifest.",
       );
     } catch {
-      setMessage("Still using the device copy. Reconciliation will retry when Scuba is reachable.");
+      setMessage(
+        "Still using the device copy. Reconciliation will retry when DiveDay is reachable.",
+      );
     }
   }, [tripId]);
 

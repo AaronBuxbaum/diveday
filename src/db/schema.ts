@@ -286,7 +286,7 @@ export const diveSites = pgTable(
   ],
 );
 
-/** Scuba-maintained common-site catalog; shops copy a published version into their own library. */
+/** DiveDay-maintained common-site catalog; shops copy a published version into their own library. */
 export const globalDiveSites = pgTable(
   "global_dive_sites",
   {

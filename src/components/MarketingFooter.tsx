@@ -5,7 +5,7 @@ export function MarketingFooter() {
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
         <p>
-          <span className="font-semibold text-foreground">scuba.</span> A calmer way to run a dive
+          <span className="font-semibold text-foreground">DiveDay.</span> A calmer way to run a dive
           day.
         </p>
         <div className="flex gap-4">

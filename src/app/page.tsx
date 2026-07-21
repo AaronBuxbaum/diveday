@@ -45,9 +45,9 @@ export default function Home() {
                 Run the whole dive day, from booking to head count.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-                Scuba puts bookings, readiness, trip prep, and an offline-ready boat manifest in one
-                considered system — so your crew can spend less time chasing details and more time
-                taking care of divers.
+                DiveDay puts bookings, readiness, trip prep, and an offline-ready boat manifest in
+                one considered system — so your crew can spend less time chasing details and more
+                time taking care of divers.
               </p>
               <div className="mt-8">
                 <HomeCTA enterDemoAction={enterDemoAction} />
@@ -59,7 +59,7 @@ export default function Home() {
             </div>
 
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
-              <CaptainPhoneFrame label="A captain marking divers boarded on Scuba's mobile roll-call screen." />
+              <CaptainPhoneFrame label="A captain marking divers boarded on DiveDay's mobile roll-call screen." />
               <div className="mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3 shadow-lg">
                 <p className="text-xs font-semibold tracking-widest text-primary uppercase">
                   At the dock
@@ -81,8 +81,8 @@ export default function Home() {
               The right view for the person holding the work.
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
-              Scuba uses the same operational truth across the shop, so the front desk does not have
-              to reconstruct it for the boat crew.
+              DiveDay uses the same operational truth across the shop, so the front desk does not
+              have to reconstruct it for the boat crew.
             </p>
           </div>
 

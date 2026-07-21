@@ -13,7 +13,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { DiverList } from "./_components/DiverList";
 
-export const metadata: Metadata = { title: "Divers — Scuba" };
+export const metadata: Metadata = { title: "Divers — DiveDay" };
 
 const diverSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
