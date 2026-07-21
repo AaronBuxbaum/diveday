@@ -17,6 +17,7 @@ import {
 } from "@/db/trips";
 import { joinTripWaitlist, recordWaitlistInvite } from "@/db/waitlist";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
+import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -248,6 +249,36 @@ export async function issueWaiverAction(shopSlug: string, tripId: string, formDa
     back,
     `${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`,
   );
+}
+
+/**
+ * Staff records that a diver signed a paper release in person or on shore, for a
+ * diver the app never sees sign. Same shop-scoped session gate as every other
+ * roster action; the accountable staff member is stamped on the record. Requires
+ * an explicit medical-clear attestation — a flagged medical must go through the
+ * diver-facing link, which captures the questionnaire and routes to review.
+ */
+export async function markWaiverInPersonAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!bookingId) redirect(`${back}?notice=waiver-error`);
+  const outcome = await recordInPersonWaiver(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    recordedByPersonId: s.user.personId,
+    medicalAttested: formData.get("medicalAttested") === "on",
+  });
+  const notice = outcome.ok
+    ? "waiver-in-person"
+    : outcome.reason === "medical_attestation_required"
+      ? "waiver-medical-attestation"
+      : "waiver-error";
+  revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
 }
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {

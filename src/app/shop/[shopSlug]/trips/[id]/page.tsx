@@ -18,7 +18,6 @@ import {
   listStaff,
   listTripDives,
 } from "@/db/trips";
-import { listTripWaiverStatuses } from "@/db/waivers";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -42,6 +41,7 @@ import {
   inviteWaitlistAction,
   issueWaiverAction,
   markPaymentAction,
+  markWaiverInPersonAction,
   reinstateTripAction,
   removeBookingAction,
   saveConditionsAction,
@@ -74,7 +74,6 @@ export default async function ManageTripPage({
     staff,
     crewIds,
     roster,
-    waiverRows,
     requirement,
     readinessRows,
     prepDivers,
@@ -85,7 +84,6 @@ export default async function ManageTripPage({
     listStaff(db, shop.id),
     getTripCrewIds(db, tripId),
     getTripRoster(db, tripId),
-    listTripWaiverStatuses(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
     listTripReadiness(db, shop.id, tripId),
     listTripPrepDivers(db, shop.id, tripId),
@@ -115,8 +113,17 @@ export default async function ManageTripPage({
   );
   // The roster is the spine of the diver section; waiver and readiness detail
   // hang off it by booking id so each diver renders as one consolidated card.
-  const waiverByBooking = new Map(waiverRows.map((row) => [row.booking.id, row] as const));
+  // Both come from the readiness rows, so the waiver control shows the same
+  // effective release (including one carried over from an earlier trip) that
+  // decides whether the diver is ready — never a stale "Send waiver" prompt for
+  // someone already signed.
   const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
+  const waiverByBooking = new Map(
+    readinessRows.map(
+      (row) =>
+        [row.booking.id, { booking: row.booking, person: row.person, waiver: row.waiver }] as const,
+    ),
+  );
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
@@ -242,6 +249,7 @@ export default async function ManageTripPage({
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
         issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
+        markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
       />
