@@ -5,7 +5,7 @@ import { seededShopContext } from "@/test/db";
 import { recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { saveRentalFit } from "./rental-fit";
-import { nitroxCertifications } from "./schema";
+import { nitroxCertifications, people } from "./schema";
 import { getTodayWork } from "./today";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -173,6 +173,38 @@ describe("today's work queue (in-memory PGlite)", () => {
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
     expect(nitroxAction?.detail).toContain("without a verified card");
+  });
+
+  it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await getTripRoster(db, reef.id);
+    if (roster.length === 0) throw new Error("demo bookings missing");
+    // Strip any seeded contacts so today's whole boat is missing one.
+    for (const entry of roster) {
+      await db
+        .update(people)
+        .set({ emergencyContactName: null, emergencyContactPhone: null })
+        .where(eq(people.id, entry.person.id));
+    }
+
+    const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const contactAction = flagged.actions.find((action) => action.id === `contact:${reef.id}`);
+    expect(contactAction?.kind).toBe("emergency_contact");
+    expect(contactAction?.detail).toContain("no emergency contact");
+    // Never a boarding blocker; it points at the roster to settle at the counter.
+    expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
+
+    for (const entry of roster) {
+      await db
+        .update(people)
+        .set({ emergencyContactName: "Kin Ashford" })
+        .where(eq(people.id, entry.person.id));
+    }
+    const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(cleared.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(false);
   });
 
   it("never looks past its one-week horizon", async () => {

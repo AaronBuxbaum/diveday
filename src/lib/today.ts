@@ -40,7 +40,8 @@ export type TodayActionKind =
   | "nitrox_gate"
   | "instructor_missing"
   | "waitlist_seat"
-  | "email_delivery";
+  | "email_delivery"
+  | "emergency_contact";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -59,6 +60,8 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   payment: 8,
   email_delivery: 9,
   waitlist_seat: 10,
+  // Dock-settleable and never a boarding blocker, so it rides at the bottom.
+  emergency_contact: 11,
 };
 
 /**
@@ -78,6 +81,7 @@ export const ACTION_KIND_META = {
   payment: { label: "Payment", tone: "neutral" },
   email_delivery: { label: "Email", tone: "neutral" },
   waitlist_seat: { label: "Wait list", tone: "neutral" },
+  emergency_contact: { label: "Contact", tone: "neutral" },
 } as const satisfies Record<
   TodayActionKind,
   { label: string; tone: "danger" | "warning" | "neutral" }

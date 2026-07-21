@@ -10,7 +10,12 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import type { MedicalAnswers } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "@/db/waivers";
+import {
+  completeWaiver,
+  getEmergencyContactForBooking,
+  getWaiverForToken,
+  saveWaiverDraft,
+} from "@/db/waivers";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -28,6 +33,11 @@ const signatureSchema = z.object({
 const completeSignatureSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
   acknowledged: z.literal("on"),
+});
+
+const emergencyContactSchema = z.object({
+  emergencyContactName: z.string().trim().max(120).optional(),
+  emergencyContactPhone: z.string().trim().max(40).optional(),
 });
 
 /** Reads every question's yes/no answer for the presented questionnaire. */
@@ -141,6 +151,7 @@ export default async function WaiverPage({
   }
 
   const { record } = state;
+  const emergencyContact = await getEmergencyContactForBooking(db, record.bookingId);
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
@@ -174,10 +185,19 @@ export default async function WaiverPage({
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
+    const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
     const outcome = await completeWaiver(await getDb(), token, {
       signerName: parsed.data.signerName,
       agreed: true,
       medicalAnswers: answers,
+      // Optional — a diver who skips it still signs; blanks never clobber a
+      // value already on file.
+      emergencyContact: contact.success
+        ? {
+            name: contact.data.emergencyContactName,
+            phone: contact.data.emergencyContactPhone,
+          }
+        : undefined,
     });
     if (!outcome.ok) {
       redirect(
@@ -248,6 +268,36 @@ export default async function WaiverPage({
               />
             ))}
           </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-surface p-5">
+          <h2 className="text-lg font-semibold">Emergency contact</h2>
+          <p className="mt-1 text-sm text-muted">
+            Someone we can reach for you on the day — optional, but it’s what the crew has if
+            anything happens on the water.
+          </p>
+          <FieldGrid columns={2} className="mt-4">
+            <Field label="Contact name">
+              <input
+                name="emergencyContactName"
+                autoComplete="name"
+                maxLength={120}
+                defaultValue={emergencyContact?.name ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label="Contact phone">
+              <input
+                name="emergencyContactPhone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                maxLength={40}
+                defaultValue={emergencyContact?.phone ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">

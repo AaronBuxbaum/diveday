@@ -161,6 +161,33 @@ async function ungatedNitroxByTrip(
   return ungated;
 }
 
+/**
+ * Booked divers with no emergency contact name on file, per trip. This is never
+ * a boarding blocker — it is a low-priority, dock-settleable nudge — so it is
+ * derived here rather than through the readiness engine, and the caller only
+ * surfaces it for boats close enough to matter.
+ */
+async function missingEmergencyContactByTrip(
+  db: AppDb,
+  shopId: string,
+  bookingIdsByTrip: Map<string, string[]>,
+) {
+  const bookingIds = [...bookingIdsByTrip.values()].flat();
+  const missing = new Map<string, number>();
+  if (bookingIds.length === 0) return missing;
+  const rows = await db
+    .select({ bookingId: bookings.id, contactName: people.emergencyContactName })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
+  const without = new Set(rows.filter((row) => !row.contactName).map((row) => row.bookingId));
+  for (const [tripId, ids] of bookingIdsByTrip) {
+    const count = ids.filter((id) => without.has(id)).length;
+    if (count > 0) missing.set(tripId, count);
+  }
+  return missing;
+}
+
 /** Wait-list depth per trip, so a freed seat can be offered to a real person. */
 async function waitlistCountsByTrip(db: AppDb, shopId: string, tripIds: string[]) {
   const counts = new Map<string, number>();
@@ -225,27 +252,35 @@ export async function getTodayWork(
     ]),
   );
 
-  const [boarded, missingFit, ungatedNitrox, waitlisted, staffedTrips, deliveryIssues] =
-    await Promise.all([
-      boardedCountsByTrip(
-        db,
-        shopId,
-        todayTrips.map((trip) => trip.id),
-      ),
-      missingFitByTrip(db, shopId, bookingIdsByTrip),
-      ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
-      waitlistCountsByTrip(
-        db,
-        shopId,
-        inWindow.map((trip) => trip.id),
-      ),
-      tripsWithInstructor(
-        db,
-        shopId,
-        inWindow.filter((trip) => trip.course).map((trip) => trip.id),
-      ),
-      listNotificationDeliveryIssues(db, shopId),
-    ]);
+  const [
+    boarded,
+    missingFit,
+    ungatedNitrox,
+    missingContact,
+    waitlisted,
+    staffedTrips,
+    deliveryIssues,
+  ] = await Promise.all([
+    boardedCountsByTrip(
+      db,
+      shopId,
+      todayTrips.map((trip) => trip.id),
+    ),
+    missingFitByTrip(db, shopId, bookingIdsByTrip),
+    ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
+    missingEmergencyContactByTrip(db, shopId, bookingIdsByTrip),
+    waitlistCountsByTrip(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+    ),
+    tripsWithInstructor(
+      db,
+      shopId,
+      inWindow.filter((trip) => trip.course).map((trip) => trip.id),
+    ),
+    listNotificationDeliveryIssues(db, shopId),
+  ]);
 
   const actions: TodayAction[] = [];
 
@@ -305,6 +340,25 @@ export async function getTodayWork(
         context: when,
         detail: "This course session has no instructor assigned and cannot take enrolments.",
         actionLabel: "Open trip",
+        href: tripHref,
+        dueAt: trip.startsAt,
+      });
+    }
+
+    // Emergency contact is a dock-settleable nudge, not a blocker, and only
+    // worth surfacing once a boat is close (within three days). Beyond that it
+    // is queue noise a diver still has time to fill in themselves.
+    const withoutContact =
+      urgencyFor(trip.startsAt, now) !== "later" ? (missingContact.get(trip.id) ?? 0) : 0;
+    if (withoutContact > 0) {
+      actions.push({
+        id: `contact:${trip.id}`,
+        kind: "emergency_contact",
+        urgency: urgencyFor(trip.startsAt, now),
+        subject: trip.title,
+        context: when,
+        detail: `${withoutContact} ${withoutContact === 1 ? "diver has" : "divers have"} no emergency contact on file — ask at the counter; it prints on the manifest.`,
+        actionLabel: "Open roster",
         href: tripHref,
         dueAt: trip.startsAt,
       });

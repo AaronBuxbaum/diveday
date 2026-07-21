@@ -207,10 +207,91 @@ function completedStatus(
   return status === "medical_review" ? "medical_review" : "completed";
 }
 
+/** Optional emergency contact captured alongside the waiver, stored on the person. */
+export type EmergencyContactInput = { name?: string; phone?: string };
+
+/**
+ * Write the diver's emergency contact to their person record, but only fill
+ * blanks it actually supplied — a diver who leaves a field empty must never
+ * wipe a value the shop already has on file. The person is reached through the
+ * record's booking, so a bearer token can only ever touch its own diver.
+ */
+async function saveEmergencyContact(
+  db: AppDb,
+  bookingId: string,
+  contact: EmergencyContactInput,
+): Promise<void> {
+  const name = contact.name?.trim();
+  const phone = contact.phone?.trim();
+  if (!name && !phone) return;
+  const patch: Partial<typeof people.$inferInsert> = {};
+  if (name) patch.emergencyContactName = name;
+  if (phone) patch.emergencyContactPhone = phone;
+  const [booking] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!booking) return;
+  await db.update(people).set(patch).where(eq(people.id, booking.personId));
+}
+
+/** The diver's emergency contact on file, reached through their booking. */
+export async function getEmergencyContactForBooking(
+  db: AppDb,
+  bookingId: string,
+): Promise<{ name: string | null; phone: string | null } | null> {
+  const [row] = await db
+    .select({
+      name: people.emergencyContactName,
+      phone: people.emergencyContactPhone,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Save an emergency contact for a booking's diver, scoped to the shop so a
+ * bearer-token surface (the `/ready` page) can only ever write to its own
+ * booking's person. Blanks never overwrite an existing value.
+ */
+export async function saveBookingEmergencyContact(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; name?: string; phone?: string },
+): Promise<boolean> {
+  const name = input.name?.trim();
+  const phone = input.phone?.trim();
+  if (!name && !phone) return false;
+  const patch: Partial<typeof people.$inferInsert> = {};
+  if (name) patch.emergencyContactName = name;
+  if (phone) patch.emergencyContactPhone = phone;
+  const [booking] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!booking) return false;
+  const [updated] = await db
+    .update(people)
+    .set(patch)
+    .where(eq(people.id, booking.personId))
+    .returning({ id: people.id });
+  return Boolean(updated);
+}
+
 export async function completeWaiver(
   db: AppDb,
   token: string,
-  input: { signerName: string; agreed: boolean; medicalAnswers: MedicalAnswers; now?: Date },
+  input: {
+    signerName: string;
+    agreed: boolean;
+    medicalAnswers: MedicalAnswers;
+    emergencyContact?: EmergencyContactInput;
+    now?: Date;
+  },
 ): Promise<CompleteWaiverOutcome> {
   const now = input.now ?? new Date();
   const evidence = localTypedConsentProvider.capture({
@@ -243,7 +324,12 @@ export async function completeWaiver(
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });
-  if (saved) return { ok: true, status: completedStatus(saved.status), idempotent: false };
+  if (saved) {
+    if (input.emergencyContact) {
+      await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
+    }
+    return { ok: true, status: completedStatus(saved.status), idempotent: false };
+  }
 
   // Another submit won the race. Do not overwrite its evidence; report that
   // stable result instead, which makes duplicate browser submits harmless.
