@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
+import { recordNotificationDelivery } from "./notifications";
 import { saveRentalFit } from "./rental-fit";
 import { nitroxCertifications, people } from "./schema";
 import { getTodayWork } from "./today";
@@ -138,6 +139,41 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(cleared.actions.some((action) => action.id === `prep:${reef.id}`)).toBe(false);
+  });
+
+  it("turns an email-delivery failure into a one-tap resend, not just a link", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [entry] = await getTripRoster(db, reef.id);
+    if (!entry) throw new Error("demo bookings missing");
+
+    // A failed booking confirmation resends from stored data...
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      kind: "booking_confirmation",
+      delivery: { status: "failed" },
+    });
+    const withConfirm = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const confirmRow = withConfirm.actions.find((action) => action.kind === "email_delivery");
+    expect(confirmRow?.actionLabel).toBe("Resend confirmation");
+    expect(confirmRow?.resend).toEqual({ bookingId: entry.booking.id });
+
+    // ...while a failed waiver link reissues through the shared WP-1 send path.
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      kind: "waiver_request",
+      delivery: { status: "failed" },
+    });
+    const withWaiver = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const waiverRow = withWaiver.actions.find(
+      (action) => action.kind === "email_delivery" && action.waiver,
+    );
+    expect(waiverRow?.actionLabel).toBe("Resend waiver link");
+    expect(waiverRow?.waiver).toEqual({ bookingIds: [entry.booking.id] });
   });
 
   it("raises a nitrox request whose card stopped being verified", async () => {

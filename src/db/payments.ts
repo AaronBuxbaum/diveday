@@ -54,15 +54,23 @@ export async function getBookingPayment(db: DbExecutor, shopId: string, bookingI
   return payment ?? null;
 }
 
-/** Current payment rows for a set of bookings, keyed by bookingId. */
+/**
+ * Current payment status and source for a set of bookings, keyed by bookingId.
+ * `provider` is "stripe" when a card was taken online, null for a manual mark —
+ * enough for the roster to say *how* a booking was paid.
+ */
 export async function paymentsByBooking(db: DbExecutor, shopId: string, bookingIds: string[]) {
-  const map = new Map<string, PaymentStatus>();
+  const map = new Map<string, { status: PaymentStatus; provider: string | null }>();
   if (bookingIds.length === 0) return map;
   const rows = await db
-    .select({ bookingId: bookingPayments.bookingId, status: bookingPayments.status })
+    .select({
+      bookingId: bookingPayments.bookingId,
+      status: bookingPayments.status,
+      provider: bookingPayments.provider,
+    })
     .from(bookingPayments)
     .where(and(eq(bookingPayments.shopId, shopId), inArray(bookingPayments.bookingId, bookingIds)));
-  for (const row of rows) map.set(row.bookingId, row.status);
+  for (const row of rows) map.set(row.bookingId, { status: row.status, provider: row.provider });
   return map;
 }
 

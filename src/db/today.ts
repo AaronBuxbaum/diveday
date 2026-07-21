@@ -426,8 +426,9 @@ export async function getTodayWork(
 
   for (const issue of deliveryIssues) {
     if (issue.trip.startsAt < now || issue.trip.startsAt > horizon) continue;
-    const what =
-      issue.delivery.kind === "booking_confirmation" ? "booking confirmation" : "waiver link";
+    const isWaiver = issue.delivery.kind !== "booking_confirmation";
+    const what = isWaiver ? "waiver link" : "booking confirmation";
+    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`;
     actions.push({
       id: `email:${issue.delivery.id}`,
       kind: "email_delivery",
@@ -438,8 +439,14 @@ export async function getTodayWork(
         issue.delivery.status === "not_configured"
           ? `Their ${what} never sent — email is not configured.`
           : `Their ${what} could not be delivered${issue.attempts > 1 ? ` after ${issue.attempts} attempts` : ""}.`,
-      actionLabel: "Open trip",
-      href: `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`,
+      // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver path
+      // (a fresh link, since the token is never stored); a confirmation retries
+      // from the stored booking. `href` is the no-JS fallback to the roster row.
+      actionLabel: isWaiver ? "Resend waiver link" : "Resend confirmation",
+      ...(isWaiver
+        ? { waiver: { bookingIds: [issue.booking.id] } }
+        : { resend: { bookingId: issue.booking.id } }),
+      href: roster,
       dueAt: issue.trip.startsAt,
     });
   }

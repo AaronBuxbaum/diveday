@@ -37,6 +37,11 @@ function DiverRow({
             </li>
           ))}
         </ul>
+        {diver.alsoOn.length > 0 ? (
+          <p className="mt-1.5 text-sm text-muted">
+            Also blocked on {diver.alsoOn.join(", ")} — same diver, fix once.
+          </p>
+        ) : null}
       </div>
       {diver.fix.sendsWaiver ? (
         <WaiverSendControl

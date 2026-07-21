@@ -62,12 +62,44 @@ export function waiverBookingIds(trip: BlockerQueueTrip): string[] {
   return trip.divers.filter((diver) => diver.fix.sendsWaiver).map((diver) => diver.bookingId);
 }
 
+/**
+ * Fill each blocked row's `alsoOn` with the *other* departures the same person
+ * is blocked on. A diver booked on two boats otherwise reads as two unrelated
+ * rows; this ties them together so staff resolve the person once. Mutates in
+ * place and returns the same array. Trip identity (not title) dedupes, so two
+ * departures that happen to share a title never collapse into one.
+ */
+export function annotateAlsoOn(trips: BlockerQueueTrip[]): BlockerQueueTrip[] {
+  const seenByPerson = new Map<string, { tripId: string; title: string }[]>();
+  for (const trip of trips) {
+    for (const diver of trip.divers) {
+      const list = seenByPerson.get(diver.personId) ?? [];
+      list.push({ tripId: trip.tripId, title: trip.title });
+      seenByPerson.set(diver.personId, list);
+    }
+  }
+  for (const trip of trips) {
+    for (const diver of trip.divers) {
+      diver.alsoOn = (seenByPerson.get(diver.personId) ?? [])
+        .filter((entry) => entry.tripId !== trip.tripId)
+        .map((entry) => entry.title);
+    }
+  }
+  return trips;
+}
+
 export type BlockerQueueDiver = {
   bookingId: string;
   personId: string;
   fullName: string;
   blockers: ReadinessBlocker[];
   fix: BlockerFix;
+  /**
+   * Titles of the *other* upcoming departures this same person is also blocked
+   * on. Lets staff see a repeat name is one person across boats, not several
+   * strangers, and resolve them once. Empty for a diver blocked on one trip.
+   */
+  alsoOn: string[];
 };
 
 export type BlockerQueueTrip = {

@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
+import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
 import type {
   NitroxByBooking,
@@ -137,6 +138,10 @@ export function RosterSection({
           {roster.map(({ booking, person }) => {
             const readiness = readinessByBooking.get(booking.id)?.readiness;
             const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
+            const paymentSource = paymentSourceLine(
+              paymentStatus,
+              readinessByBooking.get(booking.id)?.paymentProvider,
+            );
             const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
             const waiverStatus = waiverState(currentWaiver);
             const waiverControl = WAIVER_CONTROLS[waiverStatus];
@@ -273,6 +278,9 @@ export function RosterSection({
                       <input type="hidden" name="bookingId" value={booking.id} />
                       <span className="text-sm text-muted">
                         Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
+                        {paymentSource ? (
+                          <span className="text-muted"> · {paymentSource}</span>
+                        ) : null}
                       </span>
                       <select
                         name="status"
