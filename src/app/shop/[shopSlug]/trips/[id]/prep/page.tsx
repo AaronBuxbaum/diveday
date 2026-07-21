@@ -162,20 +162,20 @@ export default async function TripPrepPage({
                   : "Nothing to pull — every diver on this trip brings their own kit."}
               </p>
             ) : (
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-md border-collapse text-left text-sm">
+              <div className="mt-3">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th scope="col" className="px-4 py-3 font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
                         Item
                       </th>
-                      <th scope="col" className="px-4 py-3 font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
                         Size
                       </th>
-                      <th scope="col" className="px-4 py-3 font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
                         Qty
                       </th>
-                      <th scope="col" className="px-4 py-3 font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
                         For
                       </th>
                     </tr>
@@ -186,8 +186,8 @@ export default async function TripPrepPage({
                         key={`${line.kind}:${line.size ?? ""}`}
                         className="border-b border-border last:border-0"
                       >
-                        <td className="px-4 py-3 font-medium">{line.label}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3 font-medium sm:px-4">{line.label}</td>
+                        <td className="px-3 py-3 sm:px-4">
                           {line.size ??
                             (UNSIZED_ITEM_KINDS.includes(line.kind) ? (
                               <span className="text-muted">—</span>
@@ -195,8 +195,8 @@ export default async function TripPrepPage({
                               <span className="text-muted">Not recorded</span>
                             ))}
                         </td>
-                        <td className="px-4 py-3 tabular-nums">{line.count}</td>
-                        <td className="px-4 py-3 text-muted">{line.divers.join(", ")}</td>
+                        <td className="px-3 py-3 tabular-nums sm:px-4">{line.count}</td>
+                        <td className="px-3 py-3 text-muted sm:px-4">{line.divers.join(", ")}</td>
                       </tr>
                     ))}
                   </tbody>

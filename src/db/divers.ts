@@ -149,7 +149,9 @@ export async function listDiverSummaries(db: AppDb, shopId: string) {
       certificationCount: cards.length,
       pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
       specialtyCount: specialty.length,
-      pendingSpecialtyCount:
+      // Nitrox is not a specialty (see the glossary), but a pending nitrox
+      // card needs staff attention just the same, so it counts here.
+      pendingSpecialtyOrNitroxCount:
         specialty.filter((card) => card.status === "pending").length +
         nitrox.filter((card) => card.status === "pending").length,
       nitroxCertificationCount: nitrox.length,

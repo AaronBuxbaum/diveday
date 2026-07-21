@@ -72,86 +72,137 @@ export function DiverList({ divers, shopSlug }: { divers: DiverSummary[]; shopSl
           </p>
         </EmptyState>
       ) : (
-        <div className="relative mt-4 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
-          <table className="w-full min-w-180 border-collapse text-left">
-            <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Person
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Cards
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Rental fit
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Attention
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {visible.map((diver) => {
-                const cards =
-                  diver.certificationCount + diver.specialtyCount + diver.nitroxCertificationCount;
-                const pending = diver.pendingCertificationCount + diver.pendingSpecialtyCount;
-                return (
-                  <tr
-                    key={diver.person.id}
-                    className="group relative transition-colors duration-200 hover:bg-surface-sunken"
+        <>
+          {/* Phone: stacked cards, so nothing hides behind a sideways scroll. */}
+          <ul className="mt-4 space-y-3 sm:hidden">
+            {visible.map((diver) => {
+              const cards =
+                diver.certificationCount + diver.specialtyCount + diver.nitroxCertificationCount;
+              const pending = diver.pendingCertificationCount + diver.pendingSpecialtyOrNitroxCount;
+              return (
+                <li key={diver.person.id}>
+                  <Link
+                    href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                    className="block rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken"
                   >
-                    <td className="relative px-4 py-3">
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                        className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                        aria-hidden="true"
                       >
-                        <span
-                          className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {initials(diver.person.fullName)}
+                        {initials(diver.person.fullName)}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold">
+                          {diver.person.fullName}
                         </span>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold group-hover:text-primary">
-                            {diver.person.fullName}
-                            <span
-                              aria-hidden="true"
-                              className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
-                            >
-                              →
-                            </span>
-                          </p>
-                          <p className="truncate text-sm font-normal text-muted">
-                            {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
-                          </p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
+                        <span className="block truncate text-sm text-muted">
+                          {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                       <span className="inline-flex whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-primary">
                         {cards} card{cards === 1 ? "" : "s"}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted">
-                      {diver.rentalFit ? "Fit saved" : "No fit on file"}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex flex-wrap gap-2">
-                        {pending > 0 ? (
-                          <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
-                            {pending} pending review
+                      <span className="text-muted">
+                        {diver.rentalFit ? "Fit saved" : "No fit on file"}
+                      </span>
+                      {pending > 0 ? (
+                        <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
+                          {pending} pending review
+                        </span>
+                      ) : null}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="relative mt-4 hidden overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm sm:block">
+            <table className="w-full min-w-180 border-collapse text-left">
+              <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Person
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Cards
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Rental fit
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Attention
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {visible.map((diver) => {
+                  const cards =
+                    diver.certificationCount +
+                    diver.specialtyCount +
+                    diver.nitroxCertificationCount;
+                  const pending =
+                    diver.pendingCertificationCount + diver.pendingSpecialtyOrNitroxCount;
+                  return (
+                    <tr
+                      key={diver.person.id}
+                      className="group relative transition-colors duration-200 hover:bg-surface-sunken"
+                    >
+                      <td className="relative px-4 py-3">
+                        <Link
+                          href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                          className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                        >
+                          <span
+                            className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                            aria-hidden="true"
+                          >
+                            {initials(diver.person.fullName)}
                           </span>
-                        ) : (
-                          <span className="text-muted">None</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold group-hover:text-primary">
+                              {diver.person.fullName}
+                              <span
+                                aria-hidden="true"
+                                className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                →
+                              </span>
+                            </p>
+                            <p className="truncate text-sm font-normal text-muted">
+                              {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
+                            </p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-primary">
+                          {cards} card{cards === 1 ? "" : "s"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted">
+                        {diver.rentalFit ? "Fit saved" : "No fit on file"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-wrap gap-2">
+                          {pending > 0 ? (
+                            <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
+                              {pending} pending review
+                            </span>
+                          ) : (
+                            <span className="text-muted">None</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );
