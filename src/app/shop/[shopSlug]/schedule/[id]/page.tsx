@@ -4,20 +4,25 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { getBookingForTrip } from "@/db/bookings";
+import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
+import { getBookingPayment } from "@/db/payments";
 import { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import { getRentalFit } from "@/db/rental-fit";
 import { getShopBySlug } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
+import { publicAppUrl } from "@/lib/notifications";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
 import {
@@ -30,7 +35,7 @@ import { DiveBriefingsSection } from "./_components/DiveBriefingsSection";
 import { ForecastSection } from "./_components/ForecastSection";
 import { PackingSection } from "./_components/PackingSection";
 import { TripHeader } from "./_components/TripHeader";
-import { ERROR_MESSAGES } from "./_components/types";
+import { ERROR_MESSAGES, type PaymentPanel } from "./_components/types";
 
 export const metadata: Metadata = {
   title: "Trip — Scuba",
@@ -41,11 +46,17 @@ export default async function TripDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ booking?: string; waitlist?: string; error?: string; fit?: string }>;
+  searchParams: Promise<{
+    booking?: string;
+    waitlist?: string;
+    error?: string;
+    fit?: string;
+    pay?: string;
+  }>;
 }) {
   await connection();
   const { shopSlug, id: tripId } = await params;
-  const { booking: bookingId, waitlist: waitlistId, error, fit } = await searchParams;
+  const { booking: bookingId, waitlist: waitlistId, error, fit, pay } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -85,6 +96,18 @@ export default async function TripDetailPage({
       return { dive, diveSite, creatures, moments };
     }),
   );
+  // Pay-at-booking is offered only when the shop's own Stripe account can
+  // take a charge, the trip carries a price, and a canonical origin exists
+  // for the return links; otherwise the flow is book-now-pay-later as before.
+  const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
+  const stripeAccount = perDiverPriceCents ? await getShopStripeAccount(db, shop.id) : null;
+  const payAtBooking = Boolean(
+    perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
+  );
+  const payment = confirmed
+    ? await resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking)
+    : null;
+
   const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
   const requirement = confirmed ? await getTripRequirements(db, shop.id, tripId) : null;
   const rentalFit = confirmed ? await getRentalFit(db, shop.id, confirmed.person.id) : null;
@@ -100,7 +123,7 @@ export default async function TripDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
-      <FlashParams params={["error"]} />
+      <FlashParams params={["error", "pay"]} />
       <Link
         href={`/shop/${shopSlug}/schedule`}
         className="text-sm font-medium text-primary hover:underline"
@@ -144,6 +167,8 @@ export default async function TripDetailPage({
           rentalFit={rentalFit}
           nitroxCardVerified={nitroxCardVerified}
           fitSaved={fit === "saved"}
+          payment={payment}
+          payCancelled={pay === "cancelled"}
         />
       ) : waitlistConfirmation ? (
         <WaitlistConfirmation
@@ -166,8 +191,50 @@ export default async function TripDetailPage({
           tripRef={tripRef}
           remaining={remaining}
           errorMessage={errorMessage}
+          payAtBooking={payAtBooking}
+          perDiverPriceCents={perDiverPriceCents}
         />
       )}
     </main>
   );
+}
+
+/**
+ * What the confirmation says about money. Paid state comes from the booking's
+ * payment row (webhook or the refresh below), never from a return-URL claim; a
+ * still-open Stripe session is offered again; an expired one starts over.
+ */
+async function resolvePaymentPanel(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  bookingId: string,
+  payAtBooking: boolean,
+): Promise<PaymentPanel> {
+  const settled = await getBookingPayment(db, shopId, bookingId);
+  if (settled?.status === "paid" || settled?.status === "deposit_paid") {
+    return { state: "paid", amountCents: settled.amountCents, currency: settled.currency };
+  }
+  if (settled?.status === "waived") return null;
+
+  let checkout = await getLatestCheckoutForBooking(db, shopId, bookingId);
+  if (checkout?.status === "pending") {
+    // The diver may have just paid and beaten the webhook home; ask Stripe.
+    checkout = await refreshCheckoutFromStripe(db, shopId, checkout.id);
+    if (checkout?.status === "completed") {
+      const paid = await getBookingPayment(db, shopId, bookingId);
+      return {
+        state: "paid",
+        amountCents: paid?.amountCents ?? null,
+        currency: paid?.currency ?? "usd",
+      };
+    }
+  }
+  if (
+    checkout?.status === "pending" &&
+    checkout.checkoutUrl &&
+    (!checkout.expiresAt || checkout.expiresAt > new Date())
+  ) {
+    return { state: "pending", checkoutUrl: checkout.checkoutUrl };
+  }
+  return payAtBooking ? { state: "payable" } : null;
 }

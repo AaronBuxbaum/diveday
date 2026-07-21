@@ -707,6 +707,71 @@ export const orders = pgTable(
   ],
 );
 
+/**
+ * A hosted Stripe Checkout attempt for a public booking (or party of
+ * bookings), on the shop's connected account. `pending` means the diver was
+ * handed a payment link that may still be paid; `completed` is only ever set
+ * from Stripe's own evidence (webhook or a direct API read), never from a
+ * return-URL claim. Abandonment costs nothing: the bookings it covers simply
+ * stay unpaid, exactly as if the shop had no checkout at all.
+ * See 20260721-checkout-at-booking.
+ */
+export const checkoutStatus = pgEnum("checkout_status", ["pending", "completed", "expired"]);
+
+export const bookingCheckouts = pgTable(
+  "booking_checkouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    status: checkoutStatus("status").notNull().default("pending"),
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripeSessionId: text("stripe_session_id").notNull(),
+    /** Stripe's hosted payment page; shown again as the recovery link while the session is open. */
+    checkoutUrl: text("checkout_url"),
+    currency: text("currency").notNull().default("usd"),
+    /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
+    amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
+    totalCents: integer("total_cents").notNull(),
+    /** Stripe expires unfinished Checkout sessions; kept so the UI can be honest about a dead link. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
+    index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
+  ],
+);
+
+/** The bookings one checkout pays for — a party checkout covers several. */
+export const bookingCheckoutBookings = pgTable(
+  "booking_checkout_bookings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    checkoutId: uuid("checkout_id")
+      .notNull()
+      .references(() => bookingCheckouts.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+  },
+  (table) => [
+    uniqueIndex("booking_checkout_bookings_checkout_booking_unique").on(
+      table.checkoutId,
+      table.bookingId,
+    ),
+    index("booking_checkout_bookings_booking_idx").on(table.bookingId),
+  ],
+);
+
 export const orderLineItems = pgTable(
   "order_line_items",
   {
@@ -1100,3 +1165,5 @@ export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItem = typeof orderLineItems.$inferSelect;
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
+export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
+export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];

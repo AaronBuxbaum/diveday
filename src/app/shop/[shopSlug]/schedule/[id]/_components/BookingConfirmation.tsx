@@ -1,10 +1,75 @@
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { readinessLinkPath } from "@/lib/readiness-links";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
-import type { RentalFitRef } from "../actions";
+import { payForBooking, type RentalFitRef } from "../actions";
 import { RentalFitForm } from "./RentalFitForm";
-import type { Confirmed, Readiness, RentalFit, Requirement, Shop, Trip } from "./types";
+import type {
+  Confirmed,
+  PaymentPanel,
+  Readiness,
+  RentalFit,
+  Requirement,
+  Shop,
+  Trip,
+} from "./types";
+
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+function PaymentSection({
+  payment,
+  payCancelled,
+  payRef,
+}: {
+  payment: PaymentPanel;
+  payCancelled: boolean;
+  payRef: Omit<RentalFitRef, "personId">;
+}) {
+  if (!payment) return null;
+
+  if (payment.state === "paid") {
+    return (
+      <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
+        <h3 className="font-semibold text-success">
+          Payment received
+          {payment.amountCents !== null ? ` — ${usd.format(payment.amountCents / 100)}` : ""} ✓
+        </h3>
+        <p className="mt-1 text-sm text-muted">You're square with the shop for this trip.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
+      <h3 className="font-semibold">
+        {payCancelled ? "Your spot is safe — payment's still open" : "One thing left: payment"}
+      </h3>
+      <p className="mt-1 text-sm text-muted">
+        Pay securely through the shop's own payment page. If you'd rather settle at the counter,
+        that works too.
+      </p>
+      {payment.state === "pending" ? (
+        <a
+          href={payment.checkoutUrl}
+          className={buttonClass({ className: "mt-3 px-5 py-2.5 text-base" })}
+        >
+          Finish paying
+        </a>
+      ) : (
+        <form action={payForBooking.bind(null, payRef)} className="mt-3">
+          <SubmitButton
+            pendingLabel="Opening payment…"
+            className={buttonClass({ className: "px-5 py-2.5 text-base disabled:opacity-70" })}
+          >
+            Pay now
+          </SubmitButton>
+        </form>
+      )}
+    </div>
+  );
+}
 
 export function BookingConfirmation({
   shop,
@@ -17,6 +82,8 @@ export function BookingConfirmation({
   rentalFit,
   nitroxCardVerified,
   fitSaved,
+  payment,
+  payCancelled,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -28,6 +95,8 @@ export function BookingConfirmation({
   rentalFit: RentalFit;
   nitroxCardVerified: boolean;
   fitSaved: boolean;
+  payment: PaymentPanel;
+  payCancelled: boolean;
 }) {
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
   const nextStep = nextDiverStep(checklist);
@@ -43,6 +112,8 @@ export function BookingConfirmation({
         {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock 30
         minutes early and we'll take it from there.
       </p>
+
+      <PaymentSection payment={payment} payCancelled={payCancelled} payRef={fitRef} />
 
       <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
         {nextStep ? (

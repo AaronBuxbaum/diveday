@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
@@ -9,6 +10,11 @@ export const runtime = "nodejs";
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),
+});
+
+const checkoutSessionObjectSchema = z.object({
+  id: z.string().min(1),
+  payment_status: z.string().optional(),
 });
 
 const accountObjectSchema = z.object({
@@ -46,6 +52,26 @@ export async function POST(request: Request) {
     case "invoice.voided": {
       const invoice = invoiceObjectSchema.safeParse(event.data.object);
       if (invoice.success) await markOrderVoidedByInvoiceId(db, invoice.data.id);
+      break;
+    }
+    case "checkout.session.completed": {
+      const session = checkoutSessionObjectSchema.safeParse(event.data.object);
+      // "completed" alone is not "paid": async payment methods complete the
+      // session before the money settles. Only Stripe saying paid clears the
+      // booking payment gate (docs ADR 20260721-checkout-at-booking).
+      if (session.success && session.data.payment_status === "paid") {
+        await markCheckoutPaidBySessionId(db, session.data.id);
+      }
+      break;
+    }
+    case "checkout.session.async_payment_succeeded": {
+      const session = checkoutSessionObjectSchema.safeParse(event.data.object);
+      if (session.success) await markCheckoutPaidBySessionId(db, session.data.id);
+      break;
+    }
+    case "checkout.session.expired": {
+      const session = checkoutSessionObjectSchema.safeParse(event.data.object);
+      if (session.success) await markCheckoutExpiredBySessionId(db, session.data.id);
       break;
     }
     case "account.updated": {

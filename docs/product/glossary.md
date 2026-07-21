@@ -149,6 +149,12 @@ new domain concept, define it here in the same PR.
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked
   to a booking, into that booking's payment gate the same way a staff mark does. A paid invoice can
   be fully refunded from the diver's payment workspace when Stripe exposes its payment intent.
+- **Booking checkout** — the pay-at-booking path: right after a public booking (or party) commits,
+  the diver is handed one hosted Stripe Checkout session on the shop's connected account for the
+  per-diver price × party size. Paid state comes only from Stripe's webhook or a direct API read —
+  never from the return URL — and cascades into the booking's payment gate like any other payment.
+  An abandoned checkout costs nothing: the booking simply stays unpaid, exactly as if the shop had
+  no checkout. See [20260721-checkout-at-booking](../architecture/decisions/20260721-checkout-at-booking.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. `isDemo` is reserved for the canonical
   seeded example shop (Blue Mantis), bootstrapped in every environment and reached via "Try the live

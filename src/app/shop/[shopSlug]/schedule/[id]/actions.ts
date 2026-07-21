@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
+import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
@@ -11,6 +13,7 @@ import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { publicAppUrl } from "@/lib/notifications";
 
 /** Bound to each action so the public page can stay a pure renderer. */
 export type TripRef = { shopSlug: string; tripId: string };
@@ -107,10 +110,76 @@ export async function bookSpot({ shopSlug, tripId }: TripRef, formData: FormData
       });
     }
   }
-  revalidateAndRedirect(
-    `/shop/${shopSlug}/schedule/${tripId}`,
-    `/shop/${shopSlug}/schedule/${tripId}?booking=${primaryBookingId}`,
-  );
+  // Pay at booking: when the shop can take money and the trip is priced, the
+  // party goes straight to the shop's own hosted Stripe Checkout. The seats
+  // are already committed above, so any failure here — no connected account,
+  // no configured origin, Stripe down — degrades to the ordinary
+  // book-now-pay-later confirmation, never to a lost booking.
+  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const checkoutUrl = await startCheckoutUrl(dbi, {
+    shopId: shopNow.id,
+    shopSlug,
+    tripId,
+    bookingIds: outcome.bookings.map((entry) => entry.bookingId),
+    primaryBookingId,
+    customerEmail: validParty[0]?.email ?? "",
+  });
+  if (checkoutUrl) {
+    revalidatePath(base);
+    redirect(checkoutUrl);
+  }
+  revalidateAndRedirect(base, `${base}?booking=${primaryBookingId}`);
+}
+
+/** The hosted payment page for these fresh bookings, or null when pay-at-booking can't run. */
+async function startCheckoutUrl(
+  dbi: Awaited<ReturnType<typeof getDb>>,
+  input: {
+    shopId: string;
+    shopSlug: string;
+    tripId: string;
+    bookingIds: string[];
+    primaryBookingId: string;
+    customerEmail: string;
+  },
+): Promise<string | null> {
+  const origin = publicAppUrl();
+  if (!origin || !input.customerEmail) return null;
+  const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.primaryBookingId}`;
+  const outcome = await startBookingCheckout(dbi, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    bookingIds: input.bookingIds,
+    customerEmail: input.customerEmail,
+    successUrl: returnBase,
+    cancelUrl: `${returnBase}&pay=cancelled`,
+  }).catch(() => null);
+  return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
+}
+
+/**
+ * "Finish paying" from the confirmation panel: reuses the open Stripe session
+ * when one exists, mints a new one after an expiry, and sends the diver to it.
+ */
+export async function payForBooking(
+  { shopSlug, tripId, shopId, bookingId }: Omit<RentalFitRef, "personId">,
+  _formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const dbi = await getDb();
+  const confirmed = await getBookingForTrip(dbi, tripId, bookingId);
+  const checkoutUrl = confirmed?.person.email
+    ? await startCheckoutUrl(dbi, {
+        shopId,
+        shopSlug,
+        tripId,
+        bookingIds: [bookingId],
+        primaryBookingId: bookingId,
+        customerEmail: confirmed.person.email,
+      })
+    : null;
+  if (checkoutUrl) redirect(checkoutUrl);
+  redirect(`${base}?booking=${bookingId}&error=pay`);
 }
 
 export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: FormData) {

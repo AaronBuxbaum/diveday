@@ -53,12 +53,11 @@ Verified hands-on against the demo shop, not from our own marketing:
 
 In rough order of how often it would kill the deal:
 
-1. **We don't take the diver's money.** The public flow books a seat with name + email; payment is a
-   staff-issued Stripe invoice afterwards. Every credible competitor captures payment or deposit at
-   booking — for buyers this is *the* point of online booking (no-show protection, cashflow,
-   fewer ghosts). H-07 sits in P2 of the internal plan; from the buyer's chair it is table stakes and
-   belongs at the front of the queue. Checkout at booking (even deposit-only) is the single highest
-   commercial-leverage gap.
+1. ~~**We don't take the diver's money.**~~ ✅ **Closed 2026-07-21** — the public flow now hands the
+   diver the shop's own hosted Stripe Checkout right after the seats commit
+   ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)). Remaining from the buyer's
+   chair: a deposit-only option and cancellation/refund policy (H-07), plus live Connect platform
+   credentials in production.
 2. **Messages don't send in a default deploy** (H-09). "Send waivers" is on-screen but hollow until
    Resend is wired; there is no SMS/WhatsApp at all, while DiveAdmin ships a unified
    email/SMS/WhatsApp inbox. The blocker queue's one-tap actions need a real channel to be believed.
@@ -106,7 +105,7 @@ not. This needs a product-owner decision before any customer-facing publication 
 | Capability | Market status | Scuba today | Verdict |
 | --- | --- | --- | --- |
 | Online booking w/ real-time capacity | Universal | ✅ Best-in-class flow | Critical — done |
-| **Payment/deposit at booking** | Universal | ❌ Staff invoice after the fact | **Critical — gap #1** |
+| **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../architecture/decisions/20260721-checkout-at-booking.md)); deposit tier and cancellation policy still H-07 | Critical — mechanism done; policy open |
 | Digital waivers + medical, auto-sent | Universal (often add-on) | ✅ Versioned, immutable, included | Critical — done; needs sending to be real |
 | Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; no rosters/progress/eLearning | Critical — partial |
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
@@ -128,10 +127,11 @@ not. This needs a product-owner decision before any customer-facing publication 
 Consistent with the [breadth→depth pivot](product-space-investigation.md#recommendation-three-moves-in-order),
 with one material re-ranking from the buyer's chair:
 
-1. **Elevate checkout-at-booking (H-07) from P2 to the front of P1.** The Connect substrate exists;
-   a deposit-capable public checkout converts the best booking flow in the market into revenue and
-   removes the #1 objection. The differentiator surfaces matter for retention; checkout decides
-   whether the evaluation ever starts.
+1. ✅ **Elevate checkout-at-booking (H-07) from P2 to the front of P1** — shipped 2026-07-21: the
+   public flow now ends on the shop's own hosted Stripe Checkout, full price per diver, webhook
+   confirmed ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)). Still open from
+   the buyer's chair: a deposit option and cancellation/refund policy (H-07), and live Connect
+   platform credentials.
 2. Real notifications (H-09) stays P1 — it is both an internal multiplier and an external
    credibility line.
 3. Field-validate the manifest (V-02) before marketing leans on safety.

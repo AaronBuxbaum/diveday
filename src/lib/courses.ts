@@ -211,6 +211,26 @@ export function bookingInvoiceLines(booking: {
 }
 
 /**
+ * The per-diver amount a pay-at-booking checkout charges: the course's
+ * priced pair (with the trip fee standing in for an unpriced catalog entry,
+ * as in bookingInvoiceLines) or the plain trip fee. Null means the trip is
+ * unpriced and checkout simply doesn't happen — never a $0 charge.
+ */
+export function perDiverBookingPriceCents(
+  trip: { priceCents: number | null },
+  course: CoursePricing | null,
+): number | null {
+  if (course) {
+    const total = courseTotalCents({
+      ...course,
+      priceCents: course.priceCents ?? trip.priceCents,
+    });
+    if (total !== null) return total;
+  }
+  return trip.priceCents;
+}
+
+/**
  * One payment, both lines: what the diver is asked for at enrollment, or null
  * when the shop has not priced the course at all.
  */
