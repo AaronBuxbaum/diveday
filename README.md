@@ -1,4 +1,4 @@
-# Scuba
+# DiveDay
 
 Delight-first dive shop operations: **bookings, waivers, cert checks, trip prep, and boat
 manifests** in one place that's a genuine pleasure to use.

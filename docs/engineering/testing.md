@@ -46,7 +46,7 @@ pnpm check         # lint + typecheck + unit — the pre-commit bar
   point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
   before each test, so mutations in one spec can't change what another asserts on. Iterating on a
   single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
-  needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `SCUBA_E2E` reset opt-in, which the config supplies.
+  needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
 

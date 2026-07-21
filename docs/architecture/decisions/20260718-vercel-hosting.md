@@ -5,7 +5,7 @@
 
 ## Context
 
-Scuba is a Next.js application with pull-request review as its normal delivery path. The product
+DiveDay is a Next.js application with pull-request review as its normal delivery path. The product
 owner selected Vercel as the hosting platform. It should provide preview deployments for the same
 GitHub branches the team reviews, without creating a second deployment topology for agents to
 operate.

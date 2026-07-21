@@ -15,20 +15,20 @@ const executablePath =
 // is a production runtime, which forces a few settings dev handled implicitly:
 //   - AUTH_SECRET must be explicit (the dev fallback is refused in production).
 //   - AUTH_TRUST_HOST lets Auth.js accept the loopback test host.
-//   - SCUBA_E2E re-opens /api/test/reset, which is otherwise closed in a
+//   - DIVEDAY_E2E re-opens /api/test/reset, which is otherwise closed in a
 //     production runtime (see src/app/api/test/reset/route.ts).
 const serverEnv = {
   ...process.env,
   DATABASE_URL: "",
   DATABASE_URL_UNPOOLED: "",
   PGLITE_DATA_DIR: "memory",
-  SCUBA_E2E: "1",
+  DIVEDAY_E2E: "1",
   AUTH_TRUST_HOST: "true",
-  AUTH_SECRET: process.env.AUTH_SECRET ?? "scuba-e2e-secret",
+  AUTH_SECRET: process.env.AUTH_SECRET ?? "diveday-e2e-secret",
   // External providers are unit-tested through injected fetchers. Keeping them
   // out of the browser suite makes it deterministic without mocking our own
   // server or database.
-  SCUBA_DISABLE_EXTERNAL_HTTP: "1",
+  DIVEDAY_DISABLE_EXTERNAL_HTTP: "1",
   NEXT_TELEMETRY_DISABLED: "1",
 };
 

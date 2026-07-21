@@ -2,13 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "scuba-dev",
+      "name": "diveday-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
       "port": 3000
     },
     {
-      "name": "scuba-dev-local",
+      "name": "diveday-dev-local",
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "DATABASE_URL= DATABASE_URL_UNPOOLED= pnpm dev --port 3200"],
       "port": 3200

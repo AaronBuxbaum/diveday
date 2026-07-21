@@ -19,13 +19,13 @@ import { getShopBySlug } from "@/db/shops";
  *   2. Outside a production runtime the route is freely available for `pnpm
  *      dev` and the dev-server e2e path. Inside one — the precompiled
  *      `next start` servers the browser suite runs against — it additionally
- *      requires the harness to opt in via SCUBA_E2E, which production never
+ *      requires the harness to opt in via DIVEDAY_E2E, which production never
  *      sets.
  */
 export async function POST() {
   const hasRealDatabase = Boolean(process.env.DATABASE_URL);
   const productionRuntime = process.env.NODE_ENV === "production";
-  const e2eHarness = process.env.SCUBA_E2E === "1";
+  const e2eHarness = process.env.DIVEDAY_E2E === "1";
   if (hasRealDatabase || (productionRuntime && !e2eHarness)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }

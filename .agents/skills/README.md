@@ -1,4 +1,4 @@
-# Scuba skill library
+# DiveDay skill library
 
 Task-scoped playbooks for the AI sessions that build this project — concrete file paths, exact
 commands, known pitfalls — so a session executes recurring workflows correctly without

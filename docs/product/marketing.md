@@ -1,6 +1,6 @@
 # Public marketing surfaces
 
-Scuba's public pages are the homepage (`/`), product page (`/product`), and pricing page
+DiveDay's public pages are the homepage (`/`), product page (`/product`), and pricing page
 (`/pricing`). They are a truthful sales surface for the product that exists today: bookings,
 readiness, waiver and certification evidence, gear, dive sites, nitrox logs, reporting, and an
 encrypted offline manifest with explicit reconciliation.

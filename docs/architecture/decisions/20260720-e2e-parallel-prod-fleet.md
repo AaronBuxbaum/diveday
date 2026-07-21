@@ -38,9 +38,9 @@ own in-memory PGlite database.
   demands an explicit `AUTH_SECRET` and rejects the loopback host without `AUTH_TRUST_HOST`; the
   config supplies test values for both.
 - **Reset route opt-in.** `POST /api/test/reset` previously 404'd whenever `NODE_ENV === "production"`.
-  Because the fleet *is* a production runtime, the guard now allows it under an explicit `SCUBA_E2E`
+  Because the fleet *is* a production runtime, the guard now allows it under an explicit `DIVEDAY_E2E`
   opt-in **and** still 404s whenever `DATABASE_URL` is set. A real deployment always has a database
-  URL and never sets `SCUBA_E2E`, so the route stays unreachable in production by two independent
+  URL and never sets `DIVEDAY_E2E`, so the route stays unreachable in production by two independent
   guards.
 - **Warmup.** `e2e/global-setup.ts` resets each server's database and GETs the two routes every
   test hits first (`/` and `/sign-in`), so the first test doesn't absorb their one-time render
@@ -67,7 +67,7 @@ own in-memory PGlite database.
   added latency.
 - `pnpm e2e` now pays a one-time `next build`. Single-spec iteration skips it by calling
   `playwright test` directly against the existing build.
-- The reset route is reachable in a production *runtime* when `SCUBA_E2E=1` and no `DATABASE_URL` is
+- The reset route is reachable in a production *runtime* when `DIVEDAY_E2E=1` and no `DATABASE_URL` is
   set. The `DATABASE_URL` guard remains the hard production protection; a future change must keep it.
 - `resetDemoSchedule` (`src/db/seed.ts`) must still cover every mutable demo-schedule table or
   isolation silently breaks — this change also closed the `orders` / `order_line_items` gap that

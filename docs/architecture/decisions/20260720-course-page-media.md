@@ -25,7 +25,7 @@ free-form image URLs from the certification forms?
   for a course it already schedules.
   _Superseded by [20260720-course-single-visibility-state](20260720-course-single-visibility-state.md):
   `is_published` is dropped and `is_active` is now the only visibility state, gating both surfaces._
-- **Scuba publishes versioned templates; shops import copies.** `global_courses` /
+- **DiveDay publishes versioned templates; shops import copies.** `global_courses` /
   `global_course_versions` mirror the dive-site catalog exactly. An import is a one-way copy: a later
   template version never rewrites a shop's edits, and — importantly — never relaxes the cert gate
   under a course a shop is already teaching.

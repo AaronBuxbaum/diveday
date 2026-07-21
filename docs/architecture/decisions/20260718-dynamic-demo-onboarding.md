@@ -5,7 +5,7 @@
 
 ## Context
 
-Previously, demo mode was a global deployment-level flag (`SCUBA_DEMO`) that forced the entire instance into a single, shared demo shop (`blue-mantis`). This prevented showing a demo alongside production operations on the same deployment and forced all visitors to share one example shop. We want to support self-serve trials where a prospective customer can dynamically create their own shop, optionally seeded with demo schedule data, without needing a dedicated demo deployment.
+Previously, demo mode was a global deployment-level flag (`DIVEDAY_DEMO`) that forced the entire instance into a single, shared demo shop (`blue-mantis`). This prevented showing a demo alongside production operations on the same deployment and forced all visitors to share one example shop. We want to support self-serve trials where a prospective customer can dynamically create their own shop, optionally seeded with demo schedule data, without needing a dedicated demo deployment.
 
 ## Decision
 
@@ -25,5 +25,5 @@ Previously, demo mode was a global deployment-level flag (`SCUBA_DEMO`) that for
 ## Consequences
 
 - Prospective owners can try isolated trial shops on the main deployment.
-- The global `SCUBA_DEMO` flag is no longer the sole way to access a demo environment.
+- The global `DIVEDAY_DEMO` flag is no longer the sole way to access a demo environment.
 - Trips routes `/trips` and `/trips/[id]` are moved to `/shop/[shopSlug]/trips` and `/shop/[shopSlug]/trips/[id]`.

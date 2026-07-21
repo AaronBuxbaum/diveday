@@ -1,6 +1,6 @@
 # Brainstorm 2 — Safety & trust
 
-**Lens:** Scuba touches lives. Manifests, roll call, cert gating, and medical flags are the surfaces
+**Lens:** DiveDay touches lives. Manifests, roll call, cert gating, and medical flags are the surfaces
 where a bug isn't a bug — it's a diver left on the surface or a person diving beyond their training.
 "Trustworthy by inspection" (design principle #6) is a promise. This document explores how to make
 *safe departure* the thing shops switch to us for, and how to earn a captain's trust the first time

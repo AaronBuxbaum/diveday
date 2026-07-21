@@ -1,6 +1,6 @@
 # Brainstorm
 
-Idea exploration, not commitments. These documents map the space of things Scuba *could* build so the
+Idea exploration, not commitments. These documents map the space of things DiveDay *could* build so the
 roadmap and [next-steps](../next-steps.md) can be chosen deliberately. Nothing here is scheduled until
 it moves into the roadmap with a milestone and a note.
 

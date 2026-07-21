@@ -12,7 +12,7 @@ plumbing, or a second external service. It must also be initialized consistently
 ## Decision
 
 Use `@vercel/analytics` and render its `Analytics` component from `src/app/layout.tsx`, the root
-App Router layout. Vercel owns collection and reporting; Scuba does not store analytics data or
+App Router layout. Vercel owns collection and reporting; DiveDay does not store analytics data or
 send customer-facing operational records to the analytics service.
 
 ## Alternatives considered
@@ -24,7 +24,7 @@ send customer-facing operational records to the analytics service.
 ## Consequences
 
 Every route gets the same automatic page-view instrumentation with one small client integration,
-while product data remains in Scuba's database. This adds a vendor runtime dependency and makes
+while product data remains in DiveDay's database. This adds a vendor runtime dependency and makes
 usage reporting dependent on Vercel Analytics availability and policy. Revisit if the product needs
 custom operational events, self-hosted retention, or a different privacy boundary; migration would
 mean replacing the root component and removing the package after any required data export.

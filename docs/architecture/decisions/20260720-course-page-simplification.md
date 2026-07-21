@@ -8,7 +8,7 @@
 [20260720-course-page-media](20260720-course-page-media.md) shipped course pages, but the surfaces
 around them accreted. The course **list** doubled as an editor: a free-form description box, four
 pricing cells, a "Save" button, a "Page" button, and a "Hide/Show" button per row. A separate
-**course-page catalog** let a shop import Scuba templates — yet every shop is already seeded with all
+**course-page catalog** let a shop import DiveDay templates — yet every shop is already seeded with all
 agency courses, pre-filled with that same template copy, so import only ever produced a duplicate or
 a no-op. Photos could be pasted as URLs or uploaded. Minimum age sat in shop-editable content even
 though it is an agency admission fact, exactly like the certification gate beside it. And a "What to

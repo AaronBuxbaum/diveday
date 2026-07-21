@@ -102,8 +102,8 @@ function startInput(shopId: string, tripId: string, bookingIds: string[]) {
     tripId,
     bookingIds,
     customerEmail: "pat@example.com",
-    successUrl: "https://scuba.example/return",
-    cancelUrl: "https://scuba.example/cancel",
+    successUrl: "https://diveday.example/return",
+    cancelUrl: "https://diveday.example/cancel",
   };
 }
 

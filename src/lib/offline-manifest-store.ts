@@ -9,7 +9,7 @@ import {
   offlineManifestExpiresAt,
 } from "./offline-manifests";
 
-const DB_NAME = "scuba-offline-manifests";
+const DB_NAME = "diveday-offline-manifests";
 const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
