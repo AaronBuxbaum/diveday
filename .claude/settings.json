@@ -3,6 +3,8 @@
     "allow": [
       "ScheduleWakeup",
       "mcp__claude_code_remote__unsubscribe_pr_activity",
+      "mcp__github__subscribe_pr_activity",
+      "mcp__Argos__createReview",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
       "Bash(pnpm format)",
