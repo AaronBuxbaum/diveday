@@ -21,12 +21,19 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(page.getByRole("heading", { name: "Readiness needs attention" })).toBeVisible();
   await expect(page.getByText("Priya Sharma")).toBeVisible();
 
+  // At departure the readiness gate hides boarding for blocked divers (the seed
+  // reef trip has none ready), so there is nothing to board.
+  await expect(page.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
+
   await page.locator("#roll-call-list").scrollIntoViewIfNeeded();
   const checkpointScroll = await page.evaluate(() => window.scrollY);
   await page
     .getByRole("link", { name: "After dive 1" })
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+  // After a dive, roll call is a physical head count — a blocked diver who is
+  // aboard can still be recorded present, so boarding is offered here.
+  await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
   await expect
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - checkpointScroll))
     .toBeLessThan(100);

@@ -111,6 +111,10 @@ export function OfflineManifestView() {
     envelope.snapshot.manifests.find((entry) => entry.checkpoint === checkpoint) ??
     envelope.snapshot.manifests[0];
   if (!manifest) return null;
+  // Readiness gates boarding at departure only. After a dive, roll call is a
+  // head count — a diver aboard is recorded present whatever the saved paperwork
+  // said. The server re-checks the same way, so an offline board still syncs.
+  const isDeparture = checkpoint === "departure";
   const freshness = offlineManifestFreshness(new Date(envelope.snapshot.savedAt));
   const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
   const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
@@ -357,7 +361,7 @@ export function OfflineManifestView() {
                     </details>
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                    {ready ? (
+                    {ready || !isDeparture ? (
                       <button
                         type="button"
                         disabled={busyBooking === diver.bookingId}
