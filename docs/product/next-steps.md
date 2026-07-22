@@ -22,7 +22,7 @@ meaningful increment must improve at least one of:
 ### P1 — next
 
 1. **Provider adapters for non-Claude agents.** Keep the provider-neutral workflow — `AGENTS.md`,
-   `docs/`, `scripts/`, tests, and the canonical skills under `.agents/skills/` — as the single
+   `docs/`, `scripts/`, tests, and the canonical skills under `.claude/skills/` — as the single
    source of truth, and generate or maintain thin per-provider adapters (skill indexes, config
    pointers) that never introduce unique requirements. Add a check that detects provider
    instructions drifting from the canonical rules.
