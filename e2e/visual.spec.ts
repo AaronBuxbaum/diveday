@@ -120,6 +120,10 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link")
           .click();
         await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+        // The four trip surfaces share a layout that streams a skeleton while the
+        // page's data loads, so every capture waits for real content — never the
+        // loading fallback — before shooting.
+        await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "trip-manage", scheme);
 
         await page
@@ -127,6 +131,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Guests" })
           .click();
         await page.waitForURL(/\/guests/);
+        await page.getByRole("heading", { name: /Divers/ }).waitFor();
         await capture(page, "trip-guests", scheme);
 
         await page
@@ -134,6 +139,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Manifest" })
           .click();
         await page.waitForURL(/\/manifest/);
+        await page.getByRole("heading", { name: "Boat manifest" }).waitFor();
         await capture(page, "manifest", scheme);
       });
     });

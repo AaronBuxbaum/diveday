@@ -23,10 +23,11 @@ const HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Today's boat: the trip id staff would check in for right now, or null on a
- * day the shop has no departure. The nav uses it to turn "Boat view" into a
- * live link. Deliberately lightweight — a bounded scan of scheduled trips
- * around now, filtered to the shop's calendar day, preferring a boat that
- * hasn't finished over one that already sailed.
+ * day the shop has no departure. The command palette uses it to offer a
+ * "Boarding — today's boat" jump straight to the manifest. Deliberately
+ * lightweight — a bounded scan of scheduled trips around now, filtered to the
+ * shop's calendar day, preferring a boat that hasn't finished over one that
+ * already sailed.
  */
 export async function todayNextDepartureTripId(
   db: AppDb,

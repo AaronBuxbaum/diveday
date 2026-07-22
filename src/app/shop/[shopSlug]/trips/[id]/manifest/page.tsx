@@ -7,7 +7,6 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
-import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
@@ -123,19 +122,13 @@ export default async function TripManifestPage({
   }
 
   return (
-    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
+    <div className="boat-mode">
       <a
         href="#roll-call-list"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
       >
         Skip to roll call
       </a>
-      <TripSubNav
-        shopSlug={shopSlug}
-        tripId={tripId}
-        current="manifest"
-        className="mb-5 print:hidden"
-      />
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
           <h1 className="text-sm font-medium tracking-widest text-primary uppercase">
@@ -472,6 +465,6 @@ export default async function TripManifestPage({
           })}
         </ul>
       </section>
-    </main>
+    </div>
   );
 }

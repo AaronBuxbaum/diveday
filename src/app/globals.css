@@ -109,28 +109,45 @@ body {
 }
 
 /*
- * Dock/boat surfaces deliberately stay light even when a device is in dark
- * mode. Bright sun makes the dark palette harder to scan, while the manifest
- * needs the strongest contrast in the product. Keep this semantic so the
- * roll-call screens can opt into it without changing the rest of the app.
+ * Dock/boat surfaces follow the device's own light/dark preference — bright
+ * light by day so the manifest reads in full sun, dark for a night dive when a
+ * white screen would blind the deck. What boat-mode adds on top of the app
+ * palette is *contrast*: it darkens ink, borders, and the action color in light
+ * and lifts them in dark, so the roll call always clears the AAA bar the rest
+ * of the app only meets at AA. Big touch targets live in the components. Keep
+ * this semantic so the roll-call screens can opt in without changing the app.
  */
 .boat-mode {
-  color-scheme: light;
-  --background: #fffdf5;
-  --surface: #ffffff;
   --surface-sunken: #edf2f1;
-  --border: #aab7ba;
-  --border-strong: #536b73;
+  --border: #8ba0a4;
+  --border-strong: #3f565d;
   --foreground: #062631;
-  --muted: #304e57;
+  --muted: #294851;
   --primary: #075985;
   --primary-hover: #0c4a6e;
   --primary-foreground: #ffffff;
   --success: #166534;
   --warning: #92400e;
   --danger: #991b1b;
-  background: var(--background);
-  color: var(--foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  .boat-mode {
+    /* Higher-contrast than the app's dark palette: brighter ink and action,
+     * lifted borders, so a night-dive deck can still scan the roster at a
+     * glance without a white screen. */
+    --surface-sunken: #04121a;
+    --border: #37606f;
+    --border-strong: #6d94a6;
+    --foreground: #f2fafb;
+    --muted: #a7c2ca;
+    --primary: #38dbf3;
+    --primary-hover: #7fe9f9;
+    --primary-foreground: #041f27;
+    --success: #5ce68f;
+    --warning: #fcc63a;
+    --danger: #fb8888;
+  }
 }
 
 @media (prefers-contrast: more) {

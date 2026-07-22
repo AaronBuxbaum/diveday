@@ -16,7 +16,6 @@ import { capacityLabel, isFull } from "@/lib/trips";
 import { AddDiverSection } from "../_components/AddDiverSection";
 import { RosterSection } from "../_components/RosterSection";
 import { TripNoticeBanner } from "../_components/TripNoticeBanner";
-import { TripSubNav } from "../_components/TripSubNav";
 import { WaitlistSection } from "../_components/WaitlistSection";
 import {
   addBookingAction,
@@ -88,9 +87,9 @@ export default async function TripGuestsPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <>
       <FlashParams params={["notice", "bid", "waiver"]} />
-      <header className="mt-4 flex flex-wrap items-center gap-3">
+      <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{trip.title}</h1>
         {cancelled ? (
           <span className="rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
@@ -117,8 +116,6 @@ export default async function TripGuestsPage({
           Course session · {trip.course.title}
         </p>
       ) : null}
-
-      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="guests" className="mt-5" />
 
       <TripNoticeBanner
         notice={notice}
@@ -175,6 +172,6 @@ export default async function TripGuestsPage({
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
       />
-    </main>
+    </>
   );
 }

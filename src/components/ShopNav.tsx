@@ -53,11 +53,7 @@ export function ShopNav({
             </button>
           </form>
         </div>
-        <ShopNavLinks
-          root={root}
-          boatBoardingHref={boatBoardingHref}
-          className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"
-        />
+        <ShopNavLinks root={root} className="order-last w-full sm:order-2 sm:w-auto sm:flex-1" />
       </div>
     </header>
   );
