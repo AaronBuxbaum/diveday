@@ -2,8 +2,8 @@
   "permissions": {
     "allow": [
       "ScheduleWakeup",
-      "mcp__claude_code_remote__unsubscribe_pr_activity",
-      "mcp__claude_code_remote__send_later",
+      "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
+      "mcp__Claude_Code_Remote__send_later",
       "mcp__github__subscribe_pr_activity",
       "mcp__Argos__createReview",
       "Bash(pnpm lint)",
