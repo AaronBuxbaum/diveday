@@ -57,7 +57,7 @@ export async function getBlockerQueue(
           fullName: row.person.fullName,
         }) ?? {
           label: "Open roster",
-          href: `/shop/${shopSlug}/trips/${trip.id}`,
+          href: `/shop/${shopSlug}/trips/${trip.id}/guests`,
           sendsWaiver: false,
           bookingId: row.booking.id,
         },

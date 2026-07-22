@@ -21,6 +21,13 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await page.locator("li").filter({ hasText: title }).click();
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 
+  // Who is attending — and adding one — lives on the Guests tab now.
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await expect(page).toHaveURL(/\/guests/);
+
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });

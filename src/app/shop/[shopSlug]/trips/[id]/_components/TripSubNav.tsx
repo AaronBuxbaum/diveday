@@ -2,17 +2,21 @@ import Link from "next/link";
 
 /**
  * The boat loop's spine: one compact bar on every trip surface so a captain who
- * wanders can always reach the other three in a tap. Overview holds the roster
- * and setup; the rest are the dock surfaces. Current page is marked and inert.
+ * wanders can always reach the others in a tap. The tabs split by question:
+ * Overview is *what the dive is* (details, plan, conditions, requirements,
+ * crew); Guests is *who is attending* — the one place the roster, wait list,
+ * and every per-diver action live. Manifest and Prep are the dock surfaces.
+ * Current page is marked and inert.
  *
- * Boarding is the fast pre-departure boarding pass, distinct from the Manifest
- * (the full safety document).
+ * The Manifest is both the pre-departure boarding pass (its "Before departure"
+ * checkpoint) and the full safety document across every later checkpoint —
+ * there is no separate Boarding surface.
  */
-export type TripSubNavPage = "overview" | "boarding" | "manifest" | "prep";
+export type TripSubNavPage = "overview" | "guests" | "manifest" | "prep";
 
 const TABS: { page: TripSubNavPage; label: string; suffix: string }[] = [
   { page: "overview", label: "Overview", suffix: "" },
-  { page: "boarding", label: "Boarding", suffix: "/boarding" },
+  { page: "guests", label: "Guests", suffix: "/guests" },
   { page: "manifest", label: "Manifest", suffix: "/manifest" },
   { page: "prep", label: "Prep", suffix: "/prep" },
 ];

@@ -153,12 +153,14 @@ export default async function TripManifestPage({
           </p>
           <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
             The authoritative roster: everyone aboard — divers and crew — with emergency contacts,
-            at every checkpoint. To just get divers aboard before departure, use{" "}
+            at every checkpoint. Board the ready divers on{" "}
+            <span className="font-semibold text-foreground">Before departure</span>, then run roll
+            call again after each dive. To change who’s booked, head to{" "}
             <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/boarding`}
+              href={`/shop/${shopSlug}/trips/${tripId}/guests`}
               className="font-semibold text-primary hover:underline"
             >
-              Boarding
+              Guests
             </Link>
             .
           </p>
@@ -390,11 +392,19 @@ export default async function TripManifestPage({
                       ) : null}
                     </div>
                     {!ready ? (
-                      <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">
-                        {diver.readiness.blockers.map((blocker) => (
-                          <li key={blocker.message}>• {blocker.message}</li>
-                        ))}
-                      </ul>
+                      <>
+                        <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">
+                          {diver.readiness.blockers.map((blocker) => (
+                            <li key={blocker.message}>• {blocker.message}</li>
+                          ))}
+                        </ul>
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
+                          className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
+                        >
+                          Resolve blockers on Guests →
+                        </Link>
+                      </>
                     ) : null}
                     <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3 print:hidden">
                       <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">

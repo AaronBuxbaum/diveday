@@ -44,7 +44,7 @@ export function blockerFixFor(
   if (!blocker) return null;
   const { actionLabel, target } = BLOCKER_ACTIONS[blocker.code];
   const sendsWaiver = WAIVER_CODES.has(blocker.code);
-  const rosterRow = `/shop/${ctx.shopSlug}/trips/${ctx.tripId}#booking-${ctx.bookingId}`;
+  const rosterRow = `/shop/${ctx.shopSlug}/trips/${ctx.tripId}/guests#booking-${ctx.bookingId}`;
   return {
     label: sendsWaiver
       ? actionLabel

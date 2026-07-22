@@ -12,6 +12,12 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     .getByRole("link")
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+  // The roster and its waiver control live on the Guests tab.
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await page.waitForURL(/\/guests/);
   const staffTripUrl = page.url();
 
   const diverSection = page

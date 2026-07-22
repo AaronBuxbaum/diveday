@@ -83,7 +83,9 @@ export function TripNoticeBanner({
 }: {
   notice?: string;
   undoBookingId?: string;
-  undoAction: (formData: FormData) => void;
+  // Only the roster's reversible removals carry an undo; Overview's config
+  // notices render the same banner without one.
+  undoAction?: (formData: FormData) => void;
 }) {
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   if (!banner) return null;
@@ -92,7 +94,7 @@ export function TripNoticeBanner({
       <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
         <div className="flex items-center justify-between gap-3">
           <span>{banner.text}</span>
-          {undoBookingId ? (
+          {undoBookingId && undoAction ? (
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />
               <SubmitButton

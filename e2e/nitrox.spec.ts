@@ -40,7 +40,10 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("certified");
 
     await openWreckTrip(page);
-    await page.getByRole("link", { name: "Prep list" }).click();
+    await page
+      .getByRole("navigation", { name: "Trip" })
+      .getByRole("link", { name: "Prep" })
+      .click();
     await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
     // The prep list is derived from rental fit, so it always lists tanks and

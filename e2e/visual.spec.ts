@@ -3,8 +3,8 @@ import type { Page } from "@playwright/test";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Eleven key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 44 screenshots per run (see ADR
+ * Visual regression coverage (Argos). Twelve key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 48 screenshots per run (see ADR
  * 20260721-argos-visual-regression).
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
@@ -111,7 +111,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
         await capture(page, "diver-profile-expired", scheme);
 
-        // The seeded reef trip: schedule card → staff manage view → manifest.
+        // The seeded reef trip: schedule card → Overview (what the dive is) →
+        // Guests (who is attending) → Manifest (the day-of boarding + roll call).
         await page.goto("/shop/blue-mantis/schedule");
         await page
           .locator("li")
@@ -121,7 +122,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
         await capture(page, "trip-manage", scheme);
 
-        await page.getByRole("link", { name: "Boat manifest" }).click();
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Guests" })
+          .click();
+        await page.waitForURL(/\/guests/);
+        await capture(page, "trip-guests", scheme);
+
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Manifest" })
+          .click();
         await page.waitForURL(/\/manifest/);
         await capture(page, "manifest", scheme);
       });

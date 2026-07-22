@@ -1,106 +1,75 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
-import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
-import { listTripPrepDivers } from "@/db/rental-fit";
+import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
 import {
   getTripCrewIds,
-  getTripRoster,
   getTripSeriesSummary,
-  getTripWaitlist,
   getTripWithBooked,
   listStaff,
   listTripDives,
 } from "@/db/trips";
-import { cancellationDeadline } from "@/lib/deposits";
-import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
-import { AddDiverSection } from "./_components/AddDiverSection";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
-import { RosterSection } from "./_components/RosterSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripSubNav } from "./_components/TripSubNav";
-import { WaitlistSection } from "./_components/WaitlistSection";
 import {
-  addBookingAction,
-  addToWaitlistAction,
   cancelTripAction,
   clearConditionsAction,
-  inviteWaitlistAction,
-  issueWaiverAction,
-  markPaymentAction,
-  markWaiverInPersonAction,
   reinstateTripAction,
-  removeBookingAction,
   saveConditionsAction,
   saveCrewAction,
   saveDetails,
   saveRequirementsAction,
-  undoRemoveBookingAction,
 } from "./actions";
 
 export const metadata: Metadata = {
   title: "Manage trip — DiveDay",
 };
 
+/**
+ * Overview is *what the dive is*: details, dive plan, conditions, requirements,
+ * and crew. Who is attending — the roster, wait list, and every per-diver
+ * action — lives on the Guests tab; the day-of boarding and roll call live on
+ * the Manifest. Keeping this page free of the roster is what gives each action
+ * a single home.
+ */
 export default async function ManageTripPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; bid?: string; waiver?: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, waiver } = await searchParams;
+  const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const [
-    staff,
-    crewIds,
-    roster,
-    requirement,
-    readinessRows,
-    prepDivers,
-    diveSiteList,
-    tripDiveList,
-    waitlist,
-  ] = await Promise.all([
+  const [staff, crewIds, requirement, diveSiteList, tripDiveList] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewIds(db, tripId),
-    getTripRoster(db, tripId),
     getTripRequirements(db, shop.id, tripId),
-    listTripReadiness(db, shop.id, tripId),
-    listTripPrepDivers(db, shop.id, tripId),
     listDiveSites(db, shop.id),
     listTripDives(db, shop.id, tripId),
-    getTripWaitlist(db, tripId),
   ]);
   const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
   const series = await getTripSeriesSummary(db, shop.id, tripId);
-  // Undo is safe for every money-neutral removal but must never appear after a
-  // real refund: restoreBooking can't un-refund, so it would re-seat a diver
-  // whose money is already gone (dive-domain review).
-  const undoBookingId =
-    notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
-      ? bid
-      : undefined;
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
@@ -110,31 +79,10 @@ export default async function ManageTripPage({
         (entry) => crewIds.includes(entry.person.id) && entry.roles.includes("instructor"),
       ),
   );
-  const rentalFitByBooking = new Map(prepDivers.map((row) => [row.bookingId, row.fit] as const));
-  const nitroxByBooking = new Map(
-    prepDivers
-      .filter((row) => row.wantsNitrox)
-      .map(
-        (row) => [row.bookingId, { requested: true, approved: nitroxTanksApproved(row) }] as const,
-      ),
-  );
-  // The roster is the spine of the diver section; waiver and readiness detail
-  // hang off it by booking id so each diver renders as one consolidated card.
-  // Both come from the readiness rows, so the waiver control shows the same
-  // effective release (including one carried over from an earlier trip) that
-  // decides whether the diver is ready — never a stale "Send waiver" prompt for
-  // someone already signed.
-  const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
-  const waiverByBooking = new Map(
-    readinessRows.map(
-      (row) =>
-        [row.booking.id, { booking: row.booking, person: row.person, waiver: row.waiver }] as const,
-    ),
-  );
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <FlashParams params={["notice", "bid", "waiver"]} />
+      <FlashParams params={["notice"]} />
       <header className="mt-4 flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{trip.title}</h1>
         {cancelled ? (
@@ -176,24 +124,7 @@ export default async function ManageTripPage({
 
       <TripSubNav shopSlug={shopSlug} tripId={tripId} current="overview" className="mt-5" />
 
-      <TripNoticeBanner
-        notice={notice}
-        undoBookingId={undoBookingId}
-        undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
-      />
-
-      {notice === "waiver-link" && waiver ? (
-        <section className="rise-in mt-6 rounded-lg border border-accent/40 bg-accent/10 p-5">
-          <h2 className="font-semibold">Private waiver link ready</h2>
-          <p className="mt-1 text-sm text-muted">
-            Share this link with the diver. It expires in seven days and is replaced if you issue a
-            new one.
-          </p>
-          <Link href={`/waivers/${waiver}`} className={buttonClass({ className: "mt-3" })}>
-            Open waiver link
-          </Link>
-        </section>
-      ) : null}
+      <TripNoticeBanner notice={notice} />
 
       <DetailsSection
         action={saveDetails.bind(null, shopSlug, tripId)}
@@ -210,24 +141,6 @@ export default async function ManageTripPage({
         trip={trip}
       />
 
-      <WaitlistSection
-        waitlist={waitlist}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        shopName={shop.name}
-        tripTitle={trip.title}
-        tripWhen={formatShortDate(trip.startsAt, "en-US", shop.timezone)}
-        inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
-      />
-
-      {cancelled ? null : (
-        <AddDiverSection
-          full={isFull(trip)}
-          addBookingAction={addBookingAction.bind(null, shopSlug, tripId)}
-          addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
-        />
-      )}
-
       <RequirementsSection
         action={saveRequirementsAction.bind(null, shopSlug, tripId)}
         trip={trip}
@@ -241,25 +154,6 @@ export default async function ManageTripPage({
         staff={staff}
         crewIds={crewIds}
         hasCourseInstructor={hasCourseInstructor}
-      />
-
-      <RosterSection
-        shopSlug={shopSlug}
-        shopTimezone={shop.timezone}
-        tripId={tripId}
-        booked={trip.booked}
-        capacity={trip.capacity}
-        roster={roster}
-        readinessByBooking={readinessByBooking}
-        waiverByBooking={waiverByBooking}
-        rentalFitByBooking={rentalFitByBooking}
-        nitroxByBooking={nitroxByBooking}
-        requiresPayment={Boolean(requirement?.requiresPayment)}
-        cancellationDeadline={cancellationDeadline(trip)}
-        issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
-        markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
-        markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
-        removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
       />
 
       <section className="mt-12 border-t border-border pt-6">

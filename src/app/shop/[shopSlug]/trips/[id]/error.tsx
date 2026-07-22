@@ -3,7 +3,7 @@
 import { buttonClass } from "@/components/ui/button";
 
 /**
- * A backstop for the boat surfaces (roster, boarding, manifest, prep). A tap
+ * A backstop for the boat surfaces (overview, guests, manifest, prep). A tap
  * that throws on flaky marina Wi-Fi should offer one big "Try again" button,
  * not a raw stack trace — the roll-call actions themselves already return a
  * worded rollback for the common cases, so this only catches the unexpected.

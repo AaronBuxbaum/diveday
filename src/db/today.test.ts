@@ -232,8 +232,8 @@ describe("today's work queue (in-memory PGlite)", () => {
     const contactAction = flagged.actions.find((action) => action.id === `contact:${reef.id}`);
     expect(contactAction?.kind).toBe("emergency_contact");
     expect(contactAction?.detail).toContain("no emergency contact");
-    // Never a boarding blocker; it points at the roster to settle at the counter.
-    expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
+    // Never a boarding blocker; it points at the guests roster to settle at the counter.
+    expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/guests`);
 
     // A name with no phone is unreachable in an incident — still flagged.
     for (const entry of roster) {
