@@ -132,7 +132,7 @@ not. This needs a product-owner decision before any customer-facing publication 
 | Today/blocker daily loop | No one has it | ✅ | Differentiator |
 | Delight/UX | Open flank (EVE is the anti-model) | ✅ Visibly ahead | Differentiator |
 | Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ⚠️ Posture right, number wrong | Differentiator if repriced |
-| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ❌ | Watch → **planned wedge** — specced in [competitive-strategy.md](competitive-strategy.md): full-shop export first, importer + honesty tables, migration guides, then read API + webhooks |
+| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22 ([ADR](../architecture/decisions/20260722-full-shop-export.md)); importer, migration guides, API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, then importer + honesty tables, migration guides, read API + webhooks |
 
 ## Implications for the queue
 
