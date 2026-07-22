@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
+import { buttonClass } from "@/components/ui/button";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
@@ -136,7 +137,10 @@ export default async function TripDetailPage({
       {!confirmed && !inPast && !full ? (
         <a
           href="#book"
-          className="fixed right-4 bottom-4 z-20 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg sm:hidden"
+          className={buttonClass({
+            size: "cta",
+            className: "fixed right-4 bottom-4 z-20 rounded-full shadow-lg sm:hidden",
+          })}
         >
           Book · {remaining} left
         </a>

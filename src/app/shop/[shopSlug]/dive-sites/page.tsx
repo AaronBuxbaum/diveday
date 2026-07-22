@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
@@ -120,22 +121,22 @@ export default async function DiveSitesPage({
                       : `DiveDay template v${site.sourceTemplateVersion}`}
                   </p>
                 ) : null}
-                <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {site.minimumCertificationLevel ? (
-                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+                    <Badge tone="primary" size="sm">
                       {site.minimumCertificationLevel.replaceAll("_", " ")}
-                    </span>
+                    </Badge>
                   ) : null}
                   {site.requiresNitrox ? (
-                    <span className="rounded-full bg-warning/10 px-2.5 py-1 text-warning">
+                    <Badge tone="warning" size="sm">
                       Nitrox
-                    </span>
+                    </Badge>
                   ) : null}
                   {site.requiredSpecialties.length > 0 ? (
-                    <span className="rounded-full bg-surface-sunken px-2.5 py-1 text-muted">
+                    <Badge tone="neutral" size="sm">
                       {site.requiredSpecialties.length} required specialt
                       {site.requiredSpecialties.length === 1 ? "y" : "ies"}
-                    </span>
+                    </Badge>
                   ) : null}
                 </div>
                 <p className="mt-4 line-clamp-2 text-sm text-muted">

@@ -1,3 +1,4 @@
+import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
 import type { getShopById } from "@/db/shops";
 import type { upcomingTripsWithCounts } from "@/db/trips";
@@ -72,13 +73,13 @@ export function cardDisplayStatus(
   return card.status === "verified" && isCardExpired(card, now) ? "expired" : card.status;
 }
 
-export function statusTone(status: CardDisplayStatus) {
+export function statusTone(status: CardDisplayStatus): BadgeTone {
   switch (status) {
     case "verified":
-      return "bg-success/10 text-success";
+      return "success";
     case "expired":
-      return "bg-danger/10 text-danger";
+      return "danger";
     default:
-      return "bg-warning/10 text-warning";
+      return "warning";
   }
 }

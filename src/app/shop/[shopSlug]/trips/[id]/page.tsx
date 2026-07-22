@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
@@ -82,44 +84,43 @@ export default async function ManageTripPage({
   return (
     <>
       <FlashParams params={["notice"]} />
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{trip.title}</h1>
-        {cancelled ? (
-          <span className="rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
-            Cancelled
-          </span>
-        ) : (
-          <span
-            className={
-              isFull(trip)
-                ? "rounded-full border border-border bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
-                : "rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary tabular-nums"
-            }
-          >
-            {capacityLabel(trip)}
-          </span>
-        )}
-      </header>
-      <p className="mt-1 text-muted">
-        {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-        {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
-      </p>
-      {trip.course ? (
-        <p className="mt-2 text-sm font-medium text-primary">
-          Course session · {trip.course.title}
-        </p>
-      ) : null}
-      {series ? (
-        <p className="mt-2 text-sm text-muted">
-          Part of a repeating series ·{" "}
-          {recurrenceSummary({
-            frequency: "weekly",
-            intervalWeeks: series.intervalWeeks,
-            occurrenceCount: series.occurrenceCount,
-          })}
-          . Changes here apply to this date only; {series.scheduledCount} still on the schedule.
-        </p>
-      ) : null}
+      <ShopPageHeader
+        title={trip.title}
+        meta={
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              {cancelled ? (
+                <Badge tone="danger">Cancelled</Badge>
+              ) : (
+                <Badge tone={isFull(trip) ? "neutral" : "primary"} tabularNums>
+                  {capacityLabel(trip)}
+                </Badge>
+              )}
+              <span className="text-muted">
+                {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
+                {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+              </span>
+            </div>
+            {trip.course ? (
+              <p className="text-sm font-medium text-primary">
+                Course session · {trip.course.title}
+              </p>
+            ) : null}
+            {series ? (
+              <p className="text-sm text-muted">
+                Part of a repeating series ·{" "}
+                {recurrenceSummary({
+                  frequency: "weekly",
+                  intervalWeeks: series.intervalWeeks,
+                  occurrenceCount: series.occurrenceCount,
+                })}
+                . Changes here apply to this date only; {series.scheduledCount} still on the
+                schedule.
+              </p>
+            ) : null}
+          </div>
+        }
+      />
 
       <TripNoticeBanner notice={notice} />
 

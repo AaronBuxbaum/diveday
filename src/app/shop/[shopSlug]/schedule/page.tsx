@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
@@ -243,15 +244,9 @@ export default async function TripsPage({
                     </p>
                   </div>
                   <div className="shrink-0">
-                    <span
-                      className={
-                        full
-                          ? "inline-block rounded-full border border-border bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
-                          : "inline-block rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary tabular-nums"
-                      }
-                    >
+                    <Badge tone={full ? "neutral" : "primary"} tabularNums>
                       {capacityLabel(trip)}
-                    </span>
+                    </Badge>
                   </div>
                 </Link>
               </li>

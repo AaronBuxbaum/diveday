@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -240,15 +241,7 @@ function StatusRow({ label, ok }: { label: string; ok: boolean }) {
   return (
     <li className="flex items-center justify-between gap-3 py-1.5 text-sm">
       <span>{label}</span>
-      <span
-        className={
-          ok
-            ? "inline-block rounded-full bg-success/10 px-3 py-1 font-medium text-success"
-            : "inline-block rounded-full bg-warning/10 px-3 py-1 font-medium text-warning"
-        }
-      >
-        {ok ? "Yes" : "Not yet"}
-      </span>
+      <Badge tone={ok ? "success" : "warning"}>{ok ? "Yes" : "Not yet"}</Badge>
     </li>
   );
 }
@@ -476,15 +469,9 @@ export default async function PaymentsSettingsPage({
                   ? "Stripe account disconnected"
                   : "Stripe account connected"}
               </h2>
-              <span
-                className={
-                  ready
-                    ? "inline-block rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
-                    : "inline-block rounded-full bg-warning/10 px-3 py-1 text-sm font-medium text-warning"
-                }
-              >
+              <Badge tone={ready ? "success" : "warning"}>
                 {ready ? "Ready for payments" : "Not ready yet"}
-              </span>
+              </Badge>
             </div>
             <p className="mt-1 text-sm text-muted">
               Account ending in {account.stripeAccountId.slice(-6)}
