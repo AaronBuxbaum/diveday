@@ -36,6 +36,10 @@ How to build anything here. Written for AI agents; humans may follow along.
 ## Rules
 
 - **Never skip verify.** A green `pnpm check` is the floor, not the ceiling.
+- **Keep agent startup non-blocking.** Do not run dependency installation, Git configuration, or
+  other commands from provider `SessionStart` hooks. Remote code reviews cannot stream progress
+  until those hooks return, and a failed bootstrap leaves the review stuck at its initial status.
+  Run setup commands explicitly after the agent starts so their output and failures remain visible.
 - **New runtime dependency = ADR** (or an entry in an existing one). Dev-tool bumps exempt.
 - **Don't expand scope silently.** Adjacent problems get a note in the PR, not a drive-by fix.
 - **Server actions default to inline.** A single-page mutation lives as an inline `"use server"`
