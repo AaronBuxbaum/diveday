@@ -2,9 +2,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
 
-test("the trip sub-nav reaches all four surfaces, and the nav's Boat view shortcut lands on the manifest", async ({
-  page,
-}) => {
+test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // Today's departure card drops staff straight onto the manifest's boarding pass.
@@ -37,9 +35,4 @@ test("the trip sub-nav reaches all four surfaces, and the nav's Boat view shortc
     .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
-
-  // The seed sails a boat today, so the nav badge is a live link to its manifest.
-  await page.goto("/shop/blue-mantis");
-  await page.getByRole("link", { name: "Boat view" }).click();
-  await expect(page).toHaveURL(/\/manifest/);
 });

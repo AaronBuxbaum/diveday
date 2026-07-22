@@ -17,9 +17,12 @@ forgiving inputs (autocomplete, sensible defaults, no precision gestures). A 44 
 center its own label, and fields in a row must share one baseline no matter how their captions
 wrap — both come free from the primitives in
 [forms-and-controls.md](forms-and-controls.md). Roll call gets the
-most extreme version of this. Live and offline boat surfaces use an explicit light `boat-mode`
-with visible connectivity/freshness states, a sticky progress cue, and an accessible skip link so
-device dark mode or deck glare cannot hide an operational state.
+most extreme version of this. Live and offline boat surfaces run in `boat-mode`, which follows the
+device's own light/dark preference — bright by day so the manifest reads in full sun, dark for a
+night dive when a white screen would blind the deck — while boosting ink, border, and action
+contrast past the app's AA baseline to AAA in both schemes. Visible connectivity/freshness states,
+a sticky progress cue, and an accessible skip link keep any operational state from hiding behind
+deck glare.
 
 ## 3. Calm surfaces, earned moments of joy
 
