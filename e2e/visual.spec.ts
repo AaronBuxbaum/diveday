@@ -29,6 +29,13 @@ import { signedInAsOwner, test } from "./fixtures";
  * hides the very pixels a regression would move, and never stabilised the
  * layout shifts (a reordered queue, a trip crossing from upcoming to sailed)
  * that a moving clock actually causes.
+ *
+ * `capture` also waits on `document.fonts.ready` before every screenshot.
+ * The Geist fonts (next/font/google) load asynchronously; without this wait,
+ * a capture can land on either side of the fallback→webfont swap and render
+ * the same text with different sub-pixel antialiasing, which Argos reports
+ * as a false diff (this is what produced the "flaky" schedule/today/divers
+ * diffs on builds with no real change).
  */
 
 // Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
@@ -40,6 +47,7 @@ const VIEWPORTS = [
 ] as const;
 
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
+  await page.evaluate(() => document.fonts.ready);
   await argosScreenshot(page, `${name}-${scheme}`, {
     fullPage: true,
     viewports: [...VIEWPORTS],
