@@ -117,23 +117,6 @@ export function RosterSection({
               {booked} of {capacity}
             </span>
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            Readiness, waiver, rental fit, and payment for each diver — together in one place.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}/prep`}
-            className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Prep list
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
-            className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
-          >
-            Boat manifest
-          </Link>
         </div>
       </div>
       {roster.length === 0 ? (
