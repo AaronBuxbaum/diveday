@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { shops } from "./schema";
 
@@ -51,6 +52,24 @@ export async function setShopRentalItems(db: AppDb, shopId: string, rentalItems:
   const [shop] = await db
     .update(shops)
     .set({ rentalItems })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Replaces the shop's rental price list (set price, per-piece prices, per-dive
+ * nitrox surcharge). The route validates and normalizes amounts to minor units
+ * before calling this; a price is never inventory, only what a diver is quoted.
+ */
+export async function setShopRentalPricing(
+  db: AppDb,
+  shopId: string,
+  rentalPricing: RentalPricing,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ rentalPricing })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

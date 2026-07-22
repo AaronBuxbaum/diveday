@@ -126,7 +126,6 @@ describe("calculateReadiness", () => {
   it.each([
     ["missing specialty card", undefined, "specialty_missing"],
     ["pending specialty card", specialtyCard({ status: "pending" }), "specialty_pending"],
-    ["rejected specialty card", specialtyCard({ status: "rejected" }), "specialty_rejected"],
     [
       "expired specialty card",
       specialtyCard({ expiresAt: new Date("2026-07-17") }),
@@ -194,7 +193,6 @@ describe("calculateReadiness", () => {
   it.each([
     ["missing nitrox card", undefined, "nitrox_missing"],
     ["pending nitrox card", nitroxCard({ status: "pending" }), "nitrox_pending"],
-    ["rejected nitrox card", nitroxCard({ status: "rejected" }), "nitrox_rejected"],
   ] as const)("fails closed on a required nitrox card for %s", (_name, card, code) => {
     expect(
       calculateReadiness({

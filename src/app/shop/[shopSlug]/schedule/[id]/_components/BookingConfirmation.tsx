@@ -153,6 +153,7 @@ export function BookingConfirmation({
         action={saveRentalFitRequest.bind(null, fitRef)}
         rentalFit={rentalFit}
         rentalItems={shop.rentalItems}
+        pricing={shop.rentalPricing}
         wantsNitrox={confirmed.booking.wantsNitrox}
         nitroxCardVerified={nitroxCardVerified}
         plannedDives={trip.plannedDives}

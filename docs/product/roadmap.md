@@ -85,11 +85,11 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 
 - ✅ Capture agency, level, card number, optional expiry, and a durable card-image reference; new
   evidence starts **pending**, never implicitly trusted.
-- ✅ Staff verification/rejection workflow and per-trip requirements kept separate from a diver’s
-  cards.
+- ✅ Staff verification workflow and per-trip requirements kept separate from a diver’s cards. A
+  card the desk can’t stand behind is deleted (soft-archived), not marked for correction.
 - ✅ A typed, fail-closed readiness result combines waiver and certification evidence. It explains
-  missing, pending, rejected, expired, insufficient, medical-review, and unconfigured states in
-  staff and diver-facing language.
+  missing, pending, expired, insufficient, medical-review, and unconfigured states in staff and
+  diver-facing language.
 - ✅ Staff trip roster, public booking confirmation, and future manifest code share the same
   readiness service.
 - ✅ Specialty and site-level requirements: specialties (Deep/Wreck/Night/Drysuit) are captured and

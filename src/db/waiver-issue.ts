@@ -2,6 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
 import { sendAndRecordNotification } from "./notifications";
+import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips } from "./schema";
 import { issueWaiverRequest } from "./waivers";
 
@@ -103,4 +104,26 @@ export async function issueAndDeliverWaiver(
   }
 
   return { ok: true, bookingId, diverName, token: outcome.token, delivery };
+}
+
+/**
+ * Send a waiver the moment a diver joins a dive — but only when one is actually
+ * needed. "Needed" is exactly the readiness engine's `waiver_not_sent` blocker:
+ * the trip requires a waiver, the diver has no current signature carried forward
+ * (sign-once), and none has been issued yet. Reusing that decision keeps the
+ * join-send from ever emailing a redundant link to a diver who already signed,
+ * or issuing on a trip that gates no waiver. Returns null when nothing was sent.
+ *
+ * Idempotent by construction: a second call finds a `waiver_pending` blocker
+ * (not `waiver_not_sent`) and skips, so a retried join never stacks links.
+ */
+export async function issueWaiverOnJoin(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<IssueAndDeliverWaiverResult | null> {
+  const readiness = await getBookingReadiness(db, shopId, bookingId);
+  const needsWaiver = readiness?.blockers.some((blocker) => blocker.code === "waiver_not_sent");
+  if (!needsWaiver) return null;
+  return issueAndDeliverWaiver(db, shopId, bookingId);
 }
