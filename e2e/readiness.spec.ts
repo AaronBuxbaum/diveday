@@ -7,7 +7,11 @@ test.describe("staff-prepared trip", () => {
   test("a booked diver's readiness page lets them act, and saves an emergency contact", async ({
     page,
   }) => {
-    const title = `Readiness Run ${Date.now()}`;
+    // Frozen-clock suffix, not Date.now(): this trip lands on the shared demo
+    // shop's Today and schedule views, which the visual suite screenshots — a
+    // real-time suffix here made those snapshots diff on nothing but the
+    // clock every run (see the email below for the same fix, applied first).
+    const title = `Readiness Run ${e2eNow().getTime()}`;
 
     // Staff puts a trip on the board.
     await page.goto("/shop/blue-mantis/trips/new");
