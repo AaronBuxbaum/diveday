@@ -16,7 +16,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .getByRole("link", { name: "Manifest" })
     .click();
 
-  await expect(page.getByRole("heading", { name: "Boat manifest" })).toBeVisible();
+  await expect(page.getByText("Boat manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Readiness needs attention" })).toBeVisible();
   await expect(page.getByText("Priya Sharma")).toBeVisible();

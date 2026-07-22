@@ -20,7 +20,7 @@ export function ConditionsSection({
         Publish the crew’s read on the day. It replaces the automated marine outlook for divers.
       </p>
       <form action={saveAction} className="mt-5 flex flex-col gap-5">
-        <FieldGrid columns={1}>
+        <FieldGrid columns={1} className="max-w-2xl">
           <Field label="Conditions overview">
             <textarea
               name="conditionsSummary"

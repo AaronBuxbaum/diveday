@@ -24,7 +24,6 @@ import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripSubNav } from "./_components/TripSubNav";
 import {
   cancelTripAction,
   clearConditionsAction,
@@ -81,10 +80,10 @@ export default async function ManageTripPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <>
       <FlashParams params={["notice"]} />
-      <header className="mt-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">{trip.title}</h1>
+      <header className="flex flex-wrap items-center gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{trip.title}</h1>
         {cancelled ? (
           <span className="rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
             Cancelled
@@ -121,8 +120,6 @@ export default async function ManageTripPage({
           . Changes here apply to this date only; {series.scheduledCount} still on the schedule.
         </p>
       ) : null}
-
-      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="overview" className="mt-5" />
 
       <TripNoticeBanner notice={notice} />
 
@@ -177,6 +174,6 @@ export default async function ManageTripPage({
           </form>
         )}
       </section>
-    </main>
+    </>
   );
 }

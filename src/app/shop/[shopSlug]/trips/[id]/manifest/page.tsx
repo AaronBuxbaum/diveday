@@ -7,7 +7,6 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
-import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
@@ -127,25 +126,21 @@ export default async function TripManifestPage({
   }
 
   return (
-    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-6 py-12 print:max-w-none print:px-0 print:py-0">
+    <div className="boat-mode">
       <a
         href="#roll-call-list"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
       >
         Skip to roll call
       </a>
-      <TripSubNav
-        shopSlug={shopSlug}
-        tripId={tripId}
-        current="manifest"
-        className="mb-5 print:hidden"
-      />
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
-          <h1 className="text-sm font-medium tracking-widest text-primary uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
             Boat manifest
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {manifest.trip.title}
           </h1>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h2>
           <p className="mt-1 text-muted">
             {formatShortDate(manifest.trip.startsAt, "en-US", shop.timezone)} ·{" "}
             {formatTimeRangeTz(
@@ -368,7 +363,7 @@ export default async function TripManifestPage({
                       </span>
                       <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
-                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
                         <span className="font-bold">Emergency contact</span>
                         <span className="mt-0.5 block text-muted">
@@ -399,7 +394,7 @@ export default async function TripManifestPage({
                     </div>
                     {!ready ? (
                       <>
-                        <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">
+                        <ul className="mt-3 flex flex-col gap-1 text-base text-danger">
                           {diver.readiness.blockers.map((blocker) => (
                             <li key={blocker.message}>• {blocker.message}</li>
                           ))}
@@ -481,6 +476,6 @@ export default async function TripManifestPage({
           })}
         </ul>
       </section>
-    </main>
+    </div>
   );
 }

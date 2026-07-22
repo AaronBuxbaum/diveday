@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 /**
  * The boat loop's spine: one compact bar on every trip surface so a captain who
@@ -11,6 +14,11 @@ import Link from "next/link";
  * The Manifest is both the pre-departure boarding pass (its "Before departure"
  * checkpoint) and the full safety document across every later checkpoint —
  * there is no separate Boarding surface.
+ *
+ * It reads the active tab from the pathname rather than a prop so it can live in
+ * the shared trip layout: that keeps the nav mounted across tab switches instead
+ * of re-rendering it on every navigation, which is what makes hopping between
+ * surfaces feel instant.
  */
 export type TripSubNavPage = "overview" | "guests" | "manifest" | "prep";
 
@@ -24,15 +32,24 @@ const TABS: { page: TripSubNavPage; label: string; suffix: string }[] = [
 export function TripSubNav({
   shopSlug,
   tripId,
-  current,
   className = "",
 }: {
   shopSlug: string;
   tripId: string;
-  current: TripSubNavPage;
   className?: string;
 }) {
   const root = `/shop/${shopSlug}/trips/${tripId}`;
+  const pathname = usePathname();
+  // Overview is the bare trip route; any suffixed surface wins over it. Match on
+  // the exact segment (or a deeper path under it) so a query string never throws
+  // the highlight off.
+  const current: TripSubNavPage =
+    TABS.find(
+      (tab) =>
+        tab.suffix &&
+        (pathname === `${root}${tab.suffix}` || pathname.startsWith(`${root}${tab.suffix}/`)),
+    )?.page ?? "overview";
+
   return (
     <nav
       aria-label="Trip"

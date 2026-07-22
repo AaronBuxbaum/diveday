@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { TripSubNav } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
@@ -28,7 +27,7 @@ export default async function TripPrepPage({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const session = await requireStaffSession();
-  const { shopSlug, id: tripId } = await params;
+  const { id: tripId } = await params;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -52,31 +51,28 @@ export default async function TripPrepPage({
   const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives, divingCrew });
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
-      <TripSubNav shopSlug={shopSlug} tripId={tripId} current="prep" className="mb-5" />
-      <div>
-        <ShopPageHeader
-          eyebrow="Trip prep"
-          title={trip.title}
-          description={[
-            `${checklist.diverCount} ${checklist.diverCount === 1 ? "diver" : "divers"}`,
-            checklist.crewCount > 0
-              ? `${checklist.crewCount} diving ${checklist.crewCount === 1 ? "crew" : "crew"}`
-              : null,
-            `${checklist.diveCount} ${checklist.diveCount === 1 ? "dive" : "dives"}`,
-            "one tank per diver per dive",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          meta={
-            <span>
-              {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
-              {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
-            </span>
-          }
-          actions={<PrintButton />}
-        />
-      </div>
+    <>
+      <ShopPageHeader
+        eyebrow="Trip prep"
+        title={trip.title}
+        description={[
+          `${checklist.diverCount} ${checklist.diverCount === 1 ? "diver" : "divers"}`,
+          checklist.crewCount > 0
+            ? `${checklist.crewCount} diving ${checklist.crewCount === 1 ? "crew" : "crew"}`
+            : null,
+          `${checklist.diveCount} ${checklist.diveCount === 1 ? "dive" : "dives"}`,
+          "one tank per diver per dive",
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        meta={
+          <span>
+            {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
+            {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+          </span>
+        }
+        actions={<PrintButton />}
+      />
 
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
         <p className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
@@ -206,6 +202,6 @@ export default async function TripPrepPage({
           </section>
         </>
       )}
-    </main>
+    </>
   );
 }
