@@ -6,6 +6,7 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -108,7 +109,7 @@ describe("POST /api/offline-manifests/sync", () => {
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
 
     const clientEventId = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const now = nowDate().toISOString();
     const response = await POST(
       postRequest({
         events: [
@@ -142,7 +143,7 @@ describe("POST /api/offline-manifests/sync", () => {
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
 
     const clientEventId = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const now = nowDate().toISOString();
     const response = await POST(
       postRequest({
         events: [
@@ -174,7 +175,7 @@ describe("POST /api/offline-manifests/sync", () => {
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
 
     const clientEventId = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const now = nowDate().toISOString();
     const event = {
       clientEventId,
       snapshotId: crypto.randomUUID(),

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { getTripManifest, recordRollCall, updateLatestRollCallNote } from "./manifests";
 import { rollCallEvents } from "./schema";
@@ -259,7 +260,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       medicalAnswers: clearAnswers,
     });
 
-    const now = Date.now();
+    const now = nowMs();
     const offlineInput = {
       shopId: shop.id,
       tripId: reef.id,

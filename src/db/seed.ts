@@ -99,8 +99,10 @@ const DEMO_SHOP_TIMEZONE = "America/New_York";
  * Within five hours of local midnight the plain now+5h offset rounds into
  * tomorrow, which empties the departure board the demo (and the Today tests)
  * are built around — so it clamps to the last half-hour slot that still sails
- * today. Only once local midnight is closer than that final slot does the
- * trip concede to tomorrow morning: "today, in the future" has run out of room.
+ * today. Even in the final half hour before local midnight, when no
+ * half-hour-rounded slot is left, this still returns a same-day moment (the
+ * earliest still-future instant) rather than concede to tomorrow: "today
+ * always has a board" has no exception.
  */
 export function demoTodayDepartureStart(
   now = nowDate(),
@@ -113,7 +115,10 @@ export function demoTodayDepartureStart(
     { ...utcToWallTime(now, timeZone), hour: 23, minute: 30 },
     timeZone,
   );
-  return lastSlotToday.getTime() > now.getTime() ? lastSlotToday : candidate;
+  if (lastSlotToday.getTime() > now.getTime()) return lastSlotToday;
+  const wall = utcToWallTime(now, timeZone);
+  const midnight = wallTimeToUtc({ ...wall, day: wall.day + 1, hour: 0, minute: 0 }, timeZone);
+  return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
 }
 
 export async function seedIfEmpty(db: DbExecutor): Promise<void> {
