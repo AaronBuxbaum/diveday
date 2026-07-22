@@ -63,6 +63,22 @@ test.describe("staff", () => {
       .click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
+
+    // Removing a booking confirms first — it can fire an automatic refund that
+    // undo can't claw back, so a misclick shouldn't be one tap from done.
+    const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" });
+    page.once("dialog", (dialog) => {
+      expect(dialog.message()).toContain("Nora Quinn");
+      void dialog.dismiss();
+    });
+    await noraRow.getByRole("button", { name: "Remove booking" }).click();
+    await expect(page.getByText("Nora Quinn").first()).toBeVisible();
+
+    page.once("dialog", (dialog) => void dialog.accept());
+    await noraRow.getByRole("button", { name: "Remove booking" }).click();
+    await expect(page.getByRole("status")).toContainText("Booking cancelled");
+    await expect(page.getByText("Nora Quinn")).toHaveCount(0);
+    await expect(page.getByText("Sam Quinn").first()).toBeVisible();
   });
 
   test("staff edits a trip and cancelling removes it from the public schedule", async ({
