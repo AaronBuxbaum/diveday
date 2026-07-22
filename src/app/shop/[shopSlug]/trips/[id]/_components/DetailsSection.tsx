@@ -24,7 +24,7 @@ export function DetailsSection({
     <section className="mt-10">
       <h2 className="text-lg font-semibold">Details</h2>
       <form action={action} className="mt-4 flex flex-col gap-5">
-        <FieldGrid columns={1} className="gap-y-5">
+        <FieldGrid columns={1} className="max-w-2xl gap-y-5">
           <Field label="Title">
             <input
               name="title"
