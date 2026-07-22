@@ -21,6 +21,7 @@ const moreLinks = [
   ["Courses", "/courses"],
   ["Waivers", "/waivers"],
   ["Settings", "/settings/payments"],
+  ["Data export", "/settings/export"],
 ] as const;
 
 function isCurrent(pathname: string, href: string, root: string) {
