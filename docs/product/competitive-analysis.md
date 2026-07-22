@@ -7,7 +7,9 @@
 > inside; this document reads it from the outside — as a shop owner comparing us to
 > [DiveAdmin](https://diveadmin.com/en), EVE, DiveShop360, Bloowatch, and the generic booking
 > platforms. An assessment, not a commitment; items that survive review move to
-> [roadmap.md](roadmap.md).
+> [roadmap.md](roadmap.md). For the operator's view of the two most dangerous named rivals —
+> verified company profiles, head-to-head axes, and the data-portability wedge — see
+> [competitive-strategy.md](competitive-strategy.md) (2026-07-22).
 
 ## The market in one table
 
@@ -130,7 +132,7 @@ not. This needs a product-owner decision before any customer-facing publication 
 | Today/blocker daily loop | No one has it | ✅ | Differentiator |
 | Delight/UX | Open flank (EVE is the anti-model) | ✅ Visibly ahead | Differentiator |
 | Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ⚠️ Posture right, number wrong | Differentiator if repriced |
-| Open API / AI / easy export | Only DiveAdmin | ❌ | Watch — DiveAdmin is claiming the "modern/AI" flag with MCP + REST; an export-first anti-lock-in story is the cheap counter |
+| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ❌ | Watch → **planned wedge** — specced in [competitive-strategy.md](competitive-strategy.md): full-shop export first, importer + honesty tables, migration guides, then read API + webhooks |
 
 ## Implications for the queue
 
