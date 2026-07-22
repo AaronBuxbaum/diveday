@@ -20,7 +20,11 @@ export function ShopPageHeader({
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+          <h1
+            className={`text-3xl font-semibold tracking-tight sm:text-4xl${eyebrow ? " mt-2" : ""}`}
+          >
+            {title}
+          </h1>
           {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
           {meta ? <div className="mt-3">{meta}</div> : null}
         </div>

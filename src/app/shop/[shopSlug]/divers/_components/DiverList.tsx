@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { listDiverSummaries } from "@/db/divers";
@@ -137,16 +138,14 @@ export function DiverList({
                     </span>
                   </span>
                   <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="inline-flex whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-primary">
+                    <Badge tone="primary" className="whitespace-nowrap">
                       {cardCount(diver)} card{cardCount(diver) === 1 ? "" : "s"}
-                    </span>
+                    </Badge>
                     <span className="text-muted">
                       {diver.rentalFit ? "Fit saved" : "No fit on file"}
                     </span>
                     {pendingCount(diver) > 0 ? (
-                      <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
-                        {pendingCount(diver)} pending review
-                      </span>
+                      <Badge tone="warning">{pendingCount(diver)} pending review</Badge>
                     ) : null}
                   </span>
                 </Link>
@@ -205,9 +204,9 @@ export function DiverList({
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <span className="inline-flex whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-primary">
+                      <Badge tone="primary" className="whitespace-nowrap">
                         {cardCount(diver)} card{cardCount(diver) === 1 ? "" : "s"}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-sm text-muted">
                       {diver.rentalFit ? "Fit saved" : "No fit on file"}
@@ -215,9 +214,7 @@ export function DiverList({
                     <td className="px-4 py-3 text-sm">
                       <div className="flex flex-wrap gap-2">
                         {pendingCount(diver) > 0 ? (
-                          <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
-                            {pendingCount(diver)} pending review
-                          </span>
+                          <Badge tone="warning">{pendingCount(diver)} pending review</Badge>
                         ) : (
                           <span className="text-muted">None</span>
                         )}

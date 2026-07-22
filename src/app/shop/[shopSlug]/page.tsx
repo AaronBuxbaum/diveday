@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
 import { TodayQueue } from "@/components/today/TodayQueue";
 import { YourSessions } from "@/components/today/YourSessions";
@@ -64,24 +64,22 @@ export default async function ShopPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["created", "series", "reset", "email"]} />
 
-      <header className="mb-8">
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-          {formatShortDate(now, "en-US", shop.timezone)}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-          Good to see you, {firstName}
-        </h1>
-        <p className="mt-2 max-w-2xl text-lg text-muted">
-          {summarizeDay(
-            actions,
-            departures.length,
-            departures.reduce((total, departure) => total + departure.blocked, 0),
-          )}
-          {yourBoat
-            ? ` You’re crewing the ${formatTime(yourBoat.startsAt, "en-US", shop.timezone)} ${yourBoat.title}.`
-            : ""}
-        </p>
-      </header>
+      <ShopPageHeader
+        eyebrow={formatShortDate(now, "en-US", shop.timezone)}
+        title={`Good to see you, ${firstName}`}
+        meta={
+          <p className="max-w-2xl text-lg text-muted">
+            {summarizeDay(
+              actions,
+              departures.length,
+              departures.reduce((total, departure) => total + departure.blocked, 0),
+            )}
+            {yourBoat
+              ? ` You’re crewing the ${formatTime(yourBoat.startsAt, "en-US", shop.timezone)} ${yourBoat.title}.`
+              : ""}
+          </p>
+        }
+      />
 
       {created ? (
         <div className="mb-6">
