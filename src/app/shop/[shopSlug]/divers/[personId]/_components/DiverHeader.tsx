@@ -28,6 +28,7 @@ export function DiverHeader({
       <ShopPageHeader
         eyebrow={shop.name}
         title={diver.person.fullName}
+        align="start"
         meta={
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             {diver.person.email ? (

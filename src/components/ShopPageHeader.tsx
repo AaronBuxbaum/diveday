@@ -4,16 +4,25 @@ export function ShopPageHeader({
   description,
   meta,
   actions,
+  /** "end" bottom-aligns actions with the title block, right for a static
+   * button/print row. Use "start" when actions can grow much taller than the
+   * title — an expandable form — so opening it doesn't drag the title down. */
+  align = "end",
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
+  align?: "start" | "end";
 }) {
   return (
     <header className="mb-8">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div
+        className={`flex flex-col gap-5 sm:flex-row sm:justify-between ${
+          align === "start" ? "sm:items-start" : "sm:items-end"
+        }`}
+      >
         <div className="min-w-0">
           {eyebrow ? (
             <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
