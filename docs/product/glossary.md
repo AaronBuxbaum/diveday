@@ -142,7 +142,7 @@ new domain concept, define it here in the same PR.
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the
   roll call. Boarding a diver there is the same roll-call event as any later checkpoint. Day-of entry
-  points (Today's departure card, the "Boat view" badge) read "Boarding" and open the manifest on that
+  points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
