@@ -66,6 +66,10 @@ export default async function TripManifestPage({
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
   const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
+  // Readiness gates boarding at departure only. After a dive, roll call is a
+  // physical head count — a diver who is aboard is recorded present regardless
+  // of a paperwork state that changed after the boat left.
+  const isDeparture = checkpoint === "departure";
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
   async function rollCallAction(
@@ -277,8 +281,10 @@ export default async function TripManifestPage({
           <h2 className="font-semibold text-warning">Readiness needs attention</h2>
           <p className="mt-1 text-sm text-muted">
             {manifest.summary.blocked} {manifest.summary.blocked === 1 ? "diver is" : "divers are"}{" "}
-            blocked. They remain on this manifest and cannot be marked boarded until their readiness
-            check clears.
+            blocked.{" "}
+            {isDeparture
+              ? "They remain on this manifest and cannot board until their readiness check clears."
+              : "They already sailed — record whoever is aboard. Their readiness is a paperwork flag to follow up on shore, not a bar to this head count."}
           </p>
         </section>
       ) : null}
@@ -398,6 +404,8 @@ export default async function TripManifestPage({
                             <li key={blocker.message}>• {blocker.message}</li>
                           ))}
                         </ul>
+                        {/* At departure this unblocks boarding; after a dive the
+                            diver is aboard, so it's a shore follow-up on their record. */}
                         <Link
                           href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
                           className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
@@ -427,15 +435,16 @@ export default async function TripManifestPage({
                         {rc.note ? ` · ${rc.note}` : ""}
                       </p>
                     ) : impliedNotBoarded ? (
+                      // Carried-forward not-boarded only happens after a dive, where
+                      // boarding is a head count — so it never depends on readiness.
                       <p className="mt-3 text-sm text-muted">
-                        {ready
-                          ? "Carried forward — not boarded on an earlier checkpoint. Mark boarded to bring them back on."
-                          : "Carried forward — not boarded on an earlier checkpoint. Clear the blockers above before they can board again."}
+                        Carried forward — not boarded on an earlier checkpoint. Mark boarded to
+                        bring them back on.
                       </p>
                     ) : null}
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-56">
-                    {ready ? (
+                    {ready || !isDeparture ? (
                       <RollCallButton
                         action={rollCallAction}
                         bookingId={diver.bookingId}

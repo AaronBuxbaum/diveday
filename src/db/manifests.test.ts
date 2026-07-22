@@ -87,6 +87,41 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).resolves.toMatchObject({ ok: true });
   });
 
+  it("boards a diver whose readiness lapsed after departure at an after-dive head count", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    // The seed reef trip's divers are all blocked (no waiver). At departure the
+    // readiness gate refuses to board a blocked diver.
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        checkpoint: "departure",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "not_ready" });
+
+    // An after-dive checkpoint is a head count of bodies on the boat, so the same
+    // blocked diver can be recorded present — the "everyone accounted for" count
+    // must never exclude a diver who is demonstrably aboard.
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const afterDive = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    expect(
+      afterDive?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall?.state,
+    ).toBe("boarded");
+  });
+
   it("keeps departure and after-dive head counts independent", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {
