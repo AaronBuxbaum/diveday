@@ -135,9 +135,6 @@ export default async function TripManifestPage({
       </a>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
-          <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-            Boat manifest
-          </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
             {manifest.trip.title}
           </h1>
@@ -154,14 +151,7 @@ export default async function TripManifestPage({
             The authoritative roster: everyone aboard — divers and crew — with emergency contacts,
             at every checkpoint. Board the ready divers on{" "}
             <span className="font-semibold text-foreground">Before departure</span>, then run roll
-            call again after each dive. To change who’s booked, head to{" "}
-            <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-              className="font-semibold text-primary hover:underline"
-            >
-              Guests
-            </Link>
-            .
+            call again after each dive.
           </p>
           <p className="mt-3 print:hidden">
             <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">

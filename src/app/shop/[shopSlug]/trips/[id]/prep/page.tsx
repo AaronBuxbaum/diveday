@@ -53,7 +53,6 @@ export default async function TripPrepPage({
   return (
     <>
       <ShopPageHeader
-        eyebrow="Trip prep"
         title={trip.title}
         description={[
           `${checklist.diverCount} ${checklist.diverCount === 1 ? "diver" : "divers"}`,
