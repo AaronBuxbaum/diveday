@@ -3,8 +3,8 @@ import type { Page } from "@playwright/test";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Thirteen key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 52 screenshots per run (see ADR
+ * Visual regression coverage (Argos). Fourteen key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 56 screenshots per run (see ADR
  * 20260721-argos-visual-regression). Keep these counts in sync when adding a
  * surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -147,6 +147,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/payments");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
+
+        // The data-export page — the "leave anytime" guarantee, documented.
+        await page.goto("/shop/blue-mantis/settings/export");
+        await page.getByRole("heading", { name: "What's in the bundle" }).waitFor();
+        await capture(page, "settings-export", scheme);
       });
     });
   });

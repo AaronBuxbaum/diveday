@@ -518,6 +518,20 @@ export default async function PaymentsSettingsPage({
           </div>
         )}
       </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Your data</h2>
+        <p className="mt-1 text-sm text-muted">
+          Everything your shop owns — divers, waivers, trips, bookings, payments, roll-call history
+          — downloads as documented CSV files, any time, no asking us first.
+        </p>
+        <Link
+          href={`/shop/${shopSlug}/settings/export`}
+          className={buttonClass({ variant: "secondary", className: "mt-4 text-foreground" })}
+        >
+          Export your data
+        </Link>
+      </section>
     </main>
   );
 }

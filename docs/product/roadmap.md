@@ -202,6 +202,15 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Automated marine outlook: a mapped dive site supplies a clearly-labelled 10-day Open-Meteo
   water-temperature and sea-state fallback until the crew publishes its dated prediction. Underwater
   visibility remains crew-entered rather than being inferred from atmospheric visibility.
+- ✅ Full-shop data export (portability wedge item #1): `/settings/export` (owner/manager)
+  downloads every tenant-owned dataset — people, certifications, waivers with signed text and
+  medical evidence, trips, bookings, payments, orders, roll-call history, rental fit, sites,
+  courses — as documented CSVs in one ZIP whose README is generated from the same dataset
+  definitions. Secrets excluded by construction and by test. Domain in
+  [`src/lib/export.ts`](../../src/lib/export.ts), loading in
+  [`src/db/export.ts`](../../src/db/export.ts); see
+  [the export bundling ADR](../architecture/decisions/20260722-export-zip-bundling.md) and the
+  build plan in [competitive-strategy.md](competitive-strategy.md#the-build-plan-in-order).
 - ⬜ Payments/deposits, SMS and multi-channel notifications, deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
 
