@@ -4,15 +4,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { savePersonAction } from "../actions";
-import type { DiverProfile, Shop } from "./shared";
+import type { DiverProfile } from "./shared";
 
 export function DiverHeader({
-  shop,
   diver,
   shopSlug,
   personId,
 }: {
-  shop: Shop;
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
@@ -27,7 +25,7 @@ export function DiverHeader({
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          eyebrow={shop.name}
+          eyebrow="Front desk"
           title={diver.person.fullName}
           align="start"
           meta={

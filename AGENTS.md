@@ -58,7 +58,7 @@ adapters and must not introduce unique requirements.
 ## Skills and providers
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
-in [.agents/skills/README.md](.agents/skills/README.md): **new-feature**, **verify**,
+in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**,
 **design-review**, **schema-change**, **debug**, **e2e-and-argos**, **argos-triage**, and **adr**.
 Other providers
 should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical

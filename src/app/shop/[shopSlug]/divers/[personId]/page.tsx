@@ -43,7 +43,7 @@ export default async function DiverDetailPage({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
       <FlashParams params={["notice"]} />
-      <DiverHeader shop={shop} diver={diver} shopSlug={shopSlug} personId={personId} />
+      <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} />
       <NoticeBanner notice={notice} />
       <StatsSummary diver={diver} />
       <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} />

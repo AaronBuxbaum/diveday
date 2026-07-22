@@ -183,6 +183,7 @@ export default async function NewTripPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
+        eyebrow="Trips"
         title="Schedule a trip or course session"
         description="Times are local to the shop. Course sessions inherit their admission rules when you put them on the board."
       />

@@ -33,7 +33,7 @@ const files = [
   "README.md",
   "AGENTS.md",
   ...(await walk("docs")),
-  ...(await walk(".agents/skills")),
+  ...(await walk(".claude/skills")),
 ];
 for (const file of files) {
   const contents = await readFile(path.join(ROOT, file), "utf8");

@@ -134,12 +134,13 @@ export default async function EditDiveSitePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         ← Dive-site library
       </Link>
       <div className="mt-4">
         <ShopPageHeader
+          eyebrow="Catalog"
           title={site.name}
           description="Changes update the briefing linked to this site."
           actions={

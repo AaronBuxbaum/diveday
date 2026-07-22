@@ -109,7 +109,7 @@ export default async function WaiverTemplatesPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={shop.name}
+        eyebrow="Settings"
         title="Waiver"
         description="Every diver signs this one release. Edit it to fit your shop."
       />

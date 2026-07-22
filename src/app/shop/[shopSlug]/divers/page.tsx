@@ -83,7 +83,7 @@ export default async function DiversPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={shop.name}
+        eyebrow="Front desk"
         title="Divers"
         description="Start with the person. Their cards, rental fit, and bookings stay together so the front desk always has the right context."
         meta={

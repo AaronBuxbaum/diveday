@@ -38,6 +38,7 @@ export default async function DiveSitesPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
+        eyebrow="Catalog"
         title="Dive-site library"
         description="Build the briefing once, then attach it to any charter. Copy a site before tailoring a special itinerary."
         actions={
