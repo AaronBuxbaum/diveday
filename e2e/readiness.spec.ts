@@ -7,10 +7,10 @@ test.describe("staff-prepared trip", () => {
   test("a booked diver's readiness page lets them act, and saves an emergency contact", async ({
     page,
   }) => {
-    // Frozen-clock suffix, not Date.now(): this trip lands on the shared demo
-    // shop's Today and schedule views, which the visual suite screenshots — a
-    // real-time suffix here made those snapshots diff on nothing but the
-    // clock every run (see the email below for the same fix, applied first).
+    // Unique title for this spec's own trip; the e2eNow() suffix keeps every
+    // test-side timestamp anchored to the frozen clock (helpers.ts).
+    // Isolation from other specs — including the visual suite — comes from
+    // the per-test demo reset in fixtures.ts.
     const title = `Readiness Run ${e2eNow().getTime()}`;
 
     // Staff puts a trip on the board.
@@ -31,10 +31,7 @@ test.describe("staff-prepared trip", () => {
     // The booking form is controlled, so wait for hydration before typing.
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Nemo Quinn");
-    // Frozen-clock suffix, not Date.now(): this diver lands on the shared
-    // demo shop's People list, which the visual suite screenshots — a
-    // real-time suffix here made that snapshot diff on nothing but the clock
-    // every run.
+    // Same frozen-clock suffix convention as the trip title above.
     await page.getByLabel("Email", { exact: true }).fill(`nemo-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();

@@ -80,11 +80,16 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   const email = req.email.trim().toLowerCase();
   const fullName = req.fullName.trim();
   const tx = db;
+  // FOR UPDATE serializes concurrent bookings on the same trip: under READ
+  // COMMITTED two transactions could otherwise both read `booked = capacity-1`
+  // and both insert. PGlite is single-connection so tests can't exhibit the
+  // race — the lock is for production Postgres.
   const [trip] = await tx
     .select()
     .from(trips)
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
-    .limit(1);
+    .limit(1)
+    .for("update");
   if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
   }
@@ -108,10 +113,13 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     if (!instructor) return { ok: false, reason: "course_unstaffed" };
   }
 
+  // A soft-deleted person's email is free (matching createDiver): a rebooking
+  // diver whose record staff removed gets a fresh person row, not a booking
+  // attached to a record that's invisible on the roster.
   let [person] = await tx
     .select()
     .from(people)
-    .where(and(eq(people.shopId, req.shopId), eq(people.email, email)))
+    .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
     .limit(1);
 
   // Existing-card courses deliberately fail closed at enrollment. Staff can
@@ -203,13 +211,51 @@ export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: st
   return row ?? null;
 }
 
-export async function restoreBooking(db: AppDb, shopId: string, bookingId: string) {
-  const [booking] = await db
-    .update(bookings)
-    .set({ status: "booked" })
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
-    .returning();
-  return booking ?? null;
+export type RestoreBookingOutcome = "restored" | "already_active" | "trip_full" | "not_found";
+
+/**
+ * Undo of a roster removal. Only a currently-cancelled booking is restorable,
+ * and only if the seat is still free — a waitlisted diver may have taken it
+ * between the remove and the undo, and silently exceeding capacity would put
+ * more divers on the manifest than the boat holds.
+ */
+export async function restoreBooking(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<RestoreBookingOutcome> {
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+      .limit(1);
+    if (!booking) return "not_found";
+    // A double-tapped Undo (or a checked-in/no-show booking) is already on
+    // the roster — restoring would clobber that state, not undo a removal.
+    if (booking.status !== "cancelled") return "already_active";
+
+    // Same trip-row lock as createBooking, so the capacity re-check can't
+    // race a concurrent booking into an overfull boat.
+    const [trip] = await tx
+      .select()
+      .from(trips)
+      .where(eq(trips.id, booking.tripId))
+      .limit(1)
+      .for("update");
+    if (!trip) return "not_found";
+    const [row] = await tx
+      .select({ booked: count(bookings.id) })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
+    if ((row?.booked ?? 0) >= trip.capacity) return "trip_full";
+
+    await tx
+      .update(bookings)
+      .set({ status: "booked" })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
+    return "restored";
+  });
 }
 
 export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {

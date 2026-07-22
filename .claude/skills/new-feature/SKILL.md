@@ -24,5 +24,11 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    for structure, roadmap checkbox, ADR index.
 7. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
    PR with a summary and screenshots. Keep draft until CI is green.
+8. **Close the Argos loop** — pushing is not the end of the turn. CI's e2e job uploads an Argos
+   build ~10–15 minutes after push, and on any UI change it will sit at "waiting for your
+   decision" (a red `argos` check) until someone triages it. That someone is you: subscribe to
+   the PR's activity, schedule a check-in (`send_later` ~10 min), and when the build lands run
+   the `argos-triage` skill — approve the diffs your change explains, comment on the ones it
+   doesn't. The PR is not done while its Argos build is untriaged.
 
 Definition of done: the checklist in `docs/engineering/workflow.md`. All boxes, no exceptions.
