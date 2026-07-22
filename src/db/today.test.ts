@@ -197,10 +197,10 @@ describe("today's work queue (in-memory PGlite)", () => {
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(before.actions.some((action) => action.id === `nitrox:${reef.id}`)).toBe(false);
 
-    // The card is pulled after the request was already accepted.
+    // The card is pulled (archived) after the request was already accepted.
     await db
       .update(nitroxCertifications)
-      .set({ status: "rejected" })
+      .set({ deletedAt: new Date() })
       .where(
         and(
           eq(nitroxCertifications.shopId, shop.id),

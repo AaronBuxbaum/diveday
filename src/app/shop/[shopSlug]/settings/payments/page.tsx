@@ -15,6 +15,7 @@ import {
   setShopDockCallMinutes,
   setShopPackingList,
   setShopRentalItems,
+  setShopRentalPricing,
 } from "@/db/shops";
 import {
   canAcceptPayments,
@@ -24,7 +25,7 @@ import {
 } from "@/db/stripe-accounts";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
-import { RENTABLE_ITEMS, toRentableKinds } from "@/lib/rentals";
+import { RENTABLE_ITEMS, type RentalPricing, toRentableKinds } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
@@ -38,6 +39,11 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   },
   dock_invalid: { tone: "danger", text: "Enter a dock call time between 5 and 180 minutes." },
   rentals_saved: { tone: "success", text: "Rental catalog saved." },
+  rental_prices_saved: { tone: "success", text: "Rental prices saved." },
+  rental_prices_invalid: {
+    tone: "danger",
+    text: "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
+  },
   contact_saved: { tone: "success", text: "Contact details saved." },
   contact_invalid: {
     tone: "danger",
@@ -112,6 +118,47 @@ async function saveRentalItemsAction(formData: FormData) {
 }
 
 /**
+ * A dollar amount from a price box → minor units, or null for an empty box (not
+ * priced online). Anything else — a negative, a non-number, an absurd amount —
+ * is invalid so the whole save is rejected rather than silently zeroed.
+ */
+function parsePriceDollars(
+  raw: FormDataEntryValue | null,
+): { ok: true; cents: number | null } | { ok: false } {
+  const text = String(raw ?? "").trim();
+  if (!text) return { ok: true, cents: null };
+  const dollars = Number(text);
+  if (!Number.isFinite(dollars) || dollars < 0 || dollars > 100_000) return { ok: false };
+  return { ok: true, cents: Math.round(dollars * 100) };
+}
+
+/** What the shop charges for rental gear: a set price, per-piece prices, and per-dive nitrox. */
+async function saveRentalPricingAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings/payments`;
+  const set = parsePriceDollars(formData.get("setPrice"));
+  const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
+  let invalid = !set.ok || !nitrox.ok;
+  const perItemCents: RentalPricing["perItemCents"] = {};
+  for (const item of RENTABLE_ITEMS) {
+    const parsed = parsePriceDollars(formData.get(`price_${item.name}`));
+    if (!parsed.ok) {
+      invalid = true;
+      continue;
+    }
+    if (parsed.cents !== null) perItemCents[item.kind] = parsed.cents;
+  }
+  if (invalid || !set.ok || !nitrox.ok) redirect(`${settings}?notice=rental_prices_invalid`);
+  await setShopRentalPricing(await getDb(), session.user.shopId, {
+    setCents: set.cents,
+    perItemCents,
+    nitroxCents: nitrox.cents,
+  });
+  revalidateAndRedirect(settings, `${settings}?notice=rental_prices_saved`);
+}
+
+/**
  * The address a diver who is not booking yet writes to. Published, so an empty
  * box is a real answer — it takes the "Get in touch" composer off the shop's
  * course pages rather than publishing a blank contact.
@@ -155,6 +202,38 @@ async function refreshAction() {
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings/payments`,
     `/shop/${session.user.shopSlug}/settings/payments?notice=refreshed`,
+  );
+}
+
+/** A dollar price box, prefilled from stored minor units. An empty box means unpriced. */
+function PriceField({
+  name,
+  label,
+  hint,
+  cents,
+}: {
+  name: string;
+  label: string;
+  hint?: string;
+  cents: number | null;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted">$</span>
+        <input
+          name={name}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={100000}
+          step="0.01"
+          defaultValue={cents === null ? "" : String(cents / 100)}
+          placeholder="—"
+          className={controlClass}
+        />
+      </div>
+    </Field>
   );
 }
 
@@ -319,6 +398,43 @@ export default async function PaymentsSettingsPage({
           </fieldset>
           <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
             Save rental catalog
+          </SubmitButton>
+        </form>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Rental prices</h2>
+        <p className="mt-1 text-sm text-muted">
+          What a diver is quoted when they set their rental fit. Price the full set for the diver
+          who takes everything (usually cheaper than the pieces), and per-piece for a partial kit —
+          a diver renting all five core items is quoted the set, anyone renting fewer pays per
+          piece. Leave a box blank to settle that item at the shop.
+        </p>
+        <form action={saveRentalPricingAction} className="mt-4">
+          <FieldGrid columns={2}>
+            <PriceField
+              name="setPrice"
+              label="Full set"
+              hint="(BCD, reg, wetsuit, mask & fins, weights)"
+              cents={shop.rentalPricing.setCents}
+            />
+            {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
+              <PriceField
+                key={item.kind}
+                name={`price_${item.name}`}
+                label={item.label}
+                cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
+              />
+            ))}
+            <PriceField
+              name="nitroxPrice"
+              label="Enriched air"
+              hint="(per dive)"
+              cents={shop.rentalPricing.nitroxCents}
+            />
+          </FieldGrid>
+          <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-4" })}>
+            Save rental prices
           </SubmitButton>
         </form>
       </section>

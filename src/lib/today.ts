@@ -199,12 +199,6 @@ export const BLOCKER_ACTIONS: Record<
     groupLabel: "Verify cards",
     target: "diver",
   },
-  certification_rejected: {
-    kind: "certification",
-    actionLabel: "Review card",
-    groupLabel: "Review cards",
-    target: "diver",
-  },
   certification_expired: {
     kind: "certification",
     actionLabel: "Update card",
@@ -229,12 +223,6 @@ export const BLOCKER_ACTIONS: Record<
     groupLabel: "Verify specialties",
     target: "diver",
   },
-  specialty_rejected: {
-    kind: "certification",
-    actionLabel: "Review specialty",
-    groupLabel: "Review specialties",
-    target: "diver",
-  },
   specialty_expired: {
     kind: "certification",
     actionLabel: "Update specialty",
@@ -251,12 +239,6 @@ export const BLOCKER_ACTIONS: Record<
     kind: "certification",
     actionLabel: "Verify nitrox card",
     groupLabel: "Verify nitrox cards",
-    target: "diver",
-  },
-  nitrox_rejected: {
-    kind: "certification",
-    actionLabel: "Review nitrox card",
-    groupLabel: "Review nitrox cards",
     target: "diver",
   },
   payment_due: {

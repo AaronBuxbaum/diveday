@@ -108,12 +108,12 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  const nitrox = await setBookingNitrox(ctx.db, {
+  await setBookingNitrox(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
     wantsNitrox: parsed.data.nitrox === "on",
   });
-  const result = !saved ? "error=fit" : nitrox.ok ? "saved=fit" : "error=nitrox-card";
+  const result = saved ? "saved=fit" : "error=fit";
   revalidateAndRedirect(base(token), `${base(token)}?${result}`);
 }
 

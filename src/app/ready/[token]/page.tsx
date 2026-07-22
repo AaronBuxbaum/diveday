@@ -133,10 +133,6 @@ const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; te
     tone: "danger",
     text: "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
   },
-  "error-nitrox-card": {
-    tone: "neutral",
-    text: "Your fit is saved, but enriched air needs a verified nitrox card on file. Bring it to the counter.",
-  },
   "pay-cancelled": { tone: "neutral", text: "Payment cancelled — your seat is still held." },
 };
 
@@ -316,6 +312,7 @@ export default async function DiverReadinessPage({
           action={saveFitFromReady.bind(null, token)}
           rentalFit={data.rentalFit}
           rentalItems={data.shop.rentalItems}
+          pricing={data.shop.rentalPricing}
           wantsNitrox={data.wantsNitrox}
           nitroxCardVerified={data.nitroxCardVerified}
           plannedDives={data.trip.plannedDives}

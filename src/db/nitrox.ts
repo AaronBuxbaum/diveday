@@ -35,7 +35,7 @@ export async function reviewNitroxCertification(
   input: {
     shopId: string;
     certificationId: string;
-    status: "verified" | "rejected";
+    status: "verified";
     reviewNote?: string;
   },
 ) {
@@ -106,16 +106,20 @@ export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promis
 }
 
 export type SetBookingNitroxOutcome =
-  | { ok: true; wantsNitrox: boolean }
-  | { ok: false; reason: "booking_unavailable" | "diver_not_certified" };
+  | { ok: true; wantsNitrox: boolean; certified: boolean }
+  | { ok: false; reason: "booking_unavailable" };
 
 /**
  * Record whether a diver wants enriched air on one booking — billed per dive.
  *
- * The safety gate lives here: turning the request *on* requires a verified
- * nitrox card at write time, checked inside the transaction so a card being
- * reviewed concurrently can't slip a request through. Turning it *off* is
- * always allowed; refusing to clear a request would be the unsafe direction.
+ * A diver may *request* enriched air before their nitrox card is on file: the
+ * request is recorded and `certified` reports whether a verified card backs it
+ * right now, so the shop and diver are flagged rather than silently refused.
+ * The request is NOT a fill authorization — the actual tank is gated live
+ * downstream (the prep list, the manifest, and the Today queue all re-check the
+ * verified card and fall back to air when it is missing), so an uncertified
+ * request can never turn into a nitrox tank until a card is verified. Turning
+ * the request *off* is always allowed.
  */
 export async function setBookingNitrox(
   db: AppDb,
@@ -135,6 +139,7 @@ export async function setBookingNitrox(
       .limit(1);
     if (!booking) return { ok: false, reason: "booking_unavailable" };
 
+    let certified = true;
     if (input.wantsNitrox) {
       const [card] = await tx
         .select({ id: nitroxCertifications.id })
@@ -148,13 +153,13 @@ export async function setBookingNitrox(
           ),
         )
         .limit(1);
-      if (!card) return { ok: false, reason: "diver_not_certified" };
+      certified = Boolean(card);
     }
 
     await tx
       .update(bookings)
       .set({ wantsNitrox: input.wantsNitrox })
       .where(eq(bookings.id, booking.id));
-    return { ok: true, wantsNitrox: input.wantsNitrox };
+    return { ok: true, wantsNitrox: input.wantsNitrox, certified };
   });
 }

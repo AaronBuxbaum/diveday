@@ -201,6 +201,26 @@ summary {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * Print / Save-as-PDF. `@page` margins are what give every printed page side
+ * (and top/bottom) padding — a container's own padding only wraps the first
+ * and last page of a multi-page flow, not each page break in between. The
+ * root font-size step-down is deliberate: the app's spacing and type scale
+ * (Tailwind's rem-based utilities) is tuned for a boat-deck touchscreen held
+ * at arm's length, which reads as oversized on a printed page held at
+ * reading distance — shrinking the rem base rescales both together without
+ * touching every utility class on the printed surfaces.
+ */
+@page {
+  margin: 0.75in;
+}
+
+@media print {
+  html {
+    font-size: 13px;
+  }
+}
+
 /* Earned-moment entrance (confirmation panels). Reduced-motion kill-switch below covers it. */
 @keyframes rise-in {
   from {

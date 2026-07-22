@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 
 const links = [
@@ -14,7 +15,11 @@ export function MarketingNav() {
         aria-label="Main navigation"
         className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4"
       >
-        <Link href="/" className="text-base font-semibold tracking-tight text-foreground">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground"
+        >
+          <LogoMark className="size-6 text-primary" />
           DiveDay<span className="text-primary">.</span>
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 sm:gap-5">
