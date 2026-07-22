@@ -3,7 +3,8 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT = process.cwd();
-const guardedRoots = ["src/lib", "src/features"];
+// Domain (src/lib) and data (src/db) code must never import from src/app.
+const guardedRoots = ["src/lib", "src/db"];
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const importPattern = /(?:from\s+|import\s*\(|require\s*\()\s*["']([^"']+)["']/g;
 

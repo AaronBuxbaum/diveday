@@ -122,15 +122,6 @@ export async function setCourseVisibility(
   return course ?? null;
 }
 
-export async function getCourse(db: AppDb, shopId: string, courseId: string) {
-  const [course] = await db
-    .select()
-    .from(courses)
-    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
-    .limit(1);
-  return course ?? null;
-}
-
 export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
   const [course] = await db
     .select()

@@ -77,6 +77,10 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 - **Verify before commit** — `pnpm check` green minimum; e2e when flows changed; *look at* UI
   you changed (screenshots, light + dark). Never report unverified work as done.
+- **A pushed PR is not done until its Argos build is triaged.** CI uploads the visual build
+  ~10–15 min after push; on UI changes the `argos` check goes red ("waiting for your decision")
+  until reviewed. Schedule a check-in and run the **argos-triage** skill — approve what your diff
+  explains, comment on what it doesn't. Never end the session leaving that check silently red.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings

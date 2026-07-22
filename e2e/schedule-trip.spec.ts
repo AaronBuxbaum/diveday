@@ -4,7 +4,9 @@ import { daysFromNow, signInAsOwner } from "./helpers";
 signedInAsOwner();
 
 test("staff schedules a trip and it appears on shop and public schedules", async ({ page }) => {
-  // Unique per run: the dev database persists across e2e runs.
+  // Unique title so assertions target this spec's own trip, never a seeded
+  // one. (Isolation across tests comes from the per-test demo reset in
+  // fixtures.ts, not from this suffix.)
   const title = `Turtle Reef Special ${Date.now()}`;
 
   await page.goto("/shop/blue-mantis/schedule");
@@ -40,10 +42,9 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("heading", { name: "Morning reef" })).toBeVisible();
   await expect(page.getByText("Second site details will be confirmed at the dock.")).toBeVisible();
 
-  // Cancel the trip: the dev database persists across runs, and an
-  // uncancelled trip stays on the public schedule forever, which is what was
-  // making the schedule Argos snapshot (e2e/visual.spec.ts) flake on this
-  // timestamped title every run.
+  // Cancel the trip — this leg exercises the staff cancel control itself;
+  // test isolation is already handled by the per-test demo reset in
+  // fixtures.ts.
   const tripUrl = page.url();
   await signInAsOwner(page);
   await page.goto(tripUrl);

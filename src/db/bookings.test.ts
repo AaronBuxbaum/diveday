@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { createBooking, createBookingParty } from "./bookings";
+import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { people, personRoles } from "./schema";
+import { bookings, people, personRoles } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
@@ -100,6 +101,44 @@ describe("createBooking (in-memory PGlite)", () => {
     expect(rebook).toMatchObject({ ok: true, bookingId: first.bookingId });
   });
 
+  it("rolls back the whole party when a later member can't book", async () => {
+    const { db, shop, open } = await seededContext();
+    const before = (await getTripRoster(db, open.id)).length;
+    const outcome = await createBookingParty(db, [
+      { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
+      // Same email as the first member → already_booked, so the first
+      // member's insert must roll back too (all-or-nothing reservation).
+      { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
+    ]);
+    expect(outcome).toEqual({ ok: false, reason: "already_booked" });
+    expect(await getTripRoster(db, open.id)).toHaveLength(before);
+  });
+
+  it("does not attach a booking to a soft-deleted person", async () => {
+    const { db, shop, open } = await seededContext();
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, first.bookingId));
+    await db
+      .update(people)
+      .set({ deletedAt: nowDate() })
+      .where(and(eq(people.shopId, shop.id), eq(people.email, visitor.email)));
+
+    // The deleted record's email is free (matching createDiver): the rebooking
+    // diver gets a fresh, roster-visible person, not a booking pinned to a
+    // record staff can no longer see.
+    const rebook = await bookVisitor(db, shop.id, open.id);
+    expect(rebook.ok).toBe(true);
+    if (!rebook.ok) return;
+    expect(rebook.bookingId).not.toBe(first.bookingId);
+    const matches = await db
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.email, visitor.email)));
+    expect(matches).toHaveLength(2);
+    expect(matches.filter((p) => p.deletedAt === null)).toHaveLength(1);
+  });
+
   it("rejects unknown and cancelled trips", async () => {
     const { db, shop, open } = await seededContext();
     const unknown = await bookVisitor(db, shop.id, "00000000-0000-4000-8000-000000000000");
@@ -109,5 +148,64 @@ describe("createBooking (in-memory PGlite)", () => {
     await setTripStatus(db, shop.id, open.id, "cancelled");
     const onCancelled = await bookVisitor(db, shop.id, open.id);
     expect(onCancelled).toEqual({ ok: false, reason: "trip_unavailable" });
+  });
+});
+
+describe("restoreBooking (undo of a roster removal)", () => {
+  it("restores a cancelled booking while the seat is still free", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
+    const roster = await getTripRoster(db, open.id);
+    expect(roster.map((r) => r.person.fullName)).toContain("Nora Quinn");
+  });
+
+  it("refuses to restore into a boat that has refilled", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    // Fill every remaining seat while the removal is undone-able.
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips.find((t) => t.id === open.id);
+    if (!trip) throw new Error("trip missing");
+    for (let seat = trip.booked; seat < trip.capacity; seat++) {
+      const fill = await createBooking(db, {
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: `Fill Seat ${seat}`,
+        email: `fill-${seat}@example.com`,
+      });
+      if (!fill.ok) throw new Error("seat fill failed");
+    }
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_full");
+    const roster = await getTripRoster(db, open.id);
+    expect(roster.map((r) => r.person.fullName)).not.toContain("Nora Quinn");
+  });
+
+  it("never clobbers a booking that isn't cancelled", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await db
+      .update(bookings)
+      .set({ status: "checked_in" })
+      .where(eq(bookings.id, booked.bookingId));
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("already_active");
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("checked_in");
+  });
+
+  it("scopes to the shop and reports unknown bookings", async () => {
+    const { db, shop } = await seededContext();
+    expect(await restoreBooking(db, shop.id, "00000000-0000-4000-8000-000000000000")).toBe(
+      "not_found",
+    );
   });
 });

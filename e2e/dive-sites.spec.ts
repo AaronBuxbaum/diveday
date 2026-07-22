@@ -69,10 +69,9 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Water temp °C")).toHaveValue("");
     await expect(page.getByLabel("Visibility metres")).toHaveValue("");
 
-    // Cancel the trip: the dev database persists across runs, and an
-    // uncancelled trip stays on the public schedule forever, which is what
-    // was making the schedule Argos snapshot (e2e/visual.spec.ts) flake on
-    // this timestamped title and site name every run.
+    // Cancel the trip — this leg exercises the cancel/reinstate controls
+    // themselves; test isolation is already handled by the per-test demo
+    // reset in fixtures.ts.
     await page.getByRole("button", { name: "Cancel trip" }).click();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });

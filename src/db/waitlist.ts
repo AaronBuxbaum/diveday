@@ -1,4 +1,4 @@
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
@@ -125,11 +125,15 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
   const fullName = req.fullName.trim();
 
   return db.transaction(async (tx): Promise<WaitlistOutcome> => {
+    // Same trip-row lock as createBooking: the full/not-full decision must be
+    // serialized against concurrent bookings, or a waitlist join can race a
+    // booking into the wrong outcome.
     const [trip] = await tx
       .select()
       .from(trips)
       .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
-      .limit(1);
+      .limit(1)
+      .for("update");
     if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
       return { ok: false, reason: "trip_unavailable" };
     }
@@ -140,10 +144,11 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
     if ((capacity?.booked ?? 0) < trip.capacity) return { ok: false, reason: "trip_available" };
 
+    // A soft-deleted person's email is free (matching createBooking/createDiver).
     let [person] = await tx
       .select()
       .from(people)
-      .where(and(eq(people.shopId, req.shopId), eq(people.email, email)))
+      .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
       .limit(1);
     if (!person) {
       [person] = await tx

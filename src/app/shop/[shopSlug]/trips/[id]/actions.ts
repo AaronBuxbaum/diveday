@@ -309,8 +309,13 @@ export async function undoRemoveBookingAction(
   const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (bookingId) await restoreBooking(await getDb(), s.user.shopId, bookingId);
-  revalidateAndRedirect(back, `${back}?notice=booking-restored`);
+  if (!bookingId) redirect(back);
+  const outcome = await restoreBooking(await getDb(), s.user.shopId, bookingId);
+  if (outcome === "not_found") redirect(back);
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${outcome === "trip_full" ? "booking-restore-full" : "booking-restored"}`,
+  );
 }
 
 export async function issueWaiverAction(shopSlug: string, tripId: string, formData: FormData) {

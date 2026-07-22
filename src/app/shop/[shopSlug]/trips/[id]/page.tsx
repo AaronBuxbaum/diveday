@@ -62,15 +62,16 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const [staff, crewIds, requirement, diveSiteList, tripDiveList] = await Promise.all([
-    listStaff(db, shop.id),
-    getTripCrewIds(db, tripId),
-    getTripRequirements(db, shop.id, tripId),
-    listDiveSites(db, shop.id),
-    listTripDives(db, shop.id, tripId),
-  ]);
-  const siteRequirement = await getTripSiteRequirement(db, shop.id, tripId);
-  const series = await getTripSeriesSummary(db, shop.id, tripId);
+  const [staff, crewIds, requirement, diveSiteList, tripDiveList, siteRequirement, series] =
+    await Promise.all([
+      listStaff(db, shop.id),
+      getTripCrewIds(db, tripId),
+      getTripRequirements(db, shop.id, tripId),
+      listDiveSites(db, shop.id),
+      listTripDives(db, shop.id, tripId),
+      getTripSiteRequirement(db, shop.id, tripId),
+      getTripSeriesSummary(db, shop.id, tripId),
+    ]);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
