@@ -1,6 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { TEST_FROZEN_CLOCK } from "./src/test/frozen-clock";
 
 export default defineConfig({
   plugins: [react()],
@@ -16,6 +17,14 @@ export default defineConfig({
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,
+    // Freezes `nowDate()` (src/lib/clock.ts) for test-worker processes; see
+    // src/test/frozen-clock.ts for why global-setup.ts also sets this
+    // directly rather than relying on this config alone.
+    env: {
+      DATABASE_URL: "",
+      DATABASE_URL_UNPOOLED: "",
+      DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
+    },
   },
   resolve: {
     alias: {

@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "../clock";
 import { verifyStripeWebhook } from "./webhook";
 
 const secret = "whsec_test";
@@ -20,7 +21,7 @@ const eventPayload = JSON.stringify({
 
 describe("stripe webhook verification", () => {
   it("is not_configured without a signing secret", () => {
-    const header = signedHeader(eventPayload, Math.floor(Date.now() / 1000));
+    const header = signedHeader(eventPayload, Math.floor(nowMs() / 1000));
     expect(verifyStripeWebhook(eventPayload, header, undefined)).toEqual({
       status: "not_configured",
     });
@@ -33,14 +34,14 @@ describe("stripe webhook verification", () => {
   });
 
   it("is invalid_signature when the HMAC doesn't match", () => {
-    const header = signedHeader(eventPayload, Math.floor(Date.now() / 1000), "whsec_wrong");
+    const header = signedHeader(eventPayload, Math.floor(nowMs() / 1000), "whsec_wrong");
     expect(verifyStripeWebhook(eventPayload, header, secret)).toEqual({
       status: "invalid_signature",
     });
   });
 
   it("is invalid_signature when the timestamp is stale", () => {
-    const staleTimestamp = Math.floor(Date.now() / 1000) - 10_000;
+    const staleTimestamp = Math.floor(nowMs() / 1000) - 10_000;
     const header = signedHeader(eventPayload, staleTimestamp);
     expect(verifyStripeWebhook(eventPayload, header, secret)).toEqual({
       status: "invalid_signature",
@@ -48,7 +49,7 @@ describe("stripe webhook verification", () => {
   });
 
   it("is invalid_signature when the payload was tampered with after signing", () => {
-    const header = signedHeader(eventPayload, Math.floor(Date.now() / 1000));
+    const header = signedHeader(eventPayload, Math.floor(nowMs() / 1000));
     const tampered = eventPayload.replace("in_1", "in_evil");
     expect(verifyStripeWebhook(tampered, header, secret)).toEqual({
       status: "invalid_signature",
@@ -56,7 +57,7 @@ describe("stripe webhook verification", () => {
   });
 
   it("verifies a correctly signed, fresh event and parses it", () => {
-    const header = signedHeader(eventPayload, Math.floor(Date.now() / 1000));
+    const header = signedHeader(eventPayload, Math.floor(nowMs() / 1000));
     const result = verifyStripeWebhook(eventPayload, header, secret);
     expect(result).toEqual({
       status: "verified",
@@ -71,7 +72,7 @@ describe("stripe webhook verification", () => {
 
   it("is malformed when the signature is valid but the body isn't a Stripe event", () => {
     const payload = JSON.stringify({ hello: "world" });
-    const header = signedHeader(payload, Math.floor(Date.now() / 1000));
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000));
     expect(verifyStripeWebhook(payload, header, secret)).toEqual({ status: "malformed" });
   });
 });

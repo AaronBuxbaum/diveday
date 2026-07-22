@@ -74,7 +74,6 @@ const WAIVER_CONTROLS: Record<ReturnType<typeof waiverState>, WaiverControl> = {
 export function RosterSection({
   shopSlug,
   shopTimezone,
-  tripId,
   booked,
   capacity,
   roster,
@@ -91,7 +90,6 @@ export function RosterSection({
 }: {
   shopSlug: string;
   shopTimezone: string;
-  tripId: string;
   booked: number;
   capacity: number;
   roster: RosterEntry[];

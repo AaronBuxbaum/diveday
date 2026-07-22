@@ -157,7 +157,6 @@ export default async function TripGuestsPage({
       <RosterSection
         shopSlug={shopSlug}
         shopTimezone={shop.timezone}
-        tripId={tripId}
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}
