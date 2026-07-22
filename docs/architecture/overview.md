@@ -41,7 +41,7 @@ src/
 drizzle/        # generated SQL migrations — committed, never hand-edited
 e2e/            # Playwright specs
 docs/           # the knowledge base (see docs/README.md)
-.agents/skills/ # provider-neutral agent playbooks (new-feature, verify, design-review, …)
+.claude/skills/ # provider-neutral agent playbooks (new-feature, verify, design-review, …)
 .claude/        # Claude-specific agents and settings
 scripts/        # dev utilities (screenshots, etc.)
 ```

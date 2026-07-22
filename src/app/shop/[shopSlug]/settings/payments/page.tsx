@@ -268,10 +268,10 @@ export default async function PaymentsSettingsPage({
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Shop"
+        eyebrow="Settings"
         title="Shop settings"
         description="One-time and occasional shop configuration lives here, including the Stripe account that receives invoices and payments."
       />

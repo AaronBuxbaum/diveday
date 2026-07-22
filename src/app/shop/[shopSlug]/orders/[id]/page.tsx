@@ -102,10 +102,10 @@ export default async function OrderDetailPage({
   if (!order) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={shopSlug}
+        eyebrow="Front desk"
         title={order.person.fullName}
         description={order.order.description || "Order"}
         actions={

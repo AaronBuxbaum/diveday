@@ -113,7 +113,7 @@ export default async function TripsPage({
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={shop.name}
+        eyebrow="Trips"
         title="Schedule"
         description={
           staffView

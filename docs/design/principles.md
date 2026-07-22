@@ -73,13 +73,14 @@ A reversible mutation gets an **undo**, never a blocking `confirm()` dialog. Two
 - **High-frequency toggles** (board / not-board / aboard) use **re-tap**: tapping the confirmed
   "Aboard ✓" state clears it, with a "Tap to undo" hint. The correction is its own event, so the
   audit trail keeps it (never a delete).
-- **Destructive or rare** actions (remove a booking, delete a diver) confirm *after* the fact with
-  an **Undo banner** — the action lands immediately and the banner offers a one-tap reversal.
+- **Destructive or rare** actions (delete a diver) confirm *after* the fact with an **Undo
+  banner** — the action lands immediately and the banner offers a one-tap reversal.
 
 A blocking `confirm()` is reserved for what is genuinely **irreversible or a send** — issuing or
-reissuing a waiver link (the old link stops working, an email may go out). A `confirm()` on a
-reversible action is a bug: it slows the common path to guard against a mistake that undo already
-handles calmly.
+reissuing a waiver link (the old link stops working, an email may go out), or removing a booking
+(inside the shop's refund window it fires an automatic Stripe refund; undo restores the seat but
+can't claw back money already sent). A `confirm()` on a purely reversible action is a bug: it
+slows the common path to guard against a mistake that undo already handles calmly.
 
 ## Tokens (the mechanics)
 

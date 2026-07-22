@@ -85,6 +85,7 @@ export default async function ManageTripPage({
     <>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
+        eyebrow="Trips"
         title={trip.title}
         meta={
           <div className="flex flex-col gap-2">
