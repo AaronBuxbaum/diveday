@@ -1,4 +1,5 @@
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { nowDate } from "@/lib/clock";
@@ -133,11 +134,7 @@ export function CertificationCards({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-3 py-1 text-sm font-medium ${statusTone(display)}`}
-                  >
-                    {CARD_STATUS_LABELS[display]}
-                  </span>
+                  <Badge tone={statusTone(display)}>{CARD_STATUS_LABELS[display]}</Badge>
                   {card.status === "pending" ? (
                     <form action={reviewAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
