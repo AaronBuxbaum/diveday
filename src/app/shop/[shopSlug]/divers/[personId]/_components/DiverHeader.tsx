@@ -25,79 +25,81 @@ export function DiverHeader({
       >
         ← All divers
       </Link>
-      <ShopPageHeader
-        eyebrow={shop.name}
-        title={diver.person.fullName}
-        align="start"
-        meta={
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-            {diver.person.email ? (
-              <a
-                href={`mailto:${diver.person.email}`}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+      <div className="mt-4">
+        <ShopPageHeader
+          eyebrow={shop.name}
+          title={diver.person.fullName}
+          align="start"
+          meta={
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+              {diver.person.email ? (
+                <a
+                  href={`mailto:${diver.person.email}`}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+                >
+                  <span aria-hidden="true">✉</span>
+                  {diver.person.email}
+                </a>
+              ) : null}
+              {diver.person.phone ? (
+                <a
+                  href={`tel:${diver.person.phone.replace(/[^\d+]/g, "")}`}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+                >
+                  <span aria-hidden="true">☎</span>
+                  {diver.person.phone}
+                </a>
+              ) : null}
+              {!diver.person.email && !diver.person.phone ? (
+                <span>No contact details yet</span>
+              ) : null}
+            </div>
+          }
+          actions={
+            <details className="rounded-lg border border-border bg-surface px-4 py-3">
+              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+                Edit details
+              </summary>
+              <FieldGrid
+                as="form"
+                action={savePersonAction.bind(null, shopSlug, personId)}
+                columns={1}
+                className="mt-4 gap-y-3 sm:w-80"
               >
-                <span aria-hidden="true">✉</span>
-                {diver.person.email}
-              </a>
-            ) : null}
-            {diver.person.phone ? (
-              <a
-                href={`tel:${diver.person.phone.replace(/[^\d+]/g, "")}`}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
-              >
-                <span aria-hidden="true">☎</span>
-                {diver.person.phone}
-              </a>
-            ) : null}
-            {!diver.person.email && !diver.person.phone ? (
-              <span>No contact details yet</span>
-            ) : null}
-          </div>
-        }
-        actions={
-          <details className="rounded-lg border border-border bg-surface px-4 py-3">
-            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-              Edit details
-            </summary>
-            <FieldGrid
-              as="form"
-              action={savePersonAction.bind(null, shopSlug, personId)}
-              columns={1}
-              className="mt-4 gap-y-3 sm:w-80"
-            >
-              <Field label="Full name">
-                <input
-                  name="fullName"
-                  required
-                  defaultValue={diver.person.fullName}
-                  className={controlClass}
-                />
-              </Field>
-              <Field label="Email">
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue={diver.person.email ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-              <Field label="Phone">
-                <input
-                  name="phone"
-                  type="tel"
-                  defaultValue={diver.person.phone ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
-                  Save details
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </details>
-        }
-      />
+                <Field label="Full name">
+                  <input
+                    name="fullName"
+                    required
+                    defaultValue={diver.person.fullName}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label="Email">
+                  <input
+                    name="email"
+                    type="email"
+                    defaultValue={diver.person.email ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label="Phone">
+                  <input
+                    name="phone"
+                    type="tel"
+                    defaultValue={diver.person.phone ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
+                    Save details
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </details>
+          }
+        />
+      </div>
     </>
   );
 }
