@@ -12,7 +12,6 @@ import {
   diveSites,
   nitroxCertifications,
   people,
-  personRoles,
   shops,
   specialtyCertifications,
   tripRequirements,
@@ -268,16 +267,6 @@ export async function listShopSpecialtyCertifications(db: AppDb, shopId: string)
       and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
     )
     .orderBy(asc(people.fullName), asc(specialtyCertifications.createdAt));
-}
-
-/** Customers are the people whose card evidence can be collected for a trip. */
-export async function listShopDivers(db: AppDb, shopId: string) {
-  return db
-    .select({ id: people.id, fullName: people.fullName, email: people.email })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver")))
-    .orderBy(asc(people.fullName));
 }
 
 /** The exact same result drives staff rosters today and diver/manifest views later. */

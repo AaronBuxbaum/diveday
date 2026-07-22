@@ -4,7 +4,9 @@ import { daysFromNow } from "./helpers";
 signedInAsOwner();
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
-  // Unique per run: the dev database persists across e2e runs.
+  // Unique title so assertions target this spec's own trip, never a seeded
+  // one. (Isolation across tests comes from the per-test demo reset in
+  // fixtures.ts, not from this suffix.)
   const title = `Walk-in Test Trip ${Date.now()}`;
 
   await page.goto("/shop/blue-mantis/trips/new");

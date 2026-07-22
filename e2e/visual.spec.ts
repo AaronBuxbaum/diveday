@@ -3,9 +3,10 @@ import type { Page } from "@playwright/test";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Twelve key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 48 screenshots per run (see ADR
- * 20260721-argos-visual-regression).
+ * Visual regression coverage (Argos). Thirteen key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 52 screenshots per run (see ADR
+ * 20260721-argos-visual-regression). Keep these counts in sync when adding a
+ * surface; each `capture()` call costs 4 screenshots per CI run.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with

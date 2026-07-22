@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { shops } from "./schema";
@@ -93,14 +93,5 @@ export async function setShopContact(
     })
     .where(eq(shops.id, shopId))
     .returning();
-  return shop ?? null;
-}
-
-/**
- * The shop public pages serve. Single-shop instance for now — multi-shop
- * routing (slug subpaths or domains) arrives with shop onboarding.
- */
-export async function getDefaultShop(db: AppDb) {
-  const [shop] = await db.select().from(shops).orderBy(asc(shops.createdAt)).limit(1);
   return shop ?? null;
 }

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { onboardAction } from "@/app/actions/onboard";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { onboardAction } from "./actions";
 
 export const metadata: Metadata = {
   title: "Set up your shop — DiveDay",
@@ -44,7 +44,7 @@ export default async function OnboardPage({
                     type="text"
                     required
                     placeholder="e.g. Green Lagoon Divers"
-                    className={`${controlClass} focus:outline-none`}
+                    className={controlClass}
                   />
                 </Field>
                 <Field label="Shop link">
@@ -55,7 +55,7 @@ export default async function OnboardPage({
                     placeholder="e.g. green-lagoon"
                     pattern="^[a-z0-9-]+$"
                     title="Lowercase letters, numbers, and hyphens — this becomes your shop's web address"
-                    className={`${controlClass} focus:outline-none`}
+                    className={controlClass}
                   />
                 </Field>
               </FieldGrid>
@@ -65,7 +65,7 @@ export default async function OnboardPage({
                     name="timezone"
                     required
                     defaultValue="America/New_York"
-                    className={`${controlClass} focus:outline-none`}
+                    className={controlClass}
                   >
                     <option value="America/New_York">Eastern Time (New York)</option>
                     <option value="America/Chicago">Central Time (Chicago)</option>
@@ -89,7 +89,7 @@ export default async function OnboardPage({
                     type="text"
                     required
                     placeholder="e.g. Dana Reyes"
-                    className={`${controlClass} focus:outline-none`}
+                    className={controlClass}
                   />
                 </Field>
               </FieldGrid>
@@ -100,7 +100,7 @@ export default async function OnboardPage({
                     type="email"
                     required
                     placeholder="e.g. owner@example.com"
-                    className={`${controlClass} focus:outline-none`}
+                    className={controlClass}
                   />
                 </Field>
                 <Field label="Password">
@@ -110,7 +110,7 @@ export default async function OnboardPage({
                     required
                     placeholder="At least 6 characters"
                     minLength={6}
-                    className={`${controlClass} focus:outline-none`}
+                    className={controlClass}
                   />
                 </Field>
               </FieldGrid>
@@ -122,7 +122,7 @@ export default async function OnboardPage({
                   name="seedDemoData"
                   type="checkbox"
                   defaultChecked
-                  className="mt-1 h-4 w-4 rounded border-border-strong text-primary focus:ring-primary"
+                  className="mt-1 h-4 w-4 rounded border-border-strong accent-primary"
                 />
                 <div>
                   <span className="text-sm font-medium text-foreground">
@@ -138,9 +138,7 @@ export default async function OnboardPage({
 
             <SubmitButton
               pendingLabel="Setting up your shop…"
-              className={buttonClass({
-                className: "mt-2 cursor-pointer focus:outline-none",
-              })}
+              className={buttonClass({ className: "mt-2" })}
             >
               Create shop & start trial
             </SubmitButton>

@@ -192,6 +192,31 @@ describe("startBookingCheckout", () => {
     expect(second.checkout.id).toBe(first.checkout.id);
   });
 
+  it("mints a fresh session when the party composition changed", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+
+    // One party member drops out; the old two-seat session must not be
+    // reused for the one-seat request — its quantity/total cover a
+    // different party, and completing it would mark the wrong bookings paid.
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, [bookingIds[0]]),
+      provider,
+    );
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.reused).toBe(false);
+    expect(second.checkout.id).not.toBe(first.checkout.id);
+    expect(second.checkout.totalCents).toBe(REEF_PRICE_CENTS);
+  });
+
   it("starts a fresh session once the previous one expired", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const provider = fakeCheckout();

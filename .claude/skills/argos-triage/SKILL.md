@@ -1,12 +1,13 @@
 ---
 name: argos-triage
-description: Triage an Argos visual-regression build — for each changed screenshot, decide whether it's an expected consequence of this branch's code changes or an unexplained regression, and record that decision in Argos (approve, flag, or leave pending) so a human never has to start from a blank slate of 20+ unreviewed diffs. Use whenever asked to review/triage/check/approve an Argos build or visual diffs, and proactively after an e2e run reports Argos changes on a branch with UI changes, before calling that work done — AGENTS.md requires intentional visual changes to be called out for the reviewer, and this is how that call-out happens without waiting on a human to open Argos first.
+description: Triage an Argos visual-regression build — for each changed screenshot, decide whether it's an expected consequence of this branch's code changes or an unexplained regression, and record that decision in Argos (approve, flag, or leave pending) so a human never has to start from a blank slate of 20+ unreviewed diffs. Use whenever asked to review/triage/check/approve an Argos build or visual diffs; proactively after pushing any PR with UI changes (CI uploads the build ~10-15 min after push — schedule a check-in and triage it before calling the work done); and whenever the "argos" GitHub check is red with "waiting for your decision". AGENTS.md requires intentional visual changes to be called out for the reviewer, and this is how that call-out happens without waiting on a human to open Argos first.
 ---
 
 # Argos triage
 
 Argos (`aaron-buxbaum/diveday` — re-derive via `getMe`/`listProjects` if that ever looks wrong,
-e.g. after an account move) diffs every e2e run's 48 screenshots against the base branch and marks
+e.g. after an account move) diffs every e2e run's screenshots (52 as of this writing — see the
+count in `e2e/visual.spec.ts`) against the base branch and marks
 the build `changes-detected` until a human approves it in the Argos UI. Left alone, that human
 opens a build with a couple dozen thumbnails and no context for which ones they meant to change.
 This skill does the first pass: read the code diff that produced the build, decide which visual
@@ -14,6 +15,20 @@ diffs follow from it, and leave a paper trail for the ones that don't — so rev
 confirming your reasoning, not starting from a blank slate. **`createReview` is already
 pre-approved in this repo's `.claude/settings.json`** — acting on this skill's own findings without
 re-asking each time is the point.
+
+## When this skill runs
+
+**After every push that opens or updates a PR with UI changes — not only when a human asks.**
+The build you triage is produced by CI's e2e job, so it appears ~10–15 minutes *after* you push;
+shipping a PR and ending the session before that build is triaged is how untriaged builds pile up.
+The ship loop (new-feature skill step 7) schedules the check-in that brings you back here.
+
+Know the status semantics: on a PR branch, Argos posts a **failing** GitHub commit status —
+"N changed — waiting for your decision" — the moment changes are detected, and it stays failing
+until the build is reviewed. That red "argos" check is the *trigger to run this skill*, not a test
+failure to debug and not a reason to conclude CI is broken. Approving every snapshot flips the
+check green; a `REQUEST_CHANGES` keeps it red, correctly, for the human. (Builds on `main` are
+auto-approved as the new baseline — those never need triage.)
 
 ## The three outcomes
 
@@ -46,9 +61,17 @@ git branch --show-current
 
 `listBuilds` with `owner: aaron-buxbaum`, `project: diveday`, `head: <branch>` — take the newest
 result. If its `head.sha` doesn't match local `HEAD`, say so in your summary rather than silently
-reviewing a stale build (someone may have pushed since). If there's no build for the branch yet
-(CI still running, or the branch hasn't been pushed), say that plainly and stop — don't guess at a
-different build. If the user named a build number or PR directly, use that instead of searching.
+reviewing a stale build (someone may have pushed since). If the user named a build number or PR
+directly, use that instead of searching.
+
+**No build for the branch yet, or the build is still `pending`/`progress`? Wait, don't stop.**
+CI's e2e job takes ~10–15 minutes from push to upload. Schedule a check-in (`send_later` ~10
+minutes out, or `ScheduleWakeup` where available) that re-runs this skill, tell the user you'll
+triage when the build lands, and end the turn — never busy-wait with `sleep`, and never silently
+drop the obligation. Only give up for good when there is genuinely nothing coming: the branch was
+never pushed, or CI's e2e job failed before the Argos upload (then the failure itself is the thing
+to debug). If a check-in fires and the build still isn't there, check CI's state and re-arm once
+more rather than concluding it will never arrive.
 
 ### 2. Pull the code diff you're going to reason against
 

@@ -1,5 +1,5 @@
 import type { ReadinessBlocker } from "./readiness";
-import { BLOCKER_ACTIONS, primaryBlocker } from "./today";
+import { BLOCKER_ACTIONS, isWaiverCode, pointingLabel, primaryBlocker } from "./today";
 
 /**
  * The blocker queue is the front desk's whole day as one list: every diver who
@@ -25,16 +25,11 @@ export type BlockerFix = {
   bookingId: string;
 };
 
-const WAIVER_CODES = new Set(["waiver_not_sent", "waiver_pending", "waiver_expired"]);
-
-function firstNameOf(fullName: string): string {
-  return fullName.split(" ")[0] || fullName;
-}
-
 /**
  * The one-tap fix for a diver's *worst* blocker: a missing/pending/expired
  * waiver sends from here; card evidence lives on the person record; payment and
  * setup work lives on the trip roster (anchored to the diver's booking).
+ * Waiver-code and label rules come from `today.ts` — one blocker→fix rule.
  */
 export function blockerFixFor(
   blockers: readonly ReadinessBlocker[],
@@ -43,14 +38,10 @@ export function blockerFixFor(
   const blocker = primaryBlocker(blockers);
   if (!blocker) return null;
   const { actionLabel, target } = BLOCKER_ACTIONS[blocker.code];
-  const sendsWaiver = WAIVER_CODES.has(blocker.code);
+  const sendsWaiver = isWaiverCode(blocker.code);
   const rosterRow = `/shop/${ctx.shopSlug}/trips/${ctx.tripId}/guests#booking-${ctx.bookingId}`;
   return {
-    label: sendsWaiver
-      ? actionLabel
-      : target === "diver"
-        ? `Open ${firstNameOf(ctx.fullName)}’s record`
-        : "Open roster",
+    label: sendsWaiver ? actionLabel : pointingLabel(target, ctx.fullName),
     href: target === "diver" ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}` : rosterRow,
     sendsWaiver,
     bookingId: ctx.bookingId,
