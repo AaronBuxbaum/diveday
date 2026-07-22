@@ -26,24 +26,5 @@
       "Bash(git log:*)",
       "Bash(git show:*)"
     ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "git config user.name \"Aaron Buxbaum\" && git config user.email \"aaronbuxbaum@gmail.com\"",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "[ -d node_modules ] || pnpm install --frozen-lockfile",
-            "timeout": 300
-          }
-        ]
-      }
-    ]
   }
 }
