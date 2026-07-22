@@ -10,6 +10,7 @@ import {
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
+import { Badge } from "@/components/ui/badge";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
@@ -135,7 +136,7 @@ export default async function TripManifestPage({
       </a>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             {manifest.trip.title}
           </h1>
           <p className="mt-1 text-muted">
@@ -154,9 +155,7 @@ export default async function TripManifestPage({
             call again after each dive.
           </p>
           <p className="mt-3 print:hidden">
-            <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              Live manifest · save an offline copy below
-            </span>
+            <Badge tone="primary">Live manifest · save an offline copy below</Badge>
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
@@ -328,6 +327,10 @@ export default async function TripManifestPage({
                   : ready
                     ? "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-inset ring-warning/30 sm:px-5"
                     : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5";
+            // Not a Badge: the "explicitly not boarded" state needs a stronger,
+            // higher-contrast fill than "still awaiting" so staff can tell at a
+            // glance which rows have been actioned — a distinction the app's
+            // five standard Badge tones don't carry.
             const rollCallPillClass = boarded
               ? "rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
               : explicitNotBoarded
@@ -342,15 +345,9 @@ export default async function TripManifestPage({
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
-                      <span
-                        className={
-                          ready
-                            ? "rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
-                            : "rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger"
-                        }
-                      >
+                      <Badge tone={ready ? "success" : "danger"}>
                         {ready ? "Ready to board" : "Blocked"}
-                      </span>
+                      </Badge>
                       <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">

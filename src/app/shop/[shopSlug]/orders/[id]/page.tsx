@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
@@ -18,6 +19,11 @@ const STATUS_LABELS: Record<string, string> = {
   void: "Void",
   uncollectible: "Uncollectible",
   refunded: "Refunded",
+};
+
+const STATUS_TONES: Record<string, BadgeTone> = {
+  paid: "success",
+  open: "primary",
 };
 
 const KIND_LABELS: Record<string, string> = {
@@ -125,17 +131,9 @@ export default async function OrderDetailPage({
 
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex items-center justify-between gap-3">
-          <span
-            className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${
-              order.order.status === "paid"
-                ? "bg-success/10 text-success"
-                : order.order.status === "open"
-                  ? "bg-primary/10 text-primary"
-                  : "bg-surface-sunken text-muted"
-            }`}
-          >
+          <Badge tone={STATUS_TONES[order.order.status] ?? "neutral"}>
             {STATUS_LABELS[order.order.status] ?? order.order.status}
-          </span>
+          </Badge>
           <span className="text-lg font-semibold tabular-nums">
             {centsToDisplay(order.order.totalCents, order.order.currency)}
           </span>

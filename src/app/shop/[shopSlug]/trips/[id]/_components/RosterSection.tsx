@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
@@ -159,15 +160,12 @@ export function RosterSection({
                     <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
                   </div>
                   {readiness ? (
-                    readiness.status === "ready" ? (
-                      <span className="shrink-0 rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
-                        Ready
-                      </span>
-                    ) : (
-                      <span className="shrink-0 rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
-                        Needs attention
-                      </span>
-                    )
+                    <Badge
+                      tone={readiness.status === "ready" ? "success" : "danger"}
+                      className="shrink-0"
+                    >
+                      {readiness.status === "ready" ? "Ready" : "Needs attention"}
+                    </Badge>
                   ) : null}
                 </div>
 
