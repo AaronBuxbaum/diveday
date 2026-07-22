@@ -185,9 +185,11 @@ export type RecordRollCallOutcome =
     };
 
 /**
- * Roll call is append-only operational history. A boarded event has an
- * additional hard gate: the same readiness service used elsewhere must prove
- * the diver ready at the exact moment staff tries to board them.
+ * Roll call is append-only operational history. At departure, a boarded event
+ * has an additional hard gate: the shared readiness service must prove the diver
+ * ready at the moment staff board them. After-dive checkpoints are a physical
+ * head count of who is on the boat — a diver whose paperwork lapsed after the
+ * boat left is still aboard and must be recordable as present.
  */
 export async function recordRollCall(
   db: AppDb,
@@ -285,7 +287,11 @@ export async function recordRollCall(
       }
     }
 
-    if (input.status === "boarded") {
+    // Readiness gates boarding at departure only. An after-dive checkpoint is a
+    // head count of bodies on the boat: a diver whose card was pulled or payment
+    // reversed mid-trip is still aboard, and refusing to record them present
+    // would corrupt the one number that says nobody was left in the water.
+    if (input.status === "boarded" && checkpoint === "departure") {
       const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
       if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
     }
