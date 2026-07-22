@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoMark } from "@/components/Logo";
 import { signOut } from "@/lib/auth";
 import { ShopNavLinks } from "./ShopNavLinks";
 import { CommandPalette } from "./search/CommandPalette";
@@ -33,8 +34,8 @@ export function ShopNav({
           href={root}
           className="flex shrink-0 items-center gap-2 font-semibold tracking-tight sm:order-1"
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
-            <span aria-hidden="true">✦</span>
+          <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
+            <LogoMark className="size-5" />
             <span className="sr-only">DiveDay home</span>
           </span>
           <span className="hidden max-w-40 truncate sm:inline">{shopName}</span>
