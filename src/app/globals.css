@@ -150,11 +150,26 @@ body {
   }
 }
 
-@media (prefers-contrast: more) {
+/*
+ * Increased-contrast tuning is per-scheme. A single scheme-agnostic block
+ * would push these dark-ink light values onto the dark palette — dark-on-dark,
+ * ~1.5:1 muted text — for exactly the users who asked for MORE contrast. So
+ * light gets darker ink/borders; dark gets brighter ones.
+ */
+@media (prefers-contrast: more) and (prefers-color-scheme: light) {
   .boat-mode {
     --border: #6b7d82;
     --border-strong: #263f47;
     --muted: #1f3b44;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  .boat-mode {
+    --border: #6f97a8;
+    --border-strong: #9cbcc9;
+    --muted: #c8dde4;
+    --foreground: #ffffff;
   }
 }
 

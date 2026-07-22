@@ -131,10 +131,12 @@ export default async function TripManifestPage({
       </a>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
-          <h1 className="text-sm font-medium tracking-widest text-primary uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
             Boat manifest
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {manifest.trip.title}
           </h1>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h2>
           <p className="mt-1 text-muted">
             {formatShortDate(manifest.trip.startsAt, "en-US", shop.timezone)} ·{" "}
             {formatTimeRangeTz(
@@ -355,7 +357,7 @@ export default async function TripManifestPage({
                       </span>
                       <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
-                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
                         <span className="font-bold">Emergency contact</span>
                         <span className="mt-0.5 block text-muted">
@@ -386,7 +388,7 @@ export default async function TripManifestPage({
                     </div>
                     {!ready ? (
                       <>
-                        <ul className="mt-3 flex flex-col gap-1 text-sm text-danger">
+                        <ul className="mt-3 flex flex-col gap-1 text-base text-danger">
                           {diver.readiness.blockers.map((blocker) => (
                             <li key={blocker.message}>• {blocker.message}</li>
                           ))}

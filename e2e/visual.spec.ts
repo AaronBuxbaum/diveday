@@ -139,7 +139,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Manifest" })
           .click();
         await page.waitForURL(/\/manifest/);
-        await page.getByRole("heading", { name: "Boat manifest" }).waitFor();
+        await page.getByText("Boat manifest", { exact: true }).waitFor();
         await capture(page, "manifest", scheme);
       });
     });

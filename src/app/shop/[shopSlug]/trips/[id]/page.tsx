@@ -83,7 +83,7 @@ export default async function ManageTripPage({
     <>
       <FlashParams params={["notice"]} />
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">{trip.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{trip.title}</h1>
         {cancelled ? (
           <span className="rounded-full bg-danger/10 px-3 py-1 text-sm font-medium text-danger">
             Cancelled
