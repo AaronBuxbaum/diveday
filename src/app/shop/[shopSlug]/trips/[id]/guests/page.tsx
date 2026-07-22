@@ -92,6 +92,7 @@ export default async function TripGuestsPage({
     <>
       <FlashParams params={["notice", "bid", "waiver"]} />
       <ShopPageHeader
+        eyebrow="Trips"
         title={trip.title}
         meta={
           <div className="flex flex-col gap-2">

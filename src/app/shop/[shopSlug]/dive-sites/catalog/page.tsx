@@ -30,12 +30,13 @@ export default async function CommonDiveSitesPage({
     revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
   }
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         ← Dive-site library
       </Link>
       <div className="mt-4">
         <ShopPageHeader
+          eyebrow="Catalog"
           title="DiveDay common dive sites"
           description="Published, versioned starting points. Importing makes an independent shop briefing; later template updates never overwrite your edits."
         />
