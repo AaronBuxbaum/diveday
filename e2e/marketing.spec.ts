@@ -25,6 +25,6 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", { name: "One shop price. Every operational workflow." }),
   ).toBeVisible();
-  await expect(page.getByText("$249", { exact: true })).toBeVisible();
+  await expect(page.getByText("$149", { exact: true })).toBeVisible();
   await expect(page.getByText(/The crew saves the manifest to their phone/)).toBeVisible();
 });
