@@ -68,6 +68,13 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
     await expect(page.getByLabel("Water temp °C")).toHaveValue("");
     await expect(page.getByLabel("Visibility metres")).toHaveValue("");
+
+    // Cancel the trip: the dev database persists across runs, and an
+    // uncancelled trip stays on the public schedule forever, which is what
+    // was making the schedule Argos snapshot (e2e/visual.spec.ts) flake on
+    // this timestamped title and site name every run.
+    await page.getByRole("button", { name: "Cancel trip" }).click();
+    await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
 });
 

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow } from "./helpers";
+import { daysFromNow, signInAsOwner } from "./helpers";
 
 signedInAsOwner();
 
@@ -39,6 +39,17 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("heading", { name: "Your 3-dive plan" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Morning reef" })).toBeVisible();
   await expect(page.getByText("Second site details will be confirmed at the dock.")).toBeVisible();
+
+  // Cancel the trip: the dev database persists across runs, and an
+  // uncancelled trip stays on the public schedule forever, which is what was
+  // making the schedule Argos snapshot (e2e/visual.spec.ts) flake on this
+  // timestamped title every run.
+  const tripUrl = page.url();
+  await signInAsOwner(page);
+  await page.goto(tripUrl);
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
+  await page.getByRole("button", { name: "Cancel trip" }).click();
+  await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 
 test("end-before-start is rejected with a friendly message", async ({ page }) => {
