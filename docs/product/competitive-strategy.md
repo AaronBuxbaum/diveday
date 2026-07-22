@@ -110,22 +110,24 @@ cease-and-desist.
 
 ### Where we start from
 
-Honestly: zero. The codebase has **no CSV import, no export, no ICS, no API** of any kind
-(verified — `src/lib/calendar.ts` is month-grid math; the only "sync" is offline-manifest
-snapshots). [competitive-analysis.md](competitive-analysis.md) already flags "Open API / easy
-export" as the watch item. Everything below is greenfield.
+At the time of writing: zero — no CSV import, no export, no ICS, no API of any kind.
+[competitive-analysis.md](competitive-analysis.md) already flags "Open API / easy export" as the
+watch item. As of 2026-07-22 the export (#1 below) has shipped; the rest is greenfield.
 
 ### The build plan, in order
 
 Ordered by leverage per effort; imports touch certs and medical state, so the importer is a
 **safety-critical surface** (boring code, adversarial tests, `dive-domain-expert` review).
 
-1. **Full-shop export, self-serve, every tier** *(S–M)*. One button → a bundle of documented CSVs
-   (people, certifications, bookings, trips, waiver records index, rental-fit profiles, payments)
-   plus signed-waiver PDFs, with a published schema page. This is the "leave anytime" guarantee
-   that makes every other claim credible, the Data-Act answer, and the counter to both rivals'
-   shallow exports. Build it **before** the importer: exporting our own spine forces the schema
-   documentation the importer reuses.
+1. ✅ **Full-shop export, self-serve, every tier** — **shipped 2026-07-22**
+   ([ADR](../architecture/decisions/20260722-full-shop-export.md)): Settings → Data export
+   downloads one ZIP of documented RFC-4180 CSVs (people + roles, all three certification kinds,
+   trips + dives, bookings + payment state, waiver templates with full versioned bodies, signed
+   waiver records including medical evidence, rental fit) plus a README manifest that also states
+   what is *not* included. Signed-waiver "PDFs" turned out not to exist — waiver evidence is
+   versioned template text + signature rows, and the bundle carries both. This is the "leave
+   anytime" guarantee that makes every other claim credible; its CSV schemas are the contract the
+   importer reuses.
 2. **Diver/customer CSV importer with a published honesty table** *(M — safety-critical)*.
    Column-mapped, previewed, validated import for the shop's people + cert + sizes data, with
    templates matching what the rivals actually emit (DiveShop360's customer/cert exports,
