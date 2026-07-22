@@ -139,7 +139,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Manifest" })
           .click();
         await page.waitForURL(/\/manifest/);
-        await page.getByText("Boat manifest", { exact: true }).waitFor();
+        await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "manifest", scheme);
 
         // Shop settings, where staff set the rental catalog and its prices.
