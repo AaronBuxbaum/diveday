@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "ScheduleWakeup",
+      "mcp__Claude_Code_Remote__delete_trigger",
       "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
       "mcp__Claude_Code_Remote__send_later",
       "mcp__github__subscribe_pr_activity",
