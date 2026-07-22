@@ -63,6 +63,14 @@ new domain concept, define it here in the same PR.
   shop in settings because real muster times vary; it drives the arrival copy on booking
   confirmations, the diver's dock-day rhythm, and every pre-trip reminder, so no surface hardcodes
   "30 minutes".
+- **Export bundle** — the self-serve ZIP of the shop's records as documented RFC-4180 CSVs plus a
+  README manifest: people and roles, all certification kinds, trips with their boarding gates and
+  crew, bookings with payment state, the roll-call ledger, waiver templates and signed records
+  (attester included), and rental fit — soft-archived history included, credentials never. Gated
+  to owner/manager because it carries the roster's complete medical evidence, which staff
+  surfaces never show in full. The "leave anytime" half of the data-portability strategy; its CSV
+  schemas are the contract the planned importer and read API reuse. See
+  [20260722-full-shop-export](../architecture/decisions/20260722-full-shop-export.md).
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
   route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
   attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
