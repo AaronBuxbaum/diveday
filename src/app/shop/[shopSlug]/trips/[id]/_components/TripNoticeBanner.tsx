@@ -28,6 +28,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     text: "Booking cancelled. The payment record and Stripe disagree on what was captured — review the diver's payments before issuing any refund.",
   },
   "booking-restored": { tone: "success", text: "Back on the roster." },
+  "booking-restore-full": {
+    tone: "danger",
+    text: "Couldn't undo — the freed spot has been taken and the trip is full again. Add them to the wait list instead.",
+  },
   "diver-added": { tone: "success", text: "Diver added to the trip." },
   "diver-waitlisted": { tone: "success", text: "Diver added to the wait list." },
   "diver-invalid": { tone: "danger", text: "Enter a name and a valid email to add a diver." },

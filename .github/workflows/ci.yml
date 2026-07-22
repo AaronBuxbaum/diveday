@@ -7,12 +7,16 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel main: its e2e job uploads the auto-approved Argos baseline
+  # that every PR build diffs against — cancelling it leaves PRs diffing
+  # against a stale baseline.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   checks:
-    name: Lint, typecheck, test, build
+    name: Safeguards, lint, typecheck, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -21,14 +25,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
+      # The full pre-commit gate: repo safeguards (architecture, clock, ADR,
+      # doc links) + lint + typecheck + unit tests — the same bar agents run
+      # locally. Running the pieces individually here silently skipped the
+      # safeguards for every PR.
+      - run: pnpm check
       - run: pnpm build
 
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -37,6 +44,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: npx playwright install --with-deps chromium
       - run: pnpm e2e
         env:

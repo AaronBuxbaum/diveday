@@ -73,7 +73,8 @@ export async function startBookingCheckout(
   if (
     existing?.status === "pending" &&
     existing.checkoutUrl &&
-    (!existing.expiresAt || existing.expiresAt > nowDate())
+    (!existing.expiresAt || existing.expiresAt > nowDate()) &&
+    (await checkoutCoversExactly(db, existing.id, input.bookingIds))
   ) {
     return { ok: true, checkout: existing, reused: true };
   }
@@ -123,6 +124,26 @@ export async function startBookingCheckout(
 }
 
 /** The most recent checkout linked to any of these bookings. */
+/**
+ * A pending session is only safe to hand out again if it covers exactly the
+ * requested party. A changed composition (someone cancelled, someone joined)
+ * means a different quantity and total — and completing the old session would
+ * mark the *old* linked bookings paid, not the party the diver is looking at.
+ */
+async function checkoutCoversExactly(
+  db: DbExecutor,
+  checkoutId: string,
+  bookingIds: string[],
+): Promise<boolean> {
+  const linked = await db
+    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .from(bookingCheckoutBookings)
+    .where(eq(bookingCheckoutBookings.checkoutId, checkoutId));
+  if (linked.length !== bookingIds.length) return false;
+  const requested = new Set(bookingIds);
+  return linked.every((row) => requested.has(row.bookingId));
+}
+
 async function latestCheckoutForBookingIds(
   db: DbExecutor,
   shopId: string,

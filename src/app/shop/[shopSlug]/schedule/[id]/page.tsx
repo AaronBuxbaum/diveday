@@ -66,9 +66,11 @@ export default async function TripDetailPage({
   if (session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
     redirect(`/shop/${shopSlug}/trips/${tripId}`);
   }
-  const trip = await getTripWithBooked(db, shop.id, tripId);
+  const [trip, tripDives] = await Promise.all([
+    getTripWithBooked(db, shop.id, tripId),
+    listTripDives(db, shop.id, tripId),
+  ]);
   if (trip?.status !== "scheduled") notFound();
-  const tripDives = await listTripDives(db, shop.id, tripId);
   const crewPrediction = hasCrewPrediction(trip);
   const forecastPoint =
     trip.diveSite &&
@@ -83,10 +85,10 @@ export default async function TripDetailPage({
 
   // The confirmation renders only from a real booking row — never from a
   // URL claim (design principle 6: trustworthy by inspection).
-  const confirmed = bookingId ? await getBookingForTrip(db, tripId, bookingId) : null;
-  const waitlistConfirmation = waitlistId
-    ? await getWaitlistEntryForTrip(db, tripId, waitlistId)
-    : null;
+  const [confirmed, waitlistConfirmation] = await Promise.all([
+    bookingId ? getBookingForTrip(db, tripId, bookingId) : null,
+    waitlistId ? getWaitlistEntryForTrip(db, tripId, waitlistId) : null,
+  ]);
   const diveBriefings = await Promise.all(
     tripDives.map(async ({ dive, diveSite }) => {
       const [creatures, moments] = diveSite
@@ -106,16 +108,16 @@ export default async function TripDetailPage({
   const payAtBooking = Boolean(
     perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
-  const payment = confirmed
-    ? await resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents)
-    : null;
-
-  const readiness = confirmed ? await getBookingReadiness(db, shop.id, confirmed.booking.id) : null;
-  const requirement = confirmed ? await getTripRequirements(db, shop.id, tripId) : null;
-  const rentalFit = confirmed ? await getRentalFit(db, shop.id, confirmed.person.id) : null;
-  const nitroxCardVerified = confirmed
-    ? (await verifiedNitroxPersonIds(db, shop.id)).has(confirmed.person.id)
-    : false;
+  // The confirmed-booking panels draw on five independent queries — batch them.
+  const [payment, readiness, requirement, rentalFit, nitroxCardVerified] = confirmed
+    ? await Promise.all([
+        resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
+        getBookingReadiness(db, shop.id, confirmed.booking.id),
+        getTripRequirements(db, shop.id, tripId),
+        getRentalFit(db, shop.id, confirmed.person.id),
+        verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
+      ])
+    : [null, null, null, null, false];
 
   const inPast = trip.startsAt <= nowDate();
   const full = isFull(trip);

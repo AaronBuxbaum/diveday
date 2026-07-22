@@ -126,7 +126,7 @@ const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_expired",
 ]);
 
-function isWaiverCode(code: ReadinessBlockerCode): boolean {
+export function isWaiverCode(code: ReadinessBlockerCode): boolean {
   return WAIVER_CODES.has(code);
 }
 
@@ -138,7 +138,7 @@ function firstNameOf(fullName: string): string {
  * A label for a row whose fix lives on another screen: it points, it does not
  * command. Card work waits on the person record; everything else on the roster.
  */
-function pointingLabel(target: "trip" | "diver", fullName: string): string {
+export function pointingLabel(target: "trip" | "diver", fullName: string): string {
   return target === "diver" ? `Open ${firstNameOf(fullName)}’s record` : "Open roster";
 }
 
