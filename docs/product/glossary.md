@@ -138,11 +138,13 @@ new domain concept, define it here in the same PR.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
   duplicate events are idempotent and an older device event cannot replace newer live history.
-- **Boarding** (the `/boarding` surface) — the fast pre-departure pass: get every ready diver aboard
-  before the boat leaves, waiver/cert/payment confirmed at a glance. It is the departure checkpoint of
-  the **Manifest** viewed readiness-first — boarding a diver here is the same roll-call event — so it
-  reads "Boarding" to avoid reading as a second, separate roster. Crew, emergency contacts, after-dive
-  roll call, print, and the offline snapshot live on the Manifest.
+- **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
+  waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
+  "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the
+  roll call. Boarding a diver there is the same roll-call event as any later checkpoint. Day-of entry
+  points (Today's departure card, the "Boat view" badge) read "Boarding" and open the manifest on that
+  checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
+  on the same page.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. DiveDay keeps one versioned release per shop: editing it saves a new immutable version
   and new links snapshot the current one. The exact template version is snapshotted into each issued

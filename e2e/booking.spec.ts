@@ -56,6 +56,11 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/schedule");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    // The roster lives on the Guests tab now.
+    await page
+      .getByRole("navigation", { name: "Trip" })
+      .getByRole("link", { name: "Guests" })
+      .click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
   });
@@ -120,6 +125,10 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
     .getByRole("link")
+    .click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
     .click();
   await expect(page.getByRole("heading", { name: "Wait list" })).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();

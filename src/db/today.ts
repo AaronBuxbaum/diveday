@@ -421,8 +421,8 @@ export async function getTodayWork(
         subject: trip.title,
         context: when,
         detail: `${withoutContact} ${withoutContact === 1 ? "diver has" : "divers have"} no emergency contact on file — ask at the counter; it prints on the manifest.`,
-        actionLabel: "Open roster",
-        href: tripHref,
+        actionLabel: "Open guests",
+        href: `${tripHref}/guests`,
         dueAt: trip.startsAt,
       });
     }
@@ -439,7 +439,7 @@ export async function getTodayWork(
         detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} opened up and ${waiting} ${waiting === 1 ? "person is" : "people are"} on the wait list.`,
         // Lands right on the wait-list, where one tap invites the next in line.
         actionLabel: "Invite from wait list",
-        href: `${tripHref}#waitlist`,
+        href: `${tripHref}/guests#waitlist`,
         dueAt: trip.startsAt,
       });
     }
@@ -449,7 +449,7 @@ export async function getTodayWork(
     if (issue.trip.startsAt < now || issue.trip.startsAt > horizon) continue;
     const isWaiver = issue.delivery.kind !== "booking_confirmation";
     const what = isWaiver ? "waiver link" : "booking confirmation";
-    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`;
+    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}/guests#booking-${issue.booking.id}`;
     actions.push({
       id: `email:${issue.delivery.id}`,
       kind: "email_delivery",

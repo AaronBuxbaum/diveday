@@ -323,7 +323,7 @@ export function diverBlockerAction(
   if (!blocker) return null;
   const { kind, actionLabel, target } = BLOCKER_ACTIONS[blocker.code];
   const remaining = input.blockers.length - 1;
-  const rosterRow = `/shop/${shopSlug}/trips/${input.tripId}#booking-${input.bookingId}`;
+  const rosterRow = `/shop/${shopSlug}/trips/${input.tripId}/guests#booking-${input.bookingId}`;
   const waiver = isWaiverCode(blocker.code);
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,

@@ -32,7 +32,8 @@ export default async function ShopLayout({
     slug: string,
   ): Promise<string | undefined> {
     const tripId = await todayNextDepartureTripId(dbi, shopId, timeZone);
-    return tripId ? `/shop/${slug}/trips/${tripId}/boarding` : undefined;
+    // The manifest opens on its "Before departure" checkpoint — the boarding pass.
+    return tripId ? `/shop/${slug}/trips/${tripId}/manifest` : undefined;
   }
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/

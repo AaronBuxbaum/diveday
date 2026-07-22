@@ -42,7 +42,7 @@ export function ShopNavLinks({
 }) {
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const isBoatSurface = pathname.includes("/manifest") || pathname.includes("/boarding");
+  const isBoatSurface = pathname.includes("/manifest");
   const moreIsActive = moreLinks.some(([, suffix]) =>
     isCurrent(pathname, `${root}${suffix}`, root),
   );

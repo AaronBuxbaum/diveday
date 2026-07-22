@@ -83,7 +83,12 @@ function parseAddDiver(formData: FormData) {
   });
 }
 
+// Trip-config actions (details, conditions, crew, requirements, cancel) settle
+// back on Overview — "what the dive is". Roster actions (add/remove diver,
+// wait list, waiver, payment) settle on Guests — "who is attending" — the one
+// place they live, so a mutation never bounces staff to a page without the row.
 const backPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}`;
+const guestsPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}/guests`;
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
@@ -167,7 +172,7 @@ export async function saveCrewAction(shopSlug: string, tripId: string, formData:
 
 /** Staff-entered booking for walk-ins or divers tracked in another system. */
 export async function addBookingAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const parsed = parseAddDiver(formData);
   if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
@@ -196,7 +201,7 @@ export async function addBookingAction(shopSlug: string, tripId: string, formDat
 
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const parsed = parseAddDiver(formData);
   if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
@@ -246,7 +251,7 @@ export async function inviteWaitlistAction(
     shopSlug,
     entryId,
   });
-  revalidatePath(backPath(shopSlug, tripId));
+  revalidatePath(guestsPath(shopSlug, tripId));
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
@@ -272,7 +277,7 @@ function refundNotice(refund: CancellationRefundOutcome): string {
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
@@ -294,7 +299,7 @@ export async function undoRemoveBookingAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (bookingId) await restoreBooking(await getDb(), s.user.shopId, bookingId);
@@ -302,7 +307,7 @@ export async function undoRemoveBookingAction(
 }
 
 export async function issueWaiverAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(`${back}?notice=waiver-error`);
@@ -333,7 +338,7 @@ export async function markWaiverInPersonAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(`${back}?notice=waiver-error`);
@@ -352,7 +357,7 @@ export async function markWaiverInPersonAction(
 }
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
+  const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const status = paymentStatusSchema.safeParse(formData.get("status"));

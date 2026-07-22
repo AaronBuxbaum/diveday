@@ -70,23 +70,19 @@ function DepartureCard({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          {/* The manifest opens on "Before departure" — the boarding pass — so
+              one tap boards the boat; Guests is where the roster is managed. */}
           <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}/boarding`}
+            href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
             className={buttonClass()}
           >
             Boarding
           </Link>
           <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
+            href={`/shop/${shopSlug}/trips/${departure.tripId}/guests`}
             className={buttonClass({ variant: "secondary" })}
           >
-            Open manifest
-          </Link>
-          <Link
-            href={`/shop/${shopSlug}/trips/${departure.tripId}`}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            Open roster
+            Open guests
           </Link>
         </div>
       </div>
