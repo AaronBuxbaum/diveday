@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
@@ -177,9 +177,11 @@ async function missingFitByTrip(
 
 /**
  * Divers who asked for enriched air but hold no verified nitrox card right
- * now. The request was card-gated when it was made, so a hit here means the
- * card was rejected or removed afterwards — the tank has to go back to air
- * unless someone verifies the card before the boat leaves.
+ * now. A diver may request nitrox before their card is verified (it's flagged,
+ * not blocked), and a card can be pulled after a request was accepted — either
+ * way the tank has to go back to air unless someone verifies a card before the
+ * boat leaves. Reads the card live and fails closed: an archived card counts
+ * as no card.
  */
 async function ungatedNitroxByTrip(
   db: AppDb,
@@ -198,6 +200,7 @@ async function ungatedNitroxByTrip(
         eq(nitroxCertifications.personId, bookings.personId),
         eq(nitroxCertifications.shopId, bookings.shopId),
         eq(nitroxCertifications.status, "verified"),
+        isNull(nitroxCertifications.deletedAt),
       ),
     )
     .where(

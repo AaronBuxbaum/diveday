@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
+import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
@@ -26,6 +27,7 @@ export type ReadyPageData = {
     contactEmail: string | null;
     contactPhone: string | null;
     rentalItems: string[];
+    rentalPricing: RentalPricing;
   };
   trip: { id: string; plannedDives: number };
   person: {
@@ -58,6 +60,7 @@ export async function getReadyPageData(
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       rentalItems: shops.rentalItems,
+      rentalPricing: shops.rentalPricing,
       personEmail: people.email,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
@@ -92,6 +95,7 @@ export async function getReadyPageData(
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       rentalItems: row.rentalItems,
+      rentalPricing: row.rentalPricing,
     },
     trip: { id: row.tripId, plannedDives: trip.plannedDives },
     person: {

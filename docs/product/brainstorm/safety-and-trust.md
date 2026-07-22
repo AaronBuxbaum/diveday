@@ -92,7 +92,7 @@ Some medical answers require a physician sign-off — a *blocking state, not a c
 ## E. Cert & nitrox correctness
 
 - **Verified vs claimed.** A diver's *claimed* level and a *staff-verified* card are different
-  states; gating uses verified only. Pending/rejected/expired/insufficient are all distinct. *(M,
+  states; gating uses verified only. Pending/expired/insufficient are all distinct. *(M,
   certs, big bet.)*
 - **Site-requirement gating at booking and check-in** — checked twice (glossary), because certs can
   change between the two moments. *(M, certs.)*

@@ -58,7 +58,9 @@ test.describe("staff", () => {
   });
 });
 
-test("a diver without a verified card is not offered nitrox at booking", async ({ page }) => {
+test("a diver without a verified card can request nitrox but is flagged, not blocked", async ({
+  page,
+}) => {
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")
@@ -73,8 +75,15 @@ test("a diver without a verified card is not offered nitrox at booking", async (
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
-  // No card on file, so the request is not offered at all — the diver is told
-  // what to do instead of being allowed to ask for a mix they can't breathe.
-  await expect(page.getByText("Enriched air needs a verified nitrox card")).toBeVisible();
-  await expect(page.locator('input[name="nitrox"]')).toHaveCount(0);
+  // No card on file, but the request is offered with a flag — the diver can ask
+  // now and is told to send their card before a nitrox tank can be filled.
+  await expect(page.getByText("We need a verified nitrox card")).toBeVisible();
+  const nitrox = page.locator('input[name="nitrox"]');
+  await expect(nitrox).toHaveCount(1);
+  await nitrox.check();
+  await page.getByRole("button", { name: "Save rental fit" }).click();
+
+  // The request stuck (checkbox stays on) and the flag still explains what's needed.
+  await expect(page.locator('input[name="nitrox"]')).toBeChecked();
+  await expect(page.getByText("Your enriched-air request is on file")).toBeVisible();
 });

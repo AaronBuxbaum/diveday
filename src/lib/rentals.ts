@@ -105,3 +105,129 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
   const offered = new Set(toRentableKinds(rentalItems));
   return RENTABLE_ITEMS.filter((item) => offered.has(item.kind));
 }
+
+/**
+ * The core kit that makes up a "set". A shop usually prices these five as one
+ * cheaper bundle; a diver who takes all of them is quoted the set, and anyone
+ * taking a partial set pays per piece. The add-ons (`dive_computer`, `gopro`)
+ * and nitrox are always priced on their own, never folded into the set.
+ */
+export const CORE_RENTAL_KINDS = [
+  "bcd",
+  "regulator",
+  "wetsuit",
+  "mask_fins",
+  "weights",
+] as const satisfies readonly RentableItemKind[];
+
+export type CoreRentalKind = (typeof CORE_RENTAL_KINDS)[number];
+
+/**
+ * A shop's rental price list, all in minor units (cents). Nothing here is an
+ * inventory or an allocation — it is only what a diver is quoted for the gear
+ * they choose. Every field is optional: a shop that prices nothing online keeps
+ * the "ask the shop" behaviour, and an item with no price simply isn't quoted.
+ */
+export type RentalPricing = {
+  /** Price for the full core set (all of {@link CORE_RENTAL_KINDS}). null = no set price. */
+  setCents: number | null;
+  /** Per-piece price for each rentable item. A missing key means "not priced online". */
+  perItemCents: Partial<Record<RentableItemKind, number>>;
+  /** Enriched-air surcharge, charged per dive. null = not priced online. */
+  nitroxCents: number | null;
+};
+
+export const EMPTY_RENTAL_PRICING: RentalPricing = {
+  setCents: null,
+  perItemCents: {},
+  nitroxCents: null,
+};
+
+/** True when a shop has set at least one rental price — drives whether divers see any pricing. */
+export function hasAnyRentalPricing(pricing: RentalPricing): boolean {
+  return (
+    pricing.setCents !== null ||
+    pricing.nitroxCents !== null ||
+    Object.keys(pricing.perItemCents).length > 0
+  );
+}
+
+export type RentalQuoteLine = {
+  /** `"set"` and `"nitrox"` are synthetic; every other value is a rentable kind. */
+  kind: RentableItemKind | "set" | "nitrox";
+  label: string;
+  cents: number;
+};
+
+export type RentalQuote = {
+  lines: RentalQuoteLine[];
+  subtotalCents: number;
+  /**
+   * A gear item the diver chose that the shop hasn't priced online, so it is
+   * absent from the quote and settled at the shop. Lets a surface say "plus a
+   * few items priced at the shop" instead of quoting a misleadingly low total.
+   */
+  unpricedKinds: RentableItemKind[];
+};
+
+const ITEM_LABEL: Record<RentableItemKind, string> = {
+  bcd: "BCD",
+  regulator: "Regulator",
+  wetsuit: "Wetsuit",
+  mask_fins: "Mask & fins",
+  weights: "Weights",
+  dive_computer: "Dive computer",
+  gopro: "GoPro",
+};
+
+/**
+ * What a diver is quoted for the gear they picked. A full core set is billed at
+ * the set price when the shop offers one (cheaper than the pieces, by design); a
+ * partial set is billed per piece. Add-ons and nitrox are always separate. Items
+ * the shop hasn't priced are left off the total and reported in `unpricedKinds`,
+ * so a quote is never silently short. `plannedDives` scales the per-dive nitrox
+ * surcharge.
+ */
+export function quoteRentalFit(
+  pricing: RentalPricing,
+  fit: {
+    rentedKinds: readonly RentableItemKind[];
+    wantsNitrox: boolean;
+    plannedDives: number;
+  },
+): RentalQuote {
+  const rented = new Set(fit.rentedKinds);
+  const lines: RentalQuoteLine[] = [];
+  const unpricedKinds: RentableItemKind[] = [];
+
+  const rentedCore = CORE_RENTAL_KINDS.filter((kind) => rented.has(kind));
+  const takesFullSet = rentedCore.length === CORE_RENTAL_KINDS.length;
+  if (takesFullSet && pricing.setCents !== null) {
+    lines.push({ kind: "set", label: "Full rental set", cents: pricing.setCents });
+  } else {
+    for (const kind of rentedCore) {
+      const cents = pricing.perItemCents[kind];
+      if (cents === undefined) unpricedKinds.push(kind);
+      else lines.push({ kind, label: ITEM_LABEL[kind], cents });
+    }
+  }
+
+  for (const kind of ["dive_computer", "gopro"] as const) {
+    if (!rented.has(kind)) continue;
+    const cents = pricing.perItemCents[kind];
+    if (cents === undefined) unpricedKinds.push(kind);
+    else lines.push({ kind, label: ITEM_LABEL[kind], cents });
+  }
+
+  if (fit.wantsNitrox && pricing.nitroxCents !== null) {
+    const dives = Math.max(1, fit.plannedDives);
+    lines.push({
+      kind: "nitrox",
+      label: `Enriched air — ${dives} ${dives === 1 ? "dive" : "dives"}`,
+      cents: pricing.nitroxCents * dives,
+    });
+  }
+
+  const subtotalCents = lines.reduce((sum, line) => sum + line.cents, 0);
+  return { lines, subtotalCents, unpricedKinds };
+}

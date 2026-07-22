@@ -33,9 +33,9 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   refunded: "Refunded",
 };
 
-/** The stored card status. `rejected` is legacy: the desk no longer marks cards
- * for correction (staff delete a bad card instead), but old records may carry it. */
-export type CardStatus = "pending" | "verified" | "rejected";
+/** The stored card status. Staff either certify a card or delete a bad one; there
+ * is no "needs correction" state — a card the desk can't stand behind is removed. */
+export type CardStatus = "pending" | "verified";
 
 /**
  * What the badge shows: the stored status, or `expired` when a verified card has
@@ -53,7 +53,6 @@ export type CardDisplayStatus = CardStatus | "expired";
 export const CARD_STATUS_LABELS: Record<CardDisplayStatus, string> = {
   pending: "pending",
   verified: "certified",
-  rejected: "needs correction",
   expired: "expired",
 };
 
@@ -77,7 +76,6 @@ export function statusTone(status: CardDisplayStatus) {
   switch (status) {
     case "verified":
       return "bg-success/10 text-success";
-    case "rejected":
     case "expired":
       return "bg-danger/10 text-danger";
     default:
