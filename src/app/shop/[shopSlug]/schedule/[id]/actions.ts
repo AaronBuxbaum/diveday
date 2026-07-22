@@ -12,6 +12,7 @@ import { saveRentalFit } from "@/db/rental-fit";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
+import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { readinessLinkPath } from "@/lib/readiness-links";
@@ -151,6 +152,20 @@ export async function bookSpot(
       });
     }
   }
+  // Send each diver their waiver the moment they join, when the trip needs one
+  // and they aren't already covered (issueWaiverOnJoin makes that call). The
+  // seats are already committed, so a delivery failure is logged and dropped —
+  // it must never turn a completed booking into an error.
+  await Promise.all(
+    outcome.bookings.map(async ({ bookingId }) => {
+      try {
+        await issueWaiverOnJoin(dbi, shopNow.id, bookingId);
+      } catch {
+        console.error("Waiver-on-join could not be issued", { bookingId });
+      }
+    }),
+  );
+
   // Pay at booking: when the shop can take money and the trip is priced, the
   // party goes straight to the shop's own hosted Stripe Checkout. The seats
   // are already committed above, so any failure here — no connected account,
@@ -257,9 +272,10 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
 
 /**
  * Saves the diver's reusable rental fit and, separately, whether they want
- * enriched air on this booking. The nitrox write is card-gated in the database
- * (src/db/nitrox.ts): if it is refused, the fit is still saved and the diver is
- * told why the mix did not stick, rather than silently getting air.
+ * enriched air on this booking. A diver may request nitrox before their card is
+ * verified: the request is recorded and flagged (src/db/nitrox.ts), and the fill
+ * is re-checked against a verified card downstream, so an uncertified request
+ * never becomes a nitrox tank on its own.
  */
 export async function saveRentalFitRequest(
   { shopSlug, tripId, shopId, bookingId, personId }: RentalFitRef,
@@ -286,11 +302,11 @@ export async function saveRentalFitRequest(
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  const nitrox = await setBookingNitrox(db, {
+  await setBookingNitrox(db, {
     shopId,
     bookingId,
     wantsNitrox: parsed.data.nitrox === "on",
   });
-  const result = !saved ? "error=fit" : nitrox.ok ? "fit=saved" : "error=nitrox-card";
+  const result = saved ? "fit=saved" : "error=fit";
   revalidateAndRedirect(base, `${base}?booking=${bookingId}&${result}`);
 }

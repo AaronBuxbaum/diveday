@@ -90,22 +90,25 @@ describe("setBookingNitrox", () => {
       bookingId: ctx.bookingId,
       wantsNitrox: true,
     });
-    expect(outcome).toEqual({ ok: true, wantsNitrox: true });
+    expect(outcome).toEqual({ ok: true, wantsNitrox: true, certified: true });
     expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(true);
   });
 
-  it("refuses a request from a diver with no nitrox card at all", async () => {
+  it("records but flags a request from a diver with no nitrox card at all", async () => {
     const ctx = await context();
     const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
       wantsNitrox: true,
     });
-    expect(outcome).toEqual({ ok: false, reason: "diver_not_certified" });
-    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
+    // The request is kept so the shop is flagged, but marked uncertified — the
+    // fill gate downstream still holds the tank at air until a card is verified.
+    expect(outcome).toEqual({ ok: true, wantsNitrox: true, certified: false });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(true);
+    expect([...(await verifiedNitroxPersonIds(ctx.db, ctx.shopId))]).not.toContain(ctx.personId);
   });
 
-  it("refuses a request while the card is still pending review", async () => {
+  it("flags a request while the card is still pending review", async () => {
     const ctx = await context();
     const cert = await createNitroxCertification(ctx.db, {
       shopId: ctx.shopId,
@@ -119,23 +122,22 @@ describe("setBookingNitrox", () => {
       bookingId: ctx.bookingId,
       wantsNitrox: true,
     });
-    expect(outcome).toEqual({ ok: false, reason: "diver_not_certified" });
+    expect(outcome).toEqual({ ok: true, wantsNitrox: true, certified: false });
   });
 
-  it("refuses a request after the card is rejected", async () => {
+  it("flags a request after the card is archived", async () => {
     const ctx = await context();
     const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    await reviewNitroxCertification(ctx.db, {
+    await archiveNitroxCertification(ctx.db, {
       shopId: ctx.shopId,
       certificationId: cert.id,
-      status: "rejected",
     });
     const outcome = await setBookingNitrox(ctx.db, {
       shopId: ctx.shopId,
       bookingId: ctx.bookingId,
       wantsNitrox: true,
     });
-    expect(outcome).toEqual({ ok: false, reason: "diver_not_certified" });
+    expect(outcome).toEqual({ ok: true, wantsNitrox: true, certified: false });
   });
 
   it("always lets a request be cleared, card or no card", async () => {
@@ -151,7 +153,7 @@ describe("setBookingNitrox", () => {
       bookingId: ctx.bookingId,
       wantsNitrox: false,
     });
-    expect(cleared).toEqual({ ok: true, wantsNitrox: false });
+    expect(cleared).toEqual({ ok: true, wantsNitrox: false, certified: true });
     expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
   });
 

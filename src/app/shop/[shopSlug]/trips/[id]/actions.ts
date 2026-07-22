@@ -17,7 +17,7 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
-import { issueAndDeliverWaiver } from "@/db/waiver-issue";
+import { issueAndDeliverWaiver, issueWaiverOnJoin } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -195,6 +195,13 @@ export async function addBookingAction(shopSlug: string, tripId: string, formDat
               ? "diver-course-prerequisite"
               : "diver-unavailable";
     redirect(`${back}?notice=${code}`);
+  }
+  // A walk-in gets their waiver right away too, when the trip needs one and they
+  // aren't already covered. Best-effort: a delivery failure never undoes the add.
+  try {
+    await issueWaiverOnJoin(await getDb(), s.user.shopId, outcome.bookingId);
+  } catch {
+    console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
   }
   revalidateAndRedirect(back, `${back}?notice=diver-added&bid=${outcome.bookingId}`);
 }

@@ -31,8 +31,6 @@ export const ERROR_MESSAGES: Record<string, string> = {
   "course-prerequisite":
     "This course needs a verified certification on file. Call the shop and they’ll help get your card checked.",
   fit: "We couldn’t save that rental fit. Please check the details and try again.",
-  "nitrox-card":
-    "Your fit is saved, but enriched air needs a verified nitrox card on file. Bring your card to the counter and we’ll sort it out.",
   pay: "We couldn’t open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
 };
 

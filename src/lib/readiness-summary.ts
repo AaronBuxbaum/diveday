@@ -49,8 +49,10 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail: "Your shop is confirming your readiness. Check back shortly.",
   },
   waiver_not_sent: {
-    // Honest: in a default deployment nothing is auto-sent, so never claim an
-    // email is coming. The shop issues the link; until then there's no button.
+    // A waiver goes out the moment a diver joins, so this state is the rare
+    // leftover — a link that never issued (a delivery hiccup, or a waiver turned
+    // on after booking). Stay honest: don't claim an email is coming; the shop
+    // can hand over the link on arrival.
     state: "waiting",
     detail:
       "The shop hasn’t sent your waiver yet — you can ask for it when you arrive, or reach them below.",
@@ -73,15 +75,12 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   },
   certification_missing: {
     state: "action",
-    detail: "Bring your certification card so the shop can add it to your file.",
+    detail:
+      "Get your certification card to the shop — upload a photo or get in touch — so they can add it to your file.",
   },
   certification_pending: {
     state: "waiting",
     detail: "Your certification card is with the shop for verification.",
-  },
-  certification_rejected: {
-    state: "waiting",
-    detail: "Your certification card needs a second look — your shop will reach out about it.",
   },
   certification_expired: {
     state: "action",
@@ -94,15 +93,12 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   },
   specialty_missing: {
     state: "action",
-    detail: "This dive needs a specialty card — bring it so the shop can add it.",
+    detail:
+      "This dive needs a specialty card — send the shop a photo or get in touch so they can add it.",
   },
   specialty_pending: {
     state: "waiting",
     detail: "Your specialty card is with the shop for verification.",
-  },
-  specialty_rejected: {
-    state: "waiting",
-    detail: "Your specialty card needs a second look — your shop will reach out about it.",
   },
   specialty_expired: {
     state: "action",
@@ -110,15 +106,12 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   },
   nitrox_missing: {
     state: "action",
-    detail: "This dive uses enriched air — bring your nitrox card so the shop can add it.",
+    detail:
+      "This dive uses enriched air — send the shop a photo of your nitrox card or get in touch so they can add it.",
   },
   nitrox_pending: {
     state: "waiting",
     detail: "Your nitrox card is with the shop for verification.",
-  },
-  nitrox_rejected: {
-    state: "waiting",
-    detail: "Your nitrox card needs a second look — your shop will reach out about it.",
   },
   payment_due: {
     state: "action",
@@ -226,12 +219,12 @@ export function buildDiverChecklist(
       continue;
     }
     const { state } = DIVER_VOICE[blocker.code];
-    // A diver short several cards needs to know it's more than one thing —
-    // one generic "bring your card" line would leave them under-packed.
+    // A diver short several cards needs to know it's more than one thing — one
+    // generic "share your card" line would leave them thinking a single card clears it.
     const actionable = blockers.filter((b) => DIVER_VOICE[b.code].state === "action").length;
     const detail =
       category === "certification" && actionable > 1
-        ? "This dive needs more than one certification on file — bring every card it calls for, and your shop will confirm you’re set."
+        ? "This dive needs more than one certification on file — share every card it calls for (a photo or a quick message works), and your shop will confirm you’re set."
         : DIVER_VOICE[blocker.code].detail;
     items.push({ category, label: CATEGORY_LABEL[category], state, detail, code: blocker.code });
   }
@@ -254,12 +247,12 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
  */
 const REMINDER_ACTION: Partial<Record<ReadinessBlockerCode, string>> = {
   waiver_pending: "sign your waiver",
-  certification_missing: "bring your certification card",
+  certification_missing: "send your shop your certification card",
   certification_expired: "sort out your lapsed certification with the shop",
   certification_insufficient: "check your certification level with the shop",
-  specialty_missing: "bring your specialty card",
+  specialty_missing: "send your shop your specialty card",
   specialty_expired: "update your specialty card with the shop",
-  nitrox_missing: "bring your nitrox card",
+  nitrox_missing: "send your shop your nitrox card",
   payment_due: "settle your balance",
 };
 

@@ -14,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
+import type { RentalPricing } from "@/lib/rentals";
 
 /**
  * The domain spine. Multi-tenant from day one: every domain table carries
@@ -44,7 +45,7 @@ export const shops = pgTable("shops", {
   packingList: jsonb("packing_list")
     .$type<string[]>()
     .notNull()
-    .default(["Certification card", "Swimsuit and towel", "Reef-safe sun protection"]),
+    .default(["Swimsuit and towel", "Reef-safe sun protection", "Logbook"]),
   /**
    * The gear this shop rents (RentableItemKind values, src/lib/rentals.ts). Gates
    * which items a diver can pick in the rental-fit forms — a shop that doesn't
@@ -54,6 +55,16 @@ export const shops = pgTable("shops", {
     .$type<string[]>()
     .notNull()
     .default(["bcd", "regulator", "wetsuit", "mask_fins", "weights"]),
+  /**
+   * What the shop charges for rental gear (minor units), src/lib/rentals.ts. A
+   * set price for the full core kit, per-piece prices, and a per-dive nitrox
+   * surcharge — all optional. Never inventory or an allocation, only what a diver
+   * is quoted. Defaults to unpriced, which keeps the "ask the shop" behaviour.
+   */
+  rentalPricing: jsonb("rental_pricing")
+    .$type<RentalPricing>()
+    .notNull()
+    .default({ setCents: null, perItemCents: {}, nitroxCents: null }),
   /**
    * How many minutes before departure divers are asked to be at the dock. The
    * shop's real muster time varies (gear setup, cert check, briefing), so it is
@@ -163,11 +174,7 @@ export const certificationLevel = pgEnum("certification_level", [
   "instructor",
 ]);
 
-export const certificationStatus = pgEnum("certification_status", [
-  "pending",
-  "verified",
-  "rejected",
-]);
+export const certificationStatus = pgEnum("certification_status", ["pending", "verified"]);
 
 /**
  * Activity-gating specialties that attach to a site or trip ("this wreck

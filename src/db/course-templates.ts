@@ -409,7 +409,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       // that this is our line, not the agency's — same precedent as Rescue,
       // Deep, and Wreck below.
       prerequisiteNote:
-        "Open Water Diver or higher, from PADI or another agency — that is where we set this course. PADI's own floor is one rung lower (PADI Scuba Diver), which our system cannot record; if you hold Scuba Diver, talk to us before you book — the gate is ours, not the agency's. Bring your card or we can look it up. You will complete a medical questionnaire first; some answers require a physician's sign-off before you can dive.",
+        "Open Water Diver or higher, from PADI or another agency — that is where we set this course. PADI's own floor is one rung lower (PADI Scuba Diver), which our system cannot record; if you hold Scuba Diver, talk to us before you book — the gate is ours, not the agency's. Send us a photo of your card or we can look it up. You will complete a medical questionnaire first; some answers require a physician's sign-off before you can dive.",
       includes: [
         "Knowledge review with an instructor",
         "Complete rental gear for the session",

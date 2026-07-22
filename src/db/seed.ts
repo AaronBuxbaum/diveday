@@ -139,6 +139,31 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@bluemantis.example",
       contactPhone: "+1 305 555 0142",
+      // Rents the core kit plus both add-ons, and prices them: a full set is
+      // cheaper than the pieces, each piece has its own price, and nitrox is a
+      // per-dive surcharge. Divers see these when they set their rental fit.
+      rentalItems: [
+        "bcd",
+        "regulator",
+        "wetsuit",
+        "mask_fins",
+        "weights",
+        "dive_computer",
+        "gopro",
+      ],
+      rentalPricing: {
+        setCents: 4500,
+        perItemCents: {
+          bcd: 1500,
+          regulator: 1500,
+          wetsuit: 1200,
+          mask_fins: 800,
+          weights: 500,
+          dive_computer: 1000,
+          gopro: 2000,
+        },
+        nitroxCents: 1200,
+      },
       isDemo: true,
     })
     .returning();

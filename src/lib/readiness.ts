@@ -93,16 +93,13 @@ export type ReadinessBlockerCode =
   | "medical_review"
   | "certification_missing"
   | "certification_pending"
-  | "certification_rejected"
   | "certification_expired"
   | "certification_insufficient"
   | "specialty_missing"
   | "specialty_pending"
-  | "specialty_rejected"
   | "specialty_expired"
   | "nitrox_missing"
   | "nitrox_pending"
-  | "nitrox_rejected"
   | "payment_due"
   | "readiness_unavailable";
 
@@ -120,16 +117,13 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   medical_review: "waiver",
   certification_missing: "certification",
   certification_pending: "certification",
-  certification_rejected: "certification",
   certification_expired: "certification",
   certification_insufficient: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
-  specialty_rejected: "certification",
   specialty_expired: "certification",
   nitrox_missing: "certification",
   nitrox_pending: "certification",
-  nitrox_rejected: "certification",
   payment_due: "payment",
 };
 
@@ -213,12 +207,6 @@ function certificationBlocker(
       message: `${CERTIFICATION_LEVEL_LABELS[minimumLevel]} or higher is required for this trip.`,
     };
   }
-  if (certifications.some((certification) => certification.status === "rejected")) {
-    return {
-      code: "certification_rejected",
-      message: "Certification needs a corrected card or review.",
-    };
-  }
   if (
     certifications.some(
       (certification) => certification.expiresAt && certification.expiresAt <= now,
@@ -251,12 +239,6 @@ function specialtyBlocker(
       message: `${label} specialty card is waiting for staff verification.`,
     };
   }
-  if (cards.some((card) => card.status === "rejected")) {
-    return {
-      code: "specialty_rejected",
-      message: `${label} specialty card needs a corrected card or review.`,
-    };
-  }
   if (cards.some((card) => card.expiresAt && card.expiresAt <= now)) {
     return {
       code: "specialty_expired",
@@ -272,8 +254,7 @@ function specialtyBlocker(
 /**
  * Nitrox is a yes/no gate cleared only by a verified enriched-air card. Its
  * evidence lives in nitrox_certifications (which also gates the mix request), and those
- * cards carry no expiry — so there is no expired state, only missing/pending/
- * rejected.
+ * cards carry no expiry — so there is no expired state, only missing/pending.
  */
 function nitroxBlocker(
   nitroxCertifications: readonly NitroxCertification[],
@@ -283,12 +264,6 @@ function nitroxBlocker(
     return {
       code: "nitrox_pending",
       message: "Nitrox card is waiting for staff verification.",
-    };
-  }
-  if (nitroxCertifications.some((card) => card.status === "rejected")) {
-    return {
-      code: "nitrox_rejected",
-      message: "Nitrox card needs a corrected card or review.",
     };
   }
   return {

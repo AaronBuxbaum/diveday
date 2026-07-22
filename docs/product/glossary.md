@@ -248,6 +248,13 @@ new domain concept, define it here in the same PR.
   fields for — gear the shop stocks, so a shop that doesn't rent GoPros never offers one. Defaults to
   the core kit; add-ons are opt-in in shop settings. Editing the catalog changes what is offered going
   forward; it does not rewrite a fit a diver already recorded.
+- **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
+  `src/lib/rentals.ts`): a **set price** for the full core kit (usually cheaper than the pieces), a
+  **per-piece** price for any item, and a **per-dive nitrox** surcharge — all in minor units, all
+  optional. A diver renting all five core items is quoted the set; a partial kit is quoted per piece;
+  add-ons and nitrox are always separate. Prices are only a quote (`quoteRentalFit`) — never inventory
+  or an allocation — and an unpriced item is settled at the shop rather than quoted at zero. A shop that
+  prices nothing keeps the "ask the shop what's included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
   and in *what size* (BCD, wetsuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
   It is a storage concept: DiveDay tracks no equipment inventory, so a fit never reserves an item, is
@@ -264,10 +271,13 @@ new domain concept, define it here in the same PR.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.
-- **Nitrox request** — a per-booking ask for enriched air, billed per dive. Writing it on requires
-  a **verified** nitrox card at write time; clearing it is always allowed. Because a card can be
-  rejected after the fact, every read (prep list, manifest, Today) re-checks the card and
-  downgrades the diver to air rather than trusting the flag.
+- **Nitrox request** — a per-booking ask for enriched air, billed per dive. A diver may request it
+  **without** a verified card on file: the request is recorded and flagged to the diver and the shop
+  (`certified` on the write, the Today nitrox nudge, the prep-list blocker), never silently refused —
+  so the diver is prompted to send their card and the shop knows to chase it. The request is not a
+  fill authorization: every read (prep list, manifest, Today) re-checks for a **verified**, unarchived
+  card at read time and downgrades the diver to air unless one is present, so an uncertified request
+  can never become a nitrox tank. Clearing a request is always allowed.
 
 ## Modeling notes
 

@@ -135,7 +135,7 @@ export async function reviewCertification(
   input: {
     shopId: string;
     certificationId: string;
-    status: "verified" | "rejected";
+    status: "verified";
     reviewNote?: string;
   },
 ) {
@@ -219,7 +219,7 @@ export async function reviewSpecialtyCertification(
   input: {
     shopId: string;
     certificationId: string;
-    status: "verified" | "rejected";
+    status: "verified";
     reviewNote?: string;
   },
 ) {
