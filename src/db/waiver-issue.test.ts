@@ -3,9 +3,9 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { bookings, notificationDeliveries, people } from "./schema";
+import { bookings, notificationDeliveries, people, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
-import { issueAndDeliverWaiver } from "./waiver-issue";
+import { issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function seededBooking(email: string | null = "diver@example.com") {
@@ -89,5 +89,46 @@ describe("issueAndDeliverWaiver", () => {
 
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
     expect(result).toMatchObject({ ok: false, reason: "already_completed" });
+  });
+});
+
+describe("issueWaiverOnJoin", () => {
+  async function pendingWaiverCount(
+    db: Awaited<ReturnType<typeof seededBooking>>["db"],
+    bookingId: string,
+  ) {
+    const rows = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, bookingId));
+    return rows.length;
+  }
+
+  it("issues a waiver the moment a diver joins a waiver-required trip", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    const result = await issueWaiverOnJoin(db, shop.id, bookingId);
+    expect(result).toMatchObject({ ok: true });
+    expect(await pendingWaiverCount(db, bookingId)).toBe(1);
+  });
+
+  it("is idempotent — a second join does not stack a second link", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    await issueWaiverOnJoin(db, shop.id, bookingId);
+    const second = await issueWaiverOnJoin(db, shop.id, bookingId);
+    expect(second).toBeNull();
+    expect(await pendingWaiverCount(db, bookingId)).toBe(1);
+  });
+
+  it("skips a diver already covered by a current signature (sign-once)", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+    });
+    const result = await issueWaiverOnJoin(db, shop.id, bookingId);
+    expect(result).toBeNull();
   });
 });
