@@ -20,9 +20,11 @@ under the same sync duties (docs/README.md).
 | `e2e-and-argos` | Adding/changing a user-facing flow or surface; a visual baseline diffing on time; deciding what needs an e2e spec or Argos snapshot |
 | `argos-triage` | After every PR push with UI changes (schedule a check-in for CI's build), and whenever an Argos build has changed screenshots — decide which are expected and mark decisions in Argos |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
+| `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`
-(dive-industry correctness — required for safety-critical surfaces).
+(dive-industry correctness — required for safety-critical surfaces), `security-reviewer` (tenant
+isolation, authz, data exposure — required for auth/allowlist/token/PII/export changes).
 
 ## Maintenance
 
@@ -32,3 +34,7 @@ Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive
   the same commit.
 - Keep frontmatter `description` fields specific about triggers — they are how sessions decide to
   load the skill.
+- `pnpm check:agents` (part of `check:repo`/`check`) fails on drift: a skill missing from this
+  index, an index entry with no skill, frontmatter whose name doesn't match its directory or with
+  no description, an unmentioned reviewer agent, or a `task:context` area pointing at a doc that
+  doesn't exist. A red check means fix the stale reference in the same change.

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -42,14 +45,20 @@ export function RentalFitForm({
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
   const showPricing = hasAnyRentalPricing(pricing);
-  // A quote for what the diver currently has on file (defaults when no fit yet).
-  // It reflects saved state, not live checkbox toggles, so it settles after a
-  // save rather than pretending to be a running calculator.
+  const [rentedKinds, setRentedKinds] = useState(
+    () =>
+      new Set(
+        offered
+          .filter((item) => rentalFit?.[item.field] ?? item.defaultRented)
+          .map((item) => item.kind),
+      ),
+  );
+  const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
+  // Follow the controls, rather than the saved profile, so the estimate is
+  // useful before a diver commits their changes.
   const quote = quoteRentalFit(pricing, {
-    rentedKinds: offered
-      .filter((item) => rentalFit?.[item.field] ?? item.defaultRented)
-      .map((item) => item.kind),
-    wantsNitrox,
+    rentedKinds: [...rentedKinds],
+    wantsNitrox: nitroxRequested,
     plannedDives,
   });
   return (
@@ -72,7 +81,7 @@ export function RentalFitForm({
           <fieldset>
             <legend className="text-sm font-medium">What should we plan to have ready?</legend>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {offered.map(({ kind, name, field, label, defaultRented }) => {
+              {offered.map(({ kind, name, label }) => {
                 const priceCents = pricing.perItemCents[kind];
                 return (
                   <label
@@ -82,7 +91,15 @@ export function RentalFitForm({
                     <input
                       name={name}
                       type="checkbox"
-                      defaultChecked={rentalFit?.[field] ?? defaultRented}
+                      checked={rentedKinds.has(kind)}
+                      onChange={(event) => {
+                        setRentedKinds((current) => {
+                          const next = new Set(current);
+                          if (event.target.checked) next.add(kind);
+                          else next.delete(kind);
+                          return next;
+                        });
+                      }}
                       className="size-4 accent-primary"
                     />
                     <span className="flex-1">{label}</span>
@@ -98,7 +115,7 @@ export function RentalFitForm({
               for this trip.{" "}
               {showPricing
                 ? pricing.setCents !== null
-                  ? `Take the full set for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
+                  ? `A full set includes a BCD, regulator, wetsuit, mask & fins, and weights. Take it for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
                   : "Prices are per piece."
                 : "Ask the shop what’s included in the trip price."}
             </p>
@@ -120,11 +137,12 @@ export function RentalFitForm({
             <input
               name="nitrox"
               type="checkbox"
-              defaultChecked={wantsNitrox}
+              checked={nitroxRequested}
+              onChange={(event) => setNitroxRequested(event.target.checked)}
               className="size-4 accent-primary"
             />
             <span className="flex-1">
-              Fill my tanks with nitrox —{" "}
+              Reserve nitrox-compatible tanks for me —{" "}
               {showPricing && pricing.nitroxCents !== null
                 ? `${formatMoneyCents(pricing.nitroxCents)} per dive`
                 : "charged per dive"}
@@ -132,14 +150,19 @@ export function RentalFitForm({
           </label>
           {nitroxCardVerified ? (
             <p className="mt-2 text-sm text-muted">
-              You’ll analyze your own tanks and sign for the mix at the fill station, as always.
+              The crew will set aside nitrox-compatible tanks. You’ll analyze your own tanks and
+              sign for the mix at the fill station, as always.
             </p>
-          ) : (
+          ) : nitroxRequested ? (
             <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
               {wantsNitrox ? "Your enriched-air request is on file. " : ""}
-              We need a verified nitrox card before we can fill a nitrox tank — send the shop a
-              photo of your card or get in touch and they’ll add it. Until then your tanks are
-              filled with air.
+              We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send the
+              shop a photo of your card or get in touch and they’ll add it. Until then, the crew
+              will plan standard air tanks.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              A verified nitrox card is needed before the crew can reserve nitrox-compatible tanks.
             </p>
           )}
         </fieldset>

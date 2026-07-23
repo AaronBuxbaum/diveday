@@ -81,12 +81,12 @@ async function savePackingAction(formData: FormData) {
     packingList.length > 12 ||
     packingList.some((item) => item.length > 100)
   ) {
-    redirect(`/shop/${session.user.shopSlug}/settings/payments?notice=packing_invalid`);
+    redirect(`/shop/${session.user.shopSlug}/settings?notice=packing_invalid`);
   }
   await setShopPackingList(await getDb(), session.user.shopId, packingList);
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/settings/payments`,
-    `/shop/${session.user.shopSlug}/settings/payments?notice=packing_saved`,
+    `/shop/${session.user.shopSlug}/settings`,
+    `/shop/${session.user.shopSlug}/settings?notice=packing_saved`,
   );
 }
 
@@ -94,7 +94,7 @@ async function savePackingAction(formData: FormData) {
 async function saveDockCallAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const settings = `/shop/${session.user.shopSlug}/settings/payments`;
+  const settings = `/shop/${session.user.shopSlug}/settings`;
   const minutes = Number(formData.get("dockCallMinutes"));
   if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
     redirect(`${settings}?notice=dock_invalid`);
@@ -112,8 +112,8 @@ async function saveRentalItemsAction(formData: FormData) {
   );
   await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/settings/payments`,
-    `/shop/${session.user.shopSlug}/settings/payments?notice=rentals_saved`,
+    `/shop/${session.user.shopSlug}/settings`,
+    `/shop/${session.user.shopSlug}/settings?notice=rentals_saved`,
   );
 }
 
@@ -136,7 +136,7 @@ function parsePriceDollars(
 async function saveRentalPricingAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const settings = `/shop/${session.user.shopSlug}/settings/payments`;
+  const settings = `/shop/${session.user.shopSlug}/settings`;
   const set = parsePriceDollars(formData.get("setPrice"));
   const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
   let invalid = !set.ok || !nitrox.ok;
@@ -167,7 +167,7 @@ async function saveContactAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
-  const settings = `/shop/${session.user.shopSlug}/settings/payments`;
+  const settings = `/shop/${session.user.shopSlug}/settings`;
   if (!parsed.success) redirect(`${settings}?notice=contact_invalid`);
   await setShopContact(await getDb(), session.user.shopId, parsed.data);
   revalidateAndRedirect(settings, `${settings}?notice=contact_saved`);
@@ -184,8 +184,8 @@ async function disconnectAction() {
     await disconnectShopStripeAccount(db, account.stripeAccountId);
   }
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/settings/payments`,
-    `/shop/${session.user.shopSlug}/settings/payments?notice=disconnected`,
+    `/shop/${session.user.shopSlug}/settings`,
+    `/shop/${session.user.shopSlug}/settings?notice=disconnected`,
   );
 }
 
@@ -200,8 +200,8 @@ async function refreshAction() {
     await refreshShopStripeAccountStatus(db, account.stripeAccountId, status);
   }
   revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/settings/payments`,
-    `/shop/${session.user.shopSlug}/settings/payments?notice=refreshed`,
+    `/shop/${session.user.shopSlug}/settings`,
+    `/shop/${session.user.shopSlug}/settings?notice=refreshed`,
   );
 }
 
@@ -449,7 +449,7 @@ export default async function PaymentsSettingsPage({
             </p>
             {connectConfigured ? (
               <Link
-                href={`/shop/${shopSlug}/settings/payments/connect`}
+                href={`/shop/${shopSlug}/settings/connect`}
                 className={buttonClass({ className: "mt-4" })}
               >
                 Connect Stripe
@@ -484,10 +484,7 @@ export default async function PaymentsSettingsPage({
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {account.disconnectedAt ? (
                 connectConfigured ? (
-                  <Link
-                    href={`/shop/${shopSlug}/settings/payments/connect`}
-                    className={buttonClass()}
-                  >
+                  <Link href={`/shop/${shopSlug}/settings/connect`} className={buttonClass()}>
                     Reconnect Stripe
                   </Link>
                 ) : null

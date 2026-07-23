@@ -14,7 +14,7 @@ const GO_TO: { label: string; suffix: string }[] = [
   { label: "Schedule", suffix: "/schedule" },
   { label: "Divers", suffix: "/divers" },
   { label: "Waivers", suffix: "/waivers" },
-  { label: "Settings", suffix: "/settings/payments" },
+  { label: "Settings", suffix: "/settings" },
 ];
 
 const EMPTY: SearchResults = { divers: [], trips: [] };

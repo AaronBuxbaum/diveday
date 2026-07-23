@@ -21,7 +21,7 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
 ## Decision
 
 - **Stripe Connect, Standard accounts, via OAuth.** A shop clicks "Connect Stripe" on the shop
-  settings page (`/shop/[shopSlug]/settings/payments`); this redirects to Stripe's OAuth authorize endpoint
+  settings page (`/shop/[shopSlug]/settings`); this redirects to Stripe's OAuth authorize endpoint
   (`https://connect.stripe.com/oauth/authorize`) and the shop signs into or creates their **own**
   Stripe account. The callback exchanges the returned code for a `stripe_user_id` and stores it in
   a new `shop_stripe_accounts` row (one per shop). Standard is the correct account type for "the
@@ -29,6 +29,11 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
   own payouts and tax reporting, and can disconnect unilaterally from their Stripe settings. This is
   not Express/Custom (platform-controlled sub-accounts) — those exist for platforms that want to
   *own* the merchant relationship, which is the opposite of what was asked for.
+- **One fixed OAuth callback.** Stripe requires each redirect URI to be pre-registered and does not
+  permit a wildcard for a shop created in the future. Every shop therefore returns to
+  `/api/stripe/connect/callback`; the authenticated staff session plus the short-lived state cookie
+  identifies the initiating shop before the returned account ID is stored. Configure
+  `${APP_HOST}/api/stripe/connect/callback` once in the platform's Connect OAuth settings.
 - **No new SDK dependency.** Every Stripe call — OAuth token exchange, account status, customer,
   invoice items, invoice, webhook signature verification — goes over `fetch` against Stripe's REST
   API, the same pattern as the existing checkout seam and the Resend notification seam

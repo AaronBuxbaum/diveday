@@ -23,8 +23,12 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   const fit = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Rental fit" }) });
-  await expect(fit.getByText("Take the full set for $45.00")).toBeVisible();
+  await expect(
+    fit.getByText("A full set includes a BCD, regulator, wetsuit, mask & fins, and weights."),
+  ).toBeVisible();
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
+  await fit.getByLabel("BCD").uncheck();
+  await expect(fit.getByText(/Estimated rental: \$30\.00 per person/)).toBeVisible();
   // Nitrox carries its per-dive surcharge in the label.
   await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
 });
