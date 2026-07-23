@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { getShopById } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { publicAppUrl } from "@/lib/notifications";
 import {
@@ -22,6 +23,18 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(STRIPE_CONNECT_STATE_COOKIE)?.value;
   cookieStore.delete(STRIPE_CONNECT_STATE_COOKIE);
+
+  // The demo shop must never hold a live Stripe account: its seeded orders are
+  // fabricated and its order controls are disabled shop-wide, so a real
+  // connection would let it manage genuine money it can't reconcile. Refuse to
+  // link one — createOrder then stays "not connected", and every order on a demo
+  // shop remains demo (src/db/orders.ts, orders/[id]/page.tsx).
+  const dbForShop = await getDb();
+  const shop = await getShopById(dbForShop, session.user.shopId);
+  if (shop?.isDemo) {
+    settingsUrl.searchParams.set("notice", "connect_failed");
+    return NextResponse.redirect(settingsUrl);
+  }
 
   const error = url.searchParams.get("error");
   const code = url.searchParams.get("code");

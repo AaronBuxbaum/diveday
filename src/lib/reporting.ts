@@ -65,7 +65,10 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     tripCount: input.trips.length,
     seatsOffered,
     seatsBooked,
-    fillRate: seatsOffered > 0 ? seatsBooked / seatsOffered : null,
+    // Capacity can be cut below the booking count (updateTrip doesn't re-check
+    // the roster), which would push a raw ratio past 1; the contract is [0, 1],
+    // and the per-trip rate already caps, so cap the aggregate too.
+    fillRate: seatsOffered > 0 ? Math.min(1, seatsBooked / seatsOffered) : null,
     atCapacityTrips,
     revenueCents: input.revenueCents,
     waiverComplete,

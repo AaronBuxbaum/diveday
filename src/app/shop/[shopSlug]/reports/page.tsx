@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
-import { getMonthlyReport } from "@/db/reporting";
+import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
-import { canViewShopReports } from "@/lib/authz";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
@@ -104,7 +103,9 @@ export default async function ReportsPage({
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
 
-  if (!canViewShopReports(session.user.roles)) {
+  // Checked against the database, not the JWT, so a revoked manager loses
+  // revenue access immediately (see canPersonViewShopReports).
+  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <ShopPageHeader
