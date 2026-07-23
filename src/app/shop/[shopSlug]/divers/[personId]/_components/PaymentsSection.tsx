@@ -5,6 +5,51 @@ import { formatShortDate } from "@/lib/format";
 import { refundPaymentAction } from "../actions";
 import { type DiverProfile, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type Shop } from "./shared";
 
+const DEMO_REFUND_HINT =
+  "Demo orders aren’t backed by a live Stripe invoice, so refunds are disabled here.";
+
+/** The refund control — a live form on a real shop, disabled with a reason on the demo. */
+function RefundButton({
+  orderId,
+  shopSlug,
+  personId,
+  demo,
+}: {
+  orderId: string;
+  shopSlug: string;
+  personId: string;
+  demo: boolean;
+}) {
+  if (demo) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-disabled="true"
+        title={DEMO_REFUND_HINT}
+        className={buttonClass({
+          variant: "danger",
+          size: "sm",
+          className: "cursor-not-allowed opacity-50",
+        })}
+      >
+        Refund
+      </button>
+    );
+  }
+  return (
+    <form action={refundPaymentAction.bind(null, shopSlug, personId)}>
+      <input type="hidden" name="orderId" value={orderId} />
+      <SubmitButton
+        pendingLabel="Refunding…"
+        className={buttonClass({ variant: "danger", size: "sm" })}
+      >
+        Refund
+      </SubmitButton>
+    </form>
+  );
+}
+
 export function PaymentsSection({
   diver,
   shop,
@@ -82,15 +127,12 @@ export function PaymentsSection({
                     </Link>
                   )}
                   {orderRow?.order.status === "paid" ? (
-                    <form action={refundPaymentAction.bind(null, shopSlug, personId)}>
-                      <input type="hidden" name="orderId" value={orderRow.order.id} />
-                      <SubmitButton
-                        pendingLabel="Refunding…"
-                        className={buttonClass({ variant: "danger", size: "sm" })}
-                      >
-                        Refund
-                      </SubmitButton>
-                    </form>
+                    <RefundButton
+                      orderId={orderRow.order.id}
+                      shopSlug={shopSlug}
+                      personId={personId}
+                      demo={shop.isDemo}
+                    />
                   ) : null}
                   <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
                     {orderRow
@@ -126,15 +168,12 @@ export function PaymentsSection({
                     Open payment
                   </Link>
                   {order.status === "paid" ? (
-                    <form action={refundPaymentAction.bind(null, shopSlug, personId)}>
-                      <input type="hidden" name="orderId" value={order.id} />
-                      <SubmitButton
-                        pendingLabel="Refunding…"
-                        className={buttonClass({ variant: "danger", size: "sm" })}
-                      >
-                        Refund
-                      </SubmitButton>
-                    </form>
+                    <RefundButton
+                      orderId={order.id}
+                      shopSlug={shopSlug}
+                      personId={personId}
+                      demo={shop.isDemo}
+                    />
                   ) : null}
                   <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
                     {ORDER_STATUS_LABELS[order.status] ?? order.status}

@@ -36,11 +36,13 @@ export function NoticeBanner({ notice }: { notice?: string }) {
                                       ? "Add an email and choose an available activity."
                                       : notice === "refund-failed"
                                         ? "That payment could not be refunded. It may not be paid, or Stripe may need attention."
-                                        : notice === "deleted"
-                                          ? "Diver removed from active shop work. Their booking and card history is preserved."
-                                          : notice === "invalid"
-                                            ? "Check the details and try again."
-                                            : null;
+                                        : notice === "demo-disabled"
+                                          ? "This is a demo order — it isn’t backed by a live Stripe invoice, so it can’t be refunded."
+                                          : notice === "deleted"
+                                            ? "Diver removed from active shop work. Their booking and card history is preserved."
+                                            : notice === "invalid"
+                                              ? "Check the details and try again."
+                                              : null;
   const errorNotice = [
     "card-restore-conflict",
     "image",

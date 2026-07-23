@@ -40,6 +40,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { getCurrentWaiverTemplate } from "./waivers";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -142,7 +143,7 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
  * playground never touches these, so a signed-in demo session survives a reset
  * (docs ADR 20260718-demo-mode).
  */
-export async function seedDemo(db: DbExecutor): Promise<void> {
+export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {}): Promise<void> {
   const [shop] = await db
     .insert(shops)
     .values({
@@ -237,7 +238,7 @@ export async function seedDemo(db: DbExecutor): Promise<void> {
     ),
   );
 
-  await seedDemoSchedule(db, shop.id);
+  await seedDemoSchedule(db, shop.id, opts);
 }
 
 /**
@@ -306,7 +307,11 @@ export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Prom
     ),
   );
 
-  await seedDemoSchedule(db, shopId);
+  // A trial shop is not the demo (ADR 20260720-trial-shops-are-not-demo): it can
+  // connect its own Stripe account, so it never gets the fabricated-invoice
+  // history — those orders are only safe where the order page disables their
+  // live Stripe actions, i.e. the demo shop.
+  await seedDemoSchedule(db, shopId, { history: false });
 }
 
 /**
@@ -347,7 +352,11 @@ const customerDefs: Array<{ fullName: string; emergencyContact?: [string, string
  * exact set of rows resetDemoSchedule restores. Staff already exist (stable
  * half), so the instructor is looked up rather than passed in.
  */
-export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<void> {
+export async function seedDemoSchedule(
+  db: DbExecutor,
+  shopId: string,
+  opts: { history?: boolean } = {},
+): Promise<void> {
   const [instructor] = await db
     .select({ id: people.id })
     .from(people)
@@ -1499,6 +1508,438 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_);
+  // The trailing quarter of already-sailed trips that gives owner reporting
+  // something to report. Off for the lean unit-test template and for trial
+  // shops (see callers); on for the demo shop and the e2e fleet.
+  if (opts.history !== false) {
+    await seedHistory(db, shopId, instructor.id);
+  }
+}
+
+/**
+ * The months behind today. Owner reporting ("how's your month") is hollow over a
+ * shop that opened yesterday, so this back-fills a realistic trailing quarter:
+ * past regulars plus a cohort of divers who only ever appear in history, booked
+ * onto trips that already sailed in this month, last month, and the one before —
+ * with the payments, signed waivers, and paid invoices those trips left behind.
+ *
+ * Everything is derived deterministically from a booking counter (never a live
+ * clock or randomness) so the frozen-clock e2e fleet renders identical history
+ * on every run, and so the report totals are stable enough for an Argos
+ * baseline. It touches only the past: today's board, its roster, and its exactly
+ * asserted readiness counts are untouched.
+ */
+async function seedHistory(
+  db: DbExecutor,
+  shopId: string,
+  createdByPersonId: string,
+): Promise<void> {
+  const template = await getCurrentWaiverTemplate(db, shopId);
+  if (!template) throw new Error("seed: waiver template missing before history back-fill");
+
+  // A cohort that lives ONLY in the past — new faces, all certified, so the
+  // roster shows the churn a real shop has. Deliberately disjoint from the
+  // upcoming roster: a waiver is signed once and then satisfies the gate on
+  // every one of that diver's bookings (20260721-waiver-sign-once), so booking
+  // a current customer onto a sailed trip and signing their waiver would clear
+  // today's boat's waiver gate and change the exactly-asserted readiness counts.
+  // History-only divers keep the past fully isolated from today's board.
+  const historicalDivers: string[] = [
+    "Grace Halloran",
+    "Bjorn Aasen",
+    "Marisol Vega",
+    "Kenji Watanabe",
+    "Priscilla Adeyemi",
+    "Lars Petersen",
+    "Yara Halabi",
+    "Emmet O'Brien",
+    "Sofia Marchetti",
+    "Dominic Rossi",
+    "Aisha Bello",
+    "Henrik Nilsson",
+    "Camila Rojas",
+    "Tobias Berg",
+    "Noor Rahman",
+    "Diego Ferreira",
+  ];
+  const histPeople = await db
+    .insert(people)
+    .values(
+      historicalDivers.map((fullName, i) => ({
+        shopId,
+        fullName,
+        email: `${fullName.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
+        phone: `+1-305-555-02${String(i + 20).padStart(2, "0")}`,
+        createdAt: nextCreatedAt(),
+      })),
+    )
+    .returning();
+  await db
+    .insert(personRoles)
+    .values(histPeople.map((person) => ({ personId: person.id, role: "diver" as const })));
+  await db.insert(certifications).values(
+    histPeople.map((person, i) => ({
+      shopId,
+      personId: person.id,
+      agency: i % 2 === 0 ? ("padi" as const) : ("ssi" as const),
+      level: i % 3 === 0 ? ("advanced_open_water" as const) : ("open_water" as const),
+      identifier: `HIST-${String(i + 1).padStart(4, "0")}`,
+      status: "verified" as const,
+    })),
+  );
+
+  // The bookable pool is exactly the history-only cohort (see above): large
+  // enough that a wrapping slice fills even a 12-seat boat with distinct divers,
+  // and never a diver who also sits on an upcoming trip.
+  const pool = histPeople.map((person) => person.id);
+
+  // Trips that already sailed. daysAgo is measured from the frozen clock, so the
+  // spread lands in this month (month-to-date), last month, and the one before.
+  const tripPlan: Array<{
+    daysAgo: number;
+    hour: number;
+    title: string;
+    capacity: number;
+    priceCents: number;
+    booked: number;
+  }> = [
+    {
+      daysAgo: 1,
+      hour: 12,
+      title: "Two-Tank Reef — Molasses & French",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 10,
+    },
+    {
+      daysAgo: 4,
+      hour: 12,
+      title: "Wreck Trip — Duane",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 10,
+    },
+    {
+      daysAgo: 8,
+      hour: 12,
+      title: "Two-Tank Reef — Benwood & Elbow",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 8,
+    },
+    {
+      daysAgo: 12,
+      hour: 23,
+      title: "Night Dive — Molasses",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 6,
+    },
+    {
+      daysAgo: 16,
+      hour: 12,
+      title: "Reef Refresh — Christ of the Abyss",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 11,
+    },
+    {
+      daysAgo: 19,
+      hour: 12,
+      title: "Two-Tank Reef — French & Pickles",
+      capacity: 10,
+      priceCents: 13000,
+      booked: 7,
+    },
+    {
+      daysAgo: 25,
+      hour: 12,
+      title: "Wreck Trip — Spiegel Grove",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 9,
+    },
+    {
+      daysAgo: 29,
+      hour: 12,
+      title: "Two-Tank Reef — Molasses",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 12,
+    },
+    {
+      daysAgo: 33,
+      hour: 16,
+      title: "Afternoon Two-Tank — French Reef",
+      capacity: 10,
+      priceCents: 13000,
+      booked: 8,
+    },
+    {
+      daysAgo: 38,
+      hour: 23,
+      title: "Night Dive — City of Washington",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 7,
+    },
+    {
+      daysAgo: 43,
+      hour: 12,
+      title: "Two-Tank Reef — Benwood",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 9,
+    },
+    {
+      daysAgo: 48,
+      hour: 12,
+      title: "Reef Day — Elbow",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 10,
+    },
+    {
+      daysAgo: 53,
+      hour: 12,
+      title: "Wreck Trip — Bibb",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 8,
+    },
+    {
+      daysAgo: 58,
+      hour: 12,
+      title: "Two-Tank Reef — Molasses & French",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 11,
+    },
+    {
+      daysAgo: 64,
+      hour: 12,
+      title: "Two-Tank Reef — Pickles",
+      capacity: 10,
+      priceCents: 13000,
+      booked: 6,
+    },
+    {
+      daysAgo: 70,
+      hour: 23,
+      title: "Night Dive — Benwood",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 5,
+    },
+    {
+      daysAgo: 76,
+      hour: 12,
+      title: "Reef Day — Christ of the Abyss",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 9,
+    },
+  ];
+
+  const histTrips = await db
+    .insert(trips)
+    .values(
+      tripPlan.map((plan) => ({
+        shopId,
+        title: plan.title,
+        description: "Sailed. Kept in the log for the shop's monthly numbers.",
+        startsAt: at(-plan.daysAgo, plan.hour),
+        endsAt: at(-plan.daysAgo, plan.hour + 4),
+        capacity: plan.capacity,
+        priceCents: plan.priceCents,
+      })),
+    )
+    .returning();
+
+  // Deterministic per-booking plan. `k` is a global booking index; every "is
+  // this one a no-show / a deposit / missing its waiver" decision is a fixed
+  // function of it, so the whole back-fill is reproducible byte for byte.
+  type BookingPlan = {
+    shopId: string;
+    tripId: string;
+    personId: string;
+    status: "checked_in" | "no_show" | "cancelled";
+    price: number;
+    payment: "paid" | "deposit_paid" | "refunded" | "unpaid";
+    waiver: boolean;
+    order: boolean;
+    createdAt: Date;
+  };
+  const plans: BookingPlan[] = [];
+  let k = 0;
+  histTrips.forEach((trip, tripIndex) => {
+    const plan = tripPlan[tripIndex];
+    if (!plan) return;
+    const booked = Math.min(plan.booked, plan.capacity, pool.length);
+    const start = (tripIndex * 3) % pool.length;
+    for (let seat = 0; seat < booked; seat++) {
+      const personId = pool[(start + seat) % pool.length];
+      if (!personId) continue;
+      const cancelled = k % 23 === 7;
+      const noShow = !cancelled && k % 17 === 5;
+      const status = cancelled ? "cancelled" : noShow ? "no_show" : "checked_in";
+      const payment: BookingPlan["payment"] = cancelled
+        ? "refunded"
+        : k % 13 === 0
+          ? "unpaid"
+          : k % 5 === 0
+            ? "deposit_paid"
+            : "paid";
+      plans.push({
+        shopId,
+        tripId: trip.id,
+        personId,
+        status,
+        price: plan.priceCents,
+        payment,
+        waiver: !cancelled && k % 9 !== 0,
+        order: payment === "paid" || payment === "deposit_paid",
+        createdAt: new Date(trip.startsAt.getTime() - (seat + 1) * 60 * 1000),
+      });
+      k++;
+    }
+  });
+
+  const bookingRows = await db
+    .insert(bookings)
+    .values(
+      plans.map((plan) => ({
+        shopId,
+        tripId: plan.tripId,
+        personId: plan.personId,
+        status: plan.status,
+        createdAt: plan.createdAt,
+      })),
+    )
+    .returning();
+
+  const depositCents = (price: number) => Math.round((price * 0.3) / 100) * 100;
+
+  // Payments: what actually came in. Unpaid leaves no row (an absent row reads
+  // as unpaid, exactly as in production); a refund records the reversal.
+  const payments = plans
+    .map((plan, i) => {
+      const booking = bookingRows[i];
+      if (!booking || plan.payment === "unpaid") return null;
+      const amount =
+        plan.payment === "refunded"
+          ? 0
+          : plan.payment === "deposit_paid"
+            ? depositCents(plan.price)
+            : plan.price;
+      return {
+        shopId,
+        bookingId: booking.id,
+        status: plan.payment,
+        amountCents: amount,
+        currency: "usd",
+        provider: "stripe",
+        updatedAt: plan.createdAt,
+        createdAt: plan.createdAt,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+  if (payments.length > 0) await db.insert(bookingPayments).values(payments);
+
+  // Signed releases for the divers who actually boarded.
+  let waiverToken = 0;
+  const waiverRows = plans
+    .map((plan, i) => {
+      const booking = bookingRows[i];
+      if (!booking || !plan.waiver) return null;
+      waiverToken++;
+      const signedAt = new Date(plan.createdAt.getTime() - 12 * 60 * 60 * 1000);
+      return {
+        shopId,
+        bookingId: booking.id,
+        personId: plan.personId,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "completed" as const,
+        tokenHash: `hist-waiver-${waiverToken}`,
+        expiresAt: at(365, 12),
+        signedName: "Signed on file",
+        signatureMethod: "in_person",
+        consentedAt: signedAt,
+        signedAt,
+        completedAt: signedAt,
+        createdAt: signedAt,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+  if (waiverRows.length > 0) await db.insert(waiverRecords).values(waiverRows);
+
+  // Paid invoices, so a diver's profile shows a real billing history. The Stripe
+  // ids are fabricated — the demo never connects an account — which is why the
+  // order page disables Refresh/Void/Refund on a demo shop (orders/[id]/page).
+  let invoiceSeq = 0;
+  const orderRows: Array<{
+    booking: { id: string; personId: string };
+    total: number;
+    kind: "deposit" | "trip_fee";
+    title: string;
+    date: Date;
+  }> = [];
+  plans.forEach((plan, i) => {
+    const booking = bookingRows[i];
+    if (!booking || !plan.order) return;
+    const isDeposit = plan.payment === "deposit_paid";
+    orderRows.push({
+      booking: { id: booking.id, personId: plan.personId },
+      total: isDeposit ? depositCents(plan.price) : plan.price,
+      kind: isDeposit ? "deposit" : "trip_fee",
+      title: isDeposit ? "Trip deposit" : "Two-tank charter",
+      date: plan.createdAt,
+    });
+  });
+  if (orderRows.length > 0) {
+    const insertedOrders = await db
+      .insert(orders)
+      .values(
+        orderRows.map((row) => {
+          invoiceSeq++;
+          return {
+            shopId,
+            bookingId: row.booking.id,
+            personId: row.booking.personId,
+            createdByPersonId,
+            status: "paid" as const,
+            currency: "usd",
+            totalCents: row.total,
+            amountPaidCents: row.total,
+            description: row.title,
+            stripeAccountId: "acct_demo",
+            stripeCustomerId: `cus_demo_${invoiceSeq}`,
+            stripeInvoiceId: `in_demo_${invoiceSeq}`,
+            finalizedAt: row.date,
+            paidAt: row.date,
+            createdAt: row.date,
+            updatedAt: row.date,
+          };
+        }),
+      )
+      .returning();
+    await db.insert(orderLineItems).values(
+      insertedOrders.map((order, i) => {
+        const source = orderRows[i];
+        return {
+          shopId,
+          orderId: order.id,
+          kind: source?.kind ?? ("trip_fee" as const),
+          description: source?.title ?? "Charter",
+          quantity: 1,
+          unitAmountCents: order.totalCents,
+        };
+      }),
+    );
+  }
 }
 
 /**
