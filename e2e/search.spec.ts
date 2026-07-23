@@ -36,7 +36,7 @@ test("the divers list filters live as you type, no submit", async ({ page }) => 
   await expect(page.getByRole("cell", { name: /Priya Sharma/ })).toBeVisible();
 
   await search.fill("zzz-no-such-diver");
-  await expect(page.getByText("No matching divers.")).toBeVisible();
+  await expect(page.getByText("No divers match this view.")).toBeVisible();
 
   await search.fill("Priya");
   await expect(page.getByRole("cell", { name: /Priya Sharma/ })).toBeVisible();

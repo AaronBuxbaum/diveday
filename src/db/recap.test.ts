@@ -7,9 +7,11 @@ import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
   addRecapPhoto,
+  canAddRecapPhoto,
   deleteRecapPhoto,
   getRecapPageData,
   listRecapPhotosForTrip,
+  MAX_RECAP_CAPTION_LENGTH,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   sendDueRecaps,
   setTripRecapShoutout,
@@ -125,6 +127,43 @@ describe("recap photos and crew shout-out", () => {
         imageUrl: "https://img/x.jpg",
       }),
     ).toEqual({ ok: false, reason: "cancelled" });
+  });
+
+  it("pre-checks eligibility read-only, matching the add gate before any upload", async () => {
+    const { db, bookingId } = await recapContext();
+    expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: true });
+    expect(await canAddRecapPhoto(db, "00000000-0000-0000-0000-000000000000")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+
+    for (let i = 0; i < MAX_RECAP_PHOTOS_PER_BOOKING; i++) {
+      await addRecapPhoto(db, { bookingId, imageUrl: `https://img/${i}.jpg` });
+    }
+    // At the cap, the pre-check refuses before bytes would ever be stored.
+    expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: false, reason: "limit" });
+
+    const cancelled = await recapContext();
+    await cancelled.db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, cancelled.bookingId));
+    expect(await canAddRecapPhoto(cancelled.db, cancelled.bookingId)).toEqual({
+      ok: false,
+      reason: "cancelled",
+    });
+  });
+
+  it("truncates an over-long caption to the server bound", async () => {
+    const { db, bookingId } = await recapContext();
+    const long = "x".repeat(MAX_RECAP_CAPTION_LENGTH + 50);
+    const added = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: "https://img/cap.jpg",
+      caption: long,
+    });
+    if (!added.ok) throw new Error("photo not added");
+    expect(added.photo.caption).toHaveLength(MAX_RECAP_CAPTION_LENGTH);
   });
 
   it("shows staff every photo on a trip and lets them take one down, shop-scoped", async () => {
