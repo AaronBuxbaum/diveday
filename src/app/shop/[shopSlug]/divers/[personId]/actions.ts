@@ -39,6 +39,7 @@ const personSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   email: z.union([z.literal(""), z.email().max(320)]),
   phone: z.string().trim().max(40),
+  diveInsurance: z.string().trim().max(120),
 });
 const certificationSchema = z.object({
   agency: agencySchema,

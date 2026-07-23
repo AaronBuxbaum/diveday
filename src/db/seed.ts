@@ -1701,6 +1701,8 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  // Recap photos reference bookings and trips, so they must go before both.
+  await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));

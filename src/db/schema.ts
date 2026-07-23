@@ -102,6 +102,13 @@ export const people = pgTable(
     /** Manifests require these; nullable until collected at booking/check-in. */
     emergencyContactName: text("emergency_contact_name"),
     emergencyContactPhone: text("emergency_contact_phone"),
+    /**
+     * Dive-accident insurance the diver carries — DAN or another provider, as
+     * free text ("DAN #12345"). A safety detail the crew wants on hand in an
+     * incident, never a gate; null until the diver or staff records it
+     * (docs/product/glossary.md — "DAN").
+     */
+    diveInsurance: text("dive_insurance"),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

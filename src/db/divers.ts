@@ -69,7 +69,14 @@ export async function createDiver(db: AppDb, input: NewDiver) {
 
 export async function updateDiver(
   db: AppDb,
-  input: { shopId: string; personId: string; fullName: string; email?: string; phone?: string },
+  input: {
+    shopId: string;
+    personId: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+    diveInsurance?: string;
+  },
 ) {
   const email = input.email?.trim().toLowerCase() || null;
   if (email) {
@@ -89,7 +96,14 @@ export async function updateDiver(
   }
   const [person] = await db
     .update(people)
-    .set({ fullName: input.fullName.trim(), email, phone: input.phone?.trim() || null })
+    .set({
+      fullName: input.fullName.trim(),
+      email,
+      phone: input.phone?.trim() || null,
+      ...(input.diveInsurance === undefined
+        ? {}
+        : { diveInsurance: input.diveInsurance.trim() || null }),
+    })
     .where(
       and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
     )

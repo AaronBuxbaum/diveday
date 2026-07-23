@@ -194,8 +194,9 @@ new domain concept, define it here in the same PR.
 - **Notification delivery status** — the latest known send result for one booking and notification
   purpose. It lets staff see an unresolved email issue; it is not proof of inbox delivery or a full
   provider event history.
-- **DAN** — Divers Alert Network; dive accident insurance divers may carry. Worth a field, not
-  a feature.
+- **DAN** — Divers Alert Network; dive accident insurance divers may carry. Captured as the
+  free-text `people.dive_insurance` field (DAN or any provider) and shown on the diver profile — a
+  safety detail for the crew, never a boarding gate.
 - **Connected Stripe account** — a shop's own Standard Stripe account, authorized once via OAuth.
   The shop keeps its own Stripe dashboard, payouts, and tax reporting; DiveDay never holds the money
   and acts on the shop's behalf only through the `Stripe-Account` header the OAuth grant enables.
