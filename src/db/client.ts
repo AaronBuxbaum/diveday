@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { sql } from "drizzle-orm";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -41,11 +42,27 @@ const globalForDb = globalThis as unknown as { divedayDbPromise?: Promise<AppDb>
  * seeded demo shop on first connection. Production migrations still run
  * out-of-band via `pnpm db:migrate`; this seed is the required demo fixture,
  * not schema migration work.
+ *
+ * A failed cold start must not poison this process forever (CR-010): if
+ * `init()` rejects, the `.catch` clears the memoized promise before
+ * rethrowing, so the *next* `getDb()` call gets a fresh attempt instead of
+ * permanently returning the same rejected promise.
  */
 export function getDb(): Promise<AppDb> {
-  globalForDb.divedayDbPromise ??= init();
+  globalForDb.divedayDbPromise ??= init().catch((error) => {
+    globalForDb.divedayDbPromise = undefined;
+    throw error;
+  });
   return globalForDb.divedayDbPromise;
 }
+
+/**
+ * Arbitrary fixed key for the demo-seed advisory lock (CR-010) — any int8
+ * works; it only has to be stable and not collide with another lock this app
+ * might one day take. Picked by typing on the keyboard, not derived from
+ * anything meaningful.
+ */
+const SEED_LOCK_KEY = 872_363_841;
 
 async function init(): Promise<AppDb> {
   const databaseUrl = process.env.DATABASE_URL;
@@ -56,7 +73,31 @@ async function init(): Promise<AppDb> {
     // Same schema, same query-builder surface as the PGlite driver below;
     // the driver classes differ only in how they execute over the wire.
     const db = drizzleNodePostgres({ client: pool }) as unknown as AppDb;
-    await seedIfEmpty(db);
+    try {
+      await db.transaction(async (tx) => {
+        // Serializes concurrent cold starts across separate serverless
+        // instances/processes racing to seed the same fresh database — the
+        // in-process promise memoization above can dedupe concurrent calls
+        // within one process, but a genuinely separate process (a second
+        // Vercel function instance handling a concurrent request) has its
+        // own `globalThis` and never sees it. A transaction-scoped Postgres
+        // advisory lock reaches across that boundary and is automatically
+        // released at commit/rollback — including if the process crashes —
+        // so a dead process can never leave it stuck (CR-010).
+        await tx.execute(sql`select pg_advisory_xact_lock(${SEED_LOCK_KEY})`);
+        // Also makes the whole seed atomic: everything seedIfEmpty inserts
+        // now runs inside this one transaction, so a failure partway
+        // through rolls back every row instead of leaving a half-seeded
+        // shop a retry would find already-non-empty and stop repairing.
+        await seedIfEmpty(tx);
+      });
+    } catch (error) {
+      // The transaction failed before the pool was ever handed back to a
+      // caller — nothing else will ever close it, so a repeated failed cold
+      // start would otherwise leak one connection per attempt.
+      await pool.end().catch(() => undefined);
+      throw error;
+    }
     return db;
   }
 
@@ -64,7 +105,12 @@ async function init(): Promise<AppDb> {
   const client = dataDir === "memory" ? new PGlite() : new PGlite(dataDir);
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
-  await seedIfEmpty(db);
+  // PGlite is single-connection (no cross-process race to guard against),
+  // but the seed still runs inside a transaction for the same partial-failure
+  // atomicity as the Postgres branch above.
+  await db.transaction(async (tx) => {
+    await seedIfEmpty(tx);
+  });
   return db;
 }
 
