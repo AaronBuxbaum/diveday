@@ -5,7 +5,7 @@ import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { bookings, notificationDeliveries, people, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
-import { issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
+import { issueAndDeliverWaiver, issueWaiverOnJoin, issueWaiversForBookings } from "./waiver-issue";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function seededBooking(email: string | null = "diver@example.com") {
@@ -89,6 +89,49 @@ describe("issueAndDeliverWaiver", () => {
 
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
     expect(result).toMatchObject({ ok: false, reason: "already_completed" });
+  });
+});
+
+describe("issueWaiversForBookings (bulk roster send)", () => {
+  it("sends to each selected booking and leaves an already-signed diver alone", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("demo trip missing");
+    const a = await createBooking(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Ann Able",
+      email: "ann@example.com",
+    });
+    const b = await createBooking(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Ben Boyd",
+      email: "ben@example.com",
+    });
+    if (!a.ok || !b.ok) throw new Error("setup booking failed");
+
+    // Sign Ann's waiver; the bulk send must skip her, not reissue.
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: a.bookingId });
+    if (!issued.ok) throw new Error("issue failed");
+    await completeWaiver(db, issued.token, {
+      signerName: "Ann Able",
+      agreed: true,
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+    });
+
+    const result = await issueWaiversForBookings(db, shop.id, [a.bookingId, b.bookingId]);
+    expect(result).toEqual({ sent: 1, skipped: 1, failed: 0 });
+  });
+
+  it("collapses duplicate ids and counts an unknown booking as failed", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    const result = await issueWaiversForBookings(db, shop.id, [
+      bookingId,
+      bookingId,
+      "00000000-0000-4000-8000-000000000000",
+    ]);
+    expect(result).toEqual({ sent: 1, skipped: 0, failed: 1 });
   });
 });
 

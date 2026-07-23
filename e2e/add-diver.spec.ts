@@ -110,3 +110,44 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await addDiver.getByRole("button", { name: "Search" }).click();
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 });
+
+test("staff sends waivers to a multi-selected roster in one action", async ({ page }) => {
+  const title = `Bulk Waiver Trip ${Date.now()}`;
+  const stamp = Date.now();
+
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(6));
+  await page.getByLabel("Departs").fill("09:00");
+  await page.getByLabel("Returns").fill("11:00");
+  await page.getByLabel("Capacity").fill("4");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: title }).click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await expect(page).toHaveURL(/\/guests/);
+
+  const addDiver = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+  for (const name of ["Bulk Bea", "Bulk Cal"]) {
+    await addDiver.getByLabel("Name").fill(name);
+    await addDiver
+      .getByLabel("Email")
+      .fill(`${name.toLowerCase().replace(/\s+/g, ".")}-${stamp}@example.com`);
+    await addDiver.getByRole("button", { name: "Add to trip" }).click();
+    await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  }
+
+  // Tick both divers and send the waiver to the whole selection at once.
+  await page.getByRole("checkbox", { name: "Select Bulk Bea to send a waiver" }).check();
+  await page.getByRole("checkbox", { name: "Select Bulk Cal to send a waiver" }).check();
+  await page.getByRole("button", { name: "Send waivers to selected" }).click();
+
+  await expect(page.getByRole("status")).toContainText("Waiver links sent to the selected divers");
+});

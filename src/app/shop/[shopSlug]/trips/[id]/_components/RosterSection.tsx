@@ -84,6 +84,7 @@ export function RosterSection({
   requiresPayment,
   cancellationDeadline,
   issueWaiverAction,
+  bulkSendWaiversAction,
   markWaiverInPersonAction,
   markPaymentAction,
   removeBookingAction,
@@ -101,11 +102,20 @@ export function RosterSection({
   /** When free cancellation closes, so staff see a refund cue on paid seats; null = no stated window. */
   cancellationDeadline: Date | null;
   issueWaiverAction: (formData: FormData) => void;
+  bulkSendWaiversAction: (formData: FormData) => void;
   markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
 }) {
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
+  // How many divers still have a waiver a staffer can send or resend — the
+  // count the bulk control acts on. A signed or medical-review diver is not
+  // offered a checkbox, so ticking "the outstanding list" can't touch them.
+  const sendableCount = roster.filter(({ booking }) => {
+    const action =
+      WAIVER_CONTROLS[waiverState(waiverByBooking.get(booking.id)?.waiver ?? null)].action;
+    return action !== null;
+  }).length;
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -117,6 +127,22 @@ export function RosterSection({
             </span>
           </h2>
         </div>
+        {/* Bulk waiver send. The row checkboxes below are associated to this
+            form by its id (the HTML `form` attribute), not nested inside it —
+            so each per-diver form stays its own island and one action chases
+            the whole outstanding list. Only appears when a diver is actually
+            sendable, so it's never a dead control. */}
+        {sendableCount > 0 ? (
+          <form id="roster-bulk" action={bulkSendWaiversAction} className="flex items-center gap-2">
+            <span className="text-sm text-muted">Tick divers, then</span>
+            <SubmitButton
+              pendingLabel="Sending…"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              Send waivers to selected
+            </SubmitButton>
+          </form>
+        ) : null}
       </div>
       {roster.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
@@ -148,14 +174,29 @@ export function RosterSection({
                 className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/shop/${shopSlug}/divers/${person.id}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {person.fullName}
-                    </Link>
-                    <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    {/* Associated to the bulk form above by `form`, not nested,
+                        so it can't sit inside this row's own action forms.
+                        Only sendable divers get one. */}
+                    {waiverControl.action ? (
+                      <input
+                        type="checkbox"
+                        name="bookingId"
+                        value={booking.id}
+                        form="roster-bulk"
+                        aria-label={`Select ${person.fullName} to send a waiver`}
+                        className="mt-1 size-4 shrink-0"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${person.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {person.fullName}
+                      </Link>
+                      <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
+                    </div>
                   </div>
                   {readiness ? (
                     <Badge
