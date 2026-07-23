@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { publicAppUrl } from "@/lib/notifications";
-import { connectProviderFromEnvironment } from "@/lib/payments/connect";
+import {
+  connectProviderFromEnvironment,
+  stripeConnectCallbackUrl,
+  STRIPE_CONNECT_STATE_COOKIE,
+} from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -9,8 +13,6 @@ import { requireStaffSession } from "@/lib/session";
  * short-lived httpOnly cookie and as the OAuth `state` param, so the callback
  * can reject a forged redirect (docs ADR 20260719-stripe-connect-orders).
  */
-export const STRIPE_CONNECT_STATE_COOKIE = "stripe_connect_state";
-
 export async function GET(request: Request) {
   const session = await requireStaffSession();
   const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings/payments`, request.url);
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
   }
 
   const provider = connectProviderFromEnvironment();
-  const redirectUri = `${appHost}/shop/${session.user.shopSlug}/settings/payments/callback`;
+  const redirectUri = stripeConnectCallbackUrl(appHost);
   const state = crypto.randomUUID();
   const authorizeUrl = provider.authorizeUrl({ redirectUri, state });
   if (!authorizeUrl) {

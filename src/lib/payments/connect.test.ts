@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { connectProviderFromEnvironment } from "./connect";
+import { connectProviderFromEnvironment, stripeConnectCallbackUrl } from "./connect";
 
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
   return connectProviderFromEnvironment(env, fetchImpl as typeof fetch);
@@ -8,6 +8,12 @@ function providerWith(env: Record<string, string | undefined>, fetchImpl: unknow
 const configuredEnv = { STRIPE_SECRET_KEY: "sk_test", STRIPE_CONNECT_CLIENT_ID: "ca_test" };
 
 describe("stripe connect provider", () => {
+  it("uses one fixed callback for every shop", () => {
+    expect(stripeConnectCallbackUrl("https://dive.day")).toBe(
+      "https://dive.day/api/stripe/connect/callback",
+    );
+  });
+
   it("has no authorize URL and reports not_configured when unset", async () => {
     const provider = providerWith({}, vi.fn());
     expect(provider.authorizeUrl({ redirectUri: "https://x/cb", state: "s" })).toBeNull();

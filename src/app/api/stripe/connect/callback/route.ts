@@ -3,11 +3,17 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { publicAppUrl } from "@/lib/notifications";
-import { connectProviderFromEnvironment } from "@/lib/payments/connect";
+import {
+  connectProviderFromEnvironment,
+  stripeConnectCallbackUrl,
+  STRIPE_CONNECT_STATE_COOKIE,
+} from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
-import { STRIPE_CONNECT_STATE_COOKIE } from "../connect/route";
 
-/** Stripe's OAuth redirect target: verifies state, exchanges the code, and stores the connected account. */
+/**
+ * Stripe's one fixed OAuth redirect target. The signed-in staff session and
+ * state cookie identify the initiating shop after Stripe returns.
+ */
 export async function GET(request: Request) {
   const session = await requireStaffSession();
   const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings/payments`, request.url);
@@ -32,8 +38,7 @@ export async function GET(request: Request) {
   }
 
   const provider = connectProviderFromEnvironment();
-  const redirectUri = `${appHost}/shop/${session.user.shopSlug}/settings/payments/callback`;
-  const result = await provider.exchangeCode(code, redirectUri);
+  const result = await provider.exchangeCode(code, stripeConnectCallbackUrl(appHost));
   if (result.status !== "connected") {
     settingsUrl.searchParams.set("notice", "connect_failed");
     return NextResponse.redirect(settingsUrl);
