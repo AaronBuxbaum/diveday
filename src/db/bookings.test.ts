@@ -30,7 +30,7 @@ describe("createBooking (in-memory PGlite)", () => {
     const outcome = await bookVisitor(db, shop.id, open.id);
     expect(outcome).toMatchObject({ ok: true, personName: "Nora Quinn" });
 
-    const roster = await getTripRoster(db, open.id);
+    const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.fullName)).toContain("Nora Quinn");
 
     const [person] = await db
@@ -77,7 +77,7 @@ describe("createBooking (in-memory PGlite)", () => {
       { shopId: shop.id, tripId: open.id, fullName: "Sam Quinn", email: "sam@example.com" },
     ]);
     expect(outcome.ok).toBe(true);
-    const roster = await getTripRoster(db, open.id);
+    const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((row) => row.person.fullName)).toEqual(
       expect.arrayContaining(["Nora Quinn", "Sam Quinn"]),
     );
@@ -104,7 +104,7 @@ describe("createBooking (in-memory PGlite)", () => {
 
   it("rolls back the whole party when a later member can't book", async () => {
     const { db, shop, open } = await seededContext();
-    const before = (await getTripRoster(db, open.id)).length;
+    const before = (await getTripRoster(db, shop.id, open.id)).length;
     const outcome = await createBookingParty(db, [
       { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
       // Same email as the first member → already_booked, so the first
@@ -112,7 +112,7 @@ describe("createBooking (in-memory PGlite)", () => {
       { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
     ]);
     expect(outcome).toEqual({ ok: false, reason: "already_booked" });
-    expect(await getTripRoster(db, open.id)).toHaveLength(before);
+    expect(await getTripRoster(db, shop.id, open.id)).toHaveLength(before);
   });
 
   it("does not attach a booking to a soft-deleted person", async () => {
@@ -173,7 +173,7 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
     });
     expect(outcome).toMatchObject({ ok: true, personName: "Rey Marlin" });
 
-    const roster = await getTripRoster(db, open.id);
+    const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.id)).toContain(diver.id);
     // The whole point of the picker: no second person is minted.
     const matches = await db
@@ -237,7 +237,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
     await cancelBooking(db, shop.id, booked.bookingId);
 
     expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
-    const roster = await getTripRoster(db, open.id);
+    const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.fullName)).toContain("Nora Quinn");
   });
 
@@ -262,7 +262,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
     }
 
     expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_full");
-    const roster = await getTripRoster(db, open.id);
+    const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.fullName)).not.toContain("Nora Quinn");
   });
 

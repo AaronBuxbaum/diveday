@@ -155,7 +155,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     if (!reef) throw new Error("expected seeded reef trip missing");
     expect(reef.plannedDives).toBeGreaterThanOrEqual(2);
 
-    const [entry] = await getTripRoster(db, reef.id);
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
     if (!entry) throw new Error("expected a booking to record a roll call against");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("expected seeded staff missing");

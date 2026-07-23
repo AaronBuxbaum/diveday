@@ -14,7 +14,7 @@ async function manifestContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  const [booking] = await getTripRoster(db, reef.id);
+  const [booking] = await getTripRoster(db, shop.id, reef.id);
   if (!booking) throw new Error("demo booking missing");
   const template = await getCurrentWaiverTemplate(db, shop.id);
   if (!template) throw new Error("demo waiver template missing");
@@ -26,7 +26,7 @@ async function manifestContext() {
 describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("derives every active booking into the manifest, including blocked divers", async () => {
     const { db, shop, reef } = await manifestContext();
-    const roster = await getTripRoster(db, reef.id);
+    const roster = await getTripRoster(db, shop.id, reef.id);
     const manifest = await getTripManifest(db, shop.id, reef.id);
 
     expect(manifest?.divers).toHaveLength(roster.length);

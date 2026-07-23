@@ -9,7 +9,7 @@ async function seededBooking() {
   const { db, shop } = await seededShopContext();
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
-  const [entry] = await getTripRoster(db, trip.id);
+  const [entry] = await getTripRoster(db, shop.id, trip.id);
   if (!entry) throw new Error("demo booking missing");
   return { db, shop, trip, booking: entry.booking, person: entry.person };
 }

@@ -75,7 +75,7 @@ async function orderContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  const [entry] = await getTripRoster(db, reef.id);
+  const [entry] = await getTripRoster(db, shop.id, reef.id);
   if (!entry) throw new Error("demo booking missing");
   return { db, shop, reef, entry };
 }

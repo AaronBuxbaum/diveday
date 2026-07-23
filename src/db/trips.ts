@@ -758,33 +758,61 @@ export async function setTripCrew(
   });
 }
 
-/** Divers on a trip: non-cancelled bookings with their people, oldest first. */
-export async function getTripRoster(db: AppDb, tripId: string) {
+/**
+ * Divers on a trip: non-cancelled bookings with their people, oldest first.
+ * `bookings` carries its own `shop_id` (CR-007) — filtered directly rather
+ * than joined through `trips`, so this can never be called safely with only
+ * a trip UUID for the wrong shop.
+ */
+export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
   return db
     .select({ booking: bookings, person: people })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(bookings.tripId, tripId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
     .orderBy(asc(bookings.createdAt));
 }
 
-/** Wait-list entries stay outside the roster because they have not booked a seat. */
-export async function getTripWaitlist(db: AppDb, tripId: string) {
+/**
+ * Wait-list entries stay outside the roster because they have not booked a
+ * seat. `trip_waitlist_entries` carries its own `shop_id` (CR-007).
+ */
+export async function getTripWaitlist(db: AppDb, shopId: string, tripId: string) {
   return db
     .select({ entry: tripWaitlistEntries, person: people })
     .from(tripWaitlistEntries)
     .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-    .where(eq(tripWaitlistEntries.tripId, tripId))
+    .where(and(eq(tripWaitlistEntries.tripId, tripId), eq(tripWaitlistEntries.shopId, shopId)))
     .orderBy(asc(tripWaitlistEntries.createdAt));
 }
 
-/** Confirmation pages render only a real entry, never an identity in the URL. */
-export async function getWaitlistEntryForTrip(db: AppDb, tripId: string, entryId: string) {
+/**
+ * Confirmation pages render only a real entry, never an identity in the URL.
+ * `trip_waitlist_entries` carries its own `shop_id` (CR-007).
+ */
+export async function getWaitlistEntryForTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  entryId: string,
+) {
   const [row] = await db
     .select({ entry: tripWaitlistEntries, person: people })
     .from(tripWaitlistEntries)
     .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-    .where(and(eq(tripWaitlistEntries.id, entryId), eq(tripWaitlistEntries.tripId, tripId)))
+    .where(
+      and(
+        eq(tripWaitlistEntries.id, entryId),
+        eq(tripWaitlistEntries.tripId, tripId),
+        eq(tripWaitlistEntries.shopId, shopId),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }

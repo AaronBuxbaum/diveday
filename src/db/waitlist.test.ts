@@ -30,7 +30,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     });
 
     expect(outcome).toMatchObject({ ok: true, personName: "Nora Quinn" });
-    expect(await getTripRoster(db, fullTrip.id)).toHaveLength(fullTrip.capacity);
+    expect(await getTripRoster(db, shop.id, fullTrip.id)).toHaveLength(fullTrip.capacity);
   });
 
   it("keeps one first-come entry per diver and trip", async () => {
@@ -68,7 +68,9 @@ describe("recordWaitlistInvite", () => {
     if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
 
     const findEntry = async () =>
-      (await getTripWaitlist(db, fullTrip.id)).find((row) => row.entry.id === joined.entryId);
+      (await getTripWaitlist(db, shop.id, fullTrip.id)).find(
+        (row) => row.entry.id === joined.entryId,
+      );
 
     const t0 = new Date("2026-07-21T10:00:00.000Z");
     await expect(
@@ -113,7 +115,7 @@ describe("inviteWaitlistDiver", () => {
     });
 
     expect(result).toEqual({ ok: true, delivery: "unconfigured", invitedAt: now });
-    const entry = (await getTripWaitlist(db, fullTrip.id)).find(
+    const entry = (await getTripWaitlist(db, shop.id, fullTrip.id)).find(
       (row) => row.entry.id === joined.entryId,
     );
     expect(entry?.entry.invitedAt?.toISOString()).toBe(now.toISOString());
@@ -132,7 +134,7 @@ describe("inviteWaitlistDiver", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "not_found" });
 
-    const entry = (await getTripWaitlist(db, fullTrip.id)).find(
+    const entry = (await getTripWaitlist(db, shop.id, fullTrip.id)).find(
       (row) => row.entry.id === joined.entryId,
     );
     expect(entry?.entry.invitedAt).toBeNull();

@@ -94,7 +94,7 @@ export default async function TripDetailPage({
     : null;
   const [confirmed, waitlistConfirmation] = await Promise.all([
     confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
-    waitlistId ? getWaitlistEntryForTrip(db, tripId, waitlistId) : null,
+    waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
   ]);
   const diveBriefings = await Promise.all(
     tripDives.map(async ({ dive, diveSite }) => {

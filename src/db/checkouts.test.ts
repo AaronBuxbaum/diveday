@@ -139,7 +139,7 @@ describe("startBookingCheckout", () => {
   it("refuses without a connected, charges-enabled Stripe account", async () => {
     const { db, shop } = await seededShopContext();
     const reef = await pricedReefTrip(db, shop.id);
-    const [entry] = await getTripRoster(db, reef.id);
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
     const outcome = await startBookingCheckout(
       db,
       startInput(shop.id, reef.id, [entry.booking.id]),

@@ -70,11 +70,11 @@ export default async function TripGuestsPage({
       : await listBookableDivers(db, shop.id, tripId, { query: diverQuery });
   const [roster, requirement, readinessRows, prepDivers, waitlist, recapPhotos] = await Promise.all(
     [
-      getTripRoster(db, tripId),
+      getTripRoster(db, shop.id, tripId),
       getTripRequirements(db, shop.id, tripId),
       listTripReadiness(db, shop.id, tripId),
       listTripPrepDivers(db, shop.id, tripId),
-      getTripWaitlist(db, tripId),
+      getTripWaitlist(db, shop.id, tripId),
       listRecapPhotosForTrip(db, shop.id, tripId),
     ],
   );

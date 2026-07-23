@@ -100,7 +100,7 @@ export async function getTripManifests(
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
   const [roster, readinessRows, certified, fitByBooking, crew, ...rollCalls] = await Promise.all([
-    getTripRoster(db, tripId),
+    getTripRoster(db, shopId, tripId),
     listTripReadiness(db, shopId, tripId),
     verifiedNitroxPersonIds(db, shopId),
     rentalFitByBooking(db, shopId, tripId),
