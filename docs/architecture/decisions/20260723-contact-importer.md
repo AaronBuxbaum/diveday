@@ -77,7 +77,12 @@ Easy: the export's documented CSV schemas now have a working intake, so "importa
 the commit so the honesty rules live in one place. The migration guides (public pages) and scheduled
 backups can build on this surface next. Hard: the header-alias map and level normalization are
 best-effort against formats we can't all test from here — per-competitor verification belongs to the
-migration guides, and the honesty table says so. A schema change touching people/certifications/
+migration guides, and the honesty table says so. Agencies outside the pg enum (RAID, CMAS, GUE)
+flatten to `other` on import — safe (the card is `pending` and re-verified by hand) and disclosed
+per-row, but a line for the migration guides; widening the enum is a separate schema change.
+Specialty cards (deep/wreck/night/drysuit) are not part of the contact file and don't import at all;
+the honesty table states this so a migrating shop re-enters them by hand rather than discovering the
+gap on the boat. A schema change touching people/certifications/
 nitrox/rental-fit now has an import decision as well as an export one; the drift test in
 `src/lib/import.test.ts` pins the agency/level enums so a new rung can't silently fall out of the
 importer.

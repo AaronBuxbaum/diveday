@@ -138,25 +138,20 @@ export async function commitContactImport(
 
       if (hasSize(row)) {
         // A living preference, upserted — never versioned. Only the sizes the
-        // import carries are set; an existing profile's rents-flags are kept.
+        // import actually carries are set, so importing a BCD size can't wipe a
+        // wetsuit size already on file; an existing profile's rents-flags stay.
+        const sizeSet = {
+          ...(row.sizes.bcdSize ? { bcdSize: row.sizes.bcdSize } : {}),
+          ...(row.sizes.wetsuitSize ? { wetsuitSize: row.sizes.wetsuitSize } : {}),
+          ...(row.sizes.bootSize ? { bootSize: row.sizes.bootSize } : {}),
+          ...(row.sizes.finSize ? { finSize: row.sizes.finSize } : {}),
+        };
         await tx
           .insert(rentalFitProfiles)
-          .values({
-            shopId,
-            personId,
-            bcdSize: row.sizes.bcdSize,
-            wetsuitSize: row.sizes.wetsuitSize,
-            bootSize: row.sizes.bootSize,
-            finSize: row.sizes.finSize,
-          })
+          .values({ shopId, personId, ...sizeSet })
           .onConflictDoUpdate({
             target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
-            set: {
-              bcdSize: row.sizes.bcdSize,
-              wetsuitSize: row.sizes.wetsuitSize,
-              bootSize: row.sizes.bootSize,
-              finSize: row.sizes.finSize,
-            },
+            set: sizeSet,
           });
       }
 

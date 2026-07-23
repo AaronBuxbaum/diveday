@@ -98,6 +98,31 @@ describe("commitContactImport", () => {
     expect(again).toMatchObject({ cardsAdded: 0, cardsSkippedExisting: 1, peopleUpdated: 1 });
   });
 
+  it("merges rental sizes without wiping ones the import doesn't carry", async () => {
+    const { db, shop } = await seededShopContext();
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(
+        "full_name,email,wetsuit_size,fin_size\nSize Sam,sam.import@example.com,3mm/M,L",
+      ),
+    );
+    // A second file carrying only a BCD size must not erase the wetsuit/fin on file.
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport("full_name,email,bcd_size\nSize Sam,sam.import@example.com,M"),
+    );
+
+    const person = await personByEmail(db, shop.id, "sam.import@example.com");
+    if (!person) throw new Error("person not created");
+    const [profile] = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(eq(rentalFitProfiles.personId, person.id));
+    expect(profile).toMatchObject({ bcdSize: "M", wetsuitSize: "3mm/M", finSize: "L" });
+  });
+
   it("imports a nitrox card as claimed (pending), never a fill authorization", async () => {
     const { db, shop } = await seededShopContext();
     const csv = [

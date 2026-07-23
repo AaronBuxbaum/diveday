@@ -17,6 +17,11 @@ new domain concept, define it here in the same PR.
   integration. Only a certified, unexpired card at or above a trip’s required level can satisfy
   readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
   what readiness reads.)
+- **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
+  `pending`. It is what any card entered by hand or brought in by the contact importer starts as, and
+  the shop-owner-facing word for that state ("imported as claimed"). A claimed card never satisfies
+  readiness or authorizes a nitrox fill until staff **Mark certified**; the importer can only ever
+  produce claimed cards, never verified ones (ADR 20260723-contact-importer).
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”

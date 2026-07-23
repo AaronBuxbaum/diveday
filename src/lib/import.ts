@@ -153,7 +153,12 @@ export const IMPORT_HONESTY_TABLE: {
   scope: "full" | "partial" | "never";
   detail: string;
 }[] = [
-  { what: "Names, email, phone", scope: "full", detail: "Imported as given, matched by email." },
+  {
+    what: "Names, email, phone",
+    scope: "full",
+    detail:
+      "Imported as given. A row with an email is matched to an existing diver so a re-import updates them; a row without one always comes in as a new record.",
+  },
   {
     what: "Emergency contact",
     scope: "full",
@@ -174,7 +179,13 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Enriched air (nitrox)",
     scope: "partial",
     detail:
-      "A claim, not a fill authorization. Imported as a claimed card only when the row carries a nitrox card number; it never lets a diver request enriched air until staff verify it.",
+      "A claim, not a fill authorization. Imported as a claimed card only when the row carries a nitrox card number. A diver can still request enriched air, but every fill is re-checked at fill time and gives plain air until staff verify the card.",
+  },
+  {
+    what: "Specialty cards (deep, wreck, night, drysuit)",
+    scope: "never",
+    detail:
+      "The contact file has no column for them, so they don't come across. Re-enter and verify each by hand — until then a diver isn't cleared for a dive that requires one (deep gates depth past 18 m).",
   },
   {
     what: "Role",
@@ -522,6 +533,15 @@ export function prepareContactImport(text: string): PreparedImport {
       action = "skip";
     }
     if (action === "import" && email) seenEmails.add(email);
+    if (action === "import" && !email) {
+      // Matching and de-duping are email-only, so an email-less row always comes
+      // in as a fresh record and a later re-import can't find it to update. Say
+      // so rather than let the "matched by email" promise overstate the case.
+      issues.push({
+        level: "info",
+        message: "No email — imported as a new record; a re-import can't match it to update.",
+      });
+    }
 
     return {
       rowNumber,
