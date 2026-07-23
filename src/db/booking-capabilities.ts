@@ -84,9 +84,11 @@ export async function verifyBookingCapability(
       personId: bookings.personId,
       tripId: bookings.tripId,
       bookingStatus: bookings.status,
+      tripStatus: trips.status,
     })
     .from(bookingCapabilities)
     .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
         eq(bookingCapabilities.tokenHash, tokenHash),
@@ -102,6 +104,14 @@ export async function verifyBookingCapability(
   // ever drifting from its booking's — nothing legitimate can cause that
   // today, but a verified identity must never be trusted past that check.
   if (row.bookingStatus === "cancelled") return null;
+  // Trip cancellation doesn't cascade into cancelling its bookings (a
+  // separate, pre-existing gap outside this ticket's scope), so a booking
+  // can still read "booked" after the trip itself is called off — a
+  // security review of CR-002/CR-003 found this let an outstanding
+  // capability keep paying/rental-fit/contact authority for a trip that no
+  // longer runs. Fail closed here too, the same way `issueWaiverRequest`
+  // already does for waivers (src/db/waivers.ts).
+  if (row.tripStatus === "cancelled") return null;
   if (row.capabilityShopId !== row.bookingShopId) return null;
   return {
     bookingId: row.bookingId,

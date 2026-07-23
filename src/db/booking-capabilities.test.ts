@@ -9,7 +9,7 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
-import { upcomingTripsWithCounts } from "./trips";
+import { setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
   const { db, shop } = await seededShopContext();
@@ -182,6 +182,28 @@ describe("booking capabilities (in-memory PGlite)", () => {
     const ctx = await verifyBookingCapability(db, {
       token: issued?.token ?? "",
       purpose: "readiness",
+    });
+    expect(ctx).toBeNull();
+  });
+
+  it("cancellation: cancelling the TRIP (not the booking) also fails a previously-issued token closed (security review finding)", async () => {
+    // Trip cancellation doesn't cascade into cancelling its bookings — a
+    // separate, pre-existing gap outside CR-002/CR-003's scope — so the
+    // booking itself still reads "booked" after the trip is called off. A
+    // security review found that without this check, an outstanding
+    // confirm/readiness link kept full payment/rental-fit/contact authority
+    // for a trip that no longer runs.
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "confirm",
+    });
+    await setTripStatus(db, shop.id, open.id, "cancelled");
+    const ctx = await verifyBookingCapability(db, {
+      token: issued?.token ?? "",
+      purpose: "confirm",
     });
     expect(ctx).toBeNull();
   });
