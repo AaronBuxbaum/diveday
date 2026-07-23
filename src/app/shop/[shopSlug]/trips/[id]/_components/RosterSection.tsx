@@ -8,6 +8,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
+import { PaymentStatusControl } from "./PaymentStatusControl";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -15,16 +16,6 @@ import type {
   RosterEntry,
   WaiverByBooking,
 } from "./types";
-
-type PaymentStatus = "unpaid" | "deposit_paid" | "paid" | "waived" | "refunded";
-
-const PAYMENT_LABELS: Record<PaymentStatus, string> = {
-  unpaid: "Unpaid",
-  deposit_paid: "Deposit paid",
-  paid: "Paid",
-  waived: "Waived",
-  refunded: "Refunded",
-};
 
 // The whole waiver collapses to a single control per diver. Its face is the
 // status; its click is the only sensible next action. `action: null` means the
@@ -345,45 +336,17 @@ export function RosterSection({
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">
                   {requiresPayment ? (
-                    <form action={markPaymentAction} className="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <span className="text-sm text-muted">
-                        Payment: {PAYMENT_LABELS[paymentStatus ?? "unpaid"]}
-                        {paymentSource ? (
-                          <span className="text-muted"> · {paymentSource}</span>
-                        ) : null}
-                        {refundEligible &&
-                        cancellationDeadline &&
-                        (paymentStatus === "paid" || paymentStatus === "deposit_paid") ? (
-                          <span className="text-muted">
-                            {" "}
-                            · Refund-eligible until{" "}
-                            {formatDateTimeTz(cancellationDeadline, "en-US", shopTimezone)}
-                          </span>
-                        ) : null}
-                      </span>
-                      <select
-                        name="status"
-                        defaultValue={paymentStatus ?? "unpaid"}
-                        className="min-h-11 items-center rounded-lg border border-border-strong bg-surface px-2 text-sm"
-                      >
-                        {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      <SubmitButton
-                        pendingLabel="Updating…"
-                        className={buttonClass({
-                          variant: "secondary",
-                          size: "sm",
-                          className: "text-foreground",
-                        })}
-                      >
-                        Update
-                      </SubmitButton>
-                    </form>
+                    <PaymentStatusControl
+                      bookingId={booking.id}
+                      status={paymentStatus ?? "unpaid"}
+                      action={markPaymentAction}
+                      sourceNote={paymentSource}
+                      refundNote={
+                        refundEligible && cancellationDeadline
+                          ? `Refund-eligible until ${formatDateTimeTz(cancellationDeadline, "en-US", shopTimezone)}`
+                          : null
+                      }
+                    />
                   ) : null}
                   <Link
                     href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
