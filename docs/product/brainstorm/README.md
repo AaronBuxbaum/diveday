@@ -14,6 +14,7 @@ than one angle. Read the lens that matches what you're trying to decide.
 | 3 | [staff-operations-efficiency.md](staff-operations-efficiency.md) | Coordination work removed, throughput, ops | how to give a busy front desk its day back |
 | 4 | [diver-experience-and-growth.md](diver-experience-and-growth.md) | The customer funnel, self-service, retention | how a diver books, returns, and brings a buddy |
 | 5 | [platform-data-and-intelligence.md](platform-data-and-intelligence.md) | Data model reach, AI, integrations, agent-native | how the app gets smarter and compounds |
+| 6 | [first-principles-business.md](first-principles-business.md) | The economics: perishable seats, weather, whales, word of mouth | what actually wins deals and fills boats |
 
 ## How to read an idea here
 

@@ -35,20 +35,29 @@ test.describe("full-shop data export", () => {
     for (const name of [
       "README.txt",
       "shop.csv",
+      "contacts.csv",
       "people.csv",
       "certifications.csv",
       "trips.csv",
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
+      "waitlist_entries.csv",
       "roll_call_events.csv",
       "waiver_templates.csv",
       "waiver_records.csv",
       "rental_fit.csv",
+      "orders.csv",
+      "dive_sites.csv",
+      "courses.csv",
     ]) {
       expect(Object.keys(unzipped)).toContain(name);
     }
     expect(strFromU8(unzipped["people.csv"])).toContain("Priya Sharma");
+    // The flat import file: one row per person, names pre-split for wizards.
+    const contacts = strFromU8(unzipped["contacts.csv"]);
+    expect(contacts).toContain("first_name,last_name,full_name");
+    expect(contacts).toContain("Priya,Sharma");
     expect(strFromU8(unzipped["README.txt"])).toContain("Not included in this bundle:");
   });
 });
