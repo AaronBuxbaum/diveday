@@ -410,14 +410,21 @@ export async function applyDetailsToFutureSeries(
     const siblingCheckpoints =
       siblingIds.length > 0
         ? await tx
-            .select({ tripId: rollCallEvents.tripId, checkpoint: rollCallEvents.checkpoint })
+            .select({
+              tripId: rollCallEvents.tripId,
+              bookingId: rollCallEvents.bookingId,
+              checkpoint: rollCallEvents.checkpoint,
+              status: rollCallEvents.status,
+              occurredAt: rollCallEvents.occurredAt,
+              createdAt: rollCallEvents.createdAt,
+            })
             .from(rollCallEvents)
             .where(inArray(rollCallEvents.tripId, siblingIds))
         : [];
-    const checkpointsByTrip = new Map<string, string[]>();
+    const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();
     for (const row of siblingCheckpoints) {
       const list = checkpointsByTrip.get(row.tripId) ?? [];
-      list.push(row.checkpoint);
+      list.push(row);
       checkpointsByTrip.set(row.tripId, list);
     }
 
@@ -604,10 +611,16 @@ export async function updateTrip(
     }
 
     const checkpointRows = await tx
-      .select({ checkpoint: rollCallEvents.checkpoint })
+      .select({
+        bookingId: rollCallEvents.bookingId,
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
+        createdAt: rollCallEvents.createdAt,
+      })
       .from(rollCallEvents)
       .where(eq(rollCallEvents.tripId, tripId));
-    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows.map((row) => row.checkpoint));
+    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
     }
