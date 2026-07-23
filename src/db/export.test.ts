@@ -81,6 +81,7 @@ const EXCLUDED_TABLES = [
   "booking_checkouts", // payment attempts; outcomes live in bookings/orders
   "booking_checkout_bookings",
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
+  "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
   "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported
