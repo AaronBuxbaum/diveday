@@ -32,7 +32,7 @@ async function readinessContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  const [rosterEntry] = await getTripRoster(db, reef.id);
+  const [rosterEntry] = await getTripRoster(db, shop.id, reef.id);
   if (!rosterEntry) throw new Error("demo booking missing");
   return { db, shop, reef, rosterEntry };
 }
@@ -201,7 +201,7 @@ describe("trip readiness (in-memory PGlite)", () => {
   it("gates a required nitrox card, fail-closed, on a trip requirement", async () => {
     const { db, shop, reef } = await readinessContext();
     // Pick a booked diver who has no nitrox card on file yet.
-    const roster = await getTripRoster(db, reef.id);
+    const roster = await getTripRoster(db, shop.id, reef.id);
     const nitroxHolders = new Set(
       (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
     );
