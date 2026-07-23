@@ -8,7 +8,8 @@ adapters and must not introduce unique requirements.
 ## Read first
 
 1. This file.
-2. Run `pnpm task:context -- <area>` when the task matches a supported area.
+2. Run `pnpm task:context -- <area>` when the task matches a supported area (run without an
+   argument to list the areas).
 3. Read [docs/README.md](docs/README.md) and only the documents relevant to the task.
 4. Read the Next.js warning at the bottom before framework-touching work.
 
@@ -28,7 +29,7 @@ adapters and must not introduce unique requirements.
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm check:repo` | architecture, ADR, and documentation-link safeguards |
+| `pnpm check:repo` | architecture, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
@@ -67,6 +68,9 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 ## Parallel work
 
+- Before starting non-trivial work, list the repo's open PRs and read their declared owned
+  paths. Overlap with your plan → pick a different slice or coordinate in that PR's thread;
+  never assume you are the only session running.
 - Use a unique branch/feature slug and open a draft PR early for non-trivial concurrent work.
 - State owned paths, expected schema changes, and planned ADR ids in the PR description.
 - New ADRs use collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer.
