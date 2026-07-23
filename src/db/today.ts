@@ -253,18 +253,55 @@ async function missingEmergencyContactByTrip(
   return missing;
 }
 
-/** Wait-list depth per trip, so a freed seat can be offered to a real person. */
-async function waitlistCountsByTrip(db: AppDb, shopId: string, tripIds: string[]) {
-  const counts = new Map<string, number>();
-  if (tripIds.length === 0) return counts;
+/**
+ * Wait-list depth *and* the front-of-line entry per trip, so a freed seat can be
+ * offered to a real person straight from the queue. The front is the earliest
+ * join (the person actually next in line); its name, email, and last-invited
+ * stamp ride along so the Today row can one-tap invite and fall back to a
+ * prewritten composer exactly like the trip page's wait-list section.
+ */
+export type WaitlistFront = {
+  count: number;
+  entryId: string;
+  personName: string;
+  personEmail: string | null;
+  invitedAt: Date | null;
+};
+
+async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[]) {
+  const fronts = new Map<string, WaitlistFront>();
+  if (tripIds.length === 0) return fronts;
   const rows = await db
-    .select({ tripId: tripWaitlistEntries.tripId })
+    .select({
+      tripId: tripWaitlistEntries.tripId,
+      entryId: tripWaitlistEntries.id,
+      invitedAt: tripWaitlistEntries.invitedAt,
+      personName: people.fullName,
+      personEmail: people.email,
+    })
     .from(tripWaitlistEntries)
+    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
     .where(
       and(eq(tripWaitlistEntries.shopId, shopId), inArray(tripWaitlistEntries.tripId, tripIds)),
-    );
-  for (const row of rows) counts.set(row.tripId, (counts.get(row.tripId) ?? 0) + 1);
-  return counts;
+    )
+    .orderBy(asc(tripWaitlistEntries.createdAt));
+  for (const row of rows) {
+    const existing = fronts.get(row.tripId);
+    // Rows arrive oldest-first, so the first seen per trip is the true front of
+    // the line; later ones only bump the depth count.
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+    fronts.set(row.tripId, {
+      count: 1,
+      entryId: row.entryId,
+      personName: row.personName,
+      personEmail: row.personEmail,
+      invitedAt: row.invitedAt,
+    });
+  }
+  return fronts;
 }
 
 /** Trips that already have an instructor on the crew list. */
@@ -336,7 +373,7 @@ export async function getTodayWork(
     missingFitByTrip(db, shopId, bookingIdsByTrip),
     ungatedNitroxByTrip(db, shopId, bookingIdsByTrip),
     missingEmergencyContactByTrip(db, shopId, bookingIdsByTrip),
-    waitlistCountsByTrip(
+    waitlistFrontByTrip(
       db,
       shopId,
       inWindow.map((trip) => trip.id),
@@ -431,9 +468,10 @@ export async function getTodayWork(
       });
     }
 
-    const waiting = waitlisted.get(trip.id) ?? 0;
+    const front = waitlisted.get(trip.id);
+    const waiting = front?.count ?? 0;
     const openSeats = Math.max(0, trip.capacity - trip.booked);
-    if (waiting > 0 && openSeats > 0) {
+    if (front && waiting > 0 && openSeats > 0) {
       actions.push({
         id: `waitlist:${trip.id}`,
         kind: "waitlist_seat",
@@ -441,9 +479,20 @@ export async function getTodayWork(
         subject: trip.title,
         context: when,
         detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} opened up and ${waiting} ${waiting === 1 ? "person is" : "people are"} on the wait list.`,
-        // Lands right on the wait-list, where one tap invites the next in line.
+        // One tap invites the next in line straight from the queue; the href is
+        // the no-JS fallback to the trip's wait-list section.
         actionLabel: "Invite from wait list",
         href: `${tripHref}/guests#waitlist`,
+        invite: {
+          tripId: trip.id,
+          entryId: front.entryId,
+          personName: front.personName,
+          personEmail: front.personEmail,
+          invitedAt: front.invitedAt,
+          bookingPath: `/shop/${shopSlug}/schedule/${trip.id}`,
+          tripTitle: trip.title,
+          tripWhen: when,
+        },
         dueAt: trip.startsAt,
       });
     }

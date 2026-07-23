@@ -370,6 +370,9 @@ export async function inviteWaitlistAction(
     entryId,
   });
   revalidatePath(guestsPath(shopSlug, tripId));
+  // The freed-seat row also lives on Today, so refresh the queue after an invite
+  // whether it was sent from the roster or straight from Today (WP-9 → §7).
+  revalidatePath(`/shop/${shopSlug}`);
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 

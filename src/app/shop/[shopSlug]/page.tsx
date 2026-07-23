@@ -13,6 +13,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
+import { inviteWaitlistAction } from "./trips/[id]/actions";
 
 export const metadata: Metadata = {
   title: "Today — DiveDay",
@@ -153,7 +154,12 @@ export default async function ShopPage({
         </section>
       ) : null}
 
-      <TodayQueue actions={actions} shopSlug={shopSlug} />
+      <TodayQueue
+        actions={actions}
+        shopSlug={shopSlug}
+        shopName={shop.name}
+        inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
+      />
     </main>
   );
 }
