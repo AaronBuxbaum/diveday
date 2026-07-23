@@ -1,34 +1,35 @@
 import { getDb } from "@/db/client";
-import { loadShopExport } from "@/db/export";
-import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
-import { exportFilename, zipExportBundle } from "@/lib/export";
+import { loadShopExportBundleInput } from "@/db/export";
+import { canExportShopData } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
+import { buildExportBundle, exportFileName, zipExportBundle } from "@/lib/export";
+import { requireStaffSession } from "@/lib/session";
 
 /**
- * The full-shop export download. Authorization comes from the session, never
- * the URL: the bundle is always the signed-in staff member's own shop, and the
- * slug segment is only the address. Owner/manager only — the bundle carries
- * diver PII and medical evidence (see the export settings page).
+ * Returns the full-shop export ZIP (ADR 20260722-full-shop-export). The shop
+ * comes from the session, never the URL — and because the bundle carries the
+ * whole roster's contact details and signed medical evidence, it is gated to
+ * owner/manager, not just staff.
  */
 export async function GET() {
-  const session = await auth();
-  if (!session?.user || !isStaff(session.user.roles)) {
-    return Response.json({ error: "authentication_required" }, { status: 401 });
+  const session = await requireStaffSession();
+  if (!canExportShopData(session.user.roles)) {
+    return new Response("The data export is limited to the shop's owner or manager.", {
+      status: 403,
+    });
   }
-  if (!session.user.roles.includes("owner") && !session.user.roles.includes("manager")) {
-    return Response.json({ error: "owner_or_manager_required" }, { status: 403 });
-  }
+  const db = await getDb();
+  const input = await loadShopExportBundleInput(db, session.user.shopId);
+  if (!input) return new Response("Shop not found", { status: 404 });
 
-  const data = await loadShopExport(await getDb(), session.user.shopId);
-  if (!data) return Response.json({ error: "shop_not_found" }, { status: 404 });
-
-  const zip = zipExportBundle(data);
+  const now = nowDate();
+  const zip = zipExportBundle(buildExportBundle(input, now));
+  const fileName = exportFileName(input.shopSlug, now, input.timezone);
   return new Response(new Uint8Array(zip), {
     headers: {
-      "content-type": "application/zip",
-      "content-disposition": `attachment; filename="${exportFilename(data.shop.slug)}"`,
-      // Always fresh: the export is the shop's live state, never a cache.
-      "cache-control": "no-store",
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Cache-Control": "no-store",
     },
   });
 }
