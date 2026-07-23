@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { createDiver, listDiverSummaries, restoreDiver } from "@/db/divers";
+import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -26,16 +26,23 @@ export default async function DiversPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; deleted?: string; q?: string; after?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    deleted?: string;
+    q?: string;
+    after?: string;
+    filter?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, deleted, q, after } = await searchParams;
+  const { notice, deleted, q, after, filter: filterParam } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const query = q?.trim() ?? "";
-  const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after });
+  const filter = isDiverFilter(filterParam) ? filterParam : "all";
+  const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after, filter });
 
   async function addDiverAction(formData: FormData) {
     "use server";
@@ -144,7 +151,13 @@ export default async function DiversPage({
         </FieldGrid>
       </details>
 
-      <DiverList page={diverPage} shopSlug={shopSlug} query={query} cursorActive={Boolean(after)} />
+      <DiverList
+        page={diverPage}
+        shopSlug={shopSlug}
+        query={query}
+        filter={filter}
+        cursorActive={Boolean(after)}
+      />
     </main>
   );
 }
