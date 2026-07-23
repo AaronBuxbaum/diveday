@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
-import { setBookingPayment } from "./payments";
+import { setBookingPaymentIfNotFinal } from "./payments";
 import type { BookingCheckout } from "./schema";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -175,46 +175,58 @@ export async function getLatestCheckoutForBooking(
 
 /**
  * Mark a checkout paid from Stripe's own evidence and cascade every covered
- * booking through the shared payment gate. Idempotent: a second webhook or a
- * webhook racing the return-page refresh finds `completed` and does nothing.
+ * booking through the shared payment gate, both in one transaction so a
+ * crash between the two writes can never leave the checkout "completed"
+ * with a booking still unpaid. Idempotent and self-healing: an
+ * already-completed checkout still re-runs the booking cascade (rather than
+ * short-circuiting), so a replay repairs a booking-payment write that failed
+ * after an earlier run's status update committed, instead of silently
+ * no-op'ing forever. A booking already refunded or waived is never regressed
+ * back to paid by a duplicate or out-of-order webhook (CR-004).
  */
 export async function markCheckoutPaidBySessionId(
   db: AppDb,
   stripeSessionId: string,
 ): Promise<BookingCheckout | null> {
-  const [checkout] = await db
-    .select()
-    .from(bookingCheckouts)
-    .where(eq(bookingCheckouts.stripeSessionId, stripeSessionId))
-    .limit(1);
-  if (!checkout) return null;
-  if (checkout.status === "completed") return checkout;
+  return db.transaction(async (tx) => {
+    const [checkout] = await tx
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.stripeSessionId, stripeSessionId))
+      .limit(1);
+    if (!checkout) return null;
 
-  const [updated] = await db
-    .update(bookingCheckouts)
-    .set({ status: "completed", completedAt: nowDate() })
-    .where(eq(bookingCheckouts.id, checkout.id))
-    .returning();
-  if (!updated) return null;
+    const updated =
+      checkout.status === "completed"
+        ? checkout
+        : ((
+            await tx
+              .update(bookingCheckouts)
+              .set({ status: "completed", completedAt: nowDate() })
+              .where(eq(bookingCheckouts.id, checkout.id))
+              .returning()
+          )[0] ?? null);
+    if (!updated) return null;
 
-  const linked = await db
-    .select({ bookingId: bookingCheckoutBookings.bookingId })
-    .from(bookingCheckoutBookings)
-    .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
-  for (const { bookingId } of linked) {
-    await setBookingPayment(db, {
-      shopId: checkout.shopId,
-      bookingId,
-      // A deposit checkout clears the readiness gate as deposit_paid; the
-      // balance is collected later (staff order or a full checkout).
-      status: checkout.isDeposit ? "deposit_paid" : "paid",
-      amountCents: checkout.amountPerDiverCents,
-      currency: checkout.currency,
-      provider: "stripe",
-      providerRef: checkout.stripeSessionId,
-    });
-  }
-  return updated;
+    const linked = await tx
+      .select({ bookingId: bookingCheckoutBookings.bookingId })
+      .from(bookingCheckoutBookings)
+      .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
+    for (const { bookingId } of linked) {
+      await setBookingPaymentIfNotFinal(tx, {
+        shopId: checkout.shopId,
+        bookingId,
+        // A deposit checkout clears the readiness gate as deposit_paid; the
+        // balance is collected later (staff order or a full checkout).
+        status: checkout.isDeposit ? "deposit_paid" : "paid",
+        amountCents: checkout.amountPerDiverCents,
+        currency: checkout.currency,
+        provider: "stripe",
+        providerRef: checkout.stripeSessionId,
+      });
+    }
+    return updated;
+  });
 }
 
 /** A Stripe-expired session can no longer be paid; pending → expired, payments untouched. */
