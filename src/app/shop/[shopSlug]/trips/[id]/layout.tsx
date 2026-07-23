@@ -17,7 +17,7 @@ export default async function TripLayout({
 }) {
   const { shopSlug, id } = await params;
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-0 print:py-0">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
       <TripSubNav shopSlug={shopSlug} tripId={id} className="mb-6" />
       {children}
     </main>

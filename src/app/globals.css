@@ -202,22 +202,83 @@ summary {
 }
 
 /*
- * Print / Save-as-PDF. `@page` margins are what give every printed page side
- * (and top/bottom) padding — a container's own padding only wraps the first
- * and last page of a multi-page flow, not each page break in between. The
- * root font-size step-down is deliberate: the app's spacing and type scale
- * (Tailwind's rem-based utilities) is tuned for a boat-deck touchscreen held
- * at arm's length, which reads as oversized on a printed page held at
- * reading distance — shrinking the rem base rescales both together without
- * touching every utility class on the printed surfaces.
+ * Print / Save-as-PDF. Three things make a dive-day document read well on a
+ * shop's (usually black-and-white) printer, and none of them should touch the
+ * on-screen app:
+ *
+ * 1. Ink. The screen palette — lagoon links, coral accent, amber/red status
+ *    fills — prints as muddy color a shop neither wants nor pays for. Because
+ *    every surface is drawn from semantic tokens (ADR-0004), redefining those
+ *    tokens here re-skins the whole app to black-on-white for print with no
+ *    per-component print classes. Status still reads: the words ("Blocked",
+ *    "Waiver has not been sent") and a row's left rule carry the meaning color
+ *    did on screen. Set on `.boat-mode` too — the manifest runs in it, and a
+ *    custom property resolves from the nearest ancestor that sets it, so the
+ *    `:root` override alone would never reach a boat-mode descendant.
+ *
+ * 2. Padding. `@page` margins give each printed page its gutters — but the
+ *    print dialog's "None"/"Minimum" margin setting zeroes them, and that is
+ *    exactly when content slams into the paper edge. Side padding on the
+ *    printed surface itself (the trip layout's `print:px-*`) is content, so it
+ *    survives that setting; `@page` still owns the top/bottom gutter that has
+ *    to repeat across a multi-page manifest, which container padding can't.
+ *
+ * 3. Scale. The rem base steps down: the app's spacing and type are tuned for a
+ *    boat-deck touchscreen at arm's length, which reads oversized on paper held
+ *    at reading distance — shrinking the base rescales both at once.
  */
 @page {
-  margin: 0.75in;
+  margin: 0.5in;
 }
 
 @media print {
+  :root,
+  .boat-mode {
+    --background: #ffffff;
+    --surface: #ffffff;
+    --surface-sunken: #ffffff;
+    --border: #9ca3af;
+    --border-strong: #4b5563;
+    --foreground: #000000;
+    --muted: #374151;
+    --primary: #111827;
+    --primary-hover: #000000;
+    --primary-foreground: #ffffff;
+    --accent: #374151;
+    --accent-foreground: #000000;
+    --success: #111827;
+    --warning: #111827;
+    --danger: #000000;
+  }
+
   html {
     font-size: 13px;
+  }
+
+  /*
+   * White paper, no filled backgrounds. A shop shouldn't spend toner laying
+   * grey behind every card, pill, and status row — on paper, borders and a
+   * row's left rule carry the structure a fill carried on screen, and the text
+   * carries the status. This has to beat the utilities that paint those fills
+   * (bg-surface, the tinted bg-danger/10 rows, the badge pills), so it wins
+   * with !important the way the reduced-motion kill-switch below does. Shadows
+   * go too: they never read as depth on paper, only as wasted grey.
+   */
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: print must strip every ink-heavy fill to keep the page white */
+    background: transparent !important;
+    /* biome-ignore lint/complexity/noImportantStyles: a shadow prints as grey haze, never as depth */
+    box-shadow: none !important;
+  }
+
+  /* Keep a diver's row, a summary card, or a kit line whole — a card split at
+     the foot of a page is how a name gets skipped on the deck. */
+  li,
+  tr,
+  thead {
+    break-inside: avoid;
   }
 }
 
