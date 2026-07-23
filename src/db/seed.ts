@@ -1512,13 +1512,7 @@ export async function seedDemoSchedule(
   // something to report. Off for the lean unit-test template and for trial
   // shops (see callers); on for the demo shop and the e2e fleet.
   if (opts.history !== false) {
-    // Regulars the desk already knows, reused across the history below so the
-    // demo reads like a shop with repeat customers — never the divers whose
-    // exact readiness/cert/recap state today's assertions pin (0, 1, 2, 15).
-    const regulars = [3, 4, 5, 6, 7, 8, 9, 10, 11]
-      .map((index) => customers[index]?.id)
-      .filter((id): id is string => id !== undefined);
-    await seedHistory(db, shopId, instructor.id, regulars);
+    await seedHistory(db, shopId, instructor.id);
   }
 }
 
@@ -1539,13 +1533,17 @@ async function seedHistory(
   db: DbExecutor,
   shopId: string,
   createdByPersonId: string,
-  regulars: string[],
 ): Promise<void> {
   const template = await getCurrentWaiverTemplate(db, shopId);
   if (!template) throw new Error("seed: waiver template missing before history back-fill");
 
-  // A cohort that lives only in the past — new faces, all certified, so the
-  // roster shows the churn a real shop has.
+  // A cohort that lives ONLY in the past — new faces, all certified, so the
+  // roster shows the churn a real shop has. Deliberately disjoint from the
+  // upcoming roster: a waiver is signed once and then satisfies the gate on
+  // every one of that diver's bookings (20260721-waiver-sign-once), so booking
+  // a current customer onto a sailed trip and signing their waiver would clear
+  // today's boat's waiver gate and change the exactly-asserted readiness counts.
+  // History-only divers keep the past fully isolated from today's board.
   const historicalDivers: string[] = [
     "Grace Halloran",
     "Bjorn Aasen",
@@ -1555,6 +1553,14 @@ async function seedHistory(
     "Lars Petersen",
     "Yara Halabi",
     "Emmet O'Brien",
+    "Sofia Marchetti",
+    "Dominic Rossi",
+    "Aisha Bello",
+    "Henrik Nilsson",
+    "Camila Rojas",
+    "Tobias Berg",
+    "Noor Rahman",
+    "Diego Ferreira",
   ];
   const histPeople = await db
     .insert(people)
@@ -1582,8 +1588,10 @@ async function seedHistory(
     })),
   );
 
-  // The bookable pool: this month's newcomers plus the returning regulars.
-  const pool = [...histPeople.map((person) => person.id), ...regulars];
+  // The bookable pool is exactly the history-only cohort (see above): large
+  // enough that a wrapping slice fills even a 12-seat boat with distinct divers,
+  // and never a diver who also sits on an upcoming trip.
+  const pool = histPeople.map((person) => person.id);
 
   // Trips that already sailed. daysAgo is measured from the frozen clock, so the
   // spread lands in this month (month-to-date), last month, and the one before.
