@@ -51,6 +51,12 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   materializes independent, initially-identical trip instances on the shared spine, editable and
   cancellable per date ([20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md)).
   Series-wide edits and a rolling horizon remain future work.
+- ✅ Kill the duplicate entry: adding a diver to a trip leads with a search of the shop's existing
+  people, so a returning diver is picked by identity (`addExistingDiverAction` → `createBooking` by
+  `personId`) and their certs, waivers, rental fit, and history carry over — no re-typed name minting
+  a second person row. The picker shows each candidate's rental fit on file ("same as last time");
+  hand-entry stays for genuine first-timers and for wait-listing a full boat. Bulk multi-select
+  actions and wait-listing by identity remain follow-on work.
 
 ## M3 — Waivers (core slice complete)
 

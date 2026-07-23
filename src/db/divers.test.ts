@@ -1,15 +1,19 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
+import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
   getDiverProfile,
+  listBookableDivers,
   listDiverSummaries,
   restoreDiver,
   updateDiver,
 } from "./divers";
 import { saveRentalFit } from "./rental-fit";
+import { upcomingTripsWithCounts } from "./trips";
 
 describe("person-first diver records", () => {
   it("composes cards, fit, and history from one diver record", async () => {
@@ -141,5 +145,86 @@ describe("roster search and pagination", () => {
     expect(mangled.divers.map((row) => row.person.id)).toEqual(
       all.divers.map((row) => row.person.id),
     );
+  });
+});
+
+describe("listBookableDivers (returning-diver picker)", () => {
+  async function openTrip(db: AppDb, shopId: string) {
+    const trips = await upcomingTripsWithCounts(db, shopId);
+    const trip = trips.find((t) => t.booked < t.capacity);
+    if (!trip) throw new Error("no open seeded trip");
+    return trip;
+  }
+
+  it("returns nothing for an empty query", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await openTrip(db, shop.id);
+    expect(await listBookableDivers(db, shop.id, trip.id, { query: "  " })).toEqual([]);
+  });
+
+  it("finds a returning diver and carries their rental fit", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await openTrip(db, shop.id);
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Marina Vega",
+      email: "marina@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    await saveRentalFit(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      rentsBcd: true,
+      rentsRegulator: true,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      rentsWeights: true,
+      rentsDiveComputer: false,
+      rentsGopro: false,
+      wetsuitSize: "5 mm / M",
+    });
+
+    const matches = await listBookableDivers(db, shop.id, trip.id, { query: "marina" });
+    expect(matches.map((m) => m.person.fullName)).toEqual(["Marina Vega"]);
+    expect(matches[0]?.rentalFit).toMatchObject({ wetsuitSize: "5 mm / M" });
+  });
+
+  it("excludes a diver already holding an active seat on the trip", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await openTrip(db, shop.id);
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Booked Bianca",
+      email: "bianca@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+
+    expect(
+      (await listBookableDivers(db, shop.id, trip.id, { query: "bianca" })).map(
+        (m) => m.person.fullName,
+      ),
+    ).toEqual(["Booked Bianca"]);
+
+    const booked = await createBooking(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+    });
+    expect(booked.ok).toBe(true);
+
+    expect(await listBookableDivers(db, shop.id, trip.id, { query: "bianca" })).toEqual([]);
+  });
+
+  it("omits soft-deleted divers", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await openTrip(db, shop.id);
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Gone Gary",
+      email: "gary@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    await deleteDiver(db, shop.id, diver.id);
+    expect(await listBookableDivers(db, shop.id, trip.id, { query: "gary" })).toEqual([]);
   });
 });

@@ -10,6 +10,7 @@ import {
   isNotNull,
   isNull,
   ne,
+  notInArray,
   or,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
@@ -241,6 +242,67 @@ async function summarizeDivers(
       rentalFit: profileByPerson.get(person.id) ?? null,
     };
   });
+}
+
+export type BookableDiver = {
+  person: typeof people.$inferSelect;
+  rentalFit: typeof rentalFitProfiles.$inferSelect | null;
+};
+
+/**
+ * Returning divers a staffer can drop straight onto a trip without re-entering
+ * them — the "enter once, reuse everywhere" path that keeps the roster from
+ * minting a second person row (and orphaning the first diver's certs, waivers,
+ * and rental fit) every time a regular books. Same indexed `ilike` over
+ * name/email/phone the diver roster and command palette use, bounded to a
+ * handful of matches. Excludes soft-deleted records and anyone already holding
+ * an active seat on this trip — the roster can't book them twice. Carries each
+ * candidate's rental fit so the picker can show "fit on file — carries over".
+ */
+export async function listBookableDivers(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  options: { query?: string; limit?: number } = {},
+): Promise<BookableDiver[]> {
+  const query = options.query?.trim() ?? "";
+  if (!query) return [];
+  const limit = options.limit ?? 6;
+  const like = `%${query}%`;
+
+  const bookedRows = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+  const bookedIds = bookedRows.map((row) => row.personId);
+
+  const rows = await db
+    .select({ person: people })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+        or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like)),
+        bookedIds.length ? notInArray(people.id, bookedIds) : undefined,
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(people.id))
+    .limit(limit);
+
+  if (rows.length === 0) return [];
+  const ids = rows.map((row) => row.person.id);
+  const profiles = await db
+    .select()
+    .from(rentalFitProfiles)
+    .where(and(eq(rentalFitProfiles.shopId, shopId), inArray(rentalFitProfiles.personId, ids)));
+  const fitByPerson = new Map(profiles.map((profile) => [profile.personId, profile]));
+  return rows.map((row) => ({
+    person: row.person,
+    rentalFit: fitByPerson.get(row.person.id) ?? null,
+  }));
 }
 
 export async function getDiverProfile(db: AppDb, shopId: string, personId: string) {

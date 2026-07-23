@@ -12,14 +12,21 @@ import {
   trips,
 } from "./schema";
 
+/**
+ * A booking names its diver one of two ways: a walk-in supplies a name and
+ * email (deduped/created), or a returning diver is picked by identity so the
+ * one person row — with its certs, waivers, rental fit, and history — is
+ * reused instead of re-typed. "Enter once, reuse everywhere."
+ */
+export type BookingPerson =
+  | { personId: string }
+  | { fullName: string; email: string; phone?: string };
+
 export type BookingRequest = {
   shopId: string;
   tripId: string;
-  fullName: string;
-  email: string;
-  phone?: string;
   buddyPreference?: string;
-};
+} & BookingPerson;
 
 export type BookingOutcome =
   | { ok: true; bookingId: string; personName: string }
@@ -30,7 +37,8 @@ export type BookingOutcome =
         | "trip_full"
         | "already_booked"
         | "course_unstaffed"
-        | "course_prerequisite";
+        | "course_prerequisite"
+        | "person_not_found";
     };
 
 export type BookingPartyOutcome =
@@ -40,9 +48,10 @@ export type BookingPartyOutcome =
 /**
  * The whole "grab a spot" operation in one transaction: trip must be
  * scheduled and in the future, capacity re-checked inside the transaction
- * (the UI's spots-left pill is advisory, this is the enforcement), person
- * dedupe by email within the shop, and a cancelled booking re-activates
- * instead of violating the one-booking-per-person constraint.
+ * (the UI's spots-left pill is advisory, this is the enforcement), the diver
+ * resolved by identity (a returning diver picked from the shop) or deduped by
+ * email (a walk-in), and a cancelled booking re-activates instead of violating
+ * the one-booking-per-person constraint.
  */
 export async function createBooking(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
   return db.transaction((tx) => createBookingRecord(tx as unknown as AppDb, req));
@@ -77,8 +86,6 @@ class PartyBookingError extends Error {
 }
 
 async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
-  const email = req.email.trim().toLowerCase();
-  const fullName = req.fullName.trim();
   const tx = db;
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
@@ -113,14 +120,34 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     if (!instructor) return { ok: false, reason: "course_unstaffed" };
   }
 
-  // A soft-deleted person's email is free (matching createDiver): a rebooking
+  // Resolve the diver. A returning diver picked by identity reuses that exact
+  // person row (the whole point of "enter once"); a walk-in is looked up by
+  // email so a re-typed regular still collapses onto their record. A
+  // soft-deleted person's email is free (matching createDiver): a rebooking
   // diver whose record staff removed gets a fresh person row, not a booking
-  // attached to a record that's invisible on the roster.
-  let [person] = await tx
-    .select()
-    .from(people)
-    .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
-    .limit(1);
+  // attached to a record that's invisible on the roster. Any new walk-in row is
+  // only written after the capacity gate passes (`pendingInsert`).
+  let person: typeof people.$inferSelect | undefined;
+  let pendingInsert: { fullName: string; email: string; phone?: string } | null = null;
+  if ("personId" in req) {
+    [person] = await tx
+      .select()
+      .from(people)
+      .where(
+        and(eq(people.id, req.personId), eq(people.shopId, req.shopId), isNull(people.deletedAt)),
+      )
+      .limit(1);
+    // A copied URL or a since-removed diver must not book into this tenant.
+    if (!person) return { ok: false, reason: "person_not_found" };
+  } else {
+    const email = req.email.trim().toLowerCase();
+    [person] = await tx
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
+      .limit(1);
+    if (!person) pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
+  }
 
   // Existing-card courses deliberately fail closed at enrollment. Staff can
   // capture and verify a card, then the same public form will admit the
@@ -150,14 +177,17 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     return { ok: false, reason: "trip_full" };
   }
 
-  if (!person) {
+  if (!person && pendingInsert) {
     [person] = await tx
       .insert(people)
-      .values({ shopId: req.shopId, fullName, email, phone: req.phone })
+      .values({ shopId: req.shopId, ...pendingInsert })
       .returning();
     if (!person) throw new Error("createBooking: person insert returned no row");
     await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
   }
+  // Only reachable on the identity path if the row vanished mid-transaction;
+  // the walk-in path always has a pendingInsert. Guards the non-null uses below.
+  if (!person) return { ok: false, reason: "person_not_found" };
 
   const [existing] = await tx
     .select()
