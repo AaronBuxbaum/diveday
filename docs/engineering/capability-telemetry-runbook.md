@@ -27,11 +27,11 @@ Events sent before this change may still contain raw tokens. To check:
 | Capability | Storage | Can it be revoked/rotated? |
 | --- | --- | --- |
 | Waiver link (`/waivers/[token]`) | Hashed, expiring, supersedable row in `waiver_records` (see `src/db/waivers.ts`) | Yes — issuing a new waiver link for the same booking supersedes the old token; the superseded token stops verifying immediately. |
-| Readiness link (`/ready/[token]`) | Stateless signed token, no stored row (`src/lib/readiness-links.ts`) | Not yet — the token is valid for the life of the booking id and `AUTH_SECRET`. CR-002 replaces this with an explicit, revocable capability; until that lands, an exposed readiness link cannot be individually revoked. |
-| Recap link (`/recap/[token]`) | Stateless signed token, no stored row (`src/lib/recap-links.ts`) | Not yet — same limitation as readiness links; no per-link revocation exists today. |
+| Readiness link (`/ready/[token]`) | Hashed, expiring, revocable row in `booking_capabilities` (`purpose = 'readiness'`; see `src/db/booking-capabilities.ts`, [ADR 20260723-booking-capabilities](../architecture/decisions/20260723-booking-capabilities.md)) | Yes (CR-002) — call `revokeBookingCapabilities(db, { shopId, bookingId, purpose: "readiness" })`; a cancelled booking's outstanding links also fail closed automatically. Note: reissuing does **not** supersede an earlier still-valid link (both stay valid) — revoke explicitly if the old one must stop working. |
+| Recap link (`/recap/[token]`) | Stateless signed token, no stored row (`src/lib/recap-links.ts`) | Not yet — the token is valid for the life of the booking id and `AUTH_SECRET`. No ticket has moved this onto `booking_capabilities` yet; until it does, an exposed recap link cannot be individually revoked. |
 
-For readiness and recap links, the only current mitigation for a leaked
-token is confirming the redaction above stops further leakage and, for a
-credible active-abuse case, rotating `AUTH_SECRET` (which invalidates every
-outstanding signed token of every kind — a blunt, shop-wide instrument, not
-a scoped revocation).
+For a leaked recap link, the only current mitigation is confirming the
+redaction above stops further leakage and, for a credible active-abuse
+case, rotating `AUTH_SECRET` (which invalidates every outstanding
+`recap-links.ts`-signed token — a blunt, shop-wide instrument, not a scoped
+revocation, and it does **not** touch `booking_capabilities` rows at all).

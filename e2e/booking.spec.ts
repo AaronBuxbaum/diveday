@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -148,4 +148,43 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .click();
   await expect(page.getByRole("heading", { name: "Wait list" })).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
+});
+
+// CR-003: the confirmation panel is authorized by a signed `confirm`
+// capability in the `?booking=` param, never by the raw booking id — a
+// tampered or cross-trip token must never surface someone else's booking.
+test("a tampered or cross-trip confirmation token reveals nothing", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+    .getByRole("link")
+    .click();
+  await page.getByLabel("Name").fill("Casey Ford");
+  await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You're on the boat, Casey/ })).toBeVisible();
+
+  const confirmedUrl = new URL(page.url());
+  const realToken = confirmedUrl.searchParams.get("booking");
+  expect(realToken).toBeTruthy();
+
+  // A garbage token on the same trip must not show the confirmation.
+  const tamperedUrl = new URL(confirmedUrl);
+  tamperedUrl.searchParams.set("booking", "not-a-real-token");
+  await page.goto(tamperedUrl.toString());
+  await expect(page.getByRole("heading", { name: /You're on the boat/ })).not.toBeVisible();
+
+  // A real, valid token — but presented on a different trip — must not
+  // authorize that trip's confirmation either.
+  await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+  await page
+    .locator("li")
+    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+    .getByRole("link")
+    .click();
+  const otherTripUrl = new URL(page.url());
+  otherTripUrl.searchParams.set("booking", realToken ?? "");
+  await page.goto(otherTripUrl.toString());
+  await expect(page.getByRole("heading", { name: /You're on the boat/ })).not.toBeVisible();
 });

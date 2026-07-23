@@ -3,8 +3,9 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
+import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
-import { bookings, people, personRoles, userAccounts } from "./schema";
+import { bookingCapabilities, bookings, people, personRoles, userAccounts } from "./schema";
 import { demoTodayDepartureStart, resetDemoSchedule } from "./seed";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
@@ -71,6 +72,42 @@ describe("resetDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.email, "wendy@example.com")));
     expect(wendy).toHaveLength(0);
+  });
+
+  it("clears issued booking capabilities so a churned playground resets cleanly", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+    if (!open) throw new Error("expected open trip missing");
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Capability Cameron",
+      email: "cameron@example.com",
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("expected booking to succeed");
+    // A readiness/confirm capability row references the booking; before the
+    // reset cleared it, that row blocked the bookings delete with an FK
+    // violation (23503) and left every subsequent test's fixture dirty.
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: outcome.bookingId,
+      purpose: "readiness",
+    });
+    expect(issued).not.toBeNull();
+
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    const after = await upcomingTripsWithCounts(db, shop.id);
+    expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
+      trips.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity })),
+    );
+    const remainingCapabilities = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.shopId, shop.id));
+    expect(remainingCapabilities).toHaveLength(0);
   });
 
   it("keeps staff and their logins intact so the demo session survives", async () => {

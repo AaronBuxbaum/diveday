@@ -1,4 +1,5 @@
 import { and, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassurance, forecastLine } from "@/lib/night-before-brief";
@@ -15,7 +16,6 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { readinessLinkPath } from "@/lib/readiness-links";
 import { buildDiverChecklist, reminderReadiness } from "@/lib/readiness-summary";
 import {
   dueReminder,
@@ -23,6 +23,7 @@ import {
   type ReminderKind,
   TRIP_REMINDER_CADENCES,
 } from "@/lib/reminders";
+import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { recordNotificationDelivery } from "./notifications";
 import { getBookingReadinessDetail } from "./readiness";
@@ -183,8 +184,16 @@ export async function sendDueReminders(
     }
 
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
-    const readinessUrl = origin
-      ? new URL(readinessLinkPath(booking.id), `${origin}/`).toString()
+    const readinessCapability = origin
+      ? await issueBookingCapability(db, {
+          shopId: shop.id,
+          bookingId: booking.id,
+          purpose: "readiness",
+          now,
+        })
+      : null;
+    const readinessUrl = readinessCapability
+      ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
       : undefined;
     const phone = smsRecipient(person.phone);
 

@@ -9,6 +9,7 @@ import type { DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  bookingCapabilities,
   bookingPayments,
   bookings,
   certifications,
@@ -2138,6 +2139,8 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
+  // Readiness/confirm capabilities reference bookings, so they must go before them.
+  await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));

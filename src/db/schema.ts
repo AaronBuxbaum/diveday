@@ -1010,6 +1010,57 @@ export const waiverRecords = pgTable(
   ],
 );
 
+/**
+ * What a `booking_capabilities` row authorizes. `readiness` covers the diver
+ * self-service page (view + emergency contact + rental fit + nitrox + pay +
+ * request a waiver link); `confirm` covers the public schedule-confirmation
+ * page reached right after booking. Both are read+write for their purpose —
+ * split into separate purposes (not separate read/write tokens) because
+ * neither purpose's read and write lifetimes differ in practice.
+ */
+export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
+  "readiness",
+  "confirm",
+]);
+
+/**
+ * A revocable, expiring bearer credential over one booking (CR-002/CR-003).
+ * Unlike a waiver link, issuing a new capability does not supersede an
+ * earlier still-valid one for the same booking+purpose — a diver may be
+ * holding an earlier email's link and a later reminder's link at once, and
+ * both should keep working until they individually expire or are revoked.
+ * Only the hash is stored; the raw bearer token exists solely in the
+ * response that issued it.
+ */
+export const bookingCapabilities = pgTable(
+  "booking_capabilities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    purpose: bookingCapabilityPurpose("purpose").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The verify-path lookup: hash the bearer token, find the row.
+    index("booking_capabilities_token_hash_idx").on(table.tokenHash),
+    // Revocation-cascade and staff-facing "active links for this booking" lookups.
+    index("booking_capabilities_booking_purpose_idx").on(
+      table.bookingId,
+      table.purpose,
+      table.revokedAt,
+    ),
+  ],
+);
+
 /** Evidence belongs to a person; requirements decide whether it is sufficient for a trip. */
 export const certifications = pgTable(
   "certifications",

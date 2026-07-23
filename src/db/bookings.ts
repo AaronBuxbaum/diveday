@@ -1,6 +1,7 @@
 import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -291,5 +292,10 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
     .set({ status: "cancelled" })
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .returning();
-  return booking ?? null;
+  if (!booking) return null;
+  // Belt-and-suspenders: verifyBookingCapability already fails closed on a
+  // cancelled booking, but revoking outright keeps the capability table's
+  // own audit trail honest and stops relying solely on that join.
+  await revokeBookingCapabilities(db, { shopId, bookingId });
+  return booking;
 }
