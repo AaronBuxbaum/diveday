@@ -23,7 +23,8 @@ under the same sync duties (docs/README.md).
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`
-(dive-industry correctness — required for safety-critical surfaces).
+(dive-industry correctness — required for safety-critical surfaces), `security-reviewer` (tenant
+isolation, authz, data exposure — required for auth/allowlist/token/PII/export changes).
 
 ## Maintenance
 
