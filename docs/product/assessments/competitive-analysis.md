@@ -134,7 +134,7 @@ product-owner decision before any customer-facing publication (H-12).
 | Today/blocker daily loop | No one has it | ✅ | Differentiator |
 | Delight/UX | Open flank (EVE is the anti-model) | ✅ Visibly ahead | Differentiator |
 | Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ⚠️ Posture right; number moving toward market (H-12, see [Pricing posture](#pricing-posture)) | Differentiator once H-12 lands |
-| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22 and the CSV importer 2026-07-23 ([export](../../architecture/decisions/20260722-full-shop-export.md), [importer](../../architecture/decisions/20260723-contact-importer.md)); migration guides + read API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, importer ✅, then migration guides, read API + webhooks |
+| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22, the CSV importer 2026-07-23, and the public migration guides (`/switching` hub + live EVE, DiveShop360, DiveAdmin, Smartwaiver pages) 2026-07-23 ([export](../../architecture/decisions/20260722-full-shop-export.md), [importer](../../architecture/decisions/20260723-contact-importer.md)); read API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, importer ✅, migration guides ✅, then read API + webhooks |
 
 ## Implications for the queue
 

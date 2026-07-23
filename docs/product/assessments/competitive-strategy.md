@@ -151,7 +151,12 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    EVE" (the forced-migration pool), "…from DiveAdmin," "…from Smartwaiver," "…from
    FareHarbor/Rezdy." Each: exact click-path to the incumbent's own export, our scope table, the
    importer. These double as SEO capture of "leaving <incumbent>" searches — the documented
-   pattern across Jane, ServiceTitan, and the anti-Mindbody ecosystem.
+   pattern across Jane, ServiceTitan, and the anti-Mindbody ecosystem. **Shipped 2026-07-23:** the
+   `/switching` hub plus live guides for all four named incumbents — **EVE** (first), **DiveShop360**,
+   **DiveAdmin**, and **Smartwaiver** — each with its export click-path, the scope table rendered
+   from the importer's own `IMPORT_HONESTY_TABLE`, and the import walkthrough. A FareHarbor/Rezdy
+   guide is a future addition — not yet built, and (per the marketing claims policy) not shown until
+   it is. See [marketing.md](../marketing.md#migration-guides).
 4. **Scheduled backup export to shop-owned storage** *(S–M)*. Weekly bundle from #1 to the shop's
    email/Drive. Matches DiveAdmin's one real portability lever and converts "your data is yours"
    from pledge to running fact. Calendar (.ics) feeds for trips ride along cheaply here.
@@ -194,8 +199,10 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    band — together they are the "easy data export (attack lock-in fear head-on)" counter that
    [competitive-analysis.md](competitive-analysis.md) already prescribes for blocker #6, now
    specced.
-2. Migration guides (#3) belong to the marketing surface ([marketing.md](../marketing.md)) and can
-   ship page-by-page as importers land; "Switching from EVE" first — that pool is live now.
+2. Migration guides (#3) belong to the marketing surface ([marketing.md](../marketing.md)); they
+   shipped as a `/switching` hub with "Switching from EVE" first (`/switching/eve`) — the live-now pool —
+   followed by live guides for DiveShop360, DiveAdmin, and Smartwaiver. A FareHarbor/Rezdy guide is
+   a future addition, unbuilt for now.
 3. Backup export (#4) and the read API + webhooks (#5) are P2; the API needs an ADR.
 4. The pricing decision ([competitive-analysis.md](competitive-analysis.md#pricing-posture))
    gains a datum: both named rivals confirm the specialist ceiling ($119 DiveAdmin, $149–199+setup

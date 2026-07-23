@@ -165,8 +165,14 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   rather than duplicates. The safety spine holds: imported certs land **claimed, never verified**,
   no card number means no card, and medical answers never import (fail-closed); a scope table states
   all of it up front. Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
-  ([contact-importer](../architecture/decisions/20260723-contact-importer.md)). Migration guides,
-  backups, and the read API are the open follow-ons in [roadmap.md](roadmap.md).
+  ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
+- **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
+  (EVE, DiveShop360, DiveAdmin, Smartwaiver): each states how to export the shop's own data from
+  that system, renders the importer's `IMPORT_HONESTY_TABLE` scope table verbatim, and walks the
+  DiveDay import. High-intent SEO capture of "leaving &lt;incumbent&gt;" searches and the third leg
+  of the portability wedge. Content in `src/lib/migration-guides.ts`, pages in `src/app/switching/`
+  ([marketing.md](marketing.md#migration-guides)). Backups and the read API are the open follow-ons
+  in [roadmap.md](roadmap.md).
 - **Night-before brief + post-trip recap** — the 24-hour reminder becomes a plain-language
   night-before brief (conditions, what to bring, dock time, who to text; softer first-timer voice),
   and after departure an automatic `/recap/[token]` gives each diver a shareable page of the sites
