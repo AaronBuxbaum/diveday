@@ -268,6 +268,19 @@ new domain concept, define it here in the same PR.
   with demo data" checkbox only preloads sample trips, and a trial never shows the playground banner
   or a destructive reset (ADR 20260718-dynamic-demo-onboarding, revised by
   20260720-trial-shops-are-not-demo).
+- **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
+  revenue collected, bookings, **fill rate**, and **waiver completion** for the trips that departed
+  in a chosen month, plus a per-trip breakdown. Anchored to trip-departure month in the shop
+  timezone; "revenue" is the money actually collected on those trips' bookings (`paid` +
+  `deposit_paid` payments), not standalone retail. Owner/manager only. See
+  [20260723-owner-reporting](../architecture/decisions/20260723-owner-reporting.md).
+- **Fill rate** — seats booked ÷ seats offered. On a report it is the month's active bookings over
+  the sum of its trips' capacities; on one trip it is that trip's active bookings over its capacity,
+  capped at fully booked. "Active" excludes cancellations and no-shows — the same set that appears on
+  a manifest.
+- **Waiver completion** — the share of a month's active bookings that carry a signed
+  (completed, non-superseded) **waiver record**. The reporting counterpart of the per-trip roster's
+  waiver gate.
 
 ## Rental fit and prep
 

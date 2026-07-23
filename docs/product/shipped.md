@@ -236,6 +236,20 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   frequency, and checkout abandonment ([event-instrumentation](../architecture/decisions/20260723-event-instrumentation.md)).
 - **DAN / dive-insurance field** — `people.dive_insurance`, captured and shown on the diver profile.
 
+## Owner reporting (delivered 2026-07-23)
+
+- **"How's your month" dashboard** at `/shop/[shopSlug]/reports` — revenue collected, bookings, seat
+  fill, and waiver completion for the trips that sailed, with a per-trip breakdown and month
+  navigation. Anchored to trip-departure month; revenue is the `paid`/`deposit_paid` booking
+  payments. Pure `summarizeMonth` (`src/lib/reporting.ts`) over three aggregate queries
+  (`src/db/reporting.ts`); owner/manager only (`canViewShopReports`). Answers the recurring buyer
+  objection #5 ([owner-reporting](../architecture/decisions/20260723-owner-reporting.md)).
+- **Seeded trailing quarter** — the demo shop back-fills already-sailed trips (this month, last, and
+  the one before) with bookings, payments, signed waivers, and paid invoices, deterministically so
+  the frozen-clock e2e/Argos fleet is stable (`seedHistory`). Demo-only, behind a `{ history }` flag
+  the lean unit-test template and trial shops opt out of. Demo `orders` carry fabricated Stripe ids,
+  so the order page disables Refresh/Void/Refund on a demo shop with a hover explanation.
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate

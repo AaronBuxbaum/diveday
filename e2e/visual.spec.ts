@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Eighteen key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 72 screenshots per run (see ADR
+ * Visual regression coverage (Argos). Nineteen key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 76 screenshots per run (see ADR
  * 20260721-argos-visual-regression). Keep these counts in sync when adding a
  * surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -205,6 +205,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+
+        // Owner reporting: "how's my month" over the seeded back-fill — the KPI
+        // row and the per-trip breakdown that answer the buyer's revenue question.
+        await page.goto("/shop/blue-mantis/reports");
+        await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
+        await capture(page, "reports", scheme);
       });
     });
   });
