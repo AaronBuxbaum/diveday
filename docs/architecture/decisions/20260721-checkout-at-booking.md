@@ -8,7 +8,7 @@
 The public booking flow reserves a seat with a name and an email; money changes hands later, when
 staff build an order and Stripe emails an invoice
 ([20260719-stripe-connect-orders](20260719-stripe-connect-orders.md)). The
-[competitive analysis](../../product/competitive-analysis.md#what-blocks-the-purchase) ranks this as
+[competitive analysis](../../product/assessments/competitive-analysis.md#what-blocks-the-purchase) ranks this as
 the single largest commercial gap: every credible competitor captures payment or a deposit at
 booking, and for buyers that *is* the point of online booking — no-show protection and cashflow.
 The prior ADR explicitly anticipated this layer: Checkout "may become a lower-friction 'pay now'
