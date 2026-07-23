@@ -25,7 +25,6 @@ export type BookingPerson =
 export type BookingRequest = {
   shopId: string;
   tripId: string;
-  buddyPreference?: string;
 } & BookingPerson;
 
 export type BookingOutcome =
@@ -200,7 +199,6 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       .update(bookings)
       .set({
         status: "booked",
-        buddyPreference: req.buddyPreference || null,
         conditionsBriefedAt: trip.conditionsUpdatedAt,
       })
       .where(eq(bookings.id, existing.id));
@@ -213,7 +211,6 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       shopId: req.shopId,
       tripId: trip.id,
       personId: person.id,
-      buddyPreference: req.buddyPreference || null,
       conditionsBriefedAt: trip.conditionsUpdatedAt,
     })
     .returning();
