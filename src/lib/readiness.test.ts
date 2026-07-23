@@ -90,7 +90,7 @@ describe("calculateReadiness", () => {
       {
         requirement,
         waiver: signedWaiver,
-        certifications: [certification({ expiresAt: new Date("2026-07-17") })],
+        certifications: [certification({ expiresAt: "2026-07-17" })],
       },
       "certification_expired",
     ],
@@ -104,7 +104,7 @@ describe("calculateReadiness", () => {
       "certification_insufficient",
     ],
   ] as const)("fails closed for %s", (_name, input, code) => {
-    expect(calculateReadiness({ ...input, now }).blockers).toContainEqual(
+    expect(calculateReadiness({ ...input, now, timezone: "UTC" }).blockers).toContainEqual(
       expect.objectContaining({ code }),
     );
   });
@@ -116,6 +116,7 @@ describe("calculateReadiness", () => {
         waiver: signedWaiver,
         certifications: [certification()],
         now,
+        timezone: "UTC",
       }),
     ).toEqual({
       status: "ready",
@@ -126,11 +127,7 @@ describe("calculateReadiness", () => {
   it.each([
     ["missing specialty card", undefined, "specialty_missing"],
     ["pending specialty card", specialtyCard({ status: "pending" }), "specialty_pending"],
-    [
-      "expired specialty card",
-      specialtyCard({ expiresAt: new Date("2026-07-17") }),
-      "specialty_expired",
-    ],
+    ["expired specialty card", specialtyCard({ expiresAt: "2026-07-17" }), "specialty_expired"],
     ["wrong-specialty card", specialtyCard({ specialty: "wreck" }), "specialty_missing"],
   ] as const)("fails closed on a required specialty for %s", (_name, card, code) => {
     expect(
@@ -140,6 +137,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         specialtyCertifications: card ? [card] : [],
         now,
+        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code }));
   });
@@ -152,6 +150,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         specialtyCertifications: [specialtyCard()],
         now,
+        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -167,6 +166,7 @@ describe("calculateReadiness", () => {
       waiver: signedWaiver,
       certifications: [certification({ level: "advanced_open_water" })],
       now,
+      timezone: "UTC",
     });
     expect(result.status).toBe("blocked");
     expect(result.blockers).toContainEqual(
@@ -186,6 +186,7 @@ describe("calculateReadiness", () => {
       certifications: [certification()],
       specialtyCertifications: [],
       now,
+      timezone: "UTC",
     });
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "specialty_missing" }));
   });
@@ -201,6 +202,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         nitroxCertifications: card ? [card] : [],
         now,
+        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code }));
   });
@@ -213,6 +215,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         nitroxCertifications: [nitroxCard()],
         now,
+        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -229,6 +232,7 @@ describe("calculateReadiness", () => {
       certifications: [certification()],
       nitroxCertifications: [],
       now,
+      timezone: "UTC",
     });
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "nitrox_missing" }));
   });
@@ -245,6 +249,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: status,
         now,
+        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code: "payment_due" }));
   });
@@ -257,6 +262,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: status,
         now,
+        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -269,6 +275,7 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: "unpaid",
         now,
+        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });

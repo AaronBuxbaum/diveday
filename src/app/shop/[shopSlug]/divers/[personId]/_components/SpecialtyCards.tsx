@@ -2,6 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { SPECIALTY_LABELS } from "@/lib/readiness";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
@@ -10,6 +11,7 @@ import {
   CARD_STATUS_LABELS,
   cardDisplayStatus,
   type DiverProfile,
+  type Shop,
   statusTone,
 } from "./shared";
 
@@ -17,12 +19,14 @@ export function SpecialtyCards({
   diver,
   shopSlug,
   personId,
+  shop,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
+  shop: Shop;
 }) {
-  const now = nowDate();
+  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -103,7 +107,7 @@ export function SpecialtyCards({
         ) : (
           <>
             {diver.specialtyCertifications.map((card) => {
-              const display = cardDisplayStatus(card, now);
+              const display = cardDisplayStatus(card, todayLocal);
               const expired = display === "expired";
               return (
                 <li
@@ -118,7 +122,7 @@ export function SpecialtyCards({
                       {card.identifier}
                       {card.expiresAt ? (
                         <span className={expired ? "font-medium text-danger" : undefined}>
-                          {` · ${expired ? "expired" : "expires"} ${card.expiresAt.toLocaleDateString("en-US")}`}
+                          {` · ${expired ? "expired" : "expires"} ${formatCalendarDate(card.expiresAt)}`}
                         </span>
                       ) : null}
                     </p>

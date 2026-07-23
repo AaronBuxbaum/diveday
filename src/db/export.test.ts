@@ -234,7 +234,7 @@ describe("full-shop export dataset", () => {
         level: "rescue",
         identifier: "EXPIRED-RESCUE-1",
         status: "verified",
-        expiresAt: new Date("2025-01-01T00:00:00.000Z"),
+        expiresAt: "2025-01-01",
       },
       {
         shopId: shop.id,
@@ -257,7 +257,7 @@ describe("full-shop export dataset", () => {
       level: "advanced_open_water",
       identifier: "EXPIRED-AOW-1",
       status: "verified",
-      expiresAt: new Date("2024-06-01T00:00:00.000Z"),
+      expiresAt: "2024-06-01",
     });
 
     const input = await loadShopExportBundleInput(db, shop.id, now);
@@ -281,7 +281,7 @@ describe("full-shop export dataset", () => {
     expect(erin).toBeDefined();
     if (!erin) return;
     expect(cell(erin, "certification_number")).toBe("EXPIRED-AOW-1");
-    expect(cell(erin, "certification_expires_at")).toEqual(new Date("2024-06-01T00:00:00.000Z"));
+    expect(cell(erin, "certification_expires_at")).toBe("2024-06-01");
   });
 
   it("exports issued waiver evidence linked to its template version", async () => {

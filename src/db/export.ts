@@ -9,6 +9,11 @@
 
 import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
 import { canExportShopData, type Role } from "@/lib/authz";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isCalendarDateExpired,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
 import type { AppDb } from "./client";
@@ -54,11 +59,11 @@ function bestCertification<
   Card extends {
     level: (typeof certificationLevel.enumValues)[number];
     status: string;
-    expiresAt: Date | null;
+    expiresAt: CalendarDate | null;
   },
->(cards: Card[], now: Date): Card | undefined {
+>(cards: Card[], todayLocal: CalendarDate): Card | undefined {
   const rank = (card: Card) =>
-    (card.expiresAt && card.expiresAt <= now ? 0 : 2000) +
+    (card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal) ? 0 : 2000) +
     (card.status === "verified" ? 1000 : 0) +
     certificationLevel.enumValues.indexOf(card.level);
   return cards.reduce<Card | undefined>(
@@ -87,6 +92,7 @@ export async function loadShopExportBundleInput(
     async (tx) => {
       const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
       if (!shop) return null;
+      const todayLocal = calendarDateInTimezone(now, shop.timezone);
 
       const peopleRows = await tx
         .select()
@@ -329,7 +335,7 @@ export async function loadShopExportBundleInput(
           ],
           rows: peopleRows.map((row) => {
             const name = splitName(row.fullName);
-            const card = bestCertification(cardsByPerson.get(row.id) ?? [], now);
+            const card = bestCertification(cardsByPerson.get(row.id) ?? [], todayLocal);
             const fit = fitByPerson.get(row.id);
             return [
               name.first,

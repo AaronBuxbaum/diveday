@@ -80,6 +80,24 @@ describe("nitrox certification workflow", () => {
     await reviewNitroxCertification(db, { shopId, certificationId: cert.id, status: "verified" });
     expect([...(await verifiedNitroxPersonIds(db, shopId))]).toContain(personId);
   });
+
+  it("refuses a card whose identifier only differs by case from a live one (CR-009)", async () => {
+    const { db, shopId, personId } = await context();
+    const cert = await createNitroxCertification(db, {
+      shopId,
+      personId,
+      agency: "padi",
+      identifier: "nx1234",
+    });
+    expect(cert).not.toBeNull();
+    const duplicate = await createNitroxCertification(db, {
+      shopId,
+      personId,
+      agency: "padi",
+      identifier: "NX1234",
+    });
+    expect(duplicate).toBeNull();
+  });
 });
 
 describe("setBookingNitrox", () => {

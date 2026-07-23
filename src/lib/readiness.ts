@@ -7,6 +7,7 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import { type CalendarDate, calendarDateInTimezone, isCalendarDateExpired } from "./calendar-date";
 import { nowDate } from "./clock";
 import { waiverState } from "./waivers";
 
@@ -143,6 +144,8 @@ export type ReadinessInput = {
   /** The booking's current payment state; absent is treated as unpaid. */
   paymentStatus?: PaymentStatus | null;
   now?: Date;
+  /** The shop's IANA timezone — required so cert/specialty expiry reads against its local calendar date (CR-009), never UTC. */
+  timezone: string;
 };
 
 /** A safety surface must never treat a failed readiness lookup as a pass. */
@@ -158,10 +161,19 @@ export function unavailableReadiness(): ReadinessResult {
   };
 }
 
-export function validVerifiedCertification(certification: Certification, now: Date): boolean {
+/**
+ * `todayLocal` is the shop's own local calendar date (CR-009,
+ * src/lib/calendar-date.ts) — a card is valid through the end of its own
+ * local day, not a fixed UTC instant that reads as expired early or late
+ * depending on the shop's timezone offset.
+ */
+export function validVerifiedCertification(
+  certification: Certification,
+  todayLocal: CalendarDate,
+): boolean {
   return (
     certification.status === "verified" &&
-    (!certification.expiresAt || certification.expiresAt > now)
+    (!certification.expiresAt || !isCalendarDateExpired(certification.expiresAt, todayLocal))
   );
 }
 
@@ -169,11 +181,11 @@ export function validVerifiedCertification(certification: Certification, now: Da
 export function hasVerifiedCertificationAtLeast(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
-  now: Date = nowDate(),
+  todayLocal: CalendarDate,
 ): boolean {
   return certifications.some(
     (certification) =>
-      validVerifiedCertification(certification, now) &&
+      validVerifiedCertification(certification, todayLocal) &&
       levelRank[certification.level] >= levelRank[minimumLevel],
   );
 }
@@ -181,12 +193,12 @@ export function hasVerifiedCertificationAtLeast(
 function certificationBlocker(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
-  now: Date,
+  todayLocal: CalendarDate,
 ): ReadinessBlocker | null {
   const verified = certifications.filter((certification) =>
-    validVerifiedCertification(certification, now),
+    validVerifiedCertification(certification, todayLocal),
   );
-  if (hasVerifiedCertificationAtLeast(certifications, minimumLevel, now)) {
+  if (hasVerifiedCertificationAtLeast(certifications, minimumLevel, todayLocal)) {
     return null;
   }
   if (
@@ -209,7 +221,8 @@ function certificationBlocker(
   }
   if (
     certifications.some(
-      (certification) => certification.expiresAt && certification.expiresAt <= now,
+      (certification) =>
+        certification.expiresAt && isCalendarDateExpired(certification.expiresAt, todayLocal),
     )
   ) {
     return { code: "certification_expired", message: "Certification on file has expired." };
@@ -224,12 +237,16 @@ function certificationBlocker(
 function specialtyBlocker(
   specialtyCertifications: readonly SpecialtyCertification[],
   specialty: DiveSpecialty,
-  now: Date,
+  todayLocal: CalendarDate,
 ): ReadinessBlocker | null {
   const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
   const label = SPECIALTY_LABELS[specialty];
   if (
-    cards.some((card) => card.status === "verified" && (!card.expiresAt || card.expiresAt > now))
+    cards.some(
+      (card) =>
+        card.status === "verified" &&
+        (!card.expiresAt || !isCalendarDateExpired(card.expiresAt, todayLocal)),
+    )
   ) {
     return null;
   }
@@ -239,7 +256,7 @@ function specialtyBlocker(
       message: `${label} specialty card is waiting for staff verification.`,
     };
   }
-  if (cards.some((card) => card.expiresAt && card.expiresAt <= now)) {
+  if (cards.some((card) => card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal))) {
     return {
       code: "specialty_expired",
       message: `${label} specialty card on file has expired.`,
@@ -278,6 +295,7 @@ function nitroxBlocker(
  */
 export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const now = input.now ?? nowDate();
+  const todayLocal = calendarDateInTimezone(now, input.timezone);
   const blockers: ReadinessBlocker[] = [];
   if (!input.requirement) {
     return {
@@ -317,13 +335,13 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     const certification = certificationBlocker(
       input.certifications,
       effective.minimumCertificationLevel,
-      now,
+      todayLocal,
     );
     if (certification) blockers.push(certification);
   }
 
   for (const specialty of effective.requiredSpecialties) {
-    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty, now);
+    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty, todayLocal);
     if (blocker) blockers.push(blocker);
   }
 
