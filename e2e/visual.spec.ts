@@ -91,17 +91,17 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The migration-guides hub: one card per incumbent a shop might be
       // leaving, the entry point to the portability wedge on the marketing side.
-      await page.goto("/switch");
+      await page.goto("/switching");
       await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
-      await capture(page, "switch-hub", scheme);
+      await capture(page, "switching-hub", scheme);
 
       // The "Switching from EVE" migration guide: the marketing face of the
       // portability wedge — export click-path, the shared scope table, and the
       // importer, on the market's most motivated switching pool. Represents the
       // shared guide template every live incumbent page renders.
-      await page.goto("/switch/eve");
+      await page.goto("/switching/eve");
       await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
-      await capture(page, "switch-eve", scheme);
+      await capture(page, "switching-eve", scheme);
     });
 
     test.describe("staff", () => {

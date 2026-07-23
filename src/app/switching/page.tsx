@@ -12,8 +12,6 @@ export const metadata: Metadata = {
 };
 
 export default function SwitchHubPage() {
-  const guides = MIGRATION_GUIDES;
-
   return (
     <div className="flex min-h-full flex-col">
       <MarketingNav />
@@ -36,47 +34,21 @@ export default function SwitchHubPage() {
 
         <section className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
           <div className="grid gap-5 md:grid-cols-2">
-            {guides.map((guide) =>
-              guide.status === "live" ? (
-                <Link
-                  key={guide.slug}
-                  href={`/switch/${guide.slug}`}
-                  className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <h2 className="text-xl font-semibold tracking-tight">
-                      Switching from {guide.competitor}
-                    </h2>
-                    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
-                      Guide ready
-                    </span>
-                  </div>
-                  <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
-                  <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
-                    Read the guide →
-                  </span>
-                </Link>
-              ) : (
-                <article
-                  key={guide.slug}
-                  className="flex flex-col rounded-2xl border border-dashed border-border bg-background p-6 sm:p-7"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <h2 className="text-xl font-semibold tracking-tight text-muted">
-                      Switching from {guide.competitor}
-                    </h2>
-                    <span className="rounded-full bg-surface-sunken px-2.5 py-0.5 text-xs font-semibold text-muted">
-                      Coming soon
-                    </span>
-                  </div>
-                  <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
-                  <span className="mt-5 text-sm font-medium text-muted">
-                    You can already export from DiveDay and import a CSV — this walkthrough is on
-                    the way.
-                  </span>
-                </article>
-              ),
-            )}
+            {MIGRATION_GUIDES.map((guide) => (
+              <Link
+                key={guide.slug}
+                href={`/switching/${guide.slug}`}
+                className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
+              >
+                <h2 className="text-xl font-semibold tracking-tight">
+                  Switching from {guide.competitor}
+                </h2>
+                <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
+                <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
+                  Read the guide →
+                </span>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -86,7 +58,7 @@ export default function SwitchHubPage() {
               <h2 className="text-2xl font-semibold tracking-tight">Don't see your system?</h2>
               <p className="mt-2 max-w-xl text-muted">
                 Any spreadsheet of your divers with their names, cards, and sizes will import. Start
-                a trial and bring a CSV — DiveDay maps the columns and previews every row before
+                a trial and bring a CSV — DiveDay maps the columns and previews the file before
                 anything saves.
               </p>
             </div>

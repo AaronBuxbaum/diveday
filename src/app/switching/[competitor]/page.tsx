@@ -5,14 +5,13 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { buttonClass } from "@/components/ui/button";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
-import { getLiveMigrationGuide, LIVE_MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
+import { getMigrationGuide, MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 
-// Only the guides with real content are valid routes; a planned or unknown
-// competitor 404s rather than rendering an empty shell.
+// Only the registered guides are valid routes; an unknown competitor 404s.
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return LIVE_MIGRATION_GUIDE_SLUGS.map((competitor) => ({ competitor }));
+  return MIGRATION_GUIDE_SLUGS.map((competitor) => ({ competitor }));
 }
 
 export async function generateMetadata({
@@ -21,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ competitor: string }>;
 }): Promise<Metadata> {
   const { competitor } = await params;
-  const guide = getLiveMigrationGuide(competitor);
+  const guide = getMigrationGuide(competitor);
   if (!guide) return { title: "Switching to DiveDay" };
   return { title: `${guide.metaTitle} — DiveDay`, description: guide.metaDescription };
 }
@@ -41,7 +40,7 @@ export default async function MigrationGuidePage({
   params: Promise<{ competitor: string }>;
 }) {
   const { competitor } = await params;
-  const guide = getLiveMigrationGuide(competitor);
+  const guide = getMigrationGuide(competitor);
   if (!guide) notFound();
 
   return (
@@ -50,7 +49,7 @@ export default async function MigrationGuidePage({
       <main className="flex-1">
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-24">
-            <Link href="/switch" className="text-sm font-medium text-primary hover:underline">
+            <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
               ← All switching guides
             </Link>
             <p className="mt-6 text-sm font-semibold tracking-widest text-primary uppercase">
@@ -174,9 +173,11 @@ export default async function MigrationGuidePage({
                 <div className="pt-1">
                   <h3 className="font-semibold leading-6">Check the preview</h3>
                   <p className="mt-1.5 leading-7 text-muted">
-                    DiveDay maps your columns automatically and shows every row before anything is
-                    saved — which people are new, which cards will land as claims for staff to
-                    verify, and anything it's leaving behind.
+                    DiveDay maps your columns automatically and previews the file before anything is
+                    saved — how each column landed, which cards will come in as claims for staff to
+                    verify, and anything it's leaving behind. Rows with an email match an existing
+                    diver so a re-import updates them instead of duplicating; the whole file imports
+                    when you confirm.
                   </p>
                 </div>
               </li>
@@ -224,7 +225,7 @@ export default async function MigrationGuidePage({
               Start a trial
             </Link>
             <Link
-              href="/switch"
+              href="/switching"
               className={buttonClass({
                 variant: "secondary",
                 size: "cta",
