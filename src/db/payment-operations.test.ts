@@ -8,6 +8,7 @@ import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
   listStuckPaymentOperations,
+  recordPaymentOperationStripeObject,
   releaseBookingCheckoutClaim,
   resolvePaymentOperation,
   startPaymentOperation,
@@ -64,6 +65,27 @@ describe("startPaymentOperation / resolvePaymentOperation", () => {
       .where(eq(paymentOperationIntents.id, intent.id));
     expect(row?.status).toBe("failed");
     expect(row?.errorMessage).toBe("failed");
+  });
+});
+
+describe("recordPaymentOperationStripeObject", () => {
+  it("records the Stripe object id durably, independent of resolving the intent (CR-005)", async () => {
+    const { db, shop } = await bookedContext();
+    const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
+
+    // Simulates the crash window this ticket closes: Stripe confirmed the
+    // object exists, but the local write that would normally follow (and
+    // then call resolvePaymentOperation) never happens.
+    await recordPaymentOperationStripeObject(db, intent.id, "in_test_1");
+
+    const [row] = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.id, intent.id));
+    // Still "started" — nothing has resolved this intent — but the Stripe
+    // reference an operator needs to reconcile it by hand is already there.
+    expect(row?.status).toBe("started");
+    expect(row?.stripeObjectId).toBe("in_test_1");
   });
 });
 
@@ -190,6 +212,23 @@ describe("listStuckPaymentOperations", () => {
     expect(stuck).toHaveLength(1);
     expect(stuck[0]?.intent.id).toBe(intent.id);
     expect(stuck[0]?.tripTitle).toBe(reef.title);
+  });
+
+  it("resolves trip/person context for a bookingId-anchored intent (invoice or checkout-refund)", async () => {
+    const { db, shop, reef, bookingId } = await bookedContext();
+    const intent = await startPaymentOperation(db, {
+      shopId: shop.id,
+      kind: "invoice",
+      bookingId,
+    });
+    await recordPaymentOperationStripeObject(db, intent.id, "in_stuck_1");
+
+    const stuck = await listStuckPaymentOperations(db, shop.id, new Date(Date.now() + 1000));
+    expect(stuck).toHaveLength(1);
+    expect(stuck[0]?.intent.stripeObjectId).toBe("in_stuck_1");
+    expect(stuck[0]?.tripId).toBe(reef.id);
+    expect(stuck[0]?.tripTitle).toBe(reef.title);
+    expect(stuck[0]?.personName).toBe("Claim Test Diver");
   });
 
   it("does not surface a resolved intent", async () => {

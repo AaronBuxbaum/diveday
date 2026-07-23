@@ -6,6 +6,7 @@ import type { AppDb, DbExecutor } from "./client";
 import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
+  recordPaymentOperationStripeObject,
   releaseBookingCheckoutClaim,
   resolvePaymentOperation,
   startPaymentOperation,
@@ -134,6 +135,12 @@ export async function startBookingCheckout(
       });
       return { ok: false, reason: "checkout_unavailable" };
     }
+    // Durable the moment Stripe confirms the session exists — its own
+    // committed write, before the local insert below that could still fail.
+    // A crash between here and that insert leaves the intent `started` but
+    // with a Stripe session id an operator can find and reconcile, instead
+    // of nothing at all (CR-005).
+    await recordPaymentOperationStripeObject(db, intent.id, session.stripeSessionId);
 
     const created = await db.transaction(async (tx) => {
       const [row] = await tx
@@ -161,10 +168,7 @@ export async function startBookingCheckout(
       );
       return row;
     });
-    await resolvePaymentOperation(db, intent.id, {
-      status: "succeeded",
-      stripeObjectId: session.stripeSessionId,
-    });
+    await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
 
     return { ok: true, checkout: created, reused: false };
   } finally {

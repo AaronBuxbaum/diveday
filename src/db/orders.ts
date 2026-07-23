@@ -4,6 +4,7 @@ import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/
 import type { AppDb, DbExecutor } from "./client";
 import {
   idempotencyKeyFor,
+  recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   startPaymentOperation,
 } from "./payment-operations";
@@ -105,6 +106,9 @@ export async function createOrder(
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { ok: false, reason: "stripe_failed" };
   }
+  // Durable the moment Stripe confirms the invoice exists — before the local
+  // insert below that could still fail (CR-005).
+  await recordPaymentOperationStripeObject(db, intent.id, result.stripeInvoiceId);
 
   const status = mapStripeStatus(result.stripeStatus);
   const now = nowDate();
@@ -161,10 +165,7 @@ export async function createOrder(
 
     return created;
   });
-  await resolvePaymentOperation(db, intent.id, {
-    status: "succeeded",
-    stripeObjectId: order.stripeInvoiceId,
-  });
+  await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
 
   return { ok: true, order };
 }
@@ -372,10 +373,12 @@ export async function refundOrder(
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return null;
   }
+  // Durable the moment Stripe confirms the refund exists — before the local
+  // update below that could still fail (CR-005).
+  if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
   const updated = await applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
   await resolvePaymentOperation(db, intent.id, {
     status: "succeeded",
-    stripeObjectId: result.refundId,
   });
   return updated;
 }
