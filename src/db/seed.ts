@@ -51,6 +51,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const INSTRUCTOR_EMAIL = "marcus@bluemantis.example";
 
+/**
+ * A fixed booking id on the seeded reef trip, so a signed recap link can be
+ * minted deterministically for the demo (visual tests, screenshots) without
+ * querying a random-uuid booking out of the running server. Real bookings keep
+ * their `defaultRandom` ids; only this one demo row is pinned.
+ */
+export const DEMO_RECAP_BOOKING_ID = "0de3c0de-1eaf-4b0a-9c0f-000000000001";
+
 /** Public-domain and CC0 images from Wikimedia Commons, bundled for reliable rendering. */
 function commonsImage(filename: string): string {
   return `/dive-sites/${encodeURIComponent(filename)}`;
@@ -1412,7 +1420,12 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
     ["Deep Diver — Spiegel Grove & the wall", [17]],
   ];
   const bookingRows = [
-    ...customers.slice(0, 9).map((c) => ({ tripId: reef.id, personId: c.id })),
+    // The first reef booking is pinned so a recap link can be minted for the demo.
+    ...customers.slice(0, 9).map((c, index) => ({
+      tripId: reef.id,
+      personId: c.id,
+      ...(index === 0 ? { id: DEMO_RECAP_BOOKING_ID } : {}),
+    })),
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
     ...laterRosters.flatMap(([title, indexes]) => {

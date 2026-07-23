@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   bookingConfirmationEmail,
   type NotificationEmail,
+  tripRecapEmail,
   tripReminderEmail,
   waitlistInviteEmail,
   waiverRequestEmail,
@@ -70,6 +71,16 @@ const tripReminderFields = {
   readinessUrl: z.url().max(2_000).optional(),
 };
 
+// The night-before brief's extra sections, carried only on the 24h cadence
+// (docs first-principles brainstorm C). Every field optional so the reminder
+// degrades to the plain nudge when the shop has published nothing.
+const nightBeforeBriefSchema = z.object({
+  forecast: z.string().trim().min(1).max(600).nullish(),
+  bring: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
+  whoToText: z.string().trim().min(1).max(40).nullish(),
+  firstTimerNote: z.string().trim().min(1).max(600).nullish(),
+});
+
 // One literal per cadence so the delivery row's `kind` is the cadence itself,
 // which is what dedups a reminder to once-per-booking (src/lib/reminders.ts).
 const tripReminder7dSchema = z.object({
@@ -79,6 +90,21 @@ const tripReminder7dSchema = z.object({
 const tripReminder24hSchema = z.object({
   kind: z.literal("trip_reminder_24h"),
   ...tripReminderFields,
+  brief: nightBeforeBriefSchema.optional(),
+});
+
+const tripRecapSchema = z.object({
+  kind: z.literal("trip_recap"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
+  recapUrl: z.url().max(2_000),
 });
 
 export const notificationSchema = z.discriminatedUnion("kind", [
@@ -87,6 +113,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   waitlistInviteSchema,
   tripReminder7dSchema,
   tripReminder24hSchema,
+  tripRecapSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -124,6 +151,7 @@ function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_reminder_24h") {
     return tripReminderEmail({ ...notification, lead: "day" });
   }
+  if (notification.kind === "trip_recap") return tripRecapEmail(notification);
   return waiverRequestEmail(notification);
 }
 
@@ -141,6 +169,9 @@ function idempotencyKeyFor(notification: Notification): string {
     case "trip_reminder_7d":
     case "trip_reminder_24h":
       return `${notification.kind}/${notification.bookingId}`;
+    // One recap per booking after the trip departs.
+    case "trip_recap":
+      return `trip-recap/${notification.bookingId}`;
   }
 }
 
