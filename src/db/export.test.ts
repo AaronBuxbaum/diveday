@@ -10,19 +10,28 @@ import { issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
   "shop.csv",
+  "contacts.csv",
   "people.csv",
   "certifications.csv",
   "specialty_certifications.csv",
   "nitrox_certifications.csv",
   "trips.csv",
+  "trip_series.csv",
   "trip_dives.csv",
   "trip_requirements.csv",
   "trip_assignments.csv",
   "bookings.csv",
+  "waitlist_entries.csv",
   "roll_call_events.csv",
   "waiver_templates.csv",
   "waiver_records.csv",
   "rental_fit.csv",
+  "orders.csv",
+  "order_line_items.csv",
+  "dive_sites.csv",
+  "dive_site_creatures.csv",
+  "dive_site_moments.csv",
+  "courses.csv",
 ];
 
 /** Schema tables that get their own CSV in the bundle. */
@@ -33,14 +42,22 @@ const EXPORTED_TABLES = [
   "specialty_certifications",
   "nitrox_certifications",
   "trips",
+  "trip_series",
   "trip_dives",
   "trip_requirements",
   "trip_assignments",
   "bookings",
+  "trip_waitlist_entries",
   "roll_call_events",
   "waiver_templates",
   "waiver_records",
   "rental_fit_profiles",
+  "orders",
+  "order_line_items",
+  "dive_sites",
+  "dive_site_creatures",
+  "dive_site_moments",
+  "courses",
 ];
 
 /** Tables whose data rides inside another file rather than its own CSV. */
@@ -55,21 +72,13 @@ const FOLDED_TABLES = [
  * fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
-  "trip_series", // cadence template; every materialized trip exports with its series_id
-  "trip_waitlist_entries", // not bookings; never on a manifest
-  "notification_deliveries",
+  "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
-  "orders",
-  "order_line_items",
-  "booking_checkouts",
+  "booking_checkouts", // payment attempts; outcomes live in bookings/orders
   "booking_checkout_bookings",
-  "dive_sites", // library content; trips/dives carry site ids + names
-  "global_dive_sites",
+  "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
   "global_dive_site_versions",
-  "dive_site_creatures",
-  "dive_site_moments",
-  "courses", // catalog content; course trips export with their course_id
   "user_accounts", // credentials are never exported
 ];
 
@@ -119,12 +128,17 @@ describe("full-shop export dataset", () => {
     // The demo seed exercises the whole spine; an empty core table here means
     // a query broke, not that the seed changed shape.
     for (const file of [
+      "contacts.csv",
       "people.csv",
       "trips.csv",
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
+      "waitlist_entries.csv",
       "waiver_templates.csv",
+      "dive_sites.csv",
+      "dive_site_creatures.csv",
+      "courses.csv",
     ]) {
       expect(table(input, file).rows.length).toBeGreaterThan(0);
     }
@@ -155,6 +169,44 @@ describe("full-shop export dataset", () => {
       expect(row[assignments.header.indexOf("person_name")]).toBeTruthy();
     }
     expect(table(input, "roll_call_events.csv").header).toContain("recorded_by_name");
+  });
+
+  it("flattens each person into an import-ready contacts row", async () => {
+    const { db, shop } = await seededShopContext();
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("seeded shop failed to load");
+
+    const contacts = table(input, "contacts.csv");
+    const peopleTable = table(input, "people.csv");
+    // One row per person, exactly — the file a rival's import wizard maps.
+    expect(contacts.rows.length).toBe(peopleTable.rows.length);
+
+    const cell = (row: (typeof contacts.rows)[number], header: string) =>
+      row[contacts.header.indexOf(header)];
+
+    // Names arrive pre-split for wizards that demand first/last, with the
+    // authoritative full name alongside.
+    const dana = contacts.rows.find((row) => cell(row, "full_name") === "Dana Reyes");
+    expect(dana).toBeDefined();
+    if (!dana) return;
+    expect(cell(dana, "first_name")).toBe("Dana");
+    expect(cell(dana, "last_name")).toBe("Reyes");
+    expect(String(cell(dana, "roles"))).toContain("owner");
+
+    // The best card travels with its verification status — the seeded shop
+    // has verified divers, and the status column is what keeps a fast import
+    // honest in the destination system.
+    const verified = contacts.rows.find((row) => cell(row, "certification_status") === "verified");
+    expect(verified).toBeDefined();
+    if (!verified) return;
+    expect(cell(verified, "certification_level")).toBeTruthy();
+    expect(cell(verified, "certification_agency")).toBeTruthy();
+    expect(cell(verified, "certification_number")).toBeTruthy();
+
+    // Nitrox status is a boolean per person, never a card dump.
+    for (const row of contacts.rows) {
+      expect([true, false]).toContain(cell(row, "nitrox_certified"));
+    }
   });
 
   it("exports issued waiver evidence linked to its template version", async () => {

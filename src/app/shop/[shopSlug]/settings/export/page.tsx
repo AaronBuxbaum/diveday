@@ -42,7 +42,7 @@ export default async function DataExportPage() {
       <ShopPageHeader
         eyebrow="Settings"
         title="Data export"
-        description="Download everything this shop keeps in DiveDay as plain CSV files — divers, cards, trips, bookings, signed waivers, rental sizes. Yours to keep, on every plan, whenever you want it."
+        description="Download everything this shop keeps in DiveDay as plain CSV files — divers, cards, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Yours to keep, on every plan, whenever you want it — including a ready-to-import contacts file another system's import wizard can map directly."
         actions={
           <DownloadExportButton href={`/shop/${session.user.shopSlug}/settings/export/download`} />
         }
@@ -72,10 +72,11 @@ export default async function DataExportPage() {
           ))}
         </ul>
         <p className="mt-4 text-sm text-muted">
-          <span className="font-medium text-foreground">Not yet included:</span> offline manifest
-          snapshots, wait-list entries, notification logs, Stripe order records, the dive-site
-          library and course catalog, and card images (the CSVs carry each card's stored image
-          reference). Sign-in credentials are never exported. The bundle's README lists the same
+          <span className="font-medium text-foreground">Not included, on purpose:</span> offline
+          manifest snapshots, notification logs, Stripe checkout attempts (every money outcome is in
+          the bookings and orders files), and card images — the CSVs carry each card's stored image
+          reference, which stays readable while this account is active, so save copies before ever
+          closing it. Sign-in credentials are never exported. The bundle's README lists the same
           gaps.
         </p>
       </section>

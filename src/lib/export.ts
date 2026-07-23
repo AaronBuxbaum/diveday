@@ -29,6 +29,8 @@ export type ExportFile = { name: string; content: string };
  */
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
+  "contacts.csv":
+    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification card (verified preferred), enriched-air status, and rental sizes. The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the card.",
   "people.csv": "Everyone the shop knows — divers and staff — with their roles.",
   "certifications.csv": "Certification-ladder cards with their verification status.",
   "specialty_certifications.csv":
@@ -36,12 +38,16 @@ export const EXPORT_FILE_NOTES = {
   "nitrox_certifications.csv": "Enriched-air (EANx) cards with verification status.",
   "trips.csv":
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
+  "trip_series.csv":
+    "Recurring-trip templates; every materialized instance is its own row in trips.csv carrying series_id.",
   "trip_dives.csv": "The ordered dives within each trip, with their sites.",
   "trip_requirements.csv":
     "Each trip's own boarding gates: waiver, minimum level, specialties, nitrox, payment. Not the whole gate — the effective requirement also composes in each visited dive site's gate (stricter minimum level wins, specialties union, nitrox if either says so); apply that composition in any system enforcing boarding from this export.",
   "trip_assignments.csv": "Which staff crewed each trip.",
   "bookings.csv":
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified enriched-air card, checked at fill time.",
+  "waitlist_entries.csv":
+    "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
   "roll_call_events.csv":
     "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only: the newest event per booking and checkpoint is that diver's current state, a 'cleared' event undoes the one before it (back to awaiting), and no events means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "waiver_templates.csv":
@@ -49,6 +55,15 @@ export const EXPORT_FILE_NOTES = {
   "waiver_records.csv":
     "Issued and signed waiver evidence; the signed text is the referenced template version. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
+  "orders.csv":
+    "Shop-issued orders and invoices with their Stripe references — reconcilable against the shop's own Stripe account, which stays the shop's.",
+  "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
+  "dive_sites.csv":
+    "The shop's dive-site briefing library, archived sites included. Image links stay readable while the DiveDay account is active.",
+  "dive_site_creatures.csv": "The field-guide creatures attached to each dive-site briefing.",
+  "dive_site_moments.csv":
+    "Staff-moderated diver moments attached to dive sites, published and unpublished.",
+  "courses.csv": "The course catalog with public-page content, hidden courses included.",
 } as const;
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
@@ -100,8 +115,9 @@ export function exportFileName(shopSlug: string, now: Date, timezone: string): s
  */
 const NOT_INCLUDED = [
   "Offline manifest snapshots (device-side copies of the live records exported here).",
-  "Wait-list entries, notification delivery logs, and Stripe checkout/order records.",
-  "The dive-site library and course catalog content (trips and dives carry their site names and ids).",
+  "Notification delivery logs — operational plumbing, not shop records.",
+  "Stripe account linkage and checkout-session attempts — every money outcome is in bookings.csv and orders.csv, and the Stripe account itself already belongs to the shop.",
+  "DiveDay's shared dive-site catalog templates (the shop's own copies export in dive_sites.csv).",
   "Certification card images (the CSVs carry each card's stored image reference; those references stay readable while the shop's DiveDay account is active — save copies before closing an account).",
   "Login accounts and password hashes — credentials are never exported.",
 ];
