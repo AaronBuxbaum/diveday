@@ -24,6 +24,7 @@ import {
   addBookingAction,
   addExistingDiverAction,
   addToWaitlistAction,
+  bulkSendWaiversAction,
   inviteWaitlistAction,
   issueWaiverAction,
   markPaymentAction,
@@ -181,6 +182,7 @@ export default async function TripGuestsPage({
         requiresPayment={Boolean(requirement?.requiresPayment)}
         cancellationDeadline={cancellationDeadline(trip)}
         issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
+        bulkSendWaiversAction={bulkSendWaiversAction.bind(null, shopSlug, tripId)}
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}

@@ -17,7 +17,11 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
-import { issueAndDeliverWaiver, issueWaiverOnJoin } from "@/db/waiver-issue";
+import {
+  issueAndDeliverWaiver,
+  issueWaiverOnJoin,
+  issueWaiversForBookings,
+} from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -396,6 +400,24 @@ export async function markWaiverInPersonAction(
       ? "waiver-medical-attestation"
       : "waiver-error";
   revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+}
+
+const bulkBookingIdsSchema = z.array(z.uuid()).min(1).max(100);
+
+/**
+ * Send (or resend) a waiver link to every ticked diver in one action — the
+ * roster's "chase the whole outstanding list" instead of one tap each. Each
+ * booking runs the same issue-and-deliver rule as the per-row send; an
+ * already-signed diver is skipped, not re-issued. An empty selection is a
+ * no-op with a nudge rather than a silent redirect.
+ */
+export async function bulkSendWaiversAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = bulkBookingIdsSchema.safeParse(formData.getAll("bookingId").map(String));
+  if (!parsed.success) redirect(`${back}?notice=bulk-waiver-none`);
+  await issueWaiversForBookings(await getDb(), s.user.shopId, parsed.data);
+  revalidateAndRedirect(back, `${back}?notice=bulk-waiver`);
 }
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {

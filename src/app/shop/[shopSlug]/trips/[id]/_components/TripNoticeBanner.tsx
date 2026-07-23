@@ -66,6 +66,14 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     tone: "danger",
     text: "That waiver link could not be created. Try a current booking and template.",
   },
+  "bulk-waiver": {
+    tone: "success",
+    text: "Waiver links sent to the selected divers who still needed one — anyone already signed was left alone.",
+  },
+  "bulk-waiver-none": {
+    tone: "danger",
+    text: "Tick at least one diver, then send the waiver to the whole selection.",
+  },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
   payment: { tone: "success", text: "Payment status updated." },
   conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },

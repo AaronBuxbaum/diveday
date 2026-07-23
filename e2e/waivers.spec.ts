@@ -23,8 +23,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   const diverSection = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
-  // The whole waiver is a single button; for an unsent diver it reads "Send waiver".
-  await diverSection.getByRole("button", { name: "Send waiver" }).first().click();
+  // The whole waiver is a single button; for an unsent diver it reads "Send
+  // waiver". Exact, so it targets the per-diver control and not the roster's
+  // "Send waivers to selected" bulk button.
+  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Private waiver link ready" })).toBeVisible();
   const waiverHref = await page
     .getByRole("link", { name: "Open waiver link" })
