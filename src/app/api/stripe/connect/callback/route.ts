@@ -5,8 +5,8 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe
 import { publicAppUrl } from "@/lib/notifications";
 import {
   connectProviderFromEnvironment,
-  stripeConnectCallbackUrl,
   STRIPE_CONNECT_STATE_COOKIE,
+  stripeConnectCallbackUrl,
 } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
 
@@ -16,7 +16,7 @@ import { requireStaffSession } from "@/lib/session";
  */
 export async function GET(request: Request) {
   const session = await requireStaffSession();
-  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings/payments`, request.url);
+  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings`, request.url);
   const url = new URL(request.url);
 
   const cookieStore = await cookies();

@@ -20,7 +20,7 @@ const moreLinks = [
   ["Dive sites", "/dive-sites"],
   ["Courses", "/courses"],
   ["Waivers", "/waivers"],
-  ["Settings", "/settings/payments"],
+  ["Settings", "/settings"],
   ["Import contacts", "/settings/import"],
   ["Data export", "/settings/export"],
 ] as const;

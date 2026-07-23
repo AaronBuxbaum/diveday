@@ -77,8 +77,12 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
   // No card on file, but the request is offered with a flag — the diver can ask
-  // now and is told to send their card before a nitrox tank can be filled.
-  await expect(page.getByText("We need a verified nitrox card")).toBeVisible();
+  // now and is told to send their card before the crew can reserve a compatible tank.
+  await expect(
+    page.getByText(
+      "A verified nitrox card is needed before the crew can reserve nitrox-compatible tanks.",
+    ),
+  ).toBeVisible();
   const nitrox = page.locator('input[name="nitrox"]');
   await expect(nitrox).toHaveCount(1);
   await nitrox.check();
