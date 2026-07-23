@@ -10,6 +10,7 @@ import {
   updateCourse,
   updateCourseContent,
 } from "@/db/courses";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { parseFaqs, parseLines, parseScheduleDays, splitCourseImageUrls } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -107,6 +108,24 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     priceCents: centsFromDollars(value.price),
     eLearningPriceCents: centsFromDollars(value.eLearningPrice),
   });
+
+  // Once the content row is durably saved, any photo it no longer references
+  // (replaced hero, removed gallery photo) is queued for provider deletion —
+  // never blocked on storage, retried/owner-visible if it fails (CR-012).
+  if (saved) {
+    const supersededUrls = [
+      ...(course.heroImageUrl && course.heroImageUrl !== heroImageUrl ? [course.heroImageUrl] : []),
+      ...course.imageUrls.filter((url) => !imageUrls.includes(url)),
+    ];
+    for (const url of supersededUrls) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId: staff.user.shopId,
+        kind: "course_photo",
+        url,
+      });
+    }
+  }
+
   // The page the diver reads is a different route from the one staff just
   // saved; both have to go stale or the edit looks like it did not take.
   revalidatePath(`/shop/${shopSlug}/courses/${slug}`);

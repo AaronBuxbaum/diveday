@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { type BookingOutcome, cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
@@ -301,7 +302,18 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
   const s = await requireStaffSession();
   const photoId = String(formData.get("photoId") ?? "");
   if (!photoId) redirect(back);
-  await deleteRecapPhoto(await getDb(), s.user.shopId, photoId);
+  const db = await getDb();
+  const result = await deleteRecapPhoto(db, s.user.shopId, photoId);
+  // The row leaving is the diver-visible "removed" — never blocked on
+  // storage. The blob object is queued for deletion and retried on its own
+  // (CR-012); a provider failure surfaces on the reports page, not here.
+  if (result.deleted) {
+    await queueAndAttemptMediaDeletion(db, {
+      shopId: s.user.shopId,
+      kind: "recap_photo",
+      url: result.imageUrl,
+    });
+  }
   revalidateAndRedirect(back, `${back}?notice=recap-photo-removed`);
 }
 

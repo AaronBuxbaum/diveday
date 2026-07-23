@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import sharp from "sharp";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
@@ -84,6 +85,54 @@ test("an oversize card photo is rejected client-side before it ever reaches the 
   // Rejected client-side: the picker itself is cleared, not just annotated —
   // a submit right after cannot silently carry the oversize file.
   await expect(form.locator('input[name="cardImage"]')).toHaveValue("");
+});
+
+test("a real photo passes the server's decode/re-encode pipeline end to end (CR-012)", async ({
+  page,
+}) => {
+  const jpeg = await sharp({
+    create: { width: 40, height: 30, channels: 3, background: { r: 20, g: 90, b: 160 } },
+  })
+    .jpeg()
+    .toBuffer();
+
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: /Priya Sharma/ }).click();
+  await page.getByText("Add card", { exact: true }).click();
+  const form = levelForm(page);
+  await form.locator('select[name="agency"]').selectOption("padi");
+  await form.locator('select[name="level"]').selectOption("advanced_open_water");
+  await form.getByLabel("Card number").fill(`PADI-PIPELINE-${Date.now()}`);
+  await form
+    .locator('input[name="cardImage"]')
+    .setInputFiles({ name: "card.jpg", mimeType: "image/jpeg", buffer: jpeg });
+  await form.getByRole("button", { name: "Capture for review", exact: true }).click();
+  // The e2e fleet has no BLOB_READ_WRITE_TOKEN configured, so a genuinely
+  // decodable photo still lands as "captured, no photo stored" — the point is
+  // it reaches that notice at all, proving the server accepted (didn't
+  // reject as malformed) real image bytes it just decoded and re-encoded.
+  await expect(page.getByRole("status")).toContainText("pending");
+});
+
+test("a disguised file is rejected by the server even though it claims an allowed type (CR-012)", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: /Priya Sharma/ }).click();
+  await page.getByText("Add card", { exact: true }).click();
+  const form = levelForm(page);
+  await form.locator('select[name="agency"]').selectOption("padi");
+  await form.locator('select[name="level"]').selectOption("advanced_open_water");
+  await form.getByLabel("Card number").fill(`PADI-DISGUISED-${Date.now()}`);
+  await form.locator('input[name="cardImage"]').setInputFiles({
+    name: "card.jpg",
+    mimeType: "image/jpeg", // claims to be a JPEG — only the real decode below catches it
+    buffer: Buffer.from("not actually a jpeg, just text pretending to be one".repeat(20)),
+  });
+  await form.getByRole("button", { name: "Capture for review", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "That photo could not be used. Upload a JPG, PNG, or WebP under 5 MB.",
+  );
 });
 
 test("an expired certification reads as expired and no longer counts as valid", async ({

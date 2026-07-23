@@ -1422,6 +1422,44 @@ export const recapPhotos = pgTable(
   ],
 );
 
+export const mediaDeletionKind = pgEnum("media_deletion_kind", ["course_photo", "recap_photo"]);
+
+export const mediaDeletionStatus = pgEnum("media_deletion_status", [
+  "pending",
+  "succeeded",
+  "failed",
+]);
+
+/**
+ * One row per "this blob object should no longer exist" decision — a recap
+ * photo's row deleted by staff moderation, or a course hero/gallery photo
+ * superseded on save. Mirrors `paymentOperationIntents` (CR-005): the local
+ * removal (the row gone, the URL dropped from `imageUrls`) is never blocked on
+ * storage, so this table is the durable record of "we still owe a delete"
+ * that survives a crash between the local change and the provider call
+ * succeeding. A `pending` row that never resolved (the process died before
+ * the delete call returned) and a `failed` row (the delete call itself
+ * failed) both need the same retry — `attempts`/`lastError` exist so an owner
+ * sees why, not just that (CR-012).
+ */
+export const mediaDeletionAttempts = pgTable(
+  "media_deletion_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: mediaDeletionKind("kind").notNull(),
+    url: text("url").notNull(),
+    status: mediaDeletionStatus("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status)],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -1453,5 +1491,7 @@ export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
 export type RecapPhoto = typeof recapPhotos.$inferSelect;
 export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
+export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;
+export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
 export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
 export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];
