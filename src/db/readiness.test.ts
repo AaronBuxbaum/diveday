@@ -374,6 +374,74 @@ describe("trip readiness (in-memory PGlite)", () => {
     ).toBe(false);
   });
 
+  it("refuses a level card whose identifier only differs by case from a live one (CR-009)", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "ab1234",
+    });
+    expect(card).not.toBeNull();
+    const duplicate = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "AB1234",
+    });
+    expect(duplicate).toBeNull();
+  });
+
+  it("restores an archived level card even when the live conflict differs only by case", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "cd5678",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      true,
+    );
+    const recaptured = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "CD5678",
+    });
+    expect(recaptured).not.toBeNull();
+    // The archived card's number is live again under a different case — restoring
+    // it would collide on the case-insensitive index, so it's refused.
+    expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      false,
+    );
+  });
+
+  it("refuses a specialty card whose identifier only differs by case from a live one (CR-009)", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "wreck",
+      identifier: "wr9999",
+    });
+    expect(card).not.toBeNull();
+    const duplicate = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "wreck",
+      identifier: "WR9999",
+    });
+    expect(duplicate).toBeNull();
+  });
+
   it("restores an archived specialty card", async () => {
     const { db, shop, rosterEntry } = await readinessContext();
     const card = await createSpecialtyCertification(db, {

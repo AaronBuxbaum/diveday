@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -1088,7 +1089,13 @@ export const certifications = pgTable(
     identifier: text("identifier").notNull(),
     /** Storage seam comes later; this is a provider-neutral durable reference. */
     cardImageUrl: text("card_image_url"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /**
+     * Date-only, no time-of-day or timezone (CR-009): a card is valid
+     * through the end of its own local calendar day in the shop's
+     * timezone, not a fixed UTC instant that expires early or late
+     * depending on the shop's offset. See src/lib/calendar-date.ts.
+     */
+    expiresAt: date("expires_at", { mode: "string" }),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -1101,8 +1108,10 @@ export const certifications = pgTable(
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
     // Partial on the live rows only, so archiving a card frees its number for
     // re-entry (e.g. a renewed card carrying the same identifier).
+    // Case-insensitive so "ab1234" and "AB1234" can't create two live rows
+    // for what is the same physical card (CR-009).
     uniqueIndex("certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, table.identifier)
+      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
@@ -1129,7 +1138,8 @@ export const specialtyCertifications = pgTable(
     identifier: text("identifier").notNull(),
     /** Storage seam comes later; this is a provider-neutral durable reference. */
     cardImageUrl: text("card_image_url"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** Date-only, shop-local expiry — see certifications.expiresAt (CR-009). */
+    expiresAt: date("expires_at", { mode: "string" }),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -1139,8 +1149,9 @@ export const specialtyCertifications = pgTable(
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
+    // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
     uniqueIndex("specialty_certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, table.identifier)
+      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
@@ -1245,8 +1256,9 @@ export const nitroxCertifications = pgTable(
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
+    // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
     uniqueIndex("nitrox_certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, table.identifier)
+      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );

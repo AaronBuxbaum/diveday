@@ -1,4 +1,5 @@
 import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
@@ -10,6 +11,7 @@ import {
   courses,
   people,
   personRoles,
+  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -165,7 +167,14 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
           isNull(certifications.deletedAt),
         ),
       );
-    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
+    const [shop] = await tx
+      .select({ timezone: shops.timezone })
+      .from(shops)
+      .where(eq(shops.id, req.shopId))
+      .limit(1);
+    if (!shop) throw new Error(`createBookingRecord: shop ${req.shopId} not found`);
+    const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
+    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel, todayLocal)) {
       return { ok: false, reason: "course_prerequisite" };
     }
   }

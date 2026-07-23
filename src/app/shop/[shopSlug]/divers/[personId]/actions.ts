@@ -24,6 +24,7 @@ import {
 } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCardImage } from "@/lib/storage";
@@ -37,7 +38,12 @@ const levelSchema = z.enum([
   "instructor",
 ]);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
-const dateSchema = z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]);
+// Regex shape alone would accept a normalized impossible date like
+// "2026-02-31" (CR-009); isValidCalendarDate rejects those explicitly.
+const dateSchema = z.union([
+  z.literal(""),
+  z.string().refine(isValidCalendarDate, "not a real calendar date"),
+]);
 
 const personSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
@@ -95,8 +101,9 @@ async function resolveCardImage(formData: FormData): Promise<ResolvedCardImage> 
   return stored.status === "stored" ? { url: stored.url } : { failed: true };
 }
 
+/** The column is date-only (CR-009); the validated "YYYY-MM-DD" input needs no conversion. */
 function dateFromInput(value: string) {
-  return value ? new Date(`${value}T23:59:59.999Z`) : undefined;
+  return value || undefined;
 }
 
 export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
