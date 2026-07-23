@@ -175,6 +175,48 @@ export async function archiveCertification(
   return Boolean(row);
 }
 
+/**
+ * Undo a soft-archive: bring a level card back into every readiness/roster read.
+ * The inverse of `archiveCertification`, powering the land-then-undo affordance.
+ * Refuses (returns false) when a live card already holds the same
+ * shop/agency/identifier — the partial unique index would reject it, and a
+ * re-entered card must never be clobbered by an undo.
+ */
+export async function restoreCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+) {
+  const [archived] = await db
+    .select()
+    .from(certifications)
+    .where(
+      and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
+    )
+    .limit(1);
+  if (!archived || archived.deletedAt === null) return false;
+  const [conflict] = await db
+    .select({ id: certifications.id })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.shopId, input.shopId),
+        eq(certifications.agency, archived.agency),
+        eq(certifications.identifier, archived.identifier),
+        isNull(certifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (conflict) return false;
+  const [row] = await db
+    .update(certifications)
+    .set({ deletedAt: null })
+    .where(
+      and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
+    )
+    .returning({ id: certifications.id });
+  return Boolean(row);
+}
+
 export async function listShopCertifications(db: AppDb, shopId: string) {
   return db
     .select({ certification: certifications, person: people })
@@ -252,6 +294,48 @@ export async function archiveSpecialtyCertification(
         eq(specialtyCertifications.id, input.certificationId),
         eq(specialtyCertifications.shopId, input.shopId),
         isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .returning({ id: specialtyCertifications.id });
+  return Boolean(row);
+}
+
+/** Undo a specialty-card soft-archive, mirroring `restoreCertification`. */
+export async function restoreSpecialtyCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+) {
+  const [archived] = await db
+    .select()
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.id, input.certificationId),
+        eq(specialtyCertifications.shopId, input.shopId),
+      ),
+    )
+    .limit(1);
+  if (!archived || archived.deletedAt === null) return false;
+  const [conflict] = await db
+    .select({ id: specialtyCertifications.id })
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.shopId, input.shopId),
+        eq(specialtyCertifications.agency, archived.agency),
+        eq(specialtyCertifications.identifier, archived.identifier),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (conflict) return false;
+  const [row] = await db
+    .update(specialtyCertifications)
+    .set({ deletedAt: null })
+    .where(
+      and(
+        eq(specialtyCertifications.id, input.certificationId),
+        eq(specialtyCertifications.shopId, input.shopId),
       ),
     )
     .returning({ id: specialtyCertifications.id });
