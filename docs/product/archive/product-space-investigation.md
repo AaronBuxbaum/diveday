@@ -1,23 +1,34 @@
 # Product-space investigation — what to do next
 
+> ## 📦 Archived — historical assessment (2026-07-20)
+>
+> This is a snapshot, not live work. Its core finding ("we built the pillars but not the limbs") was
+> **acted on**: the blocker queue, one-screen check-in, and `/ready` page shipped, and its "convert
+> the spine into surfaces" recommendation became the [UX audit](ux-audit-20260721.md), which has
+> itself since fully shipped. Its cut list was largely executed (Checkout seam and agency plumbing
+> removed; monster pages decomposed). Retained for the rationale; for current state see
+> [shipped.md](../shipped.md) and for open work see [roadmap.md](../roadmap.md). The one live residue
+> — pausing/hiding the dive-site CMS and global catalog behind unproven value — is not yet on the
+> roadmap; raise it there if it still matters.
+
 > A strategic read of where DiveDay actually is versus where the vision says it should be, and an
 > opinionated recommendation for the next arc of work. Written 2026-07-20 from a full pass over
-> [vision](vision.md), [roadmap](roadmap.md), [next-steps](next-steps.md),
-> [human-decisions](human-decisions.md), [glossary](glossary.md),
-> [design principles](../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
+> [vision](../vision.md), [roadmap](../roadmap.md), [next-steps](../next-steps.md),
+> [human-decisions](../human-decisions.md), [glossary](../glossary.md),
+> [design principles](../../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
 > 2026-07-20; its lasting rulings live in
-> [architecture/overview.md](../architecture/overview.md#settled-shape-decisions)),
-> the five [brainstorm lenses](brainstorm/README.md), and the shipped code
+> [architecture/overview.md](../../architecture/overview.md#settled-shape-decisions)),
+> the five [brainstorm lenses](../brainstorm/README.md), and the shipped code
 > (`src/app/**`, `src/lib/**`, `src/db/schema.ts` — 33 tables).
 >
 > This is an assessment, not a commitment. Items that survive review move into
-> [roadmap.md](roadmap.md) with a milestone; hard-to-reverse choices become ADRs.
+> [roadmap.md](../roadmap.md) with a milestone; hard-to-reverse choices become ADRs.
 
 ## The finding in one paragraph
 
 DiveDay has **over-built the table stakes and under-built the differentiator.** The vision is explicit:
 feature parity on the five pillars is *table stakes*; we win because staff **want** to open the app
-([vision](vision.md#the-bet)). Seven milestones later, the pillars are done — and then some: nitrox
+([vision](../vision.md#the-bet)). Seven milestones later, the pillars are done — and then some: nitrox
 fill logging, an automated marine outlook, Stripe Connect orders/invoices, a dive-site content
 library with a global catalog, recurring trip series, a course catalog. Meanwhile the surfaces the
 *vision itself* names as the win — the calm daily staff loop, the confidence-building diver arc — are
@@ -31,8 +42,8 @@ The data model reaches further than the roadmap headline suggests — **33 table
 one readiness engine, multi-tenant to the core. Concretely shipped and working:
 
 - **The safety brainstorm is essentially complete.** Nearly every idea in
-  [safety-and-trust.md](brainstorm/safety-and-trust.md) exists in code: the typed fail-closed
-  readiness result ([`src/lib/readiness.ts`](../../src/lib/readiness.ts)), no-silent-disappearance +
+  [safety-and-trust.md](../brainstorm/safety-and-trust.md) exists in code: the typed fail-closed
+  readiness result ([`src/lib/readiness.ts`](../../../src/lib/readiness.ts)), no-silent-disappearance +
   two-phase roll call, an encrypted offline manifest snapshot with explicit freshness and idempotent
   reconciliation, immutable versioned waivers, verified-vs-claimed cert states, nitrox write-time
   gating, un-assignable out-of-service gear.
@@ -54,17 +65,17 @@ be turned into felt product, and it mostly hasn't been.
 
 The single most-cited idea across all five brainstorm lenses is **one readiness engine, three
 views** — the same result feeding the staff roster, the diver confirmation, and the manifest
-([safety](brainstorm/safety-and-trust.md) "one source, three views";
-[staff-ops](brainstorm/staff-operations-efficiency.md) readiness roll-up;
-[diver](brainstorm/diver-experience-and-growth.md) readiness page;
-[platform](brainstorm/platform-data-and-intelligence.md) generic core). **The engine is built. Two of
+([safety](../brainstorm/safety-and-trust.md) "one source, three views";
+[staff-ops](../brainstorm/staff-operations-efficiency.md) readiness roll-up;
+[diver](../brainstorm/diver-experience-and-growth.md) readiness page;
+[platform](../brainstorm/platform-data-and-intelligence.md) generic core). **The engine is built. Two of
 the three high-value views are not.** `readiness.ts` is consumed only *inside* two 1,000+-line pages
 (`trips/[id]/page.tsx` — 1,278 lines; `divers/[personId]/page.tsx` — 1,132 lines). There is **no**
 staff blocker queue, **no** one-screen check-in, and **no** no-login diver readiness page (verified:
 no `check-in`, `blocker`, `ready`, or `today` route exists under `src/app/shop/[shopSlug]/`).
 
 This is the crux. The front desk's *entire job* is coordination — who's coming, who's ready, who to
-call ([staff-ops](brainstorm/staff-operations-efficiency.md)). We have the data to answer that in one
+call ([staff-ops](../brainstorm/staff-operations-efficiency.md)). We have the data to answer that in one
 glance and we make staff assemble the answer by hand across a 1,300-line trip page. We built the
 brain and skipped the face.
 
@@ -74,12 +85,12 @@ Ranked by leverage against the north star (less staff coordination · more diver
 departure):
 
 1. **The staff blocker queue with one-tap actions** — the front desk's whole day as one actionable
-   list. Unbuilt. ([staff-ops](brainstorm/staff-operations-efficiency.md) #1.)
+   list. Unbuilt. ([staff-ops](../brainstorm/staff-operations-efficiency.md) #1.)
 2. **One-screen check-in** ("ready to board" at a glance, one tap to board) — the daily-throughput
    surface where safety and efficiency converge. Unbuilt.
 3. **The no-login diver readiness page** — the diver-side mirror of the blocker queue; the thing that
    kills the "did you get my waiver?" call and raises confidence. Unbuilt.
-   ([diver](brainstorm/diver-experience-and-growth.md) #1.)
+   ([diver](../brainstorm/diver-experience-and-growth.md) #1.)
 4. **Notifications don't actually send in a default deployment.** The Resend seam is real but resolves
    to a disabled stub without `RESEND_API_KEY`; policy (H-09) is unowned. So "chasing missing
    waivers" is still manual, one-tap nudges are hollow, and the waitlist recovers **zero** revenue
@@ -93,7 +104,7 @@ departure):
 7. **The cheap delight wins are unspent:** per-pillar earned moments, confirmations that state *what's
    next*, forgiving inputs (email-typo/autocomplete), undo-over-confirm, an empty-state/microcopy
    pass, per-role landing + saved views. These are mostly S-effort over existing data and are the
-   literal definition of "staff want to open it." ([delight](brainstorm/delight-and-experience.md).)
+   literal definition of "staff want to open it." ([delight](../brainstorm/delight-and-experience.md).)
 8. **DAN / dive-insurance field** — glossary calls it "worth a field"; not captured. Small gap, real.
 
 ## What we're adding that isn't solving a problem (the cut list)
@@ -104,7 +115,7 @@ should be retired, gated, or paused — not extended:
 - **A dive-site content CMS.** `dive_site_moments` (a moderated diver **photo feed**) and
   `dive_site_creatures` (marine-life field cards) are community/content-app features orthogonal to
   running a dive day — and they flirt with the explicit *"not a dive-log social network"* non-goal
-  ([vision](vision.md#non-goals-for-now)). Plus `dive-site-landmarks.ts` / `dive-site-map.ts` are
+  ([vision](../vision.md#non-goals-for-now)). Plus `dive-site-landmarks.ts` / `dive-site-map.ts` are
   **hardcoded, keyed by literal site name** ("Molasses Reef") — demo dressing that doesn't scale past
   the seed shop.
 - **The global dive-site catalog + immutable version snapshots** (`global_dive_sites`,
@@ -114,10 +125,10 @@ should be retired, gated, or paused — not extended:
   seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
   uses is the single payment path.
 - ~~**The cert-verification agency-gateway plumbing**~~ ✅ **Removed (2026-07-21).** No agency
-  exposed such an API ([H-10](human-decisions.md)), so the per-agency PADI/SSI/NAUI plumbing always
+  exposed such an API ([H-10](../human-decisions.md)), so the per-agency PADI/SSI/NAUI plumbing always
   resolved to the stub. The whole seam was removed in favour of manual staff certification (staff
   look the number up and click Mark certified) — see
-  [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md). The
+  [20260721-manual-certification](../../architecture/decisions/20260721-manual-certification.md). The
   original note read: keep the interface, shed the per-agency machinery until an
   API is real.
 - **Nitrox's disproportionate footprint** — 🔁 **Trimmed (2026-07-20).** The standalone shop-wide
@@ -134,7 +145,7 @@ should be retired, gated, or paused — not extended:
 
 Common thread: much of this is **built ahead of the human decisions needed to run it.** Nitrox
 (H-11), courses (H-08), payment policy (H-07), notifications (H-09), and waiver legal (H-01–03) are
-all *provisional* and unapproved ([provisional defaults](human-decisions.md#provisional-implementation-defaults--verify-before-production)). A large slice of
+all *provisional* and unapproved ([provisional defaults](../human-decisions.md#provisional-implementation-defaults--verify-before-production)). A large slice of
 shipped surface **cannot go to production** as-is — and in a default deploy with no keys, no email
 sends, no image stores, no payment processes. We are polishing rooms in a house that has no plumbing
 connected.
@@ -148,7 +159,7 @@ real trial shop got a "Reset demo data" button), and marketing that claimed trac
 which never existed. The 2026-07-19 cleanup audit catalogued all of it and its work packages shipped
 in full. This was never a separate workstream from delight — it *is* the delight work, and the staff
 shell no longer contradicts itself. The durable "don't undo this" rulings live in
-[architecture/overview.md](../architecture/overview.md#settled-shape-decisions).
+[architecture/overview.md](../../architecture/overview.md#settled-shape-decisions).
 
 ## Recommendation: three moves, in order
 
@@ -203,7 +214,7 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
   Move 2 pay off.
 - **Pick and finish one monetization path** (the Connect/invoicing flow), retire the other, and close
   the H-07 policy gaps enough to take a real deposit.
-- Drive the open [human decisions](human-decisions.md) for anything presented as shippable. Don't
+- Drive the open [human decisions](../human-decisions.md) for anything presented as shippable. Don't
   present provisional-policy surfaces (nitrox, courses) as done until their H-row is Chosen.
 
 ## Sequenced queue
@@ -240,7 +251,7 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 
 ## How we'll know it worked
 
-The [next-steps measures](next-steps.md#measures) become checkable once Move 2 + real notifications
+The [next-steps measures](../next-steps.md#measures) become checkable once Move 2 + real notifications
 land: median time to resolve a booking blocker, waiver completion rate before arrival, % of
 departures fully ready before trip day. The qualitative bar from the vision is the real test — *staff
 run the whole day from it, unprompted, and a diver compliments the booking flow.* We are not there

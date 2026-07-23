@@ -6,7 +6,7 @@
 ## Context
 
 The one-tap manual sends (booking confirmation, waiver link, wait-list invite) were built as the
-manual bridge the [UX audit](../../product/ux-audit-20260721.md) said to ship ahead of the H-09
+manual bridge the [UX audit](../../product/archive/ux-audit-20260721.md) said to ship ahead of the H-09
 policy decision, which explicitly deferred *auto-notification cadences* until the policy row was
 chosen and a cron/queue mechanism ADR existed — "no timer exists in the app today, by design."
 H-09's owner has now chosen to automate the pre-trip reminder cadence. This ADR supplies both the

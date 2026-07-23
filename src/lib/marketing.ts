@@ -29,9 +29,9 @@ export const productFeatureGroups = [
     eyebrow: "Run the dive day",
     title: "Crew, prep, and the boat share one source of truth",
     features: [
-      "Rental gear packed, tracked, and back on the shelf without a clipboard",
+      "Every diver's rental sizes on the trip's prep list, so the boat is packed without a clipboard",
       "Dive-site briefings with the route and conditions notes crews actually use",
-      "Nitrox fills logged with the diver's card checked and the MOD worked out for you",
+      "Nitrox requested per booking, refused unless the diver's enriched-air card checks out",
       "Save the manifest to a phone and roll call keeps working with no signal — every dive, print backup included",
     ],
   },

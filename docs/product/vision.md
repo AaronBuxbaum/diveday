@@ -25,7 +25,10 @@ concretely here.
    person and the booking. No printer anywhere in the flow.
 3. **Cert checks** — record divers' agency cards (PADI, SSI, NAUI, …), verify levels against a
    trip's requirements up front, so the dock stays drama-free.
-4. **Gear** — rental inventory with sizes, assignment to bookings, and service history.
+4. **Gear** — rental *fit*: the sizes each diver takes from the shop, feeding trip prep and
+   packing lists. (Item-level inventory, booking assignment, and service history were deliberately
+   removed as a half-maintained duplicate; a lightweight who-has-what / service-due register may
+   return — see [roadmap.md](roadmap.md).)
 5. **Boat manifests** — who's aboard, who's certified for the sites, roll call before departure
    and after every dive. A safety document first, a UI second.
 

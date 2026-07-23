@@ -5,7 +5,7 @@
 
 ## Context
 
-[competitive-strategy.md](../../product/competitive-strategy.md) makes data portability the wedge,
+[competitive-strategy.md](../../product/assessments/competitive-strategy.md) makes data portability the wedge,
 and orders it export-first: the "leave anytime" guarantee ships before the importer so the CSV
 schemas are a contract, not a promise. That export landed
 ([20260722-full-shop-export.md](20260722-full-shop-export.md)) and its `contacts.csv` — one flat
