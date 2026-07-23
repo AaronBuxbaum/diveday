@@ -97,6 +97,31 @@ export function imageStorageProviderFromEnvironment(
 }
 
 /**
+ * Best-effort delete of a stored blob by its URL — for cleaning up an object
+ * that was written but then rejected downstream (e.g. a recap-photo upload that
+ * loses a race against the per-booking cap). Deliberately swallows everything:
+ * a failed cleanup must never surface to the caller, and with no token
+ * configured it is a no-op. No SDK dependency, mirroring the raw PUT on upload.
+ */
+export async function deleteStoredImage(
+  url: string,
+  env: StorageEnvironment = process.env,
+  fetchImpl: Fetch = fetch,
+): Promise<void> {
+  const token = env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return;
+  try {
+    await fetchImpl("https://blob.vercel-storage.com/delete", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ urls: [url] }),
+    });
+  } catch {
+    // Cleanup is best-effort; an orphaned blob is a cost nit, never a failure.
+  }
+}
+
+/**
  * Validate and store a card image. Rejects a non-image or oversized file
  * before touching the provider; an unconfigured provider reports
  * not_configured so the caller can keep the card record without a photo.

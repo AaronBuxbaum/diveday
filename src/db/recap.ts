@@ -69,6 +69,13 @@ export type RecapPageData = {
 export const MAX_RECAP_PHOTOS_PER_BOOKING = 12;
 
 /**
+ * Server-side caption bound. The upload form caps at this length client-side, but
+ * the endpoint is public (token-auth), so the real cap lives here: an untrusted
+ * caller's caption is truncated, never stored unbounded.
+ */
+export const MAX_RECAP_CAPTION_LENGTH = 140;
+
+/**
  * Everything the recap page renders for one booking, or null when the booking
  * is missing or cancelled — a cancelled diver never dived, so there's no recap.
  * Sites are de-duplicated by name in dive order, so a two-tank day on one site
@@ -153,6 +160,36 @@ export async function listRecapPhotosForBooking(
   return rows;
 }
 
+export type RecapPhotoEligibility =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "cancelled" | "limit" };
+
+/**
+ * Whether a booking may take another recap photo — the same booking/cancelled/cap
+ * gate as `addRecapPhoto`, but read-only. The public upload action runs this
+ * *before* writing bytes to blob storage, so a cancelled booking or one already
+ * at its cap is rejected without an orphaned upload (a shared recap link is a
+ * write capability — this bounds the expensive side effect, not just the row).
+ */
+export async function canAddRecapPhoto(
+  db: AppDb,
+  bookingId: string,
+): Promise<RecapPhotoEligibility> {
+  const [booking] = await db
+    .select({ status: bookings.status })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!booking) return { ok: false, reason: "not_found" };
+  if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+  const [{ count: existing } = { count: 0 }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(recapPhotos)
+    .where(eq(recapPhotos.bookingId, bookingId));
+  if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
+  return { ok: true };
+}
+
 export type AddRecapPhotoResult =
   | { ok: true; photo: RecapPhotoView }
   | { ok: false; reason: "not_found" | "cancelled" | "limit" };
@@ -161,7 +198,9 @@ export type AddRecapPhotoResult =
  * Attach a photo to a diver's recap. The booking is resolved and shop/trip are
  * derived from it (never trusted from the caller), a cancelled booking is
  * refused, and a booking already at its photo cap is refused rather than
- * silently dropped. The image URL comes from the storage seam upstream.
+ * silently dropped (the same gate as `canAddRecapPhoto`, re-checked here so the
+ * write is safe even under a race). The caption is truncated to a server bound.
+ * The image URL comes from the storage seam upstream.
  */
 export async function addRecapPhoto(
   db: AppDb,
@@ -181,6 +220,7 @@ export async function addRecapPhoto(
     .where(eq(recapPhotos.bookingId, input.bookingId));
   if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
 
+  const caption = input.caption?.trim().slice(0, MAX_RECAP_CAPTION_LENGTH) || null;
   const [photo] = await db
     .insert(recapPhotos)
     .values({
@@ -188,7 +228,7 @@ export async function addRecapPhoto(
       bookingId: input.bookingId,
       tripId: booking.tripId,
       imageUrl: input.imageUrl,
-      caption: input.caption?.trim() || null,
+      caption,
     })
     .returning({
       id: recapPhotos.id,
