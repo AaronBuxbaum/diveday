@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
@@ -57,14 +59,35 @@ export default function SwitchHubPage() {
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">Don't see your system?</h2>
               <p className="mt-2 max-w-xl text-muted">
-                Any spreadsheet of your divers with their names, cards, and sizes will import. Start
-                a trial and bring a CSV — DiveDay maps the columns and previews the file before
-                anything saves.
+                Most exports import as-is — a spreadsheet of your divers with recognizable name,
+                card, and size columns is all it takes. Try the live demo, or start a trial and
+                bring a CSV: DiveDay maps the common column names, previews the file, and flags
+                anything it doesn't recognize before saving.
               </p>
             </div>
-            <Link href="/onboard" className={buttonClass({ size: "cta" })}>
-              Start a trial
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <form action={enterDemoAction}>
+                <SubmitButton
+                  pendingLabel="Getting the demo ready…"
+                  className={buttonClass({
+                    size: "cta",
+                    className: "cursor-pointer disabled:opacity-70",
+                  })}
+                >
+                  Try the live demo
+                </SubmitButton>
+              </form>
+              <Link
+                href="/onboard"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "cta",
+                  className: "border-border-strong",
+                })}
+              >
+                Start a trial
+              </Link>
+            </div>
           </div>
         </section>
       </main>
