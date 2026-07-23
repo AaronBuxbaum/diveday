@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "./limits";
 
 /**
  * The image-storage seam. Like the notification seam, the provider lives behind
@@ -31,10 +32,10 @@ export interface ImageStorageProvider {
   upload(input: ImageUpload): Promise<StoredImage>;
 }
 
-export const MAX_CARD_IMAGE_BYTES = 5 * 1024 * 1024;
-export const MAX_COURSE_IMAGE_BYTES = 5 * 1024 * 1024;
-export const MAX_RECAP_IMAGE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
+export const MAX_CARD_IMAGE_BYTES = MAX_IMAGE_BYTES;
+export const MAX_COURSE_IMAGE_BYTES = MAX_IMAGE_BYTES;
+export const MAX_RECAP_IMAGE_BYTES = MAX_IMAGE_BYTES;
+const ALLOWED_CONTENT_TYPES = new Set<string>(ALLOWED_IMAGE_CONTENT_TYPES);
 
 type Fetch = typeof fetch;
 type StorageEnvironment = Readonly<Record<string, string | undefined>>;

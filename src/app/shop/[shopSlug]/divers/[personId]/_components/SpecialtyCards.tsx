@@ -1,3 +1,4 @@
+import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -81,12 +82,7 @@ export function SpecialtyCards({
               hint="(optional; JPG, PNG, or WebP; ≤5 MB)"
               className="sm:col-span-2"
             >
-              <input
-                name="cardImage"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className={controlClass}
-              />
+              <ImageFileInput name="cardImage" />
             </Field>
             <FieldActions>
               <SubmitButton

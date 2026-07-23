@@ -67,6 +67,25 @@ test("staff captures and verifies level and specialty cards before either can be
   await expect(page.locator("li").filter({ hasText: cardNo })).toHaveCount(0);
 });
 
+test("an oversize card photo is rejected client-side before it ever reaches the server (CR-011)", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("link", { name: /Priya Sharma/ }).click();
+  await page.getByText("Add card", { exact: true }).click();
+  const form = levelForm(page);
+
+  await form.locator('input[name="cardImage"]').setInputFiles({
+    name: "card.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.alloc(6 * 1024 * 1024), // over the 5 MB card-photo limit
+  });
+  await expect(form.getByRole("alert")).toContainText("over 5 MB");
+  // Rejected client-side: the picker itself is cleared, not just annotated —
+  // a submit right after cannot silently carry the oversize file.
+  await expect(form.locator('input[name="cardImage"]')).toHaveValue("");
+});
+
 test("an expired certification reads as expired and no longer counts as valid", async ({
   page,
 }) => {

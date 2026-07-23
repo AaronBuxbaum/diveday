@@ -14,6 +14,7 @@ import { parseFaqs, parseLines, parseScheduleDays, splitCourseImageUrls } from "
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCourseImage } from "@/lib/storage";
+import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 
 const money = z.union([z.literal(""), z.coerce.number().nonnegative().max(100_000)]);
 const centsFromDollars = (value: number | "") => (value === "" ? null : Math.round(value * 100));
@@ -59,8 +60,15 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
   if (!course) redirect(`/shop/${shopSlug}/courses?notice=invalid`);
 
+  const newGalleryFiles = formData
+    .getAll("galleryImageFiles")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+  if (newGalleryFiles.length > MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION) {
+    redirect(`${base}?error=too-many-photos`);
+  }
+
   const hero = await uploadImage(formData.get("heroImageFile"));
-  const gallery = await Promise.all(formData.getAll("galleryImageFiles").map(uploadImage));
+  const gallery = await Promise.all(newGalleryFiles.map(uploadImage));
   if (hero.failed || gallery.some((image) => image.failed)) redirect(`${base}?error=upload`);
 
   // Photos are managed by upload now: new files append to the gallery, and the

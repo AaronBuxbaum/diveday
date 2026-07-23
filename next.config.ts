@@ -15,6 +15,13 @@ const nextConfig: NextConfig = {
     // fallback. Static-generation workers must not contend for that database.
     cpus: 1,
     staticGenerationMaxConcurrency: 1,
+    // Next's 1 MB default is below the 5 MB the storage seam and its UI promise
+    // (docs/architecture/decisions/20260718-card-image-storage.md and friends).
+    // 16 MB covers the worst single Server Action body this app sends today: the
+    // course editor's hero photo (5 MB) plus MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION
+    // (src/lib/storage/limits.ts) new gallery photos at 5 MB each, plus multipart
+    // overhead (CR-011, docs/architecture/decisions/20260723-upload-transport-limit.md).
+    serverActions: { bodySizeLimit: "16mb" },
   },
 };
 
