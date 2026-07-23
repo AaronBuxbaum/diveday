@@ -29,13 +29,10 @@ reporting, no gear register). Breadth is done; depth and proof are the work.
 
 ### 1. Data-portability follow-ons (the wedge)
 
-Export shipped; the rest of the "switching is safe" story is greenfield. Sequenced in
-[competitive-strategy.md](assessments/competitive-strategy.md#the-build-plan-in-order); the importer is
-**safety-critical** (boring code, adversarial tests, `dive-domain-expert` review).
+Export and the diver/customer CSV importer have shipped; the rest of the "switching is safe" story is
+greenfield. Sequenced in
+[competitive-strategy.md](assessments/competitive-strategy.md#the-build-plan-in-order).
 
-- **Diver/customer CSV importer** with a published honesty table (what imports fully / partially /
-  never). Imported certs land **claimed, never verified**; medical flags import fail-closed. Reuses
-  the export's CSV schemas as the contract.
 - **Public migration guides** — "Switching from DiveShop360 / EVE / DiveAdmin / Smartwaiver", each an
   exact export click-path + scope table + the importer. Live on the marketing surface
   ([marketing.md](marketing.md)); "Switching from EVE" first.
@@ -79,9 +76,6 @@ provider/policy decisions are open. Deliberately deferred until a real operator 
 
 ### 7. Smaller follow-ons
 
-- **Remove the dead `buddyPreference` column** — WP-5 specced its deletion but the field survives in
-  `src/db/schema.ts` (and is still read in `src/db/bookings.ts`, `src/db/export.ts`). Delete beats
-  hedging a field nothing renders.
 - **Recurring series — series-wide edits and a rolling horizon.** A series materializes a finite set
   of independent trips; there is no series-wide edit/cancel (changing every future date is
   per-instance) and the horizon is finite. Both are contained follow-ups noted in the
@@ -89,6 +83,9 @@ provider/policy decisions are open. Deliberately deferred until a real operator 
 - **Waitlist invite from Today.** The trip's waitlist section already invites the next diver one-tap
   (WP-9), but the Today freed-seat row still only *links* there (`src/db/today.ts`). Give that row the
   same one-tap invite so staff act straight from the queue.
+- **Post-trip recap extras.** The recap page ships; a crew-authored recap shout-out and a diver photo
+  upload remain follow-on work
+  ([post-trip-recap ADR](../architecture/decisions/20260723-post-trip-recap.md)).
 
 ## Delight backlog
 

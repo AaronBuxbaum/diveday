@@ -6,9 +6,9 @@ import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/s
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
-import { notificationDeliveries, people } from "./schema";
+import { notificationDeliveries, people, shops } from "./schema";
 import { setShopDockCallMinutes } from "./shops";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
 
 // The seeded shop already has bookings on several future trips, so
 // sendDueReminders (a global cron) touches more than the one under test. Every
@@ -153,6 +153,53 @@ describe("sendDueReminders", () => {
     expect(reminder.dockCallMinutes).toBe(45);
     expect(Array.isArray(reminder.outstanding)).toBe(true);
     expect(typeof reminder.medicalReview).toBe("boolean");
+  });
+
+  it("enriches the night-before brief with conditions, packing, contact, and first-timer voice", async () => {
+    const { db, shop, reef, bookingId, inWeekBucket } = await reminderContext();
+    await updateTripConditions(db, shop.id, reef.id, {
+      conditionsSummary: "Warm and glassy — a perfect first-dive day",
+      waterTemperatureC: 27,
+      visibilityMeters: 20,
+      surfaceConditions: "calm",
+    });
+    await db.update(shops).set({ contactPhone: "+13055551234" }).where(eq(shops.id, shop.id));
+    const email = fakeEmail();
+    // 10h out lands in the 24-hour bucket, so the reminder is the full brief.
+    const dayNow = new Date(reef.startsAt.getTime() - 10 * 60 * 60 * 1000);
+    expect(dayNow.getTime()).toBeGreaterThan(inWeekBucket.getTime());
+
+    await sendDueReminders(db, {
+      now: dayNow,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    });
+
+    const [reminder] = emailsFor(email, bookingId);
+    expect(reminder.kind).toBe("trip_reminder_24h");
+    if (reminder.kind !== "trip_reminder_24h") return;
+    expect(reminder.brief?.forecast).toContain("Warm and glassy");
+    expect(reminder.brief?.forecast).toContain("27°C");
+    expect(reminder.brief?.bring?.length).toBeGreaterThan(0);
+    expect(reminder.brief?.whoToText).toBe("+13055551234");
+    // Pat has never dived with the shop before — the softer voice applies.
+    expect(reminder.brief?.firstTimerNote).toContain("First boat dive");
+  });
+
+  it("keeps the 7-day reminder a light nudge with no brief", async () => {
+    const { db, bookingId, inWeekBucket } = await reminderContext();
+    const email = fakeEmail();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    });
+    const [reminder] = emailsFor(email, bookingId);
+    expect(reminder.kind).toBe("trip_reminder_7d");
+    if (reminder.kind !== "trip_reminder_7d") return;
+    expect("brief" in reminder).toBe(false);
   });
 
   it("records not_configured for a booking with no reachable channel", async () => {

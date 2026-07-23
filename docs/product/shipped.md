@@ -158,8 +158,19 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 - **Full-shop data export** — Settings → Data export downloads one ZIP of documented CSVs (leading
   with an import-ready `contacts.csv`) plus a README manifest; the "leave anytime" half of the
   data-portability wedge ([full-shop-export](../architecture/decisions/20260722-full-shop-export.md)).
-  The importer, migration guides, backups, and read API are the open follow-ons in
-  [roadmap.md](roadmap.md).
+- **Diver/customer CSV importer** — Settings → Import contacts brings people, cards, and rental sizes
+  in from a rival's export or DiveDay's own `contacts.csv`, matched by email so a re-import updates
+  rather than duplicates. The safety spine holds: imported certs land **claimed, never verified**,
+  no card number means no card, and medical answers never import (fail-closed); a scope table states
+  all of it up front. Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
+  ([contact-importer](../architecture/decisions/20260723-contact-importer.md)). Migration guides,
+  backups, and the read API are the open follow-ons in [roadmap.md](roadmap.md).
+- **Night-before brief + post-trip recap** — the 24-hour reminder becomes a plain-language
+  night-before brief (conditions, what to bring, dock time, who to text; softer first-timer voice),
+  and after departure an automatic `/recap/[token]` gives each diver a shareable page of the sites
+  they dived with a bring-a-buddy nudge, sent once per booking on the reminders cron
+  ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)). A crew recap shout-out
+  and diver photo upload remain follow-ons in [roadmap.md](roadmap.md).
 
 ## UX arc — making the surfaces *act* (delivered 2026-07-23)
 
@@ -175,8 +186,7 @@ of *doing*. Its entire P0–P1 plan (WP-1…WP-11) and P2 items shipped:
 - **Emergency contact collected** from the waiver flow and `/ready`; surfaced as a low-severity
   dock-settleable nudge on boats within 3 days. *(WP-4)*
 - **Forgiving booking form** — autocomplete, optional lead phone, email-typo nudge, `useActionState`
-  that keeps input on failure. *(WP-5; the dead `buddyPreference` column it named for deletion is
-  the one leftover — see [roadmap.md](roadmap.md).)*
+  that keeps input on failure; the dead `buddyPreference` column it named for deletion was removed. *(WP-5)*
 - **Instant pending boarding** — the boarding tap shows "Boarding…" immediately and never renders a
   confirmed ✓ before the server clears the diver (via `useActionState`, server-authoritative). *(WP-6)*
 - **One undo model** — the manifest re-tap un-board; the reversible-vs-confirm rule is in
