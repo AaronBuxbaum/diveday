@@ -6,7 +6,7 @@ import { recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
 import { saveRentalFit } from "./rental-fit";
-import { nitroxCertifications, people } from "./schema";
+import { nitroxCertifications, people, tripWaitlistEntries } from "./schema";
 import { getTodayWork } from "./today";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -176,6 +176,60 @@ describe("today's work queue (in-memory PGlite)", () => {
     );
     expect(waiverRow?.actionLabel).toBe("Resend waiver link");
     expect(waiverRow?.waiver).toEqual({ bookingIds: [entry.booking.id] });
+  });
+
+  it("makes a freed seat one-tap invitable, targeting the front of the wait list", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    // The seeded reef boat sails today at 9/12 — three open seats to fill.
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    expect(reef.booked).toBeLessThan(reef.capacity);
+
+    const [front, later] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Marina Reyes", email: "marina@example.com" },
+        { shopId: shop.id, fullName: "Theo Park", email: "theo@example.com" },
+      ])
+      .returning();
+    if (!front || !later) throw new Error("could not seed waiters");
+    // Explicit join times so the front of the line is deterministic.
+    await db.insert(tripWaitlistEntries).values([
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: front.id,
+        createdAt: new Date("2020-01-01T00:00:00.000Z"),
+      },
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: later.id,
+        createdAt: new Date("2020-02-01T00:00:00.000Z"),
+      },
+    ]);
+    const frontEntry = (
+      await db
+        .select()
+        .from(tripWaitlistEntries)
+        .where(
+          and(eq(tripWaitlistEntries.tripId, reef.id), eq(tripWaitlistEntries.personId, front.id)),
+        )
+    )[0];
+    if (!frontEntry) throw new Error("front entry missing");
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `waitlist:${reef.id}`);
+    expect(row?.kind).toBe("waitlist_seat");
+    // Depth is counted, but the invite targets the earliest joiner specifically.
+    expect(row?.detail).toContain("2 people are on the wait list");
+    expect(row?.invite).toBeDefined();
+    expect(row?.invite?.entryId).toBe(frontEntry.id);
+    expect(row?.invite?.personName).toBe("Marina Reyes");
+    expect(row?.invite?.personEmail).toBe("marina@example.com");
+    expect(row?.invite?.tripId).toBe(reef.id);
+    expect(row?.invite?.bookingPath).toBe(`/shop/${shop.slug}/schedule/${reef.id}`);
   });
 
   it("raises a nitrox request whose card stopped being verified", async () => {
