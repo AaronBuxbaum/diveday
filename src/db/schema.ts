@@ -149,7 +149,11 @@ export const tripSeries = pgTable(
     frequency: tripRecurrenceFrequency("frequency").notNull().default("weekly"),
     /** Weeks between instances: 1 for weekly, 2 for every other week, etc. */
     intervalWeeks: integer("interval_weeks").notNull().default(1),
-    /** How many instances were materialized when the series was created. */
+    /**
+     * How many instances the series has materialized — set at creation and
+     * bumped when the horizon is rolled forward (see `extendTripSeries`). Drives
+     * the staff-facing "Repeats weekly · N trips" summary.
+     */
     occurrenceCount: integer("occurrence_count").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

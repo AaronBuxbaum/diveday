@@ -10,6 +10,11 @@ import { upsertTripRequirements } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { getShopById } from "@/db/shops";
 import {
+  applyDetailsToFutureSeries,
+  cancelFutureSeriesTrips,
+  extendTripSeries,
+  getLatestSeriesInstance,
+  getTripSeriesById,
   getTripWithBooked,
   setTripCrew,
   setTripStatus,
@@ -24,9 +29,10 @@ import {
 } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
-import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { parseWallTime, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const detailsSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -181,6 +187,77 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
   const s = await requireStaffSession();
   await setTripStatus(await getDb(), s.user.shopId, tripId, "scheduled");
   revalidateAndRedirect(back, `${back}?notice=reinstated`);
+}
+
+// Series-wide operations. A series is materialized as independent trips
+// (20260719-recurring-trip-series); these iterate that instance set so staff
+// can manage the whole run without touching every date by hand. Each settles
+// back on the source trip's Overview, the one page the series banner lives on.
+
+/** Push this date's editable details across every upcoming date in the series. */
+export async function applySeriesDetailsAction(shopSlug: string, tripId: string, seriesId: string) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const result = await applyDetailsToFutureSeries(await getDb(), s.user.shopId, seriesId, tripId);
+  const notice = !result
+    ? "series-error"
+    : result.skipped > 0
+      ? "series-applied-partial"
+      : "series-applied";
+  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+}
+
+/** Cancel every upcoming date in the series at once; each stays reinstatable. */
+export async function cancelSeriesAction(shopSlug: string, tripId: string, seriesId: string) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const cancelled = await cancelFutureSeriesTrips(await getDb(), s.user.shopId, seriesId);
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${cancelled > 0 ? "series-cancelled" : "series-error"}`,
+  );
+}
+
+const extendSeriesSchema = z.object({
+  count: z.coerce.number().int().min(1).max(MAX_SERIES_OCCURRENCES),
+});
+
+/** Roll a finite series' horizon forward by adding more dates on the same cadence. */
+export async function extendSeriesAction(
+  shopSlug: string,
+  tripId: string,
+  seriesId: string,
+  formData: FormData,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = extendSeriesSchema.safeParse({ count: formData.get("count") });
+  if (!parsed.success) redirect(`${back}?notice=series-error`);
+  const db = await getDb();
+  const [shop, series, latest] = await Promise.all([
+    getShopById(db, s.user.shopId),
+    getTripSeriesById(db, s.user.shopId, seriesId),
+    getLatestSeriesInstance(db, s.user.shopId, seriesId),
+  ]);
+  if (!shop || !series || !latest) redirect(`${back}?notice=series-error`);
+  const walls = weeklyOccurrencesAfter(
+    {
+      start: utcToWallTime(latest.startsAt, shop.timezone),
+      end: utcToWallTime(latest.endsAt, shop.timezone),
+    },
+    series.intervalWeeks,
+    parsed.data.count,
+  );
+  if (!walls) redirect(`${back}?notice=series-error`);
+  const result = await extendTripSeries(db, {
+    shopId: s.user.shopId,
+    seriesId,
+    occurrences: walls.map((wall) => ({
+      startsAt: wallTimeToUtc(wall.start, shop.timezone),
+      endsAt: wallTimeToUtc(wall.end, shop.timezone),
+    })),
+  });
+  revalidateAndRedirect(back, `${back}?notice=${result ? "series-extended" : "series-error"}`);
 }
 
 export async function saveCrewAction(shopSlug: string, tripId: string, formData: FormData) {

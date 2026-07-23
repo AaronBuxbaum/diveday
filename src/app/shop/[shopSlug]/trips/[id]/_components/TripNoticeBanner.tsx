@@ -74,6 +74,26 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     tone: "danger",
     text: "Tick at least one diver, then send the waiver to the whole selection.",
   },
+  "series-applied": {
+    tone: "success",
+    text: "Those details now apply to every upcoming date in this series.",
+  },
+  "series-applied-partial": {
+    tone: "success",
+    text: "Applied to the upcoming dates in this series. A few already had more divers than the new capacity, so those were left as they were — adjust them from their own trip pages.",
+  },
+  "series-cancelled": {
+    tone: "danger",
+    text: "Cancelled every upcoming date in this series. Reinstate any single date from its own trip page.",
+  },
+  "series-extended": {
+    tone: "success",
+    text: "Added more dates — the series runs further out on the board now.",
+  },
+  "series-error": {
+    tone: "danger",
+    text: "That series change didn't go through. Try again from a scheduled date in the series.",
+  },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
   payment: { tone: "success", text: "Payment status updated." },
   conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },
