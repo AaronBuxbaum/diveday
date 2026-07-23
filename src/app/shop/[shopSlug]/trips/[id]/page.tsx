@@ -24,6 +24,7 @@ import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
+import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { SeriesSection } from "./_components/SeriesSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
@@ -37,6 +38,7 @@ import {
   saveConditionsAction,
   saveCrewAction,
   saveDetails,
+  saveRecapShoutoutAction,
   saveRequirementsAction,
 } from "./actions";
 
@@ -143,6 +145,11 @@ export default async function ManageTripPage({
         saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
         trip={trip}
+      />
+
+      <RecapNoteSection
+        action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
+        shoutout={trip.recapShoutout}
       />
 
       <RequirementsSection

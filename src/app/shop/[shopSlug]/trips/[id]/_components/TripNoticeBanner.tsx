@@ -94,6 +94,11 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     tone: "danger",
     text: "That series change didn't go through. Try again from a scheduled date in the series.",
   },
+  "recap-note": {
+    tone: "success",
+    text: "Recap note saved — it rides along on every diver's recap once this trip departs.",
+  },
+  "recap-photo-removed": { tone: "success", text: "Photo removed from the recap." },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
   payment: { tone: "success", text: "Payment status updated." },
   conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },

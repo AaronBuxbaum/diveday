@@ -26,6 +26,7 @@ import {
   orders,
   people,
   personRoles,
+  recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
   shops,
@@ -1467,6 +1468,33 @@ export async function seedDemoSchedule(db: DbExecutor, shopId: string): Promise<
       .insert(bookingPayments)
       .values(paymentSeed.map((row) => ({ shopId, currency: "usd", ...row })));
   }
+
+  // Post-trip recap demo: a crew shout-out on the pinned reef trip and a couple
+  // of diver photos on the pinned recap booking, so /recap/[token] shows the
+  // shout-out block and the photo strip out of the box.
+  await db
+    .update(trips)
+    .set({
+      recapShoutout:
+        "What a day on the water — glassy surface and a curious green turtle on the second tank. Thanks for diving with us, and tag Blue Mantis in your shots!",
+    })
+    .where(eq(trips.id, reef.id));
+  await db.insert(recapPhotos).values([
+    {
+      shopId,
+      bookingId: DEMO_RECAP_BOOKING_ID,
+      tripId: reef.id,
+      imageUrl: commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
+      caption: "French angelfish cruising the coral",
+    },
+    {
+      shopId,
+      bookingId: DEMO_RECAP_BOOKING_ID,
+      tripId: reef.id,
+      imageUrl: commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
+      caption: "A whole squad of blue tangs",
+    },
+  ]);
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);

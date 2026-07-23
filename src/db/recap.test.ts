@@ -5,7 +5,15 @@ import type { Notification, NotificationDelivery, NotificationProvider } from "@
 import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { getRecapPageData, sendDueRecaps } from "./recap";
+import {
+  addRecapPhoto,
+  deleteRecapPhoto,
+  getRecapPageData,
+  listRecapPhotosForTrip,
+  MAX_RECAP_PHOTOS_PER_BOOKING,
+  sendDueRecaps,
+  setTripRecapShoutout,
+} from "./recap";
 import { bookings, notificationDeliveries, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -73,6 +81,79 @@ describe("getRecapPageData", () => {
   it("returns null for an unknown booking", async () => {
     const { db } = await recapContext();
     expect(await getRecapPageData(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+});
+
+describe("recap photos and crew shout-out", () => {
+  it("attaches a diver photo and surfaces it on the recap, newest first", async () => {
+    const { db, bookingId } = await recapContext();
+    const first = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: "https://img/one.jpg",
+      caption: "  Turtle!  ",
+    });
+    const second = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/two.jpg" });
+    expect(first.ok && second.ok).toBe(true);
+    if (first.ok) expect(first.photo.caption).toBe("Turtle!"); // trimmed
+    const data = await getRecapPageData(db, bookingId);
+    expect(data?.photos.map((p) => p.imageUrl)).toEqual([
+      "https://img/two.jpg",
+      "https://img/one.jpg",
+    ]);
+  });
+
+  it("refuses a photo on a cancelled booking and past the per-booking cap", async () => {
+    const { db, bookingId } = await recapContext();
+    for (let i = 0; i < MAX_RECAP_PHOTOS_PER_BOOKING; i++) {
+      expect((await addRecapPhoto(db, { bookingId, imageUrl: `https://img/${i}.jpg` })).ok).toBe(
+        true,
+      );
+    }
+    expect(await addRecapPhoto(db, { bookingId, imageUrl: "https://img/over.jpg" })).toEqual({
+      ok: false,
+      reason: "limit",
+    });
+
+    const cancelled = await recapContext();
+    await cancelled.db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, cancelled.bookingId));
+    expect(
+      await addRecapPhoto(cancelled.db, {
+        bookingId: cancelled.bookingId,
+        imageUrl: "https://img/x.jpg",
+      }),
+    ).toEqual({ ok: false, reason: "cancelled" });
+  });
+
+  it("shows staff every photo on a trip and lets them take one down, shop-scoped", async () => {
+    const { db, shop, reef, bookingId } = await recapContext();
+    const before = await listRecapPhotosForTrip(db, shop.id, reef.id);
+    const keep = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/keep.jpg" });
+    const doomed = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/bad.jpg" });
+    if (!keep.ok || !doomed.ok) throw new Error("photos not added");
+
+    const after = await listRecapPhotosForTrip(db, shop.id, reef.id);
+    expect(after.length).toBe(before.length + 2);
+    expect(after.find((p) => p.id === doomed.photo.id)?.diverName).toBe("Rae Recap");
+
+    // A different shop can't moderate this photo.
+    expect(
+      await deleteRecapPhoto(db, "00000000-0000-0000-0000-000000000000", doomed.photo.id),
+    ).toBe(false);
+    expect(await deleteRecapPhoto(db, shop.id, doomed.photo.id)).toBe(true);
+    const afterDelete = await listRecapPhotosForTrip(db, shop.id, reef.id);
+    expect(afterDelete.length).toBe(before.length + 1);
+    expect(afterDelete.some((p) => p.id === doomed.photo.id)).toBe(false);
+  });
+
+  it("carries the crew shout-out onto the recap and clears it on empty", async () => {
+    const { db, shop, reef, bookingId } = await recapContext();
+    await setTripRecapShoutout(db, shop.id, reef.id, "  Killer vis today!  ");
+    expect((await getRecapPageData(db, bookingId))?.shoutout).toBe("Killer vis today!");
+    await setTripRecapShoutout(db, shop.id, reef.id, "   ");
+    expect((await getRecapPageData(db, bookingId))?.shoutout).toBeNull();
   });
 });
 
