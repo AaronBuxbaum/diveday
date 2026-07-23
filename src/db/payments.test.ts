@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { getBookingPayment, setBookingPayment } from "./payments";
+import { getBookingPayment, setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
@@ -78,5 +78,73 @@ describe("booking payments", () => {
         status: "paid",
       }),
     ).toBeNull();
+  });
+});
+
+describe("setBookingPaymentIfNotFinal", () => {
+  it("refuses to write a lesser status over a refunded or waived row", async () => {
+    const { db, shop, entry } = await paymentContext();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      status: "refunded",
+      providerRef: "re_original",
+    });
+
+    const result = await db.transaction((tx) =>
+      setBookingPaymentIfNotFinal(tx, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "paid",
+        providerRef: "cs_replay",
+      }),
+    );
+    expect(result?.status).toBe("refunded");
+    expect(result?.providerRef).toBe("re_original");
+    expect((await getBookingPayment(db, shop.id, entry.booking.id))?.status).toBe("refunded");
+  });
+
+  it("writes normally when there is no existing row or the existing row is not final", async () => {
+    const { db, shop, entry } = await paymentContext();
+
+    const first = await db.transaction((tx) =>
+      setBookingPaymentIfNotFinal(tx, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "deposit_paid",
+        amountCents: 6000,
+      }),
+    );
+    expect(first?.status).toBe("deposit_paid");
+
+    const second = await db.transaction((tx) =>
+      setBookingPaymentIfNotFinal(tx, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "paid",
+        amountCents: 18000,
+      }),
+    );
+    expect(second?.status).toBe("paid");
+  });
+
+  it("always writes a final status as the input regardless of the current one", async () => {
+    const { db, shop, entry } = await paymentContext();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      status: "paid",
+      amountCents: 18000,
+    });
+
+    const refunded = await db.transaction((tx) =>
+      setBookingPaymentIfNotFinal(tx, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "refunded",
+        amountCents: 0,
+      }),
+    );
+    expect(refunded?.status).toBe("refunded");
   });
 });
