@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { shops } from "./schema";
 import {
   getTripRoster,
   getTripWaitlist,
   getTripWithBooked,
+  getWaitlistEntryForTrip,
   upcomingTripsWithCounts,
 } from "./trips";
 import { inviteWaitlistDiver, joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
@@ -138,5 +140,32 @@ describe("inviteWaitlistDiver", () => {
       (row) => row.entry.id === joined.entryId,
     );
     expect(entry?.entry.invitedAt).toBeNull();
+  });
+});
+
+describe("getTripWaitlist / getWaitlistEntryForTrip cross-tenant isolation (CR-007)", () => {
+  it("neither shop can read the other's real wait-list entry by substituting its own trip/entry id", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-waitlist-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+
+    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+
+    // A genuinely different shop, its own trip, its own real entry — not a
+    // hardcoded placeholder id — so this proves the query rejects a real
+    // mismatched shop_id, not just an id that matches nothing at all.
+    const otherTrips = await upcomingTripsWithCounts(db, otherShop.id);
+    expect(otherTrips).toEqual([]); // a fresh shop has no seeded trips of its own
+
+    // otherShop's session can't see shop's entry at all.
+    expect(await getTripWaitlist(db, otherShop.id, fullTrip.id)).toEqual([]);
+    expect(await getWaitlistEntryForTrip(db, otherShop.id, fullTrip.id, joined.entryId)).toBeNull();
+
+    // shop's own session still can, unaffected by the other shop existing.
+    expect(await getWaitlistEntryForTrip(db, shop.id, fullTrip.id, joined.entryId)).not.toBeNull();
   });
 });

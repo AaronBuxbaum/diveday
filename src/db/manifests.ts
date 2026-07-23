@@ -22,11 +22,17 @@ async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
     .select({ person: people, role: personRoles.role })
     .from(tripAssignments)
+    // `trip_assignments` carries no shop_id of its own; proving the trip
+    // itself belongs to shopId (not just the assigned person) is what closes
+    // the cross-tenant read this table's shape allows (CR-007 review
+    // finding — mirrors getTripCrewIds's already-fixed join, src/db/trips.ts).
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
       and(
         eq(tripAssignments.tripId, tripId),
+        eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
         inArray(personRoles.role, [...STAFF_ROLES]),
       ),
