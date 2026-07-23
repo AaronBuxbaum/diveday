@@ -9,7 +9,9 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 
 ## Foundation and spine (M0–M1)
 
-- **Tooling, CI, agent layer, design tokens** — the base everything leans on.
+- **Tooling, CI, agent layer, design tokens** — the base everything leans on. The agent layer is
+  drift-checked: `pnpm check:agents` (in `check:repo`) keeps skills, the skill index, AGENTS.md
+  references, reviewer agents, and `task:context` doc paths in sync.
 - **Database + ORM** — Drizzle + Postgres, PGlite in dev/test with auto-migrate/auto-seed
   ([0005](../architecture/decisions/0005-database.md)); Neon in production
   ([Neon hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)).

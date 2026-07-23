@@ -32,6 +32,7 @@ description: Debugging playbook — failing tests, red CI, Playwright flakes, Dr
 | Vitest timeout on db tests | Each test boots PGlite; ceiling is 20s in `vitest.config.ts` — a hang usually means an unresolved promise, not slowness |
 | CI failure | The failed step's log tail only — never stream full job logs |
 | Red `argos` check, "N changed — waiting for your decision" | Not a failure to debug — it's an untriaged visual build. Run the `argos-triage` skill |
+| e2e job red but all tests passed; log ends in Argos `APIError … 402` "maximum screenshot capacity" | Account screenshot quota exhausted — billing, not your diff. Comment the blocker on the PR for the human; don't rerun (it fails identically) and don't make CI swallow Argos errors |
 | Framework behaving "wrong" | This is **Next 16** — check `node_modules/next/dist/docs/` before assuming our bug (middleware→proxy, async `searchParams`, `connection()`) |
 | Redirect loops / auth bounces | Two layers run: `src/proxy.ts` (edge, redirects to `/sign-in` or `/`) and `requireStaffSession()` (server). Identify which bounced before changing either |
 | Sign-in silently fails in dev | `verifyCredentials` returns null for four distinct reasons (no account, disabled, bad password, no staff role) by design — check the seeded account state, don't add error leakage |
