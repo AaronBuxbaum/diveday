@@ -198,45 +198,53 @@ export type AddRecapPhotoResult =
  * Attach a photo to a diver's recap. The booking is resolved and shop/trip are
  * derived from it (never trusted from the caller), a cancelled booking is
  * refused, and a booking already at its photo cap is refused rather than
- * silently dropped (the same gate as `canAddRecapPhoto`, re-checked here so the
- * write is safe even under a race). The caption is truncated to a server bound.
- * The image URL comes from the storage seam upstream.
+ * silently dropped. The whole check-and-insert runs in one transaction that
+ * locks the booking row `FOR UPDATE`, so the cap is enforced atomically: this is
+ * a public token-auth endpoint, and without the lock two concurrent uploads on
+ * the same booking could both read `count = cap-1` under READ COMMITTED and both
+ * insert, blowing past the cap (and its 5 MB-per-blob cost bound). Mirrors the
+ * booking-capacity lock in `bookings.ts`; PGlite is single-connection so tests
+ * can't exhibit the race — the lock is for production Postgres. The caption is
+ * truncated to a server bound. The image URL comes from the storage seam upstream.
  */
 export async function addRecapPhoto(
   db: AppDb,
   input: { bookingId: string; imageUrl: string; caption?: string | null },
 ): Promise<AddRecapPhotoResult> {
-  const [booking] = await db
-    .select({ shopId: bookings.shopId, tripId: bookings.tripId, status: bookings.status })
-    .from(bookings)
-    .where(eq(bookings.id, input.bookingId))
-    .limit(1);
-  if (!booking) return { ok: false, reason: "not_found" };
-  if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select({ shopId: bookings.shopId, tripId: bookings.tripId, status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, input.bookingId))
+      .limit(1)
+      .for("update");
+    if (!booking) return { ok: false, reason: "not_found" };
+    if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
 
-  const [{ count: existing } = { count: 0 }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(recapPhotos)
-    .where(eq(recapPhotos.bookingId, input.bookingId));
-  if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
+    const [{ count: existing } = { count: 0 }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(recapPhotos)
+      .where(eq(recapPhotos.bookingId, input.bookingId));
+    if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
 
-  const caption = input.caption?.trim().slice(0, MAX_RECAP_CAPTION_LENGTH) || null;
-  const [photo] = await db
-    .insert(recapPhotos)
-    .values({
-      shopId: booking.shopId,
-      bookingId: input.bookingId,
-      tripId: booking.tripId,
-      imageUrl: input.imageUrl,
-      caption,
-    })
-    .returning({
-      id: recapPhotos.id,
-      imageUrl: recapPhotos.imageUrl,
-      caption: recapPhotos.caption,
-    });
-  if (!photo) return { ok: false, reason: "not_found" };
-  return { ok: true, photo };
+    const caption = input.caption?.trim().slice(0, MAX_RECAP_CAPTION_LENGTH) || null;
+    const [photo] = await tx
+      .insert(recapPhotos)
+      .values({
+        shopId: booking.shopId,
+        bookingId: input.bookingId,
+        tripId: booking.tripId,
+        imageUrl: input.imageUrl,
+        caption,
+      })
+      .returning({
+        id: recapPhotos.id,
+        imageUrl: recapPhotos.imageUrl,
+        caption: recapPhotos.caption,
+      });
+    if (!photo) return { ok: false, reason: "not_found" };
+    return { ok: true, photo };
+  });
 }
 
 export type StaffRecapPhoto = RecapPhotoView & { diverName: string; bookingId: string };
