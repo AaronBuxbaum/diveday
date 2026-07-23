@@ -48,3 +48,13 @@ export function canExportShopData(roles: readonly Role[] | undefined): boolean {
 export function canImportShopData(roles: readonly Role[] | undefined): boolean {
   return canExportShopData(roles);
 }
+
+/**
+ * Owner reporting is the buyer's "how's my month" — revenue, fill rate, waiver
+ * completion across the whole shop. Revenue is owner-grade information the daily
+ * crew has no reason to see, so it takes the same accountable owner/manager gate
+ * as export and import (ADR 20260723-owner-reporting).
+ */
+export function canViewShopReports(roles: readonly Role[] | undefined): boolean {
+  return canExportShopData(roles);
+}

@@ -23,6 +23,7 @@ import {
   reviewSpecialtyCertification,
 } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCardImage } from "@/lib/storage";
@@ -308,7 +309,15 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
-  const refunded = orderId ? await refundOrder(await getDb(), staff.user.shopId, orderId) : null;
+  const db = await getDb();
+  // A demo shop's orders carry fabricated Stripe ids; refunding one would hit
+  // live Stripe and fail. The button is rendered disabled to match (PaymentsSection).
+  const shop = await getShopById(db, staff.user.shopId);
+  if (shop?.isDemo) {
+    revalidateAndRedirect(base, `${base}?notice=demo-disabled`);
+    return;
+  }
+  const refunded = orderId ? await refundOrder(db, staff.user.shopId, orderId) : null;
   revalidateAndRedirect(base, `${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
 }
 

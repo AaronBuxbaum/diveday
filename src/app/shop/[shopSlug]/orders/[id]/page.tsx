@@ -8,6 +8,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
+import { getShopById } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
@@ -40,16 +41,30 @@ function centsToDisplay(cents: number, currency: string): string {
   return `$${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
 }
 
+/**
+ * Demo shops carry seeded orders whose Stripe invoice ids are fabricated (the
+ * demo never connects a real Stripe account). Refresh / void / refund all reach
+ * out to Stripe with those ids and would error against live platform
+ * credentials, so on a demo shop these actions are refused before any Stripe
+ * call — and the buttons are rendered disabled to match (src/db/seed.ts).
+ */
+async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string): Promise<boolean> {
+  const shop = await getShopById(db, shopId);
+  return shop?.isDemo ?? false;
+}
+
 async function refreshAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
+  const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  if (await isDemoShop(db, session.user.shopId)) {
+    revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
+    return;
+  }
   const updated = orderId ? await refreshOrderStatus(db, session.user.shopId, orderId) : null;
-  revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/orders/${orderId}`,
-    `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "refreshed" : "refresh_failed"}`,
-  );
+  revalidateAndRedirect(back, `${back}?notice=${updated ? "refreshed" : "refresh_failed"}`);
 }
 
 async function voidAction(formData: FormData) {
@@ -57,11 +72,13 @@ async function voidAction(formData: FormData) {
   const session = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
+  const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  if (await isDemoShop(db, session.user.shopId)) {
+    revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
+    return;
+  }
   const updated = orderId ? await voidOrder(db, session.user.shopId, orderId) : null;
-  revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/orders/${orderId}`,
-    `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "voided" : "void_failed"}`,
-  );
+  revalidateAndRedirect(back, `${back}?notice=${updated ? "voided" : "void_failed"}`);
 }
 
 async function refundAction(formData: FormData) {
@@ -69,11 +86,13 @@ async function refundAction(formData: FormData) {
   const session = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
+  const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  if (await isDemoShop(db, session.user.shopId)) {
+    revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
+    return;
+  }
   const updated = orderId ? await refundOrder(db, session.user.shopId, orderId) : null;
-  revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/orders/${orderId}`,
-    `/shop/${session.user.shopSlug}/orders/${orderId}?notice=${updated ? "refunded" : "refund_failed"}`,
-  );
+  revalidateAndRedirect(back, `${back}?notice=${updated ? "refunded" : "refund_failed"}`);
 }
 
 const FAILED_NOTICES = new Set(["refresh_failed", "void_failed", "refund_failed"]);
@@ -85,7 +104,37 @@ const NOTICE_MESSAGES: Record<string, string> = {
   void_failed: "Couldn't void this order — it may already be paid or void.",
   refunded: "Payment refunded — the trip now shows as unpaid for this diver.",
   refund_failed: "Couldn't refund this order — it may not have a refundable payment yet.",
+  demo_disabled:
+    "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
 };
+
+/** Why a Stripe action is greyed out on a demo shop — shown on hover and to AT. */
+const DEMO_ACTION_HINT =
+  "Demo orders aren't backed by a live Stripe invoice, so this action is disabled.";
+
+/** A greyed-out stand-in for a Stripe action a demo shop can't perform. */
+function DisabledDemoButton({
+  label,
+  variant,
+}: {
+  label: string;
+  variant: "secondary" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      disabled
+      aria-disabled="true"
+      title={DEMO_ACTION_HINT}
+      className={buttonClass({
+        variant,
+        className: `cursor-not-allowed opacity-50${variant === "secondary" ? " text-foreground" : ""}`,
+      })}
+    >
+      {label}
+    </button>
+  );
+}
 
 export default async function OrderDetailPage({
   params,
@@ -100,6 +149,7 @@ export default async function OrderDetailPage({
   const db = await getDb();
   const order = await getOrder(db, session.user.shopId, id);
   if (!order) notFound();
+  const demo = await isDemoShop(db, session.user.shopId);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -121,7 +171,13 @@ export default async function OrderDetailPage({
       {notice ? (
         <div className="mb-6">
           <ShopNotice
-            tone={FAILED_NOTICES.has(notice) ? "danger" : "success"}
+            tone={
+              notice === "demo_disabled"
+                ? "neutral"
+                : FAILED_NOTICES.has(notice)
+                  ? "danger"
+                  : "success"
+            }
             role={FAILED_NOTICES.has(notice) ? "alert" : "status"}
           >
             {NOTICE_MESSAGES[notice] ?? notice}
@@ -172,39 +228,53 @@ export default async function OrderDetailPage({
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           {order.order.status === "open" ? (
-            <>
-              <form action={refreshAction}>
-                <input type="hidden" name="orderId" value={order.order.id} />
-                <SubmitButton
-                  pendingLabel="Refreshing…"
-                  className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-                >
-                  Refresh status
-                </SubmitButton>
-              </form>
-              <form action={voidAction}>
-                <input type="hidden" name="orderId" value={order.order.id} />
-                <SubmitButton
-                  pendingLabel="Voiding…"
-                  className={buttonClass({ variant: "danger" })}
-                >
-                  Void order
-                </SubmitButton>
-              </form>
-            </>
+            demo ? (
+              <>
+                <DisabledDemoButton label="Refresh status" variant="secondary" />
+                <DisabledDemoButton label="Void order" variant="danger" />
+              </>
+            ) : (
+              <>
+                <form action={refreshAction}>
+                  <input type="hidden" name="orderId" value={order.order.id} />
+                  <SubmitButton
+                    pendingLabel="Refreshing…"
+                    className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+                  >
+                    Refresh status
+                  </SubmitButton>
+                </form>
+                <form action={voidAction}>
+                  <input type="hidden" name="orderId" value={order.order.id} />
+                  <SubmitButton
+                    pendingLabel="Voiding…"
+                    className={buttonClass({ variant: "danger" })}
+                  >
+                    Void order
+                  </SubmitButton>
+                </form>
+              </>
+            )
           ) : null}
           {order.order.status === "paid" ? (
-            <form action={refundAction}>
-              <input type="hidden" name="orderId" value={order.order.id} />
-              <SubmitButton
-                pendingLabel="Refunding…"
-                className={buttonClass({ variant: "danger" })}
-              >
-                Refund payment
-              </SubmitButton>
-            </form>
+            demo ? (
+              <DisabledDemoButton label="Refund payment" variant="danger" />
+            ) : (
+              <form action={refundAction}>
+                <input type="hidden" name="orderId" value={order.order.id} />
+                <SubmitButton
+                  pendingLabel="Refunding…"
+                  className={buttonClass({ variant: "danger" })}
+                >
+                  Refund payment
+                </SubmitButton>
+              </form>
+            )
           ) : null}
         </div>
+        {demo && (order.order.status === "open" || order.order.status === "paid") ? (
+          <p className="mt-2 text-xs text-muted">{DEMO_ACTION_HINT}</p>
+        ) : null}
       </section>
     </main>
   );
