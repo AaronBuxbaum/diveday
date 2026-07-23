@@ -5,6 +5,7 @@ import {
   MAX_SERIES_OCCURRENCES,
   recurrenceSummary,
   weeklyOccurrences,
+  weeklyOccurrencesAfter,
 } from "./recurrence";
 import type { WallTime } from "./zoned";
 import { utcToWallTime, wallTimeToUtc } from "./zoned";
@@ -91,6 +92,40 @@ describe("weeklyOccurrences", () => {
         { frequency: "weekly", intervalWeeks: 1, occurrenceCount: 1 },
       ),
     ).toBeNull();
+  });
+});
+
+describe("weeklyOccurrencesAfter", () => {
+  it("generates the next N dates strictly after the anchor, on the same cadence", () => {
+    const occurrences = weeklyOccurrencesAfter(
+      { start: wall(2026, 7, 25), end: wall(2026, 7, 25, 12, 0) },
+      1,
+      3,
+    );
+    expect(occurrences).not.toBeNull();
+    // The anchor (25th) is never repeated — extension starts one interval on.
+    expect(occurrences?.map((o) => `${o.start.month}-${o.start.day}`)).toEqual([
+      "8-1",
+      "8-8",
+      "8-15",
+    ]);
+    expect(occurrences?.[2]?.end).toEqual(wall(2026, 8, 15, 12, 0));
+  });
+
+  it("respects the interval when rolling an every-other-week series forward", () => {
+    const occurrences = weeklyOccurrencesAfter(
+      { start: wall(2026, 8, 1), end: wall(2026, 8, 1, 12, 0) },
+      2,
+      2,
+    );
+    expect(occurrences?.map((o) => `${o.start.month}-${o.start.day}`)).toEqual(["8-15", "8-29"]);
+  });
+
+  it("rejects an out-of-bounds interval or count", () => {
+    const anchor = { start: wall(2026, 8, 1), end: wall(2026, 8, 1, 12, 0) };
+    expect(weeklyOccurrencesAfter(anchor, 0, 3)).toBeNull();
+    expect(weeklyOccurrencesAfter(anchor, 1, 0)).toBeNull();
+    expect(weeklyOccurrencesAfter(anchor, 1, MAX_SERIES_OCCURRENCES + 1)).toBeNull();
   });
 });
 
