@@ -539,6 +539,17 @@ export const bookings = pgTable(
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     status: bookingStatus("status").notNull().default("booked"),
+    /**
+     * Set for the duration of one in-flight checkout attempt covering this
+     * booking (`payment_operation_intents.id`), cleared once that attempt
+     * resolves either way. A second concurrent `startBookingCheckout` call
+     * for the same booking can claim it only while this is null, so two
+     * racing attempts can never both mint a Stripe Checkout session for the
+     * same seat (CR-005) — see src/db/checkouts.ts. Not a typed FK: that
+     * reference is mutual with `payment_operation_intents.booking_id`, and
+     * drizzle can't type two tables that reference each other's primary key.
+     */
+    pendingCheckoutIntentId: uuid("pending_checkout_intent_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -876,6 +887,64 @@ export const orderLineItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("order_line_items_order_idx").on(table.orderId)],
+);
+
+export const paymentOperationKind = pgEnum("payment_operation_kind", [
+  "checkout_session",
+  "invoice",
+  "refund",
+]);
+
+/**
+ * `started` is written and committed *before* the Stripe call it describes —
+ * the durable evidence a crash between "Stripe was asked" and "the local
+ * order/checkout/payment row was written" leaves behind. `succeeded`/`failed`
+ * mean the Stripe call itself returned; a row still `started` past a short
+ * staleness window is exactly the "indeterminate operation" CR-005 exists to
+ * surface (`listStuckPaymentOperations`, src/db/payment-operations.ts).
+ */
+export const paymentOperationStatus = pgEnum("payment_operation_status", [
+  "started",
+  "succeeded",
+  "failed",
+]);
+
+/**
+ * One row per attempted Stripe side effect (create a Checkout session, create
+ * or refund an invoice, refund a checkout) — written before the call, not
+ * after, so the attempt itself is durable even if the process dies mid-call
+ * or the local order/checkout/payment write that should follow never
+ * happens. `id` is also the deterministic idempotency-key material
+ * (`idempotencyKeyFor`, src/db/payment-operations.ts): retrying the same
+ * logical attempt reuses the same intent row and the same Stripe idempotency
+ * key, so a retry after a lost response converges on one Stripe object
+ * instead of creating a second one. Exactly one of `tripId`/`bookingId`/
+ * `orderId`/`checkoutId` is populated, matching `kind` (CR-005).
+ */
+export const paymentOperationIntents = pgTable(
+  "payment_operation_intents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: paymentOperationKind("kind").notNull(),
+    status: paymentOperationStatus("status").notNull().default("started"),
+    /** Set for a checkout_session intent — which trip's booking(s) this session is for. */
+    tripId: uuid("trip_id").references(() => trips.id),
+    /** Set for an invoice intent that settles a booking's payment gate; null for a booking-less order. */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /** Set for a refund intent against an order's invoice. */
+    orderId: uuid("order_id").references(() => orders.id),
+    /** Set for a refund intent against a checkout's session. */
+    checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
+    /** The Stripe object id once known, even if the local finalize write then failed. */
+    stripeObjectId: text("stripe_object_id"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [index("payment_operation_intents_shop_status_idx").on(table.shopId, table.status)],
 );
 
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
@@ -1378,3 +1447,6 @@ export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
 export type RecapPhoto = typeof recapPhotos.$inferSelect;
+export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
+export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
+export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];

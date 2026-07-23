@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb } from "./client";
+import { resolvePaymentOperation, startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookings, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -89,6 +90,16 @@ export async function refundBookingOnCancellation(
   if (!canAcceptPayments(account)) return { status: "manual", reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
 
+  // Durable evidence before calling Stripe (CR-005) — refundCheckoutSession
+  // already derives its own deterministic Idempotency-Key from the payment
+  // intent + amount, so a retry converges on the same Stripe refund either
+  // way; this intent row is what makes an unresolved attempt reconcilable.
+  const intent = await startPaymentOperation(db, {
+    shopId: input.shopId,
+    kind: "refund",
+    bookingId: input.bookingId,
+  });
+
   const result = await checkout.refundCheckoutSession(
     stripeAccountId,
     payment.providerRef,
@@ -105,8 +116,13 @@ export async function refundBookingOnCancellation(
       providerRef: result.refundId ?? payment.providerRef,
       note: "Auto-refunded on cancellation within the free window",
     });
+    await resolvePaymentOperation(db, intent.id, {
+      status: "succeeded",
+      stripeObjectId: result.refundId,
+    });
     return { status: "refunded", amountCents: decision.refundCents };
   }
+  await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
   return { status: "failed" };

@@ -2,6 +2,11 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
+import {
+  idempotencyKeyFor,
+  resolvePaymentOperation,
+  startPaymentOperation,
+} from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import type { Order, OrderLineItemKind, OrderStatus } from "./schema";
 import { bookings, courses, orderLineItems, orders, people, trips } from "./schema";
@@ -71,6 +76,17 @@ export async function createOrder(
   }
 
   const currency = "usd";
+
+  // Durable evidence this attempt exists, written and committed before
+  // Stripe is ever called (CR-005) — a crash mid-attempt (e.g. after
+  // finalize but before the local order row below) still leaves this row
+  // for reconciliation instead of a Stripe invoice with no local trace.
+  const intent = await startPaymentOperation(db, {
+    shopId: input.shopId,
+    kind: "invoice",
+    bookingId: input.bookingId ?? undefined,
+  });
+
   const result = await invoicing.createInvoice({
     stripeAccountId,
     customerEmail: customer.email,
@@ -81,8 +97,14 @@ export async function createOrder(
       quantity: item.quantity,
       unitAmountCents: item.unitAmountCents,
     })),
+    // Deterministic per-attempt key: a retry of this same intent converges
+    // on the customer/items/invoice Stripe already created (CR-005).
+    idempotencyKey: idempotencyKeyFor(intent.id),
   });
-  if (result.status !== "created") return { ok: false, reason: "stripe_failed" };
+  if (result.status !== "created") {
+    await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
+    return { ok: false, reason: "stripe_failed" };
+  }
 
   const status = mapStripeStatus(result.stripeStatus);
   const now = nowDate();
@@ -138,6 +160,10 @@ export async function createOrder(
     }
 
     return created;
+  });
+  await resolvePaymentOperation(db, intent.id, {
+    status: "succeeded",
+    stripeObjectId: order.stripeInvoiceId,
   });
 
   return { ok: true, order };
@@ -328,9 +354,30 @@ export async function refundOrder(
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (order?.status !== "paid") return null;
-  const result = await invoicing.refundInvoice(order.stripeAccountId, order.stripeInvoiceId);
-  if (result.status !== "refunded") return null;
-  return applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
+
+  // Durable evidence before calling Stripe, and a deterministic idempotency
+  // key so a retry of this same refund attempt converges on the one Stripe
+  // refund already issued rather than refunding the diver twice (CR-005).
+  const intent = await startPaymentOperation(db, {
+    shopId,
+    kind: "refund",
+    orderId: order.id,
+  });
+  const result = await invoicing.refundInvoice(
+    order.stripeAccountId,
+    order.stripeInvoiceId,
+    idempotencyKeyFor(intent.id),
+  );
+  if (result.status !== "refunded") {
+    await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
+    return null;
+  }
+  const updated = await applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
+  await resolvePaymentOperation(db, intent.id, {
+    status: "succeeded",
+    stripeObjectId: result.refundId,
+  });
+  return updated;
 }
 
 /** Manual fallback for shops without the webhook configured yet: pull current status straight from Stripe. */

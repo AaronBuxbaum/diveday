@@ -18,6 +18,13 @@ export type CreateCheckoutSessionRequest = {
   customerEmail: string;
   successUrl: string;
   cancelUrl: string;
+  /**
+   * Deterministic per-attempt key (`idempotencyKeyFor`,
+   * src/db/payment-operations.ts) so a retry after a lost response converges
+   * on the one Checkout session Stripe already created instead of minting a
+   * second one (CR-005).
+   */
+  idempotencyKey: string;
 };
 
 export type CheckoutSessionSnapshot = {
@@ -131,7 +138,10 @@ export function stripeCheckoutProvider(
         });
         const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
           method: "POST",
-          headers: headersFor(config.secretKey, request.stripeAccountId),
+          headers: {
+            ...headersFor(config.secretKey, request.stripeAccountId),
+            "Idempotency-Key": request.idempotencyKey,
+          },
           body: form.toString(),
         });
         if (!response.ok) return { status: "failed" };

@@ -3,6 +3,13 @@ import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
+import {
+  claimBookingsForCheckout,
+  idempotencyKeyFor,
+  releaseBookingCheckoutClaim,
+  resolvePaymentOperation,
+  startPaymentOperation,
+} from "./payment-operations";
 import { setBookingPaymentIfNotFinal } from "./payments";
 import type { BookingCheckout } from "./schema";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
@@ -79,48 +86,94 @@ export async function startBookingCheckout(
     return { ok: true, checkout: existing, reused: true };
   }
 
-  const session = await checkout.createCheckoutSession({
-    stripeAccountId,
-    currency: "usd",
-    // A deposit is labelled as one on the hosted page so the diver knows a
-    // balance is still due, not that this is the whole fare.
-    description: charge.isDeposit ? `Deposit — ${tripRow.trip.title}` : tripRow.trip.title,
-    unitAmountCents: amountPerDiverCents,
-    quantity: input.bookingIds.length,
-    customerEmail: input.customerEmail,
-    successUrl: input.successUrl,
-    cancelUrl: input.cancelUrl,
-  });
-  if (session.status !== "created") return { ok: false, reason: "checkout_unavailable" };
-
-  const created = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(bookingCheckouts)
-      .values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        stripeAccountId,
-        stripeSessionId: session.stripeSessionId,
-        checkoutUrl: session.checkoutUrl,
-        currency: "usd",
-        amountPerDiverCents,
-        totalCents: amountPerDiverCents * input.bookingIds.length,
-        isDeposit: charge.isDeposit,
-        expiresAt: session.expiresAt,
-      })
-      .returning();
-    if (!row) throw new Error("startBookingCheckout: insert returned no row");
-    await tx.insert(bookingCheckoutBookings).values(
-      input.bookingIds.map((bookingId) => ({
-        shopId: input.shopId,
-        checkoutId: row.id,
-        bookingId,
-      })),
-    );
-    return row;
+  // Durable evidence this attempt exists, written and committed before
+  // Stripe is ever called (CR-005) — a crash mid-attempt still leaves this
+  // row for reconciliation (listStuckPaymentOperations) instead of no trace
+  // at all.
+  const intent = await startPaymentOperation(db, {
+    shopId: input.shopId,
+    kind: "checkout_session",
+    tripId: input.tripId,
   });
 
-  return { ok: true, checkout: created, reused: false };
+  // Claims every booking in the party for this attempt so a second
+  // concurrent start for an overlapping party can never also reach Stripe.
+  const claimed = await claimBookingsForCheckout(db, {
+    bookingIds: input.bookingIds,
+    intentId: intent.id,
+  });
+  if (!claimed) {
+    await resolvePaymentOperation(db, intent.id, {
+      status: "failed",
+      errorMessage: "booking already has an active checkout attempt",
+    });
+    return { ok: false, reason: "checkout_unavailable" };
+  }
+
+  try {
+    const session = await checkout.createCheckoutSession({
+      stripeAccountId,
+      currency: "usd",
+      // A deposit is labelled as one on the hosted page so the diver knows a
+      // balance is still due, not that this is the whole fare.
+      description: charge.isDeposit ? `Deposit — ${tripRow.trip.title}` : tripRow.trip.title,
+      unitAmountCents: amountPerDiverCents,
+      quantity: input.bookingIds.length,
+      customerEmail: input.customerEmail,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+      // Deterministic per-attempt key: a retry of this same intent (a lost
+      // response, a redeployed process) converges on the one session Stripe
+      // already created instead of minting a second one (CR-005).
+      idempotencyKey: idempotencyKeyFor(intent.id),
+    });
+    if (session.status !== "created") {
+      await resolvePaymentOperation(db, intent.id, {
+        status: "failed",
+        errorMessage: session.status,
+      });
+      return { ok: false, reason: "checkout_unavailable" };
+    }
+
+    const created = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(bookingCheckouts)
+        .values({
+          shopId: input.shopId,
+          tripId: input.tripId,
+          stripeAccountId,
+          stripeSessionId: session.stripeSessionId,
+          checkoutUrl: session.checkoutUrl,
+          currency: "usd",
+          amountPerDiverCents,
+          totalCents: amountPerDiverCents * input.bookingIds.length,
+          isDeposit: charge.isDeposit,
+          expiresAt: session.expiresAt,
+        })
+        .returning();
+      if (!row) throw new Error("startBookingCheckout: insert returned no row");
+      await tx.insert(bookingCheckoutBookings).values(
+        input.bookingIds.map((bookingId) => ({
+          shopId: input.shopId,
+          checkoutId: row.id,
+          bookingId,
+        })),
+      );
+      return row;
+    });
+    await resolvePaymentOperation(db, intent.id, {
+      status: "succeeded",
+      stripeObjectId: session.stripeSessionId,
+    });
+
+    return { ok: true, checkout: created, reused: false };
+  } finally {
+    // The claim's only job was to keep a concurrent attempt out while this
+    // one was in flight; once resolved (either way), the checkout's own
+    // `pending` status (on success) or the freed claim (on failure) is what
+    // future callers check.
+    await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
+  }
 }
 
 /** The most recent checkout linked to any of these bookings. */

@@ -14,6 +14,7 @@ const request = {
   customerEmail: "diver@example.com",
   successUrl: "https://diveday.example/shop/reef/schedule/t1?booking=b1",
   cancelUrl: "https://diveday.example/shop/reef/schedule/t1?booking=b1&pay=cancelled",
+  idempotencyKey: "intent-1",
 };
 
 function ok(json: unknown) {
@@ -55,6 +56,7 @@ describe("stripe checkout provider", () => {
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/checkout/sessions");
     const call = fetchImpl.mock.calls[0][1];
     expect(call.headers["Stripe-Account"]).toBe("acct_123");
+    expect(call.headers["Idempotency-Key"]).toBe("intent-1");
     const form = new URLSearchParams(call.body);
     expect(form.get("mode")).toBe("payment");
     expect(form.get("line_items[0][price_data][unit_amount]")).toBe("18000");

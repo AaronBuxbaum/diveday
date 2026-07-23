@@ -80,6 +80,7 @@ const EXCLUDED_TABLES = [
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   "booking_checkouts", // payment attempts; outcomes live in bookings/orders
   "booking_checkout_bookings",
+  "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported
