@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { createDiver } from "./divers";
 import { bookings, people, personRoles } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
@@ -148,6 +149,83 @@ describe("createBooking (in-memory PGlite)", () => {
     await setTripStatus(db, shop.id, open.id, "cancelled");
     const onCancelled = await bookVisitor(db, shop.id, open.id);
     expect(onCancelled).toEqual({ ok: false, reason: "trip_unavailable" });
+  });
+});
+
+describe("createBooking by identity (returning diver, no re-entry)", () => {
+  async function seedDiver(db: AppDb, shopId: string) {
+    const diver = await createDiver(db, {
+      shopId,
+      fullName: "Rey Marlin",
+      email: "rey@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    return diver;
+  }
+
+  it("books an existing person by id and reuses the one row", async () => {
+    const { db, shop, open } = await seededContext();
+    const diver = await seedDiver(db, shop.id);
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+    });
+    expect(outcome).toMatchObject({ ok: true, personName: "Rey Marlin" });
+
+    const roster = await getTripRoster(db, open.id);
+    expect(roster.map((r) => r.person.id)).toContain(diver.id);
+    // The whole point of the picker: no second person is minted.
+    const matches = await db
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.email, "rey@example.com")));
+    expect(matches).toHaveLength(1);
+  });
+
+  it("rejects an unknown person id", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      personId: "00000000-0000-4000-8000-000000000000",
+    });
+    expect(outcome).toEqual({ ok: false, reason: "person_not_found" });
+  });
+
+  it("refuses a soft-deleted person (invisible on the roster)", async () => {
+    const { db, shop, open } = await seededContext();
+    const diver = await seedDiver(db, shop.id);
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, diver.id));
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "person_not_found" });
+  });
+
+  it("rejects re-booking the same trip by identity", async () => {
+    const { db, shop, open } = await seededContext();
+    const diver = await seedDiver(db, shop.id);
+    await createBooking(db, { shopId: shop.id, tripId: open.id, personId: diver.id });
+    const again = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+    });
+    expect(again).toEqual({ ok: false, reason: "already_booked" });
+  });
+
+  it("rejects a full trip by identity", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const diver = await seedDiver(db, shop.id);
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      personId: diver.id,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "trip_full" });
   });
 });
 
