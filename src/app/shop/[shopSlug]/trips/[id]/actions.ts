@@ -7,6 +7,7 @@ import { type BookingOutcome, cancelBooking, createBooking, restoreBooking } fro
 import { getDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
+import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { getShopById } from "@/db/shops";
 import {
@@ -258,6 +259,39 @@ export async function extendSeriesAction(
     })),
   });
   revalidateAndRedirect(back, `${back}?notice=${result ? "series-extended" : "series-error"}`);
+}
+
+const recapShoutoutSchema = z.object({ recapShoutout: z.string().trim().max(400) });
+
+/** Crew-authored post-trip note that rides along on every diver's recap. */
+export async function saveRecapShoutoutAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = recapShoutoutSchema.safeParse({
+    recapShoutout: formData.get("recapShoutout") ?? "",
+  });
+  if (!parsed.success) redirect(`${back}?notice=invalid`);
+  const saved = await setTripRecapShoutout(
+    await getDb(),
+    s.user.shopId,
+    tripId,
+    parsed.data.recapShoutout,
+  );
+  revalidateAndRedirect(back, `${back}?notice=${saved ? "recap-note" : "invalid"}`);
+}
+
+/** Take down a diver's recap photo — the shop's moderation seam. */
+export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const photoId = String(formData.get("photoId") ?? "");
+  if (!photoId) redirect(back);
+  await deleteRecapPhoto(await getDb(), s.user.shopId, photoId);
+  revalidateAndRedirect(back, `${back}?notice=recap-photo-removed`);
 }
 
 export async function saveCrewAction(shopSlug: string, tripId: string, formData: FormData) {
