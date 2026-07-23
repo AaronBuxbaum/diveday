@@ -59,4 +59,33 @@ describe("redactCapabilityUrl", () => {
   it("does not choke on a malformed percent-encoding", () => {
     expect(() => redactCapabilityUrl("/waivers/%E0%A4%A")).not.toThrow();
   });
+
+  it("redacts the schedule-confirmation page's ?booking= token, even though the path itself isn't capability-prefixed (security review finding on CR-001)", () => {
+    expect(redactCapabilityUrl("/shop/blue-hole/schedule/trip-123?booking=abc123.def456")).toBe(
+      "/shop/blue-hole/schedule/trip-123?booking=%5Btoken%5D",
+    );
+  });
+
+  it("redacts ?booking= alongside other, non-sensitive query params", () => {
+    const redacted = redactCapabilityUrl(
+      "/shop/blue-hole/schedule/trip-123?booking=abc123.def456&error=pay",
+    );
+    expect(redacted).toContain("booking=%5Btoken%5D");
+    expect(redacted).toContain("error=pay");
+    expect(redacted).not.toContain("abc123.def456");
+  });
+
+  it("redacts ?booking= on an absolute URL, including one returned from a third party (Stripe checkout)", () => {
+    expect(
+      redactCapabilityUrl(
+        "https://diveday.example/shop/blue-hole/schedule/trip-123?booking=abc123.def456",
+      ),
+    ).toBe("/shop/blue-hole/schedule/trip-123?booking=%5Btoken%5D");
+  });
+
+  it("leaves a schedule page with no booking token untouched", () => {
+    expect(redactCapabilityUrl("/shop/blue-hole/schedule/trip-123")).toBe(
+      "/shop/blue-hole/schedule/trip-123",
+    );
+  });
 });
