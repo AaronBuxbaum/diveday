@@ -403,10 +403,33 @@ export async function applyDetailsToFutureSeries(
       )
       .groupBy(trips.id);
 
+    // Same operational-history invariant updateTrip enforces for a single
+    // trip (CR-006) — a bulk apply must not silently orphan a sibling's
+    // roll-call checkpoints either.
+    const siblingIds = siblings.map((sibling) => sibling.id);
+    const siblingCheckpoints =
+      siblingIds.length > 0
+        ? await tx
+            .select({ tripId: rollCallEvents.tripId, checkpoint: rollCallEvents.checkpoint })
+            .from(rollCallEvents)
+            .where(inArray(rollCallEvents.tripId, siblingIds))
+        : [];
+    const checkpointsByTrip = new Map<string, string[]>();
+    for (const row of siblingCheckpoints) {
+      const list = checkpointsByTrip.get(row.tripId) ?? [];
+      list.push(row.checkpoint);
+      checkpointsByTrip.set(row.tripId, list);
+    }
+
     let updated = 0;
     let skipped = 0;
     for (const sibling of siblings) {
       if (source.capacity < sibling.booked) {
+        skipped += 1;
+        continue;
+      }
+      const recordedDiveCount = maxRecordedDiveNumber(checkpointsByTrip.get(sibling.id) ?? []);
+      if (source.plannedDives < recordedDiveCount) {
         skipped += 1;
         continue;
       }
@@ -541,12 +564,9 @@ export type TripPatch = {
 
 export type UpdateTripOutcome =
   | { ok: true; trip: Trip }
-  | {
-      ok: false;
-      reason: "invalid" | "not_found" | "capacity_below_booked" | "planned_dives_below_history";
-      /** Present only for the two below-invariant reasons, for a specific staff message. */
-      detail?: { bookedCount: number } | { recordedDiveCount: number };
-    };
+  | { ok: false; reason: "invalid" | "not_found" }
+  | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
+  | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } };
 
 /**
  * Edits a trip's own details/schedule/dives. Locks the trip row (mirroring
@@ -691,23 +711,50 @@ export async function listStaff(db: AppDb, shopId: string) {
   return [...byId.values()];
 }
 
-export async function getTripCrewIds(db: AppDb, tripId: string): Promise<string[]> {
+/**
+ * `trip_assignments` has no `shop_id` of its own (CR-007) — every read here
+ * proves membership by joining through the trip that owns it, the same
+ * pattern `setTripCrew` uses for its write, rather than trusting a bare
+ * trip UUID the caller might supply for any shop.
+ */
+export async function getTripCrewIds(db: AppDb, shopId: string, tripId: string): Promise<string[]> {
   const rows = await db
     .select({ personId: tripAssignments.personId })
     .from(tripAssignments)
-    .where(eq(tripAssignments.tripId, tripId));
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId)));
   return rows.map((r) => r.personId);
 }
 
-/** Replace a trip's crew. Only people with a staff role in the shop stick. */
-export async function setTripCrew(db: AppDb, shopId: string, tripId: string, personIds: string[]) {
+/**
+ * Replace a trip's crew. Only people with a staff role in the shop stick.
+ * Proves the trip itself belongs to the shop in the same transaction as the
+ * write — `trip_assignments` carries no `shop_id` of its own to lean on, so
+ * without this a tripId for any shop plus a validated personId list would
+ * silently rewrite another shop's crew (CR-007). Returns false, doing
+ * nothing, for a tripId that isn't this shop's.
+ */
+export async function setTripCrew(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personIds: string[],
+): Promise<boolean> {
   const staff = await listStaff(db, shopId);
   const valid = personIds.filter((id) => staff.some((s) => s.person.id === id));
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    const [trip] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!trip) return false;
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
     if (valid.length > 0) {
       await tx.insert(tripAssignments).values(valid.map((personId) => ({ tripId, personId })));
     }
+    return true;
   });
 }
 

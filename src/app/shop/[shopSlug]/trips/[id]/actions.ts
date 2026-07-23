@@ -158,13 +158,15 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     dives: tripDiveDraftsFromForm(formData, plannedDives),
   });
   if (!outcome.ok) {
-    const notice =
-      outcome.reason === "capacity_below_booked"
-        ? "capacity-below-booked"
-        : outcome.reason === "planned_dives_below_history"
-          ? "planned-dives-below-history"
-          : "invalid";
-    redirect(`${back}?notice=${notice}`);
+    if (outcome.reason === "capacity_below_booked") {
+      redirect(`${back}?notice=capacity-below-booked&count=${outcome.detail.bookedCount}`);
+    }
+    if (outcome.reason === "planned_dives_below_history") {
+      redirect(
+        `${back}?notice=planned-dives-below-history&count=${outcome.detail.recordedDiveCount}`,
+      );
+    }
+    redirect(`${back}?notice=invalid`);
   }
   revalidateAndRedirect(back, `${back}?notice=saved`);
 }
@@ -307,7 +309,8 @@ export async function saveCrewAction(shopSlug: string, tripId: string, formData:
   const back = backPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const ids = formData.getAll("crew").map(String);
-  await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
+  const saved = await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
+  if (!saved) redirect(`${back}?notice=invalid`);
   revalidateAndRedirect(back, `${back}?notice=crew`);
 }
 

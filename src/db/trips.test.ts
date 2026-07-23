@@ -11,6 +11,7 @@ import {
   createTripSeries,
   extendTripSeries,
   getLatestSeriesInstance,
+  getTripCrewIds,
   getTripRoster,
   getTripSeriesById,
   getTripSeriesSummary,
@@ -18,12 +19,15 @@ import {
   listStaff,
   listTripDives,
   pagedUpcomingTripsWithCounts,
+  setTripCrew,
   setTripStatus,
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingTripsWithCounts,
   updateTrip,
 } from "./trips";
+
+const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
   it("returns upcoming trips ordered by start with correct booked counts", async () => {
@@ -394,6 +398,67 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     expect(skipped?.capacity).toBe(12);
   });
 
+  it("skips a sibling whose recorded roll call would be orphaned by the new dive count", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = new Date("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(db, {
+      shopId: shop.id,
+      title: "Monday Wreck",
+      capacity: 10,
+      plannedDives: 2,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      occurrences: [
+        {
+          startsAt: new Date("2030-09-02T11:00:00.000Z"),
+          endsAt: new Date("2030-09-02T15:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2030-09-09T11:00:00.000Z"),
+          endsAt: new Date("2030-09-09T15:00:00.000Z"),
+        },
+      ],
+    });
+    if (!result) throw new Error("series not created");
+    const [source, sailed] = result.trips;
+    if (!source || !sailed) throw new Error("expected two instances");
+
+    // The second date already sailed its second dive — staff logged a roll
+    // call after it.
+    const [p1] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    const [staff] = await listStaff(db, shop.id);
+    if (!p1 || !staff) throw new Error("seed people/staff missing");
+    const [booked] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: sailed.id, personId: p1.id })
+      .returning();
+    if (!booked) throw new Error("booking insert failed");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: sailed.id,
+      bookingId: booked.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: now,
+    });
+
+    // Staff shrink the template to a single dive and push it across the run.
+    await updateTrip(db, shop.id, source.id, {
+      title: source.title,
+      startsAt: source.startsAt,
+      endsAt: source.endsAt,
+      capacity: source.capacity,
+      plannedDives: 1,
+    });
+
+    const applied = await applyDetailsToFutureSeries(db, shop.id, result.series.id, source.id, now);
+    expect(applied).toEqual({ updated: 0, skipped: 1 });
+
+    const untouched = await getTripWithBooked(db, shop.id, sailed.id);
+    expect(untouched?.plannedDives).toBe(2);
+  });
+
   it("cancels every upcoming date at once but leaves past dates alone", async () => {
     const { db, shop } = await seededShopContext();
     const now = new Date("2030-08-15T00:00:00.000Z");
@@ -544,5 +609,57 @@ describe("paged schedule queries", () => {
     const range = await upcomingScheduleRange(db, shop.id);
     expect(range.first?.getTime()).toBe(all[0]?.startsAt.getTime());
     expect(range.last?.getTime()).toBe(all.at(-1)?.startsAt.getTime());
+  });
+});
+
+describe("trip crew (CR-007: cross-tenant write path)", () => {
+  it("assigns and replaces the crew, keeping only staff of this shop", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("expected a seeded trip");
+    const staff = await listStaff(db, shop.id);
+    if (staff.length < 2) throw new Error("expected at least two seeded staff");
+
+    const [first, second] = staff;
+    if (!first || !second) throw new Error("expected two staff rows");
+    expect(
+      await setTripCrew(db, shop.id, trip.id, [
+        first.person.id,
+        second.person.id,
+        crypto.randomUUID(), // not a real person — silently dropped, not an error
+      ]),
+    ).toBe(true);
+    expect(new Set(await getTripCrewIds(db, shop.id, trip.id))).toEqual(
+      new Set([first.person.id, second.person.id]),
+    );
+
+    // Replacing with a smaller set actually removes the dropped assignment.
+    expect(await setTripCrew(db, shop.id, trip.id, [first.person.id])).toBe(true);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([first.person.id]);
+  });
+
+  it("refuses to write or read crew for a trip id that isn't this shop's", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("expected a seeded trip");
+    const [staffMember, otherStaffMember] = await listStaff(db, shop.id);
+    if (!staffMember || !otherStaffMember) throw new Error("expected two seeded staff");
+    // Some seeded trips already carry crew (e.g. an instructor); capture
+    // whatever this trip starts with so the refusal can be proven by
+    // "unchanged", not by assuming an empty starting state.
+    const before = new Set(await getTripCrewIds(db, shop.id, trip.id));
+
+    // A tripId that is real, but for a different shop, must not let that
+    // shop's staff list get written onto it.
+    expect(await setTripCrew(db, FOREIGN_SHOP_ID, trip.id, [otherStaffMember.person.id])).toBe(
+      false,
+    );
+    expect(new Set(await getTripCrewIds(db, shop.id, trip.id))).toEqual(before);
+
+    // Nor does asking for the crew under the wrong shop leak the real one.
+    await setTripCrew(db, shop.id, trip.id, [staffMember.person.id]);
+    expect(await getTripCrewIds(db, FOREIGN_SHOP_ID, trip.id)).toEqual([]);
   });
 });

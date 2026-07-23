@@ -1,7 +1,9 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 
-const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string }> = {
+type NoticeText = string | ((count?: number) => string);
+
+const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: NoticeText }> = {
   saved: { tone: "success", text: "Changes saved." },
   cancelled: { tone: "danger", text: "Trip cancelled — it's off the public schedule." },
   reinstated: { tone: "success", text: "Back on! The trip is on the schedule again." },
@@ -113,20 +115,29 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   "end-before-start": { tone: "danger", text: "The trip has to end after it starts." },
   "capacity-below-booked": {
     tone: "danger",
-    text: "That capacity is below how many divers are already booked on this trip — cancel bookings first, or set a higher capacity.",
+    text: (count) =>
+      count === undefined
+        ? "That capacity is below how many divers are already booked on this trip — cancel bookings first, or set a higher capacity."
+        : `That capacity is below the ${count} diver${count === 1 ? "" : "s"} already booked on this trip — cancel bookings first, or set a higher capacity.`,
   },
   "planned-dives-below-history": {
     tone: "danger",
-    text: "Can't drop the dive count below one staff already recorded a roll call against — that history has to stay reachable.",
+    text: (count) =>
+      count === undefined
+        ? "Can't drop the dive count below one staff already recorded a roll call against — that history has to stay reachable."
+        : `Can't drop the dive count below ${count} — staff already recorded a roll call after dive ${count} on this trip, and that history has to stay reachable.`,
   },
 };
 
 export function TripNoticeBanner({
   notice,
+  count,
   undoBookingId,
   undoAction,
 }: {
   notice?: string;
+  /** The specific count behind a "-below-" refusal notice, e.g. the booked count or recorded dive number. */
+  count?: string;
   undoBookingId?: string;
   // Only the roster's reversible removals carry an undo; Overview's config
   // notices render the same banner without one.
@@ -134,11 +145,13 @@ export function TripNoticeBanner({
 }) {
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
   if (!banner) return null;
+  const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
+  const text = typeof banner.text === "function" ? banner.text(parsedCount) : banner.text;
   return (
     <div className="mt-6">
       <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
         <div className="flex items-center justify-between gap-3">
-          <span>{banner.text}</span>
+          <span>{text}</span>
           {undoBookingId && undoAction ? (
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />
