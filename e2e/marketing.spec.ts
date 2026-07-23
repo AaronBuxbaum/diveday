@@ -62,6 +62,11 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByText("Medical & health history")).toBeVisible();
   await expect(page.getByText("Never").first()).toBeVisible();
 
+  // Demo-before-trial funnel and cited competitor claims both land on the guide.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sources" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /DiveShop360 acquires EVE Diving/ })).toBeVisible();
+
   // Another live guide carries its own export path and a competitor-specific note.
   await page.goto("/switching/smartwaiver");
   await expect(

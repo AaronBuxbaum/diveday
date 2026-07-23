@@ -64,6 +64,15 @@ export type MigrationGuide = {
    * importer); this is the single place a guide tailors it honestly.
    */
   importerNote?: string;
+
+  /**
+   * Primary sources for the competitor claims on the page — the same references
+   * recorded in competitive-strategy.md. The marketing claims policy
+   * (docs/product/marketing.md) requires switching guides to cite incumbent
+   * facts, so a shop can verify a volatile export path or a competitive claim
+   * rather than take our word for it. Rendered as a "Sources" list on the guide.
+   */
+  sources: { label: string; url: string }[];
 };
 
 const eve: MigrationGuide = {
@@ -126,6 +135,12 @@ const eve: MigrationGuide = {
     "Do this while your EVE install still opens and your license is active — a working export today beats chasing it later.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you exactly how each column mapped before you commit.",
     "Purchase and service history isn't part of this move, and that's by design — see the scope table below. It stays in your EVE records; DiveDay starts your people clean and ready.",
+  ],
+  sources: [
+    {
+      label: "DiveShop360 acquires EVE Diving (Divernet, 2023)",
+      url: "https://divernet.com/scuba-news/dive-shop-360-acquires-eve-diving/",
+    },
   ],
 };
 
@@ -192,6 +207,13 @@ const diveshop360: MigrationGuide = {
   ],
   importerNote:
     "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file updates the same divers instead of duplicating them.",
+  sources: [
+    {
+      label: "DiveShop360 FAQ — the datasets you can export",
+      url: "https://diveshop360.com/faq",
+    },
+    { label: "DiveShop360 integrations", url: "https://diveshop360.com/integrations" },
+  ],
 };
 
 const diveadmin: MigrationGuide = {
@@ -251,6 +273,16 @@ const diveadmin: MigrationGuide = {
   ],
   importerNote:
     'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each as a claim your staff verify; anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
+  sources: [
+    {
+      label: "DiveAdmin API documentation",
+      url: "https://diveadmin.com/en/api-documentation",
+    },
+    {
+      label: "DiveAdmin — automated Google Drive backups",
+      url: "https://diveadmin.com/resources/dive-admin-vs-eve/",
+    },
+  ],
 };
 
 const smartwaiver: MigrationGuide = {
@@ -306,6 +338,13 @@ const smartwaiver: MigrationGuide = {
   ],
   importerNote:
     "A Smartwaiver export is contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). The waivers themselves are re-signed in DiveDay against your own template.",
+  sources: [
+    { label: "Smartwaiver", url: "https://www.smartwaiver.com/" },
+    {
+      label: "DiveShop360 integrations — Smartwaiver waivers",
+      url: "https://diveshop360.com/integrations",
+    },
+  ],
 };
 
 /**

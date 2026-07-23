@@ -32,6 +32,16 @@ describe("migration guides", () => {
     }
   });
 
+  it("every guide cites at least one source with an absolute URL (claims policy)", () => {
+    for (const guide of MIGRATION_GUIDES) {
+      expect(guide.sources.length, `${guide.slug} sources`).toBeGreaterThan(0);
+      for (const source of guide.sources) {
+        expect(source.label.trim().length).toBeGreaterThan(0);
+        expect(source.url).toMatch(/^https:\/\//);
+      }
+    }
+  });
+
   it("has unique slugs", () => {
     const slugs = MIGRATION_GUIDES.map((g) => g.slug);
     expect(new Set(slugs).size).toBe(slugs.length);

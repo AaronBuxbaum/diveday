@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { getMigrationGuide, MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
@@ -216,26 +218,64 @@ export default async function MigrationGuidePage({
               Ready to make the move off {guide.competitor}?
             </h2>
             <p className="mt-2 max-w-xl text-muted">
-              Start a trial shop, bring your export, and see your roster land in DiveDay — safety
-              spine intact.
+              Walk the live demo as the owner, the captain, or a diver first — then start a trial
+              shop, bring your export, and see your roster land in DiveDay with the safety spine
+              intact.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/onboard" className={buttonClass({ size: "cta" })}>
-              Start a trial
-            </Link>
-            <Link
-              href="/switching"
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              Other switching guides
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <form action={enterDemoAction}>
+                <SubmitButton
+                  pendingLabel="Getting the demo ready…"
+                  className={buttonClass({
+                    size: "cta",
+                    className: "cursor-pointer disabled:opacity-70",
+                  })}
+                >
+                  Try the live demo
+                </SubmitButton>
+              </form>
+              <Link
+                href="/onboard"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "cta",
+                  className: "border-border-strong",
+                })}
+              >
+                Start a trial
+              </Link>
+            </div>
+            <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
+              Other switching guides →
             </Link>
           </div>
         </section>
+
+        {guide.sources.length > 0 && (
+          <section className="border-t border-border">
+            <div className="mx-auto max-w-4xl px-6 py-8">
+              <h2 className="text-xs font-semibold tracking-widest text-muted uppercase">
+                Sources
+              </h2>
+              <ul className="mt-3 flex flex-col gap-1.5 text-sm text-muted">
+                {guide.sources.map((source) => (
+                  <li key={source.url}>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer nofollow"
+                      className="hover:text-foreground hover:underline"
+                    >
+                      {source.label} ↗
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
       </main>
       <MarketingFooter />
     </div>

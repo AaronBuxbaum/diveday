@@ -134,9 +134,10 @@ A switching guide is a live page only — no roadmap or "coming soon" entries (c
 Each names one incumbent's own export click-path, renders the import scope table from
 `IMPORT_HONESTY_TABLE` verbatim (never paraphrased), and ends on a demo CTA. Every incumbent claim
 is documented fact from [assessments/competitive-strategy.md](assessments/competitive-strategy.md),
-phrased factually and never speculative; the safety-adjacent scope copy gets `dive-domain-expert`
-review like any other. Add a guide by writing its `MigrationGuide` entry (`status: "live"`) once its
-export path is real.
+carrying its own `sources` (rendered on the page) and phrased factually, never speculative; the
+safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add a guide by writing
+its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
+a published page (there is no draft/planned state).
 
 ## Maintenance loop
 
