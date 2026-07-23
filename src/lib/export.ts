@@ -56,7 +56,14 @@ export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
 export function csvCell(value: CsvValue): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
-  const text = typeof value === "string" ? value : String(value);
+  let text = typeof value === "string" ? value : String(value);
+  // Neutralize spreadsheet formulas (CSV injection): a *string* cell starting
+  // with =, +, -, @, tab, or CR executes when the export opens in Excel or
+  // LibreOffice — RFC-4180 quoting does not prevent it — and names on a public
+  // booking are diver-controlled. The apostrophe is the spreadsheet "treat as
+  // text" marker; the bundle README documents it. Numbers stay untouched, so
+  // negative amounts never gain a prefix.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   // Quote only when needed: embedded quote, comma, or line break.
   if (/[",\r\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
   return text;
@@ -121,6 +128,8 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     `Every file is UTF-8 CSV (RFC 4180). Timestamps are ISO 8601 in UTC.`,
     `Money columns are minor units (cents). Rows with a deleted_at value are`,
     `soft-archived history — kept so nothing is lost in a migration.`,
+    `Text that would open as a spreadsheet formula (leading =, +, -, or @) is`,
+    `prefixed with an apostrophe so it always reads as text.`,
     ``,
     `Files:`,
     ...input.tables.map((table) => `- ${table.file} (${table.rows.length} rows): ${table.note}`),
