@@ -499,7 +499,6 @@ export const bookings = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
-    buddyPreference: text("buddy_preference"),
     /**
      * The diver asked for enriched air on this trip — billed per dive. Only
      * written for a diver with a verified nitrox card (src/db/nitrox.ts); the
