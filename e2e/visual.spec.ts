@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Seventeen key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 68 screenshots per run (see ADR
+ * Visual regression coverage (Argos). Eighteen key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 72 screenshots per run (see ADR
  * 20260721-argos-visual-regression). Keep these counts in sync when adding a
  * surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -89,9 +89,16 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
       await capture(page, "recap", scheme);
 
+      // The migration-guides hub: one card per incumbent a shop might be
+      // leaving, the entry point to the portability wedge on the marketing side.
+      await page.goto("/switch");
+      await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
+      await capture(page, "switch-hub", scheme);
+
       // The "Switching from EVE" migration guide: the marketing face of the
       // portability wedge — export click-path, the shared scope table, and the
-      // importer, on the market's most motivated switching pool.
+      // importer, on the market's most motivated switching pool. Represents the
+      // shared guide template every live incumbent page renders.
       await page.goto("/switch/eve");
       await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
       await capture(page, "switch-eve", scheme);

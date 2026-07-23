@@ -58,6 +58,14 @@ export type MigrationGuide = {
   exportSteps: ExportStep[];
   /** Caveats that keep the click-path honest (version drift, what won't export). */
   exportNotes: string[];
+
+  /**
+   * Optional one-line, competitor-specific caveat for the import step — e.g. a
+   * system that exports certs as a separate file, or one that holds no cards at
+   * all. The import walkthrough itself is identical for every guide (it's one
+   * importer); this is the single place a guide tailors it honestly.
+   */
+  importerNote?: string;
 };
 
 const eve: MigrationGuide = {
@@ -124,59 +132,205 @@ const eve: MigrationGuide = {
   ],
 };
 
+const diveshop360: MigrationGuide = {
+  slug: "diveshop360",
+  competitor: "DiveShop360",
+  status: "live",
+  cardSummary:
+    "The retail-POS incumbent. Export the customer and certification CSVs its own FAQ names, then bring your people across.",
+
+  metaTitle: "Switching from DiveShop360 to DiveDay",
+  metaDescription:
+    "Leaving DiveShop360? A step-by-step guide to exporting your customers and certification data as CSV and bringing them into DiveDay — what comes across, what doesn't, and why.",
+
+  heroEyebrow: "Switching to DiveDay",
+  heroTitle: "Moving your shop off DiveShop360",
+  heroLede:
+    "DiveShop360 keeps your customers and their cards in the cloud, and its own help pages name the datasets you can export as CSV. Here's how to pull your people and certifications and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
+
+  context: [
+    "DiveShop360 grew out of a retail point-of-sale platform, and that's where it's strongest — registers, inventory, vendor catalogs. Its own FAQ names four things you can export to CSV: customers, inventory, sales reports, and certification data. For a move to DiveDay you need two of them — customers and certification data. The other two are retail records DiveDay isn't trying to be a home for.",
+    "We're not here to replace your point of sale. DiveDay runs the water — bookings, readiness, the boat — so \"bring your POS, we run the dive day\" is a real division of labor, not a slogan. That's also why we only ask for the customer and certification files, not your whole retail history.",
+    "One rule we won't bend: you export your own CSV from your own DiveShop360 account. DiveDay never signs into DiveShop360 and never reaches across to pull your data — that's your data to hand us, not ours to take.",
+  ],
+
+  exportHeading: "Get your data out of DiveShop360",
+  exportIntro:
+    "DiveShop360 runs in a browser, and exports come from the back-office admin, not the register. The goal is two CSVs — your customers and your certification data. DiveShop360 has no public API or bulk export, so this is a manual, dataset-by-dataset download; menu labels shift between versions, so treat these as the shape of the path.",
+  exportSteps: [
+    {
+      title: "Sign into DiveShop360 admin as an owner or manager",
+      detail:
+        "Exports live in the back office, behind an owner or manager login — not the point-of-sale screen your front desk rings sales on.",
+    },
+    {
+      title: "Find the customer export",
+      detail:
+        "Look under Customers or Reports for a CSV export of your customer list. DiveShop360's own FAQ lists customers as one of the four datasets you can export.",
+    },
+    {
+      title: "Export all customers to CSV",
+      detail:
+        "Export the whole customer list, not a filtered or single-page view, so no one is left behind. Save the file where you'll find it.",
+    },
+    {
+      title: "Export the certification data too",
+      detail:
+        "Certifications are a separate one of DiveShop360's four exportable datasets. Export it as CSV — it holds the agency, level, and card number, and the card number is what lets a card come across at all.",
+    },
+    {
+      title: "Skip inventory and sales reports",
+      detail:
+        "Those are the other two exportable datasets. You don't need them for DiveDay — we're not your POS. Keep them for your own records.",
+    },
+    {
+      title: "Stuck on an export? Ask DiveShop360 support",
+      detail:
+        "If a dataset won't export from the UI, their support can produce a customer or certification CSV. Ask in writing and keep the file — that file is all DiveDay needs.",
+    },
+  ],
+  exportNotes: [
+    "Manual CSV, dataset by dataset, is a limit of DiveShop360 — no API, no bulk export, no webhooks — not of DiveDay. Doing it yourself from the admin is the whole path.",
+    "Your column headings don't have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you exactly how each column mapped before you commit.",
+    "Retail history, repair tickets, and your e-commerce site aren't part of a contact import — see the scope table below. They stay in DiveShop360.",
+  ],
+  importerNote:
+    "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file updates the same divers instead of duplicating them.",
+};
+
+const diveadmin: MigrationGuide = {
+  slug: "diveadmin",
+  competitor: "DiveAdmin",
+  status: "live",
+  cardSummary:
+    "The fast, cheap newcomer. Export your customer CSV — or use its Google Drive backup — and bring your roster across.",
+
+  metaTitle: "Switching from DiveAdmin to DiveDay",
+  metaDescription:
+    "Leaving DiveAdmin? A step-by-step guide to exporting your customers and certifications and bringing them into DiveDay — what comes across, what doesn't, and why.",
+
+  heroEyebrow: "Switching to DiveDay",
+  heroTitle: "Moving your shop off DiveAdmin",
+  heroLede:
+    "DiveAdmin keeps your customers in the cloud, exportable as CSV, and can drop an automated backup into your own Google Drive. Here's how to pull your roster and cards and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
+
+  context: [
+    "DiveAdmin is the newer, lower-priced option, and it leans hard on an open, API-forward story. Worth knowing before you plan a move: its documented API is built to take data in — leads and bookings — not to hand your records back in bulk. The route out is the customer CSV export, or the automated backup DiveAdmin can write to your own Google Drive.",
+    "That's genuinely fine for this move. DiveDay's import needs your people, their certification cards, and their rental sizes — exactly what a customer export carries. You don't need an API to bring a spreadsheet.",
+    "One rule we won't bend: you export your own file from your own DiveAdmin account (or your own Google Drive backup). DiveDay never signs into DiveAdmin and never reaches across to pull your data — that's your data to hand us, not ours to take.",
+  ],
+
+  exportHeading: "Get your data out of DiveAdmin",
+  exportIntro:
+    "DiveAdmin runs in a browser. The goal is a customer CSV with your people and their cards. Menu labels shift between versions, so treat these as the shape of the path, not word-for-word buttons.",
+  exportSteps: [
+    {
+      title: "Sign into your DiveAdmin dashboard as an owner or admin",
+      detail: "Exports live in the admin dashboard, behind an owner or manager login.",
+    },
+    {
+      title: "Open your customers (or members) list",
+      detail:
+        "Find the area that lists every customer with their details. You want the full roster, not a single record.",
+    },
+    {
+      title: "Export the list to CSV",
+      detail:
+        "DiveAdmin's customer lists export to a spreadsheet. Export everyone, and save the CSV where you'll find it.",
+    },
+    {
+      title: "Include certifications",
+      detail:
+        "If cards (agency, level, card number) are columns on the customer export, you're set. If they're a separate export, pull that too — the card number is what lets a card come across.",
+    },
+    {
+      title: "No dashboard export? Use your Google Drive backup",
+      detail:
+        "DiveAdmin can write automated backups to your own Google Drive. The customer CSV inside that backup works just as well as a manual export — it's still your file.",
+    },
+  ],
+  exportNotes: [
+    "DiveAdmin's API ingests data; it doesn't hand your records back in bulk. The CSV export (or the Google Drive backup) is the route out, not the API.",
+    "Your column headings don't have to match anything. DiveDay recognizes the common names DiveAdmin and every other system use, and shows you exactly how each column mapped before you commit.",
+    "Booking and message history isn't part of a contact import — see the scope table below. It stays in DiveAdmin.",
+  ],
+  importerNote:
+    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each as a claim your staff verify; anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
+};
+
+const smartwaiver: MigrationGuide = {
+  slug: "smartwaiver",
+  competitor: "Smartwaiver",
+  status: "live",
+  cardSummary:
+    "Waivers only. Export your participant CSV and bring the people across — waivers are re-signed here, natively.",
+
+  metaTitle: "Switching from Smartwaiver to DiveDay",
+  metaDescription:
+    "Moving off Smartwaiver? A step-by-step guide to exporting your participants and bringing them into DiveDay's native waivers — what comes across, what doesn't, and why.",
+
+  heroEyebrow: "Switching to DiveDay",
+  heroTitle: "Moving your waivers off Smartwaiver",
+  heroLede:
+    "Smartwaiver holds signed waivers and the people who signed them, exportable as a participant CSV. Here's how to bring those people into DiveDay — where waivers are native, versioned, and re-signed against your own template — with a plain account of what makes the trip and what stays behind.",
+
+  context: [
+    "Smartwaiver does one thing — digital waivers — and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay's waivers are native and built into every tier, so moving off Smartwaiver means two things: bring the people across, and re-sign the waiver itself in DiveDay.",
+    "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact — the roster you need. What it doesn't hold is certification cards or rental sizes; a waiver system isn't where those live, so expect the import to be mostly contact data.",
+    "The waiver itself is re-signed here, not imported, and that's deliberate. A signed Smartwaiver PDF is evidence tied to Smartwaiver's template and Smartwaiver's questions; it isn't a satisfied DiveDay waiver. Your divers sign your DiveDay waiver once, and medical answers are collected fresh — a cleared flag from another system is never clearance here. The scope table below states this plainly.",
+    "One rule we won't bend: you export your own participant CSV from your own Smartwaiver account. DiveDay never signs into Smartwaiver and never reaches across to pull your data — that's your data to hand us, not ours to take.",
+  ],
+
+  exportHeading: "Get your data out of Smartwaiver",
+  exportIntro:
+    "Smartwaiver runs in a browser. The goal is a participant CSV — the people who signed your waivers. Menu labels shift over time, so treat these as the shape of the path, not word-for-word buttons.",
+  exportSteps: [
+    {
+      title: "Sign into your Smartwaiver dashboard",
+      detail: "Exports live in the dashboard, behind your account login.",
+    },
+    {
+      title: "Open the waiver or participant search",
+      detail:
+        "Find the area that lists the people who have signed — usually a waivers or participants search with an export option.",
+    },
+    {
+      title: "Set the date range wide, then export to CSV",
+      detail:
+        "Set the range as broad as it goes — all time — so every participant is included, then export the list to CSV and save it where you'll find it.",
+    },
+    {
+      title: "That CSV is your roster",
+      detail:
+        "Names, email, phone, and any emergency contact you collected are what come across. That's the people; the waiver itself is re-signed in DiveDay.",
+    },
+  ],
+  exportNotes: [
+    "Smartwaiver holds waivers, not certification cards or gear sizes — so mostly it's the people who migrate, and that's the roster you need.",
+    "Your column headings don't have to match anything. DiveDay recognizes the common names Smartwaiver and every other system use, and shows you exactly how each column mapped before you commit.",
+    "Signed waivers and their medical answers aren't imported — see the scope table below. Your divers re-sign your DiveDay waiver, and health answers are collected fresh.",
+  ],
+  importerNote:
+    "A Smartwaiver export is contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). The waivers themselves are re-signed in DiveDay against your own template.",
+};
+
 /**
- * The rest of the switching pool from competitive-strategy.md #3, ordered by the
- * strategy's priority. These render as coming-soon cards on the hub until each
- * one's page is written and flipped to "live".
+ * Still on the roadmap from competitive-strategy.md #3 — the OTA/booking-channel
+ * pool. Renders as a coming-soon card on the hub until its page is written and
+ * flipped to "live".
  */
 const planned: MigrationGuide[] = [
   {
-    slug: "diveshop360",
-    competitor: "DiveShop360",
+    slug: "fareharbor",
+    competitor: "FareHarbor & Rezdy",
     status: "planned",
     cardSummary:
-      "The retail-POS incumbent. Export the four datasets its own FAQ names, then bring your people across.",
-    metaTitle: "Switching from DiveShop360 to DiveDay",
+      "The activity-booking channels. Export your customer CSV and bring the people across — walkthrough on the way.",
+    metaTitle: "Switching from FareHarbor or Rezdy to DiveDay",
     metaDescription:
-      "Leaving DiveShop360? How to export your customers and certifications and bring them into DiveDay.",
+      "Moving off FareHarbor or Rezdy? How to export your customers and bring them into DiveDay.",
     heroEyebrow: "Switching to DiveDay",
-    heroTitle: "Moving your shop off DiveShop360",
-    heroLede: "",
-    context: [],
-    exportHeading: "",
-    exportIntro: "",
-    exportSteps: [],
-    exportNotes: [],
-  },
-  {
-    slug: "diveadmin",
-    competitor: "DiveAdmin",
-    status: "planned",
-    cardSummary:
-      "The fast, cheap newcomer. Export your customer CSVs and bring your roster, cards, and sizes here.",
-    metaTitle: "Switching from DiveAdmin to DiveDay",
-    metaDescription:
-      "Leaving DiveAdmin? How to export your customers and certifications and bring them into DiveDay.",
-    heroEyebrow: "Switching to DiveDay",
-    heroTitle: "Moving your shop off DiveAdmin",
-    heroLede: "",
-    context: [],
-    exportHeading: "",
-    exportIntro: "",
-    exportSteps: [],
-    exportNotes: [],
-  },
-  {
-    slug: "smartwaiver",
-    competitor: "Smartwaiver",
-    status: "planned",
-    cardSummary:
-      "Waivers only. Export your participant CSV and bring the people across — waivers are re-signed here.",
-    metaTitle: "Switching from Smartwaiver to DiveDay",
-    metaDescription:
-      "Moving off Smartwaiver? How to export your participants and bring them into DiveDay's native waivers.",
-    heroEyebrow: "Switching to DiveDay",
-    heroTitle: "Moving your waivers off Smartwaiver",
+    heroTitle: "Moving your shop off FareHarbor or Rezdy",
     heroLede: "",
     context: [],
     exportHeading: "",
@@ -187,7 +341,13 @@ const planned: MigrationGuide[] = [
 ];
 
 /** All guides, live first, in strategy-priority order. */
-export const MIGRATION_GUIDES: MigrationGuide[] = [eve, ...planned];
+export const MIGRATION_GUIDES: MigrationGuide[] = [
+  eve,
+  diveshop360,
+  diveadmin,
+  smartwaiver,
+  ...planned,
+];
 
 /** Slugs with a real page — the source for generateStaticParams and route validity. */
 export const LIVE_MIGRATION_GUIDE_SLUGS: string[] = MIGRATION_GUIDES.filter(

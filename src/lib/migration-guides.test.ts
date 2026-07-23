@@ -6,17 +6,23 @@ import {
 } from "./migration-guides";
 
 describe("migration guides", () => {
-  it("exposes exactly the live slugs, and EVE is the first one shipped", () => {
+  it("exposes exactly the live slugs, with EVE first and the named incumbents live", () => {
     const live = MIGRATION_GUIDES.filter((g) => g.status === "live").map((g) => g.slug);
     expect(LIVE_MIGRATION_GUIDE_SLUGS).toEqual(live);
-    expect(LIVE_MIGRATION_GUIDE_SLUGS).toContain("eve");
+    // EVE ships first, and the four named incumbents from the strategy are all live.
+    expect(LIVE_MIGRATION_GUIDE_SLUGS[0]).toBe("eve");
+    for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver"]) {
+      expect(LIVE_MIGRATION_GUIDE_SLUGS).toContain(slug);
+    }
   });
 
   it("resolves a live guide by slug and refuses planned or unknown ones", () => {
     expect(getLiveMigrationGuide("eve")?.competitor).toBe("EVE");
+    expect(getLiveMigrationGuide("smartwaiver")?.competitor).toBe("Smartwaiver");
     // A planned competitor exists in the registry but has no page.
-    expect(MIGRATION_GUIDES.some((g) => g.slug === "diveshop360")).toBe(true);
-    expect(getLiveMigrationGuide("diveshop360")).toBeNull();
+    const planned = MIGRATION_GUIDES.find((g) => g.status === "planned");
+    expect(planned).toBeDefined();
+    if (planned) expect(getLiveMigrationGuide(planned.slug)).toBeNull();
     expect(getLiveMigrationGuide("nope")).toBeNull();
   });
 

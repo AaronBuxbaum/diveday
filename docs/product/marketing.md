@@ -12,9 +12,17 @@ reconciliation.
 ([competitive-strategy.md](assessments/competitive-strategy.md) #3): one page per incumbent that a
 shop is likely leaving, capturing "leaving &lt;incumbent&gt;" search intent and turning it into a
 concrete on-ramp. The hub lists every guide; a `live` guide has its own page at `/switch/<slug>`,
-a `planned` one shows as a coming-soon card. "Switching from EVE" (`/switch/eve`) ships first —
+a `planned` one shows as a coming-soon card. "Switching from EVE" (`/switch/eve`) shipped first —
 that is the market's most motivated pool (a PADI-endorsed desktop system now owned by DiveShop360,
-widely being sunset).
+widely being sunset) — followed by the other named incumbents: **DiveShop360**, **DiveAdmin**, and
+**Smartwaiver** are all live. FareHarbor/Rezdy remain a coming-soon roadmap card.
+
+Each guide is tuned to its incumbent's shape: DiveShop360 exports customers and certification data
+as separate CSVs (its own FAQ names the four exportable datasets); DiveAdmin's API only ingests, so
+the route out is its CSV export or Google Drive backup; Smartwaiver is waivers-only, so the people
+migrate but the waiver itself is re-signed natively. A guide can add one competitor-specific
+`importerNote` to the import step; everything else — the export click-path shape, the scope table,
+and the import walkthrough — is shared.
 
 Each live guide is the same three-part promise made concrete for that system:
 
