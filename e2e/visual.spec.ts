@@ -152,6 +152,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/export");
         await page.getByRole("heading", { name: "Data export" }).waitFor();
         await capture(page, "settings-export", scheme);
+
+        // The import surface: the honesty table stating what does and doesn't
+        // come across, before any file is chosen.
+        await page.goto("/shop/blue-mantis/settings/import");
+        await page.getByRole("heading", { name: "What comes across" }).waitFor();
+        await capture(page, "settings-import", scheme);
       });
     });
   });

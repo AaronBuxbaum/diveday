@@ -222,9 +222,17 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   orders + line items, and the dive-site library and course catalog; exclusions are now only
   operational plumbing (notification logs, Stripe linkage/checkout attempts, offline snapshots,
   credentials, image binaries).
-- ⬜ Data-portability follow-ons: the diver/customer CSV importer with published honesty tables
-  (safety-critical: imported certs land *claimed*, never *verified*), public migration guides,
-  scheduled backup exports, and the read API + webhooks (ADR required).
+- ✅ Diver/customer CSV importer with a published honesty table: Settings → Import contacts brings
+  people, cards, and rental sizes in from a rival's export or DiveDay's own `contacts.csv`, matched
+  by email so a re-import updates rather than duplicates. The safety spine holds through the import —
+  imported certs land *claimed*, never *verified*; no card number, no card (nothing fabricated);
+  medical/health answers never import (fail-closed) — and the page states all of it in a scope table
+  up front ([competitive-strategy](competitive-strategy.md),
+  [ADR](../architecture/decisions/20260723-contact-importer.md)). Pure prepare/validate in
+  [`src/lib/import.ts`](../../src/lib/import.ts), the write in [`src/db/import.ts`](../../src/db/import.ts),
+  gated to owner/manager like the export.
+- ⬜ Data-portability follow-ons: public migration guides, scheduled backup exports, and the read
+  API + webhooks (ADR required).
 - ⬜ Payments/deposits, SMS and multi-channel notifications, deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
 
