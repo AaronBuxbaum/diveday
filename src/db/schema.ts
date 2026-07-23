@@ -592,6 +592,10 @@ export const notificationKind = pgEnum("notification_kind", [
   // (src/lib/reminders.ts) means each cadence sends at most once.
   "trip_reminder_7d",
   "trip_reminder_24h",
+  // The post-trip recap message — sent once per booking after the trip departs,
+  // linking to the diver's shareable recap page (docs first-principles
+  // brainstorm C: the word-of-mouth window, weaponized).
+  "trip_recap",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [

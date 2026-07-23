@@ -61,6 +61,14 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   form by the HTML `form` attribute so each per-diver control stays its own island. Moving divers
   between trips, wait-listing by identity, and bulk rental-fit assignment remain follow-on work
   (the last reshaped by the no-inventory invariant — a fit is a size record, never an allocation).
+- ✅ The anxiety-to-confidence arc ([first-principles brainstorm C](brainstorm/first-principles-business.md)):
+  the 24-hour reminder becomes a **night-before brief** — the crew's plain-language conditions, what
+  to bring, a concrete dock-arrival time, and who to text — in a softer **first-timer** voice for a
+  diver new to the shop (`src/lib/night-before-brief.ts`). After the trip departs, an automatic
+  **post-trip recap** (`/recap/[token]`) gives each diver a shareable page of the sites they dived and
+  a bring-a-buddy nudge, sent once per booking on the same daily cron as the reminders
+  ([20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)). A crew-authored
+  recap shout-out and a diver photo upload remain follow-on work.
 
 ## M3 — Waivers (core slice complete)
 

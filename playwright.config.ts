@@ -16,6 +16,13 @@ const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
   (!process.env.CI && fs.existsSync(sandboxChromium) ? sandboxChromium : undefined);
 
+// The worker servers and this runner process must agree on the signing secret:
+// the visual suite mints a signed recap token in-process (e2e/visual.spec.ts) and
+// the server verifies it. Pin one resolved value into the environment before
+// anything — serverEnv below, or an auth.config import from a spec — derives from
+// it, so both halves sign and verify with the same key.
+process.env.AUTH_SECRET ??= "diveday-e2e-secret";
+
 // Every worker server shares one read-only production build but owns an
 // isolated in-memory database, so the suite runs fully parallel. `next start`
 // is a production runtime, which forces a few settings dev handled implicitly:

@@ -1,6 +1,7 @@
-import { and, eq, gt, inArray, lte, ne } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { firstTimerReassurance, forecastLine } from "@/lib/night-before-brief";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -30,6 +31,29 @@ import { bookings, notificationDeliveries, people, shops, trips } from "./schema
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
 const HOUR_MS = 60 * 60 * 1000;
 
+/**
+ * The subset of these people who have dived with the shop before — anyone with a
+ * prior non-cancelled booking on a trip that has already departed. A diver NOT
+ * in this set is a first-timer, and the night-before brief speaks to them in a
+ * softer, what-happens-on-the-boat voice (brainstorm C's first-timer track).
+ * Batched to a single query so the cron scan stays flat regardless of party size.
+ */
+async function returningDiverIds(db: AppDb, personIds: string[], now: Date): Promise<Set<string>> {
+  if (personIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ personId: bookings.personId })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inArray(bookings.personId, personIds),
+        ne(bookings.status, "cancelled"),
+        lt(trips.startsAt, now),
+      ),
+    );
+  return new Set(rows.map((r) => r.personId));
+}
+
 export type ReminderRunSummary = {
   /** Active bookings on trips inside the reminder horizon. */
   scanned: number;
@@ -50,7 +74,11 @@ export type SendDueRemindersOptions = {
   appOrigin?: string | null;
 };
 
-/** A short text; the email carries the full detail and the link. */
+/**
+ * A short text; the email carries the full detail and the link. The night-before
+ * (day) lead adds the plain-language conditions line and who to text, the SMS
+ * half of the confidence arc — kept compact so it stays a single readable text.
+ */
 function reminderSmsBody(input: {
   shopName: string;
   tripTitle: string;
@@ -61,15 +89,20 @@ function reminderSmsBody(input: {
   dockCallMinutes: number;
   outstanding: string[];
   medicalReview: boolean;
+  forecast?: string | null;
+  whoToText?: string | null;
 }): string {
   const when = input.lead === "week" ? "this week" : "tomorrow";
   const date = formatShortDate(input.startsAt, "en-US", input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const conditions = input.lead === "day" && input.forecast ? ` Conditions: ${input.forecast}` : "";
   // Name the diver's own outstanding items rather than a generic nudge.
   const todo = [...input.outstanding];
   if (input.medicalReview) todo.push("check if a medical answer needs a doctor's sign-off");
   const todoText = todo.length ? ` Still to sort before you board: ${todo.join("; ")}.` : "";
-  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock ${input.dockCallMinutes} min early.${todoText}`;
+  const contact =
+    input.lead === "day" && input.whoToText ? ` Questions? Text us at ${input.whoToText}.` : "";
+  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock ${input.dockCallMinutes} min early.${conditions}${todoText}${contact}`;
 }
 
 /**
@@ -134,6 +167,10 @@ export async function sendDueReminders(
     sentByBooking.set(row.bookingId, set);
   }
 
+  // Who has dived with the shop before — a night-before brief speaks to a
+  // first-timer (anyone NOT in this set) in a softer voice (brainstorm C).
+  const returning = await returningDiverIds(db, [...new Set(rows.map((r) => r.person.id))], now);
+
   for (const { booking, person, trip, shop } of rows) {
     const cadence = dueReminder({
       startsAt: trip.startsAt,
@@ -157,6 +194,29 @@ export async function sendDueReminders(
     const { outstanding, medicalReview } = detail
       ? reminderReadiness(buildDiverChecklist(detail.requirement, detail.readiness))
       : { outstanding: [], medicalReview: false };
+
+    // The night-before (day) lead becomes the full brief: plain-language
+    // conditions from the crew, what to bring, who to text, and a softer voice
+    // for a first-timer. The 7-day nudge carries none of it.
+    const isDay = cadence.kind === "trip_reminder_24h";
+    const forecast = isDay
+      ? forecastLine({
+          conditionsSummary: trip.conditionsSummary,
+          waterTemperatureC: trip.waterTemperatureC,
+          visibilityMeters: trip.visibilityMeters,
+          surfaceConditions: trip.surfaceConditions,
+        })
+      : null;
+    const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
+    const brief = isDay
+      ? {
+          forecast,
+          bring: shop.packingList,
+          whoToText,
+          firstTimerNote: firstTimerReassurance(!returning.has(person.id)),
+        }
+      : undefined;
+
     const smsBody = reminderSmsBody({
       shopName: shop.name,
       tripTitle: trip.title,
@@ -167,6 +227,8 @@ export async function sendDueReminders(
       dockCallMinutes: shop.dockCallMinutes,
       outstanding,
       medicalReview,
+      forecast,
+      whoToText,
     });
 
     let delivery: NotificationDelivery;
@@ -187,6 +249,7 @@ export async function sendDueReminders(
           outstanding,
           medicalReview,
           readinessUrl,
+          ...(brief ? { brief } : {}),
         },
         emailProvider,
       );

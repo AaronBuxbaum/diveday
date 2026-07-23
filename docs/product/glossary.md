@@ -240,6 +240,21 @@ new domain concept, define it here in the same PR.
   departure into buckets, so a late booking gets only the accurate reminder, never a stale one. An
   external scheduler drives an idempotent cron endpoint; the app holds no timer. See
   [20260721-scheduled-reminder-cadence](../architecture/decisions/20260721-scheduled-reminder-cadence.md).
+- **Night-before brief** — the 24-hour reminder cadence enriched into a full pre-departure brief:
+  the crew's plain-language conditions read, what to bring (the shop's packing list), a concrete
+  dock-arrival time, and who to text on the day. It is the same `trip_reminder_24h` send, not a new
+  kind — the cheapest cancellation-prevention tool a shop has, since most day-of no-shows are anxiety
+  plus logistics confusion. Copy in `src/lib/night-before-brief.ts`; the 7-day reminder stays a light
+  nudge.
+- **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
+  diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
+  reassurance; the signal is derived at send time, not stored.
+- **Post-trip recap** — a single shareable per-diver-per-trip page (`/recap/[token]`) generated after
+  the trip departs: the sites dived, the day's conditions, and a bring-a-buddy nudge. It rides the
+  same delivery-row dedup as the reminders, sent once per booking as the `trip_recap` kind by the
+  departed-trip scan (`src/db/recap.ts`) on the same daily cron. The link is a purpose-separated signed
+  booking token, distinct from the readiness link. See
+  [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md).
 - **SMS / WhatsApp channel** — an optional text channel for notifications, delivered through a
   fetch-based Twilio seam (`notifySms()`). A number is texted only if it is already E.164, and a
   channel with no configured sender degrades to `not_configured`, exactly like the email seam. Used
