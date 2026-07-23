@@ -46,13 +46,40 @@ export async function startPaymentOperation(
   return intent;
 }
 
+/**
+ * Durably record the Stripe object id the moment Stripe confirms it exists —
+ * its own committed write, deliberately *before* the local order/checkout/
+ * payment write that follows. That local write can still fail (a crash, a
+ * dropped connection); if it does, the intent is left `started` but with
+ * `stripeObjectId` already on it, so `listStuckPaymentOperations` gives an
+ * operator the one thing they need to find the object in the Stripe
+ * dashboard and reconcile it by hand — the reconciliation clue a crash right
+ * after this point would otherwise have taken with it (CR-005).
+ */
+export async function recordPaymentOperationStripeObject(
+  db: DbExecutor,
+  intentId: string,
+  stripeObjectId: string,
+): Promise<void> {
+  await db
+    .update(paymentOperationIntents)
+    .set({ stripeObjectId })
+    .where(eq(paymentOperationIntents.id, intentId));
+}
+
 export type ResolvePaymentOperationInput = {
   status: "succeeded" | "failed";
   stripeObjectId?: string;
   errorMessage?: string;
 };
 
-/** Record how the Stripe call this intent describes actually resolved. */
+/**
+ * Record how the Stripe call this intent describes actually resolved. On
+ * success this is the *second* write for a call that got a Stripe object —
+ * `recordPaymentOperationStripeObject` already made the id durable before
+ * the risky local write ran; this just closes the intent out once that
+ * local write also succeeded.
+ */
 export async function resolvePaymentOperation(
   db: DbExecutor,
   intentId: string,
@@ -62,7 +89,7 @@ export async function resolvePaymentOperation(
     .update(paymentOperationIntents)
     .set({
       status: input.status,
-      stripeObjectId: input.stripeObjectId ?? null,
+      ...(input.stripeObjectId ? { stripeObjectId: input.stripeObjectId } : {}),
       errorMessage: input.errorMessage ?? null,
       resolvedAt: nowDate(),
     })
@@ -210,54 +237,93 @@ export async function listStuckPaymentOperations(
     );
   if (intents.length === 0) return [];
 
-  // Batched lookups, not a join: a checkout_session intent's trip and an
-  // invoice/refund intent's order->person live on different tables, and only
-  // one of those references is ever set per intent (schema.ts comment).
-  const tripIds = [...new Set(intents.flatMap((intent) => (intent.tripId ? [intent.tripId] : [])))];
+  // Batched lookups, not a join: a checkout_session intent's trip, a
+  // bookingId intent's booking->trip/person, and an invoice/refund intent's
+  // order->person live on different tables, and only one of these
+  // references is ever set per intent (schema.ts comment). Every lookup is
+  // scoped to shopId too — belt-and-suspenders alongside every caller
+  // already validating a referenced row's shop before it's ever recorded on
+  // an intent (payment-operations.test.ts's cross-shop test covers that).
+  //
+  // Two phases: checkout/order/booking ids resolve first (phase one), since
+  // a booking or checkout can itself point at a trip that isn't on any
+  // intent directly — the trips query (phase two) has to wait for those
+  // results to know the full set of trip ids it needs.
   const checkoutIds = [
     ...new Set(intents.flatMap((intent) => (intent.checkoutId ? [intent.checkoutId] : []))),
   ];
   const orderIds = [
     ...new Set(intents.flatMap((intent) => (intent.orderId ? [intent.orderId] : []))),
   ];
+  const bookingIds = [
+    ...new Set(intents.flatMap((intent) => (intent.bookingId ? [intent.bookingId] : []))),
+  ];
 
-  const [tripRows, checkoutRows, orderRows] = await Promise.all([
-    tripIds.length
-      ? db
-          .select({ id: trips.id, title: trips.title })
-          .from(trips)
-          .where(inArray(trips.id, tripIds))
-      : [],
+  const [checkoutRows, orderRows, bookingRows] = await Promise.all([
     checkoutIds.length
       ? db
           .select({ id: bookingCheckouts.id, tripId: bookingCheckouts.tripId })
           .from(bookingCheckouts)
-          .where(inArray(bookingCheckouts.id, checkoutIds))
+          .where(
+            and(inArray(bookingCheckouts.id, checkoutIds), eq(bookingCheckouts.shopId, shopId)),
+          )
       : [],
     orderIds.length
       ? db
           .select({ id: orders.id, personId: orders.personId })
           .from(orders)
-          .where(inArray(orders.id, orderIds))
+          .where(and(inArray(orders.id, orderIds), eq(orders.shopId, shopId)))
+      : [],
+    bookingIds.length
+      ? db
+          .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+          .from(bookings)
+          .where(and(inArray(bookings.id, bookingIds), eq(bookings.shopId, shopId)))
+      : [],
+  ]);
+  const tripIdByCheckoutId = new Map(checkoutRows.map((row) => [row.id, row.tripId]));
+  const personIdByOrderId = new Map(orderRows.map((row) => [row.id, row.personId]));
+  const tripIdByBookingId = new Map(bookingRows.map((row) => [row.id, row.tripId]));
+  const personIdByBookingId = new Map(bookingRows.map((row) => [row.id, row.personId]));
+
+  const tripIds = [
+    ...new Set([
+      ...intents.flatMap((intent) => (intent.tripId ? [intent.tripId] : [])),
+      ...checkoutRows.map((row) => row.tripId),
+      ...bookingRows.map((row) => row.tripId),
+    ]),
+  ];
+  const personIds = [
+    ...new Set([
+      ...orderRows.flatMap((row) => (row.personId ? [row.personId] : [])),
+      ...bookingRows.map((row) => row.personId),
+    ]),
+  ];
+  const [tripRows, personRows] = await Promise.all([
+    tripIds.length
+      ? db
+          .select({ id: trips.id, title: trips.title })
+          .from(trips)
+          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId)))
+      : [],
+    personIds.length
+      ? db
+          .select({ id: people.id, fullName: people.fullName })
+          .from(people)
+          .where(and(inArray(people.id, personIds), eq(people.shopId, shopId)))
       : [],
   ]);
   const tripTitleById = new Map(tripRows.map((row) => [row.id, row.title]));
-  const tripIdByCheckoutId = new Map(checkoutRows.map((row) => [row.id, row.tripId]));
-  const personIdByOrderId = new Map(orderRows.map((row) => [row.id, row.personId]));
-
-  const personIds = [...new Set(orderRows.flatMap((row) => (row.personId ? [row.personId] : [])))];
-  const personRows = personIds.length
-    ? await db
-        .select({ id: people.id, fullName: people.fullName })
-        .from(people)
-        .where(inArray(people.id, personIds))
-    : [];
   const personNameById = new Map(personRows.map((row) => [row.id, row.fullName]));
 
   return intents.map((intent) => {
     const tripId =
-      intent.tripId ?? (intent.checkoutId ? tripIdByCheckoutId.get(intent.checkoutId) : undefined);
-    const personId = intent.orderId ? personIdByOrderId.get(intent.orderId) : undefined;
+      intent.tripId ??
+      (intent.checkoutId ? tripIdByCheckoutId.get(intent.checkoutId) : undefined) ??
+      (intent.bookingId ? tripIdByBookingId.get(intent.bookingId) : undefined);
+    const personId =
+      (intent.orderId ? personIdByOrderId.get(intent.orderId) : undefined) ??
+      (intent.bookingId ? personIdByBookingId.get(intent.bookingId) : undefined);
     return {
       intent,
       tripId: tripId ?? null,

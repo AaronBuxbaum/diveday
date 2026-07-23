@@ -32,10 +32,24 @@ instead of converging on the first.
   POST, each of invoice creation's four steps (customer/invoiceitem(s)/invoice/finalize, each with
   its own `:step` suffix since each is a separate Stripe idempotency scope), and invoice refund
   (checkout refund already had its own deterministic key derived from the payment intent + amount,
-  which is left as-is — equally deterministic, just not intent-id-based). A retry of the same
-  logical attempt — a lost response, a redeployed process resuming where a crashed one left off —
-  always sends the same key, so Stripe itself collapses the retry onto the object it already
-  created instead of minting a second one.
+  which is left as-is — equally deterministic, just not intent-id-based). This closes the case Stripe
+  itself can retry (an HTTP-level auto-retry after a lost response to the *same* call) and duplicate
+  webhook delivery. **It does not, by itself, make a human- or caller-level retry resume the same
+  intent** — a fresh call to `startBookingCheckout`/`createOrder`/`refundOrder` always mints a new
+  intent and a new key, so a diver clicking "pay now" again after a failure can still reach Stripe a
+  second time. `recordPaymentOperationStripeObject` (below) is what keeps that scenario from being
+  silent; a caller-level resume-by-existing-intent path is not built here (see Consequences).
+- **The Stripe object id is durable the instant Stripe confirms it, not after the local write that
+  follows.** `recordPaymentOperationStripeObject(db, intentId, stripeObjectId)` is its own committed
+  write, called immediately after `createCheckoutSession`/`createInvoice`/`refundInvoice`/
+  `refundCheckoutSession` return success — *before* the local `orders`/`booking_checkouts`/
+  `booking_payments` write that follows, which can still fail. A security review of the first cut of
+  this ticket found that writing the Stripe object id only alongside `resolvePaymentOperation`'s
+  final "succeeded" call meant a crash between the Stripe call and that later local write left the
+  intent `started` with `stripeObjectId` still null — exactly the reconciliation clue an operator
+  needs, dropped in exactly the crash window this ticket exists to cover. Splitting the write in two
+  closes that gap: worst case after a crash, the intent is `started` but already carries the Stripe
+  object id `listStuckPaymentOperations` surfaces to staff.
 - **`bookings.pending_checkout_intent_id` is an atomic claim, not a lock held across the Stripe
   call.** `claimBookingsForCheckout` conditionally claims every booking a checkout attempt covers
   (`UPDATE ... WHERE pending_checkout_intent_id IS NULL`) in one short transaction that commits
@@ -76,6 +90,19 @@ instead of converging on the first.
   Stripe) — out of scope for this ticket. An indeterminate payment operation is exactly the case
   that should stop and ask a human, not guess; `listStuckPaymentOperations` makes the guess visible
   instead of making it silently.
+- **Extending `claimBookingsForCheckout`'s exclusivity claim to `createOrder`/`refundOrder`** —
+  deliberately not done here. The same review that found the `stripeObjectId` timing gap above also
+  found that only checkout-session creation has a claim; two concurrent `createOrder`/`refundOrder`
+  calls for the same booking (two staff tabs, a resubmitted form after a slow response) can still
+  both reach Stripe and each create its own invoice or refund, with no local exclusivity to stop
+  either. `SubmitButton`'s disable-on-submit covers the same-tab double click, not two tabs or two
+  staff members. This is accepted as a known gap for this ticket rather than closed, both to keep
+  the change bounded and because the two operations differ from checkout in a way that matters:
+  checkout is public and self-service (a diver can retry unsupervised, so a race is likely), while
+  `createOrder`/`refundOrder` are staff-initiated actions a person is watching — a duplicate invoice
+  or refund is recoverable by voiding/reversing it, not silently compounding. Extending the claim
+  column (or an equivalent) to `orders`/refund attempts, keyed by `bookingId`/`orderId`, is the
+  natural follow-up if this gap proves real in practice.
 
 ## Consequences
 
@@ -90,3 +117,7 @@ instead of converging on the first.
   (checkout, invoice, refund) and carries no money, so a duplicate void call is harmless either way.
 - The migration adding `bookings.pending_checkout_intent_id` is additive and nullable; no existing
   row is affected.
+- `listStuckPaymentOperations`'s batched lookups (trip/checkout/order/booking/person) are scoped by
+  `shopId` on every query, belt-and-suspenders alongside every caller already validating a
+  referenced row's shop before recording it on an intent — so a future `kind` or caller that forgets
+  that check still can't leak another shop's trip title or customer name onto the Reports page.

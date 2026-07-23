@@ -932,11 +932,16 @@ export const paymentOperationIntents = pgTable(
     status: paymentOperationStatus("status").notNull().default("started"),
     /** Set for a checkout_session intent — which trip's booking(s) this session is for. */
     tripId: uuid("trip_id").references(() => trips.id),
-    /** Set for an invoice intent that settles a booking's payment gate; null for a booking-less order. */
+    /**
+     * Set for an invoice intent that settles a booking's payment gate (null
+     * for a booking-less order), or for a checkout-refund intent
+     * (refundBookingOnCancellation operates by bookingId, not a
+     * booking_checkouts row — it never has one in hand).
+     */
     bookingId: uuid("booking_id").references(() => bookings.id),
     /** Set for a refund intent against an order's invoice. */
     orderId: uuid("order_id").references(() => orders.id),
-    /** Set for a refund intent against a checkout's session. */
+    /** Reserved for a future refund path that has a booking_checkouts row in hand; no caller sets this today. */
     checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),

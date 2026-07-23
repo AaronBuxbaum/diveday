@@ -3,7 +3,11 @@ import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb } from "./client";
-import { resolvePaymentOperation, startPaymentOperation } from "./payment-operations";
+import {
+  recordPaymentOperationStripeObject,
+  resolvePaymentOperation,
+  startPaymentOperation,
+} from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookings, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -106,6 +110,9 @@ export async function refundBookingOnCancellation(
     decision.refundCents,
   );
   if (result.status === "refunded") {
+    // Durable the moment Stripe confirms the refund exists — before the
+    // local payment-row update below that could still fail (CR-005).
+    if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
     await setBookingPayment(db, {
       shopId: input.shopId,
       bookingId: input.bookingId,
@@ -116,10 +123,7 @@ export async function refundBookingOnCancellation(
       providerRef: result.refundId ?? payment.providerRef,
       note: "Auto-refunded on cancellation within the free window",
     });
-    await resolvePaymentOperation(db, intent.id, {
-      status: "succeeded",
-      stripeObjectId: result.refundId,
-    });
+    await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: decision.refundCents };
   }
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
