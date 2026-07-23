@@ -3,6 +3,7 @@ import {
   buildTripManifest,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
+  maxRecordedDiveNumber,
   type RollCallRecord,
   rollCallCheckpointLabel,
   rollCallCheckpoints,
@@ -112,5 +113,13 @@ describe("buildTripManifest", () => {
     expect(isRollCallCheckpoint("after_dive_2", 2)).toBe(true);
     expect(isRollCallCheckpoint("after_dive_3", 2)).toBe(false);
     expect(rollCallCheckpointLabel("after_dive_2")).toBe("After dive 2");
+  });
+
+  it("finds the highest recorded dive number, or 0 with no after-dive history", () => {
+    expect(maxRecordedDiveNumber([])).toBe(0);
+    expect(maxRecordedDiveNumber(["departure"])).toBe(0);
+    expect(maxRecordedDiveNumber(["departure", "after_dive_1"])).toBe(1);
+    expect(maxRecordedDiveNumber(["after_dive_1", "after_dive_3", "after_dive_2"])).toBe(3);
+    expect(maxRecordedDiveNumber(["not-a-checkpoint", "after_dive_4"])).toBe(4);
   });
 });

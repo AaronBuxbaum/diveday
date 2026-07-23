@@ -144,7 +144,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const startsAt = wallTimeToUtc(sw, shopNow.timezone);
   const endsAt = wallTimeToUtc(ew, shopNow.timezone);
   if (endsAt <= startsAt) redirect(`${back}?notice=end-before-start`);
-  await updateTrip(dbi, s.user.shopId, tripId, {
+  const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
     startsAt,
@@ -157,6 +157,15 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
     dives: tripDiveDraftsFromForm(formData, plannedDives),
   });
+  if (!outcome.ok) {
+    const notice =
+      outcome.reason === "capacity_below_booked"
+        ? "capacity-below-booked"
+        : outcome.reason === "planned_dives_below_history"
+          ? "planned-dives-below-history"
+          : "invalid";
+    redirect(`${back}?notice=${notice}`);
+  }
   revalidateAndRedirect(back, `${back}?notice=saved`);
 }
 

@@ -111,6 +111,14 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     text: "That didn't save — check the date, times, and capacity, then try again.",
   },
   "end-before-start": { tone: "danger", text: "The trip has to end after it starts." },
+  "capacity-below-booked": {
+    tone: "danger",
+    text: "That capacity is below how many divers are already booked on this trip — cancel bookings first, or set a higher capacity.",
+  },
+  "planned-dives-below-history": {
+    tone: "danger",
+    text: "Can't drop the dive count below one staff already recorded a roll call against — that history has to stay reachable.",
+  },
 };
 
 export function TripNoticeBanner({

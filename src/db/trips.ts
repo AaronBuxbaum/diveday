@@ -1,16 +1,18 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
-import type { Course } from "./schema";
+import type { Course, Trip } from "./schema";
 import {
   bookings,
   courses,
   diveSites,
   people,
   personRoles,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -537,13 +539,64 @@ export type TripPatch = {
   cancellationWindowHours?: number | null;
 };
 
-export async function updateTrip(db: AppDb, shopId: string, tripId: string, patch: TripPatch) {
+export type UpdateTripOutcome =
+  | { ok: true; trip: Trip }
+  | {
+      ok: false;
+      reason: "invalid" | "not_found" | "capacity_below_booked" | "planned_dives_below_history";
+      /** Present only for the two below-invariant reasons, for a specific staff message. */
+      detail?: { bookedCount: number } | { recordedDiveCount: number };
+    };
+
+/**
+ * Edits a trip's own details/schedule/dives. Locks the trip row (mirroring
+ * the booking-creation lock in `createBookingRecord`) so a concurrent
+ * booking can't land between the active-booking count read and this
+ * update — capacity can never end up below the party actually on the
+ * manifest, and planned dives can never drop below a dive number staff have
+ * already recorded a roll call against (CR-006). Both invariants fail
+ * closed with a typed reason instead of silently discarding data.
+ */
+export async function updateTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  patch: TripPatch,
+): Promise<UpdateTripOutcome> {
   return db.transaction(async (tx) => {
     const plannedDives = normalizedDiveCount(patch.plannedDives);
-    if (!plannedDives) return null;
+    if (!plannedDives) return { ok: false, reason: "invalid" };
+
+    const [existing] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!existing) return { ok: false, reason: "not_found" };
+
+    const [{ bookedCount }] = await tx
+      .select({ bookedCount: count() })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+    if (patch.capacity < bookedCount) {
+      return { ok: false, reason: "capacity_below_booked", detail: { bookedCount } };
+    }
+
+    const checkpointRows = await tx
+      .select({ checkpoint: rollCallEvents.checkpoint })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, tripId));
+    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows.map((row) => row.checkpoint));
+    if (plannedDives < recordedDiveCount) {
+      return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
+    }
+
     const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;
     const sitesToValidate = drafts ?? (patch.diveSiteId ? [{ diveSiteId: patch.diveSiteId }] : []);
-    if (!(await validateDiveSites(tx, shopId, sitesToValidate))) return null;
+    if (!(await validateDiveSites(tx, shopId, sitesToValidate))) {
+      return { ok: false, reason: "invalid" };
+    }
     const [trip] = await tx
       .update(trips)
       .set({
@@ -562,9 +615,9 @@ export async function updateTrip(db: AppDb, shopId: string, tripId: string, patc
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
-    if (!trip) return null;
+    if (!trip) return { ok: false, reason: "not_found" };
     if (drafts) await replaceTripDives(tx, tripId, drafts);
-    return trip;
+    return { ok: true, trip };
   });
 }
 

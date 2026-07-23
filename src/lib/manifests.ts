@@ -27,6 +27,25 @@ export function rollCallCheckpointLabel(checkpoint: RollCallCheckpoint): string 
   return `After dive ${checkpoint.slice("after_dive_".length)}`;
 }
 
+/**
+ * The highest dive number any recorded roll-call checkpoint for a trip
+ * refers to — 0 when history only ever touched "departure" or there is no
+ * history at all. Used to stop a planned-dive-count edit from silently
+ * orphaning operational history that already happened (CR-006): a trip
+ * cannot be edited down to fewer dives than staff have already recorded a
+ * roll call against.
+ */
+export function maxRecordedDiveNumber(checkpoints: readonly string[]): number {
+  let max = 0;
+  for (const checkpoint of checkpoints) {
+    const match = /^after_dive_(\d+)$/.exec(checkpoint);
+    if (!match) continue;
+    const diveNumber = Number(match[1]);
+    if (diveNumber > max) max = diveNumber;
+  }
+  return max;
+}
+
 export type ManifestDiverInput = {
   bookingId: string;
   fullName: string;
