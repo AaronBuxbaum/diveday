@@ -47,14 +47,7 @@ providers only). A vendor adapter behind the existing `SignatureProvider` seam i
 gated on the H-01/H-03 legal decisions
 ([waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md)).
 
-### 3. Owner reporting
-
-The buyer is often the owner, and "how's my month" (bookings, revenue, fill rate, waiver completion)
-has no surface today — a recurring deal-blocker
-([competitive-analysis.md](assessments/competitive-analysis.md#what-blocks-the-purchase) #5). Even a modest
-dashboard over data that already exists removes the objection.
-
-### 4. Minimal gear register (an M5 reversal, deliberately smaller)
+### 3. Minimal gear register (an M5 reversal, deliberately smaller)
 
 M5 removed equipment inventory on purpose, but "who has what, what's due for service" is table stakes
 for gear-heavy shops and a disqualifier for the classic retail shop
@@ -62,19 +55,19 @@ for gear-heavy shops and a disqualifier for the classic retail shop
 lightweight who-has-what + service-due register — **not** a POS, and **not** the deleted assignment
 model. **ADR required** (it reverses a shipped decision).
 
-### 5. Nitrox fill / analysis log (open question)
+### 4. Nitrox fill / analysis log (open question)
 
 The analyzed-fill log was retired with gear inventory (it referenced a tracked cylinder). Whether a
 fill/analysis record should return in some tank-free form is genuinely open, gated on the nitrox
 policy decision — V-05 and H-11 in [human-decisions.md](human-decisions.md).
 
-### 6. Multi-boat / multi-shop configuration
+### 5. Multi-boat / multi-shop configuration
 
 Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** — a trip is the
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it.
 
-### 7. Smaller follow-ons
+### 6. Smaller follow-ons
 
 All three shipped 2026-07-23 — recurring-series series-wide edit/cancel and a rolling horizon, the
 Today freed-seat one-tap waitlist invite, and the post-trip recap extras (crew shout-out + diver

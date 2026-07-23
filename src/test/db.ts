@@ -15,8 +15,9 @@ export async function seededTestDb(): Promise<AppDb> {
   const bytes = await templateBytes();
   if (!bytes) {
     // Global setup didn't run (foreign config / direct runner): pay full price.
+    // Match the template — the lean demo, without the reporting history back-fill.
     const db = await createTestDb();
-    await seedDemo(db);
+    await seedDemo(db, { history: false });
     return db;
   }
   const client = new PGlite({ loadDataDir: new Blob([bytes], { type: "application/x-tar" }) });

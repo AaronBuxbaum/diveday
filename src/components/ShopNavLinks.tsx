@@ -20,6 +20,7 @@ const moreLinks = [
   ["Dive sites", "/dive-sites"],
   ["Courses", "/courses"],
   ["Waivers", "/waivers"],
+  ["Reports", "/reports"],
   ["Settings", "/settings"],
   ["Import contacts", "/settings/import"],
   ["Data export", "/settings/export"],
