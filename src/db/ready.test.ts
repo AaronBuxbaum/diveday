@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { verifyReadinessToken } from "@/lib/readiness-links";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { getReadyPageData } from "./ready";
@@ -38,10 +37,5 @@ describe("getReadyPageData", () => {
   it("returns null for a booking that does not exist", async () => {
     const { db } = await seededBooking();
     await expect(getReadyPageData(db, "00000000-0000-4000-8000-000000000099")).resolves.toBeNull();
-  });
-
-  it("rejects a tampered readiness token before any lookup", () => {
-    expect(verifyReadinessToken("not-a-real-token")).toBeNull();
-    expect(verifyReadinessToken("")).toBeNull();
   });
 });

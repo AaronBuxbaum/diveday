@@ -7,11 +7,11 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getReadyPageData } from "@/db/ready";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { verifyReadinessToken } from "@/lib/readiness-links";
 import {
   buildDiverChecklist,
   type ChecklistState,
@@ -146,8 +146,9 @@ export default async function DiverReadinessPage({
   await connection();
   const { token } = await params;
   const { saved, error, pay } = await searchParams;
-  const bookingId = verifyReadinessToken(token);
-  if (!bookingId) {
+  const db = await getDb();
+  const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
+  if (!capability) {
     return (
       <Notice
         title="This readiness link isn’t available"
@@ -155,8 +156,8 @@ export default async function DiverReadinessPage({
       />
     );
   }
+  const { bookingId } = capability;
 
-  const db = await getDb();
   const data = await getReadyPageData(db, bookingId);
   if (!data) {
     return (

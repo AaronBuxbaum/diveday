@@ -83,6 +83,7 @@ const EXCLUDED_TABLES = [
   "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported
+  "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
 ];
 
 function table(
