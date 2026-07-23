@@ -10,6 +10,8 @@ ships a usable vertical slice. Re-order only with a note here explaining why.
   [competitive-strategy.md](assessments/competitive-strategy.md).
 - When an item here ships, **move it to [shipped.md](shipped.md)** (compress to a line, link its ADR)
   rather than leaving it marked done — that pollution is what this file exists to avoid.
+- This tracks the substantial open work; small per-feature follow-ons may also live in the ADR that
+  introduced the feature (grep the ADR's *Consequences* for "follow-up").
 
 ## Where we are
 
@@ -75,11 +77,18 @@ Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** �
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it.
 
-### 7. Loose ends
+### 7. Smaller follow-ons
 
 - **Remove the dead `buddyPreference` column** — WP-5 specced its deletion but the field survives in
   `src/db/schema.ts` (and is still read in `src/db/bookings.ts`, `src/db/export.ts`). Delete beats
   hedging a field nothing renders.
+- **Recurring series — series-wide edits and a rolling horizon.** A series materializes a finite set
+  of independent trips; there is no series-wide edit/cancel (changing every future date is
+  per-instance) and the horizon is finite. Both are contained follow-ups noted in the
+  [recurring-trip-series ADR](../architecture/decisions/20260719-recurring-trip-series.md).
+- **Waitlist invite from Today.** The trip's waitlist section already invites the next diver one-tap
+  (WP-9), but the Today freed-seat row still only *links* there (`src/db/today.ts`). Give that row the
+  same one-tap invite so staff act straight from the queue.
 
 ## Delight backlog
 

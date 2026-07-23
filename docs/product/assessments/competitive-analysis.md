@@ -125,7 +125,7 @@ product-owner decision before any customer-facing publication (H-12).
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
 | Rental equipment tracking | Universal | ❌ Sizes only, no inventory/service | Critical — gap |
-| Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email + SMS/WhatsApp through one seam (confirmation, waiver, wait-list invite) with scheduled 7-day/24-hour reminder cadences; composer/`not_configured` fallback when unset | Critical — mechanism done; consent/copy policy (H-09) open |
+| Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email everywhere via one seam (confirmation, waiver, wait-list invite); scheduled 7-day/24-hour reminders add courtesy SMS. A Twilio SMS/WhatsApp seam exists but only reminders use it — no flow requests WhatsApp yet | Critical — email + reminder SMS done; WhatsApp unwired, consent/copy (H-09) open |
 | Owner reporting | Expected | ❌ | Critical-lite — gap |
 | Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
 | Fail-closed readiness engine | **No one has it** | ✅ | **Differentiator #1** |
