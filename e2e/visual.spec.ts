@@ -10,6 +10,12 @@ import { signedInAsOwner, test } from "./fixtures";
  * 20260721-argos-visual-regression). Keep these counts in sync when adding a
  * surface; each `capture()` call costs 4 screenshots per CI run.
  *
+ * Two more come from the `print` block at the bottom: the manifest and prep
+ * pages as they render for the printer. Print is its own concern, not a
+ * light/dark one — the `@media print` token override collapses both schemes to
+ * one black-on-white palette — so each is captured once, at a US-Letter width,
+ * via `capturePrint()`. That brings the run to 62 screenshots.
+ *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
  * ` vw-<width>`, so `landing-light` becomes `landing-light vw-390` and
@@ -55,6 +61,24 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
     fullPage: true,
     viewports: [...VIEWPORTS],
   });
+}
+
+/**
+ * Capture a surface as it renders for the printer. Emulating `print` media
+ * applies the whole `@media print` treatment — monochrome tokens, page
+ * padding, `print:hidden` chrome removed — so the baseline is the document a
+ * shop actually prints, not the interactive page. One shot at the current
+ * (Letter-width) viewport: print output is scheme- and viewport-independent, so
+ * the light/dark × phone/desktop matrix the on-screen `capture` runs would be
+ * four identical copies here. `@page` margins never show in a screenshot; the
+ * padding visible in the baseline is the container's own (`print:px-*`), the
+ * gutter that survives a "None margins" print dialog.
+ */
+async function capturePrint(page: Page, name: string) {
+  await page.evaluate(() => document.fonts.ready);
+  await page.emulateMedia({ media: "print" });
+  await argosScreenshot(page, `${name}-print`, { fullPage: true });
+  await page.emulateMedia({ media: "screen" });
 }
 
 for (const scheme of ["light", "dark"] as const) {
@@ -185,3 +209,39 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+/**
+ * Print / Save-as-PDF surfaces. The manifest and the prep list are the two
+ * pages staff physically print for the dock, and print gets a dedicated
+ * rendering (globals.css `@media print`): monochrome, so a shop's black-and-
+ * white printer isn't asked for muddy color, and padded, so content doesn't
+ * slam into the paper edge. The interactive baselines above never exercise
+ * that path. This block lives outside the light/dark loop on purpose — print
+ * is scheme-independent — and runs at a US-Letter-ish width so the baseline
+ * reflects paper rather than a 1280px browser window.
+ */
+test.describe("print", () => {
+  signedInAsOwner();
+  test.use({ viewport: { width: 816, height: 1056 } });
+
+  test("dock print surfaces render monochrome and padded", async ({ page }) => {
+    // Reach the seeded reef trip the way staff do, then print its two dock
+    // surfaces. Navigating by link keeps this off any hard-coded trip id.
+    await page.goto("/shop/blue-mantis/schedule");
+    await page
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+      .getByRole("link")
+      .click();
+    await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+    const tripPath = new URL(page.url()).pathname;
+
+    await page.goto(`${tripPath}/manifest`);
+    await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+    await capturePrint(page, "manifest");
+
+    await page.goto(`${tripPath}/prep`);
+    await page.getByRole("heading", { name: "Tanks" }).waitFor();
+    await capturePrint(page, "prep");
+  });
+});
