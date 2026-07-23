@@ -39,3 +39,12 @@ export function isStaff(roles: readonly Role[] | undefined): boolean {
 export function canExportShopData(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some((role) => role === "owner" || role === "manager");
 }
+
+/**
+ * Bulk contact import writes to the roster and carries the whole file's people,
+ * cards, and sizes at once — the same accountability weight as the export, so
+ * it takes the same owner/manager gate (ADR 20260723-contact-importer).
+ */
+export function canImportShopData(roles: readonly Role[] | undefined): boolean {
+  return canExportShopData(roles);
+}

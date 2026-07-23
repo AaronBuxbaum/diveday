@@ -135,7 +135,10 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    honest limit: rivals' importers can't be tested from here, so the claim we make is "flat,
    documented, wizard-mappable CSV" — per-competitor import verification belongs to the migration
    guides (#3).
-2. **Diver/customer CSV importer with a published honesty table** *(M — safety-critical)*.
+2. ✅ **Diver/customer CSV importer with a published honesty table** — **shipped 2026-07-23**
+   ([ADR](../../architecture/decisions/20260723-contact-importer.md)): Settings → Import contacts,
+   matched by email, with the scope table up front and the safety spine held (imported certs land
+   *claimed*, never *verified*; medical answers never import).
    Column-mapped, previewed, validated import for the shop's people + cert + sizes data, with
    templates matching what the rivals actually emit (DiveShop360's customer/cert exports,
    DiveAdmin's CSVs, Smartwaiver participant CSVs, generic spreadsheet). Publish Jane-style scope
