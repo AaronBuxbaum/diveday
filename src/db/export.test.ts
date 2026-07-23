@@ -1,11 +1,12 @@
 // @vitest-environment node
-import { getTableName } from "drizzle-orm";
+import { and, eq, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { seededShopContext } from "@/test/db";
 import { createDiver, deleteDiver } from "./divers";
-import { loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
 import * as schema from "./schema";
-import { people, shops } from "./schema";
+import { people, personRoles, shops, userAccounts } from "./schema";
 import { issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
@@ -154,7 +155,12 @@ describe("full-shop export dataset", () => {
     for (const row of assignments.rows) {
       expect(row[assignments.header.indexOf("person_name")]).toBeTruthy();
     }
-    expect(table(input, "roll_call_events.csv").header).toContain("recorded_by_name");
+    const rollCall = table(input, "roll_call_events.csv");
+    expect(rollCall.header).toContain("recorded_by_name");
+    // Offline provenance: which device event and which encrypted snapshot an
+    // incident review would correlate against.
+    expect(rollCall.header).toContain("client_event_id");
+    expect(rollCall.header).toContain("offline_snapshot_saved_at");
   });
 
   it("exports issued waiver evidence linked to its template version", async () => {
@@ -231,6 +237,63 @@ describe("full-shop export dataset", () => {
   it("returns null for an unknown shop instead of an empty bundle", async () => {
     const { db } = await seededShopContext();
     expect(await loadShopExportBundleInput(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+});
+
+describe("export privilege re-check (database, not JWT)", () => {
+  async function personIdForEmail(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    email: string,
+  ) {
+    const [account] = await db
+      .select({ personId: userAccounts.personId })
+      .from(userAccounts)
+      .where(eq(userAccounts.email, email))
+      .limit(1);
+    if (!account) throw new Error(`no account for ${email}`);
+    return account.personId;
+  }
+
+  it("passes a current owner and refuses roles the token might overstate", async () => {
+    const { db, shop } = await seededShopContext();
+    const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+    expect(await canPersonExportShopData(db, shop.id, owner)).toBe(true);
+
+    // A captain is staff everywhere else, but not accountable for the
+    // roster's medical evidence.
+    const captain = await personIdForEmail(db, DEV_STAFF_LOGINS.captain.email);
+    expect(await canPersonExportShopData(db, shop.id, captain)).toBe(false);
+
+    // A diver with no login can never export, and neither can an owner id
+    // presented against a shop it does not belong to.
+    const diver = await createDiver(db, { shopId: shop.id, fullName: "No Login Nora" });
+    if (!diver) throw new Error("diver insert failed");
+    expect(await canPersonExportShopData(db, shop.id, diver.id)).toBe(false);
+    expect(await canPersonExportShopData(db, "00000000-0000-0000-0000-000000000000", owner)).toBe(
+      false,
+    );
+  });
+
+  it("revokes access the moment the accountable roles are removed, before any token expires", async () => {
+    const { db, shop } = await seededShopContext();
+    const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+    // The seed gives Dana both accountable roles; a demotion removes both.
+    for (const role of ["owner", "manager"] as const) {
+      await db
+        .delete(personRoles)
+        .where(and(eq(personRoles.personId, owner), eq(personRoles.role, role)));
+    }
+    expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
+  });
+
+  it("revokes access the moment the login is disabled", async () => {
+    const { db, shop } = await seededShopContext();
+    const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, owner));
+    expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
   });
 });
 
