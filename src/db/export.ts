@@ -9,6 +9,7 @@
 
 import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
 import { canExportShopData, type Role } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
 import type { AppDb } from "./client";
 import {
@@ -41,16 +42,24 @@ import {
 } from "./schema";
 
 /**
- * "Best card" for the flat contacts file: the highest rung on the ladder,
- * preferring verified evidence over pending claims at any rung — a shop
+ * "Best card" for the flat contacts file: current cards before expired ones,
+ * verified evidence before pending claims, then the highest rung — a shop
  * leaving with this file should hand its next system the strongest honest
- * claim per diver, clearly labeled with its verification status.
+ * claim per diver. An expired card is history, not evidence, so it only
+ * represents a diver who has nothing current — and the expiry column travels
+ * in contacts.csv so the destination can enforce it either way.
  */
 function bestCertification<
-  Card extends { level: (typeof certificationLevel.enumValues)[number]; status: string },
->(cards: Card[]): Card | undefined {
+  Card extends {
+    level: (typeof certificationLevel.enumValues)[number];
+    status: string;
+    expiresAt: Date | null;
+  },
+>(cards: Card[], now: Date): Card | undefined {
   const rank = (card: Card) =>
-    (card.status === "verified" ? 1000 : 0) + certificationLevel.enumValues.indexOf(card.level);
+    (card.expiresAt && card.expiresAt <= now ? 0 : 2000) +
+    (card.status === "verified" ? 1000 : 0) +
+    certificationLevel.enumValues.indexOf(card.level);
   return cards.reduce<Card | undefined>(
     (best, card) => (!best || rank(card) > rank(best) ? card : best),
     undefined,
@@ -67,6 +76,7 @@ function splitName(fullName: string): { first: string; last: string } {
 export async function loadShopExportBundleInput(
   db: AppDb,
   shopId: string,
+  now: Date = nowDate(),
 ): Promise<ExportBundleInput | null> {
   // One read-only repeatable-read transaction: the bundle is a relational
   // snapshot, and per-statement snapshots would let a booking that commits
@@ -301,6 +311,7 @@ export async function loadShopExportBundleInput(
             "certification_level",
             "certification_number",
             "certification_status",
+            "certification_expires_at",
             "nitrox_certified",
             "bcd_size",
             "wetsuit_size",
@@ -311,7 +322,7 @@ export async function loadShopExportBundleInput(
           ],
           rows: peopleRows.map((row) => {
             const name = splitName(row.fullName);
-            const card = bestCertification(cardsByPerson.get(row.id) ?? []);
+            const card = bestCertification(cardsByPerson.get(row.id) ?? [], now);
             const fit = fitByPerson.get(row.id);
             return [
               name.first,
@@ -326,6 +337,7 @@ export async function loadShopExportBundleInput(
               card?.level,
               card?.identifier,
               card?.status,
+              card?.expiresAt,
               nitroxVerified.has(row.id),
               fit?.bcdSize,
               fit?.wetsuitSize,

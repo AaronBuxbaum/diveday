@@ -74,10 +74,10 @@ export default async function DataExportPage() {
         <p className="mt-4 text-sm text-muted">
           <span className="font-medium text-foreground">Not included, on purpose:</span> offline
           manifest snapshots, notification logs, Stripe checkout attempts (every money outcome is in
-          the bookings and orders files), and card images — the CSVs carry each card's stored image
-          reference, which stays readable while this account is active, so save copies before ever
-          closing it. Sign-in credentials are never exported. The bundle's README lists the same
-          gaps.
+          the bookings and orders files), and image files of any kind — card photos, dive-site
+          imagery, and course media travel as stored references in the CSVs, which stay readable
+          while this account is active, so save copies of anything you need before ever closing it.
+          Sign-in credentials are never exported. The bundle's README lists the same gaps.
         </p>
       </section>
     </main>

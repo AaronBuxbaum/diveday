@@ -30,7 +30,7 @@ export type ExportFile = { name: string; content: string };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "contacts.csv":
-    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification card (verified preferred), enriched-air status, and rental sizes. The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the card.",
+    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification card (current before expired, verified before pending, expiry included so the destination can enforce it), enriched-air status, and rental sizes. The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the card.",
   "people.csv": "Everyone the shop knows — divers and staff — with their roles.",
   "certifications.csv": "Certification-ladder cards with their verification status.",
   "specialty_certifications.csv":
@@ -49,7 +49,7 @@ export const EXPORT_FILE_NOTES = {
   "waitlist_entries.csv":
     "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
   "roll_call_events.csv":
-    "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only: the newest event per booking and checkpoint is that diver's current state, a 'cleared' event undoes the one before it (back to awaiting), and no events means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
+    "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only and in checkpoint order (departure, then after each dive): within one checkpoint the newest event per booking wins, and a 'cleared' event erases that checkpoint's result. Then carry forward: an explicit 'not_boarded' fills every later checkpoint that has no explicit result of its own until an explicit 'boarded' breaks the chain — off the boat stays off the boat; a checkpoint with no result and nothing carried means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "waiver_templates.csv":
     "Every waiver template version, full text included — signed records reference these.",
   "waiver_records.csv":
@@ -68,18 +68,31 @@ export const EXPORT_FILE_NOTES = {
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
 
+/**
+ * Would this diver-authored string execute as a formula in Excel/LibreOffice?
+ * `=`, `@`, tab, and CR always count. A leading `+` or `-` counts only when
+ * followed by anything beyond digits and phone punctuation: `+1 305 555 0100`
+ * is an E.164 phone number a destination system must receive intact — the one
+ * thing a purely numeric cell can do in a spreadsheet is display as a number,
+ * never reach a DDE/command payload, which needs letters or pipes.
+ */
+function opensAsFormula(text: string): boolean {
+  if (/^[=@\t\r]/.test(text)) return true;
+  return /^[+-]/.test(text) && !/^[+-][\d\s()./-]*$/.test(text);
+}
+
 /** Serialize one cell: empty for null/undefined, ISO for dates, RFC-4180 quoting. */
 export function csvCell(value: CsvValue): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
   let text = typeof value === "string" ? value : String(value);
-  // Neutralize spreadsheet formulas (CSV injection): a *string* cell starting
-  // with =, +, -, @, tab, or CR executes when the export opens in Excel or
-  // LibreOffice — RFC-4180 quoting does not prevent it — and names on a public
-  // booking are diver-controlled. The apostrophe is the spreadsheet "treat as
-  // text" marker; the bundle README documents it. Numbers stay untouched, so
-  // negative amounts never gain a prefix.
-  if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  // Neutralize spreadsheet formulas (CSV injection): a *string* cell that
+  // opens as a formula executes when the export opens in Excel or LibreOffice
+  // — RFC-4180 quoting does not prevent it — and names on a public booking
+  // are diver-controlled. The apostrophe is the spreadsheet "treat as text"
+  // marker; the bundle README documents it. Numbers and phone-shaped strings
+  // stay untouched so amounts and E.164 numbers import intact.
+  if (typeof value === "string" && opensAsFormula(text)) text = `'${text}`;
   // Quote only when needed: embedded quote, comma, or line break.
   if (/[",\r\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
   return text;
@@ -119,7 +132,7 @@ const NOT_INCLUDED = [
   "Notification delivery logs — operational plumbing, not shop records.",
   "Stripe account linkage and checkout-session attempts — every money outcome is in bookings.csv and orders.csv, and the Stripe account itself already belongs to the shop.",
   "DiveDay's shared dive-site catalog templates (the shop's own copies export in dive_sites.csv).",
-  "Certification card images (the CSVs carry each card's stored image reference; those references stay readable while the shop's DiveDay account is active — save copies before closing an account).",
+  "Image binaries of any kind — certification card photos, dive-site imagery, and course media are carried as stored references in their CSVs, never as files; those references stay readable while the shop's DiveDay account is active, so save copies of anything you need before closing an account.",
   "Login accounts and password hashes — credentials are never exported.",
 ];
 
@@ -145,9 +158,10 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     `Every file is UTF-8 CSV (RFC 4180). Timestamps are ISO 8601 in UTC.`,
     `Money columns are minor units (cents). Rows with a deleted_at value are`,
     `soft-archived history — kept so nothing is lost in a migration.`,
-    `Text that would open as a spreadsheet formula (leading =, +, -, or @) is`,
-    `prefixed with an apostrophe so it always reads as text; strip it when`,
-    `importing programmatically.`,
+    `Text that would open as a spreadsheet formula (leading =, @, or a +/-`,
+    `followed by anything beyond digits and phone punctuation) is prefixed`,
+    `with an apostrophe so it always reads as text; strip it when importing`,
+    `programmatically. Phone numbers like +1 305 555 0100 are never altered.`,
     ``,
     `Files:`,
     ...input.tables.map(
