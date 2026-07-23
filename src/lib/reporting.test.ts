@@ -45,6 +45,13 @@ describe("summarizeMonth", () => {
     expect(report.fillRate).toBeCloseTo(0.7);
   });
 
+  it("caps fill rate at fully booked when a trip was overbooked (capacity cut below bookings)", () => {
+    const report = summarizeMonth(
+      input({ trips: [trip({ capacity: 4, activeBookings: 6, waiverComplete: 0 })] }),
+    );
+    expect(report.fillRate).toBe(1);
+  });
+
   it("counts only sold-out trips as at capacity, and never an unbooked empty trip", () => {
     const report = summarizeMonth(
       input({
