@@ -38,7 +38,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
 
   await expect(page.getByRole("heading", { name: "The door swings both ways." })).toBeVisible();
 
-  // The four named incumbents are live; a roadmap entry still shows coming soon.
+  // The four named incumbents each have a live guide (no coming-soon entries).
   for (const name of [
     /Switching from EVE/,
     /Switching from DiveShop360/,
@@ -47,7 +47,6 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ]) {
     await expect(page.getByRole("link", { name })).toBeVisible();
   }
-  await expect(page.getByText("Coming soon").first()).toBeVisible();
 
   await page.getByRole("link", { name: /Switching from EVE/ }).click();
   await expect(page.getByRole("heading", { name: "Moving your shop off EVE" })).toBeVisible();
@@ -64,13 +63,13 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByText("Never").first()).toBeVisible();
 
   // Another live guide carries its own export path and a competitor-specific note.
-  await page.goto("/switch/smartwaiver");
+  await page.goto("/switching/smartwaiver");
   await expect(
     page.getByRole("heading", { name: "Moving your waivers off Smartwaiver" }),
   ).toBeVisible();
   await expect(page.getByText(/For a Smartwaiver export:/)).toBeVisible();
 
-  // A planned competitor has no page of its own.
-  const response = await page.goto("/switch/fareharbor");
+  // An unlisted incumbent has no page — no coming-soon shells.
+  const response = await page.goto("/switching/fareharbor");
   expect(response?.status()).toBe(404);
 });

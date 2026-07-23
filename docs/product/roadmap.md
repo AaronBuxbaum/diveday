@@ -29,13 +29,13 @@ reporting, no gear register). Breadth is done; depth and proof are the work.
 
 ### 1. Data-portability follow-ons (the wedge)
 
-Export and the diver/customer CSV importer have shipped; the rest of the "switching is safe" story is
-greenfield. Sequenced in
+Export, the diver/customer CSV importer, and the public migration guides have shipped; the rest of
+the "switching is safe" story is greenfield. Sequenced in
 [competitive-strategy.md](assessments/competitive-strategy.md#the-build-plan-in-order).
 
-- **Public migration guides** — "Switching from DiveShop360 / EVE / DiveAdmin / Smartwaiver", each an
-  exact export click-path + scope table + the importer. Live on the marketing surface
-  ([marketing.md](marketing.md)); "Switching from EVE" first.
+- ✅ **Public migration guides** — shipped: `/switching` hub plus a live page per named incumbent
+  (EVE, DiveShop360, DiveAdmin, Smartwaiver), each an export click-path + the importer's scope table
+  + the import walkthrough ([shipped.md](shipped.md), [marketing.md](marketing.md)).
 - **Scheduled backup export** to shop-owned storage (weekly bundle; `.ics` trip feeds ride along).
 - **Read API + webhooks**, every tier — token-scoped reads over the export schema plus
   booking/waiver/manifest events. **ADR required** before building.

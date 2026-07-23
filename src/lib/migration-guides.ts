@@ -31,12 +31,10 @@ export type ExportStep = {
 };
 
 export type MigrationGuide = {
-  /** URL segment: /switch/<slug>. */
+  /** URL segment: /switching/<slug>. */
   slug: string;
   /** The incumbent's name as shops know it. */
   competitor: string;
-  /** "live" guides have a page; "planned" render as a coming-soon card on the hub. */
-  status: "live" | "planned";
   /** One-line description used on the hub card. */
   cardSummary: string;
 
@@ -71,9 +69,8 @@ export type MigrationGuide = {
 const eve: MigrationGuide = {
   slug: "eve",
   competitor: "EVE",
-  status: "live",
   cardSummary:
-    "The PADI-endorsed Windows desktop CRM, now owned by DiveShop360. Export your customers and cards, then bring them here.",
+    "Long the Windows desktop shop-management system for PADI retailers, now owned by DiveShop360. Export your customers and cards, then bring them here.",
 
   metaTitle: "Switching from EVE to DiveDay",
   metaDescription:
@@ -85,8 +82,8 @@ const eve: MigrationGuide = {
     "EVE keeps your divers and their cards on a Windows PC in the back office. Here's how to get that data out of EVE yourself and bring your people, cards, and rental sizes into DiveDay — with a plain account of what makes the trip and what stays behind.",
 
   context: [
-    "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years. DiveShop360 acquired it in 2023, and shops on it are widely planning their move — so if you're reading this, you're likely deciding where to land, not whether to leave.",
-    "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your first trips out of the gate are safe and staffed, and the history stays where it already is.",
+    "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you're planning a move off it, this guide is about the practical part: getting your people and their cards out of EVE and into DiveDay.",
+    "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your people are in hand for your first trips, every card waiting as a claim your staff verify, and the history stays where it already is.",
     "One rule we won't bend: you export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data — that's your data to hand us, not ours to take.",
   ],
 
@@ -126,7 +123,7 @@ const eve: MigrationGuide = {
     },
   ],
   exportNotes: [
-    "Do this while your EVE install still opens. A working export today beats chasing a sunset system later.",
+    "Do this while your EVE install still opens and your license is active — a working export today beats chasing it later.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you exactly how each column mapped before you commit.",
     "Purchase and service history isn't part of this move, and that's by design — see the scope table below. It stays in your EVE records; DiveDay starts your people clean and ready.",
   ],
@@ -135,7 +132,6 @@ const eve: MigrationGuide = {
 const diveshop360: MigrationGuide = {
   slug: "diveshop360",
   competitor: "DiveShop360",
-  status: "live",
   cardSummary:
     "The retail-POS incumbent. Export the customer and certification CSVs its own FAQ names, then bring your people across.",
 
@@ -149,7 +145,7 @@ const diveshop360: MigrationGuide = {
     "DiveShop360 keeps your customers and their cards in the cloud, and its own help pages name the datasets you can export as CSV. Here's how to pull your people and certifications and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
 
   context: [
-    "DiveShop360 grew out of a retail point-of-sale platform, and that's where it's strongest — registers, inventory, vendor catalogs. Its own FAQ names four things you can export to CSV: customers, inventory, sales reports, and certification data. For a move to DiveDay you need two of them — customers and certification data. The other two are retail records DiveDay isn't trying to be a home for.",
+    "DiveShop360 grew out of a retail point-of-sale system, and that's where it's strongest — registers, inventory, vendor catalogs. Its own FAQ names four things you can export to CSV: customers, inventory, sales reports, and certification data. For a move to DiveDay you need two of them — customers and certification data. The other two are retail records DiveDay isn't trying to be a home for.",
     "We're not here to replace your point of sale. DiveDay runs the water — bookings, readiness, the boat — so \"bring your POS, we run the dive day\" is a real division of labor, not a slogan. That's also why we only ask for the customer and certification files, not your whole retail history.",
     "One rule we won't bend: you export your own CSV from your own DiveShop360 account. DiveDay never signs into DiveShop360 and never reaches across to pull your data — that's your data to hand us, not ours to take.",
   ],
@@ -201,7 +197,6 @@ const diveshop360: MigrationGuide = {
 const diveadmin: MigrationGuide = {
   slug: "diveadmin",
   competitor: "DiveAdmin",
-  status: "live",
   cardSummary:
     "The fast, cheap newcomer. Export your customer CSV — or use its Google Drive backup — and bring your roster across.",
 
@@ -261,7 +256,6 @@ const diveadmin: MigrationGuide = {
 const smartwaiver: MigrationGuide = {
   slug: "smartwaiver",
   competitor: "Smartwaiver",
-  status: "live",
   cardSummary:
     "Waivers only. Export your participant CSV and bring the people across — waivers are re-signed here, natively.",
 
@@ -315,47 +309,17 @@ const smartwaiver: MigrationGuide = {
 };
 
 /**
- * Still on the roadmap from competitive-strategy.md #3 — the OTA/booking-channel
- * pool. Renders as a coming-soon card on the hub until its page is written and
- * flipped to "live".
+ * Every guide in this registry is a real, published page — there are no
+ * roadmap or "coming soon" entries (marketing claims policy in
+ * docs/product/marketing.md is shipped-only). A future incumbent gets an entry
+ * here, and a route, only once its export click-path is real.
  */
-const planned: MigrationGuide[] = [
-  {
-    slug: "fareharbor",
-    competitor: "FareHarbor & Rezdy",
-    status: "planned",
-    cardSummary:
-      "The activity-booking channels. Export your customer CSV and bring the people across — walkthrough on the way.",
-    metaTitle: "Switching from FareHarbor or Rezdy to DiveDay",
-    metaDescription:
-      "Moving off FareHarbor or Rezdy? How to export your customers and bring them into DiveDay.",
-    heroEyebrow: "Switching to DiveDay",
-    heroTitle: "Moving your shop off FareHarbor or Rezdy",
-    heroLede: "",
-    context: [],
-    exportHeading: "",
-    exportIntro: "",
-    exportSteps: [],
-    exportNotes: [],
-  },
-];
+export const MIGRATION_GUIDES: MigrationGuide[] = [eve, diveshop360, diveadmin, smartwaiver];
 
-/** All guides, live first, in strategy-priority order. */
-export const MIGRATION_GUIDES: MigrationGuide[] = [
-  eve,
-  diveshop360,
-  diveadmin,
-  smartwaiver,
-  ...planned,
-];
+/** Slugs with a page — the source for generateStaticParams and route validity. */
+export const MIGRATION_GUIDE_SLUGS: string[] = MIGRATION_GUIDES.map((guide) => guide.slug);
 
-/** Slugs with a real page — the source for generateStaticParams and route validity. */
-export const LIVE_MIGRATION_GUIDE_SLUGS: string[] = MIGRATION_GUIDES.filter(
-  (guide) => guide.status === "live",
-).map((guide) => guide.slug);
-
-/** Look up a live guide by slug; planned or unknown slugs return null (→ 404). */
-export function getLiveMigrationGuide(slug: string): MigrationGuide | null {
-  const guide = MIGRATION_GUIDES.find((entry) => entry.slug === slug);
-  return guide && guide.status === "live" ? guide : null;
+/** Look up a guide by slug; an unknown slug returns null (→ 404). */
+export function getMigrationGuide(slug: string): MigrationGuide | null {
+  return MIGRATION_GUIDES.find((entry) => entry.slug === slug) ?? null;
 }

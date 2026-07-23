@@ -1,33 +1,26 @@
 import { describe, expect, it } from "vitest";
-import {
-  getLiveMigrationGuide,
-  LIVE_MIGRATION_GUIDE_SLUGS,
-  MIGRATION_GUIDES,
-} from "./migration-guides";
+import { getMigrationGuide, MIGRATION_GUIDE_SLUGS, MIGRATION_GUIDES } from "./migration-guides";
 
 describe("migration guides", () => {
-  it("exposes exactly the live slugs, with EVE first and the named incumbents live", () => {
-    const live = MIGRATION_GUIDES.filter((g) => g.status === "live").map((g) => g.slug);
-    expect(LIVE_MIGRATION_GUIDE_SLUGS).toEqual(live);
-    // EVE ships first, and the four named incumbents from the strategy are all live.
-    expect(LIVE_MIGRATION_GUIDE_SLUGS[0]).toBe("eve");
+  it("exposes every guide's slug, with EVE first and the named incumbents present", () => {
+    expect(MIGRATION_GUIDE_SLUGS).toEqual(MIGRATION_GUIDES.map((g) => g.slug));
+    // EVE ships first, and the four named incumbents from the strategy are all present.
+    expect(MIGRATION_GUIDE_SLUGS[0]).toBe("eve");
     for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver"]) {
-      expect(LIVE_MIGRATION_GUIDE_SLUGS).toContain(slug);
+      expect(MIGRATION_GUIDE_SLUGS).toContain(slug);
     }
   });
 
-  it("resolves a live guide by slug and refuses planned or unknown ones", () => {
-    expect(getLiveMigrationGuide("eve")?.competitor).toBe("EVE");
-    expect(getLiveMigrationGuide("smartwaiver")?.competitor).toBe("Smartwaiver");
-    // A planned competitor exists in the registry but has no page.
-    const planned = MIGRATION_GUIDES.find((g) => g.status === "planned");
-    expect(planned).toBeDefined();
-    if (planned) expect(getLiveMigrationGuide(planned.slug)).toBeNull();
-    expect(getLiveMigrationGuide("nope")).toBeNull();
+  it("resolves a guide by slug and refuses an unknown one", () => {
+    expect(getMigrationGuide("eve")?.competitor).toBe("EVE");
+    expect(getMigrationGuide("smartwaiver")?.competitor).toBe("Smartwaiver");
+    // No coming-soon / roadmap entries — an unlisted incumbent has no page.
+    expect(getMigrationGuide("fareharbor")).toBeNull();
+    expect(getMigrationGuide("nope")).toBeNull();
   });
 
-  it("every live guide carries the full three-part promise — no empty shell can ship live", () => {
-    for (const guide of MIGRATION_GUIDES.filter((g) => g.status === "live")) {
+  it("every guide carries the full three-part promise — no empty shell can ship", () => {
+    for (const guide of MIGRATION_GUIDES) {
       expect(guide.heroLede.trim().length, `${guide.slug} lede`).toBeGreaterThan(0);
       expect(guide.context.length, `${guide.slug} context`).toBeGreaterThan(0);
       expect(guide.exportHeading.trim().length, `${guide.slug} export heading`).toBeGreaterThan(0);
@@ -47,7 +40,7 @@ describe("migration guides", () => {
   it("never instructs a shop to hand DiveDay a competitor login (legal guardrail)", () => {
     // We migrate from files the shop exports itself; the copy must not describe
     // logging DiveDay into the incumbent or handing over its credentials.
-    for (const guide of MIGRATION_GUIDES.filter((g) => g.status === "live")) {
+    for (const guide of MIGRATION_GUIDES) {
       const prose = [
         guide.heroLede,
         ...guide.context,
