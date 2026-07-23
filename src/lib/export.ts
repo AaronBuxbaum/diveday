@@ -38,15 +38,16 @@ export const EXPORT_FILE_NOTES = {
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
   "trip_dives.csv": "The ordered dives within each trip, with their sites.",
   "trip_requirements.csv":
-    "Each trip's boarding gates: waiver, minimum level, specialties, nitrox, payment.",
+    "Each trip's own boarding gates: waiver, minimum level, specialties, nitrox, payment. Not the whole gate — the effective requirement also composes in each visited dive site's gate (stricter minimum level wins, specialties union, nitrox if either says so); apply that composition in any system enforcing boarding from this export.",
   "trip_assignments.csv": "Which staff crewed each trip.",
-  "bookings.csv": "Every booking with its trip, diver, and payment state.",
+  "bookings.csv":
+    "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified enriched-air card, checked at fill time.",
   "roll_call_events.csv":
-    "The boarding and roll-call ledger — every head-count event, with who recorded it.",
+    "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only: the newest event per booking and checkpoint is that diver's current state, a 'cleared' event undoes the one before it (back to awaiting), and no events means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "waiver_templates.csv":
     "Every waiver template version, full text included — signed records reference these.",
   "waiver_records.csv":
-    "Issued and signed waiver evidence; the signed text is the referenced template version.",
+    "Issued and signed waiver evidence; the signed text is the referenced template version. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
 } as const;
 
@@ -56,7 +57,13 @@ export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
 export function csvCell(value: CsvValue): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
-  const text = typeof value === "string" ? value : String(value);
+  let text = typeof value === "string" ? value : String(value);
+  // Formula-injection guard (OWASP): a diver-supplied string starting with
+  // =, +, -, @, tab, or CR would execute when the owner opens the CSV in
+  // Excel/Sheets, so it gets a protective leading apostrophe (the README
+  // tells programmatic importers to strip it). Strings only — a negative
+  // number like a winter water temperature must serialize untouched.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   // Quote only when needed: embedded quote, comma, or line break.
   if (/[",\r\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
   return text;
@@ -95,7 +102,7 @@ const NOT_INCLUDED = [
   "Offline manifest snapshots (device-side copies of the live records exported here).",
   "Wait-list entries, notification delivery logs, and Stripe checkout/order records.",
   "The dive-site library and course catalog content (trips and dives carry their site names and ids).",
-  "Certification card images (the CSVs carry each card's stored image reference).",
+  "Certification card images (the CSVs carry each card's stored image reference; those references stay readable while the shop's DiveDay account is active — save copies before closing an account).",
   "Login accounts and password hashes — credentials are never exported.",
 ];
 
@@ -121,9 +128,15 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     `Every file is UTF-8 CSV (RFC 4180). Timestamps are ISO 8601 in UTC.`,
     `Money columns are minor units (cents). Rows with a deleted_at value are`,
     `soft-archived history — kept so nothing is lost in a migration.`,
+    `Text cells a spreadsheet could mistake for a formula (starting with =, +, -,`,
+    `or @) carry a protective leading apostrophe; strip it when importing`,
+    `programmatically.`,
     ``,
     `Files:`,
-    ...input.tables.map((table) => `- ${table.file} (${table.rows.length} rows): ${table.note}`),
+    ...input.tables.map(
+      (table) =>
+        `- ${table.file} (${table.rows.length} ${table.rows.length === 1 ? "row" : "rows"}): ${table.note}`,
+    ),
     ``,
     `Not included in this bundle:`,
     ...NOT_INCLUDED.map((line) => `- ${line}`),

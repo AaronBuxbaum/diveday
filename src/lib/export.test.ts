@@ -18,6 +18,18 @@ describe("csv serialization", () => {
     expect(csvCell(0)).toBe("0");
   });
 
+  it("defangs strings a spreadsheet would execute as formulas, and only strings", () => {
+    // A walk-up named "=HYPERLINK(...)" must not run on the owner's machine.
+    expect(csvCell('=HYPERLINK("https://evil.example","tap")')).toBe(
+      '"\'=HYPERLINK(""https://evil.example"",""tap"")"',
+    );
+    expect(csvCell("+1 305 555 0100")).toBe("'+1 305 555 0100");
+    expect(csvCell("@channel")).toBe("'@channel");
+    expect(csvCell("-drift note")).toBe("'-drift note");
+    // Numbers are ours, not diver input — a winter water temperature stays intact.
+    expect(csvCell(-2)).toBe("-2");
+  });
+
   it("builds a header-first CRLF document and rejects ragged rows", () => {
     const csv = buildCsv(["id", "name"], [["1", "Ada"]]);
     expect(csv).toBe("id,name\r\n1,Ada\r\n");
