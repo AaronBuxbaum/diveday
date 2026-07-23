@@ -49,7 +49,7 @@ export const productFeatureGroups = [
 
 export const earlyAccessPrice = {
   name: "Founding shop",
-  price: "$149",
+  price: "$99",
   cadence: "per location / month",
   description: "One clear price for the whole shop — every role, every workflow, no per-seat math.",
   included: [
