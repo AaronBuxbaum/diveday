@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  deleteStoredImage,
   imageStorageProviderFromEnvironment,
   MAX_CARD_IMAGE_BYTES,
   MAX_COURSE_IMAGE_BYTES,
@@ -106,5 +107,37 @@ describe("course image storage", () => {
       ),
     ).toEqual({ status: "failed" });
     expect(provider.upload).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteStoredImage (best-effort cleanup)", () => {
+  it("no-ops without a token", async () => {
+    const fetchImpl = vi.fn();
+    await deleteStoredImage("https://blob/x.jpg", {}, fetchImpl as unknown as typeof fetch);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("posts the blob URL to the delete endpoint when a token is set", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true });
+    await deleteStoredImage(
+      "https://blob/x.jpg",
+      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(String(url)).toContain("/delete");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ urls: ["https://blob/x.jpg"] });
+  });
+
+  it("swallows a provider error — cleanup never throws", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
+    await expect(
+      deleteStoredImage(
+        "https://blob/x.jpg",
+        { BLOB_READ_WRITE_TOKEN: "test-token" },
+        fetchImpl as unknown as typeof fetch,
+      ),
+    ).resolves.toBeUndefined();
   });
 });
