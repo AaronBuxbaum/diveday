@@ -26,6 +26,7 @@ import {
   orders,
   people,
   personRoles,
+  recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
   shops,
@@ -128,6 +129,12 @@ export async function loadShopExportBundleInput(
         .from(diveSiteMoments)
         .where(eq(diveSiteMoments.shopId, shopId))
         .orderBy(asc(diveSiteMoments.createdAt), asc(diveSiteMoments.id));
+
+      const recapPhotoRows = await tx
+        .select()
+        .from(recapPhotos)
+        .where(eq(recapPhotos.shopId, shopId))
+        .orderBy(asc(recapPhotos.createdAt), asc(recapPhotos.id));
 
       const courseRows = await tx
         .select()
@@ -975,6 +982,19 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["dive_site_moments.csv"],
         },
         {
+          file: "recap_photos.csv",
+          header: ["id", "booking_id", "trip_id", "image_url", "caption", "created_at"],
+          rows: recapPhotoRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.tripId,
+            row.imageUrl,
+            row.caption,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["recap_photos.csv"],
+        },
+        {
           file: "courses.csv",
           header: [
             "id",
@@ -1130,6 +1150,9 @@ export async function loadShopExportCounts(
     ),
     "dive_site_moments.csv": await countOf(
       db.select({ n: count() }).from(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId)),
+    ),
+    "recap_photos.csv": await countOf(
+      db.select({ n: count() }).from(recapPhotos).where(eq(recapPhotos.shopId, shopId)),
     ),
     "courses.csv": await countOf(
       db.select({ n: count() }).from(courses).where(eq(courses.shopId, shopId)),

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { LogoMark } from "@/components/Logo";
 import { signOut } from "@/lib/auth";
 import { ShopNavLinks } from "./ShopNavLinks";
@@ -44,6 +45,7 @@ export function ShopNav({
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
           <CommandPalette shopSlug={shopSlug} boatBoardingHref={boatBoardingHref} />
+          <KeyboardShortcuts shopSlug={shopSlug} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
