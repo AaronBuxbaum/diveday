@@ -6,7 +6,7 @@ import { seededShopContext } from "@/test/db";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
 import * as schema from "./schema";
-import { people, personRoles, shops, userAccounts } from "./schema";
+import { certifications, people, personRoles, shops, userAccounts } from "./schema";
 import { issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
@@ -213,6 +213,72 @@ describe("full-shop export dataset", () => {
     for (const row of contacts.rows) {
       expect([true, false]).toContain(cell(row, "nitrox_certified"));
     }
+  });
+
+  it("never lets an expired card outrank a current one in contacts.csv", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = new Date("2026-07-23T12:00:00.000Z");
+
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Lapsed Card Lee", email: "lee@example.com" })
+      .returning();
+    await db.insert(certifications).values([
+      {
+        shopId: shop.id,
+        personId: diver.id,
+        agency: "padi",
+        level: "rescue",
+        identifier: "EXPIRED-RESCUE-1",
+        status: "verified",
+        expiresAt: new Date("2025-01-01T00:00:00.000Z"),
+      },
+      {
+        shopId: shop.id,
+        personId: diver.id,
+        agency: "padi",
+        level: "open_water",
+        identifier: "CURRENT-OW-1",
+        status: "verified",
+        expiresAt: null,
+      },
+    ]);
+    const [onlyExpired] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Only Expired Erin", email: "erin@example.com" })
+      .returning();
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: onlyExpired.id,
+      agency: "ssi",
+      level: "advanced_open_water",
+      identifier: "EXPIRED-AOW-1",
+      status: "verified",
+      expiresAt: new Date("2024-06-01T00:00:00.000Z"),
+    });
+
+    const input = await loadShopExportBundleInput(db, shop.id, now);
+    if (!input) throw new Error("shop failed to load");
+    const contacts = table(input, "contacts.csv");
+    const cell = (row: (typeof contacts.rows)[number], header: string) =>
+      row[contacts.header.indexOf(header)];
+
+    // A current lower card beats an expired higher one — an expired card is
+    // history, not evidence, and must not migrate as a live claim.
+    const lee = contacts.rows.find((row) => cell(row, "full_name") === "Lapsed Card Lee");
+    expect(lee).toBeDefined();
+    if (!lee) return;
+    expect(cell(lee, "certification_number")).toBe("CURRENT-OW-1");
+    expect(cell(lee, "certification_level")).toBe("open_water");
+    expect(cell(lee, "certification_expires_at")).toBeNull();
+
+    // A diver with nothing current still exports their history — with the
+    // expiry visible so the destination can enforce it.
+    const erin = contacts.rows.find((row) => cell(row, "full_name") === "Only Expired Erin");
+    expect(erin).toBeDefined();
+    if (!erin) return;
+    expect(cell(erin, "certification_number")).toBe("EXPIRED-AOW-1");
+    expect(cell(erin, "certification_expires_at")).toEqual(new Date("2024-06-01T00:00:00.000Z"));
   });
 
   it("exports issued waiver evidence linked to its template version", async () => {

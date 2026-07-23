@@ -19,10 +19,10 @@ export async function GET() {
       status: 403,
     });
   }
-  const input = await loadShopExportBundleInput(db, session.user.shopId);
+  const now = nowDate();
+  const input = await loadShopExportBundleInput(db, session.user.shopId, now);
   if (!input) return new Response("Shop not found", { status: 404 });
 
-  const now = nowDate();
   const zip = zipExportBundle(buildExportBundle(input, now));
   const fileName = exportFileName(input.shopSlug, now, input.timezone);
   return new Response(new Uint8Array(zip), {
