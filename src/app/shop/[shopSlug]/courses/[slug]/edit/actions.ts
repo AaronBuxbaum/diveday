@@ -10,10 +10,12 @@ import {
   updateCourse,
   updateCourseContent,
 } from "@/db/courses";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { parseFaqs, parseLines, parseScheduleDays, splitCourseImageUrls } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCourseImage } from "@/lib/storage";
+import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 
 const money = z.union([z.literal(""), z.coerce.number().nonnegative().max(100_000)]);
 const centsFromDollars = (value: number | "") => (value === "" ? null : Math.round(value * 100));
@@ -59,8 +61,15 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
   if (!course) redirect(`/shop/${shopSlug}/courses?notice=invalid`);
 
+  const newGalleryFiles = formData
+    .getAll("galleryImageFiles")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+  if (newGalleryFiles.length > MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION) {
+    redirect(`${base}?error=too-many-photos`);
+  }
+
   const hero = await uploadImage(formData.get("heroImageFile"));
-  const gallery = await Promise.all(formData.getAll("galleryImageFiles").map(uploadImage));
+  const gallery = await Promise.all(newGalleryFiles.map(uploadImage));
   if (hero.failed || gallery.some((image) => image.failed)) redirect(`${base}?error=upload`);
 
   // Photos are managed by upload now: new files append to the gallery, and the
@@ -99,6 +108,24 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     priceCents: centsFromDollars(value.price),
     eLearningPriceCents: centsFromDollars(value.eLearningPrice),
   });
+
+  // Once the content row is durably saved, any photo it no longer references
+  // (replaced hero, removed gallery photo) is queued for provider deletion —
+  // never blocked on storage, retried/owner-visible if it fails (CR-012).
+  if (saved) {
+    const supersededUrls = [
+      ...(course.heroImageUrl && course.heroImageUrl !== heroImageUrl ? [course.heroImageUrl] : []),
+      ...course.imageUrls.filter((url) => !imageUrls.includes(url)),
+    ];
+    for (const url of supersededUrls) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId: staff.user.shopId,
+        kind: "course_photo",
+        url,
+      });
+    }
+  }
+
   // The page the diver reads is a different route from the one staff just
   // saved; both have to go stale or the edit looks like it did not take.
   revalidatePath(`/shop/${shopSlug}/courses/${slug}`);

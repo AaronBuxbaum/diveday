@@ -97,6 +97,38 @@ test.describe("staff", () => {
     await expect(page).toHaveURL(/\/sign-in/);
   });
 
+  test("oversize and over-limit course photos are rejected client-side (CR-011)", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/courses");
+    const row = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
+    await row.getByRole("link", { name: "Edit" }).click();
+    await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\/edit/);
+
+    const heroInput = page.locator('input[name="heroImageFile"]');
+    await heroInput.setInputFiles({
+      name: "hero.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.alloc(6 * 1024 * 1024), // over the 5 MB course-photo limit
+    });
+    await expect(page.getByRole("alert").filter({ hasText: "over 5 MB" })).toBeVisible();
+    await expect(heroInput).toHaveValue("");
+
+    // The gallery accepts new photos in small batches (next.config.ts's Server
+    // Actions body limit is sized for that batch, not an unbounded multi-file
+    // body) — picking more than the batch cap at once is rejected the same way.
+    const galleryInput = page.locator('input[name="galleryImageFiles"]');
+    await galleryInput.setInputFiles([
+      { name: "one.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
+      { name: "two.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
+      { name: "three.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
+    ]);
+    await expect(
+      page.getByRole("alert").filter({ hasText: "up to 2 photos at a time" }),
+    ).toBeVisible();
+    await expect(galleryInput).toHaveValue("");
+  });
+
   test("a diver books a course session from its public page", async ({ page }) => {
     // Schedule this run's own session rather than spending a seeded seat: the e2e
     // database persists across runs, so a test that books the demo session works

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { type BookingOutcome, cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
@@ -144,7 +145,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const startsAt = wallTimeToUtc(sw, shopNow.timezone);
   const endsAt = wallTimeToUtc(ew, shopNow.timezone);
   if (endsAt <= startsAt) redirect(`${back}?notice=end-before-start`);
-  await updateTrip(dbi, s.user.shopId, tripId, {
+  const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
     startsAt,
@@ -157,6 +158,17 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
     dives: tripDiveDraftsFromForm(formData, plannedDives),
   });
+  if (!outcome.ok) {
+    if (outcome.reason === "capacity_below_booked") {
+      redirect(`${back}?notice=capacity-below-booked&count=${outcome.detail.bookedCount}`);
+    }
+    if (outcome.reason === "planned_dives_below_history") {
+      redirect(
+        `${back}?notice=planned-dives-below-history&count=${outcome.detail.recordedDiveCount}`,
+      );
+    }
+    redirect(`${back}?notice=invalid`);
+  }
   revalidateAndRedirect(back, `${back}?notice=saved`);
 }
 
@@ -290,7 +302,18 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
   const s = await requireStaffSession();
   const photoId = String(formData.get("photoId") ?? "");
   if (!photoId) redirect(back);
-  await deleteRecapPhoto(await getDb(), s.user.shopId, photoId);
+  const db = await getDb();
+  const result = await deleteRecapPhoto(db, s.user.shopId, photoId);
+  // The row leaving is the diver-visible "removed" — never blocked on
+  // storage. The blob object is queued for deletion and retried on its own
+  // (CR-012); a provider failure surfaces on the reports page, not here.
+  if (result.deleted) {
+    await queueAndAttemptMediaDeletion(db, {
+      shopId: s.user.shopId,
+      kind: "recap_photo",
+      url: result.imageUrl,
+    });
+  }
   revalidateAndRedirect(back, `${back}?notice=recap-photo-removed`);
 }
 
@@ -298,7 +321,8 @@ export async function saveCrewAction(shopSlug: string, tripId: string, formData:
   const back = backPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const ids = formData.getAll("crew").map(String);
-  await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
+  const saved = await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
+  if (!saved) redirect(`${back}?notice=invalid`);
   revalidateAndRedirect(back, `${back}?notice=crew`);
 }
 

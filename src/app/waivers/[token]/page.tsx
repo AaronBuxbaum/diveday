@@ -7,6 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import type { MedicalAnswers } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -17,10 +18,10 @@ import {
   saveBookingEmergencyContact,
   saveWaiverDraft,
 } from "@/db/waivers";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { readinessLinkPath } from "@/lib/readiness-links";
 
 export const metadata: Metadata = {
   title: "Complete your waiver — DiveDay",
@@ -139,8 +140,16 @@ export default async function WaiverPage({
     const needsReview = state.record.status === "medical_review";
     // The token knows its booking, so send them onward to their own readiness
     // page rather than dead-ending on the shop home — that's where the rest of
-    // their pre-trip prep (payment, rentals, nitrox) lives.
-    const readyPath = readinessLinkPath(state.record.bookingId);
+    // their pre-trip prep (payment, rentals, nitrox) lives. Minting a fresh
+    // readiness capability here (rather than trying to recall a prior one) is
+    // the same tradeoff issueBookingCapability always makes: only the hash of
+    // an issued token is ever kept.
+    const readyCapability = await issueBookingCapability(db, {
+      shopId: state.record.shopId,
+      bookingId: state.record.bookingId,
+      purpose: "readiness",
+    });
+    const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
         <section className="rise-in rounded-lg border border-accent/40 bg-accent/10 p-7">
@@ -153,9 +162,11 @@ export default async function WaiverPage({
               ? "Thanks — a team member will privately review one of your answers before the trip. Please don’t assume you’re cleared until they confirm."
               : "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed."}
           </p>
-          <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
-            See what’s left before you sail
-          </Link>
+          {readyPath ? (
+            <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
+              See what’s left before you sail
+            </Link>
+          ) : null}
         </section>
       </main>
     );

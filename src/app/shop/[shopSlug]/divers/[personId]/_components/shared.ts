@@ -2,6 +2,7 @@ import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
 import type { getShopById } from "@/db/shops";
 import type { upcomingTripsWithCounts } from "@/db/trips";
+import { type CalendarDate, isCalendarDateExpired } from "@/lib/calendar-date";
 
 export type DiverProfile = NonNullable<Awaited<ReturnType<typeof getDiverProfile>>>;
 export type Shop = NonNullable<Awaited<ReturnType<typeof getShopById>>>;
@@ -59,18 +60,23 @@ export const CARD_STATUS_LABELS: Record<CardDisplayStatus, string> = {
 
 /**
  * A card past its expiry no longer counts as a valid certification — the same
- * rule the readiness engine applies in `validVerifiedCertification`.
+ * rule the readiness engine applies in `validVerifiedCertification`, compared
+ * against the shop's own local calendar date rather than a UTC instant
+ * (CR-009, src/lib/calendar-date.ts).
  */
-export function isCardExpired(card: { expiresAt?: Date | null }, now: Date): boolean {
-  return Boolean(card.expiresAt && card.expiresAt <= now);
+export function isCardExpired(
+  card: { expiresAt?: CalendarDate | null },
+  todayLocal: CalendarDate,
+): boolean {
+  return Boolean(card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal));
 }
 
 /** An expired verified card reads as `expired`; every other state is unchanged. */
 export function cardDisplayStatus(
-  card: { status: CardStatus; expiresAt?: Date | null },
-  now: Date,
+  card: { status: CardStatus; expiresAt?: CalendarDate | null },
+  todayLocal: CalendarDate,
 ): CardDisplayStatus {
-  return card.status === "verified" && isCardExpired(card, now) ? "expired" : card.status;
+  return card.status === "verified" && isCardExpired(card, todayLocal) ? "expired" : card.status;
 }
 
 export function statusTone(status: CardDisplayStatus): BadgeTone {

@@ -1,7 +1,9 @@
+import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
@@ -10,6 +12,7 @@ import {
   CARD_STATUS_LABELS,
   cardDisplayStatus,
   type DiverProfile,
+  type Shop,
   statusTone,
 } from "./shared";
 
@@ -17,12 +20,14 @@ export function CertificationCards({
   diver,
   shopSlug,
   personId,
+  shop,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
+  shop: Shop;
 }) {
-  const now = nowDate();
+  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   return (
     <section className="mt-10" aria-labelledby="cards-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -75,12 +80,7 @@ export function CertificationCards({
               hint="(optional; JPG, PNG, or WebP; ≤5 MB)"
               className="sm:col-span-2"
             >
-              <input
-                name="cardImage"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className={controlClass}
-              />
+              <ImageFileInput name="cardImage" />
             </Field>
             <FieldActions>
               <SubmitButton
@@ -100,7 +100,7 @@ export function CertificationCards({
           </li>
         ) : (
           diver.certifications.map((card) => {
-            const display = cardDisplayStatus(card, now);
+            const display = cardDisplayStatus(card, todayLocal);
             const expired = display === "expired";
             return (
               <li
@@ -115,7 +115,7 @@ export function CertificationCards({
                     {card.identifier}
                     {card.expiresAt ? (
                       <span className={expired ? "font-medium text-danger" : undefined}>
-                        {` · ${expired ? "expired" : "expires"} ${card.expiresAt.toLocaleDateString("en-US")}`}
+                        {` · ${expired ? "expired" : "expires"} ${formatCalendarDate(card.expiresAt)}`}
                       </span>
                     ) : null}
                   </p>

@@ -44,7 +44,7 @@ async function seededContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const trip = trips.find((t) => t.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("expected seeded trip missing");
-  const roster = await getTripRoster(db, trip.id);
+  const roster = await getTripRoster(db, shop.id, trip.id);
   const [row] = roster;
   if (!row) throw new Error("expected seeded booking missing");
   const [staff] = await db

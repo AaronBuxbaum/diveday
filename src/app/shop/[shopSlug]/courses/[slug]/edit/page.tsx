@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ImageFileInput } from "@/components/ImageFileInput";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { getCourseBySlug } from "@/db/courses";
 import { formatFaqs, formatScheduleDays } from "@/lib/courses";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Edit course page — DiveDay" };
@@ -23,6 +25,7 @@ const errors: Record<string, string> = {
   invalid: "That didn’t save. Check the fields and try again.",
   images: "You can keep up to eight gallery photos. Remove one before adding more.",
   upload: "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
+  "too-many-photos": `Add up to ${MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION} new gallery photos per save. Save this batch, then add more.`,
 };
 
 const dollarsInput = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2));
@@ -176,14 +179,12 @@ export default async function EditCoursePage({
                   </label>
                 </div>
               ) : null}
-              <input
-                name="heroImageFile"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className={controlClass}
-              />
+              <ImageFileInput name="heroImageFile" />
             </Field>
-            <Field label="Gallery photos" hint="(up to eight in total)">
+            <Field
+              label="Gallery photos"
+              hint={`(up to eight in total, ${MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION} new per save)`}
+            >
               {course.imageUrls.length > 0 ? (
                 <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {course.imageUrls.map((url) => (
@@ -213,12 +214,10 @@ export default async function EditCoursePage({
                   ))}
                 </div>
               ) : null}
-              <input
+              <ImageFileInput
                 name="galleryImageFiles"
-                type="file"
                 multiple
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className={controlClass}
+                maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
               />
             </Field>
           </FieldGrid>

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -113,7 +114,18 @@ export const people = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("people_shop_idx").on(table.shopId)],
+  (table) => [
+    index("people_shop_idx").on(table.shopId),
+    // Case-insensitive so "Nora@x.com" and "nora@x.com" can never split one
+    // diver's cert/waiver/rental history into two rows (CR-008). Partial on
+    // the live rows only, matching the archive-not-delete pattern elsewhere:
+    // a soft-deleted person's email frees up for a genuinely new person, and
+    // an undelete that would collide with an active row is refused
+    // (src/db/people.ts — findOrCreatePerson, restoreDiver-style callers).
+    uniqueIndex("people_shop_email_unique")
+      .on(table.shopId, sql`lower(${table.email})`)
+      .where(sql`${table.deletedAt} is null and ${table.email} is not null`),
+  ],
 );
 
 export const personRoles = pgTable(
@@ -527,6 +539,17 @@ export const bookings = pgTable(
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     status: bookingStatus("status").notNull().default("booked"),
+    /**
+     * Set for the duration of one in-flight checkout attempt covering this
+     * booking (`payment_operation_intents.id`), cleared once that attempt
+     * resolves either way. A second concurrent `startBookingCheckout` call
+     * for the same booking can claim it only while this is null, so two
+     * racing attempts can never both mint a Stripe Checkout session for the
+     * same seat (CR-005) — see src/db/checkouts.ts. Not a typed FK: that
+     * reference is mutual with `payment_operation_intents.booking_id`, and
+     * drizzle can't type two tables that reference each other's primary key.
+     */
+    pendingCheckoutIntentId: uuid("pending_checkout_intent_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -866,6 +889,69 @@ export const orderLineItems = pgTable(
   (table) => [index("order_line_items_order_idx").on(table.orderId)],
 );
 
+export const paymentOperationKind = pgEnum("payment_operation_kind", [
+  "checkout_session",
+  "invoice",
+  "refund",
+]);
+
+/**
+ * `started` is written and committed *before* the Stripe call it describes —
+ * the durable evidence a crash between "Stripe was asked" and "the local
+ * order/checkout/payment row was written" leaves behind. `succeeded`/`failed`
+ * mean the Stripe call itself returned; a row still `started` past a short
+ * staleness window is exactly the "indeterminate operation" CR-005 exists to
+ * surface (`listStuckPaymentOperations`, src/db/payment-operations.ts).
+ */
+export const paymentOperationStatus = pgEnum("payment_operation_status", [
+  "started",
+  "succeeded",
+  "failed",
+]);
+
+/**
+ * One row per attempted Stripe side effect (create a Checkout session, create
+ * or refund an invoice, refund a checkout) — written before the call, not
+ * after, so the attempt itself is durable even if the process dies mid-call
+ * or the local order/checkout/payment write that should follow never
+ * happens. `id` is also the deterministic idempotency-key material
+ * (`idempotencyKeyFor`, src/db/payment-operations.ts): retrying the same
+ * logical attempt reuses the same intent row and the same Stripe idempotency
+ * key, so a retry after a lost response converges on one Stripe object
+ * instead of creating a second one. Exactly one of `tripId`/`bookingId`/
+ * `orderId`/`checkoutId` is populated, matching `kind` (CR-005).
+ */
+export const paymentOperationIntents = pgTable(
+  "payment_operation_intents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: paymentOperationKind("kind").notNull(),
+    status: paymentOperationStatus("status").notNull().default("started"),
+    /** Set for a checkout_session intent — which trip's booking(s) this session is for. */
+    tripId: uuid("trip_id").references(() => trips.id),
+    /**
+     * Set for an invoice intent that settles a booking's payment gate (null
+     * for a booking-less order), or for a checkout-refund intent
+     * (refundBookingOnCancellation operates by bookingId, not a
+     * booking_checkouts row — it never has one in hand).
+     */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /** Set for a refund intent against an order's invoice. */
+    orderId: uuid("order_id").references(() => orders.id),
+    /** Reserved for a future refund path that has a booking_checkouts row in hand; no caller sets this today. */
+    checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
+    /** The Stripe object id once known, even if the local finalize write then failed. */
+    stripeObjectId: text("stripe_object_id"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [index("payment_operation_intents_shop_status_idx").on(table.shopId, table.status)],
+);
+
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
 export const tripAssignments = pgTable(
   "trip_assignments",
@@ -1010,6 +1096,57 @@ export const waiverRecords = pgTable(
   ],
 );
 
+/**
+ * What a `booking_capabilities` row authorizes. `readiness` covers the diver
+ * self-service page (view + emergency contact + rental fit + nitrox + pay +
+ * request a waiver link); `confirm` covers the public schedule-confirmation
+ * page reached right after booking. Both are read+write for their purpose —
+ * split into separate purposes (not separate read/write tokens) because
+ * neither purpose's read and write lifetimes differ in practice.
+ */
+export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
+  "readiness",
+  "confirm",
+]);
+
+/**
+ * A revocable, expiring bearer credential over one booking (CR-002/CR-003).
+ * Unlike a waiver link, issuing a new capability does not supersede an
+ * earlier still-valid one for the same booking+purpose — a diver may be
+ * holding an earlier email's link and a later reminder's link at once, and
+ * both should keep working until they individually expire or are revoked.
+ * Only the hash is stored; the raw bearer token exists solely in the
+ * response that issued it.
+ */
+export const bookingCapabilities = pgTable(
+  "booking_capabilities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    purpose: bookingCapabilityPurpose("purpose").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The verify-path lookup: hash the bearer token, find the row.
+    index("booking_capabilities_token_hash_idx").on(table.tokenHash),
+    // Revocation-cascade and staff-facing "active links for this booking" lookups.
+    index("booking_capabilities_booking_purpose_idx").on(
+      table.bookingId,
+      table.purpose,
+      table.revokedAt,
+    ),
+  ],
+);
+
 /** Evidence belongs to a person; requirements decide whether it is sufficient for a trip. */
 export const certifications = pgTable(
   "certifications",
@@ -1026,7 +1163,13 @@ export const certifications = pgTable(
     identifier: text("identifier").notNull(),
     /** Storage seam comes later; this is a provider-neutral durable reference. */
     cardImageUrl: text("card_image_url"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /**
+     * Date-only, no time-of-day or timezone (CR-009): a card is valid
+     * through the end of its own local calendar day in the shop's
+     * timezone, not a fixed UTC instant that expires early or late
+     * depending on the shop's offset. See src/lib/calendar-date.ts.
+     */
+    expiresAt: date("expires_at", { mode: "string" }),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -1039,8 +1182,10 @@ export const certifications = pgTable(
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
     // Partial on the live rows only, so archiving a card frees its number for
     // re-entry (e.g. a renewed card carrying the same identifier).
+    // Case-insensitive so "ab1234" and "AB1234" can't create two live rows
+    // for what is the same physical card (CR-009).
     uniqueIndex("certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, table.identifier)
+      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
@@ -1067,7 +1212,8 @@ export const specialtyCertifications = pgTable(
     identifier: text("identifier").notNull(),
     /** Storage seam comes later; this is a provider-neutral durable reference. */
     cardImageUrl: text("card_image_url"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** Date-only, shop-local expiry — see certifications.expiresAt (CR-009). */
+    expiresAt: date("expires_at", { mode: "string" }),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -1077,8 +1223,9 @@ export const specialtyCertifications = pgTable(
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
+    // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
     uniqueIndex("specialty_certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, table.identifier)
+      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
@@ -1183,8 +1330,9 @@ export const nitroxCertifications = pgTable(
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
+    // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
     uniqueIndex("nitrox_certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, table.identifier)
+      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
@@ -1274,6 +1422,44 @@ export const recapPhotos = pgTable(
   ],
 );
 
+export const mediaDeletionKind = pgEnum("media_deletion_kind", ["course_photo", "recap_photo"]);
+
+export const mediaDeletionStatus = pgEnum("media_deletion_status", [
+  "pending",
+  "succeeded",
+  "failed",
+]);
+
+/**
+ * One row per "this blob object should no longer exist" decision — a recap
+ * photo's row deleted by staff moderation, or a course hero/gallery photo
+ * superseded on save. Mirrors `paymentOperationIntents` (CR-005): the local
+ * removal (the row gone, the URL dropped from `imageUrls`) is never blocked on
+ * storage, so this table is the durable record of "we still owe a delete"
+ * that survives a crash between the local change and the provider call
+ * succeeding. A `pending` row that never resolved (the process died before
+ * the delete call returned) and a `failed` row (the delete call itself
+ * failed) both need the same retry — `attempts`/`lastError` exist so an owner
+ * sees why, not just that (CR-012).
+ */
+export const mediaDeletionAttempts = pgTable(
+  "media_deletion_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: mediaDeletionKind("kind").notNull(),
+    url: text("url").notNull(),
+    status: mediaDeletionStatus("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status)],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -1304,3 +1490,8 @@ export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
 export type RecapPhoto = typeof recapPhotos.$inferSelect;
+export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
+export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;
+export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
+export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
+export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signReadinessToken } from "./readiness-links";
+import { createCapabilityToken } from "./booking-capabilities";
 import { recapLinkPath, signRecapToken, verifyRecapToken } from "./recap-links";
 
 const BOOKING = "11111111-2222-3333-4444-555555555555";
@@ -19,10 +19,10 @@ describe("recap tokens", () => {
     expect(verifyRecapToken("")).toBeNull();
   });
 
-  it("refuses a readiness token — the two links are not interchangeable", () => {
-    // A readiness token signs the bare booking id with no recap purpose prefix,
-    // so it must not verify as a recap token even though the secret is shared.
-    expect(verifyRecapToken(signReadinessToken(BOOKING))).toBeNull();
+  it("refuses a readiness capability token — the two links are not interchangeable", () => {
+    // A readiness link (src/db/booking-capabilities.ts) is an unrelated opaque
+    // bearer token with no HMAC structure at all, so it must not verify here.
+    expect(verifyRecapToken(createCapabilityToken())).toBeNull();
   });
 
   it("builds an absolute recap path", () => {

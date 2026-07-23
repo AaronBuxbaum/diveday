@@ -270,17 +270,23 @@ export async function listRecapPhotosForTrip(
     .orderBy(desc(recapPhotos.createdAt));
 }
 
-/** Take a photo down — the moderation seam, shop-scoped. Returns whether a row went. */
+export type DeleteRecapPhotoResult = { deleted: true; imageUrl: string } | { deleted: false };
+
+/**
+ * Take a photo down — the moderation seam, shop-scoped. Returns the removed
+ * row's URL so the caller can queue the blob object for deletion too
+ * (CR-012) — this function only owns the row.
+ */
 export async function deleteRecapPhoto(
   db: AppDb,
   shopId: string,
   photoId: string,
-): Promise<boolean> {
-  const removed = await db
+): Promise<DeleteRecapPhotoResult> {
+  const [removed] = await db
     .delete(recapPhotos)
     .where(and(eq(recapPhotos.id, photoId), eq(recapPhotos.shopId, shopId)))
-    .returning({ id: recapPhotos.id });
-  return removed.length > 0;
+    .returning({ imageUrl: recapPhotos.imageUrl });
+  return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
 }
 
 /** Set (or clear, with an empty string) a trip's crew-authored recap shout-out. */

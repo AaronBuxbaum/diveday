@@ -14,6 +14,7 @@ const request = {
     { description: "Two-tank charter", quantity: 1, unitAmountCents: 18_000 },
     { description: "Rental gear", quantity: 1, unitAmountCents: 4_000 },
   ],
+  idempotencyKey: "intent-1",
 };
 
 function sequencedFetch(responses: unknown[]) {
@@ -31,7 +32,7 @@ describe("stripe invoicing provider", () => {
     const provider = providerWith({}, vi.fn());
     expect(await provider.createInvoice(request)).toEqual({ status: "not_configured" });
     expect(await provider.voidInvoice("acct_123", "in_1")).toEqual({ status: "not_configured" });
-    expect(await provider.refundInvoice("acct_123", "in_1")).toEqual({
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-1")).toEqual({
       status: "not_configured",
     });
     expect(await provider.retrieveInvoice("acct_123", "in_1")).toEqual({
@@ -75,6 +76,17 @@ describe("stripe invoicing provider", () => {
     expect(fetchImpl.mock.calls[3][0]).toBe("https://api.stripe.com/v1/invoices");
     expect(fetchImpl.mock.calls[4][0]).toBe("https://api.stripe.com/v1/invoices/in_1/finalize");
     expect(fetchImpl.mock.calls[5][0]).toBe("https://api.stripe.com/v1/invoices/in_1/send");
+
+    // Each step of the chain gets its own deterministic, step-scoped key
+    // derived from the request's idempotencyKey — a retry of this same
+    // attempt replays each step against the object it created the first
+    // time, never a second customer/item/invoice (CR-005).
+    expect(fetchImpl.mock.calls[0][1].headers["Idempotency-Key"]).toBe("intent-1:customer");
+    expect(fetchImpl.mock.calls[1][1].headers["Idempotency-Key"]).toBe("intent-1:item:0");
+    expect(fetchImpl.mock.calls[2][1].headers["Idempotency-Key"]).toBe("intent-1:item:1");
+    expect(fetchImpl.mock.calls[3][1].headers["Idempotency-Key"]).toBe("intent-1:invoice");
+    expect(fetchImpl.mock.calls[4][1].headers["Idempotency-Key"]).toBe("intent-1:finalize");
+    expect(fetchImpl.mock.calls[5][1].headers["Idempotency-Key"]).toBe("intent-1:send");
   });
 
   it("fails if any step in the chain is not ok", async () => {
@@ -102,7 +114,7 @@ describe("stripe invoicing provider", () => {
       ok({ id: "re_1" }),
     ]);
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    expect(await provider.refundInvoice("acct_123", "in_1")).toEqual({
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-2")).toEqual({
       status: "refunded",
       refundId: "re_1",
     });
@@ -111,6 +123,7 @@ describe("stripe invoicing provider", () => {
     );
     expect(fetchImpl.mock.calls[1][0]).toBe("https://api.stripe.com/v1/refunds");
     expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_1");
+    expect(fetchImpl.mock.calls[1][1].headers["Idempotency-Key"]).toBe("intent-2");
   });
 
   it("retrieves current invoice status", async () => {

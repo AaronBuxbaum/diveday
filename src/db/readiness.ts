@@ -1,9 +1,10 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { paymentsByBooking } from "./payments";
 import type { DiveSpecialty } from "./schema";
 import {
@@ -106,11 +107,17 @@ export type NewCertification = {
   agency: "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
   level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
   identifier: string;
-  expiresAt?: Date;
+  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
+  expiresAt?: CalendarDate;
   cardImageUrl?: string;
 };
 
-/** Evidence is captured pending; a separate, explicit review makes it usable for readiness. */
+/**
+ * Evidence is captured pending; a separate, explicit review makes it usable for
+ * readiness. Refuses (returns null) rather than throwing when a live card
+ * already holds the same shop/agency/identifier in any case — the
+ * case-insensitive partial unique index would reject it anyway (CR-009).
+ */
 export async function createCertification(db: AppDb, input: NewCertification) {
   const [person] = await db
     .select({ id: people.id })
@@ -118,15 +125,20 @@ export async function createCertification(db: AppDb, input: NewCertification) {
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
-  const [certification] = await db
-    .insert(certifications)
-    .values({
-      ...input,
-      identifier: input.identifier.trim(),
-      cardImageUrl: input.cardImageUrl?.trim() || null,
-    })
-    .returning();
-  return certification ?? null;
+  try {
+    const [certification] = await db
+      .insert(certifications)
+      .values({
+        ...input,
+        identifier: input.identifier.trim(),
+        cardImageUrl: input.cardImageUrl?.trim() || null,
+      })
+      .returning();
+    return certification ?? null;
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
 }
 
 export async function reviewCertification(
@@ -201,7 +213,7 @@ export async function restoreCertification(
       and(
         eq(certifications.shopId, input.shopId),
         eq(certifications.agency, archived.agency),
-        eq(certifications.identifier, archived.identifier),
+        sql`lower(${certifications.identifier}) = lower(${archived.identifier})`,
         isNull(certifications.deletedAt),
       ),
     )
@@ -232,11 +244,16 @@ export type NewSpecialtyCertification = {
   agency: "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
   specialty: DiveSpecialty;
   identifier: string;
-  expiresAt?: Date;
+  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
+  expiresAt?: CalendarDate;
   cardImageUrl?: string;
 };
 
-/** Same capture→verify contract as a level card: evidence starts pending. */
+/**
+ * Same capture→verify contract as a level card: evidence starts pending.
+ * Refuses (returns null) on a same-shop/agency/identifier collision in any
+ * case, mirroring `createCertification` (CR-009).
+ */
 export async function createSpecialtyCertification(db: AppDb, input: NewSpecialtyCertification) {
   const [person] = await db
     .select({ id: people.id })
@@ -244,15 +261,20 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
-  const [certification] = await db
-    .insert(specialtyCertifications)
-    .values({
-      ...input,
-      identifier: input.identifier.trim(),
-      cardImageUrl: input.cardImageUrl?.trim() || null,
-    })
-    .returning();
-  return certification ?? null;
+  try {
+    const [certification] = await db
+      .insert(specialtyCertifications)
+      .values({
+        ...input,
+        identifier: input.identifier.trim(),
+        cardImageUrl: input.cardImageUrl?.trim() || null,
+      })
+      .returning();
+    return certification ?? null;
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
 }
 
 export async function reviewSpecialtyCertification(
@@ -323,7 +345,7 @@ export async function restoreSpecialtyCertification(
       and(
         eq(specialtyCertifications.shopId, input.shopId),
         eq(specialtyCertifications.agency, archived.agency),
-        eq(specialtyCertifications.identifier, archived.identifier),
+        sql`lower(${specialtyCertifications.identifier}) = lower(${archived.identifier})`,
         isNull(specialtyCertifications.deletedAt),
       ),
     )
@@ -360,12 +382,16 @@ export async function listTripReadiness(
   tripId: string,
   now: Date = nowDate(),
 ) {
-  const [requirement, siteRequirement, waiverRows, currentTemplate] = await Promise.all([
+  const [requirement, siteRequirement, waiverRows, currentTemplate, shopRow] = await Promise.all([
     getTripRequirements(db, shopId, tripId),
     getTripSiteRequirement(db, shopId, tripId),
     listTripWaiverStatuses(db, shopId, tripId),
     getCurrentWaiverTemplate(db, shopId),
+    db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
   ]);
+  const [shop] = shopRow;
+  if (!shop) throw new Error(`listTripReadiness: shop ${shopId} not found`);
+  const timezone = shop.timezone;
   const bookingIds = waiverRows.map((row) => row.booking.id);
   const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
@@ -458,6 +484,7 @@ export async function listTripReadiness(
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
         now,
+        timezone,
       }),
     };
   });

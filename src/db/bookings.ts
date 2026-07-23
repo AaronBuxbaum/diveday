@@ -1,13 +1,17 @@
 import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { findOrCreatePerson } from "./people";
 import {
   bookings,
   certifications,
   courses,
   people,
   personRoles,
+  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -163,7 +167,14 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
           isNull(certifications.deletedAt),
         ),
       );
-    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
+    const [shop] = await tx
+      .select({ timezone: shops.timezone })
+      .from(shops)
+      .where(eq(shops.id, req.shopId))
+      .limit(1);
+    if (!shop) throw new Error(`createBookingRecord: shop ${req.shopId} not found`);
+    const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
+    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel, todayLocal)) {
       return { ok: false, reason: "course_prerequisite" };
     }
   }
@@ -177,12 +188,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   }
 
   if (!person && pendingInsert) {
-    [person] = await tx
-      .insert(people)
-      .values({ shopId: req.shopId, ...pendingInsert })
-      .returning();
-    if (!person) throw new Error("createBooking: person insert returned no row");
-    await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+    person = (await findOrCreatePerson(tx, { shopId: req.shopId, ...pendingInsert })).person;
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
@@ -291,5 +297,10 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
     .set({ status: "cancelled" })
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .returning();
-  return booking ?? null;
+  if (!booking) return null;
+  // Belt-and-suspenders: verifyBookingCapability already fails closed on a
+  // cancelled booking, but revoking outright keeps the capability table's
+  // own audit trail honest and stops relying solely on that join.
+  await revokeBookingCapabilities(db, { shopId, bookingId });
+  return booking;
 }

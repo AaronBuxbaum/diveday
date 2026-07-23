@@ -24,7 +24,7 @@ async function waiverContext() {
   const { db, shop } = await seededShopContext();
   const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   if (!trip) throw new Error("demo trip missing");
-  const [rosterEntry] = await getTripRoster(db, trip.id);
+  const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
   if (!rosterEntry) throw new Error("demo booking missing");
   const template = await getCurrentWaiverTemplate(db, shop.id);
   if (!template) throw new Error("demo waiver template missing");
