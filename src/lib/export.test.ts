@@ -10,6 +10,19 @@ describe("csv serialization", () => {
     expect(csvCell("plain")).toBe("plain");
   });
 
+  it("neutralizes cells that would open as spreadsheet formulas", () => {
+    // Diver-controlled text (a public booking's name) must never execute when
+    // the owner opens the export in Excel/LibreOffice.
+    expect(csvCell("=1+2")).toBe("'=1+2");
+    expect(csvCell("@cmd")).toBe("'@cmd");
+    expect(csvCell("-Dana")).toBe("'-Dana");
+    expect(csvCell("+1 305 555 0100")).toBe("'+1 305 555 0100");
+    // Composes with RFC-4180 quoting when the payload also carries a comma.
+    expect(csvCell("=SUM(A1,A2)")).toBe('"\'=SUM(A1,A2)"');
+    // Numbers are not diver-authored text and keep their sign.
+    expect(csvCell(-500)).toBe("-500");
+  });
+
   it("serializes empties, dates, booleans, and numbers unambiguously", () => {
     expect(csvCell(null)).toBe("");
     expect(csvCell(undefined)).toBe("");

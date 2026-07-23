@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
-import { loadShopExportCounts } from "@/db/export";
-import { canExportShopData } from "@/lib/authz";
+import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { requireStaffSession } from "@/lib/session";
 import { DownloadExportButton } from "./DownloadExportButton";
 
@@ -16,8 +15,10 @@ export const metadata: Metadata = { title: "Data export — DiveDay" };
  */
 export default async function DataExportPage() {
   const session = await requireStaffSession();
+  const db = await getDb();
 
-  if (!canExportShopData(session.user.roles)) {
+  // Checked against the database, not the JWT — see the download route.
+  if (!(await canPersonExportShopData(db, session.user.shopId, session.user.personId))) {
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <ShopPageHeader
@@ -33,7 +34,6 @@ export default async function DataExportPage() {
     );
   }
 
-  const db = await getDb();
   const families = await loadShopExportCounts(db, session.user.shopId);
   if (!families) return null;
 
