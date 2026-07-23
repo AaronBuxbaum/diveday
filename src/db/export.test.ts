@@ -32,6 +32,7 @@ const EXPECTED_FILES = [
   "dive_sites.csv",
   "dive_site_creatures.csv",
   "dive_site_moments.csv",
+  "recap_photos.csv",
   "courses.csv",
 ];
 
@@ -58,6 +59,7 @@ const EXPORTED_TABLES = [
   "dive_sites",
   "dive_site_creatures",
   "dive_site_moments",
+  "recap_photos",
   "courses",
 ];
 
