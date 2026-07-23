@@ -1,4 +1,4 @@
-import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
@@ -46,6 +46,23 @@ type WaitlistInviteEmailInput = {
   bookingUrl: string;
 };
 
+/**
+ * The night-before brief's extra sections. Carried only on the day-lead
+ * reminder — the single cheapest cancellation-prevention tool a shop has, since
+ * most day-of no-shows are anxiety plus logistics confusion, not lost interest
+ * (docs first-principles brainstorm C). The 7-day reminder stays light.
+ */
+type NightBeforeBriefInput = {
+  /** Plain-language conditions from the crew, or null when none published. */
+  forecast?: string | null;
+  /** What to bring — the shop's packing list. */
+  bring?: string[];
+  /** The shop's number for day-of questions, already E.164-validated. */
+  whoToText?: string | null;
+  /** Extra "what happens on the boat" reassurance for a first-timer. */
+  firstTimerNote?: string | null;
+};
+
 type TripReminderEmailInput = {
   diverName: string;
   shopName: string;
@@ -66,6 +83,8 @@ type TripReminderEmailInput = {
   medicalReview?: boolean;
   /** The diver's readiness page, so they can finish what's outstanding. */
   readinessUrl?: string;
+  /** Present on the night-before (day) lead only; enriches it into a full brief. */
+  brief?: NightBeforeBriefInput;
 };
 
 /** "30 minutes" today, whatever the shop set otherwise. */
@@ -89,6 +108,49 @@ function outstandingLines(outstanding: string[] | undefined, medicalReview: bool
           .map((t) => `<li>${escapeHtml(t)}</li>`)
           .join("")}</ul>`
       : "",
+  };
+}
+
+/**
+ * The night-before brief's body — conditions, what to bring, and who to text —
+ * rendered as text + html fragments slotted between the dock-time line and the
+ * outstanding-items list. Empty strings when the brief carries nothing, so the
+ * reminder degrades to the plain "you sail tomorrow" note.
+ */
+function briefSections(brief: NightBeforeBriefInput | undefined, arrivalLine: string) {
+  const forecast = brief?.forecast?.trim();
+  const bring = (brief?.bring ?? []).map((item) => item.trim()).filter(Boolean);
+  const whoToText = brief?.whoToText?.trim();
+  const firstTimer = brief?.firstTimerNote?.trim();
+
+  const textParts: string[] = [];
+  const htmlParts: string[] = [];
+  if (firstTimer) {
+    textParts.push(firstTimer);
+    htmlParts.push(`<p>${escapeHtml(firstTimer)}</p>`);
+  }
+  if (forecast) {
+    textParts.push(`Conditions: ${forecast}`);
+    htmlParts.push(`<p><strong>Conditions:</strong> ${escapeHtml(forecast)}</p>`);
+  }
+  if (bring.length) {
+    textParts.push(`What to bring:\n${bring.map((item) => `- ${item}`).join("\n")}`);
+    htmlParts.push(
+      `<p>What to bring:</p><ul>${bring.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
+    );
+  }
+  // Arrival always renders on the brief — the concrete clock time is the
+  // logistics half of the confidence arc.
+  textParts.push(arrivalLine);
+  htmlParts.push(`<p>${escapeHtml(arrivalLine)}</p>`);
+  if (whoToText) {
+    const line = `Questions on the day? Text the shop at ${whoToText}.`;
+    textParts.push(line);
+    htmlParts.push(`<p>${escapeHtml(line)}</p>`);
+  }
+  return {
+    text: textParts.length ? `\n\n${textParts.join("\n\n")}` : "",
+    html: htmlParts.join(""),
   };
 }
 
@@ -152,10 +214,64 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   const todo = outstandingLines(input.outstanding, input.medicalReview);
   const dock = dockCallPhrase(input.dockCallMinutes);
 
+  // The 7-day reminder stays a light nudge. The night-before (day) lead becomes
+  // the full brief: conditions, what to bring, a concrete arrival time, and who
+  // to text — the confidence arc that keeps an anxious diver from no-showing.
+  if (input.lead === "day") {
+    const dockMinutes = input.dockCallMinutes ?? 30;
+    const arriveBy = new Date(input.startsAt.getTime() - dockMinutes * 60_000);
+    const arrivalClock = formatTime(arriveBy, "en-US", input.timezone);
+    const arrivalLine = `Aim to be at the dock by ${arrivalClock} — ${dock} before we sail.`;
+    const brief = briefSections(input.brief, arrivalLine);
+    const opener = input.brief?.firstTimerNote
+      ? `You dive with ${input.shopName} tomorrow — here's everything you need for the day.`
+      : `A quick reminder that ${input.tripTitle} with ${input.shopName} sails tomorrow.`;
+    const openerHtml = input.brief?.firstTimerNote
+      ? `You dive with ${shop} tomorrow — here's everything you need for the day.`
+      : `A quick reminder that <strong>${title}</strong> with ${shop} sails tomorrow.`;
+    return {
+      subject: `You sail tomorrow — ${input.tripTitle}`,
+      text: `Hi ${firstName},\n\n${opener}\n\n${date}\n${time}${brief.text}${todo.text}${readyText}`,
+      html: `<p>Hi ${escapeHtml(firstName)},</p><p>${openerHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${brief.html}${todo.html}${readyHtml}`,
+    };
+  }
+
   return {
     subject: `You sail ${when} — ${input.tripTitle}`,
     text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early.${todo.text}${readyText}`,
     html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early.</p>${todo.html}${readyHtml}`,
+  };
+}
+
+type TripRecapEmailInput = {
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+  /** The names of the sites dived, in order, for the recap's opening line. */
+  sites?: string[];
+  /** The diver's shareable recap page. */
+  recapUrl: string;
+};
+
+export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
+  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
+  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const shop = escapeHtml(input.shopName);
+  const url = escapeHtml(input.recapUrl);
+  const sites = (input.sites ?? []).map((site) => site.trim()).filter(Boolean);
+  // Name the sites they dived when we know them — the recap is warmer when it
+  // remembers the day rather than nudging generically.
+  const where = sites.length
+    ? ` You dived ${sites.length === 1 ? sites[0] : `${sites.slice(0, -1).join(", ")} and ${sites[sites.length - 1]}`}.`
+    : "";
+
+  return {
+    subject: `Your dive with ${input.shopName} — ${input.tripTitle}`,
+    text: `Hi ${firstName},\n\nThanks for diving ${input.tripTitle} with ${input.shopName} on ${date}.${where}\n\nWe put together a recap of your day — see it here:\n${input.recapUrl}\n\nIf you loved it, the best thing you can do is bring a buddy next time. See you in the water!\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Thanks for diving <strong>${title}</strong> with ${shop} on ${escapeHtml(date)}.${escapeHtml(where)}</p><p><a href="${url}">See the recap of your day</a>.</p><p>If you loved it, the best thing you can do is bring a buddy next time. See you in the water!</p>`,
   };
 }
 
