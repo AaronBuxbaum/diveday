@@ -71,8 +71,19 @@ describe("person-first diver records", () => {
       fullName: "Returning Riley Updated",
       email: "riley@example.com",
       phone: "555",
+      diveInsurance: "  DAN #12345  ",
     });
     expect(updated?.fullName).toBe("Returning Riley Updated");
+    // The dive-insurance field is trimmed and persisted; blanking it clears it.
+    expect(updated?.diveInsurance).toBe("DAN #12345");
+    const cleared = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Returning Riley Updated",
+      email: "riley@example.com",
+      diveInsurance: "   ",
+    });
+    expect(cleared?.diveInsurance).toBeNull();
 
     const staff = (await listDiverSummaries(db, shop.id)).divers.find(
       (row) => row.person.fullName === "Dana Reyes",
