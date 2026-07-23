@@ -18,6 +18,8 @@ import {
   listShopCertifications,
   listShopSpecialtyCertifications,
   listTripReadiness,
+  restoreCertification,
+  restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
   upsertTripRequirements,
@@ -323,6 +325,78 @@ describe("trip readiness (in-memory PGlite)", () => {
       identifier: "PADI-RESCUE-DELETE",
     });
     expect(recaptured).not.toBeNull();
+  });
+
+  it("restores an archived level card, but refuses once its number is re-used", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESTORE-1",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      true,
+    );
+
+    // The undo path: the same archived card comes back into the shop list.
+    expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      true,
+    );
+    expect(await listShopCertifications(db, shop.id)).toContainEqual(
+      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
+    );
+
+    // Archive it again, then re-capture the same number as a fresh card. Restoring
+    // the old one now would collide on the partial unique index, so it's refused.
+    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      true,
+    );
+    const recaptured = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PADI-RESTORE-1",
+    });
+    if (!recaptured) throw new Error("expected recapture to insert");
+    expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
+      false,
+    );
+    // A restore through another shop's id is likewise refused.
+    expect(
+      await restoreCertification(db, {
+        shopId: "00000000-0000-0000-0000-000000000000",
+        certificationId: recaptured.id,
+      }),
+    ).toBe(false);
+  });
+
+  it("restores an archived specialty card", async () => {
+    const { db, shop, rosterEntry } = await readinessContext();
+    const card = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "wreck",
+      identifier: "PADI-WRECK-RESTORE",
+    });
+    if (!card) throw new Error("expected specialty to insert");
+    expect(
+      await archiveSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+    ).toBe(true);
+    expect(
+      await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+    ).toBe(true);
+    expect(await listShopSpecialtyCertifications(db, shop.id)).toContainEqual(
+      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
+    );
+    // Restoring a card that was never archived is a no-op false.
+    expect(
+      await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+    ).toBe(false);
   });
 
   it("refuses to archive a level card through another shop's id", async () => {

@@ -148,9 +148,9 @@ export function CertificationCards({
                   ) : null}
                   <form action={deleteCertificationAction.bind(null, shopSlug, personId)}>
                     <input type="hidden" name="certificationId" value={card.id} />
+                    {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                     <SubmitButton
                       pendingLabel="Deleting…"
-                      confirmMessage="Delete this certification card? It stops counting toward readiness; its history is kept for records."
                       className={buttonClass({ variant: "danger", size: "sm" })}
                     >
                       Delete
