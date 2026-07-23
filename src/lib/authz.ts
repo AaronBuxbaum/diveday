@@ -29,3 +29,13 @@ export const STAFF_ROLES: readonly Role[] = [
 export function isStaff(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some((role) => STAFF_ROLES.includes(role));
 }
+
+/**
+ * The full-shop export hands over more than any staff surface shows — every
+ * diver's contact details plus complete signed medical answers — so it is the
+ * one staff feature gated past `isStaff`, to the accountable roles
+ * (ADR 20260722-full-shop-export).
+ */
+export function canExportShopData(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner" || role === "manager");
+}

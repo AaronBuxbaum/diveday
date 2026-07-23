@@ -148,9 +148,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
 
-        // The data-export page — the "leave anytime" guarantee, documented.
+        // The data-export surface: the "your data is yours" promise, concrete.
         await page.goto("/shop/blue-mantis/settings/export");
-        await page.getByRole("heading", { name: "What's in the bundle" }).waitFor();
+        await page.getByRole("heading", { name: "Data export" }).waitFor();
         await capture(page, "settings-export", scheme);
       });
     });

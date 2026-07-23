@@ -202,15 +202,15 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
 - ✅ Automated marine outlook: a mapped dive site supplies a clearly-labelled 10-day Open-Meteo
   water-temperature and sea-state fallback until the crew publishes its dated prediction. Underwater
   visibility remains crew-entered rather than being inferred from atmospheric visibility.
-- ✅ Full-shop data export (portability wedge item #1): `/settings/export` (owner/manager)
-  downloads every tenant-owned dataset — people, certifications, waivers with signed text and
-  medical evidence, trips, bookings, payments, orders, roll-call history, rental fit, sites,
-  courses — as documented CSVs in one ZIP whose README is generated from the same dataset
-  definitions. Secrets excluded by construction and by test. Domain in
-  [`src/lib/export.ts`](../../src/lib/export.ts), loading in
-  [`src/db/export.ts`](../../src/db/export.ts); see
-  [the export bundling ADR](../architecture/decisions/20260722-export-zip-bundling.md) and the
-  build plan in [competitive-strategy.md](competitive-strategy.md#the-build-plan-in-order).
+- ✅ Full-shop data export: Settings → Data export downloads the shop's records as one ZIP of
+  documented CSVs plus a README manifest — the "leave anytime" half of the data-portability wedge
+  ([competitive-strategy](competitive-strategy.md),
+  [ADR](../architecture/decisions/20260722-full-shop-export.md)). CSV/bundle assembly in
+  [`src/lib/export.ts`](../../src/lib/export.ts), per-shop loading in
+  [`src/db/export.ts`](../../src/db/export.ts).
+- ⬜ Data-portability follow-ons: the diver/customer CSV importer with published honesty tables
+  (safety-critical: imported certs land *claimed*, never *verified*), public migration guides,
+  scheduled backup exports, and the read API + webhooks (ADR required).
 - ⬜ Payments/deposits, SMS and multi-channel notifications, deeper reporting,
   multi-boat/multi-shop configuration, and their provider/policy decisions.
 

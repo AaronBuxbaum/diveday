@@ -1,79 +1,82 @@
 import type { Metadata } from "next";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
-import { EXPORT_DATASETS } from "@/lib/export";
+import { getDb } from "@/db/client";
+import { loadShopExportCounts } from "@/db/export";
+import { canExportShopData } from "@/lib/authz";
 import { requireStaffSession } from "@/lib/session";
+import { DownloadExportButton } from "./DownloadExportButton";
 
-export const metadata: Metadata = { title: "Export your data — DiveDay" };
+export const metadata: Metadata = { title: "Data export — DiveDay" };
 
 /**
- * The exit door, kept visibly unlocked. One button downloads everything the
- * shop owns as documented CSVs — the "leave anytime" guarantee from the
- * portability wedge (docs/product/competitive-strategy.md). Owner/manager
- * only: the bundle carries diver PII and medical evidence.
+ * The "leave anytime" surface (ADR 20260722-full-shop-export): one button, the
+ * whole shop as documented CSVs. The list below comes from the same file
+ * definitions as the bundle's README, so what we promise on screen is exactly
+ * what the ZIP contains — but only row counts are queried here, never the rows.
  */
-export default async function ExportSettingsPage({
-  params,
-}: {
-  params: Promise<{ shopSlug: string }>;
-}) {
+export default async function DataExportPage() {
   const session = await requireStaffSession();
-  const { shopSlug } = await params;
-  const canExport = session.user.roles.includes("owner") || session.user.roles.includes("manager");
+
+  if (!canExportShopData(session.user.roles)) {
+    return (
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <ShopPageHeader
+          eyebrow="Settings"
+          title="Data export"
+          description="Download everything this shop keeps in DiveDay as plain CSV files."
+        />
+        <ShopNotice tone="warning" role="status">
+          The full export includes every diver's contact details and signed medical forms, so it's
+          limited to the shop's owner or manager. Ask them to run it if you need a copy.
+        </ShopNotice>
+      </main>
+    );
+  }
+
+  const db = await getDb();
+  const families = await loadShopExportCounts(db, session.user.shopId);
+  if (!families) return null;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow="Settings"
-        title="Export your data"
-        description="Everything your shop owns, as plain CSV files anyone can open — divers, certifications, waivers with their signed text, trips, bookings, payments, and the full roll-call history."
+        title="Data export"
+        description="Download everything this shop keeps in DiveDay as plain CSV files — divers, cards, trips, bookings, signed waivers, rental sizes. Yours to keep, on every plan, whenever you want it."
+        actions={
+          <DownloadExportButton href={`/shop/${session.user.shopSlug}/settings/export/download`} />
+        }
       />
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">One bundle, no asking us first</h2>
-        <p className="mt-1 text-sm text-muted">
-          The download is a ZIP of {EXPORT_DATASETS.length} CSV files plus a README that documents
-          every column. Timestamps are ISO 8601, money is in cents, and ids join across files —
-          ready for a spreadsheet, an accountant, or another system. Your data is yours: export it
-          as often as you like, and take it with you if you ever leave.
+      <section className="rounded-2xl border border-border bg-surface p-6">
+        <h2 className="text-lg font-semibold">What's in the bundle</h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted">
+          One ZIP with a README and a CSV for each kind of record. Every date and time carries its
+          timezone, money is in cents, and your archived history comes along too — nothing is lost
+          if you ever move on.
         </p>
-        {canExport ? (
-          <a
-            href={`/shop/${shopSlug}/settings/export/download`}
-            download
-            className={buttonClass({ className: "mt-4" })}
-          >
-            Download everything
-          </a>
-        ) : (
-          <div className="mt-4">
-            <ShopNotice tone="warning" role="status">
-              The full export includes divers' contact details and medical answers, so only an owner
-              or manager can download it. Ask yours — it's one button.
-            </ShopNotice>
-          </div>
-        )}
-      </section>
-
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">What's in the bundle</h2>
-        <ul className="mt-3 divide-y divide-border">
-          {EXPORT_DATASETS.map((dataset) => (
-            <li key={dataset.filename} className="py-2.5 text-sm">
-              <span className="font-mono text-xs">{dataset.filename}</span>
-              <p className="mt-0.5 text-muted">{dataset.description}</p>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {families.map((family) => (
+            <li
+              key={family.file}
+              className="flex items-baseline justify-between gap-3 rounded-xl bg-surface-sunken px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="font-mono text-sm break-all text-foreground">{family.file}</p>
+                <p className="mt-0.5 text-xs text-muted">{family.note}</p>
+              </div>
+              <span className="shrink-0 text-xs font-medium text-muted tabular-nums">
+                {family.count === 1 ? "1 row" : `${family.count} rows`}
+              </span>
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">What stays out, on purpose</h2>
-        <p className="mt-1 text-sm text-muted">
-          Login passwords (hashes belong to no one — people set new ones wherever they land), waiver
-          signing-link secrets, and notification delivery logs. Card photos and site images are
-          linked by durable URL in the CSVs rather than embedded, so the bundle stays small enough
-          to email.
+        <p className="mt-4 text-sm text-muted">
+          <span className="font-medium text-foreground">Not yet included:</span> offline manifest
+          snapshots, wait-list entries, notification logs, Stripe order records, the dive-site
+          library and course catalog, and card images (the CSVs carry each card's stored image
+          reference). Sign-in credentials are never exported. The bundle's README lists the same
+          gaps.
         </p>
       </section>
     </main>
