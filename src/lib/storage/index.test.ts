@@ -4,6 +4,7 @@ import {
   deleteStoredImage,
   deleteStoredImageTracked,
   imageStorageProviderFromEnvironment,
+  isManagedBlobUrl,
   MAX_CARD_IMAGE_BYTES,
   MAX_COURSE_IMAGE_BYTES,
   storeCardImage,
@@ -234,5 +235,29 @@ describe("deleteStoredImageTracked (CR-012)", () => {
     );
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("network unreachable");
+  });
+});
+
+describe("isManagedBlobUrl (CR-012 review finding)", () => {
+  it("recognizes a genuine Vercel Blob public object URL", () => {
+    expect(isManagedBlobUrl("https://abc123.public.blob.vercel-storage.com/courses/x.jpg")).toBe(
+      true,
+    );
+  });
+
+  it("rejects a bundled template asset (root-relative, never left this app)", () => {
+    expect(isManagedBlobUrl("/dive-sites/reef.jpg")).toBe(false);
+  });
+
+  it("rejects a legacy pasted external URL — the provider never stored it", () => {
+    expect(isManagedBlobUrl("https://example.com/photo.jpg")).toBe(false);
+  });
+
+  it("rejects the Blob API host itself — that's for PUT/delete requests, not object URLs", () => {
+    expect(isManagedBlobUrl("https://blob.vercel-storage.com/courses/x.jpg")).toBe(false);
+  });
+
+  it("fails closed on an unparseable URL instead of throwing", () => {
+    expect(isManagedBlobUrl("not a url")).toBe(false);
   });
 });

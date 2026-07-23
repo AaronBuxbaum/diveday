@@ -1,6 +1,6 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type DeleteImageResult, deleteStoredImageTracked } from "@/lib/storage";
+import { type DeleteImageResult, deleteStoredImageTracked, isManagedBlobUrl } from "@/lib/storage";
 import type { AppDb, DbExecutor } from "./client";
 import { type MediaDeletionAttempt, type MediaDeletionKind, mediaDeletionAttempts } from "./schema";
 
@@ -20,11 +20,22 @@ export type QueueMediaDeletionInput = {
  * delete call succeeding is not durable against a crash between the two, and
  * a crash there would otherwise leave the object orphaned with no record
  * anyone still owes it a delete.
+ *
+ * Returns `null`, queuing nothing, when `url` isn't actually a Blob object
+ * this seam could have stored (a bundled template asset, a legacy pasted
+ * external URL). Queuing one of those would create a row that can never
+ * resolve — the provider has never heard of it, so every retry fails the
+ * same way forever, permanently occupying a slot on the owner-visible
+ * reports panel and the bounded nightly retry (a real gap a security review
+ * of this ticket found: course photo replacement was queuing every seeded
+ * shop's default template photos for deletion on the first ordinary edit).
+ * Enforced here, once, so no future caller can reintroduce it.
  */
 export async function queueMediaDeletion(
   db: AppDb,
   input: QueueMediaDeletionInput,
-): Promise<MediaDeletionAttempt> {
+): Promise<MediaDeletionAttempt | null> {
+  if (!isManagedBlobUrl(input.url)) return null;
   const [attempt] = await db
     .insert(mediaDeletionAttempts)
     .values({ shopId: input.shopId, kind: input.kind, url: input.url })
@@ -73,6 +84,7 @@ export async function queueAndAttemptMediaDeletion(
   deleteFn: DeleteFn = deleteStoredImageTracked,
 ): Promise<void> {
   const attempt = await queueMediaDeletion(db, input);
+  if (!attempt) return;
   const result = await deleteFn(attempt.url);
   await resolveMediaDeletion(
     db,

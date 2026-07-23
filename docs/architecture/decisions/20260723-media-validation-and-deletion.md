@@ -72,6 +72,21 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   attempts across every shop per run. This is deliberately reuse, not a new endpoint: the ticket
   wants a bounded, scheduled retry mechanism, and this app already has exactly that shape running
   daily for reminders/recaps with the same `CRON_SECRET` fail-closed gate.
+- **`queueMediaDeletion` only queues a URL that could plausibly have been written by this seam's own
+  provider** — `isManagedBlobUrl` (`src/lib/storage/index.ts`) checks the URL's hostname against
+  Vercel Blob's public-object-URL suffix and rejects anything else, silently (returns `null`, queues
+  nothing). This closes a real gap a `security-reviewer` pass on the first version of this ticket
+  found: every seeded shop's courses start pre-filled with DiveDay's default template content, whose
+  `heroImageUrl`/`imageUrls` are bundled root-relative paths (`/dive-sites/...`,
+  `src/db/course-templates.ts`'s `bundledImage()`) — never a Blob object. The original
+  `saveCourseContentAction` diffed old vs. new URLs with no such filter, so a shop doing the
+  completely ordinary thing (replacing a template's default hero photo with their own) would queue
+  the bundled path for provider deletion. That delete could never succeed — Vercel Blob has never
+  heard of `/dive-sites/reef.jpg` — producing a `media_deletion_attempts` row stuck `failed` forever,
+  permanently occupying a slot on the owner-visible reports panel and the bounded nightly retry, and
+  undermining the very "owner-visible and retryable" guarantee this ticket exists to provide (visible,
+  yes; ever actually retryable, no). The guard is enforced once, centrally, in `queueMediaDeletion`
+  itself rather than at each call site, so no future caller of the deletion queue can reintroduce it.
 - **Card evidence photos (`cardImageUrl` on certifications/specialty cards) are deliberately *not*
   wired into this deletion path.** "Deleting" a card is a soft-archive (ADR 20260719-crud-archive-
   semantics) — the row is kept "for safety history" and is restorable via a land-then-undo toast.
