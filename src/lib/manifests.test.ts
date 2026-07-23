@@ -116,10 +116,91 @@ describe("buildTripManifest", () => {
   });
 
   it("finds the highest recorded dive number, or 0 with no after-dive history", () => {
+    const t0 = new Date("2026-06-01T10:00:00Z");
+    const boarded = (bookingId: string, checkpoint: string, occurredAt = t0) => ({
+      bookingId,
+      checkpoint,
+      status: "boarded",
+      occurredAt,
+      createdAt: occurredAt,
+    });
+
     expect(maxRecordedDiveNumber([])).toBe(0);
-    expect(maxRecordedDiveNumber(["departure"])).toBe(0);
-    expect(maxRecordedDiveNumber(["departure", "after_dive_1"])).toBe(1);
-    expect(maxRecordedDiveNumber(["after_dive_1", "after_dive_3", "after_dive_2"])).toBe(3);
-    expect(maxRecordedDiveNumber(["not-a-checkpoint", "after_dive_4"])).toBe(4);
+    expect(maxRecordedDiveNumber([boarded("b1", "departure")])).toBe(0);
+    expect(maxRecordedDiveNumber([boarded("b1", "departure"), boarded("b1", "after_dive_1")])).toBe(
+      1,
+    );
+    expect(
+      maxRecordedDiveNumber([
+        boarded("b1", "after_dive_1"),
+        boarded("b2", "after_dive_3"),
+        boarded("b1", "after_dive_2"),
+      ]),
+    ).toBe(3);
+    expect(
+      maxRecordedDiveNumber([boarded("b1", "not-a-checkpoint"), boarded("b1", "after_dive_4")]),
+    ).toBe(4);
+  });
+
+  it("ignores a checkpoint whose latest event for that diver is a clear — the mis-tap-then-undo case (dive-domain-expert review finding, CR-006)", () => {
+    const t0 = new Date("2026-06-01T10:00:00Z");
+    const t1 = new Date("2026-06-01T10:05:00Z");
+
+    // b1 was mis-tapped at after_dive_3, then immediately cleared — no diver
+    // was ever actually counted there, so it must not block a plannedDives
+    // edit down to 2.
+    expect(
+      maxRecordedDiveNumber([
+        {
+          bookingId: "b1",
+          checkpoint: "after_dive_3",
+          status: "boarded",
+          occurredAt: t0,
+          createdAt: t0,
+        },
+        {
+          bookingId: "b1",
+          checkpoint: "after_dive_3",
+          status: "cleared",
+          occurredAt: t1,
+          createdAt: t1,
+        },
+        {
+          bookingId: "b1",
+          checkpoint: "after_dive_2",
+          status: "boarded",
+          occurredAt: t0,
+          createdAt: t0,
+        },
+      ]),
+    ).toBe(2);
+
+    // But a second diver genuinely boarded at after_dive_3 (never cleared)
+    // means dive 3 really did happen — the checkpoint counts.
+    expect(
+      maxRecordedDiveNumber([
+        {
+          bookingId: "b1",
+          checkpoint: "after_dive_3",
+          status: "boarded",
+          occurredAt: t0,
+          createdAt: t0,
+        },
+        {
+          bookingId: "b1",
+          checkpoint: "after_dive_3",
+          status: "cleared",
+          occurredAt: t1,
+          createdAt: t1,
+        },
+        {
+          bookingId: "b2",
+          checkpoint: "after_dive_3",
+          status: "boarded",
+          occurredAt: t0,
+          createdAt: t0,
+        },
+      ]),
+    ).toBe(3);
   });
 });

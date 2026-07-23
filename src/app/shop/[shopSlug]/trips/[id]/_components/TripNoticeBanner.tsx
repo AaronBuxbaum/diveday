@@ -82,7 +82,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
   },
   "series-applied-partial": {
     tone: "success",
-    text: "Applied to the upcoming dates in this series. A few already had more divers than the new capacity, so those were left as they were — adjust them from their own trip pages.",
+    text: "Applied to the upcoming dates in this series. A few already had more divers than the new capacity, or already had a roll call recorded past the new dive count, so those were left as they were — adjust them from their own trip pages.",
   },
   "series-cancelled": {
     tone: "danger",
