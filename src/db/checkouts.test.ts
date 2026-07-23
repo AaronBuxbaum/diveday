@@ -1,4 +1,6 @@
 // @vitest-environment node
+
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type {
   CheckoutProvider,
@@ -16,6 +18,7 @@ import {
   startBookingCheckout,
 } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
+import { bookingCheckouts } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -136,7 +139,7 @@ describe("startBookingCheckout", () => {
   it("refuses without a connected, charges-enabled Stripe account", async () => {
     const { db, shop } = await seededShopContext();
     const reef = await pricedReefTrip(db, shop.id);
-    const [entry] = await getTripRoster(db, reef.id);
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
     const outcome = await startBookingCheckout(
       db,
       startInput(shop.id, reef.id, [entry.booking.id]),
@@ -352,6 +355,69 @@ describe("checkout completion", () => {
     expect(await markCheckoutExpiredBySessionId(db, start.checkout.stripeSessionId)).toBeNull();
     const payment = await getBookingPayment(db, shop.id, bookingIds[0]);
     expect(payment?.status).toBe("paid");
+  });
+
+  // CR-004: fault injection — simulate a crash between the checkout-status
+  // write and the booking-payment cascade (as could happen before both were
+  // one transaction) by forcing the checkout straight to "completed" without
+  // ever writing the booking payment, then prove a replay of the same
+  // webhook self-heals rather than short-circuiting on "already completed".
+  it("replay repairs a booking payment left unwritten by a prior partial run", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    await db
+      .update(bookingCheckouts)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(eq(bookingCheckouts.id, start.checkout.id));
+    for (const bookingId of bookingIds) {
+      expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();
+    }
+
+    const replayed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    expect(replayed?.status).toBe("completed");
+    for (const bookingId of bookingIds) {
+      const payment = await getBookingPayment(db, shop.id, bookingId);
+      expect(payment?.status).toBe("paid");
+      expect(payment?.providerRef).toBe(start.checkout.stripeSessionId);
+    }
+  });
+
+  // CR-004: a duplicate or out-of-order webhook must never regress a booking
+  // a human already refunded back to "paid".
+  it("does not regress an already-refunded booking back to paid on a duplicate webhook", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+
+    const refundedBookingId = bookingIds[0];
+    if (!refundedBookingId) throw new Error("expected at least one booking");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: refundedBookingId,
+      status: "refunded",
+      amountCents: 0,
+      currency: "usd",
+      provider: "stripe",
+      providerRef: "re_manual",
+    });
+
+    // A delayed/duplicate delivery of the same "paid" event arrives late.
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+
+    const payment = await getBookingPayment(db, shop.id, refundedBookingId);
+    expect(payment?.status).toBe("refunded");
+    expect(payment?.providerRef).toBe("re_manual");
   });
 });
 

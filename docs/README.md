@@ -23,6 +23,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [design/forms-and-controls.md](design/forms-and-controls.md) | Field alignment and touch-target primitives, and the checks that enforce them | you build a form, a button, or a menu |
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
+| [engineering/capability-telemetry-runbook.md](engineering/capability-telemetry-runbook.md) | How bearer-capability URLs (waivers/ready/recap tokens) are kept out of Analytics/Speed Insights, and how to audit/rotate an exposed one | the redaction logic changes or a capability type's revocation story changes |
 
 **Strategic assessments** ([product/assessments/](product/assessments/)) — dated buyer/rival analyses,
 not commitments. Their surviving recommendations belong in the roadmap; read for context.

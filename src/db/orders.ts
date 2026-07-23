@@ -2,7 +2,13 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
-import { setBookingPayment } from "./payments";
+import {
+  idempotencyKeyFor,
+  recordPaymentOperationStripeObject,
+  resolvePaymentOperation,
+  startPaymentOperation,
+} from "./payment-operations";
+import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import type { Order, OrderLineItemKind, OrderStatus } from "./schema";
 import { bookings, courses, orderLineItems, orders, people, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -71,6 +77,17 @@ export async function createOrder(
   }
 
   const currency = "usd";
+
+  // Durable evidence this attempt exists, written and committed before
+  // Stripe is ever called (CR-005) — a crash mid-attempt (e.g. after
+  // finalize but before the local order row below) still leaves this row
+  // for reconciliation instead of a Stripe invoice with no local trace.
+  const intent = await startPaymentOperation(db, {
+    shopId: input.shopId,
+    kind: "invoice",
+    bookingId: input.bookingId ?? undefined,
+  });
+
   const result = await invoicing.createInvoice({
     stripeAccountId,
     customerEmail: customer.email,
@@ -81,8 +98,17 @@ export async function createOrder(
       quantity: item.quantity,
       unitAmountCents: item.unitAmountCents,
     })),
+    // Deterministic per-attempt key: a retry of this same intent converges
+    // on the customer/items/invoice Stripe already created (CR-005).
+    idempotencyKey: idempotencyKeyFor(intent.id),
   });
-  if (result.status !== "created") return { ok: false, reason: "stripe_failed" };
+  if (result.status !== "created") {
+    await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
+    return { ok: false, reason: "stripe_failed" };
+  }
+  // Durable the moment Stripe confirms the invoice exists — before the local
+  // insert below that could still fail (CR-005).
+  await recordPaymentOperationStripeObject(db, intent.id, result.stripeInvoiceId);
 
   const status = mapStripeStatus(result.stripeStatus);
   const now = nowDate();
@@ -122,20 +148,24 @@ export async function createOrder(
       })),
     );
 
+    // Same transaction as the order/line-item insert above, not a separate
+    // write after commit — Stripe already reports this invoice paid, so a
+    // crash here must not leave a "paid" order with an unpaid booking (CR-004).
+    if (created.status === "paid" && created.bookingId) {
+      await setBookingPaymentIfNotFinal(tx, {
+        shopId: input.shopId,
+        bookingId: created.bookingId,
+        status: "paid",
+        amountCents: created.totalCents,
+        currency: created.currency,
+        provider: "stripe",
+        providerRef: created.stripeInvoiceId,
+      });
+    }
+
     return created;
   });
-
-  if (order.status === "paid" && order.bookingId) {
-    await setBookingPayment(db, {
-      shopId: input.shopId,
-      bookingId: order.bookingId,
-      status: "paid",
-      amountCents: order.totalCents,
-      currency: order.currency,
-      provider: "stripe",
-      providerRef: order.stripeInvoiceId,
-    });
-  }
+  await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
 
   return { ok: true, order };
 }
@@ -199,7 +229,19 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
   return { ...row, lineItems };
 }
 
-/** Applies a status/amount change to an order and cascades a completed payment to its booking. */
+/**
+ * Applies a status/amount change to an order and cascades a completed
+ * payment to its booking, both in one transaction so a crash between the
+ * two writes can never leave the order "paid" with its booking still
+ * unpaid. Re-reads the order fresh inside the transaction rather than
+ * trusting the possibly-stale `order` the caller looked up, and always
+ * re-applies the booking cascade for a "paid"/"refunded" target status
+ * (not just on a transition into it) so a replay is self-healing —
+ * idempotent and able to repair a booking-payment write that failed after
+ * an earlier run's status update already committed (CR-004). A booking
+ * already refunded or waived is never regressed back to paid by a
+ * duplicate or out-of-order webhook.
+ */
 async function applyOrderUpdate(
   db: AppDb,
   order: Order,
@@ -210,45 +252,49 @@ async function applyOrderUpdate(
     invoicePdfUrl?: string | null;
   },
 ): Promise<Order | null> {
-  const now = nowDate();
-  const [updated] = await db
-    .update(orders)
-    .set({
-      status: patch.status,
-      amountPaidCents: patch.amountPaidCents ?? order.amountPaidCents,
-      hostedInvoiceUrl: patch.hostedInvoiceUrl ?? order.hostedInvoiceUrl,
-      invoicePdfUrl: patch.invoicePdfUrl ?? order.invoicePdfUrl,
-      paidAt: patch.status === "paid" ? (order.paidAt ?? now) : order.paidAt,
-      voidedAt: patch.status === "void" ? (order.voidedAt ?? now) : order.voidedAt,
-      refundedAt: patch.status === "refunded" ? (order.refundedAt ?? now) : order.refundedAt,
-      updatedAt: now,
-    })
-    .where(eq(orders.id, order.id))
-    .returning();
-  if (!updated) return null;
+  return db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).limit(1);
+    if (!current) return null;
+    const now = nowDate();
+    const [updated] = await tx
+      .update(orders)
+      .set({
+        status: patch.status,
+        amountPaidCents: patch.amountPaidCents ?? current.amountPaidCents,
+        hostedInvoiceUrl: patch.hostedInvoiceUrl ?? current.hostedInvoiceUrl,
+        invoicePdfUrl: patch.invoicePdfUrl ?? current.invoicePdfUrl,
+        paidAt: patch.status === "paid" ? (current.paidAt ?? now) : current.paidAt,
+        voidedAt: patch.status === "void" ? (current.voidedAt ?? now) : current.voidedAt,
+        refundedAt: patch.status === "refunded" ? (current.refundedAt ?? now) : current.refundedAt,
+        updatedAt: now,
+      })
+      .where(eq(orders.id, current.id))
+      .returning();
+    if (!updated) return null;
 
-  if (updated.status === "paid" && order.status !== "paid" && updated.bookingId) {
-    await setBookingPayment(db, {
-      shopId: updated.shopId,
-      bookingId: updated.bookingId,
-      status: "paid",
-      amountCents: updated.totalCents,
-      currency: updated.currency,
-      provider: "stripe",
-      providerRef: updated.stripeInvoiceId,
-    });
-  } else if (updated.status === "refunded" && order.status !== "refunded" && updated.bookingId) {
-    await setBookingPayment(db, {
-      shopId: updated.shopId,
-      bookingId: updated.bookingId,
-      status: "refunded",
-      amountCents: 0,
-      currency: updated.currency,
-      provider: "stripe",
-      providerRef: updated.stripeInvoiceId,
-    });
-  }
-  return updated;
+    if (updated.status === "paid" && updated.bookingId) {
+      await setBookingPaymentIfNotFinal(tx, {
+        shopId: updated.shopId,
+        bookingId: updated.bookingId,
+        status: "paid",
+        amountCents: updated.totalCents,
+        currency: updated.currency,
+        provider: "stripe",
+        providerRef: updated.stripeInvoiceId,
+      });
+    } else if (updated.status === "refunded" && updated.bookingId) {
+      await setBookingPayment(tx, {
+        shopId: updated.shopId,
+        bookingId: updated.bookingId,
+        status: "refunded",
+        amountCents: 0,
+        currency: updated.currency,
+        provider: "stripe",
+        providerRef: updated.stripeInvoiceId,
+      });
+    }
+    return updated;
+  });
 }
 
 /** Called from the Stripe webhook: marks the order that owns this invoice paid and cascades to its booking. */
@@ -309,9 +355,32 @@ export async function refundOrder(
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (order?.status !== "paid") return null;
-  const result = await invoicing.refundInvoice(order.stripeAccountId, order.stripeInvoiceId);
-  if (result.status !== "refunded") return null;
-  return applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
+
+  // Durable evidence before calling Stripe, and a deterministic idempotency
+  // key so a retry of this same refund attempt converges on the one Stripe
+  // refund already issued rather than refunding the diver twice (CR-005).
+  const intent = await startPaymentOperation(db, {
+    shopId,
+    kind: "refund",
+    orderId: order.id,
+  });
+  const result = await invoicing.refundInvoice(
+    order.stripeAccountId,
+    order.stripeInvoiceId,
+    idempotencyKeyFor(intent.id),
+  );
+  if (result.status !== "refunded") {
+    await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
+    return null;
+  }
+  // Durable the moment Stripe confirms the refund exists — before the local
+  // update below that could still fail (CR-005).
+  if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
+  const updated = await applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
+  await resolvePaymentOperation(db, intent.id, {
+    status: "succeeded",
+  });
+  return updated;
 }
 
 /** Manual fallback for shops without the webhook configured yet: pull current status straight from Stripe. */

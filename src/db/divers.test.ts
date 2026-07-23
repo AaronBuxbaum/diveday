@@ -112,6 +112,31 @@ describe("person-first diver records", () => {
       (await listDiverSummaries(db, shop.id)).divers.some((row) => row.person.id === diver.id),
     ).toBe(true);
   });
+
+  it("frees a deleted diver's email for a genuinely new person, and refuses to restore into a collision (CR-008)", async () => {
+    const { db, shop } = await seededShopContext();
+    const original = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Archived Alex",
+      email: "alex@example.com",
+    });
+    if (!original) throw new Error("diver insert failed");
+    expect(await deleteDiver(db, shop.id, original.id)).toBe(true);
+
+    // The email is free while Alex's record is soft-deleted — a genuinely
+    // new person can take it.
+    const replacement = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "New Alex",
+      email: "Alex@Example.com",
+    });
+    expect(replacement).not.toBeNull();
+    expect(replacement?.id).not.toBe(original.id);
+
+    // Restoring the original would now collide with the replacement's live
+    // row — refused, not a silent identity clobber.
+    expect(await restoreDiver(db, shop.id, original.id)).toBe(false);
+  });
 });
 
 describe("roster search and pagination", () => {

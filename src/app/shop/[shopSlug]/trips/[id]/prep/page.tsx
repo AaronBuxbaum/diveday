@@ -37,7 +37,7 @@ export default async function TripPrepPage({
   const [divers, staff, crewIds] = await Promise.all([
     listTripPrepDivers(db, shop.id, tripId),
     listStaff(db, shop.id),
-    getTripCrewIds(db, tripId),
+    getTripCrewIds(db, shop.id, tripId),
   ]);
   // Only the crew who actually dive the trip need their own tank — a captain
   // or deckhand assigned for the boat stays dry and is not part of the plan.

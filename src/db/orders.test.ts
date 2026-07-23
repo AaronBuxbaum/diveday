@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { courseTotalCents } from "@/lib/courses";
 import type {
@@ -23,7 +24,8 @@ import {
   refundOrder,
   voidOrder,
 } from "./orders";
-import { getBookingPayment } from "./payments";
+import { getBookingPayment, setBookingPayment } from "./payments";
+import { orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -73,7 +75,7 @@ async function orderContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  const [entry] = await getTripRoster(db, reef.id);
+  const [entry] = await getTripRoster(db, shop.id, reef.id);
   if (!entry) throw new Error("demo booking missing");
   return { db, shop, reef, entry };
 }
@@ -345,6 +347,101 @@ describe("orders", () => {
     expect(voided?.status).toBe("void");
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
       status: "paid",
+    });
+  });
+
+  // CR-004: fault injection — simulate a crash between the order-status write
+  // and the booking-payment cascade (as could happen before both were one
+  // transaction) by forcing the order straight to "paid" without ever
+  // writing the booking payment, then prove a replay of the same webhook
+  // self-heals rather than short-circuiting on "already paid".
+  it("replay repairs a booking payment left unwritten by a prior partial run", async () => {
+    const { db, shop, entry } = await orderContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_123");
+    await setShopStripeAccountStatus(db, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: entry.person.id,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing({
+        async createInvoice(): Promise<CreateInvoiceResult> {
+          return {
+            status: "created",
+            stripeCustomerId: "cus_partial",
+            stripeInvoiceId: "in_partial",
+            stripeStatus: "open", // created open, not paid — no cascade runs yet
+            hostedInvoiceUrl: null,
+            invoicePdfUrl: null,
+            totalCents: 22_000,
+          };
+        },
+      }),
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
+
+    // A prior run got as far as flipping the order to "paid" but crashed
+    // before the booking-payment write landed.
+    await db.update(orders).set({ status: "paid" }).where(eq(orders.id, result.order.id));
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
+
+    const replayed = await markOrderPaidByInvoiceId(db, "in_partial", 22_000);
+    expect(replayed?.status).toBe("paid");
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      status: "paid",
+      providerRef: "in_partial",
+    });
+  });
+
+  // CR-004: a duplicate or out-of-order webhook must never regress a booking
+  // a human already refunded back to "paid".
+  it("does not regress an already-refunded booking back to paid on a duplicate webhook", async () => {
+    const { db, shop, entry } = await orderContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_123");
+    await setShopStripeAccountStatus(db, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: entry.person.id,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      status: "refunded",
+      amountCents: 0,
+      currency: "usd",
+      provider: "stripe",
+      providerRef: "re_manual",
+    });
+
+    // A delayed/duplicate delivery of the same "paid" event arrives late.
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      status: "refunded",
+      providerRef: "re_manual",
     });
   });
 

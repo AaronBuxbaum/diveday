@@ -339,3 +339,13 @@ new domain concept, define it here in the same PR.
   not in this set — it gates the per-booking mix request, not a site.
 - Bookings, waivers, certs, rental fit, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.
+- **Identity match key** — self-service paths (booking, wait-list, CSV import) treat a shop's
+  active people as unique by `(shop_id, lower(email))` and silently **reuse** the matching person
+  on any submission with that email — the submitted name is not compared, so a shared inbox (a
+  family, a work account) attaches every submission to the same diver's cert/waiver/rental-fit
+  history (`findOrCreatePerson`, `src/db/people.ts`, CR-008). Staff-facing diver create/edit/restore
+  instead **refuse** on the same collision rather than reuse, and a soft-deleted person's email
+  frees up for a new, unrelated person. Whether email-only reuse is safe enough for a shared-inbox
+  or shared-household scenario (e.g. a minor booked under a parent's email — see **Junior
+  certification**) is an open product/safety question, not yet decided — see H-13 in
+  [human-decisions.md](human-decisions.md).

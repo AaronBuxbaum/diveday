@@ -58,7 +58,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const [entry] = await getTripRoster(db, reef.id);
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
     if (!entry) throw new Error("demo booking missing");
 
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -88,7 +88,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const [entry] = await getTripRoster(db, reef.id);
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
     const [staff] = await listStaff(db, shop.id);
     if (!entry || !staff) throw new Error("demo fixture missing");
 
@@ -116,7 +116,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const roster = await getTripRoster(db, reef.id);
+    const roster = await getTripRoster(db, shop.id, reef.id);
     if (roster.length === 0) throw new Error("demo bookings missing");
 
     const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -148,7 +148,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const [entry] = await getTripRoster(db, reef.id);
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
     if (!entry) throw new Error("demo bookings missing");
 
     // A failed booking confirmation resends from stored data...
@@ -237,7 +237,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const roster = await getTripRoster(db, reef.id);
+    const roster = await getTripRoster(db, shop.id, reef.id);
     const certified = roster.find((entry) => entry.person.fullName === "Priya Sharma");
     if (!certified) throw new Error("seeded nitrox diver missing from the reef trip");
 
@@ -272,7 +272,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
-    const roster = await getTripRoster(db, reef.id);
+    const roster = await getTripRoster(db, shop.id, reef.id);
     if (roster.length === 0) throw new Error("demo bookings missing");
     // Strip any seeded contacts so today's whole boat is missing one.
     for (const entry of roster) {

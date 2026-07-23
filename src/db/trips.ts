@@ -1,16 +1,18 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
-import type { Course } from "./schema";
+import type { Course, Trip } from "./schema";
 import {
   bookings,
   courses,
   diveSites,
   people,
   personRoles,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -401,10 +403,40 @@ export async function applyDetailsToFutureSeries(
       )
       .groupBy(trips.id);
 
+    // Same operational-history invariant updateTrip enforces for a single
+    // trip (CR-006) — a bulk apply must not silently orphan a sibling's
+    // roll-call checkpoints either.
+    const siblingIds = siblings.map((sibling) => sibling.id);
+    const siblingCheckpoints =
+      siblingIds.length > 0
+        ? await tx
+            .select({
+              tripId: rollCallEvents.tripId,
+              bookingId: rollCallEvents.bookingId,
+              checkpoint: rollCallEvents.checkpoint,
+              status: rollCallEvents.status,
+              occurredAt: rollCallEvents.occurredAt,
+              createdAt: rollCallEvents.createdAt,
+            })
+            .from(rollCallEvents)
+            .where(inArray(rollCallEvents.tripId, siblingIds))
+        : [];
+    const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();
+    for (const row of siblingCheckpoints) {
+      const list = checkpointsByTrip.get(row.tripId) ?? [];
+      list.push(row);
+      checkpointsByTrip.set(row.tripId, list);
+    }
+
     let updated = 0;
     let skipped = 0;
     for (const sibling of siblings) {
       if (source.capacity < sibling.booked) {
+        skipped += 1;
+        continue;
+      }
+      const recordedDiveCount = maxRecordedDiveNumber(checkpointsByTrip.get(sibling.id) ?? []);
+      if (source.plannedDives < recordedDiveCount) {
         skipped += 1;
         continue;
       }
@@ -537,13 +569,67 @@ export type TripPatch = {
   cancellationWindowHours?: number | null;
 };
 
-export async function updateTrip(db: AppDb, shopId: string, tripId: string, patch: TripPatch) {
+export type UpdateTripOutcome =
+  | { ok: true; trip: Trip }
+  | { ok: false; reason: "invalid" | "not_found" }
+  | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
+  | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } };
+
+/**
+ * Edits a trip's own details/schedule/dives. Locks the trip row (mirroring
+ * the booking-creation lock in `createBookingRecord`) so a concurrent
+ * booking can't land between the active-booking count read and this
+ * update — capacity can never end up below the party actually on the
+ * manifest, and planned dives can never drop below a dive number staff have
+ * already recorded a roll call against (CR-006). Both invariants fail
+ * closed with a typed reason instead of silently discarding data.
+ */
+export async function updateTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  patch: TripPatch,
+): Promise<UpdateTripOutcome> {
   return db.transaction(async (tx) => {
     const plannedDives = normalizedDiveCount(patch.plannedDives);
-    if (!plannedDives) return null;
+    if (!plannedDives) return { ok: false, reason: "invalid" };
+
+    const [existing] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!existing) return { ok: false, reason: "not_found" };
+
+    const [{ bookedCount }] = await tx
+      .select({ bookedCount: count() })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+    if (patch.capacity < bookedCount) {
+      return { ok: false, reason: "capacity_below_booked", detail: { bookedCount } };
+    }
+
+    const checkpointRows = await tx
+      .select({
+        bookingId: rollCallEvents.bookingId,
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
+        createdAt: rollCallEvents.createdAt,
+      })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, tripId));
+    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
+    if (plannedDives < recordedDiveCount) {
+      return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
+    }
+
     const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;
     const sitesToValidate = drafts ?? (patch.diveSiteId ? [{ diveSiteId: patch.diveSiteId }] : []);
-    if (!(await validateDiveSites(tx, shopId, sitesToValidate))) return null;
+    if (!(await validateDiveSites(tx, shopId, sitesToValidate))) {
+      return { ok: false, reason: "invalid" };
+    }
     const [trip] = await tx
       .update(trips)
       .set({
@@ -562,9 +648,9 @@ export async function updateTrip(db: AppDb, shopId: string, tripId: string, patc
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
-    if (!trip) return null;
+    if (!trip) return { ok: false, reason: "not_found" };
     if (drafts) await replaceTripDives(tx, tripId, drafts);
-    return trip;
+    return { ok: true, trip };
   });
 }
 
@@ -638,53 +724,108 @@ export async function listStaff(db: AppDb, shopId: string) {
   return [...byId.values()];
 }
 
-export async function getTripCrewIds(db: AppDb, tripId: string): Promise<string[]> {
+/**
+ * `trip_assignments` has no `shop_id` of its own (CR-007) — every read here
+ * proves membership by joining through the trip that owns it, the same
+ * pattern `setTripCrew` uses for its write, rather than trusting a bare
+ * trip UUID the caller might supply for any shop.
+ */
+export async function getTripCrewIds(db: AppDb, shopId: string, tripId: string): Promise<string[]> {
   const rows = await db
     .select({ personId: tripAssignments.personId })
     .from(tripAssignments)
-    .where(eq(tripAssignments.tripId, tripId));
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId)));
   return rows.map((r) => r.personId);
 }
 
-/** Replace a trip's crew. Only people with a staff role in the shop stick. */
-export async function setTripCrew(db: AppDb, shopId: string, tripId: string, personIds: string[]) {
+/**
+ * Replace a trip's crew. Only people with a staff role in the shop stick.
+ * Proves the trip itself belongs to the shop in the same transaction as the
+ * write — `trip_assignments` carries no `shop_id` of its own to lean on, so
+ * without this a tripId for any shop plus a validated personId list would
+ * silently rewrite another shop's crew (CR-007). Returns false, doing
+ * nothing, for a tripId that isn't this shop's.
+ */
+export async function setTripCrew(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personIds: string[],
+): Promise<boolean> {
   const staff = await listStaff(db, shopId);
   const valid = personIds.filter((id) => staff.some((s) => s.person.id === id));
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    const [trip] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!trip) return false;
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
     if (valid.length > 0) {
       await tx.insert(tripAssignments).values(valid.map((personId) => ({ tripId, personId })));
     }
+    return true;
   });
 }
 
-/** Divers on a trip: non-cancelled bookings with their people, oldest first. */
-export async function getTripRoster(db: AppDb, tripId: string) {
+/**
+ * Divers on a trip: non-cancelled bookings with their people, oldest first.
+ * `bookings` carries its own `shop_id` (CR-007) — filtered directly rather
+ * than joined through `trips`, so this can never be called safely with only
+ * a trip UUID for the wrong shop.
+ */
+export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
   return db
     .select({ booking: bookings, person: people })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(bookings.tripId, tripId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
     .orderBy(asc(bookings.createdAt));
 }
 
-/** Wait-list entries stay outside the roster because they have not booked a seat. */
-export async function getTripWaitlist(db: AppDb, tripId: string) {
+/**
+ * Wait-list entries stay outside the roster because they have not booked a
+ * seat. `trip_waitlist_entries` carries its own `shop_id` (CR-007).
+ */
+export async function getTripWaitlist(db: AppDb, shopId: string, tripId: string) {
   return db
     .select({ entry: tripWaitlistEntries, person: people })
     .from(tripWaitlistEntries)
     .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-    .where(eq(tripWaitlistEntries.tripId, tripId))
+    .where(and(eq(tripWaitlistEntries.tripId, tripId), eq(tripWaitlistEntries.shopId, shopId)))
     .orderBy(asc(tripWaitlistEntries.createdAt));
 }
 
-/** Confirmation pages render only a real entry, never an identity in the URL. */
-export async function getWaitlistEntryForTrip(db: AppDb, tripId: string, entryId: string) {
+/**
+ * Confirmation pages render only a real entry, never an identity in the URL.
+ * `trip_waitlist_entries` carries its own `shop_id` (CR-007).
+ */
+export async function getWaitlistEntryForTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  entryId: string,
+) {
   const [row] = await db
     .select({ entry: tripWaitlistEntries, person: people })
     .from(tripWaitlistEntries)
     .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-    .where(and(eq(tripWaitlistEntries.id, entryId), eq(tripWaitlistEntries.tripId, tripId)))
+    .where(
+      and(
+        eq(tripWaitlistEntries.id, entryId),
+        eq(tripWaitlistEntries.tripId, tripId),
+        eq(tripWaitlistEntries.shopId, shopId),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }

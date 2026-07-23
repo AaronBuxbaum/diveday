@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
@@ -10,7 +11,6 @@ import { saveRentalFit } from "@/db/rental-fit";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
-import { verifyReadinessToken } from "@/lib/readiness-links";
 
 /**
  * The transactional half of the diver's readiness page. Every action is
@@ -24,12 +24,12 @@ const base = (token: string) => `/ready/${token}`;
 
 /** Resolve the token to its booking + shop context, or bounce to a plain notice. */
 async function contextFor(token: string) {
-  const bookingId = verifyReadinessToken(token);
-  if (!bookingId) return null;
   const db = await getDb();
-  const data = await getReadyPageData(db, bookingId);
+  const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
+  if (!capability) return null;
+  const data = await getReadyPageData(db, capability.bookingId);
   if (!data || data.detail.cancelled) return null;
-  return { db, bookingId, data };
+  return { db, bookingId: capability.bookingId, data };
 }
 
 /**

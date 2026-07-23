@@ -13,6 +13,7 @@ import {
   type PaymentStatus,
   people,
   personRoles,
+  shops,
   trips,
   userAccounts,
   waiverRecords,
@@ -262,6 +263,54 @@ describe("getMonthlyReport", () => {
     );
     expect(report.trips).toEqual([]);
     expect(report.revenueCents).toBe(0);
+  });
+
+  it("excludes a payment/waiver row whose own shop_id doesn't match the trip's shop, even though it joins to that shop's booking (CR-007)", async () => {
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-reporting-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+
+    const diver = await makePerson(db, shop.id, "Diver X");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+
+    // Both rows join correctly to shop.id's booking via bookingId, but each
+    // claims a different shop on its own shop_id column — the exact
+    // inconsistency CR-007 exists to never trust. A query that (incorrectly)
+    // relied on the bookingId join alone would still pick these up for
+    // shop.id's report.
+    await db
+      .insert(bookingPayments)
+      .values({ shopId: otherShop.id, bookingId: booking, status: "paid", amountCents: 99_999 });
+    const template = await getCurrentWaiverTemplate(db, shop.id);
+    if (!template) throw new Error("seeded shop is missing a waiver template");
+    await db.insert(waiverRecords).values({
+      shopId: otherShop.id,
+      bookingId: booking,
+      personId: diver,
+      templateId: template.id,
+      templateTitle: template.title,
+      templateVersion: template.version,
+      templateBody: template.body,
+      status: "completed",
+      tokenHash: "hash-cross-shop",
+      expiresAt: new Date("2027-01-01T00:00:00Z"),
+      signedAt: new Date("2026-06-05T00:00:00Z"),
+      completedAt: new Date("2026-06-05T00:00:00Z"),
+    });
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.revenueCents).toBe(0);
+    expect(report.trips.find((t) => t.title === "Reef")).toMatchObject({ waiverComplete: 0 });
+
+    // The mismatched rows don't leak into the other shop's report either —
+    // the trip and booking they join to both belong to `shop`, not `otherShop`.
+    const otherReport = await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START);
+    expect(otherReport.trips).toEqual([]);
+    expect(otherReport.revenueCents).toBe(0);
   });
 });
 

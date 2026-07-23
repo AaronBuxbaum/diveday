@@ -1,6 +1,6 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { AppDb } from "./client";
+import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { bookings, nitroxCertifications, people } from "./schema";
 
 export type NewNitroxCertification = {
@@ -10,7 +10,11 @@ export type NewNitroxCertification = {
   identifier: string;
 };
 
-/** Captured pending; a separate explicit review makes it usable as a fill gate. */
+/**
+ * Captured pending; a separate explicit review makes it usable as a fill gate.
+ * Refuses (returns null) on a same-shop/agency/identifier collision in any
+ * case, mirroring `createCertification` (CR-009).
+ */
 export async function createNitroxCertification(db: AppDb, input: NewNitroxCertification) {
   const [person] = await db
     .select({ id: people.id })
@@ -18,16 +22,21 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
   if (!person) return null;
-  const [certification] = await db
-    .insert(nitroxCertifications)
-    .values({
-      shopId: input.shopId,
-      personId: input.personId,
-      agency: input.agency,
-      identifier: input.identifier.trim(),
-    })
-    .returning();
-  return certification ?? null;
+  try {
+    const [certification] = await db
+      .insert(nitroxCertifications)
+      .values({
+        shopId: input.shopId,
+        personId: input.personId,
+        agency: input.agency,
+        identifier: input.identifier.trim(),
+      })
+      .returning();
+    return certification ?? null;
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
 }
 
 export async function reviewNitroxCertification(
@@ -107,7 +116,7 @@ export async function restoreNitroxCertification(
       and(
         eq(nitroxCertifications.shopId, input.shopId),
         eq(nitroxCertifications.agency, archived.agency),
-        eq(nitroxCertifications.identifier, archived.identifier),
+        sql`lower(${nitroxCertifications.identifier}) = lower(${archived.identifier})`,
         isNull(nitroxCertifications.deletedAt),
       ),
     )

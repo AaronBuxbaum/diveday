@@ -21,6 +21,15 @@ export type CreateInvoiceRequest = {
   lineItems: InvoiceLineItem[];
   /** Days a diver has to pay before the invoice is overdue; Stripe requires this for `send_invoice`. */
   daysUntilDue?: number;
+  /**
+   * Deterministic per-attempt key (`idempotencyKeyFor`,
+   * src/db/payment-operations.ts). Invoice creation is several POSTs
+   * (customer, invoiceitem(s), invoice, finalize) — each gets its own
+   * `:step` suffix so a retry replays each step against the same Stripe
+   * object it created the first time, never a second customer/item/invoice
+   * (CR-005).
+   */
+  idempotencyKey: string;
 };
 
 export type CreatedInvoice = {
@@ -60,7 +69,12 @@ export type RefundInvoiceResult = {
 export interface InvoicingProvider {
   createInvoice(request: CreateInvoiceRequest): Promise<CreateInvoiceResult>;
   voidInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<VoidInvoiceResult>;
-  refundInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<RefundInvoiceResult>;
+  /** `idempotencyKey` — see CreateInvoiceRequest; a retry converges on one Stripe refund. */
+  refundInvoice(
+    stripeAccountId: string,
+    stripeInvoiceId: string,
+    idempotencyKey: string,
+  ): Promise<RefundInvoiceResult>;
   retrieveInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<InvoiceLookupResult>;
 }
 
@@ -108,10 +122,18 @@ export function stripeInvoicingProvider(
   config: { secretKey: string },
   fetchImpl: Fetch,
 ): InvoicingProvider {
-  async function post(stripeAccountId: string, path: string, form: URLSearchParams) {
+  async function post(
+    stripeAccountId: string,
+    path: string,
+    form: URLSearchParams,
+    idempotencyKey?: string,
+  ) {
     return fetchImpl(`https://api.stripe.com/v1${path}`, {
       method: "POST",
-      headers: headersFor(config.secretKey, stripeAccountId),
+      headers: {
+        ...headersFor(config.secretKey, stripeAccountId),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      },
       body: form.toString(),
     });
   }
@@ -119,17 +141,19 @@ export function stripeInvoicingProvider(
   return {
     async createInvoice(request) {
       try {
+        const key = request.idempotencyKey;
         const customerResponse = await post(
           request.stripeAccountId,
           "/customers",
           new URLSearchParams({ email: request.customerEmail, name: request.customerName }),
+          `${key}:customer`,
         );
         if (!customerResponse.ok) return { status: "failed" };
         const customerBody = customerResponseSchema.safeParse(await customerResponse.json());
         if (!customerBody.success) return { status: "failed" };
         const stripeCustomerId = customerBody.data.id;
 
-        for (const item of request.lineItems) {
+        for (const [index, item] of request.lineItems.entries()) {
           const itemResponse = await post(
             request.stripeAccountId,
             "/invoiceitems",
@@ -140,6 +164,7 @@ export function stripeInvoicingProvider(
               quantity: String(item.quantity),
               unit_amount: String(item.unitAmountCents),
             }),
+            `${key}:item:${index}`,
           );
           if (!itemResponse.ok) return { status: "failed" };
         }
@@ -153,6 +178,7 @@ export function stripeInvoicingProvider(
             days_until_due: String(request.daysUntilDue ?? 7),
             auto_advance: "false",
           }),
+          `${key}:invoice`,
         );
         if (!invoiceResponse.ok) return { status: "failed" };
         const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
@@ -162,6 +188,7 @@ export function stripeInvoicingProvider(
           request.stripeAccountId,
           `/invoices/${invoiceBody.data.id}/finalize`,
           new URLSearchParams(),
+          `${key}:finalize`,
         );
         if (!finalizeResponse.ok) return { status: "failed" };
         const finalizeBody = invoiceResponseSchema.safeParse(await finalizeResponse.json());
@@ -172,6 +199,7 @@ export function stripeInvoicingProvider(
           request.stripeAccountId,
           `/invoices/${finalizeBody.data.id}/send`,
           new URLSearchParams(),
+          `${key}:send`,
         ).catch(() => undefined);
 
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
@@ -193,7 +221,7 @@ export function stripeInvoicingProvider(
       }
     },
 
-    async refundInvoice(stripeAccountId, stripeInvoiceId) {
+    async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey) {
       try {
         const invoiceResponse = await fetchImpl(
           `https://api.stripe.com/v1/invoices/${stripeInvoiceId}?expand[]=payment_intent`,
@@ -211,6 +239,7 @@ export function stripeInvoicingProvider(
           stripeAccountId,
           "/refunds",
           new URLSearchParams({ payment_intent: paymentIntentId }),
+          idempotencyKey,
         );
         if (!response.ok) return { status: "failed" };
         const body = refundResponseSchema.safeParse(await response.json());

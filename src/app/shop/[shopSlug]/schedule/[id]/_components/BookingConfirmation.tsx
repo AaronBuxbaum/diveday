@@ -2,7 +2,6 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { readinessLinkPath } from "@/lib/readiness-links";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
 import { RentalFitForm } from "./RentalFitForm";
@@ -25,7 +24,7 @@ function PaymentSection({
 }: {
   payment: PaymentPanel;
   payCancelled: boolean;
-  payRef: Omit<RentalFitRef, "personId">;
+  payRef: RentalFitRef;
 }) {
   if (!payment) return null;
 
@@ -91,6 +90,7 @@ export function BookingConfirmation({
   fitSaved,
   payment,
   payCancelled,
+  readinessLink,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -104,10 +104,11 @@ export function BookingConfirmation({
   fitSaved: boolean;
   payment: PaymentPanel;
   payCancelled: boolean;
+  /** Null when no readiness capability could be issued (e.g. no canonical origin configured). */
+  readinessLink: string | null;
 }) {
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
   const nextStep = nextDiverStep(checklist);
-  const readinessLink = readinessLinkPath(confirmed.booking.id);
 
   return (
     <section className="rise-in mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
@@ -142,8 +143,9 @@ export function BookingConfirmation({
           </>
         )}
         <Link
-          href={readinessLink}
-          className="mt-3 inline-block text-sm font-semibold text-primary hover:underline"
+          href={readinessLink ?? "#"}
+          aria-disabled={readinessLink === null}
+          className="mt-3 inline-block text-sm font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
         >
           Track everything on your readiness page →
         </Link>

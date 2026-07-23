@@ -58,11 +58,11 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; count?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice } = await searchParams;
+  const { notice, count } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -71,7 +71,7 @@ export default async function ManageTripPage({
   const [staff, crewIds, requirement, diveSiteList, tripDiveList, siteRequirement, series] =
     await Promise.all([
       listStaff(db, shop.id),
-      getTripCrewIds(db, tripId),
+      getTripCrewIds(db, shop.id, tripId),
       getTripRequirements(db, shop.id, tripId),
       listDiveSites(db, shop.id),
       listTripDives(db, shop.id, tripId),
@@ -90,7 +90,7 @@ export default async function ManageTripPage({
 
   return (
     <>
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "count"]} />
       <ShopPageHeader
         eyebrow="Trips"
         title={trip.title}
@@ -130,7 +130,7 @@ export default async function ManageTripPage({
         }
       />
 
-      <TripNoticeBanner notice={notice} />
+      <TripNoticeBanner notice={notice} count={count} />
 
       <DetailsSection
         action={saveDetails.bind(null, shopSlug, tripId)}

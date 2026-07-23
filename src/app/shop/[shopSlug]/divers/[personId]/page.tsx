@@ -56,8 +56,8 @@ export default async function DiverDetailPage({
         <NoticeBanner notice={notice} />
       )}
       <StatsSummary diver={diver} />
-      <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} />
-      <SpecialtyCards diver={diver} shopSlug={shopSlug} personId={personId} />
+      <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
+      <SpecialtyCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
       <RentalFit
         diver={diver}
         shopSlug={shopSlug}

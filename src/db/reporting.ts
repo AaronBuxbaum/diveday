@@ -94,7 +94,11 @@ export async function getMonthlyReport(
     .from(trips)
     .leftJoin(
       bookings,
-      and(eq(bookings.tripId, trips.id), inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES])),
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
     )
     .where(inWindow)
     .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity);
@@ -113,7 +117,11 @@ export async function getMonthlyReport(
     .from(trips)
     .innerJoin(
       bookings,
-      and(eq(bookings.tripId, trips.id), inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES])),
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
     )
     .innerJoin(
       waiverRecords,
@@ -130,12 +138,24 @@ export async function getMonthlyReport(
   // Money collected on this month's trips. The base is each booking's current
   // payment row (paid or deposit_paid), which correctly covers full payments,
   // deposits not yet topped up, refunds (excluded), and staff manual marks.
+  // `bookings`/`bookingPayments` carry their own (independently-writable)
+  // `shop_id` alongside the FK chain to `trips` — every join here is scoped
+  // to both, so this never trusts a child row's own shop_id alone (CR-007).
   const [baseRevenue] = await db
     .select({ total: sum(bookingPayments.amountCents) })
     .from(bookingPayments)
-    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
+    )
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])));
+    .where(
+      and(
+        inWindow,
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES]),
+      ),
+    );
 
   // The one thing that current-state row loses: when a deposit is later topped
   // up by a balance payment, `setBookingPayment` overwrites the deposit amount
@@ -146,13 +166,26 @@ export async function getMonthlyReport(
   const [recoveredDeposits] = await db
     .select({ total: sum(bookingCheckouts.amountPerDiverCents) })
     .from(bookingCheckouts)
-    .innerJoin(bookingCheckoutBookings, eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id))
-    .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, shopId),
+      ),
+    )
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookings.id))
+    .innerJoin(
+      bookingPayments,
+      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, shopId)),
+    )
     .where(
       and(
         inWindow,
+        eq(bookingCheckouts.shopId, shopId),
         eq(bookingCheckouts.isDeposit, true),
         eq(bookingCheckouts.status, "completed"),
         eq(bookingPayments.status, "paid"),

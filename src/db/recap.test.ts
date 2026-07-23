@@ -180,8 +180,11 @@ describe("recap photos and crew shout-out", () => {
     // A different shop can't moderate this photo.
     expect(
       await deleteRecapPhoto(db, "00000000-0000-0000-0000-000000000000", doomed.photo.id),
-    ).toBe(false);
-    expect(await deleteRecapPhoto(db, shop.id, doomed.photo.id)).toBe(true);
+    ).toEqual({ deleted: false });
+    expect(await deleteRecapPhoto(db, shop.id, doomed.photo.id)).toEqual({
+      deleted: true,
+      imageUrl: "https://img/bad.jpg",
+    });
     const afterDelete = await listRecapPhotosForTrip(db, shop.id, reef.id);
     expect(afterDelete.length).toBe(before.length + 1);
     expect(afterDelete.some((p) => p.id === doomed.photo.id)).toBe(false);

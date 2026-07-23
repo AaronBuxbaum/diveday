@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
@@ -17,6 +18,7 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
@@ -58,7 +60,7 @@ export default async function TripDetailPage({
 }) {
   await connection();
   const { shopSlug, id: tripId } = await params;
-  const { booking: bookingId, waitlist: waitlistId, error, fit, pay } = await searchParams;
+  const { booking: bookingToken, waitlist: waitlistId, error, fit, pay } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -83,11 +85,16 @@ export default async function TripDetailPage({
       ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
       : null;
 
-  // The confirmation renders only from a real booking row — never from a
-  // URL claim (design principle 6: trustworthy by inspection).
+  // The confirmation renders only from a verified `confirm` capability —
+  // never from a raw booking id in the URL (design principle 6: trustworthy
+  // by inspection; CR-003). A guessed/leaked booking UUID alone is not a
+  // credential; only a token this server itself issued verifies here.
+  const confirmCapability = bookingToken
+    ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })
+    : null;
   const [confirmed, waitlistConfirmation] = await Promise.all([
-    bookingId ? getBookingForTrip(db, tripId, bookingId) : null,
-    waitlistId ? getWaitlistEntryForTrip(db, tripId, waitlistId) : null,
+    confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
+    waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
   ]);
   const diveBriefings = await Promise.all(
     tripDives.map(async ({ dive, diveSite }) => {
@@ -108,16 +115,23 @@ export default async function TripDetailPage({
   const payAtBooking = Boolean(
     perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
-  // The confirmed-booking panels draw on five independent queries — batch them.
-  const [payment, readiness, requirement, rentalFit, nitroxCardVerified] = confirmed
-    ? await Promise.all([
-        resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
-        getBookingReadiness(db, shop.id, confirmed.booking.id),
-        getTripRequirements(db, shop.id, tripId),
-        getRentalFit(db, shop.id, confirmed.person.id),
-        verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
-      ])
-    : [null, null, null, null, false];
+  // The confirmed-booking panels draw on six independent queries — batch them.
+  const [payment, readiness, requirement, rentalFit, nitroxCardVerified, readinessCapability] =
+    confirmed
+      ? await Promise.all([
+          resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
+          getBookingReadiness(db, shop.id, confirmed.booking.id),
+          getTripRequirements(db, shop.id, tripId),
+          getRentalFit(db, shop.id, confirmed.person.id),
+          verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
+          issueBookingCapability(db, {
+            shopId: shop.id,
+            bookingId: confirmed.booking.id,
+            purpose: "readiness",
+          }),
+        ])
+      : [null, null, null, null, false, null];
+  const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
 
   const inPast = trip.startsAt <= nowDate();
   const full = isFull(trip);
@@ -165,15 +179,16 @@ export default async function TripDetailPage({
           requirement={requirement}
           fitRef={{
             ...tripRef,
-            shopId: shop.id,
-            bookingId: confirmed.booking.id,
-            personId: confirmed.person.id,
+            // `confirmed` is only non-null when `confirmCapability` (and thus
+            // `bookingToken`) verified, so this is always a real token here.
+            token: bookingToken as string,
           }}
           rentalFit={rentalFit}
           nitroxCardVerified={nitroxCardVerified}
           fitSaved={fit === "saved"}
           payment={payment}
           payCancelled={pay === "cancelled"}
+          readinessLink={readinessLink}
         />
       ) : waitlistConfirmation ? (
         <WaitlistConfirmation

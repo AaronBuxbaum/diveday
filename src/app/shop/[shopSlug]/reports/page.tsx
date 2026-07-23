@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
+import { listPendingMediaDeletions } from "@/db/media-deletions";
+import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
@@ -10,6 +14,18 @@ import { formatShortDate } from "@/lib/format";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { retryMediaDeletionAction } from "./actions";
+
+const OPERATION_KIND_LABELS = {
+  checkout_session: "Checkout",
+  invoice: "Invoice",
+  refund: "Refund",
+} as const;
+
+const MEDIA_KIND_LABELS = {
+  course_photo: "Course photo",
+  recap_photo: "Recap photo",
+} as const;
 
 export const metadata: Metadata = {
   title: "Reports — DiveDay",
@@ -137,6 +153,9 @@ export default async function ReportsPage({
     tz,
   );
 
+  const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
+  const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
+  const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
   const input = await getMonthlyReport(db, shop.id, monthStart, monthEnd);
   const report = summarizeMonth(input);
   const trips = [...input.trips].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
@@ -168,6 +187,79 @@ export default async function ReportsPage({
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader eyebrow="Owner" title="How's your month" description={description} />
+
+      {stuckPaymentOperations.length > 0 ? (
+        <section aria-label="Payment operations needing reconciliation" className="mb-8">
+          <ShopNotice tone="warning" role="status">
+            <p className="font-medium">
+              {stuckPaymentOperations.length}{" "}
+              {stuckPaymentOperations.length === 1 ? "payment attempt" : "payment attempts"} need
+              reconciliation
+            </p>
+            <p className="mt-1 text-sm">
+              Stripe was asked to do something and the app never confirmed how it went — check each
+              against the Stripe dashboard and finish it by hand.
+            </p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
+                <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium">{OPERATION_KIND_LABELS[intent.kind]}</span>
+                  {tripTitle ? <span>· {tripTitle}</span> : null}
+                  {personName ? <span>· {personName}</span> : null}
+                  <span className="text-muted">
+                    · started {formatShortDate(intent.startedAt, "en-US", tz)}
+                    {intent.stripeObjectId ? ` · Stripe: ${intent.stripeObjectId}` : ""}
+                  </span>
+                  {tripId ? (
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                      className="font-medium text-primary underline underline-offset-2"
+                    >
+                      Open trip
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {pendingMediaDeletions.length > 0 ? (
+        <section aria-label="Photo deletions needing reconciliation" className="mb-8">
+          <ShopNotice tone="warning" role="status">
+            <p className="font-medium">
+              {pendingMediaDeletions.length}{" "}
+              {pendingMediaDeletions.length === 1 ? "photo" : "photos"} removed but not yet deleted
+              from storage
+            </p>
+            <p className="mt-1 text-sm">
+              The photo is already gone from the app; the stored file wasn't — retry the delete, or
+              leave it for tonight's automatic retry.
+            </p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {pendingMediaDeletions.map((attempt) => (
+                <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-medium">{MEDIA_KIND_LABELS[attempt.kind]}</span>
+                  <span className="text-muted">
+                    · queued {formatShortDate(attempt.createdAt, "en-US", tz)}
+                    {attempt.lastError ? ` · ${attempt.lastError}` : ""}
+                  </span>
+                  <form action={retryMediaDeletion}>
+                    <input type="hidden" name="attemptId" value={attempt.id} />
+                    <SubmitButton
+                      pendingLabel="Retrying…"
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      Retry delete
+                    </SubmitButton>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
 
       {/* Month navigator — plain server-rendered links, no client JS. */}
       <div className="mb-6 flex items-center justify-between gap-3">

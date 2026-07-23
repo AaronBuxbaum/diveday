@@ -310,10 +310,18 @@ async function tripsWithInstructor(db: AppDb, shopId: string, tripIds: string[])
   const rows = await db
     .select({ tripId: tripAssignments.tripId })
     .from(tripAssignments)
+    // `trip_assignments` carries no shop_id of its own; proving the trip
+    // itself belongs to shopId (not just the assigned person) is what closes
+    // the cross-tenant read this table's shape allows (CR-007 review
+    // finding — mirrors getTripCrewIds's already-fixed join, src/db/trips.ts).
+    // Every current caller already pre-filters tripIds to this shop, but the
+    // helper itself shouldn't depend on that discipline.
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
       and(
+        eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
         eq(personRoles.role, "instructor"),
         inArray(tripAssignments.tripId, tripIds),

@@ -14,7 +14,7 @@ import {
   or,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { AppDb } from "./client";
+import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { listOrdersForPerson } from "./orders";
 import { listPersonBookingPayments } from "./payments";
@@ -37,7 +37,15 @@ export type NewDiver = {
   phone?: string;
 };
 
-/** Create a reusable shop person without requiring a booking first. */
+/**
+ * Create a reusable shop person without requiring a booking first. Returns
+ * null both for the ordinary "someone with this email already exists" case
+ * and for the race where a concurrent write (a booking, a wait-list join, an
+ * import row) claims the same email between the check and this insert
+ * (people_shop_email_unique, CR-008) — either way, staff must go find and
+ * reuse the existing diver rather than getting a second row silently split
+ * off from the first's history.
+ */
 export async function createDiver(db: AppDb, input: NewDiver) {
   const email = input.email?.trim().toLowerCase() || null;
   if (email) {
@@ -51,20 +59,25 @@ export async function createDiver(db: AppDb, input: NewDiver) {
     if (existing) return null;
   }
 
-  return db.transaction(async (tx) => {
-    const [person] = await tx
-      .insert(people)
-      .values({
-        shopId: input.shopId,
-        fullName: input.fullName.trim(),
-        email,
-        phone: input.phone?.trim() || null,
-      })
-      .returning();
-    if (!person) throw new Error("createDiver: person insert returned no row");
-    await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
-    return person;
-  });
+  try {
+    return await db.transaction(async (tx) => {
+      const [person] = await tx
+        .insert(people)
+        .values({
+          shopId: input.shopId,
+          fullName: input.fullName.trim(),
+          email,
+          phone: input.phone?.trim() || null,
+        })
+        .returning();
+      if (!person) throw new Error("createDiver: person insert returned no row");
+      await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+      return person;
+    });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
 }
 
 export async function updateDiver(
@@ -94,21 +107,33 @@ export async function updateDiver(
       .limit(1);
     if (existing) return null;
   }
-  const [person] = await db
-    .update(people)
-    .set({
-      fullName: input.fullName.trim(),
-      email,
-      phone: input.phone?.trim() || null,
-      ...(input.diveInsurance === undefined
-        ? {}
-        : { diveInsurance: input.diveInsurance.trim() || null }),
-    })
-    .where(
-      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
-    )
-    .returning();
-  return person ?? null;
+  try {
+    const [person] = await db
+      .update(people)
+      .set({
+        fullName: input.fullName.trim(),
+        email,
+        phone: input.phone?.trim() || null,
+        ...(input.diveInsurance === undefined
+          ? {}
+          : { diveInsurance: input.diveInsurance.trim() || null }),
+      })
+      .where(
+        and(
+          eq(people.id, input.personId),
+          eq(people.shopId, input.shopId),
+          isNull(people.deletedAt),
+        ),
+      )
+      .returning();
+    return person ?? null;
+  } catch (error) {
+    // Same race as the check above, closed instead of just narrowed
+    // (people_shop_email_unique, CR-008): a concurrent write claimed this
+    // email between the read and this write.
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
 }
 
 /** Soft-delete a diver. Bookings, cards, and rental fit stay available to operations. */
@@ -121,13 +146,24 @@ export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
   return Boolean(person);
 }
 
+/**
+ * Undo a soft-delete. Refuses (returns false) if an active person at this
+ * shop now holds the same email — the partial unique index would reject it
+ * anyway (people_shop_email_unique, CR-008), and a diver who re-registered
+ * while this one was deleted must not be silently clobbered by the undo.
+ */
 export async function restoreDiver(db: AppDb, shopId: string, personId: string) {
-  const [person] = await db
-    .update(people)
-    .set({ deletedAt: null })
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNotNull(people.deletedAt)))
-    .returning({ id: people.id });
-  return Boolean(person);
+  try {
+    const [person] = await db
+      .update(people)
+      .set({ deletedAt: null })
+      .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNotNull(people.deletedAt)))
+      .returning({ id: people.id });
+    return Boolean(person);
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return false;
+    throw error;
+  }
 }
 
 export const DIVER_PAGE_SIZE = 50;

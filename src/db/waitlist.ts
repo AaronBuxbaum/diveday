@@ -1,8 +1,9 @@
-import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
-import { bookings, people, personRoles, shops, trips, tripWaitlistEntries } from "./schema";
+import { findOrCreatePerson } from "./people";
+import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -144,20 +145,12 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
     if ((capacity?.booked ?? 0) < trip.capacity) return { ok: false, reason: "trip_available" };
 
-    // A soft-deleted person's email is free (matching createBooking/createDiver).
-    let [person] = await tx
-      .select()
-      .from(people)
-      .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
-      .limit(1);
-    if (!person) {
-      [person] = await tx
-        .insert(people)
-        .values({ shopId: req.shopId, fullName, email, phone: req.phone })
-        .returning();
-      if (!person) throw new Error("joinTripWaitlist: person insert returned no row");
-      await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
-    }
+    const { person } = await findOrCreatePerson(tx, {
+      shopId: req.shopId,
+      fullName,
+      email,
+      phone: req.phone,
+    });
 
     const [booking] = await tx
       .select({ id: bookings.id })

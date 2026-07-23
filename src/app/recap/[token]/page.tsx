@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { ImageFileInput } from "@/components/ImageFileInput";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -212,16 +213,15 @@ export default async function DiveRecapPage({
             action={uploadRecapPhotoAction.bind(null, token)}
             className="mt-4 flex flex-col gap-3"
           >
-            <label className="flex flex-col gap-1 text-sm font-medium">
+            <label htmlFor="recap-photo" className="flex flex-col gap-1 text-sm font-medium">
               Add a photo
-              <input
-                type="file"
-                name="photo"
-                required
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
-              />
             </label>
+            <ImageFileInput
+              id="recap-photo"
+              name="photo"
+              required
+              className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+            />
             <input
               type="text"
               name="caption"

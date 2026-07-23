@@ -9,6 +9,7 @@ import type { DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  bookingCapabilities,
   bookingPayments,
   bookings,
   certifications,
@@ -71,6 +72,17 @@ function at(daysFromNow: number, hour: number, minute = 0): Date {
   const d = new Date(nowMs() + daysFromNow * DAY_MS);
   d.setUTCHours(hour, minute, 0, 0);
   return d;
+}
+
+/**
+ * n days from now as a date-only "YYYY-MM-DD" (demo cert expiries, CR-009).
+ * Uses the UTC calendar date, not the demo shop's own timezone — fine for the
+ * multi-week-out/lapsed values seeded today, but do not use this for a
+ * boundary-adjacent value (e.g. "expires today") without switching to
+ * `calendarDateInTimezone` first.
+ */
+function dateAt(daysFromNow: number): string {
+  return new Date(nowMs() + daysFromNow * DAY_MS).toISOString().slice(0, 10);
 }
 
 /**
@@ -403,13 +415,13 @@ export async function seedDemoSchedule(
     agency: "padi" | "ssi" | "naui" | "sdi" | "tdi";
     level: "open_water" | "advanced_open_water" | "rescue" | "divemaster";
     status: "verified" | "pending";
-    expiresAt?: Date;
+    expiresAt?: string;
   }> = [
     { index: 12, agency: "padi", level: "advanced_open_water", status: "verified" },
     { index: 13, agency: "ssi", level: "open_water", status: "pending" },
-    { index: 14, agency: "padi", level: "rescue", status: "verified", expiresAt: at(26, 12) },
+    { index: 14, agency: "padi", level: "rescue", status: "verified", expiresAt: dateAt(26) },
     // Certified once, but the card lapsed a few weeks ago — no longer valid.
-    { index: 15, agency: "naui", level: "open_water", status: "verified", expiresAt: at(-24, 12) },
+    { index: 15, agency: "naui", level: "open_water", status: "verified", expiresAt: dateAt(-24) },
     { index: 16, agency: "sdi", level: "open_water", status: "verified" },
     { index: 17, agency: "tdi", level: "divemaster", status: "verified" },
   ];
@@ -2138,6 +2150,8 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
+  // Readiness/confirm capabilities reference bookings, so they must go before them.
+  await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));

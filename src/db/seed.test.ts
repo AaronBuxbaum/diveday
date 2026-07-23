@@ -3,9 +3,11 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
+import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
-import { bookings, people, personRoles, userAccounts } from "./schema";
-import { demoTodayDepartureStart, resetDemoSchedule } from "./seed";
+import { createTestDb } from "./client";
+import { bookingCapabilities, bookings, people, personRoles, shops, userAccounts } from "./schema";
+import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 
@@ -71,6 +73,42 @@ describe("resetDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.email, "wendy@example.com")));
     expect(wendy).toHaveLength(0);
+  });
+
+  it("clears issued booking capabilities so a churned playground resets cleanly", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+    if (!open) throw new Error("expected open trip missing");
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Capability Cameron",
+      email: "cameron@example.com",
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("expected booking to succeed");
+    // A readiness/confirm capability row references the booking; before the
+    // reset cleared it, that row blocked the bookings delete with an FK
+    // violation (23503) and left every subsequent test's fixture dirty.
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: outcome.bookingId,
+      purpose: "readiness",
+    });
+    expect(issued).not.toBeNull();
+
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    const after = await upcomingTripsWithCounts(db, shop.id);
+    expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
+      trips.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity })),
+    );
+    const remainingCapabilities = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.shopId, shop.id));
+    expect(remainingCapabilities).toHaveLength(0);
   });
 
   it("keeps staff and their logins intact so the demo session survives", async () => {
@@ -152,5 +190,46 @@ describe("demoTodayDepartureStart", () => {
     const start = demoTodayDepartureStart(now, TZ);
     expect(start.getTime()).toBeGreaterThan(now.getTime());
     expect(localDay(start)).toBe(localDay(now));
+  });
+});
+
+describe("seedIfEmpty (CR-010)", () => {
+  it("seeds a fresh database and is a no-op the second time", async () => {
+    const db = await createTestDb();
+    await expect(db.select({ id: shops.id }).from(shops)).resolves.toHaveLength(0);
+
+    await seedIfEmpty(db);
+    const seeded = await db.select({ id: shops.id }).from(shops);
+    expect(seeded.length).toBeGreaterThan(0);
+
+    // A shop already exists, so a second call must not mint a duplicate demo
+    // shop (or throw on the unique slug it would collide with).
+    await seedIfEmpty(db);
+    await expect(db.select({ id: shops.id }).from(shops)).resolves.toHaveLength(seeded.length);
+  });
+
+  it("rolls back the whole seed atomically when the enclosing transaction fails", async () => {
+    // src/db/client.ts's init() wraps seedIfEmpty in exactly this shape — a
+    // transaction that seedIfEmpty runs inside of, so a failure after it
+    // completes (a crash writing the return value, a network blip) undoes
+    // every row instead of leaving a half-seeded shop a retry would find
+    // already non-empty and stop repairing (CR-010).
+    const db = await createTestDb();
+    await expect(
+      db.transaction(async (tx) => {
+        await seedIfEmpty(tx);
+        // seeding itself succeeded; simulate a failure elsewhere in the
+        // same attempt before the transaction gets to commit.
+        throw new Error("simulated failure after seeding");
+      }),
+    ).rejects.toThrow("simulated failure after seeding");
+
+    // Nothing survived the rollback — a retry sees a genuinely empty
+    // database, not a shop with no staff/trips/courses.
+    await expect(db.select({ id: shops.id }).from(shops)).resolves.toHaveLength(0);
+
+    // The retry itself then succeeds cleanly.
+    await seedIfEmpty(db);
+    await expect(db.select({ id: shops.id }).from(shops)).resolves.not.toHaveLength(0);
   });
 });

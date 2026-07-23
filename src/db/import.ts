@@ -13,10 +13,10 @@
  * commit describe the same roster.
  */
 
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { canImportShopData, type Role } from "@/lib/authz";
 import type { PreparedImport, PreparedRow } from "@/lib/import";
-import type { AppDb } from "./client";
+import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
   certifications,
   nitroxCertifications,
@@ -102,10 +102,10 @@ export async function commitContactImport(
       const emailKey = row.email?.toLowerCase();
       let personId = emailKey ? personIdByEmail.get(emailKey) : undefined;
 
-      if (personId) {
-        // Non-destructive update: identity name refreshes, contact fields only
-        // fill in where the import actually carries a value.
-        await tx
+      // Non-destructive update: identity name refreshes, contact fields only
+      // fill in where the import actually carries a value.
+      const applyUpdate = (id: string) =>
+        tx
           .update(people)
           .set({
             fullName: row.fullName,
@@ -115,24 +115,58 @@ export async function commitContactImport(
               ? { emergencyContactPhone: row.emergencyContactPhone }
               : {}),
           })
-          .where(and(eq(people.id, personId), eq(people.shopId, shopId)));
+          .where(and(eq(people.id, id), eq(people.shopId, shopId)));
+
+      if (personId) {
+        await applyUpdate(personId);
         summary.peopleUpdated += 1;
       } else {
-        const [inserted] = await tx
-          .insert(people)
-          .values({
-            shopId,
-            fullName: row.fullName,
-            email: row.email,
-            phone: row.phone,
-            emergencyContactName: row.emergencyContactName,
-            emergencyContactPhone: row.emergencyContactPhone,
-          })
-          .returning({ id: people.id });
-        if (!inserted) throw new Error("commitContactImport: person insert returned no row");
-        personId = inserted.id;
-        await tx.insert(personRoles).values({ personId, role: "diver" }).onConflictDoNothing();
-        summary.peopleCreated += 1;
+        // A concurrent booking/wait-list/other import row can win the same
+        // email between the batch lookup above and this insert
+        // (people_shop_email_unique, CR-008) — fall back to updating the
+        // winner's row instead of throwing, same as the branch above. The
+        // insert runs in a nested transaction (savepoint): on real Postgres
+        // a failed statement aborts the whole enclosing `tx` until an
+        // explicit rollback, and a plain try/catch here would poison `tx`
+        // for the reread below instead of converging on the winner
+        // (see src/db/people.ts's findOrCreatePerson for the same pattern).
+        try {
+          const inserted = await tx.transaction(async (tx2) => {
+            const [row2] = await tx2
+              .insert(people)
+              .values({
+                shopId,
+                fullName: row.fullName,
+                email: row.email,
+                phone: row.phone,
+                emergencyContactName: row.emergencyContactName,
+                emergencyContactPhone: row.emergencyContactPhone,
+              })
+              .returning({ id: people.id });
+            if (!row2) throw new Error("commitContactImport: person insert returned no row");
+            await tx2.insert(personRoles).values({ personId: row2.id, role: "diver" });
+            return row2;
+          });
+          personId = inserted.id;
+          summary.peopleCreated += 1;
+        } catch (error) {
+          if (!isUniqueConstraintViolation(error)) throw error;
+          const [winner] = await tx
+            .select({ id: people.id })
+            .from(people)
+            .where(
+              and(
+                eq(people.shopId, shopId),
+                sql`lower(${people.email}) = lower(${row.email ?? ""})`,
+                isNull(people.deletedAt),
+              ),
+            )
+            .limit(1);
+          if (!winner) throw error;
+          personId = winner.id;
+          await applyUpdate(personId);
+          summary.peopleUpdated += 1;
+        }
         if (emailKey) personIdByEmail.set(emailKey, personId);
       }
 

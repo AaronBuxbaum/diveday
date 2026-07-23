@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { saveRentalFit } from "@/db/rental-fit";
@@ -13,20 +14,44 @@ import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
-import { readinessLinkPath } from "@/lib/readiness-links";
 import { ERROR_MESSAGES } from "./_components/types";
 
-/** Absolute readiness link for the confirmation email, or undefined with no origin. */
-function readinessEmailUrl(bookingId: string): string | undefined {
+/** Absolute readiness link for the confirmation email, or undefined with no origin/booking. */
+async function readinessEmailUrl(
+  dbi: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<string | undefined> {
   const origin = publicAppUrl();
-  return origin ? new URL(readinessLinkPath(bookingId), `${origin}/`).toString() : undefined;
+  if (!origin) return undefined;
+  const capability = await issueBookingCapability(dbi, { shopId, bookingId, purpose: "readiness" });
+  return capability
+    ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
+    : undefined;
 }
 
 /** Bound to each action so the public page can stay a pure renderer. */
 export type TripRef = { shopSlug: string; tripId: string };
-export type RentalFitRef = TripRef & { shopId: string; bookingId: string; personId: string };
+/**
+ * `token` is a purpose-bound `confirm` capability (src/db/booking-capabilities.ts), never a raw
+ * booking id: every action below re-verifies it and derives shop/booking/person identity from
+ * that verification, so a bound closure can never be used to act on a booking the token doesn't
+ * actually authorize (CR-003).
+ */
+export type RentalFitRef = TripRef & { token: string };
+
+/** Resolve a `confirm` token to its live booking context, or null on anything invalid. */
+async function confirmContextFor(tripId: string, token: string) {
+  const db = await getDb();
+  const capability = await verifyBookingCapability(db, { token, purpose: "confirm" });
+  if (!capability) return null;
+  const confirmed = await getBookingForTrip(db, tripId, capability.bookingId);
+  if (!confirmed) return null;
+  return { db, capability, confirmed };
+}
 
 /**
  * What a failed booking submit hands back to the form. A validation failure
@@ -138,7 +163,7 @@ export async function bookSpot(
         endsAt: tripNow.endsAt,
         timezone: shopNow.timezone,
         dockCallMinutes: shopNow.dockCallMinutes,
-        readinessUrl: readinessEmailUrl(primaryBookingId),
+        readinessUrl: await readinessEmailUrl(dbi, shopNow.id, primaryBookingId),
       });
       if (delivery.status === "failed") {
         console.error("Booking confirmation notification failed", {
@@ -166,25 +191,41 @@ export async function bookSpot(
     }),
   );
 
+  // The confirmation URL/action bears a purpose-bound `confirm` capability,
+  // never the raw booking id — a leaked/guessed booking UUID must not be
+  // enough to view or mutate someone else's booking (CR-003). A same-shop
+  // recheck right after creation should never fail, but if it somehow does,
+  // fall back to the plain trip page rather than a broken/unauthenticated link.
+  const confirmCapability = await issueBookingCapability(dbi, {
+    shopId: shopNow.id,
+    bookingId: primaryBookingId,
+    purpose: "confirm",
+  });
+
   // Pay at booking: when the shop can take money and the trip is priced, the
   // party goes straight to the shop's own hosted Stripe Checkout. The seats
   // are already committed above, so any failure here — no connected account,
   // no configured origin, Stripe down — degrades to the ordinary
   // book-now-pay-later confirmation, never to a lost booking.
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
-  const checkoutUrl = await startCheckoutUrl(dbi, {
-    shopId: shopNow.id,
-    shopSlug,
-    tripId,
-    bookingIds: outcome.bookings.map((entry) => entry.bookingId),
-    primaryBookingId,
-    customerEmail: validParty[0]?.email ?? "",
-  });
+  const checkoutUrl = confirmCapability
+    ? await startCheckoutUrl(dbi, {
+        shopId: shopNow.id,
+        shopSlug,
+        tripId,
+        bookingIds: outcome.bookings.map((entry) => entry.bookingId),
+        confirmToken: confirmCapability.token,
+        customerEmail: validParty[0]?.email ?? "",
+      })
+    : null;
   if (checkoutUrl) {
     revalidatePath(base);
     redirect(checkoutUrl);
   }
-  revalidateAndRedirect(base, `${base}?booking=${primaryBookingId}`);
+  revalidateAndRedirect(
+    base,
+    confirmCapability ? `${base}?booking=${confirmCapability.token}` : base,
+  );
 }
 
 /** The hosted payment page for these fresh bookings, or null when pay-at-booking can't run. */
@@ -195,13 +236,13 @@ async function startCheckoutUrl(
     shopSlug: string;
     tripId: string;
     bookingIds: string[];
-    primaryBookingId: string;
+    confirmToken: string;
     customerEmail: string;
   },
 ): Promise<string | null> {
   const origin = publicAppUrl();
   if (!origin || !input.customerEmail) return null;
-  const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.primaryBookingId}`;
+  const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.confirmToken}`;
   const outcome = await startBookingCheckout(dbi, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -218,24 +259,23 @@ async function startCheckoutUrl(
  * when one exists, mints a new one after an expiry, and sends the diver to it.
  */
 export async function payForBooking(
-  { shopSlug, tripId, shopId, bookingId }: Omit<RentalFitRef, "personId">,
+  { shopSlug, tripId, token }: RentalFitRef,
   _formData: FormData,
 ) {
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
-  const dbi = await getDb();
-  const confirmed = await getBookingForTrip(dbi, tripId, bookingId);
-  const checkoutUrl = confirmed?.person.email
-    ? await startCheckoutUrl(dbi, {
-        shopId,
+  const ctx = await confirmContextFor(tripId, token);
+  const checkoutUrl = ctx?.confirmed.person.email
+    ? await startCheckoutUrl(ctx.db, {
+        shopId: ctx.capability.shopId,
         shopSlug,
         tripId,
-        bookingIds: [bookingId],
-        primaryBookingId: bookingId,
-        customerEmail: confirmed.person.email,
+        bookingIds: [ctx.capability.bookingId],
+        confirmToken: token,
+        customerEmail: ctx.confirmed.person.email,
       })
     : null;
   if (checkoutUrl) redirect(checkoutUrl);
-  redirect(`${base}?booking=${bookingId}&error=pay`);
+  redirect(`${base}?booking=${token}&error=pay`);
 }
 
 export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: FormData) {
@@ -278,16 +318,17 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
  * never becomes a nitrox tank on its own.
  */
 export async function saveRentalFitRequest(
-  { shopSlug, tripId, shopId, bookingId, personId }: RentalFitRef,
+  { shopSlug, tripId, token }: RentalFitRef,
   formData: FormData,
 ) {
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const ctx = await confirmContextFor(tripId, token);
+  if (!ctx) redirect(`${base}?booking=${token}&error=fit`);
   const parsed = rentalFitSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?booking=${bookingId}&error=fit`);
-  const db = await getDb();
-  const saved = await saveRentalFit(db, {
-    shopId,
-    personId,
+  if (!parsed.success) redirect(`${base}?booking=${token}&error=fit`);
+  const saved = await saveRentalFit(ctx.db, {
+    shopId: ctx.capability.shopId,
+    personId: ctx.confirmed.person.id,
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
     rentsWetsuit: parsed.data.wetsuit === "on",
@@ -302,11 +343,11 @@ export async function saveRentalFitRequest(
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  await setBookingNitrox(db, {
-    shopId,
-    bookingId,
+  await setBookingNitrox(ctx.db, {
+    shopId: ctx.capability.shopId,
+    bookingId: ctx.capability.bookingId,
     wantsNitrox: parsed.data.nitrox === "on",
   });
   const result = saved ? "fit=saved" : "error=fit";
-  revalidateAndRedirect(base, `${base}?booking=${bookingId}&${result}`);
+  revalidateAndRedirect(base, `${base}?booking=${token}&${result}`);
 }
