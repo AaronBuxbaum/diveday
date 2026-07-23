@@ -149,9 +149,10 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 - **Automated marine outlook** — a 10-day Open-Meteo water-temp/sea-state fallback until the crew
   publishes its own; visibility stays crew-entered
   ([automated-marine-outlook](../architecture/decisions/20260718-automated-marine-outlook.md)).
-- **Notifications, multi-channel** — booking confirmation, waiver link, and wait-list invite through
-  one `notify()` seam; SMS/WhatsApp via a Twilio `notifySms()` seam; scheduled 7-day/24-hour pre-trip
-  reminders via an idempotent cron endpoint. All degrade to `not_configured` until their env is set
+- **Notifications** — booking confirmation, waiver link, and wait-list invite through one `notify()`
+  (email) seam; a Twilio `notifySms()` seam adds SMS, used today by the scheduled 7-day/24-hour
+  pre-trip reminders (the WhatsApp channel exists at the seam but no flow requests it yet). All
+  degrade to `not_configured` until their env is set
   ([sms-whatsapp-notifications](../architecture/decisions/20260721-sms-whatsapp-notifications.md),
   [scheduled-reminder-cadence](../architecture/decisions/20260721-scheduled-reminder-cadence.md)).
 - **Full-shop data export** — Settings → Data export downloads one ZIP of documented CSVs (leading
@@ -181,7 +182,8 @@ of *doing*. Its entire P0–P1 plan (WP-1…WP-11) and P2 items shipped:
 - **One undo model** — the manifest re-tap un-board; the reversible-vs-confirm rule is in
   [design/principles.md](../design/principles.md). *(WP-7)*
 - **Global command palette (⌘K) + nav search** over divers and trips; live Divers filter. *(WP-8)*
-- **Waitlist that recovers seats** — one-tap invite with `invitedAt` and a copyable fallback. *(WP-9)*
+- **Waitlist that recovers seats** — one-tap invite with `invitedAt` and a copyable fallback on the
+  trip waitlist section. *(WP-9; the Today freed-seat row still only links there — [roadmap.md](roadmap.md).)*
 - **Trip sub-nav** (Overview · Guests · Manifest · Prep) on every trip surface; boarding is a
   Manifest checkpoint, not a separate page. *(WP-10)*
 - **Honesty/dead-end fixes** — real waiver stepper, waiver completion links to `/ready`, Today

@@ -54,5 +54,5 @@ Track a small set of measures so "delight" and "agent efficiency" stay concrete:
 - PR rework caused by missed invariants, architecture drift, or merge collisions;
 - escaped defects in safety-critical flows.
 
-Keep this file to still-open work: when an item ships, move it into [roadmap.md](roadmap.md) or an
+Keep this file to still-open work: when an item ships, move it into [shipped.md](shipped.md) or an
 ADR rather than letting this plan become an unbounded second backlog.
