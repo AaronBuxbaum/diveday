@@ -1,0 +1,102 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { MarketingFooter } from "@/components/MarketingFooter";
+import { MarketingNav } from "@/components/MarketingNav";
+import { buttonClass } from "@/components/ui/button";
+import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+
+export const metadata: Metadata = {
+  title: "Switching to DiveDay — migration guides",
+  description:
+    "Leaving EVE, DiveShop360, DiveAdmin, or Smartwaiver? Step-by-step guides to export your data and bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
+};
+
+export default function SwitchHubPage() {
+  const guides = MIGRATION_GUIDES;
+
+  return (
+    <div className="flex min-h-full flex-col">
+      <MarketingNav />
+      <main className="flex-1">
+        <section className="border-b border-border">
+          <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              Switching to DiveDay
+            </p>
+            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
+              The door swings both ways.
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
+              Most shops stay on software they've outgrown because leaving looks painful. These
+              guides make the move concrete: how to export your own data from your current system,
+              exactly what comes across into DiveDay, and what — honestly — stays behind.
+            </p>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
+          <div className="grid gap-5 md:grid-cols-2">
+            {guides.map((guide) =>
+              guide.status === "live" ? (
+                <Link
+                  key={guide.slug}
+                  href={`/switch/${guide.slug}`}
+                  className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="text-xl font-semibold tracking-tight">
+                      Switching from {guide.competitor}
+                    </h2>
+                    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
+                      Guide ready
+                    </span>
+                  </div>
+                  <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
+                  <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
+                    Read the guide →
+                  </span>
+                </Link>
+              ) : (
+                <article
+                  key={guide.slug}
+                  className="flex flex-col rounded-2xl border border-dashed border-border bg-background p-6 sm:p-7"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="text-xl font-semibold tracking-tight text-muted">
+                      Switching from {guide.competitor}
+                    </h2>
+                    <span className="rounded-full bg-surface-sunken px-2.5 py-0.5 text-xs font-semibold text-muted">
+                      Coming soon
+                    </span>
+                  </div>
+                  <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
+                  <span className="mt-5 text-sm font-medium text-muted">
+                    You can already export from DiveDay and import a CSV — this walkthrough is on
+                    the way.
+                  </span>
+                </article>
+              ),
+            )}
+          </div>
+        </section>
+
+        <section className="border-t border-border bg-surface">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight">Don't see your system?</h2>
+              <p className="mt-2 max-w-xl text-muted">
+                Any spreadsheet of your divers with their names, cards, and sizes will import. Start
+                a trial and bring a CSV — DiveDay maps the columns and previews every row before
+                anything saves.
+              </p>
+            </div>
+            <Link href="/onboard" className={buttonClass({ size: "cta" })}>
+              Start a trial
+            </Link>
+          </div>
+        </section>
+      </main>
+      <MarketingFooter />
+    </div>
+  );
+}

@@ -28,3 +28,35 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByText("$99", { exact: true })).toBeVisible();
   await expect(page.getByText(/The crew saves the manifest to their phone/)).toBeVisible();
 });
+
+test("migration guides walk a shop from an incumbent export into the importer", async ({
+  page,
+}) => {
+  // The switch surface is reachable from the footer on any marketing page.
+  await page.goto("/");
+  await page.getByRole("contentinfo").getByRole("link", { name: "Switch" }).click();
+
+  await expect(page.getByRole("heading", { name: "The door swings both ways." })).toBeVisible();
+
+  // The EVE guide is live; the rest of the pool shows as coming soon.
+  await expect(page.getByRole("link", { name: /Switching from EVE/ })).toBeVisible();
+  await expect(page.getByText("Coming soon").first()).toBeVisible();
+
+  await page.getByRole("link", { name: /Switching from EVE/ }).click();
+  await expect(page.getByRole("heading", { name: "Moving your shop off EVE" })).toBeVisible();
+
+  // The three-part promise: export click-path, the scope table, the importer.
+  await expect(page.getByRole("heading", { name: "Get your data out of EVE" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What comes across — and what doesn't" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
+
+  // The scope table is the importer's honesty table — medical history never migrates.
+  await expect(page.getByText("Medical & health history")).toBeVisible();
+  await expect(page.getByText("Never").first()).toBeVisible();
+
+  // A planned competitor has no page of its own.
+  const response = await page.goto("/switch/diveshop360");
+  expect(response?.status()).toBe(404);
+});

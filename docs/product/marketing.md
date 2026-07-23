@@ -1,9 +1,41 @@
 # Public marketing surfaces
 
-DiveDay's public pages are the homepage (`/`), product page (`/product`), and pricing page
-(`/pricing`). They are a truthful sales surface for the product that exists today: bookings,
-readiness, waiver and certification evidence, gear, dive sites, nitrox logs, reporting, and an
-encrypted offline manifest with explicit reconciliation.
+DiveDay's public pages are the homepage (`/`), product page (`/product`), pricing page
+(`/pricing`), and the switching guides (`/switch` and `/switch/<incumbent>`). They are a truthful
+sales surface for the product that exists today: bookings, readiness, waiver and certification
+evidence, gear, dive sites, nitrox logs, reporting, and an encrypted offline manifest with explicit
+reconciliation.
+
+## Migration guides
+
+`/switch` is the public face of the data-portability wedge
+([competitive-strategy.md](assessments/competitive-strategy.md) #3): one page per incumbent that a
+shop is likely leaving, capturing "leaving &lt;incumbent&gt;" search intent and turning it into a
+concrete on-ramp. The hub lists every guide; a `live` guide has its own page at `/switch/<slug>`,
+a `planned` one shows as a coming-soon card. "Switching from EVE" (`/switch/eve`) ships first —
+that is the market's most motivated pool (a PADI-endorsed desktop system now owned by DiveShop360,
+widely being sunset).
+
+Each live guide is the same three-part promise made concrete for that system:
+
+1. **The export click-path** — step-by-step instructions to get the shop's own data *out of* the
+   incumbent. These describe only the incumbent's own export and never tell anyone to hand DiveDay
+   a competitor login; DiveDay never reaches into another system (legal guardrail, *Facebook v.
+   Power Ventures*, in competitive-strategy.md). The click-paths are best-effort against desktop
+   software whose menus vary by version and that we can't drive from here, so they say where labels
+   differ and point to the vendor's own support rather than inventing exact wording — the same
+   honesty bar as the rest of this surface.
+2. **The scope table** — rendered from `IMPORT_HONESTY_TABLE` in `src/lib/import.ts`, *verbatim*.
+   The honest answer to "what comes across" is a property of the importer, not the incumbent, so
+   every guide shows the same table the import wizard shows and the marketing promise can't drift
+   from the running code. Do not restate or paraphrase the scope in prose.
+3. **The importer** — how DiveDay reads the file back: Settings → Import contacts, a previewed
+   column-mapped import where imported cards land as *claims* staff verify and medical history
+   never migrates.
+
+Guide content lives in `src/lib/migration-guides.ts` (framework-free data); the pages are
+`src/app/switch/`. Add a competitor by writing its `MigrationGuide` entry and flipping `status` to
+`live` once the export click-path is real.
 
 ## Product visuals
 
