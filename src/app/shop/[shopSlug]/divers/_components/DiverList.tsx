@@ -2,15 +2,40 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import type { listDiverSummaries } from "@/db/divers";
+import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
+
+/** Role-shaped default views, offered to every shop. */
+const BUILT_IN_VIEWS: { label: string; filter: DiverFilter }[] = [
+  { label: "All divers", filter: "all" },
+  { label: "Missing contact", filter: "missing_contact" },
+  { label: "Has insurance", filter: "insured" },
+];
+
+/** A staffer's own pinned view — a name over a search + filter, stored per shop. */
+type SavedView = { name: string; query: string; filter: DiverFilter };
+
+function savedViewsKey(shopSlug: string) {
+  return `diveday:diver-views:${shopSlug}`;
+}
+
+function readSavedViews(shopSlug: string): SavedView[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(savedViewsKey(shopSlug));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as SavedView[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 function initials(fullName: string): string {
   return fullName
@@ -39,44 +64,114 @@ export function DiverList({
   page,
   shopSlug,
   query,
+  filter,
   cursorActive,
 }: {
   page: DiverPage;
   shopSlug: string;
   query: string;
+  filter: DiverFilter;
   cursorActive: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep the input in sync when navigation (back/forward, "top of the list")
-  // changes the query underneath us — but never while the user is mid-debounce.
+  // Keep the input in sync when navigation (back/forward, a view chip) changes
+  // the query underneath us — but never while the user is mid-debounce.
   useEffect(() => setTyped(query), [query]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
+  useEffect(() => setSavedViews(readSavedViews(shopSlug)), [shopSlug]);
+
+  // One place builds every roster URL, so search, a view chip, and the pager all
+  // carry both the text query and the active filter (never dropping one).
+  const hrefFor = useCallback(
+    (nextQuery: string, nextFilter: DiverFilter, cursor?: string) => {
+      const params = new URLSearchParams();
+      if (nextQuery.trim()) params.set("q", nextQuery.trim());
+      if (nextFilter !== "all") params.set("filter", nextFilter);
+      if (cursor) params.set("after", cursor);
+      return params.size ? `${pathname}?${params}` : pathname;
+    },
+    [pathname],
+  );
 
   const search = (value: string) => {
     setTyped(value);
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (value.trim()) params.set("q", value.trim());
-      router.replace(params.size ? `${pathname}?${params}` : pathname, { scroll: false });
+      router.replace(hrefFor(value, filter), { scroll: false });
     }, 250);
   };
 
+  const saveCurrentView = () => {
+    const name = window.prompt("Name this view")?.trim();
+    if (!name) return;
+    const next = [...savedViews.filter((view) => view.name !== name), { name, query, filter }];
+    window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
+    setSavedViews(next);
+  };
+
+  const removeSavedView = (name: string) => {
+    const next = savedViews.filter((view) => view.name !== name);
+    window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
+    setSavedViews(next);
+  };
+
   const { divers, nextCursor, total } = page;
-  const nextHref = (() => {
-    if (!nextCursor) return null;
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    params.set("after", nextCursor);
-    return `${pathname}?${params}`;
-  })();
-  const topHref = query ? `${pathname}?q=${encodeURIComponent(query)}` : pathname;
+  const nextHref = nextCursor ? hrefFor(query, filter, nextCursor) : null;
+  const topHref = hrefFor(query, filter);
+  const chipClass = (active: boolean) =>
+    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
+      active
+        ? "border-primary bg-primary/10 text-primary"
+        : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
+    }`;
 
   return (
     <section className="mt-10" aria-labelledby="diver-list-heading">
+      <nav aria-label="Saved views" className="mb-4 flex flex-wrap items-center gap-2">
+        {BUILT_IN_VIEWS.map((view) => (
+          <Link
+            key={view.filter}
+            href={hrefFor(query, view.filter)}
+            scroll={false}
+            className={chipClass(filter === view.filter)}
+          >
+            {view.label}
+          </Link>
+        ))}
+        {savedViews.map((view) => {
+          const active = view.query === query && view.filter === filter;
+          return (
+            <span key={view.name} className="inline-flex items-center">
+              <Link
+                href={hrefFor(view.query, view.filter)}
+                scroll={false}
+                className={chipClass(active)}
+              >
+                {view.name}
+              </Link>
+              <button
+                type="button"
+                onClick={() => removeSavedView(view.name)}
+                aria-label={`Remove saved view ${view.name}`}
+                className="ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-muted hover:text-danger"
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+        <button
+          type="button"
+          onClick={saveCurrentView}
+          className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
+        >
+          + Save this view
+        </button>
+      </nav>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="diver-list-heading" className="text-lg font-semibold">
@@ -106,10 +201,12 @@ export function DiverList({
       </div>
       {divers.length === 0 ? (
         <EmptyState className="mt-4">
-          <p className="font-medium">{query ? "No matching divers." : "No divers on file yet."}</p>
+          <p className="font-medium">
+            {query || filter !== "all" ? "No divers match this view." : "No divers on file yet."}
+          </p>
           <p className="mt-1 text-sm text-muted">
-            {query
-              ? "Try a different search or add a new diver above."
+            {query || filter !== "all"
+              ? "Try a different search or view, or add a new diver above."
               : "Add one here or accept a booking to create their person record."}
           </p>
         </EmptyState>

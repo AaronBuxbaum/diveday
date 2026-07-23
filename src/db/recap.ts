@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, lte, ne } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type NotificationDelivery,
@@ -16,8 +16,11 @@ import {
 import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
 import { recordNotificationDelivery } from "./notifications";
-import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
+import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } from "./schema";
 import { getTripWithBooked, listTripDives } from "./trips";
+
+/** A diver's own recap photo, as the recap page renders it. */
+export type RecapPhotoView = { id: string; imageUrl: string; caption: string | null };
 
 /**
  * The post-trip recap: a single shareable page per diver per trip, generated
@@ -54,7 +57,16 @@ export type RecapPageData = {
   };
   diverName: string;
   sites: RecapSite[];
+  /** The booking this recap belongs to — the scope an uploaded photo attaches to. */
+  bookingId: string;
+  /** A short crew-authored note for this trip, or null when the crew wrote none. */
+  shoutout: string | null;
+  /** The diver's own uploaded photos, newest first. */
+  photos: RecapPhotoView[];
 };
+
+/** How many photos one booking may attach — a memory strip, not a media host. */
+export const MAX_RECAP_PHOTOS_PER_BOOKING = 12;
 
 /**
  * Everything the recap page renders for one booking, or null when the booking
@@ -101,6 +113,8 @@ export async function getRecapPageData(
     });
   }
 
+  const photos = await listRecapPhotosForBooking(db, bookingId);
+
   return {
     shop: {
       name: row.shopName,
@@ -120,7 +134,120 @@ export async function getRecapPageData(
     },
     diverName: row.diverName,
     sites,
+    bookingId,
+    shoutout: trip.recapShoutout,
+    photos,
   };
+}
+
+/** A diver's own recap photos for one booking, newest first. */
+export async function listRecapPhotosForBooking(
+  db: AppDb,
+  bookingId: string,
+): Promise<RecapPhotoView[]> {
+  const rows = await db
+    .select({ id: recapPhotos.id, imageUrl: recapPhotos.imageUrl, caption: recapPhotos.caption })
+    .from(recapPhotos)
+    .where(eq(recapPhotos.bookingId, bookingId))
+    .orderBy(desc(recapPhotos.createdAt));
+  return rows;
+}
+
+export type AddRecapPhotoResult =
+  | { ok: true; photo: RecapPhotoView }
+  | { ok: false; reason: "not_found" | "cancelled" | "limit" };
+
+/**
+ * Attach a photo to a diver's recap. The booking is resolved and shop/trip are
+ * derived from it (never trusted from the caller), a cancelled booking is
+ * refused, and a booking already at its photo cap is refused rather than
+ * silently dropped. The image URL comes from the storage seam upstream.
+ */
+export async function addRecapPhoto(
+  db: AppDb,
+  input: { bookingId: string; imageUrl: string; caption?: string | null },
+): Promise<AddRecapPhotoResult> {
+  const [booking] = await db
+    .select({ shopId: bookings.shopId, tripId: bookings.tripId, status: bookings.status })
+    .from(bookings)
+    .where(eq(bookings.id, input.bookingId))
+    .limit(1);
+  if (!booking) return { ok: false, reason: "not_found" };
+  if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+
+  const [{ count: existing } = { count: 0 }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(recapPhotos)
+    .where(eq(recapPhotos.bookingId, input.bookingId));
+  if (existing >= MAX_RECAP_PHOTOS_PER_BOOKING) return { ok: false, reason: "limit" };
+
+  const [photo] = await db
+    .insert(recapPhotos)
+    .values({
+      shopId: booking.shopId,
+      bookingId: input.bookingId,
+      tripId: booking.tripId,
+      imageUrl: input.imageUrl,
+      caption: input.caption?.trim() || null,
+    })
+    .returning({
+      id: recapPhotos.id,
+      imageUrl: recapPhotos.imageUrl,
+      caption: recapPhotos.caption,
+    });
+  if (!photo) return { ok: false, reason: "not_found" };
+  return { ok: true, photo };
+}
+
+export type StaffRecapPhoto = RecapPhotoView & { diverName: string; bookingId: string };
+
+/** Every diver photo on a trip, with who shared it — the staff moderation gallery. */
+export async function listRecapPhotosForTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<StaffRecapPhoto[]> {
+  return db
+    .select({
+      id: recapPhotos.id,
+      imageUrl: recapPhotos.imageUrl,
+      caption: recapPhotos.caption,
+      diverName: people.fullName,
+      bookingId: recapPhotos.bookingId,
+    })
+    .from(recapPhotos)
+    .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(recapPhotos.shopId, shopId), eq(recapPhotos.tripId, tripId)))
+    .orderBy(desc(recapPhotos.createdAt));
+}
+
+/** Take a photo down — the moderation seam, shop-scoped. Returns whether a row went. */
+export async function deleteRecapPhoto(
+  db: AppDb,
+  shopId: string,
+  photoId: string,
+): Promise<boolean> {
+  const removed = await db
+    .delete(recapPhotos)
+    .where(and(eq(recapPhotos.id, photoId), eq(recapPhotos.shopId, shopId)))
+    .returning({ id: recapPhotos.id });
+  return removed.length > 0;
+}
+
+/** Set (or clear, with an empty string) a trip's crew-authored recap shout-out. */
+export async function setTripRecapShoutout(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  shoutout: string,
+): Promise<boolean> {
+  const [trip] = await db
+    .update(trips)
+    .set({ recapShoutout: shoutout.trim() || null })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .returning({ id: trips.id });
+  return Boolean(trip);
 }
 
 const HOUR_MS = 60 * 60 * 1000;

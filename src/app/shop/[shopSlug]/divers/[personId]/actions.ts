@@ -8,6 +8,7 @@ import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import {
   archiveNitroxCertification,
   createNitroxCertification,
+  restoreNitroxCertification,
   reviewNitroxCertification,
 } from "@/db/nitrox";
 import { refundOrder } from "@/db/orders";
@@ -16,6 +17,8 @@ import {
   archiveSpecialtyCertification,
   createCertification,
   createSpecialtyCertification,
+  restoreCertification,
+  restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
 } from "@/db/readiness";
@@ -39,6 +42,7 @@ const personSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   email: z.union([z.literal(""), z.email().max(320)]),
   phone: z.string().trim().max(40),
+  diveInsurance: z.string().trim().max(120),
 });
 const certificationSchema = z.object({
   agency: agencySchema,
@@ -214,7 +218,14 @@ export async function deleteCertificationAction(
   const deleted = certificationId
     ? await archiveCertification(await getDb(), { shopId: staff.user.shopId, certificationId })
     : false;
-  revalidateAndRedirect(base, `${base}?notice=${deleted ? "card-deleted" : "invalid"}`);
+  // Land-then-undo: the delete happens now, and the toast on the next render
+  // carries the id + type so a single tap restores it (no confirm dialog).
+  revalidateAndRedirect(
+    base,
+    deleted
+      ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=level`
+      : `${base}?notice=invalid`,
+  );
 }
 
 /** Delete a specialty or nitrox card (soft-archive; dispatched by the hidden `cardType`). */
@@ -227,12 +238,46 @@ export async function deleteSpecialtyAction(
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
   const db = await getDb();
+  const cardType = formData.get("cardType") === "nitrox" ? "nitrox" : "specialty";
   const deleted = certificationId
-    ? formData.get("cardType") === "nitrox"
+    ? cardType === "nitrox"
       ? await archiveNitroxCertification(db, { shopId: staff.user.shopId, certificationId })
       : await archiveSpecialtyCertification(db, { shopId: staff.user.shopId, certificationId })
     : false;
-  revalidateAndRedirect(base, `${base}?notice=${deleted ? "card-deleted" : "invalid"}`);
+  revalidateAndRedirect(
+    base,
+    deleted
+      ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=${cardType}`
+      : `${base}?notice=invalid`,
+  );
+}
+
+const cardTypeSchema = z.enum(["level", "specialty", "nitrox"]);
+
+/**
+ * Undo a card archive from the land-then-undo toast. Dispatches by the card
+ * type stamped into the toast, restoring the exact card that was archived; a
+ * re-entered card that now owns the same number blocks the restore rather than
+ * being clobbered (readiness.ts).
+ */
+export async function restoreCardAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const certificationId = String(formData.get("certificationId") ?? "");
+  const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
+  if (!certificationId || !cardType.success) redirect(base);
+  const db = await getDb();
+  const input = { shopId: staff.user.shopId, certificationId };
+  const restored =
+    cardType.data === "level"
+      ? await restoreCertification(db, input)
+      : cardType.data === "specialty"
+        ? await restoreSpecialtyCertification(db, input)
+        : await restoreNitroxCertification(db, input);
+  revalidateAndRedirect(
+    base,
+    `${base}?notice=${restored ? "card-restored" : "card-restore-conflict"}`,
+  );
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {

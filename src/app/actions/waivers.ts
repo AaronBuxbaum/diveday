@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { issueAndDeliverWaiver } from "@/db/waiver-issue";
+import { trackEvent } from "@/lib/analytics";
 import { requireStaffSession } from "@/lib/session";
 import type { WaiverSendState, WaiverSendSurface } from "./waiver-send-types";
 
@@ -63,5 +64,8 @@ export async function sendWaiversAction(
   // The blocked row itself moves to its awaiting state (a fresh link is now
   // pending) once the server data refreshes.
   revalidatePath(SURFACE_PATH[surface](shopSlug));
+  if (state.sent.length > 0) {
+    await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface });
+  }
   return state;
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "people" ADD COLUMN "dive_insurance" text;

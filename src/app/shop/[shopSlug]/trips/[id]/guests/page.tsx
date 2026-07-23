@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { getTripRequirements, listTripReadiness } from "@/db/readiness";
+import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
@@ -17,6 +18,7 @@ import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { AddDiverSection } from "../_components/AddDiverSection";
+import { RecapPhotoGallery } from "../_components/RecapPhotoGallery";
 import { RosterSection } from "../_components/RosterSection";
 import { TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { WaitlistSection } from "../_components/WaitlistSection";
@@ -25,6 +27,7 @@ import {
   addExistingDiverAction,
   addToWaitlistAction,
   bulkSendWaiversAction,
+  deleteRecapPhotoAction,
   inviteWaitlistAction,
   issueWaiverAction,
   markPaymentAction,
@@ -65,13 +68,16 @@ export default async function TripGuestsPage({
     isFull(trip) || diverQuery === ""
       ? []
       : await listBookableDivers(db, shop.id, tripId, { query: diverQuery });
-  const [roster, requirement, readinessRows, prepDivers, waitlist] = await Promise.all([
-    getTripRoster(db, tripId),
-    getTripRequirements(db, shop.id, tripId),
-    listTripReadiness(db, shop.id, tripId),
-    listTripPrepDivers(db, shop.id, tripId),
-    getTripWaitlist(db, tripId),
-  ]);
+  const [roster, requirement, readinessRows, prepDivers, waitlist, recapPhotos] = await Promise.all(
+    [
+      getTripRoster(db, tripId),
+      getTripRequirements(db, shop.id, tripId),
+      listTripReadiness(db, shop.id, tripId),
+      listTripPrepDivers(db, shop.id, tripId),
+      getTripWaitlist(db, tripId),
+      listRecapPhotosForTrip(db, shop.id, tripId),
+    ],
+  );
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
   // whose money is already gone (dive-domain review).
@@ -186,6 +192,11 @@ export default async function TripGuestsPage({
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
+      />
+
+      <RecapPhotoGallery
+        photos={recapPhotos}
+        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
       />
     </>
   );

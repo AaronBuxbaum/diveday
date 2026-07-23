@@ -3,10 +3,26 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getRecapPageData, type RecapSite } from "@/db/recap";
+import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
+import { uploadRecapPhotoAction } from "./actions";
+
+const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
+  added: { tone: "success", text: "Added to your recap — thanks for sharing!" },
+  none: { tone: "danger", text: "Pick a photo first, then add it." },
+  limit: {
+    tone: "danger",
+    text: `That's the most photos one recap holds (${MAX_RECAP_PHOTOS_PER_BOOKING}).`,
+  },
+  unconfigured: {
+    tone: "danger",
+    text: "Photo uploads aren't set up for this shop yet — no worries, tag them when you post.",
+  },
+  error: { tone: "danger", text: "That photo didn't upload — try a JPEG or PNG under 5 MB." },
+};
 
 export const metadata: Metadata = {
   title: "Your dive recap — DiveDay",
@@ -56,9 +72,16 @@ function sitesSentence(sites: RecapSite[]): string | null {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-export default async function DiveRecapPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function DiveRecapPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ photo?: string }>;
+}) {
   await connection();
   const { token } = await params;
+  const { photo } = await searchParams;
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
     return (
@@ -77,7 +100,9 @@ export default async function DiveRecapPage({ params }: { params: Promise<{ toke
     );
   }
 
-  const { shop, trip, diverName, sites } = data;
+  const { shop, trip, diverName, sites, shoutout, photos } = data;
+  const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
+  const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
   const when = formatShortDate(trip.startsAt, "en-US", shop.timezone);
   const where = sitesSentence(sites);
@@ -109,6 +134,15 @@ export default async function DiveRecapPage({ params }: { params: Promise<{ toke
         </p>
       </EarnedMoment>
 
+      {shoutout ? (
+        <section className="mt-8 rounded-xl border border-primary/25 bg-primary/5 p-5">
+          <h2 className="text-sm font-medium tracking-widest text-primary uppercase">
+            From your crew
+          </h2>
+          <p className="mt-2 text-base text-pretty">{shoutout}</p>
+        </section>
+      ) : null}
+
       {sites.length ? (
         <section className="mt-8">
           <h2 className="text-lg font-semibold">Where you dived</h2>
@@ -132,10 +166,74 @@ export default async function DiveRecapPage({ params }: { params: Promise<{ toke
       ) : null}
 
       <section className="mt-8 rounded-xl bg-surface-sunken p-5">
-        <h2 className="text-lg font-semibold">Got photos?</h2>
+        <h2 className="text-lg font-semibold">Your photos</h2>
         <p className="mt-1 text-base text-muted">
-          Tag {shop.name} when you share them — a good photo is the best invitation a buddy can get.
+          Add the shots from today — they stay on your recap, and {shop.name} may love to see them.
         </p>
+
+        {photoNotice ? (
+          <p
+            role={photoNotice.tone === "danger" ? "alert" : "status"}
+            className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+              photoNotice.tone === "danger"
+                ? "border-danger/30 bg-danger/10 text-danger"
+                : "border-primary/30 bg-primary/10 text-primary"
+            }`}
+          >
+            {photoNotice.text}
+          </p>
+        ) : null}
+
+        {photos.length ? (
+          <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {photos.map((image) => (
+              <li key={image.id} className="overflow-hidden rounded-lg border border-border">
+                {/* biome-ignore lint/performance/noImgElement: diver photos come from the blob store, which no build-time image allowlist can enumerate. */}
+                <img
+                  src={image.imageUrl}
+                  alt={image.caption ?? `A photo from ${trip.title}`}
+                  loading="lazy"
+                  className="aspect-square w-full object-cover"
+                />
+                {image.caption ? (
+                  <p className="px-2 py-1.5 text-xs text-muted">{image.caption}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {atPhotoLimit ? (
+          <p className="mt-4 text-sm text-muted">
+            You've added the most photos one recap holds. Nice haul!
+          </p>
+        ) : (
+          <form
+            action={uploadRecapPhotoAction.bind(null, token)}
+            className="mt-4 flex flex-col gap-3"
+          >
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Add a photo
+              <input
+                type="file"
+                name="photo"
+                required
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+              />
+            </label>
+            <input
+              type="text"
+              name="caption"
+              maxLength={140}
+              placeholder="Add a caption (optional)"
+              className={controlClass}
+            />
+            <button type="submit" className={buttonClass({ className: "self-start" })}>
+              Add to my recap
+            </button>
+          </form>
+        )}
       </section>
 
       <section className="mt-8">

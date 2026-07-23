@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { UndoToast } from "@/components/UndoToast";
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
@@ -16,6 +17,7 @@ import { RentalFit } from "./_components/RentalFit";
 import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
+import { restoreCardAction } from "./actions";
 
 export const metadata: Metadata = { title: "Diver — DiveDay" };
 
@@ -24,11 +26,11 @@ export default async function DiverDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; personId: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; undo?: string; cardType?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
-  const { notice } = await searchParams;
+  const { notice, undo, cardType } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
@@ -42,9 +44,17 @@ export default async function DiverDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "undo", "cardType"]} />
       <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} />
-      <NoticeBanner notice={notice} />
+      {notice === "card-deleted" && undo && cardType ? (
+        <UndoToast
+          message="Card removed."
+          action={restoreCardAction.bind(null, shopSlug, personId)}
+          fields={{ certificationId: undo, cardType }}
+        />
+      ) : (
+        <NoticeBanner notice={notice} />
+      )}
       <StatsSummary diver={diver} />
       <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} />
       <SpecialtyCards diver={diver} shopSlug={shopSlug} personId={personId} />

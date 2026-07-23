@@ -7,6 +7,7 @@ import type { AppDb } from "./client";
 import {
   archiveNitroxCertification,
   createNitroxCertification,
+  restoreNitroxCertification,
   reviewNitroxCertification,
   setBookingNitrox,
   verifiedNitroxPersonIds,
@@ -200,6 +201,27 @@ describe("setBookingNitrox", () => {
     ).toBe(true);
     // The gate reads the card live: with it archived the diver is no longer certified.
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
+  });
+
+  it("restores an archived nitrox card so the gate reads it again", async () => {
+    const ctx = await context();
+    const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    expect(
+      await archiveNitroxCertification(ctx.db, { shopId: ctx.shopId, certificationId: cert.id }),
+    ).toBe(true);
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
+
+    expect(
+      await restoreNitroxCertification(ctx.db, { shopId: ctx.shopId, certificationId: cert.id }),
+    ).toBe(true);
+    expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
+    // A cross-shop restore is refused.
+    expect(
+      await restoreNitroxCertification(ctx.db, {
+        shopId: crypto.randomUUID(),
+        certificationId: cert.id,
+      }),
+    ).toBe(false);
   });
 
   it("refuses to archive a card through another shop's id", async () => {

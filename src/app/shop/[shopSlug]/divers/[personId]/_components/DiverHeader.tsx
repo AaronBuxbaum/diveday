@@ -51,6 +51,15 @@ export function DiverHeader({
               {!diver.person.email && !diver.person.phone ? (
                 <span>No contact details yet</span>
               ) : null}
+              {diver.person.diveInsurance ? (
+                <span className="inline-flex min-h-11 items-center gap-2 px-2">
+                  <span aria-hidden="true">🛟</span>
+                  <span>
+                    <span className="sr-only">Dive insurance: </span>
+                    {diver.person.diveInsurance}
+                  </span>
+                </span>
+              ) : null}
             </div>
           }
           actions={
@@ -85,6 +94,14 @@ export function DiverHeader({
                     name="phone"
                     type="tel"
                     defaultValue={diver.person.phone ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label="Dive insurance" hint="(DAN or other, optional)">
+                  <input
+                    name="diveInsurance"
+                    defaultValue={diver.person.diveInsurance ?? ""}
+                    placeholder="DAN #12345"
                     className={controlClass}
                   />
                 </Field>

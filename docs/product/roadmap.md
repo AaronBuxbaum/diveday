@@ -76,33 +76,18 @@ provider/policy decisions are open. Deliberately deferred until a real operator 
 
 ### 7. Smaller follow-ons
 
-- **Recurring series — series-wide edits and a rolling horizon.** A series materializes a finite set
-  of independent trips; there is no series-wide edit/cancel (changing every future date is
-  per-instance) and the horizon is finite. Both are contained follow-ups noted in the
-  [recurring-trip-series ADR](../architecture/decisions/20260719-recurring-trip-series.md).
-- **Waitlist invite from Today.** The trip's waitlist section already invites the next diver one-tap
-  (WP-9), but the Today freed-seat row still only *links* there (`src/db/today.ts`). Give that row the
-  same one-tap invite so staff act straight from the queue.
-- **Post-trip recap extras.** The recap page ships; a crew-authored recap shout-out and a diver photo
-  upload remain follow-on work
-  ([post-trip-recap ADR](../architecture/decisions/20260723-post-trip-recap.md)).
+All three shipped 2026-07-23 — recurring-series series-wide edit/cancel and a rolling horizon, the
+Today freed-seat one-tap waitlist invite, and the post-trip recap extras (crew shout-out + diver
+photos). See [shipped.md](shipped.md).
 
 ## Delight backlog
 
 Cross-cutting quality to fold into slices as they're touched, not defer to a final "polish" pass.
-The done items (global command/search, thoughtful demo data, accessible motion) moved to
-[shipped.md](shipped.md); what remains open:
-
-- **generic undo** for reversible staff actions (beyond the manifest re-tap and inverse actions that
-  exist today) instead of confirmation dialogs;
-- **optimistic interaction** where rollback is safe — boarding already shows a server-authoritative
-  pending state; extend the pattern (a true `useOptimistic` path) where it helps;
-- **visible keyboard shortcuts** beyond ⌘K;
-- **saved filters/views** for common shop roles;
-- **performance budgets** for staff pages on ordinary phones and weak marina Wi-Fi;
-- **event instrumentation** for abandonment, blocker frequency, and staff recovery paths (only
-  page-level analytics exists today);
-- a **DAN / dive-insurance field** — the glossary calls it "worth a field"; not captured yet.
+The whole open list shipped 2026-07-23 — generic undo (land-then-undo toast), a true `useOptimistic`
+path (payment status), visible keyboard shortcuts beyond ⌘K, saved filters/views for shop roles, a
+staff-page performance budget, custom event instrumentation, and the DAN / dive-insurance field —
+alongside the earlier done items (global command/search, demo data, accessible motion). All indexed
+in [shipped.md](shipped.md). Fold new cross-cutting quality in here as it arises.
 
 ## Production-readiness gates (human-owned)
 

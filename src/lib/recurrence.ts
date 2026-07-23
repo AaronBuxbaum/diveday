@@ -81,6 +81,37 @@ export function weeklyOccurrences(
   });
 }
 
+/**
+ * Extend a series forward: the next `count` occurrences *after* an anchor date,
+ * each shifted a further whole `intervalWeeks` on from the last. The anchor is
+ * the series' furthest instance, so a rolling horizon keeps the same cadence
+ * without ever repeating a date already on the board. Returns `null` when the
+ * interval is out of bounds or `count` is not a sane 1..MAX window, so a caller
+ * cannot silently generate a runaway extension (20260719-recurring-trip-series).
+ */
+export function weeklyOccurrencesAfter(
+  anchor: { start: WallTime; end: WallTime },
+  intervalWeeks: number,
+  count: number,
+): Array<{ start: WallTime; end: WallTime }> | null {
+  if (
+    !Number.isInteger(intervalWeeks) ||
+    intervalWeeks < MIN_INTERVAL_WEEKS ||
+    intervalWeeks > MAX_INTERVAL_WEEKS
+  ) {
+    return null;
+  }
+  if (!Number.isInteger(count) || count < 1 || count > MAX_SERIES_OCCURRENCES) return null;
+  const step = intervalWeeks * DAYS_PER_WEEK;
+  return Array.from({ length: count }, (_, index) => {
+    const offset = (index + 1) * step;
+    return {
+      start: addDaysToWall(anchor.start, offset),
+      end: addDaysToWall(anchor.end, offset),
+    };
+  });
+}
+
 /** Staff-facing one-liner, e.g. "Repeats weekly · 8 trips" or "Repeats every 2 weeks · 6 trips". */
 export function recurrenceSummary(recurrence: WeeklyRecurrence): string {
   const cadence =

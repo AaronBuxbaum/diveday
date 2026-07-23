@@ -171,8 +171,8 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   night-before brief (conditions, what to bring, dock time, who to text; softer first-timer voice),
   and after departure an automatic `/recap/[token]` gives each diver a shareable page of the sites
   they dived with a bring-a-buddy nudge, sent once per booking on the reminders cron
-  ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)). A crew recap shout-out
-  and diver photo upload remain follow-ons in [roadmap.md](roadmap.md).
+  ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)). The crew shout-out and
+  diver photo upload follow-ons shipped 2026-07-23 (see below).
 
 ## UX arc — making the surfaces *act* (delivered 2026-07-23)
 
@@ -195,13 +195,40 @@ of *doing*. Its entire P0–P1 plan (WP-1…WP-11) and P2 items shipped:
   [design/principles.md](../design/principles.md). *(WP-7)*
 - **Global command palette (⌘K) + nav search** over divers and trips; live Divers filter. *(WP-8)*
 - **Waitlist that recovers seats** — one-tap invite with `invitedAt` and a copyable fallback on the
-  trip waitlist section. *(WP-9; the Today freed-seat row still only links there — [roadmap.md](roadmap.md).)*
+  trip waitlist section, now also from the Today freed-seat row. *(WP-9; Today follow-on shipped 2026-07-23.)*
 - **Trip sub-nav** (Overview · Guests · Manifest · Prep) on every trip surface; boarding is a
   Manifest checkpoint, not a separate page. *(WP-10)*
 - **Honesty/dead-end fixes** — real waiver stepper, waiver completion links to `/ready`, Today
   email-resend, staff-voiced empty states, duplicate-person hint, payment-source label. *(WP-11)*
 - **List scale** — keyset pagination and server-side search on Divers/Schedule; booking-page content
   folded below the seat.
+
+## Section 7 follow-ons + Delight backlog (delivered 2026-07-23)
+
+The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
+
+- **Series-wide edit, cancel, and rolling horizon** — a "Repeating series" section on the trip page
+  applies one date's template across the run, cancels every upcoming date at once, and rolls the
+  finite horizon forward on the same cadence (`extendTripSeries`, `weeklyOccurrencesAfter`);
+  instances stay independent ([recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md)).
+- **Waitlist invite from Today** — the freed-seat row carries the front-of-line entry and reuses the
+  one-tap invite control, so staff fill a seat without leaving the queue (extends WP-9).
+- **Post-trip recap extras** — a crew shout-out (`trips.recap_shoutout`) renders on every diver's
+  recap, and divers attach their own photos (`recap_photos` + `storeRecapImage`), which staff
+  moderate from the roster ([post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md)).
+- **Generic undo** — the reversible card deletes land immediately and offer a 5-second undo toast
+  instead of a confirm dialog (`restoreCertification`/specialty/nitrox; reusable `UndoToast`).
+- **Optimistic interaction** — a true `useOptimistic` payment-status control flips instantly and
+  reconciles on the server; boarding stays server-authoritative (never optimistic on safety state).
+- **Visible keyboard shortcuts** — a `g`-sequence jumps between surfaces and `?` opens a shortcuts
+  cheat-sheet, beyond ⌘K.
+- **Saved views** — the diver roster has role-preset chips (All / Missing contact / Has insurance)
+  plus per-shop browser-saved custom views, over a cheap `listDiverSummaries` facet.
+- **Performance budget** — the shared first-load JS is gzip-measured after build and gated in CI
+  ([performance-budgets](../architecture/performance-budgets.md)).
+- **Event instrumentation** — a typed `src/lib/analytics.ts` seam for staff recovery, blocker
+  frequency, and checkout abandonment ([event-instrumentation](../architecture/decisions/20260723-event-instrumentation.md)).
+- **DAN / dive-insurance field** — `people.dive_insurance`, captured and shown on the diver profile.
 
 ## Simplification rulings (2026-07-19 → 20 audit)
 

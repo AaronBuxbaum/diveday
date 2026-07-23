@@ -53,8 +53,8 @@ test("staff captures and verifies level and specialty cards before either can be
   await expect(page.getByRole("status")).toContainText("certified");
 
   // The specialty card can be deleted outright (replaces the old "needs
-  // correction" flow). Accept the confirm dialog the delete button raises.
-  page.once("dialog", (dialog) => dialog.accept());
+  // correction" flow). No confirm dialog: the delete lands and a toast offers a
+  // one-tap undo (delight backlog — land-then-undo over "are you sure?").
   await page
     .locator("li")
     .filter({ hasText: cardNo })
@@ -63,7 +63,7 @@ test("staff captures and verifies level and specialty cards before either can be
       name: "Delete",
     })
     .click();
-  await expect(page.getByRole("status")).toContainText("Card deleted");
+  await expect(page.getByRole("status")).toContainText("Card removed");
   await expect(page.locator("li").filter({ hasText: cardNo })).toHaveCount(0);
 });
 

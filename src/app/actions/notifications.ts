@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { retryBookingConfirmation } from "@/db/notifications";
+import { trackEvent } from "@/lib/analytics";
 import { requireStaffSession } from "@/lib/session";
 import type { ResendState } from "./notification-resend-types";
 
@@ -29,7 +30,10 @@ export async function resendConfirmationAction(
   revalidatePath(`/shop/${shopSlug}`);
 
   if (!delivery) return { status: "error", reason: "no_email" };
-  if (delivery.status === "sent") return { status: "sent" };
+  if (delivery.status === "sent") {
+    await trackEvent({ name: "staff_recovery", kind: "confirmation_resent", surface: "today" });
+    return { status: "sent" };
+  }
   return {
     status: "error",
     reason: delivery.status === "not_configured" ? "not_configured" : "failed",

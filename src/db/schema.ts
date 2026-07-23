@@ -102,6 +102,13 @@ export const people = pgTable(
     /** Manifests require these; nullable until collected at booking/check-in. */
     emergencyContactName: text("emergency_contact_name"),
     emergencyContactPhone: text("emergency_contact_phone"),
+    /**
+     * Dive-accident insurance the diver carries — DAN or another provider, as
+     * free text ("DAN #12345"). A safety detail the crew wants on hand in an
+     * incident, never a gate; null until the diver or staff records it
+     * (docs/product/glossary.md — "DAN").
+     */
+    diveInsurance: text("dive_insurance"),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -149,7 +156,11 @@ export const tripSeries = pgTable(
     frequency: tripRecurrenceFrequency("frequency").notNull().default("weekly"),
     /** Weeks between instances: 1 for weekly, 2 for every other week, etc. */
     intervalWeeks: integer("interval_weeks").notNull().default(1),
-    /** How many instances were materialized when the series was created. */
+    /**
+     * How many instances the series has materialized — set at creation and
+     * bumped when the horizon is rolled forward (see `extendTripSeries`). Drives
+     * the staff-facing "Repeats weekly · N trips" summary.
+     */
     occurrenceCount: integer("occurrence_count").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -446,6 +457,14 @@ export const trips = pgTable(
     visibilityMeters: integer("visibility_meters"),
     surfaceConditions: text("surface_conditions"),
     conditionsUpdatedAt: timestamp("conditions_updated_at", { withTimezone: true }),
+    /**
+     * A short crew-authored note that rides along on every diver's post-trip
+     * recap for this date ("Killer vis today — thanks for diving with us!").
+     * Diver-facing and post-trip, distinct from the pre-trip conditions
+     * briefing; null until the crew writes one
+     * (20260723-post-trip-recap follow-up).
+     */
+    recapShoutout: text("recap_shoutout"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1224,6 +1243,37 @@ export const rollCallEvents = pgTable(
   ],
 );
 
+/**
+ * A photo a diver attaches to their own post-trip recap page. The recap link is
+ * a per-booking signed token (public, noindex), so an upload is scoped to that
+ * booking and a diver only ever sees the shots on their own page. Staff see a
+ * trip's diver photos on the roster so the shop can reuse them and take down
+ * anything inappropriate — the moderation seam is a delete, mirroring the opt-in
+ * `dive_site_moments` shape (20260723-post-trip-recap follow-up).
+ */
+export const recapPhotos = pgTable(
+  "recap_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    imageUrl: text("image_url").notNull(),
+    caption: text("caption"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("recap_photos_booking_idx").on(table.bookingId, table.createdAt),
+    index("recap_photos_trip_idx").on(table.tripId, table.createdAt),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -1253,3 +1303,4 @@ export type OrderLineItem = typeof orderLineItems.$inferSelect;
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
+export type RecapPhoto = typeof recapPhotos.$inferSelect;

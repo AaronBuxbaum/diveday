@@ -115,6 +115,22 @@ export type TodayAction = {
    * stays as the no-JS fallback to the trip.
    */
   resend?: { bookingId: string };
+  /**
+   * Present on a freed-seat row: the front-of-line wait-list entry plus the
+   * context the one-tap invite needs for its composer fallback, so staff can
+   * offer the seat straight from the queue instead of navigating to the trip.
+   * `href` stays as the no-JS fallback to the wait-list section.
+   */
+  invite?: {
+    tripId: string;
+    entryId: string;
+    personName: string;
+    personEmail: string | null;
+    invitedAt: Date | null;
+    bookingPath: string;
+    tripTitle: string;
+    tripWhen: string;
+  };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
