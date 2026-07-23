@@ -113,7 +113,18 @@ export const people = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("people_shop_idx").on(table.shopId)],
+  (table) => [
+    index("people_shop_idx").on(table.shopId),
+    // Case-insensitive so "Nora@x.com" and "nora@x.com" can never split one
+    // diver's cert/waiver/rental history into two rows (CR-008). Partial on
+    // the live rows only, matching the archive-not-delete pattern elsewhere:
+    // a soft-deleted person's email frees up for a genuinely new person, and
+    // an undelete that would collide with an active row is refused
+    // (src/db/people.ts — findOrCreatePerson, restoreDiver-style callers).
+    uniqueIndex("people_shop_email_unique")
+      .on(table.shopId, sql`lower(${table.email})`)
+      .where(sql`${table.deletedAt} is null and ${table.email} is not null`),
+  ],
 );
 
 export const personRoles = pgTable(

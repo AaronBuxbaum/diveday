@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { findOrCreatePerson } from "./people";
 import {
   bookings,
   certifications,
@@ -178,12 +179,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   }
 
   if (!person && pendingInsert) {
-    [person] = await tx
-      .insert(people)
-      .values({ shopId: req.shopId, ...pendingInsert })
-      .returning();
-    if (!person) throw new Error("createBooking: person insert returned no row");
-    await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+    person = (await findOrCreatePerson(tx, { shopId: req.shopId, ...pendingInsert })).person;
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.

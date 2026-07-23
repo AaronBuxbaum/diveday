@@ -17,6 +17,22 @@ export type AppTransaction = TransactionCallback extends (tx: infer T) => Promis
 /** Query services may accept either the app database or its transaction boundary. */
 export type DbExecutor = AppDb | AppTransaction;
 
+/**
+ * True for a Postgres unique-constraint violation (SQLSTATE 23505), however
+ * many wrapper layers deep the driver buried it — drizzle-orm's own
+ * `DrizzleQueryError` nests the real `pg`/PGlite error under `.cause`.
+ * Callers use this to turn a losing race against a concurrent insert into a
+ * graceful re-read instead of an unhandled throw (CR-008).
+ */
+export function isUniqueConstraintViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth++) {
+    if (typeof current === "object" && "code" in current && current.code === "23505") return true;
+    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
 // Survive Next.js dev-server HMR: module state resets on reload, globalThis doesn't.
 const globalForDb = globalThis as unknown as { divedayDbPromise?: Promise<AppDb> };
 
