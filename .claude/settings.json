@@ -3,10 +3,11 @@
     "allow": [
       "ScheduleWakeup",
       "mcp__Claude_Code_Remote__delete_trigger",
+      "mcp__Claude_Code_Remote__update_trigger",
+      "mcp__Claude_Code_Remote__create_trigger",
+      "mcp__Claude_Code_Remote__subscribe_pr_activity",
       "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
       "mcp__Claude_Code_Remote__send_later",
-      "mcp__github__subscribe_pr_activity",
-      "mcp__Claude_Code_Remote__subscribe_pr_activity",
       "mcp__Argos__addCommentReaction",
       "mcp__Argos__createComment",
       "mcp__Argos__createProject",
@@ -31,7 +32,6 @@
       "mcp__Argos__unresolveCommentThread",
       "mcp__Argos__unsubscribeCommentThread",
       "mcp__Argos__updateComment",
-      "mcp__813e9827-bd32-43ab-b163-d4679c2fc22f__createReview",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
       "Bash(pnpm format)",
@@ -49,7 +49,24 @@
       "Bash(git status)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(pnpm task:context:*)",
+      "Bash(pnpm check:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "mcp__github__list_pull_requests",
+      "mcp__github__pull_request_read",
+      "mcp__github__list_issues",
+      "mcp__github__issue_read",
+      "mcp__github__get_file_contents",
+      "mcp__github__list_commits",
+      "mcp__github__get_commit",
+      "mcp__github__subscribe_pr_activity"
     ]
   }
 }
