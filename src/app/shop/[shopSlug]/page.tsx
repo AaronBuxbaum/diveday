@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
@@ -9,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
+import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
@@ -55,6 +57,11 @@ export default async function ShopPage({
   const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const crewedSet = new Set(crewedTripIds);
   const departures = lens === "boat" ? leadWithCrewed(work.departures, crewedSet) : work.departures;
+  // Blocker frequency, after the response so it never delays the queue: how many
+  // divers still can't board today, and how many jobs are urgent right now.
+  const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);
+  const urgentJobs = actions.filter((action) => action.urgency === "now").length;
+  after(() => trackEvent({ name: "blockers_surfaced", count: blockedToday, urgent: urgentJobs }));
   const yourBoat =
     lens === "boat"
       ? (departures.find((departure) => crewedSet.has(departure.tripId)) ?? null)
