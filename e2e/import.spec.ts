@@ -47,7 +47,7 @@ test.describe("contact import", () => {
 
     // The person is now on the roster.
     await page.goto("/shop/blue-mantis/divers?q=imported.ingrid@example.com");
-    await expect(page.getByText("Imported Ingrid")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Imported Ingrid/ })).toBeVisible();
   });
 });
 

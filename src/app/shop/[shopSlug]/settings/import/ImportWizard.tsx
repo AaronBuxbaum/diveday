@@ -61,8 +61,9 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
       <h2 className="text-lg font-semibold">Upload a contacts file</h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">
         A CSV from your old system, or DiveDay's own <span className="font-mono">contacts.csv</span>{" "}
-        from the data export. We match your existing divers by email, so re-importing updates them
-        instead of making duplicates. Nothing is written until you review the preview and confirm.
+        from the data export. Rows with an email are matched to your existing divers, so
+        re-importing one updates that diver instead of duplicating them; rows without an email
+        always come in as new records. Nothing is written until you review the preview and confirm.
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
