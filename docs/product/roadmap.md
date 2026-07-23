@@ -207,7 +207,11 @@ Tooling, docs, agent layer, CI, design tokens. Everything after this leans on it
   ([competitive-strategy](competitive-strategy.md),
   [ADR](../architecture/decisions/20260722-full-shop-export.md)). CSV/bundle assembly in
   [`src/lib/export.ts`](../../src/lib/export.ts), per-shop loading in
-  [`src/db/export.ts`](../../src/db/export.ts).
+  [`src/db/export.ts`](../../src/db/export.ts). Completeness pass (2026-07-23) added
+  `contacts.csv` — a flat import-wizard-ready per-person file — plus wait lists, trip series,
+  orders + line items, and the dive-site library and course catalog; exclusions are now only
+  operational plumbing (notification logs, Stripe linkage/checkout attempts, offline snapshots,
+  credentials, image binaries).
 - ⬜ Data-portability follow-ons: the diver/customer CSV importer with published honesty tables
   (safety-critical: imported certs land *claimed*, never *verified*), public migration guides,
   scheduled backup exports, and the read API + webhooks (ADR required).
