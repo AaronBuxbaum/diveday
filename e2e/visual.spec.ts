@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Fifteen key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 60 screenshots per run (see ADR
+ * Visual regression coverage (Argos). Seventeen key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 68 screenshots per run (see ADR
  * 20260721-argos-visual-regression). Keep these counts in sync when adding a
  * surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -88,6 +88,13 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
       await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
       await capture(page, "recap", scheme);
+
+      // The "Switching from EVE" migration guide: the marketing face of the
+      // portability wedge — export click-path, the shared scope table, and the
+      // importer, on the market's most motivated switching pool.
+      await page.goto("/switch/eve");
+      await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
+      await capture(page, "switch-eve", scheme);
     });
 
     test.describe("staff", () => {
