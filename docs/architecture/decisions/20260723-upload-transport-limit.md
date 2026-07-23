@@ -106,3 +106,23 @@ publicly reachable callback URL to function. It was set aside for now rather tha
   `MAX_IMAGE_BYTES`/`ALLOWED_IMAGE_CONTENT_TYPES` are each defined once in
   `src/lib/storage/limits.ts` and read by both the client pre-check and the server's authoritative
   validation, so they cannot drift apart.
+
+## Security review (2026-07-23)
+
+A `security-reviewer` pass on this ADR's implementing commit found no exploitable
+tenant-isolation or authorization regression, confirmed every client-side check in
+`ImageFileInput.tsx` has a server-side equivalent with no gap, and confirmed the gallery-count
+check is correctly ordered (before any upload attempt) and scoped (new files only). Its one
+substantive note was on the recap-endpoint tradeoff two bullets up: **this paragraph is that
+tracked dependency**, not just a narrative mention — CR-013 ("Put abuse controls on public write
+boundaries," `docs/product/assessments/codebase-review-20260723.md`) is the ticket responsible for
+closing it, and whoever picks up CR-013 should read this ADR first. The reviewer also suggested a
+cheaper interim mitigation worth recording rather than building under this ticket's scope: move
+`uploadRecapPhotoAction` off the shared Server Action body limit entirely by rewriting it as its
+own Route Handler with a `Content-Length` pre-check sized to ~6 MB — closing this specific gap
+without waiting on CR-013's general rate-limiting work. Not implemented here because a naive
+`Content-Length` check alone is not a robust limit (a client can lie about the header and stream
+more than declared; Next's own `bodySizeLimit` enforces against actual bytes read, not the
+declared header), so doing this properly needs real streaming byte-limit enforcement — a small
+but real slice of work, better scoped to CR-013 or its own fast-follow than folded in here
+under time pressure.
