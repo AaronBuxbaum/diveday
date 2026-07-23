@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { bookings, people, rollCallEvents, tripRequirements } from "./schema";
+import { bookings, people, rollCallEvents, shops, tripRequirements } from "./schema";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -661,5 +661,25 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     // Nor does asking for the crew under the wrong shop leak the real one.
     await setTripCrew(db, shop.id, trip.id, [staffMember.person.id]);
     expect(await getTripCrewIds(db, FOREIGN_SHOP_ID, trip.id)).toEqual([]);
+  });
+
+  it("does not leak a trip's roster to a genuinely different shop (CR-007)", async () => {
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-roster-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips.find((t) => t.booked > 0);
+    if (!trip) throw new Error("expected a seeded trip with at least one booking");
+
+    const roster = await getTripRoster(db, shop.id, trip.id);
+    expect(roster.length).toBeGreaterThan(0);
+
+    // A real second shop, asking about shop's real, booked trip — not a
+    // hardcoded placeholder id — sees nothing.
+    expect(await getTripRoster(db, otherShop.id, trip.id)).toEqual([]);
   });
 });
