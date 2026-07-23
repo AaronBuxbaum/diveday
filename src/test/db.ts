@@ -1,7 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { type AppDb, createTestDb } from "@/db/client";
-import * as schema from "@/db/schema";
 import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { templateBytes } from "./db-template";
@@ -21,7 +20,7 @@ export async function seededTestDb(): Promise<AppDb> {
     return db;
   }
   const client = new PGlite({ loadDataDir: new Blob([bytes], { type: "application/x-tar" }) });
-  return drizzle({ client, schema });
+  return drizzle({ client });
 }
 
 /** As {@link seededTestDb}, plus the seeded "blue-mantis" demo shop row. */

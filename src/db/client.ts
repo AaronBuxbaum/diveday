@@ -4,10 +4,12 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
 import { withExplicitSslMode } from "./connection-string";
-import * as schema from "./schema";
 import { seedIfEmpty } from "./seed";
 
-export type AppDb = ReturnType<typeof drizzle<typeof schema>>;
+// drizzle 1.0 moved relational config out of the driver `schema` option
+// (into `defineRelations`); we build queries through `.select()/.from()`, which
+// take their types from the tables, so the db is typed by its driver alone.
+export type AppDb = ReturnType<typeof drizzle>;
 type TransactionCallback = Parameters<AppDb["transaction"]>[0];
 export type AppTransaction = TransactionCallback extends (tx: infer T) => Promise<unknown>
   ? T
@@ -37,14 +39,14 @@ async function init(): Promise<AppDb> {
     });
     // Same schema, same query-builder surface as the PGlite driver below;
     // the driver classes differ only in how they execute over the wire.
-    const db = drizzleNodePostgres({ client: pool, schema }) as unknown as AppDb;
+    const db = drizzleNodePostgres({ client: pool }) as unknown as AppDb;
     await seedIfEmpty(db);
     return db;
   }
 
   const dataDir = process.env.PGLITE_DATA_DIR ?? ".pglite";
   const client = dataDir === "memory" ? new PGlite() : new PGlite(dataDir);
-  const db = drizzle({ client, schema });
+  const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
   await seedIfEmpty(db);
   return db;
@@ -52,7 +54,7 @@ async function init(): Promise<AppDb> {
 
 /** Fresh in-memory database for tests: migrated, unseeded, isolated per call. */
 export async function createTestDb(): Promise<AppDb> {
-  const db = drizzle({ client: new PGlite(), schema });
+  const db = drizzle({ client: new PGlite() });
   await migrate(db, { migrationsFolder: "drizzle" });
   return db;
 }

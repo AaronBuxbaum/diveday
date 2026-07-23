@@ -4,7 +4,6 @@ import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import * as schema from "@/db/schema";
 import { seedDemo } from "@/db/seed";
 
 /**
@@ -55,7 +54,7 @@ export async function ensureTestDbTemplate(): Promise<void> {
   if (meta && meta.fingerprint === fingerprint && Date.now() - meta.builtAt < MAX_AGE_MS) return;
 
   const client = new PGlite();
-  const db = drizzle({ client, schema });
+  const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
   await seedDemo(db);
   const dump = await client.dumpDataDir("none");
