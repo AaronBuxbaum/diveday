@@ -197,6 +197,15 @@ export default async function MigrationGuidePage({
                 </div>
               </li>
             </ol>
+
+            {guide.importerNote && (
+              <p className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 text-sm leading-6 text-muted">
+                <span className="font-semibold text-foreground">
+                  For a {guide.competitor} export:{" "}
+                </span>
+                {guide.importerNote}
+              </p>
+            )}
           </div>
         </section>
 
