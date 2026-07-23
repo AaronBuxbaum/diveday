@@ -38,6 +38,18 @@ export interface StripeConnectProvider {
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
+/** The one OAuth callback registered with Stripe for every self-service shop. */
+export const STRIPE_CONNECT_CALLBACK_PATH = "/api/stripe/connect/callback";
+export const STRIPE_CONNECT_STATE_COOKIE = "stripe_connect_state";
+
+/**
+ * Builds the fixed OAuth callback URL from the configured public origin.
+ * The authenticated staff session identifies the shop once Stripe returns.
+ */
+export function stripeConnectCallbackUrl(appHost: string): string {
+  return `${appHost}${STRIPE_CONNECT_CALLBACK_PATH}`;
+}
+
 const connectConfigSchema = z.object({
   secretKey: z.string().trim().min(1),
   clientId: z.string().trim().min(1),

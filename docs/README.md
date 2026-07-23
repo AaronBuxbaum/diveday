@@ -15,7 +15,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/shipped.md](product/shipped.md) | Scannable index of what's already built, ADR-linked | a slice ships (move it here from the roadmap) |
 | [product/next-steps.md](product/next-steps.md) | Prioritized agent-development enablement plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
 | [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work, plus the provisional waiver/course/rental-fit/nitrox/hosting baselines awaiting that approval | a human decision is made, assigned, implemented, or validated, or a provisional default needs recording |
-| [product/marketing.md](product/marketing.md) | Public pages, the illustrated mockups they ship, and the pricing boundary (source of truth is `src/lib/marketing.ts`) | product claims, public visuals, or pricing change |
+| [product/marketing.md](product/marketing.md) | The public-page rulebook: positioning spine, claims policy, voice, SEO conventions, visuals, and the maintenance loop (price source of truth is `src/lib/marketing.ts`) | product claims, positioning, public visuals, or pricing change |
 | [product/brainstorm/](product/brainstorm/README.md) | Non-canonical idea backlog — unfiltered opportunity notes, not commitments or approved scope | you want raw feature ideas; never cite it as a decision |
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
@@ -31,6 +31,7 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | --- | --- |
 | [assessments/competitive-analysis.md](product/assessments/competitive-analysis.md) | Buyer-perspective market comparison, critical-vs-differentiator matrix, pricing posture |
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
+| [assessments/marketing-review.md](product/assessments/marketing-review.md) | 2026-07-23 review of the public pages: the case for repositioning, SEO substrate gaps, and the task breakdown (M1–M8) |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.

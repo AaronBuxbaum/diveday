@@ -139,7 +139,7 @@ should be retired, gated, or paused — not extended:
 - ~~**Navigation debris.**~~ ✅ **Done (2026-07-20).** The `shop/page.tsx` alias, the `reports`
   duplicate page, and the `certifications`/`orders` bookmark shims were all deleted (no redirects —
   there are no users to keep bookmarks for), the four flash/notice mechanisms were unified on
-  `ShopNotice`, and "Shop" now means one thing ("Settings" → `/settings/payments`).
+  `ShopNotice`, and "Shop" now means one thing ("Settings" → `/settings`).
 - **A `recurrence` enum with a single `weekly` value** — additive hedging for cadences that don't
   exist yet.
 

@@ -30,7 +30,7 @@ describe("isPublicShopRoute", () => {
       "/shop/blue-mantis",
       "/shop/blue-mantis/divers",
       "/shop/blue-mantis/trips/abc-123",
-      "/shop/blue-mantis/settings/payments",
+      "/shop/blue-mantis/settings",
       "/shop/blue-mantis/waivers",
     ]) {
       expect(isPublicShopRoute(path)).toBe(false);

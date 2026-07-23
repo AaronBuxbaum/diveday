@@ -24,8 +24,10 @@ meaningful increment must improve at least one of:
 1. **Provider adapters for non-Claude agents.** Keep the provider-neutral workflow — `AGENTS.md`,
    `docs/`, `scripts/`, tests, and the canonical skills under `.claude/skills/` — as the single
    source of truth, and generate or maintain thin per-provider adapters (skill indexes, config
-   pointers) that never introduce unique requirements. Add a check that detects provider
-   instructions drifting from the canonical rules.
+   pointers) that never introduce unique requirements. The internal-consistency half is done:
+   `pnpm check:agents` fails `check:repo` when skills, the skill index, AGENTS.md references, or
+   `task:context` doc paths drift. Still open: the per-provider adapters themselves and checking
+   *them* against the canonical layer.
 2. **Path-aware CI and changed-UI evidence.** Run the smallest trustworthy check set for a change
    while preserving the full `pnpm check` gate before merge, and require screenshot artifacts (or an
    explicit no-visual-change marker) for UI changes.

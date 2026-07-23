@@ -20,9 +20,11 @@ export function MarketingNav() {
           className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground"
         >
           <LogoMark className="size-6 text-primary" />
-          DiveDay<span className="text-primary">.</span>
+          <span>
+            DiveDay<span className="text-primary">.</span>
+          </span>
         </Link>
-        <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 sm:gap-5">
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 sm:gap-5">
           {links.map((link) => (
             <Link
               key={link.href}

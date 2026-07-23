@@ -153,7 +153,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest", scheme);
 
         // Shop settings, where staff set the rental catalog and its prices.
-        await page.goto("/shop/blue-mantis/settings/payments");
+        await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
 
