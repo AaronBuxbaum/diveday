@@ -6,6 +6,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
+import { listBookableDivers } from "@/db/divers";
 import { getTripRequirements, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
@@ -21,7 +22,9 @@ import { TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { WaitlistSection } from "../_components/WaitlistSection";
 import {
   addBookingAction,
+  addExistingDiverAction,
   addToWaitlistAction,
+  bulkSendWaiversAction,
   inviteWaitlistAction,
   issueWaiverAction,
   markPaymentAction,
@@ -45,16 +48,23 @@ export default async function TripGuestsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; bid?: string; waiver?: string }>;
+  searchParams: Promise<{ notice?: string; bid?: string; waiver?: string; diverq?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, waiver } = await searchParams;
+  const { notice, bid, waiver, diverq } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
+  // The returning-diver picker only books, so it is skipped once the boat is
+  // full — hand-entry then wait-lists instead.
+  const diverQuery = diverq?.trim() ?? "";
+  const diverCandidates =
+    isFull(trip) || diverQuery === ""
+      ? []
+      : await listBookableDivers(db, shop.id, tripId, { query: diverQuery });
   const [roster, requirement, readinessRows, prepDivers, waitlist] = await Promise.all([
     getTripRoster(db, tripId),
     getTripRequirements(db, shop.id, tripId),
@@ -149,9 +159,13 @@ export default async function TripGuestsPage({
 
       {cancelled ? null : (
         <AddDiverSection
+          shopSlug={shopSlug}
           full={isFull(trip)}
+          query={diverQuery}
+          candidates={diverCandidates}
           addBookingAction={addBookingAction.bind(null, shopSlug, tripId)}
           addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
+          addExistingDiverAction={addExistingDiverAction.bind(null, shopSlug, tripId)}
         />
       )}
 
@@ -168,6 +182,7 @@ export default async function TripGuestsPage({
         requiresPayment={Boolean(requirement?.requiresPayment)}
         cancellationDeadline={cancellationDeadline(trip)}
         issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
+        bulkSendWaiversAction={bulkSendWaiversAction.bind(null, shopSlug, tripId)}
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}

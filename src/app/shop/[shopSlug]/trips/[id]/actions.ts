@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
+import { type BookingOutcome, cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
@@ -17,7 +17,11 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
-import { issueAndDeliverWaiver, issueWaiverOnJoin } from "@/db/waiver-issue";
+import {
+  issueAndDeliverWaiver,
+  issueWaiverOnJoin,
+  issueWaiversForBookings,
+} from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -74,6 +78,23 @@ const addDiverSchema = z.object({
   email: z.email().max(200),
   phone: z.string().trim().max(30).optional(),
 });
+
+const existingDiverSchema = z.object({ personId: z.uuid() });
+
+function addDiverNotice(reason: Exclude<BookingOutcome, { ok: true }>["reason"]): string {
+  switch (reason) {
+    case "trip_full":
+      return "diver-full";
+    case "already_booked":
+      return "diver-already";
+    case "course_unstaffed":
+      return "diver-course-unstaffed";
+    case "course_prerequisite":
+      return "diver-course-prerequisite";
+    default:
+      return "diver-unavailable";
+  }
+}
 
 function parseAddDiver(formData: FormData) {
   return addDiverSchema.safeParse({
@@ -183,21 +204,34 @@ export async function addBookingAction(shopSlug: string, tripId: string, formDat
     email: parsed.data.email,
     phone: parsed.data.phone,
   });
-  if (!outcome.ok) {
-    const code =
-      outcome.reason === "trip_full"
-        ? "diver-full"
-        : outcome.reason === "already_booked"
-          ? "diver-already"
-          : outcome.reason === "course_unstaffed"
-            ? "diver-course-unstaffed"
-            : outcome.reason === "course_prerequisite"
-              ? "diver-course-prerequisite"
-              : "diver-unavailable";
-    redirect(`${back}?notice=${code}`);
-  }
+  if (!outcome.ok) redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
   // A walk-in gets their waiver right away too, when the trip needs one and they
   // aren't already covered. Best-effort: a delivery failure never undoes the add.
+  try {
+    await issueWaiverOnJoin(await getDb(), s.user.shopId, outcome.bookingId);
+  } catch {
+    console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
+  }
+  revalidateAndRedirect(back, `${back}?notice=diver-added&bid=${outcome.bookingId}`);
+}
+
+/**
+ * Book a returning diver by identity — the "enter once, reuse everywhere" path.
+ * No name/email is re-typed: the existing person row carries their certs,
+ * waivers, rental fit, and history straight onto the trip. Same waiver-on-join
+ * and capacity gate as the walk-in path.
+ */
+export async function addExistingDiverAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = existingDiverSchema.safeParse({ personId: formData.get("personId") });
+  if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
+  const outcome = await createBooking(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    personId: parsed.data.personId,
+  });
+  if (!outcome.ok) redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
   try {
     await issueWaiverOnJoin(await getDb(), s.user.shopId, outcome.bookingId);
   } catch {
@@ -366,6 +400,24 @@ export async function markWaiverInPersonAction(
       ? "waiver-medical-attestation"
       : "waiver-error";
   revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+}
+
+const bulkBookingIdsSchema = z.array(z.uuid()).min(1).max(100);
+
+/**
+ * Send (or resend) a waiver link to every ticked diver in one action — the
+ * roster's "chase the whole outstanding list" instead of one tap each. Each
+ * booking runs the same issue-and-deliver rule as the per-row send; an
+ * already-signed diver is skipped, not re-issued. An empty selection is a
+ * no-op with a nudge rather than a silent redirect.
+ */
+export async function bulkSendWaiversAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const parsed = bulkBookingIdsSchema.safeParse(formData.getAll("bookingId").map(String));
+  if (!parsed.success) redirect(`${back}?notice=bulk-waiver-none`);
+  await issueWaiversForBookings(await getDb(), s.user.shopId, parsed.data);
+  revalidateAndRedirect(back, `${back}?notice=bulk-waiver`);
 }
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {

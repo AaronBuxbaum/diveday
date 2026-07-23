@@ -127,3 +127,30 @@ export async function issueWaiverOnJoin(
   if (!needsWaiver) return null;
   return issueAndDeliverWaiver(db, shopId, bookingId);
 }
+
+export type BulkWaiverResult = { sent: number; skipped: number; failed: number };
+
+/**
+ * Issue and deliver a waiver to every selected booking in one staff action —
+ * the roster's "send to the whole outstanding list" instead of one tap per
+ * diver. Each booking goes through the same {@link issueAndDeliverWaiver} rule
+ * (so bulk never diverges from the single send); an already-signed diver is
+ * counted as `skipped`, not re-issued, and one booking's failure never aborts
+ * the rest. Runs sequentially so a large roster can't fan out a burst of
+ * provider calls. Duplicate ids are collapsed so a doubled checkbox can't
+ * double-send.
+ */
+export async function issueWaiversForBookings(
+  db: AppDb,
+  shopId: string,
+  bookingIds: string[],
+): Promise<BulkWaiverResult> {
+  const result: BulkWaiverResult = { sent: 0, skipped: 0, failed: 0 };
+  for (const bookingId of [...new Set(bookingIds)]) {
+    const outcome = await issueAndDeliverWaiver(db, shopId, bookingId);
+    if (outcome.ok) result.sent += 1;
+    else if (outcome.reason === "already_completed") result.skipped += 1;
+    else result.failed += 1;
+  }
+  return result;
+}
