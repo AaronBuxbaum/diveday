@@ -73,11 +73,12 @@ export function csvCell(value: CsvValue): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
   let text = typeof value === "string" ? value : String(value);
-  // Formula-injection guard (OWASP): a diver-supplied string starting with
-  // =, +, -, @, tab, or CR would execute when the owner opens the CSV in
-  // Excel/Sheets, so it gets a protective leading apostrophe (the README
-  // tells programmatic importers to strip it). Strings only — a negative
-  // number like a winter water temperature must serialize untouched.
+  // Neutralize spreadsheet formulas (CSV injection): a *string* cell starting
+  // with =, +, -, @, tab, or CR executes when the export opens in Excel or
+  // LibreOffice — RFC-4180 quoting does not prevent it — and names on a public
+  // booking are diver-controlled. The apostrophe is the spreadsheet "treat as
+  // text" marker; the bundle README documents it. Numbers stay untouched, so
+  // negative amounts never gain a prefix.
   if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   // Quote only when needed: embedded quote, comma, or line break.
   if (/[",\r\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
@@ -144,9 +145,9 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     `Every file is UTF-8 CSV (RFC 4180). Timestamps are ISO 8601 in UTC.`,
     `Money columns are minor units (cents). Rows with a deleted_at value are`,
     `soft-archived history — kept so nothing is lost in a migration.`,
-    `Text cells a spreadsheet could mistake for a formula (starting with =, +, -,`,
-    `or @) carry a protective leading apostrophe; strip it when importing`,
-    `programmatically.`,
+    `Text that would open as a spreadsheet formula (leading =, +, -, or @) is`,
+    `prefixed with an apostrophe so it always reads as text; strip it when`,
+    `importing programmatically.`,
     ``,
     `Files:`,
     ...input.tables.map(

@@ -10,24 +10,25 @@ describe("csv serialization", () => {
     expect(csvCell("plain")).toBe("plain");
   });
 
+  it("neutralizes cells that would open as spreadsheet formulas", () => {
+    // Diver-controlled text (a public booking's name) must never execute when
+    // the owner opens the export in Excel/LibreOffice.
+    expect(csvCell("=1+2")).toBe("'=1+2");
+    expect(csvCell("@cmd")).toBe("'@cmd");
+    expect(csvCell("-Dana")).toBe("'-Dana");
+    expect(csvCell("+1 305 555 0100")).toBe("'+1 305 555 0100");
+    // Composes with RFC-4180 quoting when the payload also carries a comma.
+    expect(csvCell("=SUM(A1,A2)")).toBe('"\'=SUM(A1,A2)"');
+    // Numbers are not diver-authored text and keep their sign.
+    expect(csvCell(-500)).toBe("-500");
+  });
+
   it("serializes empties, dates, booleans, and numbers unambiguously", () => {
     expect(csvCell(null)).toBe("");
     expect(csvCell(undefined)).toBe("");
     expect(csvCell(new Date("2026-07-22T14:30:00Z"))).toBe("2026-07-22T14:30:00.000Z");
     expect(csvCell(true)).toBe("true");
     expect(csvCell(0)).toBe("0");
-  });
-
-  it("defangs strings a spreadsheet would execute as formulas, and only strings", () => {
-    // A walk-up named "=HYPERLINK(...)" must not run on the owner's machine.
-    expect(csvCell('=HYPERLINK("https://evil.example","tap")')).toBe(
-      '"\'=HYPERLINK(""https://evil.example"",""tap"")"',
-    );
-    expect(csvCell("+1 305 555 0100")).toBe("'+1 305 555 0100");
-    expect(csvCell("@channel")).toBe("'@channel");
-    expect(csvCell("-drift note")).toBe("'-drift note");
-    // Numbers are ours, not diver input — a winter water temperature stays intact.
-    expect(csvCell(-2)).toBe("-2");
   });
 
   it("builds a header-first CRLF document and rejects ragged rows", () => {

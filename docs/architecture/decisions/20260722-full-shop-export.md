@@ -37,7 +37,10 @@ the strategy criticizes), tenant-scoped by the session's shop, and boringly dete
   feature gated past `isStaff`. Staff surfaces show only *flagged* medical prompts; the bundle
   carries every diver's complete signed medical answers plus the whole roster's contact details,
   so "staff can already see it" does not hold here. Other staff get an explanation on the page
-  and a 403 from the route.
+  and a 403 from the route. The privilege is re-checked against the **database** on every request
+  (`canPersonExportShopData` in `src/db/export.ts`) — roles live in a stateless JWT that can be
+  up to its lifetime stale, and a demoted or disabled manager must lose this surface immediately,
+  not at token expiry.
 
 ## Alternatives considered
 
