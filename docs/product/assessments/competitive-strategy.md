@@ -5,7 +5,7 @@
 > and API docs, review platforms, ScubaBoard, migration-industry and regulatory sources), checked
 > against the running codebase. Companion to [competitive-analysis.md](competitive-analysis.md)
 > (the buyer's whole-market view); this document is the operator's view of two specific fights.
-> An assessment, not a commitment; items that survive review move to [roadmap.md](roadmap.md).
+> An assessment, not a commitment; items that survive review move to [roadmap.md](../roadmap.md).
 
 ## The two rivals, verified
 
@@ -70,7 +70,7 @@ verified:
 
 | Axis | vs DiveAdmin | vs DiveShop360 |
 | --- | --- | --- |
-| Price | They undercut ($39–119). We cannot win a price war against a 3-person studio; win on substance and make pricing honest (see [competitive-analysis.md](competitive-analysis.md#pricing-249-is-upside-down)) | We undercut their real all-in cost (setup fees + Core-tier gating + processing quotes). "No setup fee, everything in every tier" lands hard here |
+| Price | They undercut ($39–119). We cannot win a price war against a 3-person studio; win on substance and make pricing honest (see [competitive-analysis.md](competitive-analysis.md#pricing-posture)) | We undercut their real all-in cost (setup fees + Core-tier gating + processing quotes). "No setup fee, everything in every tier" lands hard here |
 | Boat-day ops | **We win now.** Their manifest is a printable list; ours is roll-call checkpoints, append-only history, offline snapshots | **We win now.** Their "Manifest 2.0" is booking admin, not on-boat safety ops |
 | Safety spine | **We win.** No fail-closed readiness anywhere in their product | Same — certs are records to sync, not a typed boarding gate |
 | Waivers | Comparable on paper (both native e-sign); ours are versioned/immutable and free-tier | **We win.** Theirs is a third-party add-on behind the mid tier |
@@ -120,7 +120,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
 **safety-critical surface** (boring code, adversarial tests, `dive-domain-expert` review).
 
 1. ✅ **Full-shop export, self-serve, every tier** — **shipped 2026-07-22, completeness pass
-   2026-07-23** ([ADR](../architecture/decisions/20260722-full-shop-export.md)): Settings → Data
+   2026-07-23** ([ADR](../../architecture/decisions/20260722-full-shop-export.md)): Settings → Data
    export downloads one ZIP of documented RFC-4180 CSVs (people + roles, all three certification
    kinds, trips + dives + series, boarding gates, crew, bookings + payment state, wait lists,
    waiver templates with full versioned bodies, signed waiver records including medical evidence,
@@ -191,10 +191,10 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    band — together they are the "easy data export (attack lock-in fear head-on)" counter that
    [competitive-analysis.md](competitive-analysis.md) already prescribes for blocker #6, now
    specced.
-2. Migration guides (#3) belong to the marketing surface ([marketing.md](marketing.md)) and can
+2. Migration guides (#3) belong to the marketing surface ([marketing.md](../marketing.md)) and can
    ship page-by-page as importers land; "Switching from EVE" first — that pool is live now.
 3. Backup export (#4) and the read API + webhooks (#5) are P2; the API needs an ADR.
-4. The pricing decision ([competitive-analysis.md](competitive-analysis.md#pricing-249-is-upside-down))
+4. The pricing decision ([competitive-analysis.md](competitive-analysis.md#pricing-posture))
    gains a datum: both named rivals confirm the specialist ceiling ($119 DiveAdmin, $149–199+setup
    DS360 entry). The wedge strengthens the meet-the-market posture — "no lock-in" and "no
    add-ons" are one story about respecting the shop.

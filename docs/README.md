@@ -5,18 +5,17 @@ writing code, and update them **in the same PR** as the change that invalidates 
 
 ## Map
 
+**Living docs** — the canonical source of truth; keep these current:
+
 | Doc | What it holds | Update when… |
 | --- | --- | --- |
 | [product/vision.md](product/vision.md) | Why this product exists, who it serves, what "delight-first" means | positioning or personas change |
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them | you introduce or rename a domain concept |
-| [product/roadmap.md](product/roadmap.md) | Milestone sequencing | a milestone ships or scope shifts |
-| [product/next-steps.md](product/next-steps.md) | Prioritized product and agent-development execution plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
-| [product/product-space-investigation.md](product/product-space-investigation.md) | Strategic assessment of built vs. unbuilt surface, the cut list, and the breadth→depth pivot | the product direction is re-examined or its recommendations ship |
-| [product/competitive-analysis.md](product/competitive-analysis.md) | Buyer-perspective market comparison (DiveAdmin, EVE, DiveShop360, Bloowatch, generic platforms), critical-vs-differentiator matrix, pricing posture | the competitive landscape shifts, pricing posture is decided, or a named gap ships |
-| [product/competitive-strategy.md](product/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360: verified rival profiles, head-to-head axes, and the data-portability wedge (export, importer, migration guides, API) | either rival ships portability/API features, or a wedge item ships |
-| [product/ux-audit-20260721.md](product/ux-audit-20260721.md) | Screenshot-verified UX audit of the shipped surfaces and the specced P0–P2 work plan (WP-1…WP-11) | a WP ships, is re-scoped, or a finding is invalidated |
+| [product/roadmap.md](product/roadmap.md) | What is **not** built yet, in priority order | scope shifts; when an item ships, move it to shipped.md |
+| [product/shipped.md](product/shipped.md) | Scannable index of what's already built, ADR-linked | a slice ships (move it here from the roadmap) |
+| [product/next-steps.md](product/next-steps.md) | Prioritized agent-development enablement plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
 | [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work, plus the provisional waiver/course/rental-fit/nitrox/hosting baselines awaiting that approval | a human decision is made, assigned, implemented, or validated, or a provisional default needs recording |
-| [product/marketing.md](product/marketing.md) | Public pages, the illustrated mockups they ship, and the provisional pricing boundary | product claims, public visuals, or pricing change |
+| [product/marketing.md](product/marketing.md) | Public pages, the illustrated mockups they ship, and the pricing boundary (source of truth is `src/lib/marketing.ts`) | product claims, public visuals, or pricing change |
 | [product/brainstorm/](product/brainstorm/README.md) | Non-canonical idea backlog — unfiltered opportunity notes, not commitments or approved scope | you want raw feature ideas; never cite it as a decision |
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
@@ -24,6 +23,22 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [design/forms-and-controls.md](design/forms-and-controls.md) | Field alignment and touch-target primitives, and the checks that enforce them | you build a form, a button, or a menu |
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
+
+**Strategic assessments** ([product/assessments/](product/assessments/)) — dated buyer/rival analyses,
+not commitments. Their surviving recommendations belong in the roadmap; read for context.
+
+| Doc | What it holds |
+| --- | --- |
+| [assessments/competitive-analysis.md](product/assessments/competitive-analysis.md) | Buyer-perspective market comparison, critical-vs-differentiator matrix, pricing posture |
+| [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
+
+**Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
+rationale. Not open work; do not plan from them.
+
+| Doc | Why it's here |
+| --- | --- |
+| [archive/product-space-investigation.md](product/archive/product-space-investigation.md) | 2026-07-20 breadth→depth assessment; its recommendations shipped |
+| [archive/ux-audit-20260721.md](product/archive/ux-audit-20260721.md) | 2026-07-21 UX work plan (WP-1…WP-11); fully delivered 2026-07-23 |
 
 ## Rules
 

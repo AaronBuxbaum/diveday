@@ -26,10 +26,13 @@ them) is a deliberate, ADR-gated decision if the mockups ever stop being enough.
 
 ## Pricing boundary
 
-The `$249 per location / month` founding-shop price in `src/lib/marketing.ts` is a provisional
-early-access starting point, not an implemented checkout or signed commercial policy. Validate the
-amount, included support, billing terms, taxes, and any multi-location offer with the product owner
-before publishing customer-facing pricing beyond this trial surface.
+The founding-shop price lives in `src/lib/marketing.ts` — that file is the single source of truth.
+Do **not** restate the figure in prose here or in other docs; it is early-access and moves, and every
+copy of the number is a future stale claim (it read `$249`, then `$149`, and is still being set). It
+is a provisional starting point, not an implemented checkout or a signed commercial policy. Validate
+the amount, included support, billing terms, taxes, and any multi-location offer with the product
+owner (H-12 in [human-decisions.md](human-decisions.md)) before publishing customer-facing pricing
+beyond this trial surface.
 
 Offline claims must stay precise *and* human: staff explicitly saves a copy to the device; the
 product does not invisibly cache an authenticated page, transfer a copy across devices, or

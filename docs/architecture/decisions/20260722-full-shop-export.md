@@ -5,7 +5,7 @@
 
 ## Context
 
-[competitive-strategy.md](../../product/competitive-strategy.md) makes data portability the wedge
+[competitive-strategy.md](../../product/assessments/competitive-strategy.md) makes data portability the wedge
 against DiveAdmin (API only ingests; no bulk export) and DiveShop360 (no API; manual CSV of four
 datasets), and orders the work export-first: the "leave anytime" guarantee must be real before any
 importer or marketing claim. The codebase has no export surface at all, and no ZIP capability

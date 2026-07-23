@@ -3,11 +3,11 @@
 > A buyer-perspective assessment of DiveDay against the dive-shop software market, written 2026-07-20
 > from external research (vendor sites, pricing pages, ScubaBoard buyer threads) plus a hands-on pass
 > through the running product (public pages, demo shop, staff surfaces, manifest). Companion to
-> [product-space-investigation.md](product-space-investigation.md), which reads the product from the
+> [product-space-investigation.md](../archive/product-space-investigation.md), which reads the product from the
 > inside; this document reads it from the outside — as a shop owner comparing us to
 > [DiveAdmin](https://diveadmin.com/en), EVE, DiveShop360, Bloowatch, and the generic booking
 > platforms. An assessment, not a commitment; items that survive review move to
-> [roadmap.md](roadmap.md). For the operator's view of the two most dangerous named rivals —
+> [roadmap.md](../roadmap.md). For the operator's view of the two most dangerous named rivals —
 > verified company profiles, head-to-head axes, and the data-portability wedge — see
 > [competitive-strategy.md](competitive-strategy.md) (2026-07-22).
 
@@ -57,20 +57,20 @@ In rough order of how often it would kill the deal:
 
 1. ~~**We don't take the diver's money.**~~ ✅ **Closed 2026-07-21** — the public flow now hands the
    diver the shop's own hosted Stripe Checkout right after the seats commit
-   ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)), and the **deposit + declarative
+   ([ADR](../../architecture/decisions/20260721-checkout-at-booking.md)), and the **deposit + declarative
    cancellation-window mechanisms** now ship on top of it (opt-in, off by default,
-   [ADR](../architecture/decisions/20260721-deposit-cancellation-policy.md)). Remaining from the
+   [ADR](../../architecture/decisions/20260721-deposit-cancellation-policy.md)). Remaining from the
    buyer's chair is now *policy, not mechanism*: the deposit/window values shops should be guided
    toward and live Connect platform credentials in production (all H-07). Refunds inside a stated
    window now automate through the shop's Stripe account
-   ([ADR](../architecture/decisions/20260721-automated-cancellation-refund.md)).
+   ([ADR](../../architecture/decisions/20260721-automated-cancellation-refund.md)).
 2. **Messages** (H-09). Booking confirmation, the waiver link, and the wait-list freed-seat invite go
    through one `notify()` seam and send for real once Resend is configured — degrading to a
    copyable/mailto composer when it isn't. The remaining channel/cadence scope is now built: SMS and
    WhatsApp through a Twilio `notifySms()` seam
-   ([ADR](../architecture/decisions/20260721-sms-whatsapp-notifications.md)) and scheduled 7-day/
+   ([ADR](../../architecture/decisions/20260721-sms-whatsapp-notifications.md)) and scheduled 7-day/
    24-hour pre-trip reminders via an idempotent cron endpoint
-   ([ADR](../architecture/decisions/20260721-scheduled-reminder-cadence.md)), both off until their
+   ([ADR](../../architecture/decisions/20260721-scheduled-reminder-cadence.md)), both off until their
    env is set. Still open: the H-09 consent/copy/sender ownership policy.
 3. **No equipment inventory or service tracking.** Rental *fit* (sizes) is genuinely useful, but
    "who has what, what's due for service" is table stakes for gear-heavy shops — DiveAdmin,
@@ -94,36 +94,38 @@ Explicitly fine to *not* have, despite competitors: retail POS/barcode inventory
 DiveShop360 owns it), marketing campaigns/CRM blasts, channel-manager/OTA plumbing, staff payroll,
 multi-location (say "not yet" honestly, as the pricing FAQ already does).
 
-## Pricing: $249 is upside-down
+## Pricing posture
 
-The provisional `$249 per location / month` ([marketing.md](marketing.md#pricing-boundary)) sits
-**2–6× above the specialist tier** (DiveAdmin tops out at $119, Bloowatch at €119, DiveShop360's
-POS-inclusive Startup is ~$149–199) while missing checkout, equipment, and agency hooks. Premium
-pricing needs either the POS-suite story (we don't want it) or a proven safety/ops story (V-02 still
-open). Two coherent postures:
+The founding-shop price ([marketing.md](../marketing.md#pricing-boundary), set in
+`src/lib/marketing.ts` — the source of truth, early-access and still moving) has come **down** from
+the original $249 toward the specialist tier (DiveAdmin tops out at $119, Bloowatch at €119,
+DiveShop360's POS-inclusive Startup is ~$149–199) — the "meet the market" direction below. The final
+number is still an open **H-12** decision; two coherent postures remain:
 
-- **Meet the market:** land at **$79–129 flat, everything included, zero commission** — undercuts
-  nothing we need and makes "no add-ons" the headline against Bloowatch/TrekkSoft nickel-and-diming.
-- **Earn the premium:** keep ~$199–249 only after checkout-at-booking ships, notifications send by
-  default, and the manifest is field-proven — and sell it as "the safety-first operating system,"
-  with the 6%-of-volume math versus FareHarbor as the anchor (a shop doing $300k/yr online pays
-  $9–18k/yr in generic-platform fees; $249/mo is $3k).
+- **Meet the market:** land ~**$79–129 flat, everything included, zero commission** — makes
+  "no add-ons" the headline against Bloowatch/TrekkSoft nickel-and-diming. The price drop is already
+  walking this way.
+- **Earn the premium:** hold higher only once the manifest is field-proven (V-02) — checkout-at-booking
+  and default-sending notifications have since shipped, so that half of the earlier bar is now met —
+  and sell it as "the safety-first operating system," with the 6%-of-volume math versus FareHarbor as
+  the anchor (a shop doing $300k/yr online pays $9–18k/yr in generic-platform fees).
 
-Either is defensible; the current combination (premium price, table-stakes gaps, unproven claims) is
-not. This needs a product-owner decision before any customer-facing publication (H-07 territory).
+Either is defensible; the earlier mismatch (a premium number against table-stakes gaps) is what the
+price drop and the shipped checkout/notifications have been closing. The final number is a
+product-owner decision before any customer-facing publication (H-12).
 
 ## Critical vs. differentiator
 
 | Capability | Market status | DiveDay today | Verdict |
 | --- | --- | --- | --- |
 | Online booking w/ real-time capacity | Universal | ✅ Best-in-class flow | Critical — done |
-| **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../architecture/decisions/20260721-checkout-at-booking.md)); deposit + cancellation-window mechanisms shipped opt-in ([ADR](../architecture/decisions/20260721-deposit-cancellation-policy.md)); only the policy *values* remain H-07 | Critical — mechanism done; policy open |
+| **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../../architecture/decisions/20260721-checkout-at-booking.md)); deposit + cancellation-window mechanisms shipped opt-in ([ADR](../../architecture/decisions/20260721-deposit-cancellation-policy.md)); only the policy *values* remain H-07 | Critical — mechanism done; policy open |
 | Digital waivers + medical, auto-sent | Universal (often add-on) | ✅ Versioned, immutable, included | Critical — done; needs sending to be real |
 | Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; no rosters/progress/eLearning | Critical — partial |
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
 | Rental equipment tracking | Universal | ❌ Sizes only, no inventory/service | Critical — gap |
-| Notifications (email min., SMS/WhatsApp rising) | Universal | ⚠️ Email sends for real through one seam (confirmation, waiver, wait-list invite), composer fallback when unconfigured; no SMS/WhatsApp, no scheduled cadences | Critical — email done; SMS + policy open |
+| Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email + SMS/WhatsApp through one seam (confirmation, waiver, wait-list invite) with scheduled 7-day/24-hour reminder cadences; composer/`not_configured` fallback when unset | Critical — mechanism done; consent/copy policy (H-09) open |
 | Owner reporting | Expected | ❌ | Critical-lite — gap |
 | Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
 | Fail-closed readiness engine | **No one has it** | ✅ | **Differentiator #1** |
@@ -131,19 +133,19 @@ not. This needs a product-owner decision before any customer-facing publication 
 | No-login diver arc (book/sign/readiness) | No one has it end-to-end | ✅ | Differentiator |
 | Today/blocker daily loop | No one has it | ✅ | Differentiator |
 | Delight/UX | Open flank (EVE is the anti-model) | ✅ Visibly ahead | Differentiator |
-| Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ⚠️ Posture right, number wrong | Differentiator if repriced |
-| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22 ([ADR](../architecture/decisions/20260722-full-shop-export.md)); importer, migration guides, API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, then importer + honesty tables, migration guides, read API + webhooks |
+| Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ⚠️ Posture right; number moving toward market (H-12, see [Pricing posture](#pricing-posture)) | Differentiator once H-12 lands |
+| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22 ([ADR](../../architecture/decisions/20260722-full-shop-export.md)); importer, migration guides, API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, then importer + honesty tables, migration guides, read API + webhooks |
 
 ## Implications for the queue
 
-Consistent with the [breadth→depth pivot](product-space-investigation.md#recommendation-three-moves-in-order),
+Consistent with the [breadth→depth pivot](../archive/product-space-investigation.md#recommendation-three-moves-in-order),
 with one material re-ranking from the buyer's chair:
 
 1. ✅ **Elevate checkout-at-booking (H-07) from P2 to the front of P1** — shipped 2026-07-21: the
    public flow now ends on the shop's own hosted Stripe Checkout, webhook confirmed
-   ([ADR](../architecture/decisions/20260721-checkout-at-booking.md)), and the deposit +
+   ([ADR](../../architecture/decisions/20260721-checkout-at-booking.md)), and the deposit +
    declarative-cancellation mechanisms now layer on it opt-in
-   ([ADR](../architecture/decisions/20260721-deposit-cancellation-policy.md)). Still open from the
+   ([ADR](../../architecture/decisions/20260721-deposit-cancellation-policy.md)). Still open from the
    buyer's chair, and now *policy not mechanism*: the deposit/window values, whether refunds
    automate, and live Connect platform credentials (H-07).
 2. ✅ **Real notifications (H-09)** — the wait-list freed-seat invite sends through the same
