@@ -69,7 +69,14 @@ export async function createDiver(db: AppDb, input: NewDiver) {
 
 export async function updateDiver(
   db: AppDb,
-  input: { shopId: string; personId: string; fullName: string; email?: string; phone?: string },
+  input: {
+    shopId: string;
+    personId: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+    diveInsurance?: string;
+  },
 ) {
   const email = input.email?.trim().toLowerCase() || null;
   if (email) {
@@ -89,7 +96,14 @@ export async function updateDiver(
   }
   const [person] = await db
     .update(people)
-    .set({ fullName: input.fullName.trim(), email, phone: input.phone?.trim() || null })
+    .set({
+      fullName: input.fullName.trim(),
+      email,
+      phone: input.phone?.trim() || null,
+      ...(input.diveInsurance === undefined
+        ? {}
+        : { diveInsurance: input.diveInsurance.trim() || null }),
+    })
     .where(
       and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
     )
@@ -124,10 +138,42 @@ export const DIVER_PAGE_SIZE = 50;
  * the command palette in `search.ts`), and pages are keyset-bounded so a shop
  * with thousands of records costs one page, not the whole table.
  */
+/**
+ * Named roster views for common front-desk jobs. Deliberately code-defined, not
+ * a per-shop table: they are role-shaped presets over the one roster ("who needs
+ * a safety contact chased", "who carries insurance"), and any staffer can pin
+ * their own combinations in the browser (see DiverQuickViews). Each is a cheap
+ * WHERE clause, so filtering never breaks the keyset paging.
+ */
+export type DiverFilter = "all" | "missing_contact" | "insured";
+
+export const DIVER_FILTERS = ["all", "missing_contact", "insured"] as const;
+
+export function isDiverFilter(value: string | undefined): value is DiverFilter {
+  return value === "all" || value === "missing_contact" || value === "insured";
+}
+
+function diverFilterCondition(filter: DiverFilter) {
+  if (filter === "missing_contact") {
+    // "On file" needs both a name and a phone (glossary — Emergency contact), so
+    // a hole in either lands the diver in this view.
+    return or(
+      isNull(people.emergencyContactName),
+      eq(people.emergencyContactName, ""),
+      isNull(people.emergencyContactPhone),
+      eq(people.emergencyContactPhone, ""),
+    );
+  }
+  if (filter === "insured") {
+    return and(isNotNull(people.diveInsurance), ne(people.diveInsurance, ""));
+  }
+  return undefined;
+}
+
 export async function listDiverSummaries(
   db: AppDb,
   shopId: string,
-  options: { query?: string; cursor?: string; limit?: number } = {},
+  options: { query?: string; cursor?: string; limit?: number; filter?: DiverFilter } = {},
 ) {
   const query = options.query?.trim() ?? "";
   const limit = options.limit ?? DIVER_PAGE_SIZE;
@@ -138,6 +184,7 @@ export async function listDiverSummaries(
     eq(people.shopId, shopId),
     eq(personRoles.role, "diver"),
     isNull(people.deletedAt),
+    diverFilterCondition(options.filter ?? "all"),
     like
       ? or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like))
       : undefined,

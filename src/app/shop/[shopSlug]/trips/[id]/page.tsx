@@ -24,15 +24,21 @@ import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
+import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
+import { SeriesSection } from "./_components/SeriesSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import {
+  applySeriesDetailsAction,
+  cancelSeriesAction,
   cancelTripAction,
   clearConditionsAction,
+  extendSeriesAction,
   reinstateTripAction,
   saveConditionsAction,
   saveCrewAction,
   saveDetails,
+  saveRecapShoutoutAction,
   saveRequirementsAction,
 } from "./actions";
 
@@ -141,6 +147,11 @@ export default async function ManageTripPage({
         trip={trip}
       />
 
+      <RecapNoteSection
+        action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
+        shoutout={trip.recapShoutout}
+      />
+
       <RequirementsSection
         action={saveRequirementsAction.bind(null, shopSlug, tripId)}
         trip={trip}
@@ -155,6 +166,17 @@ export default async function ManageTripPage({
         crewIds={crewIds}
         hasCourseInstructor={hasCourseInstructor}
       />
+
+      {series ? (
+        <SeriesSection
+          intervalWeeks={series.intervalWeeks}
+          occurrenceCount={series.occurrenceCount}
+          futureScheduledCount={series.futureScheduledCount}
+          applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
+          cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
+          extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
+        />
+      ) : null}
 
       <section className="mt-12 border-t border-border pt-6">
         {cancelled ? (

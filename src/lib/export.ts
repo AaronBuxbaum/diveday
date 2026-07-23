@@ -63,6 +63,8 @@ export const EXPORT_FILE_NOTES = {
   "dive_site_creatures.csv": "The field-guide creatures attached to each dive-site briefing.",
   "dive_site_moments.csv":
     "Staff-moderated diver moments attached to dive sites, published and unpublished.",
+  "recap_photos.csv":
+    "Photos divers attached to their post-trip recap pages, by booking and trip. Image links stay readable while the DiveDay account is active.",
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
 } as const;
 

@@ -148,9 +148,9 @@ export function SpecialtyCards({
                     ) : null}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
+                      {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                       <SubmitButton
                         pendingLabel="Deleting…"
-                        confirmMessage="Delete this specialty card? It stops counting toward readiness; its history is kept for records."
                         className={buttonClass({ variant: "danger", size: "sm" })}
                       >
                         Delete
@@ -186,9 +186,9 @@ export function SpecialtyCards({
                   <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                     <input type="hidden" name="certificationId" value={card.id} />
                     <input type="hidden" name="cardType" value="nitrox" />
+                    {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                     <SubmitButton
                       pendingLabel="Deleting…"
-                      confirmMessage="Delete this nitrox card? It stops counting toward readiness; its history is kept for records."
                       className={buttonClass({ variant: "danger", size: "sm" })}
                     >
                       Delete

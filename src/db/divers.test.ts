@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -13,6 +14,7 @@ import {
   updateDiver,
 } from "./divers";
 import { saveRentalFit } from "./rental-fit";
+import { people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 describe("person-first diver records", () => {
@@ -71,8 +73,19 @@ describe("person-first diver records", () => {
       fullName: "Returning Riley Updated",
       email: "riley@example.com",
       phone: "555",
+      diveInsurance: "  DAN #12345  ",
     });
     expect(updated?.fullName).toBe("Returning Riley Updated");
+    // The dive-insurance field is trimmed and persisted; blanking it clears it.
+    expect(updated?.diveInsurance).toBe("DAN #12345");
+    const cleared = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Returning Riley Updated",
+      email: "riley@example.com",
+      diveInsurance: "   ",
+    });
+    expect(cleared?.diveInsurance).toBeNull();
 
     const staff = (await listDiverSummaries(db, shop.id)).divers.find(
       (row) => row.person.fullName === "Dana Reyes",
@@ -116,6 +129,46 @@ describe("roster search and pagination", () => {
     expect(nobody.divers).toHaveLength(0);
     expect(nobody.total).toBe(0);
     expect(nobody.nextCursor).toBeNull();
+  });
+
+  it("filters the roster by saved-view facet (missing contact, insured)", async () => {
+    const { db, shop } = await seededShopContext();
+    const target = (await listDiverSummaries(db, shop.id)).divers[0]?.person;
+    if (!target) throw new Error("expected seeded divers");
+
+    // Start the target with no contact so the baseline "missing contact" count
+    // deterministically includes them, then measure it.
+    await db
+      .update(people)
+      .set({ emergencyContactName: null, emergencyContactPhone: null })
+      .where(eq(people.id, target.id));
+    const baselineMissing = (await listDiverSummaries(db, shop.id, { filter: "missing_contact" }))
+      .total;
+    expect(baselineMissing).toBeGreaterThan(0);
+
+    // Now complete the target's contact and give them dive insurance.
+    await updateDiver(db, {
+      shopId: shop.id,
+      personId: target.id,
+      fullName: target.fullName,
+      email: target.email ?? "",
+      phone: target.phone ?? "",
+      diveInsurance: "DAN #999",
+    });
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Kin Ono", emergencyContactPhone: "+1 305 555 0000" })
+      .where(eq(people.id, target.id));
+
+    // Insurance is a new column defaulting null, so only the target carries it.
+    const insured = await listDiverSummaries(db, shop.id, { filter: "insured" });
+    expect(insured.divers.map((row) => row.person.id)).toEqual([target.id]);
+    expect(insured.total).toBe(1);
+
+    // With a full contact now on file, the target leaves the "missing" view.
+    const missing = await listDiverSummaries(db, shop.id, { filter: "missing_contact" });
+    expect(missing.divers.some((row) => row.person.id === target.id)).toBe(false);
+    expect(missing.total).toBe(baselineMissing - 1);
   });
 
   it("pages with a keyset cursor and never repeats or skips a diver", async () => {

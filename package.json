@@ -21,6 +21,7 @@
     "check:agents": "node scripts/check-agents.mjs",
     "check:repo": "pnpm check:architecture && pnpm check:clock && pnpm check:adrs && pnpm check:docs && pnpm check:agents",
     "check": "pnpm check:repo && pnpm lint && pnpm typecheck && pnpm test",
+    "perf:budget": "node scripts/perf-budget.mjs",
     "task:context": "node scripts/task-context.mjs",
     "screenshot": "node scripts/screenshot.mjs",
     "db:generate": "drizzle-kit generate",

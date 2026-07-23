@@ -31,6 +31,9 @@ jobs:
       # safeguards for every PR.
       - run: pnpm check
       - run: pnpm build
+      # Guards the shared first-load JS every staff page pays, so a phone at the
+      # dock on weak Wi-Fi never silently gets slower (docs/architecture/performance-budgets.md).
+      - run: pnpm perf:budget
 
   e2e:
     name: End-to-end

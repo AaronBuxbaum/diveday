@@ -33,6 +33,7 @@ export interface ImageStorageProvider {
 
 export const MAX_CARD_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_COURSE_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_RECAP_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
 
 type Fetch = typeof fetch;
@@ -117,6 +118,19 @@ export async function storeCourseImage(
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
   return storeImage({ ...upload, keyPrefix: "courses" }, MAX_COURSE_IMAGE_BYTES, provider);
+}
+
+/**
+ * Store a diver's post-trip recap photo. Same validation as the others, its own
+ * `recap` key prefix so diver snapshots never share a namespace with evidence
+ * or brochure media; the caller keeps the recap page working whether or not a
+ * provider is configured.
+ */
+export async function storeRecapImage(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "recap" }, MAX_RECAP_IMAGE_BYTES, provider);
 }
 
 async function storeImage(

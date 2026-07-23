@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { WaitlistInvite } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { buttonClass } from "@/components/ui/button";
 import { ACTION_KIND_META, groupActions, type TodayAction } from "@/lib/today";
 import { ResendConfirmationControl } from "./ResendConfirmationControl";
 import { WaiverSendControl } from "./WaiverSendControl";
+
+/** Binds shopSlug + tripId server-side; the client control supplies the entry. */
+export type TodayInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
 
 const CHIP_TONES = {
   danger: "border-danger/30 bg-danger/10 text-danger",
@@ -21,7 +25,17 @@ function KindChip({ kind }: { kind: TodayAction["kind"] }) {
   );
 }
 
-function ActionRow({ action, shopSlug }: { action: TodayAction; shopSlug: string }) {
+function ActionRow({
+  action,
+  shopSlug,
+  shopName,
+  inviteAction,
+}: {
+  action: TodayAction;
+  shopSlug: string;
+  shopName: string;
+  inviteAction: TodayInviteAction;
+}) {
   return (
     <li className="rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
@@ -46,6 +60,18 @@ function ActionRow({ action, shopSlug }: { action: TodayAction; shopSlug: string
             bookingId={action.resend.bookingId}
             label={action.actionLabel}
           />
+        ) : action.invite ? (
+          <WaitlistInvite
+            entryId={action.invite.entryId}
+            personName={action.invite.personName}
+            personEmail={action.invite.personEmail}
+            invitedAt={action.invite.invitedAt}
+            bookingPath={action.invite.bookingPath}
+            shopName={shopName}
+            tripTitle={action.invite.tripTitle}
+            tripWhen={action.invite.tripWhen}
+            invite={inviteAction.bind(null, action.invite.tripId)}
+          />
         ) : (
           <Link
             href={action.href}
@@ -67,9 +93,13 @@ function ActionRow({ action, shopSlug }: { action: TodayAction; shopSlug: string
 export function TodayQueue({
   actions,
   shopSlug,
+  shopName,
+  inviteAction,
 }: {
   actions: readonly TodayAction[];
   shopSlug: string;
+  shopName: string;
+  inviteAction: TodayInviteAction;
 }) {
   const groups = groupActions(actions);
 
@@ -117,7 +147,13 @@ export function TodayQueue({
             </div>
             <ul className="mt-3 flex flex-col gap-3">
               {group.actions.map((action) => (
-                <ActionRow key={action.id} action={action} shopSlug={shopSlug} />
+                <ActionRow
+                  key={action.id}
+                  action={action}
+                  shopSlug={shopSlug}
+                  shopName={shopName}
+                  inviteAction={inviteAction}
+                />
               ))}
             </ul>
           </div>

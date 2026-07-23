@@ -81,6 +81,51 @@ export async function archiveNitroxCertification(
   return Boolean(row);
 }
 
+/**
+ * Undo a nitrox-card soft-archive, mirroring `restoreCertification`. Refuses when
+ * a live card already holds the same shop/agency/identifier (partial unique index).
+ */
+export async function restoreNitroxCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+) {
+  const [archived] = await db
+    .select()
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.id, input.certificationId),
+        eq(nitroxCertifications.shopId, input.shopId),
+      ),
+    )
+    .limit(1);
+  if (!archived || archived.deletedAt === null) return false;
+  const [conflict] = await db
+    .select({ id: nitroxCertifications.id })
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.shopId, input.shopId),
+        eq(nitroxCertifications.agency, archived.agency),
+        eq(nitroxCertifications.identifier, archived.identifier),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (conflict) return false;
+  const [row] = await db
+    .update(nitroxCertifications)
+    .set({ deletedAt: null })
+    .where(
+      and(
+        eq(nitroxCertifications.id, input.certificationId),
+        eq(nitroxCertifications.shopId, input.shopId),
+      ),
+    )
+    .returning({ id: nitroxCertifications.id });
+  return Boolean(row);
+}
+
 export async function listShopNitroxCertifications(db: AppDb, shopId: string) {
   return db
     .select({ certification: nitroxCertifications, person: people })
