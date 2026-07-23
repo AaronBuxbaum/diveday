@@ -21,6 +21,7 @@ const moreLinks = [
   ["Courses", "/courses"],
   ["Waivers", "/waivers"],
   ["Settings", "/settings/payments"],
+  ["Import contacts", "/settings/import"],
   ["Data export", "/settings/export"],
 ] as const;
 
