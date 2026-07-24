@@ -94,3 +94,40 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   const response = await page.goto("/switching/fareharbor");
   expect(response?.status()).toBe(404);
 });
+
+test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {
+  // Reachable from the hub — the largest under-served pool gets a front door.
+  await page.goto("/switching");
+  await page.getByRole("link", { name: /Coming from a spreadsheet/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "The spreadsheet got you this far." }),
+  ).toBeVisible();
+
+  // The three-part shape, reframed for a shop with no vendor to leave:
+  // ready your own sheet, the shared scope table, the importer.
+  await expect(
+    page.getByRole("heading", { name: "Does your sheet have these columns?" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What comes across — and what doesn't" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
+
+  // The starter template downloads a real CSV (not a dead link).
+  const templateHref = await page
+    .getByRole("link", { name: /Download the starter template/ })
+    .getAttribute("href");
+  expect(templateHref).toBe("/diveday-diver-import-template.csv");
+  const template = await page.request.get(templateHref ?? "");
+  expect(template.ok()).toBeTruthy();
+  expect(await template.text()).toContain("certification_number");
+
+  // The scope table is the importer's honesty table — same safety spine.
+  await expect(page.getByText("Medical & health history")).toBeVisible();
+
+  // The owner-authorized free-import offer lands, phrased as a human commitment.
+  await expect(page.getByRole("heading", { name: /we'll do it with you — free/ })).toBeVisible();
+
+  // Demo-before-trial funnel, same as every guide.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+});

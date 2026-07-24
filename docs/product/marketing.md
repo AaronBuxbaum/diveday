@@ -42,6 +42,13 @@ chosen battlegrounds — and re-read it before changing the spine.
 - **Shipped-only.** Every claim describes a workflow that works in the demo today. No roadmap
   marketing, no "coming soon". If a claim can't be demonstrated in the live demo, it doesn't go on
   a page.
+- **Authorized service offers** are the one exception to shipped-only: a commitment the shop makes
+  to a customer, not a product feature, may be stated once the product owner has authorized it.
+  Currently authorized: **free, personal help importing a shop's existing spreadsheet or data** (a
+  Jane-style concierge import, authorized 2026-07-24, on `/switching/spreadsheet`). Phrase these as
+  a human commitment ("we'll map it with you"), never as an automated product capability, and never
+  promise a turnaround time. A new service claim needs product-owner sign-off the same way the
+  price does.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
@@ -138,6 +145,15 @@ carrying its own `sources` (rendered on the page) and phrased factually, never s
 safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add a guide by writing
 its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
 a published page (there is no draft/planned state).
+
+The one non-incumbent guide is `/switching/spreadsheet` ("Coming from a spreadsheet"). A shop on a
+spreadsheet has no vendor to leave, so the page has no incumbent context, no export click-path to
+reverse-engineer, and no `sources`; it lives as its own static route rather than a
+`migration-guides.ts` entry (a static segment wins over the sibling `[competitor]` one). It still
+renders `IMPORT_HONESTY_TABLE` verbatim like every guide — the shared honesty invariant — and it
+carries the authorized free-import offer. Its wedge is not portability (a spreadsheet never locked
+anyone in) but the jobs a list can't do: readiness checked at the dock, the blocker queue, the
+no-login diver arc.
 
 ## Maintenance loop
 
