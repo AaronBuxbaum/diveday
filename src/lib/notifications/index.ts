@@ -263,7 +263,10 @@ function isLoopbackHostname(hostname: string): boolean {
  * Production requires a bare HTTPS origin; a loopback origin is only permitted
  * outside production, so a real deploy can never point at localhost.
  */
-export function checkPublicHost(rawValue: string | undefined, productionRuntime: boolean): PublicHostCheck {
+export function checkPublicHost(
+  rawValue: string | undefined,
+  productionRuntime: boolean,
+): PublicHostCheck {
   const trimmed = rawValue?.trim();
   if (!trimmed) return { status: "unset" };
 
@@ -286,10 +289,16 @@ export function checkPublicHost(rawValue: string | undefined, productionRuntime:
     };
   }
   if (parsed.username || parsed.password) {
-    return { status: "invalid", reason: `APP_HOST must not include credentials, got "${trimmed}".` };
+    return {
+      status: "invalid",
+      reason: `APP_HOST must not include credentials, got "${trimmed}".`,
+    };
   }
   if (parsed.pathname !== "/" && parsed.pathname !== "") {
-    return { status: "invalid", reason: `APP_HOST must be a bare origin with no path, got "${trimmed}".` };
+    return {
+      status: "invalid",
+      reason: `APP_HOST must be a bare origin with no path, got "${trimmed}".`,
+    };
   }
   if (parsed.search || parsed.hash) {
     return {
