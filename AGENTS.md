@@ -29,13 +29,15 @@ adapters and must not introduce unique requirements.
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm check:repo` | architecture, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:repo` | architecture, clock, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test -- <file> --reporter=dot` | focused Vitest run with low-noise success output |
 | `pnpm e2e -- <spec> --reporter=line` | focused Playwright run |
 | `pnpm build` | production build |
+| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
+| `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
 | `node scripts/screenshot.mjs [routes]` | light/dark × desktop/phone PNGs → `.screenshots/` |
 
 ## Route map (don't re-derive this)
@@ -43,6 +45,7 @@ adapters and must not introduce unique requirements.
 | You need | Go to |
 | --- | --- |
 | Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
+| Bearer-token pages (waiver signing, trip-prep "ready", recap) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
 | Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
@@ -50,10 +53,15 @@ adapters and must not introduce unique requirements.
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/trips.ts`, `src/db/shops.ts`, `src/db/seed.ts` |
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
+| Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
+| Notifications (email/SMS) | `src/lib/notifications/` (Resend/Twilio adapters); log + resend state in `src/db/notifications.ts` |
+| Data portability (CSV export/import) | `src/db/export.ts` / `src/db/import.ts`; staff UI at `src/app/shop/[shopSlug]/settings/import/` — security-sensitive, see hard rules |
+| Offline boat manifests | `src/lib/offline-manifests.ts` + `offline-manifest-store.ts` (encrypted IndexedDB); viewer at `src/app/offline-manifest/` |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
+| Form/button/control wrappers | `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`), `button.ts` (`buttonClass`) |
 | "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
 
 ## Skills and providers
