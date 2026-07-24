@@ -65,7 +65,9 @@ chosen battlegrounds — and re-read it before changing the spine.
   two years for the founding cohort** and **founder-direct, same-day-response support** for the
   founding cohort. Billing cadence, taxes/fees, and the contract flow remain undecided
   ([human-decisions.md](human-decisions.md)); do not publish billing terms through any new channel
-  without that decision.
+  without that decision. The two-year price lock and the same-day support promise are **binding
+  commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
+  legal/tax-review dependency (H-12); do not treat the closed *price* as clearing them.
 - **Offline claims stay precise and human**: staff explicitly save a copy to the device; nothing
   invisibly caches, transfers between devices, or guarantees stale readiness is live. Captain's
   words ("saved to this phone", "checked again when service returns") — the machinery

@@ -40,29 +40,34 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
 export type CardStatus = "pending" | "verified";
 
 /**
- * What the badge shows: the stored status, or `expired` when a verified card has
- * lapsed. Expiry is a display overlay, not a stored state — the same card is
- * "certified" until its expiry passes, then "expired".
+ * What the badge shows: the stored status, or `expired` when a verified card is
+ * past the shop's refresher-due date. Real C-cards do not expire (glossary
+ * **C-card**); this date is a shop-set *refresher-due* policy, not a card
+ * expiry — so the `expired` display key surfaces to staff as "refresher due".
+ * It is a display overlay, not a stored state.
  */
 export type CardDisplayStatus = CardStatus | "expired";
 
 /**
  * Staff-facing card labels. A card is "certified" once staff confirm it (they
  * look the number up with the issuing agency and click Mark certified); the
- * stored status is still `verified`, which is what readiness reads. An expired
- * card reads as "expired" and no longer counts as valid.
+ * stored status is still `verified`, which is what readiness reads. Once a card
+ * passes its shop-set refresher-due date it reads as "refresher due" and no
+ * longer counts as valid until refreshed (H-08).
  */
 export const CARD_STATUS_LABELS: Record<CardDisplayStatus, string> = {
   pending: "pending",
   verified: "certified",
-  expired: "expired",
+  expired: "refresher due",
 };
 
 /**
- * A card past its expiry no longer counts as a valid certification — the same
- * rule the readiness engine applies in `validVerifiedCertification`, compared
- * against the shop's own local calendar date rather than a UTC instant
- * (CR-009, src/lib/calendar-date.ts).
+ * A card past its shop-set refresher-due date no longer counts as a valid
+ * certification — the same rule the readiness engine applies in
+ * `validVerifiedCertification`, compared against the shop's own local calendar
+ * date rather than a UTC instant (CR-009, src/lib/calendar-date.ts). The name
+ * predates the H-08 refresher-due relabel and still tracks the same
+ * `expiresAt` column.
  */
 export function isCardExpired(
   card: { expiresAt?: CalendarDate | null },

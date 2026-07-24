@@ -85,13 +85,25 @@ notice short of staff spotting a duplicate on the roster.
   (rare — e.g. a shared family account), the constraint has no per-row override today; that would
   need a deliberate product decision (e.g. an opt-in "shared contact" flag) before being modeled,
   not a workaround baked into this migration.
-- **Open safety question (H-13):** self-service `findOrCreatePerson` reuse matches on email only,
-  never comparing the submitted name — a `dive-domain-expert` review flagged this as unsafe for a
-  shared-inbox scenario (a spouse, or a minor booked under a parent's email) where a new diver's
-  booking can silently inherit an existing person's verified cert and current waiver with no
-  medical questionnaire or cert check ever collected for them. Whether that needs a name-mismatch
-  safeguard before production is recorded as a human decision, not resolved by this ADR — see
-  [H-13](../../product/human-decisions.md) and the
+- **Name-mismatch safeguard (H-13, resolved 2026-07-24):** a `dive-domain-expert` review flagged
+  email-only reuse as unsafe for a shared-inbox scenario (a spouse, or a minor booked under a
+  parent's email) where a new diver's booking could silently inherit an existing person's verified
+  cert and current waiver with no medical questionnaire or cert check ever collected for them. The
+  product owner chose the name-mismatch safeguard: `findOrCreatePerson` now returns `nameMatches`
+  (a case/accent/order/middle-initial-tolerant comparison, `src/lib/person-name.ts`), and a public
+  booking that reuses an email under a genuinely different name is stamped
+  `bookings.identity_unconfirmed_at`, which raises a fail-closed `identity_unconfirmed` readiness
+  blocker until staff **Confirm identity** on the roster. Reuse itself is unchanged (the person is
+  never forked); the safeguard only withholds *readiness* until a human vouches for the match. The
+  **soft-delete-frees-the-email window** was reviewed in the same decision and accepted as-is: it
+  already fails closed (a new claimant gets a blank record, never the deleted person's evidence), so
+  no additional mitigation ships. **Accepted limitation of name-matching:** because the comparison
+  drops single-character tokens (so a re-typed middle initial doesn't fire), two genuinely different
+  people on one inbox distinguished *only* by a middle initial — or two true namesakes ("Jane Doe"
+  and "Jane Doe") — match and are not flagged; the second could inherit the first's evidence. This
+  is intrinsic to name-based matching, and the alternative (firing on every initial) would train
+  staff to confirm reflexively and blunt the gate. Security and dive-domain reviews accepted it as a
+  floor, not a regression. See [H-13](../../product/human-decisions.md) and the
   [identity match key glossary entry](../../product/glossary.md#modeling-notes).
 - **Concurrency-closing path is not exercisable in the current test suite:** the catch-and-reread
   branch in `findOrCreatePerson`/`createDiver`/`updateDiver`/`restoreDiver`/`commitContactImport`

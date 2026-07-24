@@ -83,10 +83,14 @@ impossible dates like `2026-02-31`.
   HAVING count(*) > 1;
   ```
   and reconcile each by hand before migrating, same as the person-email-uniqueness migration.
-- **Open product question, not resolved by this ticket:** `docs/product/glossary.md`'s own
-  **C-card** entry states real certification cards (Open Water through Instructor, and the
-  Deep/Wreck/Night/Drysuit specialties) do not expire — only a shop-chosen refresher policy might.
-  This ticket hardens `expiresAt` further (a stricter, more correct date comparison) without
-  resolving whether the field should even be presented as a card "expiry" versus a shop-set
-  "refresher due" date; that policy question predates this ticket and is already open as H-08 in
-  [human-decisions.md](../../product/human-decisions.md).
+- **Resolved 2026-07-24 (H-08 relabel):** `docs/product/glossary.md`'s own **C-card** entry states
+  real certification cards (Open Water through Instructor, and the Deep/Wreck/Night/Drysuit
+  specialties) do not expire — only a shop-chosen refresher policy might. The product owner decided
+  the field is presented to staff as a shop-set **"refresher due"** date, not a card "expiry": the
+  add-card form label is "Refresher due", the diver-profile line reads "refresher due/overdue
+  &lt;date&gt;", the display badge reads "refresher due", and the readiness blockers say the card
+  "is past its refresher-due date". The **stored column, gating behavior, and readiness codes are
+  unchanged** — a card past its refresher-due date still fails closed exactly as before; only the
+  staff-facing wording changed. Scope note: the CSV export/import column keeps its `expires_at`
+  data name (round-trip stability), and the internal `CardDisplayStatus` key stays `expired`. This
+  resolves only the relabel half of H-08; the course/agency-rules half stays open.

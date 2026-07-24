@@ -124,6 +124,38 @@ describe("calculateReadiness", () => {
     });
   });
 
+  it("blocks a diver whose booking reused an existing person under a mismatched name (H-13)", () => {
+    // Every piece of evidence is satisfied — the only thing wrong is that this
+    // booking may be a different human sharing the email. It must not read ready.
+    const result = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [certification()],
+      identityUnconfirmed: true,
+      now,
+      timezone: "UTC",
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toContainEqual(
+      expect.objectContaining({ code: "identity_unconfirmed" }),
+    );
+  });
+
+  it("does not raise the identity blocker once the booking is confirmed (or was never flagged)", () => {
+    for (const identityUnconfirmed of [false, undefined]) {
+      const result = calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        identityUnconfirmed,
+        now,
+        timezone: "UTC",
+      });
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toEqual([]);
+    }
+  });
+
   it.each([
     ["missing specialty card", undefined, "specialty_missing"],
     ["pending specialty card", specialtyCard({ status: "pending" }), "specialty_pending"],

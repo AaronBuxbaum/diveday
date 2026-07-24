@@ -72,7 +72,7 @@ export function CertificationCards({
             <Field label="Card number">
               <input name="identifier" required className={controlClass} />
             </Field>
-            <Field label="Expiry" hint="(if issued)">
+            <Field label="Refresher due" hint="(optional; shop policy — cards don’t expire)">
               <input name="expiresOn" type="date" className={controlClass} />
             </Field>
             <Field
@@ -115,7 +115,7 @@ export function CertificationCards({
                     {card.identifier}
                     {card.expiresAt ? (
                       <span className={expired ? "font-medium text-danger" : undefined}>
-                        {` · ${expired ? "expired" : "expires"} ${formatCalendarDate(card.expiresAt)}`}
+                        {` · refresher ${expired ? "overdue" : "due"} ${formatCalendarDate(card.expiresAt)}`}
                       </span>
                     ) : null}
                   </p>
