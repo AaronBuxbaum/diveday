@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "bdfbb4e1-c7fa-417a-8c6f-30a03b1bacd8",
+  "id": "46867c36-f581-4504-beee-252fd788169c",
   "prevIds": [
     "8f2d57e4-24dd-4260-8a61-147add663a89"
   ],
@@ -4042,7 +4042,7 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": "'[\"bcd\",\"regulator\",\"wetsuit\",\"mask_fins\",\"weights\"]'",
+      "default": "'[\"bcd\",\"regulator\",\"wetsuit\",\"mask_fins\",\"weights\",\"dive_computer\"]'",
       "generated": null,
       "identity": null,
       "name": "rental_items",
@@ -5067,7 +5067,7 @@
     {
       "type": "uuid",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -5346,45 +5346,6 @@
       "generated": null,
       "identity": null,
       "name": "completed_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "waiver_records"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "imported_from_label",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "waiver_records"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "import_source_document_url",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "waiver_records"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "import_source_medical_document_url",
       "entityType": "columns",
       "schema": "public",
       "table": "waiver_records"

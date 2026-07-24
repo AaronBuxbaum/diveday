@@ -231,6 +231,12 @@ export default function ProductPage() {
                 Walk the live demo as the owner, the captain, or a diver — then start a trial shop
                 of your own.
               </p>
+              <Link
+                href="/switching/spreadsheet"
+                className={buttonClass({ variant: "link", className: "mt-3 text-left" })}
+              >
+                On a spreadsheet today? Bring it across — we'll even do it with you →
+              </Link>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction}>

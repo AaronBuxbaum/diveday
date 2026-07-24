@@ -104,8 +104,9 @@ These block real operations regardless of code completeness; owners and evidence
 
 - **V-02 — field-validate the offline manifest** on a phone, outdoors, wet hands, airplane-mode.
   Until it passes, the safety differentiator is unproven and unclaimable.
-- **Pricing posture** — the public price is provisional (`src/lib/marketing.ts`, currently
-  early-access) and awaits the H-12 commercial decision; see
+- **Pricing posture** — the public price is **approved for now** (`src/lib/marketing.ts`,
+  early-access and still moving; H-12, 2026-07-24); the remaining commercial terms (billing cadence,
+  taxes/fees, support/onboarding, contract flow) still await the rest of the H-12 decision. See
   [competitive-analysis.md](assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
   notification consent — H-01…H-11.

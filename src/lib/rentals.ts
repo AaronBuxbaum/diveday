@@ -33,9 +33,10 @@ export type RentableItem = {
   label: string;
   /**
    * Whether a diver with no fit on file defaults to renting this. Core gear a
-   * shop stocks for everyone defaults on; add-ons a diver usually owns (a
-   * computer) or may not want (a GoPro) default off, so nobody is packed a
-   * GoPro they never asked for.
+   * shop stocks for everyone defaults on, as does the dive computer (safety kit
+   * most divers want); only the GoPro defaults off, so nobody is packed a GoPro
+   * they never asked for. Note the computer defaults on but is priced as its own
+   * add-on line — being on by default is separate from being part of the set.
    */
   defaultRented: boolean;
 };
@@ -75,7 +76,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
     field: "rentsDiveComputer",
     name: "diveComputer",
     label: "Dive computer",
-    defaultRented: false,
+    defaultRented: true,
   },
   { kind: "gopro", field: "rentsGopro", name: "gopro", label: "GoPro", defaultRented: false },
 ] as const;
@@ -109,8 +110,10 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
 /**
  * The core kit that makes up a "set". A shop usually prices these five as one
  * cheaper bundle; a diver who takes all of them is quoted the set, and anyone
- * taking a partial set pays per piece. The add-ons (`dive_computer`, `gopro`)
- * and nitrox are always priced on their own, never folded into the set.
+ * taking a partial set pays per piece. The `dive_computer` and `gopro` add-ons
+ * and nitrox are always priced on their own, never folded into the set — the
+ * computer defaults on for every diver but is billed as its own line, so a diver
+ * who brings their own keeps the full-set discount on the hard goods.
  */
 export const CORE_RENTAL_KINDS = [
   "bcd",
@@ -181,27 +184,36 @@ const ITEM_LABEL: Record<RentableItemKind, string> = {
 };
 
 /**
- * What a diver is quoted for the gear they picked. A full core set is billed at
- * the set price when the shop offers one (cheaper than the pieces, by design); a
- * partial set is billed per piece. Add-ons and nitrox are always separate. Items
- * the shop hasn't priced are left off the total and reported in `unpricedKinds`,
- * so a quote is never silently short. `plannedDives` scales the per-dive nitrox
- * surcharge.
+ * What a diver is quoted for the gear they picked. Taking every core item the
+ * shop offers is billed at the set price when the shop has one (cheaper than the
+ * pieces, by design); a partial set is billed per piece. The dive-computer and
+ * GoPro add-ons and nitrox are always separate. Items the shop hasn't priced are
+ * left off the total and reported in `unpricedKinds`, so a quote is never
+ * silently short. `plannedDives` scales the per-dive nitrox surcharge.
  */
 export function quoteRentalFit(
   pricing: RentalPricing,
   fit: {
     rentedKinds: readonly RentableItemKind[];
+    /**
+     * The kinds this shop actually stocks (its rental catalog). The "set" is
+     * every core item the shop offers, so a shop that doesn't rent a dive
+     * computer still reaches its set with the core it does stock — and set
+     * eligibility never depends on an item the diver can't pick.
+     */
+    offeredKinds: readonly RentableItemKind[];
     wantsNitrox: boolean;
     plannedDives: number;
   },
 ): RentalQuote {
   const rented = new Set(fit.rentedKinds);
+  const offered = new Set(fit.offeredKinds);
   const lines: RentalQuoteLine[] = [];
   const unpricedKinds: RentableItemKind[] = [];
 
-  const rentedCore = CORE_RENTAL_KINDS.filter((kind) => rented.has(kind));
-  const takesFullSet = rentedCore.length === CORE_RENTAL_KINDS.length;
+  const offeredCore = CORE_RENTAL_KINDS.filter((kind) => offered.has(kind));
+  const rentedCore = offeredCore.filter((kind) => rented.has(kind));
+  const takesFullSet = offeredCore.length > 0 && rentedCore.length === offeredCore.length;
   if (takesFullSet && pricing.setCents !== null) {
     lines.push({ kind: "set", label: "Full rental set", cents: pricing.setCents });
   } else {
