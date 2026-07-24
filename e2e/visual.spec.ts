@@ -270,25 +270,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "manifest", scheme);
 
-        // The Night trip's roster carries the H-13 identity gate: a seat booked
-        // through a shared inbox under a name that doesn't match the person on
-        // file shows the fail-closed "Confirm identity" affordance and blocker
-        // until staff vouch for it — a safety-critical state worth a baseline.
-        await page.goto("/shop/blue-mantis/schedule");
-        await page
-          .locator("li")
-          .filter({ hasText: "Night Dive — City of Washington" })
-          .getByRole("link")
-          .click();
-        await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Guests" })
-          .click();
-        await page.waitForURL(/\/guests/);
-        await page.getByText("Identity unconfirmed").first().waitFor();
-        await capture(page, "trip-guests-identity", scheme);
-
         // Shop settings, where staff set the rental catalog and its prices.
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
@@ -310,6 +291,28 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
+      });
+
+      // H-13: the roster's identity gate gets its own test so its capture never
+      // crowds the long staff-surfaces test's per-test time budget. A Night-trip
+      // seat booked through a shared inbox under a name that doesn't match the
+      // person on file shows the fail-closed "Confirm identity" affordance and
+      // blocker until staff vouch for it — a safety-critical state worth a baseline.
+      test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule");
+        await page
+          .locator("li")
+          .filter({ hasText: "Night Dive — City of Washington" })
+          .getByRole("link")
+          .click();
+        await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Guests" })
+          .click();
+        await page.waitForURL(/\/guests/);
+        await page.getByText("Identity unconfirmed").first().waitFor();
+        await capture(page, "trip-guests-identity", scheme);
       });
     });
   });

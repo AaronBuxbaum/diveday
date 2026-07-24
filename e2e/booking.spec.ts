@@ -170,6 +170,9 @@ test("a shared-inbox booking under a different name is held for staff identity c
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
+  // Wait for the sign-out redirect to land before booking as the public — a
+  // signed-in staffer opening a trip gets the manage view, not the booking form.
+  await expect(page).toHaveURL(/\/$/);
 
   // Nora books the seeded reef trip under her email.
   await page.goto("/shop/blue-mantis/schedule");
