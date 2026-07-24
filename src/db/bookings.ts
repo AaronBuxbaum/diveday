@@ -1,4 +1,5 @@
 import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { entryLevelCourseCapacity } from "@/lib/course-ratios";
@@ -44,6 +45,7 @@ export type BookingOutcome =
         | "course_unstaffed"
         | "course_prerequisite"
         | "course_ratio_full"
+        | "course_min_age"
         | "person_not_found";
     };
 
@@ -193,30 +195,51 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     }
   }
 
-  // Existing-card courses deliberately fail closed at enrollment. Staff can
-  // capture and verify a card, then the same public form will admit the
-  // diver; we never reserve capacity based on a self-assertion.
-  if (course?.minimumCertificationLevel) {
-    if (!person) return { ok: false, reason: "course_prerequisite" };
-    const cardRows = await tx
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, req.shopId),
-          eq(certifications.personId, person.id),
-          isNull(certifications.deletedAt),
-        ),
-      );
+  // Both course gates below read the shop's local calendar, so take its
+  // timezone once for whichever of them applies.
+  if (course?.minimumCertificationLevel || course?.minimumAge) {
     const [shop] = await tx
       .select({ timezone: shops.timezone })
       .from(shops)
       .where(eq(shops.id, req.shopId))
       .limit(1);
     if (!shop) throw new Error(`createBookingRecord: shop ${req.shopId} not found`);
-    const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
-    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel, todayLocal)) {
-      return { ok: false, reason: "course_prerequisite" };
+
+    // Existing-card courses deliberately fail closed at enrollment. Staff can
+    // capture and verify a card, then the same public form will admit the
+    // diver; we never reserve capacity based on a self-assertion.
+    if (course.minimumCertificationLevel) {
+      if (!person) return { ok: false, reason: "course_prerequisite" };
+      const cardRows = await tx
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, req.shopId),
+            eq(certifications.personId, person.id),
+            isNull(certifications.deletedAt),
+          ),
+        );
+      const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
+      if (
+        !hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel, todayLocal)
+      ) {
+        return { ok: false, reason: "course_prerequisite" };
+      }
+    }
+
+    // Minimum age, measured on the day the course actually runs (H-08). Unlike
+    // the card gate this **fails open**: a diver with no date of birth on file
+    // books exactly as before, because nothing collects one at booking and
+    // failing closed would lock out every diver already on the books. Age is
+    // still verified at the dock; this only catches the case the shop already
+    // has the data to catch. A walk-in with no `person` row yet is likewise
+    // unknown, and passes.
+    if (course.minimumAge && person?.dateOfBirth) {
+      const courseDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
+      if (checkMinimumAge(person.dateOfBirth, course.minimumAge, courseDate).status === "under") {
+        return { ok: false, reason: "course_min_age" };
+      }
     }
   }
 

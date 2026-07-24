@@ -97,6 +97,18 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
+                <Field
+                  label="Date of birth"
+                  hint="(optional)"
+                  description="Used to check a course's minimum age on the day it runs. Leave it blank and courses book as they always have."
+                >
+                  <input
+                    name="dateOfBirth"
+                    type="date"
+                    defaultValue={diver.person.dateOfBirth ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
                 <Field label="Dive insurance" hint="(DAN or other, optional)">
                   <input
                     name="diveInsurance"
