@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_ROLES,
+  canConfigureTrips,
+  canDeleteDiver,
   canExportShopData,
   canImportShopData,
+  canManagePaymentSettings,
+  canManageWaiverTemplates,
+  canRefund,
   canViewShopReports,
   isStaff,
   type Role,
@@ -28,6 +33,11 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canExportShopData", canExportShopData],
     ["canImportShopData", canImportShopData],
     ["canViewShopReports", canViewShopReports],
+    // H-14: money, legal templates, and roster deletion share the same gate.
+    ["canManagePaymentSettings", canManagePaymentSettings],
+    ["canRefund", canRefund],
+    ["canManageWaiverTemplates", canManageWaiverTemplates],
+    ["canDeleteDiver", canDeleteDiver],
   ] as const;
 
   for (const [name, gate] of gates) {
@@ -53,4 +63,27 @@ describe("accountable-role gates (export/import/reports)", () => {
       });
     });
   }
+});
+
+describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {
+  it("admits owner, manager, and instructor", () => {
+    expect(canConfigureTrips(["owner"])).toBe(true);
+    expect(canConfigureTrips(["manager"])).toBe(true);
+    expect(canConfigureTrips(["instructor"])).toBe(true);
+  });
+
+  it("rejects the operating crew — captain, crew, divemaster — and divers", () => {
+    for (const role of ["captain", "crew", "divemaster", "diver"] as const) {
+      expect(canConfigureTrips([role])).toBe(false);
+    }
+  });
+
+  it("admits when an allowed role is mixed with disallowed ones", () => {
+    expect(canConfigureTrips(["captain", "instructor"])).toBe(true);
+  });
+
+  it("rejects empty and undefined roles", () => {
+    expect(canConfigureTrips([])).toBe(false);
+    expect(canConfigureTrips(undefined)).toBe(false);
+  });
 });

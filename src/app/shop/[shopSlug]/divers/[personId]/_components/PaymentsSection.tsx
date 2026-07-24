@@ -55,11 +55,14 @@ export function PaymentsSection({
   shop,
   shopSlug,
   personId,
+  canRefund,
 }: {
   diver: DiverProfile;
   shop: Shop;
   shopSlug: string;
   personId: string;
+  /** Only owners/managers issue refunds (H-14); others don't see the control. */
+  canRefund: boolean;
 }) {
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="payments-heading">
@@ -126,7 +129,7 @@ export function PaymentsSection({
                       Create invoice
                     </Link>
                   )}
-                  {orderRow?.order.status === "paid" ? (
+                  {canRefund && orderRow?.order.status === "paid" ? (
                     <RefundButton
                       orderId={orderRow.order.id}
                       shopSlug={shopSlug}
@@ -167,7 +170,7 @@ export function PaymentsSection({
                   >
                     Open payment
                   </Link>
-                  {order.status === "paid" ? (
+                  {canRefund && order.status === "paid" ? (
                     <RefundButton
                       orderId={order.id}
                       shopSlug={shopSlug}

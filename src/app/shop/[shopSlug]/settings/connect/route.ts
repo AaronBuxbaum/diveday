@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { canPersonManagePaymentSettings } from "@/db/authz";
+import { getDb } from "@/db/client";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   connectProviderFromEnvironment,
@@ -16,6 +18,18 @@ import { requireStaffSession } from "@/lib/session";
 export async function GET(request: Request) {
   const session = await requireStaffSession();
   const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings`, request.url);
+
+  // Connecting the shop's Stripe account is a payment setting — owner/manager
+  // only (H-14, ADR 20260724-role-authorization), re-checked against live roles.
+  const canPayments = await canPersonManagePaymentSettings(
+    await getDb(),
+    session.user.shopId,
+    session.user.personId,
+  );
+  if (!canPayments) {
+    settingsUrl.searchParams.set("notice", "not_authorized");
+    return NextResponse.redirect(settingsUrl);
+  }
 
   const appHost = publicAppUrl();
   if (!appHost) {

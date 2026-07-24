@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
@@ -68,16 +69,25 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const [staff, crewIds, requirement, diveSiteList, tripDiveList, siteRequirement, series] =
-    await Promise.all([
-      listStaff(db, shop.id),
-      getTripCrewIds(db, shop.id, tripId),
-      getTripRequirements(db, shop.id, tripId),
-      listDiveSites(db, shop.id),
-      listTripDives(db, shop.id, tripId),
-      getTripSiteRequirement(db, shop.id, tripId),
-      getTripSeriesSummary(db, shop.id, tripId),
-    ]);
+  const [
+    staff,
+    crewIds,
+    requirement,
+    diveSiteList,
+    tripDiveList,
+    siteRequirement,
+    series,
+    canConfigure,
+  ] = await Promise.all([
+    listStaff(db, shop.id),
+    getTripCrewIds(db, shop.id, tripId),
+    getTripRequirements(db, shop.id, tripId),
+    listDiveSites(db, shop.id),
+    listTripDives(db, shop.id, tripId),
+    getTripSiteRequirement(db, shop.id, tripId),
+    getTripSeriesSummary(db, shop.id, tripId),
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+  ]);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
@@ -132,73 +142,91 @@ export default async function ManageTripPage({
 
       <TripNoticeBanner notice={notice} count={count} />
 
-      <DetailsSection
-        action={saveDetails.bind(null, shopSlug, tripId)}
-        trip={trip}
-        diveSiteList={diveSiteList}
-        tripDiveList={tripDiveList}
-        startWall={startWall}
-        endWall={endWall}
-      />
-
-      <ConditionsSection
-        saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
-        clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
-        trip={trip}
-      />
+      {canConfigure ? null : (
+        <div className="mt-6">
+          <ShopNotice tone="neutral" role="status">
+            You're viewing this trip. Editing its setup — details, conditions, requirements, crew,
+            and cancellation — is limited to owners, managers, and instructors. The roster,
+            check-in, manifest, and roll call stay open to all crew from the Guests and manifest
+            pages.
+          </ShopNotice>
+        </div>
+      )}
 
       <RecapNoteSection
         action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
         shoutout={trip.recapShoutout}
       />
 
-      <RequirementsSection
-        action={saveRequirementsAction.bind(null, shopSlug, tripId)}
-        trip={trip}
-        requirement={requirement}
-        siteRequirement={siteRequirement}
-      />
+      {canConfigure ? (
+        <>
+          <DetailsSection
+            action={saveDetails.bind(null, shopSlug, tripId)}
+            trip={trip}
+            diveSiteList={diveSiteList}
+            tripDiveList={tripDiveList}
+            startWall={startWall}
+            endWall={endWall}
+          />
 
-      <CrewSection
-        action={saveCrewAction.bind(null, shopSlug, tripId)}
-        trip={trip}
-        staff={staff}
-        crewIds={crewIds}
-        hasCourseInstructor={hasCourseInstructor}
-      />
+          <ConditionsSection
+            saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
+            clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+            trip={trip}
+          />
 
-      {series ? (
-        <SeriesSection
-          intervalWeeks={series.intervalWeeks}
-          occurrenceCount={series.occurrenceCount}
-          futureScheduledCount={series.futureScheduledCount}
-          applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
-          cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
-          extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
-        />
+          <RequirementsSection
+            action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+            trip={trip}
+            requirement={requirement}
+            siteRequirement={siteRequirement}
+          />
+
+          <CrewSection
+            action={saveCrewAction.bind(null, shopSlug, tripId)}
+            trip={trip}
+            staff={staff}
+            crewIds={crewIds}
+            hasCourseInstructor={hasCourseInstructor}
+          />
+
+          {series ? (
+            <SeriesSection
+              intervalWeeks={series.intervalWeeks}
+              occurrenceCount={series.occurrenceCount}
+              futureScheduledCount={series.futureScheduledCount}
+              applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
+              cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
+              extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
+            />
+          ) : null}
+
+          <section className="mt-12 border-t border-border pt-6">
+            {cancelled ? (
+              <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
+                <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
+                  Reinstate trip
+                </SubmitButton>
+              </form>
+            ) : (
+              <form
+                action={cancelTripAction.bind(null, shopSlug, tripId)}
+                className="flex items-center gap-3"
+              >
+                <SubmitButton
+                  pendingLabel="Cancelling…"
+                  className={buttonClass({ variant: "danger" })}
+                >
+                  Cancel trip
+                </SubmitButton>
+                <p className="text-sm text-muted">
+                  Takes it off the public schedule. You can reinstate it any time.
+                </p>
+              </form>
+            )}
+          </section>
+        </>
       ) : null}
-
-      <section className="mt-12 border-t border-border pt-6">
-        {cancelled ? (
-          <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-            <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
-              Reinstate trip
-            </SubmitButton>
-          </form>
-        ) : (
-          <form
-            action={cancelTripAction.bind(null, shopSlug, tripId)}
-            className="flex items-center gap-3"
-          >
-            <SubmitButton pendingLabel="Cancelling…" className={buttonClass({ variant: "danger" })}>
-              Cancel trip
-            </SubmitButton>
-            <p className="text-sm text-muted">
-              Takes it off the public schedule. You can reinstate it any time.
-            </p>
-          </form>
-        )}
-      </section>
     </>
   );
 }

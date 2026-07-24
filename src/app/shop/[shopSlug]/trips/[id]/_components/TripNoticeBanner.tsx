@@ -29,6 +29,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
     tone: "danger",
     text: "Booking cancelled. The payment record and Stripe disagree on what was captured — review the diver's payments before issuing any refund.",
   },
+  "booking-removed-refund-owner": {
+    tone: "danger",
+    text: "Booking cancelled and the spot is open. This booking was paid, so a refund may be owed — an owner or manager needs to issue it from the diver's payments.",
+  },
   "booking-restored": { tone: "success", text: "Back on the roster." },
   "booking-restore-full": {
     tone: "danger",
@@ -111,6 +115,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
   "conditions-cleared": {
     tone: "success",
     text: "Crew prediction cleared. Divers will see the automated outlook when it is available.",
+  },
+  "not-authorized": {
+    tone: "danger",
+    text: "You don't have permission to change this trip's setup. Trip configuration is limited to owners, managers, and instructors — ask one of them to make this change.",
   },
   invalid: {
     tone: "danger",
