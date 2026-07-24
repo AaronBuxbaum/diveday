@@ -75,6 +75,21 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Cancel trip" }).click();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
+
+  test("a URL resolving to a private address is blocked server-side, never saved raw (CR-020)", async ({
+    page,
+  }) => {
+    // A literal loopback address needs no real DNS/network access to prove
+    // the save wiring actually runs the SSRF check end to end (real
+    // dns.lookup call, real code path) and fails closed rather than keeping
+    // the raw URL. src/lib/storage/ingest-url.test.ts covers the full range
+    // of blocked addresses and the not_configured/blocked distinction.
+    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.getByLabel("Name").fill(`Ingestion Check ${Date.now()}`);
+    await page.getByLabel("Satellite map image URL").fill("http://127.0.0.1:1/reef-sat.jpg");
+    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await expect(page.getByText(/couldn.t be used/)).toBeVisible();
+  });
 });
 
 test("the seeded reef briefing shows a satellite map, a gentle route, landmarks, and a field guide", async ({

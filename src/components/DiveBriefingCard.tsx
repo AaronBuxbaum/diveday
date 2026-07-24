@@ -49,7 +49,7 @@ export function DiveBriefingCard({
       {site && getSeedDiveSiteMap(site.name) ? (
         <DiveSiteMap siteName={site.name} />
       ) : site?.satelliteImageUrl ? (
-        // biome-ignore lint/performance/noImgElement: staff-provided media supports arbitrary approved hosts.
+        // biome-ignore lint/performance/noImgElement: first-party blob/bundled URL only — ingested server-side at save time (CR-020), never a live third-party host.
         <img
           src={site.satelliteImageUrl}
           alt={`Satellite view of ${site.name}`}
