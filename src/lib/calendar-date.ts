@@ -47,6 +47,12 @@ export function formatCalendarDate(date: CalendarDate, locale = "en-US"): string
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+/** A calendar date as a UTC-midnight instant — for a timestamp column that needs one. */
+export function calendarDateToUtcMidnight(date: CalendarDate): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 /**
  * A date-only expiry is valid through the end of its own local day: it has
  * not yet expired while today's shop-local date is on or before it, and

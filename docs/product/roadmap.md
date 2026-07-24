@@ -33,6 +33,12 @@ Export, the diver/customer CSV importer, and the public migration guides have sh
 the "switching is safe" story is greenfield. Sequenced in
 [competitive-strategy.md](assessments/competitive-strategy.md#the-build-plan-in-order).
 
+- ✅ **Import waiver acceptance, export real photo files** — shipped 2026-07-24: the importer now
+  trusts a row's claim that a diver already accepted a waiver (medical clearance included) at a prior
+  shop, marked `imported`; the export bundle now includes every DiveDay-stored photo as a real file,
+  not only a URL. See [shipped.md](shipped.md), [20260724-import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md),
+  [20260724-export-bundled-photos](../architecture/decisions/20260724-export-bundled-photos.md).
+
 - ✅ **Public migration guides** — shipped: `/switching` hub plus a live page per named incumbent
   (EVE, DiveShop360, DiveAdmin, Smartwaiver), each an export click-path + the importer's scope table
   + the import walkthrough ([shipped.md](shipped.md), [marketing.md](marketing.md)).

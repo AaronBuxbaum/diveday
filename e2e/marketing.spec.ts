@@ -74,8 +74,9 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
 
-  // The scope table is the importer's honesty table — medical history never migrates.
-  await expect(page.getByText("Medical & health history")).toBeVisible();
+  // The scope table is the importer's honesty table — a claimed waiver
+  // acceptance is trusted, medical clearance included, and marked imported.
+  await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
   await expect(page.getByText("Never").first()).toBeVisible();
 
   // Demo-before-trial funnel and cited competitor claims both land on the guide.

@@ -36,6 +36,11 @@ system is not clearance under this shop's waiver.
   - **Medical/health answers never import (fail-closed).** Columns matching medical/liability
     patterns are detected and the shop is told, once, that they were left behind — collect a fresh
     signed waiver in DiveDay.
+    > Revised by [20260724-import-waiver-acceptance](20260724-import-waiver-acceptance.md): a row
+    > explicitly claiming a prior waiver acceptance (`waiver_accepted`) is now trusted, medical
+    > clearance included, and written as an `imported` record — a product-owner decision recorded in
+    > `docs/product/human-decisions.md` H-17. Unrecognized medical-ish columns are still left behind
+    > exactly as below; only the one recognized claim column changed.
   - **Enriched air is a claim, not a fill authorization.** A nitrox card imports `pending` and only
     against a real nitrox card number; it never authorizes a fill until staff verify it.
   - **People match by email**, so a re-import updates the roster instead of duplicating it; a card
@@ -63,6 +68,9 @@ system is not clearance under this shop's waiver.
   verified and collides on the unique index; "no number, no card" is honest and safe.
 - **Import medical answers as satisfied** — rejected, fail-closed: another system's clearance is not
   clearance here.
+  > Revised by [20260724-import-waiver-acceptance](20260724-import-waiver-acceptance.md) for the
+  > narrower case of an explicit waiver-acceptance claim; see that ADR for why and its own
+  > alternatives considered.
 - **Client-side commit / trust the browser preview** — rejected: the browser preview is UX only; the
   server re-prepares the raw text so the safety rules are enforced where they can't be edited.
 - **A CSV library (papaparse, csv-parse)** — unnecessary given a symmetric reader is ~40 lines and

@@ -43,7 +43,12 @@ export async function importContactsAction(
     };
   }
 
-  const summary = await commitContactImport(db, session.user.shopId, prepared);
+  const summary = await commitContactImport(
+    db,
+    session.user.shopId,
+    prepared,
+    session.user.personId,
+  );
   // The roster and its counts change; refresh the divers surface.
   revalidatePath(`/shop/${session.user.shopSlug}/divers`);
   return { status: "done", summary };
