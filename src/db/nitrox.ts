@@ -144,18 +144,29 @@ export async function listShopNitroxCertifications(db: AppDb, shopId: string) {
     .orderBy(asc(people.fullName), asc(nitroxCertifications.createdAt));
 }
 
-/** The set of personIds with a verified nitrox card — the fill gate, in bulk. */
+/**
+ * A card authorizes an enriched-air fill when it is `verified`, live, and — if
+ * it was brought in by the contact importer — a staffer has confirmed it here
+ * (ADR 20260724-import-verified-cards). An imported nitrox card lands `verified`
+ * so it can never be a boarding blocker, but the actual fill is the single
+ * highest-consequence gate (wrong mix → oxygen toxicity), and a nitrox card
+ * carries no expiry to catch a bad import later — so the fill specifically waits
+ * for the one-tap confirm (`reviewedAt`) that clears `importedAt`. A card
+ * entered by hand (no `importedAt`) is unaffected. `dive-domain-expert` review
+ * carved this out; every fill-gate read must share this exact predicate.
+ */
+export const authorizesNitroxFill = and(
+  eq(nitroxCertifications.status, "verified"),
+  isNull(nitroxCertifications.deletedAt),
+  sql`(${nitroxCertifications.importedAt} is null or ${nitroxCertifications.reviewedAt} is not null)`,
+);
+
+/** The set of personIds whose nitrox card authorizes a fill — the gate, in bulk. */
 export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promise<Set<string>> {
   const rows = await db
     .select({ personId: nitroxCertifications.personId })
     .from(nitroxCertifications)
-    .where(
-      and(
-        eq(nitroxCertifications.shopId, shopId),
-        eq(nitroxCertifications.status, "verified"),
-        isNull(nitroxCertifications.deletedAt),
-      ),
-    );
+    .where(and(eq(nitroxCertifications.shopId, shopId), authorizesNitroxFill));
   return new Set(rows.map((r) => r.personId));
 }
 
@@ -202,8 +213,7 @@ export async function setBookingNitrox(
           and(
             eq(nitroxCertifications.shopId, input.shopId),
             eq(nitroxCertifications.personId, booking.personId),
-            eq(nitroxCertifications.status, "verified"),
-            isNull(nitroxCertifications.deletedAt),
+            authorizesNitroxFill,
           ),
         )
         .limit(1);

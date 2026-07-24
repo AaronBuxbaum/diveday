@@ -45,11 +45,14 @@ chosen battlegrounds — and re-read it before changing the spine.
   a page.
 - **Authorized service offers** are the one exception to shipped-only: a commitment the shop makes
   to a customer, not a product feature, may be stated once the product owner has authorized it.
-  Currently authorized: **free, personal help importing a shop's existing spreadsheet or data** (a
-  Jane-style concierge import, authorized 2026-07-24, on `/switching/spreadsheet`, routed to the
-  `switch@dive.day` inbox). Phrase these as a human commitment ("we'll map it with you"), never as
-  an automated product capability, and never promise a turnaround time. A new service claim needs
-  product-owner sign-off the same way the price does.
+  Currently authorized (a Jane-style concierge, authorized 2026-07-24, extended H-20): **free,
+  personal, bidirectional help switching — a person will help a shop bring its data *in* (map any
+  export or spreadsheet, migrate the roster with them) and, if DiveDay is ever not right, take its
+  data back *out* just as personally.** It lives on **every** `/switching` page as the shared
+  `SwitchingConcierge` block, routed to the `switch@dive.day` inbox. Phrase these as a human
+  commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
+  capability, and never promise a turnaround time. A new service claim needs product-owner sign-off
+  the same way the price does.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
@@ -173,9 +176,9 @@ spreadsheet has no vendor to leave, so the page has no incumbent context, no exp
 reverse-engineer, and no `sources`; it lives as its own static route rather than a
 `migration-guides.ts` entry (a static segment wins over the sibling `[competitor]` one). It still
 renders `IMPORT_HONESTY_TABLE` verbatim like every guide — the shared honesty invariant — and it
-carries the authorized free-import offer. Its wedge is not portability (a spreadsheet never locked
-anyone in) but the jobs a list can't do: readiness checked at the dock, the blocker queue, the
-no-login diver arc.
+carries the shared `SwitchingConcierge` offer like every switching page. Its wedge is not
+portability (a spreadsheet never locked anyone in) but the jobs a list can't do: readiness checked
+at the dock, the blocker queue, the no-login diver arc.
 
 ## Maintenance loop
 

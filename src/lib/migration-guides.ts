@@ -132,7 +132,7 @@ const eve: MigrationGuide = {
 
   context: [
     "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you're planning a move off it, this guide is about the practical part: getting your people and their cards out of EVE and into DiveDay.",
-    "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your people are in hand for your first trips, every card waiting as a claim your staff verify, and the history stays where it already is.",
+    "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your people are trip-ready from the first booking, every card coming across verified and flagged imported with a one-tap confirm for staff, and the history stays where it already is.",
     "One rule we won't bend: you export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data — that's your data to hand us, not ours to take.",
   ],
 
@@ -312,7 +312,7 @@ const diveadmin: MigrationGuide = {
     "Booking and message history isn't part of a contact import — see the scope table below. It stays in DiveAdmin.",
   ],
   importerNote:
-    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each as a claim your staff verify; anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
+    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each verified and flagged imported, with a one-tap confirm for staff; anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
   sources: [
     {
       label: "DiveAdmin API documentation",
@@ -422,7 +422,7 @@ const fareharbor: MigrationGuide = {
       {
         title: "Certification checks that actually gate the dive",
         detail:
-          "Every card is captured pending and verified by your staff, never trusted on sight; a deep dive won't clear a diver who isn't carded for it, and a nitrox request gets plain air until staff verify the card. A general booking engine has no concept of a C-card.",
+          "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm. A general booking engine has no concept of a C-card.",
       },
       {
         title: "Native waivers with medical review — in every tier",
@@ -549,7 +549,7 @@ const rezdy: MigrationGuide = {
       {
         title: "Certification checks that actually gate the dive",
         detail:
-          "Every card is captured pending and verified by your staff, never trusted on sight; a deep dive won't clear a diver who isn't carded for it, and a nitrox request gets plain air until staff verify the card. A general booking engine has no concept of a C-card.",
+          "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm. A general booking engine has no concept of a C-card.",
       },
       {
         title: "Native waivers with medical review — in every tier",

@@ -481,8 +481,19 @@ export async function seedDemoSchedule(
     level: "open_water" | "advanced_open_water" | "rescue" | "divemaster";
     status: "verified" | "pending";
     expiresAt?: string;
+    /** A card brought in by the contact importer: verified but flagged imported,
+     * awaiting a one-tap staff confirm (ADR 20260724-import-verified-cards). */
+    importedFromLabel?: string;
   }> = [
-    { index: 12, agency: "padi", level: "advanced_open_water", status: "verified" },
+    // Imported from the diver's prior shop: verified and flagged imported, with a
+    // one-tap "Confirm card" nudge still open (reviewedAt stays null).
+    {
+      index: 12,
+      agency: "padi",
+      level: "advanced_open_water",
+      status: "verified",
+      importedFromLabel: "Coral Coast Divers",
+    },
     { index: 13, agency: "ssi", level: "open_water", status: "pending" },
     { index: 14, agency: "padi", level: "rescue", status: "verified", expiresAt: dateAt(26) },
     // Certified once, but the card lapsed a few weeks ago — no longer valid.
@@ -502,6 +513,9 @@ export async function seedDemoSchedule(
         identifier: `DEMO-${String(cert.index + 1).padStart(4, "0")}`,
         status: cert.status,
         expiresAt: cert.expiresAt ?? null,
+        // An imported card keeps reviewedAt null so the confirm nudge shows.
+        importedAt: cert.importedFromLabel ? nextCreatedAt() : null,
+        importedFromLabel: cert.importedFromLabel ?? null,
       };
     })
     .filter((row) => row !== null);

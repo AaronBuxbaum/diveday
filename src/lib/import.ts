@@ -8,9 +8,12 @@
  * cannot be talked out of by the client.
  *
  * The rules are honesty, made mechanical:
- *   - An imported certification is always **claimed**, never verified. A fast
- *     import is only safe because the verified/claimed distinction survives it;
- *     staff re-check the card at first contact exactly as they do today.
+ *   - An imported certification lands **verified and flagged imported** (ADR
+ *     20260724-import-verified-cards): DiveDay assumes a card already in the
+ *     shop's system was checked there, trusts it, and surfaces a one-tap staff
+ *     confirm instead of re-capturing it as an unverified claim. The imported
+ *     marker stays forever so it is never mistaken for a card this shop carded
+ *     on sight; card expiry and fill-time re-checks still apply.
  *   - We never fabricate a card number. No number on the row → no card, and we
  *     say so — a made-up identifier would collide, and a card with no evidence
  *     is worse than no card.
@@ -26,8 +29,12 @@
  *     never imported and never fabricated — there is no source shape that
  *     maps onto this shop's own questionnaire. Only the accept/no-review-needed
  *     outcome is trusted, per the row above.
- *   - Enriched-air is a claim, not a fill authorization — a nitrox card imports
- *     pending like any other, and only against a real card number.
+ *   - A nitrox card imports verified and flagged imported like any level card,
+ *     and only against a real card number. Boarding clears immediately, but the
+ *     actual enriched-air *fill* — the highest-consequence gate, and one no card
+ *     expiry backstops — waits for the one-tap staff confirm (`reviewedAt`); an
+ *     imported-but-unconfirmed card gives plain air (src/db/nitrox.ts). A card
+ *     entered by hand is unaffected.
  *
  * The published honesty table (IMPORT_HONESTY_TABLE) states the same scope in
  * the shop owner's language; keep the two in step.
@@ -218,72 +225,82 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
 const MEDICAL_HEADER_PATTERN =
   /medical|health|rstc|allerg|physician|doctor|condition|diagnos|medication|liability|indemnif/i;
 
-/** Published scope table — what the importer takes, in the shop owner's words. */
+/**
+ * Published scope table — what the importer takes, in the shop owner's words.
+ *
+ * Two honest buckets, no alarm-red middle ground: `included` is what comes
+ * across, `stays-behind` is what a contact file simply doesn't carry (and where
+ * it lives instead). Cards come across as **verified and flagged imported** —
+ * DiveDay assumes a record already in your system was checked there, so it
+ * trusts it and offers a one-tap staff confirm rather than re-capturing it as an
+ * unverified claim (ADR 20260724-import-verified-cards). Expiry, fill-time
+ * re-checks, and the never-reconstruct-medical-answers rule all still hold.
+ */
 export const IMPORT_HONESTY_TABLE: {
   what: string;
-  scope: "full" | "partial" | "never";
+  scope: "included" | "stays-behind";
   detail: string;
 }[] = [
   {
     what: "Names, email, phone",
-    scope: "full",
+    scope: "included",
     detail:
       "Imported as given. A row with an email is matched to an existing diver so a re-import updates them; a row without one always comes in as a new record.",
   },
   {
     what: "Emergency contact",
-    scope: "full",
+    scope: "included",
     detail: "Name and phone carry over when present.",
   },
   {
     what: "Rental sizes",
-    scope: "full",
+    scope: "included",
     detail: "BCD, wetsuit, boot, and fin sizes become a rental-fit profile.",
   },
   {
     what: "Certification card",
-    scope: "partial",
+    scope: "included",
     detail:
-      "Imported as claimed — never verified. A card lands only with a card number and a recognized level; your staff verify it at first contact, same as a card entered by hand. Unrecognized levels are left for a person to enter.",
+      "Imported verified and flagged imported — DiveDay trusts the card your system already checked, so a diver is ready from the first trip. A card lands with a card number and a recognized level; staff give it a one-tap confirm, and expiry still applies. Unrecognized levels are left for a person to enter.",
   },
   {
     what: "Enriched air (nitrox)",
-    scope: "partial",
+    scope: "included",
     detail:
-      "A claim, not a fill authorization. Imported as a claimed card only when the row carries a nitrox card number. A diver can still request enriched air, but every fill is re-checked at fill time and gives plain air until staff verify the card.",
-  },
-  {
-    what: "Specialty cards (deep, wreck, night, drysuit)",
-    scope: "never",
-    detail:
-      "The contact file has no column for them, so they don't come across. Re-enter and verify each by hand — until then a diver isn't cleared for a dive that requires one (deep gates depth past 18 m).",
-  },
-  {
-    what: "Role",
-    scope: "partial",
-    detail: "Everyone imports as a diver. Staff roles and logins are never granted by import.",
+      "Imported as a verified nitrox card, flagged imported, whenever the row carries a nitrox card number — so a diver can request enriched air right away. A fill is the highest-stakes gate, so an imported nitrox card gives plain air until a staffer taps the one-tap confirm; boarding never waits on it.",
   },
   {
     what: "Signed waivers & medical clearance",
-    scope: "partial",
+    scope: "included",
     detail:
       "When a row says the diver already accepted a waiver at the prior shop, DiveDay trusts it — including its medical clearance — and the diver is not asked to sign again. The record is marked imported everywhere staff see it, snapshots your shop's current release for reference only (the diver did not agree to that exact text), and is dated to the acceptance date the row gives (or the import date if it doesn't). Individual medical answers are never reconstructed — only the accept/no-review-needed outcome carries over. This is a deliberate policy choice; see the imported-waiver ADR.",
   },
   {
     what: "Waiver / medical documents",
-    scope: "partial",
+    scope: "included",
     detail:
-      "A row's waiver_document_url / medical_document_url is fetched once and re-stored in DiveDay's own storage for audit, the same way a pasted card photo is. Only image files (JPEG/PNG/WebP/HEIC, 5 MB max) are supported this way — a PDF link will not attach; keep the original on file elsewhere.",
+      "A row's waiver_document_url / medical_document_url is fetched once and re-stored in DiveDay's own storage for audit, the same way a pasted card photo is. Image files (JPEG/PNG/WebP/HEIC) and PDFs are supported, 5 MB max.",
+  },
+  {
+    what: "Role",
+    scope: "included",
+    detail: "Everyone imports as a diver. Staff roles and logins are never granted by import.",
+  },
+  {
+    what: "Specialty cards (deep, wreck, night, drysuit)",
+    scope: "stays-behind",
+    detail:
+      "A contact file has no column for them, so they stay behind — re-enter and verify each by hand. Until then a diver isn't cleared for a dive that requires one (deep gates depth past 18 m).",
   },
   {
     what: "Card on file / payment",
-    scope: "never",
-    detail: "Never imported — the un-migratable residue every shop resents, and we say so.",
+    scope: "stays-behind",
+    detail: "Stays with your payment processor — DiveDay never imports card or payment data.",
   },
   {
     what: "Booking, trip & service history",
-    scope: "never",
-    detail: "Not part of the contact import. Your export carries it; the importer does not.",
+    scope: "stays-behind",
+    detail: "Not part of a contact import — your full-shop export carries the history.",
   },
 ];
 
@@ -361,8 +378,24 @@ function unguardCell(value: string): string {
 
 export type ImportIssue = { level: "error" | "warning" | "info"; message: string };
 
-export type PreparedCert = { agency: ImportAgency; level: ImportLevel; identifier: string };
-export type PreparedNitrox = { agency: ImportAgency; identifier: string };
+/**
+ * A migrated card. `sourceLabel` is the optional prior-shop/system name the row
+ * carried (the `waiver_source_name`/`prior_shop` column) — a card imports as
+ * `verified` because the prior system already checked it, flagged with this
+ * provenance and surfaced for a one-tap staff confirm (ADR
+ * 20260724-import-verified-cards).
+ */
+export type PreparedCert = {
+  agency: ImportAgency;
+  level: ImportLevel;
+  identifier: string;
+  sourceLabel: string | null;
+};
+export type PreparedNitrox = {
+  agency: ImportAgency;
+  identifier: string;
+  sourceLabel: string | null;
+};
 
 /**
  * A trusted claim that the diver already accepted a waiver (and its medical
@@ -570,7 +603,15 @@ export function prepareContactImport(text: string): PreparedImport {
       }
     }
 
-    // Certification: claimed only, and only with a real card number.
+    // Row-level provenance: the prior shop/system this record came from, if the
+    // file named one. Shared by the card, nitrox card, and waiver record so an
+    // imported card is stamped with where the shop verified it before.
+    const sourceLabel = clean(at(cells, "waiver_source_name"));
+
+    // Certification: imported as verified-and-flagged, and only with a real card
+    // number (ADR 20260724-import-verified-cards). The prior system already
+    // checked it; DiveDay trusts that, marks it imported, and surfaces a one-tap
+    // staff confirm rather than re-capturing it as an unverified claim.
     let cert: PreparedCert | null = null;
     const levelRaw = clean(at(cells, "certification_level"));
     const certNumber = clean(at(cells, "certification_number"));
@@ -588,16 +629,11 @@ export function prepareContactImport(text: string): PreparedImport {
           message: `Certification level "${levelRaw}" has no card number — card not imported. A card without a number can't be verified.`,
         });
       } else {
-        cert = { agency, level, identifier: certNumber };
-        const statusRaw = clean(at(cells, "certification_status"))?.toLowerCase();
-        const saidVerified = statusRaw
-          ? ["verified", "certified", "true", "yes", "valid"].includes(statusRaw)
-          : false;
+        cert = { agency, level, identifier: certNumber, sourceLabel };
         issues.push({
           level: "info",
-          message: saidVerified
-            ? "Card imported as claimed — the source marked it verified, but imported cards are never born verified. Staff verify at first contact."
-            : "Card imported as claimed — staff verify at first contact.",
+          message:
+            "Card imported as verified from your records — flagged imported, with a one-tap confirm for staff.",
         });
         if (!agencyKnown) {
           issues.push({
@@ -608,7 +644,9 @@ export function prepareContactImport(text: string): PreparedImport {
       }
     }
 
-    // Nitrox: a claim, and only against a real card number.
+    // Nitrox: imported as a verified-and-flagged card, and only against a real
+    // card number. Enriched-air fills read the verified card; the imported
+    // marker keeps it distinguishable and fills are still re-checked at fill time.
     let nitrox: PreparedNitrox | null = null;
     if (isTrueish(at(cells, "nitrox_certified")) || indexOf("nitrox_certification_number") >= 0) {
       const flagged =
@@ -616,10 +654,11 @@ export function prepareContactImport(text: string): PreparedImport {
         Boolean(clean(at(cells, "nitrox_certification_number")));
       const nitroxNumber = clean(at(cells, "nitrox_certification_number"));
       if (flagged && nitroxNumber) {
-        nitrox = { agency, identifier: nitroxNumber };
+        nitrox = { agency, identifier: nitroxNumber, sourceLabel };
         issues.push({
           level: "info",
-          message: "Nitrox card imported as claimed — never a fill authorization until verified.",
+          message:
+            "Nitrox card imported as verified from your records — flagged imported. Fills give plain air until a staffer taps confirm.",
         });
       } else if (flagged) {
         issues.push({
@@ -658,7 +697,7 @@ export function prepareContactImport(text: string): PreparedImport {
       }
       waiver = {
         signedAt,
-        sourceLabel: clean(at(cells, "waiver_source_name")),
+        sourceLabel,
         documentUrl: clean(at(cells, "waiver_document_url")),
         medicalDocumentUrl: clean(at(cells, "medical_document_url")),
       };

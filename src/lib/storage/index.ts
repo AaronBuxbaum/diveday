@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "./limits";
+import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES, PDF_CONTENT_TYPE } from "./limits";
 import { processImage } from "./process-image";
 
 /**
@@ -79,6 +79,24 @@ function safeName(filename: string): string {
 /** Every accepted upload is re-encoded to JPEG (`processImage`); keep the stored name honest. */
 function withJpegExtension(filename: string): string {
   return `${filename.replace(/\.[a-z0-9]+$/i, "")}.jpg`;
+}
+
+/** A PDF import document is stored as-is; keep the stored name's extension honest. */
+function withPdfExtension(filename: string): string {
+  return `${filename.replace(/\.[a-z0-9]+$/i, "")}.pdf`;
+}
+
+/**
+ * `%PDF-` — the authoritative signature at the head of every PDF. We route on
+ * the actual bytes, not the caller's content-type claim, so a mislabeled or
+ * disguised file can never take the PDF path (and a real PDF always does,
+ * whatever header the source sent).
+ */
+const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d] as const;
+
+function looksLikePdf(bytes: ArrayBuffer | Buffer): boolean {
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  return view.length >= PDF_MAGIC.length && PDF_MAGIC.every((byte, i) => view[i] === byte);
 }
 
 /**
@@ -242,18 +260,53 @@ export async function storeDiveSiteImage(
 }
 
 /**
- * Store a contact-import waiver or medical document scan. Same validation as
- * the others, its own `import-waivers` key prefix so imported evidence never
- * shares a namespace with a card, brochure, or diver's own recap photo. Only
- * called from the server-side commit path (`src/db/import.ts`), on a URL a
- * staff member pasted into an import row — never rendered from that raw URL
- * directly (ADR 20260724-import-waiver-acceptance).
+ * Store a contact-import waiver or medical document scan. Its own
+ * `import-waivers` key prefix so imported evidence never shares a namespace with
+ * a card, brochure, or diver's own recap photo. Only called from the
+ * server-side commit path (`src/db/import.ts`), on a URL a staff member pasted
+ * into an import row — never rendered from that raw URL directly (ADR
+ * 20260724-import-waiver-acceptance).
+ *
+ * Two shapes are accepted (ADR 20260724-import-verified-cards). An **image**
+ * takes the same decode-strip-re-encode path as every other upload. A **PDF**
+ * (identified by its `%PDF-` magic bytes, not the caller's content-type claim)
+ * is stored as-is: the `sharp` pipeline can't decode a PDF, and an import
+ * document is archival evidence that is never rendered from its raw bytes, so
+ * re-encoding it would be both impossible and pointless. Anything that is
+ * neither a valid image nor a real PDF is rejected.
  */
 export async function storeImportWaiverDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  return storeImage({ ...upload, keyPrefix: "import-waivers" }, MAX_IMAGE_BYTES, provider);
+  const scoped = { ...upload, keyPrefix: "import-waivers" };
+  if (looksLikePdf(upload.bytes)) {
+    return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
+  }
+  return storeImage(scoped, MAX_IMAGE_BYTES, provider);
+}
+
+/**
+ * Store a PDF import document without the image pipeline. The bytes are already
+ * bounded by the ingest fetch (`ingestImageUrl`, which enforces the same
+ * `MAX_IMAGE_BYTES` cap and all the SSRF defenses); here we re-check the size
+ * and confirm the `%PDF-` signature before handing the raw bytes to the
+ * provider with an honest `application/pdf` content-type and `.pdf` name.
+ */
+async function storePdfDocument(
+  upload: ImageUpload,
+  maxBytes: number,
+  provider: ImageStorageProvider,
+): Promise<StoredImage> {
+  if (upload.bytes.byteLength === 0 || upload.bytes.byteLength > maxBytes) {
+    return { status: "failed" };
+  }
+  if (!looksLikePdf(upload.bytes)) return { status: "failed" };
+  return provider.upload({
+    ...upload,
+    filename: withPdfExtension(upload.filename),
+    contentType: PDF_CONTENT_TYPE,
+  });
 }
 
 async function storeImage(

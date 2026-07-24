@@ -5,6 +5,7 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
+import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { getMigrationGuide, MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
@@ -31,9 +32,8 @@ const scopeChip: Record<
   (typeof IMPORT_HONESTY_TABLE)[number]["scope"],
   { label: string; className: string }
 > = {
-  full: { label: "Imports fully", className: "bg-success/10 text-success" },
-  partial: { label: "Partial", className: "bg-warning/15 text-warning" },
-  never: { label: "Never", className: "bg-danger/10 text-danger" },
+  included: { label: "Comes across", className: "bg-success/10 text-success" },
+  "stays-behind": { label: "Stays behind", className: "bg-surface-sunken text-muted" },
 };
 
 export default async function MigrationGuidePage({
@@ -155,9 +155,10 @@ export default async function MigrationGuidePage({
             What comes across — and what doesn't
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-            This is the same scope table DiveDay shows before it imports a single row. The safety
-            spine holds through the move: nothing arrives already verified, and nothing medical
-            arrives at all.
+            This is the same scope table DiveDay shows before it imports a single row. A card your
+            system already checked comes across verified and flagged imported, ready to use, with a
+            one-tap confirm for staff — card expiry still applies, and individual medical answers
+            are never reconstructed.
           </p>
 
           <ul className="mt-8 space-y-2">
@@ -211,8 +212,8 @@ export default async function MigrationGuidePage({
                   <h3 className="font-semibold leading-6">Check the preview</h3>
                   <p className="mt-1.5 leading-7 text-muted">
                     DiveDay maps your columns automatically and previews the file before anything is
-                    saved — how each column landed, which cards will come in as claims for staff to
-                    verify, and anything it's leaving behind. Rows with an email match an existing
+                    saved — how each column landed, which cards will come in verified and flagged
+                    imported, and anything it's leaving behind. Rows with an email match an existing
                     diver so a re-import updates them instead of duplicating; the rows that pass
                     import when you confirm.
                   </p>
@@ -223,14 +224,12 @@ export default async function MigrationGuidePage({
                   3
                 </span>
                 <div className="pt-1">
-                  <h3 className="font-semibold leading-6">
-                    Import, then verify cards as divers arrive
-                  </h3>
+                  <h3 className="font-semibold leading-6">Import — your roster is ready</h3>
                   <p className="mt-1.5 leading-7 text-muted">
-                    Your roster and rental sizes are ready immediately. Imported cards wait as
-                    unverified claims — your staff confirm each one at first contact, exactly as
-                    they would a card entered by hand, so no one boards on evidence no one here has
-                    checked.
+                    Roster, rental sizes, and cards are ready immediately: cards land verified and
+                    flagged imported, so divers are trip-ready from the first booking. Each imported
+                    card carries a one-tap confirm on the diver's record for staff to give it a look
+                    when they get a moment — no boarding waits on it.
                   </p>
                 </div>
               </li>
@@ -246,6 +245,9 @@ export default async function MigrationGuidePage({
             )}
           </div>
         </section>
+
+        {/* The owner-authorized concierge switch offer (shared across /switching). */}
+        <SwitchingConcierge />
 
         <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
           <div>

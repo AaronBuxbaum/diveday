@@ -21,10 +21,18 @@ new domain concept, define it here in the same PR.
   readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
   what readiness reads.)
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
-  `pending`. It is what any card entered by hand or brought in by the contact importer starts as, and
-  the shop-owner-facing word for that state ("imported as claimed"). A claimed card never satisfies
-  readiness or authorizes a nitrox fill until staff **Mark certified**; the importer can only ever
-  produce claimed cards, never verified ones (ADR 20260723-contact-importer).
+  `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
+  A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified**.
+  (A card brought in by the contact importer is *not* claimed — see **Imported certification**.)
+- **Imported certification** — a card the contact importer brought in from a shop's prior system or
+  spreadsheet. It lands `verified` (DiveDay assumes the shop's own system already checked it) but is
+  permanently flagged `imported` (a non-null `importedAt`, with an optional prior-shop
+  `importedFromLabel`), so it is never mistaken for a card this shop carded on sight. A level card
+  satisfies readiness and clears depth gates on import, with expiry still applied; staff get a soft
+  one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding never waits on it. The one
+  exception is the **enriched-air fill**: an imported nitrox card gives plain air until that confirm,
+  because a wrong fill is the highest-consequence failure and a nitrox card has no expiry backstop
+  (ADR 20260724-import-verified-cards).
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
@@ -346,14 +354,19 @@ new domain concept, define it here in the same PR.
   certification inbox.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
-  recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.
+  recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified. A card
+  brought in by the contact importer lands `verified` and flagged imported, but — unlike a level card
+  — its fill authorization waits for a staff confirm (see **Nitrox request**), because a nitrox card
+  has no expiry to backstop a bad import and a wrong fill is the highest-consequence failure
+  (ADR 20260724-import-verified-cards).
 - **Nitrox request** — a per-booking ask for enriched air, billed per dive. A diver may request it
   **without** a verified card on file: the request is recorded and flagged to the diver and the shop
   (`certified` on the write, the Today nitrox nudge, the prep-list blocker), never silently refused —
   so the diver is prompted to send their card and the shop knows to chase it. The request is not a
-  fill authorization: every read (prep list, manifest, Today) re-checks for a **verified**, unarchived
-  card at read time and downgrades the diver to air unless one is present, so an uncertified request
-  can never become a nitrox tank. Clearing a request is always allowed.
+  fill authorization: every read (prep list, manifest, Today) re-checks the card at read time
+  (`authorizesNitroxFill`) and downgrades the diver to air unless a card **authorizes the fill** —
+  `verified`, unarchived, and (if imported) confirmed here. So neither an uncertified request nor an
+  imported-but-unconfirmed card can become a nitrox tank. Clearing a request is always allowed.
 
 ## Modeling notes
 

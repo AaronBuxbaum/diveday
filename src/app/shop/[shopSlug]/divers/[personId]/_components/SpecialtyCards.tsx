@@ -12,6 +12,8 @@ import {
   CARD_STATUS_LABELS,
   cardDisplayStatus,
   type DiverProfile,
+  isImportedCard,
+  needsImportConfirm,
   type Shop,
   statusTone,
 } from "./shared";
@@ -36,8 +38,8 @@ export function SpecialtyCards({
             Specialty cards
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Specialty cards live with the diver. A verified Nitrox card is required before an EANx
-            fill or tank handoff.
+            Specialty cards live with the diver. A verified Nitrox card — confirmed here if it was
+            imported — is required before an EANx fill or tank handoff.
           </p>
         </div>
         <details>
@@ -171,15 +173,22 @@ export function SpecialtyCards({
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone(card.status)}>{CARD_STATUS_LABELS[card.status]}</Badge>
-                  {card.status === "pending" ? (
+                  {isImportedCard(card) ? (
+                    <Badge tone="neutral">
+                      {card.importedFromLabel ? `imported · ${card.importedFromLabel}` : "imported"}
+                    </Badge>
+                  ) : null}
+                  {card.status === "pending" || needsImportConfirm(card) ? (
                     <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       <input type="hidden" name="cardType" value="nitrox" />
                       <SubmitButton
-                        pendingLabel="Marking certified…"
+                        pendingLabel={
+                          needsImportConfirm(card) ? "Confirming…" : "Marking certified…"
+                        }
                         className={buttonClass({ variant: "secondary", size: "sm" })}
                       >
-                        Mark certified
+                        {needsImportConfirm(card) ? "Confirm card" : "Mark certified"}
                       </SubmitButton>
                     </form>
                   ) : null}

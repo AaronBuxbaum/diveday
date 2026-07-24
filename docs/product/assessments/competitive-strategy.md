@@ -202,7 +202,9 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
 - Don't automate logins or scraping against incumbent systems — files the shop exports itself,
   only (*Power Ventures*).
 - Don't ship a pledge page before the export button works; DiveAdmin proves rhetoric is cheap.
-- Don't let imported data bypass the safety spine — no imported cert is ever born verified.
+- Keep imported evidence honest and distinguishable — an imported cert lands `verified` (the shop's
+  own system already checked it) but permanently flagged `imported`, with a soft staff confirm and
+  expiry still enforced; never a silent, unmarked pass (H-20, ADR 20260724-import-verified-cards).
 
 ## Implications for the queue
 
