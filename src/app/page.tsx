@@ -233,8 +233,8 @@ export default function Home() {
               See how it feels when the whole shop is on the same page.
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-              DiveDay is early, and the first shops shape it. Founding shops get a direct line to
-              the people building DiveDay — what your crew runs into this season is what gets
+              DiveDay is early, and the first shops shape it. Founding shops get a founder-direct
+              line with same-day responses — what your crew runs into this season is what gets
               attention next.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3">
