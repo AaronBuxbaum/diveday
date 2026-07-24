@@ -181,6 +181,14 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   of the portability wedge. Content in `src/lib/migration-guides.ts`, pages in `src/app/switching/`
   ([marketing.md](marketing.md#migration-guides)). Backups and the read API are the open follow-ons
   in [roadmap.md](roadmap.md).
+- **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
+  an optional `coexist` block, because FareHarbor is a booking/distribution *channel* (a general
+  tours engine, Booking-Holdings-owned), not a records system to leave: the guide leads with "keep
+  FareHarbor's storefront and network, run the dive day it can't" and offers the clean leave path
+  (DiveDay takes the booking, the per-booking fee stops), over the shared export/scope/import
+  mechanics. Every competitor claim is sourced and honesty-flagged (the ~6% fee is reported-only,
+  not FareHarbor-published; no live sync claimed)
+  ([assessments/fareharbor-positioning.md](assessments/fareharbor-positioning.md)).
 - **Marketing SEO substrate + try/run/leave repositioning** (2026-07-24) — the public pages argue
   the researched wedge instead of the category: home gains a "Safe to leave" portability band and
   founding-shop closing, `/product` a diver-arc moment (night-before brief, recap) and an "honest

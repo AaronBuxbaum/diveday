@@ -155,6 +155,17 @@ safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add 
 its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
 a published page (there is no draft/planned state).
 
+A guide for a booking/distribution **channel** rather than a records system (today: **FareHarbor**,
+a general tours engine owned by Booking Holdings) additionally carries an optional `coexist` block
+and is **coexist-led**: it opens with "keep the storefront and its network, run the dive day it
+can't" — the product page's "bring your POS, we run the water" division of labor extended to a
+booking channel — then offers the clean leave path (DiveDay takes the booking, the per-booking fee
+stops) over the same shared export/scope/import mechanics. Two extra honesty rules bind these:
+**never imply an integration or live sync** (coexistence is "run alongside, bridged by the CSV
+import"), and **never state a competitor's unpublished fee as their published price** (FareHarbor's
+rate is reported-only, phrased "reported at around 6%"). See
+[assessments/fareharbor-positioning.md](assessments/fareharbor-positioning.md).
+
 The one non-incumbent guide is `/switching/spreadsheet` ("Coming from a spreadsheet"). A shop on a
 spreadsheet has no vendor to leave, so the page has no incumbent context, no export click-path to
 reverse-engineer, and no `sources`; it lives as its own static route rather than a
