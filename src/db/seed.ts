@@ -1537,6 +1537,23 @@ export async function seedDemoSchedule(
     )
     .returning();
 
+  // H-13 demo: one night-trip seat came in through a shared inbox under a
+  // different name than the person already on file for that email, so it carries
+  // the identity-unconfirmed flag. The roster shows the fail-closed "Confirm
+  // identity" gate until staff vouch for it — the diver can't board on the
+  // matched person's evidence. Reuses the booking's own createdAt so nothing new
+  // is stamped against the clock. The diver is already blocked (no Night
+  // specialty), so this adds a blocker rather than flipping a ready seat.
+  const nightIdentityBooking = bookingRows_.find(
+    (b) => b.tripId === night.id && b.personId === customers[4]?.id,
+  );
+  if (nightIdentityBooking) {
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nightIdentityBooking.createdAt })
+      .where(eq(bookings.id, nightIdentityBooking.id));
+  }
+
   // Payment demo on the pay-to-board wreck trip: one paid, one deposit, the
   // rest unpaid (an absent row reads as unpaid in readiness).
   const wreckBookings = bookingRows_.filter((b) => b.tripId === wreck.id);

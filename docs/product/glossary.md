@@ -10,7 +10,10 @@ new domain concept, define it here in the same PR.
   levels are broadly equivalent across agencies.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
-  may require a refresher after long inactivity.
+  may require a refresher after long inactivity. DiveDay stores that optional date on the card
+  (`expires_at`) and, per **H-08**, the staff surface presents it as a shop-set **"refresher due"**
+  date — never an implied card expiry; a card past that date reads as "refresher due" and stops
+  satisfying readiness until refreshed.
 - **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
   until staff certify it — staff look the card number up with the issuing agency (in the agency's
   own portal, outside DiveDay) and click **Mark certified**. There is no automated agency
@@ -360,12 +363,17 @@ new domain concept, define it here in the same PR.
 - Bookings, waivers, certs, rental fit, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.
 - **Identity match key** — self-service paths (booking, wait-list, CSV import) treat a shop's
-  active people as unique by `(shop_id, lower(email))` and silently **reuse** the matching person
-  on any submission with that email — the submitted name is not compared, so a shared inbox (a
-  family, a work account) attaches every submission to the same diver's cert/waiver/rental-fit
-  history (`findOrCreatePerson`, `src/db/people.ts`, CR-008). Staff-facing diver create/edit/restore
-  instead **refuse** on the same collision rather than reuse, and a soft-deleted person's email
-  frees up for a new, unrelated person. Whether email-only reuse is safe enough for a shared-inbox
-  or shared-household scenario (e.g. a minor booked under a parent's email — see **Junior
-  certification**) is an open product/safety question, not yet decided — see H-13 in
-  [human-decisions.md](human-decisions.md).
+  active people as unique by `(shop_id, lower(email))` and **reuse** the matching person on any
+  submission with that email, so a re-typed regular collapses onto their own cert/waiver/rental-fit
+  history (`findOrCreatePerson`, `src/db/people.ts`, CR-008). **Name-mismatch safeguard (H-13):** the
+  reuse is no longer silent — `findOrCreatePerson` now compares the submitted name to the stored one
+  (`personNamesMatch`, `src/lib/person-name.ts`; case/accent/order/middle-initial tolerant), and a
+  public booking that reuses an email under a genuinely different name is stamped
+  `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness
+  blocker — so a shared inbox (a spouse, or a minor booked under a parent's email; see **Junior
+  certification**) can't board on the matched diver's evidence — until staff **Confirm identity** on
+  the roster. Staff-facing diver create/edit/restore still **refuse** on the same email collision
+  rather than reuse, and a soft-deleted person's email frees up for a new, unrelated person (that
+  soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
+  [human-decisions.md](human-decisions.md) and
+  [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).

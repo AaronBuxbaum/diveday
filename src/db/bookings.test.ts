@@ -3,7 +3,13 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
+import {
+  cancelBooking,
+  confirmBookingIdentity,
+  createBooking,
+  createBookingParty,
+  restoreBooking,
+} from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { bookings, people, personRoles } from "./schema";
@@ -285,5 +291,77 @@ describe("restoreBooking (undo of a roster removal)", () => {
     expect(await restoreBooking(db, shop.id, "00000000-0000-4000-8000-000000000000")).toBe(
       "not_found",
     );
+  });
+});
+
+describe("createBooking identity safeguard (H-13)", () => {
+  async function nightTrip(db: AppDb, shopId: string) {
+    const trips = await upcomingTripsWithCounts(db, shopId);
+    const night = trips.find((t) => t.title.startsWith("Night Dive"));
+    if (!night) throw new Error("night trip missing");
+    return night;
+  }
+
+  async function identityFlag(db: AppDb, bookingId: string) {
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    return row?.identityUnconfirmedAt ?? null;
+  }
+
+  it("does not flag a brand-new walk-in or a same-human re-book", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    expect(await identityFlag(db, first.bookingId)).toBeNull();
+
+    // Same person, different case and a middle initial, on another trip.
+    const second = await createBooking(db, {
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "Nora Q. Quinn",
+      email: "NORA@example.com",
+    });
+    if (!second.ok) throw new Error("same-human re-book failed");
+    expect(await identityFlag(db, second.bookingId)).toBeNull();
+  });
+
+  it("flags a booking that reuses an existing email under a different name, and staff can confirm it", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+
+    // A different human on Nora's shared inbox books a second trip: reused
+    // person, mismatched name — must not silently inherit her evidence.
+    const shared = await createBooking(db, {
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "Ben Quinn",
+      email: "nora@example.com",
+    });
+    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+
+    // Staff confirm identity → flag clears; a second confirm is a no-op.
+    expect(await confirmBookingIdentity(db, shop.id, shared.bookingId)).toBe(true);
+    expect(await identityFlag(db, shared.bookingId)).toBeNull();
+    expect(await confirmBookingIdentity(db, shop.id, shared.bookingId)).toBe(false);
+  });
+
+  it("never flags the identity path — an existing diver booked by id submits no name", async () => {
+    const { db, shop, open } = await seededContext();
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Priya Sharma",
+      email: "priya-h13@example.com",
+    });
+    if (!diver) throw new Error("diver setup failed");
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+    });
+    if (!outcome.ok) throw new Error("existing-diver booking failed");
+    expect(await identityFlag(db, outcome.bookingId)).toBeNull();
   });
 });

@@ -150,6 +150,71 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
 });
 
+// H-13: a self-service booking that reuses an existing diver's email under a
+// genuinely different name (a shared inbox — a spouse, a minor under a parent's
+// email) must not silently inherit that diver's certs/waiver. It is held with an
+// identity blocker until staff confirm it is the same person.
+test("a shared-inbox booking under a different name is held for staff identity confirmation", async ({
+  page,
+}) => {
+  const email = `shared-${e2eNow().getTime()}@example.com`;
+  const tripB = `H13 Shared Inbox ${e2eNow().getTime()}`;
+
+  // Staff put a second bookable trip on the board, then sign out.
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(tripB);
+  await page.getByLabel("Date").fill(daysFromNow(7));
+  await page.getByLabel("Departs").fill("19:00");
+  await page.getByLabel("Returns").fill("21:00");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toBeVisible();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  // Wait for the sign-out redirect to land before booking as the public — a
+  // signed-in staffer opening a trip gets the manage view, not the booking form.
+  await expect(page).toHaveURL(/\/$/);
+
+  // Nora books the seeded reef trip under her email.
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+    .getByRole("link")
+    .click();
+  await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+
+  // A different name on the same inbox books trip B — reuses Nora's record.
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
+
+  // Staff open trip B's roster: the diver is held on identity, not ready.
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+
+  const row = page.locator("li").filter({ hasText: "Nora Quinn" });
+  await expect(row).toContainText("Identity unconfirmed");
+
+  // Confirming identity clears the blocker.
+  page.once("dialog", (dialog) => void dialog.accept());
+  await row.getByRole("button", { name: /^Confirm this is/ }).click();
+  await expect(page.getByRole("status")).toContainText("Identity confirmed");
+  await expect(page.locator("li").filter({ hasText: "Nora Quinn" })).not.toContainText(
+    "Identity unconfirmed",
+  );
+});
+
 // CR-003: the confirmation panel is authorized by a signed `confirm`
 // capability in the `?booking=` param, never by the raw booking id — a
 // tampered or cross-trip token must never surface someone else's booking.
