@@ -451,6 +451,11 @@ export async function seedDemoSchedule(
         phone: `+1-305-555-01${String(i + 10).padStart(2, "0")}`,
         emergencyContactName: customer.emergencyContact?.[0] ?? null,
         emergencyContactPhone: customer.emergencyContact?.[1] ?? null,
+        // A couple of dates on file so the H-08 minimum-age gate has something
+        // to demo; most divers deliberately have none, which is the fail-open
+        // case every existing shop starts from. Anchored to the seeded clock so
+        // the rendered age never drifts across Argos runs.
+        dateOfBirth: i < 2 ? dateAt(-365 * (28 + i * 5)) : null,
       })),
     )
     .returning();
@@ -1620,6 +1625,41 @@ export async function seedDemoSchedule(
     },
   ]);
 
+  // A real booking never sits with zero waiver activity: the live
+  // booking-creation flow issues a waiver request the instant a diver joins a
+  // trip (issueWaiverOnJoin). The seed mirrors that so every upcoming
+  // booking already has a pending (issued, unsigned) waiver on file — except
+  // the reef trip's first-booked diver (the pinned recap booking above), who
+  // stays genuinely unsent. That one holdout is the shop's real-world
+  // straggler — a request that quietly never went out — and it's what keeps
+  // the "click Send waiver" flows (staff UI, e2e) demonstrable.
+  const waiverTemplate = await getCurrentWaiverTemplate(db, shopId);
+  if (!waiverTemplate) throw new Error("seed: waiver template missing before upcoming waivers");
+  let upcomingWaiverToken = 0;
+  const upcomingWaiverRows = bookingRows_
+    .filter((booking) => booking.id !== recapBookingId)
+    .map((booking) => {
+      upcomingWaiverToken++;
+      return {
+        shopId,
+        bookingId: booking.id,
+        personId: booking.personId,
+        templateId: waiverTemplate.id,
+        templateTitle: waiverTemplate.title,
+        templateVersion: waiverTemplate.version,
+        templateBody: waiverTemplate.body,
+        // Never a real bearer token (nobody is meant to sign these seeded
+        // links), but unique per shop row so a fleet of minted demo shops
+        // can never collide on the table's global tokenHash constraint.
+        tokenHash: `seed-waiver-${shopId}-${upcomingWaiverToken}`,
+        // Comfortably past every seeded upcoming trip (furthest is ~21 days
+        // out) so a fresh demo never opens with an already-expired link.
+        expiresAt: at(30, 12),
+        createdAt: nextCreatedAt(),
+      };
+    });
+  if (upcomingWaiverRows.length > 0) await db.insert(waiverRecords).values(upcomingWaiverRows);
+
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_);
@@ -2140,6 +2180,7 @@ async function seedRentalFit(
         fin: string;
         weights?: string;
         ownsRegulator?: boolean;
+        needsStaffFit?: boolean;
       },
     ]
   > = [
@@ -2148,7 +2189,10 @@ async function seedRentalFit(
     // A diver with their own reg — the prep list has to leave it off.
     [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M", ownsRegulator: true }],
     [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
-    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg" }],
+    // H-06 demo: the shop is out of this diver's size, so they're flagged for
+    // hands-on fitting — their kit is deliberately off the prep list and they
+    // get named in its "fit these divers at check-in" section instead.
+    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg", needsStaffFit: true }],
     // Sizes half-recorded, which is how a fit book actually looks.
     [12, { bcd: null, wetsuit: "M", boot: "7", fin: "M" }],
   ];
@@ -2169,6 +2213,8 @@ async function seedRentalFit(
         bootSize: fit.boot,
         finSize: fit.fin,
         weightPreference: fit.weights ?? null,
+        needsStaffFitAt: fit.needsStaffFit ? nowDate() : null,
+        needsStaffFitNote: fit.needsStaffFit ? "No XL BCD left — fit from the spares" : null,
       };
     })
     .filter((row) => row !== null);

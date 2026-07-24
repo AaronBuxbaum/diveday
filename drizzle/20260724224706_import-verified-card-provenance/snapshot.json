@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "189af571-b9c8-4ad9-848b-05b808d72c6a",
+  "id": "80a186f4-0990-4051-af96-b8cc9f498dcf",
   "prevIds": [
-    "e1a2c720-d191-4c8f-80fc-0bce087da160"
+    "0c63fee4-2821-4b85-8afc-7a6bd65669ea"
   ],
   "ddl": [
     {
@@ -3336,6 +3336,19 @@
       "table": "people"
     },
     {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "date_of_birth",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "people"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -3695,6 +3708,32 @@
       "generated": null,
       "identity": null,
       "name": "note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "needs_staff_fit_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "needs_staff_fit_note",
       "entityType": "columns",
       "schema": "public",
       "table": "rental_fit_profiles"

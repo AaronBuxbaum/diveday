@@ -89,6 +89,8 @@ export async function updateDiver(
     email?: string;
     phone?: string;
     diveInsurance?: string;
+    /** Date-only "YYYY-MM-DD", or "" to clear. Undefined leaves it untouched. */
+    dateOfBirth?: string;
   },
 ) {
   const email = input.email?.trim().toLowerCase() || null;
@@ -117,6 +119,9 @@ export async function updateDiver(
         ...(input.diveInsurance === undefined
           ? {}
           : { diveInsurance: input.diveInsurance.trim() || null }),
+        ...(input.dateOfBirth === undefined
+          ? {}
+          : { dateOfBirth: input.dateOfBirth.trim() || null }),
       })
       .where(
         and(

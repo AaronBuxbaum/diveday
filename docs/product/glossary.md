@@ -346,12 +346,30 @@ new domain concept, define it here in the same PR.
   list.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
+- **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
+  staff flag the diver for hands-on fitting at check-in instead of quietly packing a different
+  size. The flagged diver's sized kit drops **off** the prep list — packing a substitute is exactly
+  what the flag prevents — and they're named in their own "fit these divers at check-in" section.
+  Their tanks still count; gas is never sized. Distinct from both "own kit" and "not asked yet" on
+  a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
+  See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).
+- **Gear-request override** — rewriting what a diver themselves asked for. Reserved to owners,
+  managers, instructors, and **divemasters** (`canOverrideGearRequest`) — sizing a diver is in-water
+  judgement. Deliberately wider than `canConfigureTrips`, which excludes divemasters. Substituting
+  a real available item and flagging for staff fit stay open to every staff member: those are the
+  day's work, not an override.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
   for. Purely derived — nothing on it is an allocation. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.
+- **Date of birth** — optional on a diver profile (`people.date_of_birth`, date-only). Its one job
+  is checking a course's `minimum_age` on the day that course runs — not the day it's booked, so a
+  diver whose birthday falls in between is admitted. **Fails open** by product decision (H-08,
+  option B): a diver with no date on file books exactly as they always have, because nothing
+  collected one before and failing closed would lock out every existing diver overnight. Real age
+  verification stays a dock-side ID check.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified. A card

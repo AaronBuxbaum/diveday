@@ -236,6 +236,61 @@ describe("buildDivePrepChecklist rental lines", () => {
   });
 });
 
+describe("needs-staff-fit fallback (H-06)", () => {
+  const flaggedAt = new Date("2026-07-24T12:00:00Z");
+
+  it("keeps a flagged diver's sizes off the packing lines", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Ada" }),
+        diver({
+          bookingId: "b2",
+          fullName: "Ben",
+          fit: { ...fullFit, needsStaffFitAt: flaggedAt, needsStaffFitNote: "No L BCD" },
+        }),
+      ],
+      plannedDives: 2,
+    });
+    // Only Ada's kit is laid out — packing Ben's stated size is exactly what
+    // the flag exists to prevent.
+    expect(lineFor(checklist, "bcd", "M")?.count).toBe(1);
+    expect(lineFor(checklist, "bcd", "M")?.divers).toEqual(["Ada"]);
+    expect(checklist.diversNeedingStaffFit).toEqual([{ fullName: "Ben", note: "No L BCD" }]);
+    // ...and he is not miscounted as a diver nobody ever asked.
+    expect(checklist.diversWithoutFit).toEqual([]);
+  });
+
+  it("still counts a flagged diver's tanks — gas is never sized", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Ada" }),
+        diver({
+          bookingId: "b2",
+          fullName: "Ben",
+          fit: { ...fullFit, needsStaffFitAt: flaggedAt },
+        }),
+      ],
+      plannedDives: 3,
+    });
+    expect(checklist.tanks.total).toBe(6);
+    expect(checklist.diverCount).toBe(2);
+  });
+
+  it("reports a flagged diver with no note as a bare name", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Ada",
+          fit: { ...fullFit, needsStaffFitAt: flaggedAt, needsStaffFitNote: "   " },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    expect(checklist.diversNeedingStaffFit).toEqual([{ fullName: "Ada", note: null }]);
+  });
+});
+
 describe("rentalFitLine", () => {
   it("reads as a packing line for one diver", () => {
     expect(rentalFitLine(fullFit)).toEqual({
@@ -258,5 +313,17 @@ describe("rentalFitLine", () => {
         rentsWeights: false,
       }),
     ).toEqual({ state: "own_kit", text: "Own kit" });
+  });
+
+  it("reads a flagged diver as an open job, not a size to hand over", () => {
+    const flaggedAt = new Date("2026-07-24T12:00:00Z");
+    expect(rentalFitLine({ ...fullFit, needsStaffFitAt: flaggedAt })).toEqual({
+      state: "needs_staff_fit",
+      text: "Needs staff fit at check-in",
+    });
+    // The note rides along so the dock knows what's short without a click.
+    expect(
+      rentalFitLine({ ...fullFit, needsStaffFitAt: flaggedAt, needsStaffFitNote: "No L BCD" }),
+    ).toEqual({ state: "needs_staff_fit", text: "Needs staff fit — No L BCD" });
   });
 });
