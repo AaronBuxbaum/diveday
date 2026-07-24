@@ -226,6 +226,7 @@ export default async function MigrationGuidePage({
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction}>
+                <input type="hidden" name="source" value={`switching-${competitor}`} />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
                   className={buttonClass({

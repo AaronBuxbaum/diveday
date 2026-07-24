@@ -1,15 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { FeatureGroupsGrid } from "@/components/MarketingSections";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { earlyAccessPrice } from "@/lib/marketing";
+import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 
 export const metadata: Metadata = {
-  title: "Pricing — DiveDay",
+  title: "Pricing — one flat price per shop | DiveDay",
   description:
-    "Straightforward early-access pricing for DiveDay's complete dive-shop operating system.",
+    "One flat price for the whole dive shop — bookings, waivers, cert checks, trip prep, and the boat manifest included. No setup fee, no per-seat math, no feature tiers.",
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "DiveDay pricing — one flat price per shop",
+    description:
+      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat math, no feature tiers.",
+    url: "/pricing",
+  },
 };
 
 const faq = [
@@ -24,31 +33,72 @@ const faq = [
       "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — or start a trial shop of your own, with sample trips ready to explore if you want them.",
   },
   {
-    question: "What about multiple locations?",
-    answer:
-      "Each DiveDay workspace runs one shop today. If you operate more than one location, talk to us — we'd rather build that with you than pretend it's already here.",
-  },
-  {
     question: "Does the manifest work offline?",
     answer:
       "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts.",
   },
+  {
+    question: "DiveDay is new. What happens to my data if this doesn't work out?",
+    answer: `You leave with your shop's records, whenever you choose. ${fullShopExport.claim} ${fullShopExport.terms} One caveat, stated in the export's own README: card and photo images come along as stored links, not files — save copies before closing an account.`,
+  },
+  {
+    question: "What does switching to DiveDay actually involve?",
+    answer:
+      "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, and their rental sizes — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify, and medical history never imports at all. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver.",
+  },
+  {
+    question: "Does DiveDay connect to PADI or SSI?",
+    answer:
+      "No — no agency offers shop software a way to verify a C-card automatically, so DiveDay doesn't pretend. A photo of the card goes on the diver's profile once, your staff confirm the number with the agency and mark it certified, and that card stays with the diver for every future booking. Courses arrive as your shop's copy of the agency catalog, with DiveDay's published page templates as a starting point — you set the prices and choose what's visible.",
+  },
+  {
+    question: "Does DiveDay replace my POS?",
+    answer:
+      "No — keep your register. DiveDay runs the water side of the shop: bookings, courses, readiness, trip prep, and the boat, with trip and course payments through your shop's own Stripe account. You can put a retail line on a DiveDay order, but there is no register, barcode scanner, or stock count here, and we'd rather say that plainly than pretend.",
+  },
+  {
+    question: "Why be a founding shop?",
+    answer:
+      "Because early shops steer. Founding shops get a direct line to the people building DiveDay, what your crew runs into shapes what ships next, and every new feature lands in the one plan there is — there are no higher tiers to move things into.",
+  },
+  {
+    question: "What about multiple locations?",
+    answer:
+      "Each DiveDay workspace runs one shop today. If you operate more than one location, talk to us — we'd rather build that with you than pretend it's already here.",
+  },
 ] as const;
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
+};
 
 export default function PricingPage() {
   return (
     <div className="flex min-h-full flex-col">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data built from our own constants above and `<`-escaped below.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <MarketingNav />
       <main className="flex-1">
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">Pricing</p>
             <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-              One shop price. Every operational workflow.
+              One flat price for the whole shop.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              Simple early-access pricing for the complete DiveDay system — without turning the
-              essential safety workflow into a stack of add-ons.
+              No setup fee, no per-seat math, no feature tiers — the safety workflow is never an
+              add-on you have to remember to buy.
             </p>
           </div>
         </section>
@@ -62,7 +112,7 @@ export default function PricingPage() {
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight">Complete shop access</h2>
               </div>
-              <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-foreground">
+              <span className="rounded-full border border-border bg-surface-sunken px-3 py-1 text-xs font-semibold text-muted">
                 Early access
               </span>
             </div>
@@ -90,6 +140,19 @@ export default function PricingPage() {
             >
               Start a trial shop
             </Link>
+            <form action={enterDemoAction} className="mt-3">
+              <input type="hidden" name="source" value="pricing" />
+              <SubmitButton
+                pendingLabel="Getting the demo ready…"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "cta",
+                  className: "w-full cursor-pointer border-border-strong disabled:opacity-70",
+                })}
+              >
+                Try the live demo first
+              </SubmitButton>
+            </form>
           </div>
           <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-6 text-muted">
             Payment-processing fees stay between you and your payment provider. If a future
@@ -117,10 +180,13 @@ export default function PricingPage() {
           <p className="text-center text-sm font-semibold tracking-widest text-primary uppercase">
             Questions, answered plainly
           </p>
+          <h2 className="mt-3 text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            The questions that actually decide it.
+          </h2>
           <div className="mt-10 divide-y divide-border rounded-2xl border border-border bg-surface">
             {faq.map((item) => (
               <article key={item.question} className="p-6">
-                <h2 className="text-lg font-semibold">{item.question}</h2>
+                <h3 className="text-lg font-semibold">{item.question}</h3>
                 <p className="mt-2 leading-7 text-muted">{item.answer}</p>
               </article>
             ))}

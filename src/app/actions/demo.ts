@@ -8,15 +8,22 @@ import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
+import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { requireStaffSession } from "@/lib/session";
 
 /**
  * One-click into the demo: sign in as the example shop's owner and land on the
  * staff dashboard. Database initialization guarantees the demo shop and login
- * exist before this action can run.
+ * exist before this action can run. Forms may carry a hidden `source` field
+ * naming the page the click came from.
  */
-export async function enterDemoAction() {
+export async function enterDemoAction(formData?: FormData) {
+  const sourceField = formData?.get("source");
+  await trackEvent({
+    name: "demo_entered",
+    source: typeof sourceField === "string" && sourceField !== "" ? sourceField : "unknown",
+  });
   try {
     await signIn("credentials", {
       email: DEV_STAFF_LOGINS.owner.email,

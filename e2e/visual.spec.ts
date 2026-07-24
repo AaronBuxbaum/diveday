@@ -91,6 +91,15 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/");
       await capture(page, "landing", scheme);
 
+      // The other two buyer-facing sales surfaces: the product narrative
+      // (readiness, dock, diver arc, honest-no scope) and the pricing page
+      // with its objection FAQ. Copy changes here are product changes.
+      await page.goto("/product");
+      await capture(page, "product", scheme);
+
+      await page.goto("/pricing");
+      await capture(page, "pricing", scheme);
+
       await page.goto("/sign-in");
       await capture(page, "sign-in", scheme);
 
