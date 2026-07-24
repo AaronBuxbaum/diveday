@@ -1047,11 +1047,12 @@ export const waiverTemplates = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("waiver_templates_shop_title_version_unique").on(
-      table.shopId,
-      table.title,
-      table.version,
-    ),
+    // A shop has exactly one waiver — versions increment per shop, not per
+    // (shop, title): saveWaiverTemplate already computes the next version
+    // shop-wide with no title filter, so the DB constraint now matches that
+    // real invariant instead of a looser one that could let two different
+    // titles both claim "version 2" at the same shop (CR-015).
+    uniqueIndex("waiver_templates_shop_version_unique").on(table.shopId, table.version),
   ],
 );
 
