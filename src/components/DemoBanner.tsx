@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { resetDemoAction, switchDemoRoleAction } from "@/app/actions/demo";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -15,6 +16,10 @@ interface DemoBannerProps {
    * readable by anyone who has it, so it shows a "don't enter real data" notice.
    */
   isMintedDemo?: boolean;
+  /** The signed-in email for `currentRole`, absent for the signed-out diver view. */
+  currentEmail?: string | null;
+  /** Shared plaintext sign-in password for any minted demo (src/lib/credentials.ts). */
+  demoPassword?: string;
 }
 
 const ROLES_INFO = [
@@ -66,6 +71,8 @@ export function DemoBanner({
   shopSlug,
   availableRoles,
   isMintedDemo = false,
+  currentEmail,
+  demoPassword,
 }: DemoBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -132,6 +139,17 @@ export function DemoBanner({
           <p className="mt-2 text-xs text-muted">
             This demo is open to anyone with its link — explore freely, but don&apos;t enter real
             customer details.
+            {currentEmail && demoPassword ? (
+              <>
+                {" "}
+                Session expired? Sign back in at{" "}
+                <Link href="/sign-in" className="font-medium text-primary hover:underline">
+                  /sign-in
+                </Link>{" "}
+                with <span className="font-mono">{currentEmail}</span> /{" "}
+                <span className="font-mono">{demoPassword}</span>.
+              </>
+            ) : null}
           </p>
         ) : null}
 

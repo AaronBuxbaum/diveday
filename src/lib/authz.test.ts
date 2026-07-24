@@ -7,6 +7,7 @@ import {
   canImportShopData,
   canManagePaymentSettings,
   canManageWaiverTemplates,
+  canOverrideGearRequest,
   canRefund,
   canViewShopReports,
   isStaff,
@@ -85,5 +86,27 @@ describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canConfigureTrips([])).toBe(false);
     expect(canConfigureTrips(undefined)).toBe(false);
+  });
+});
+
+describe("canOverrideGearRequest (H-06 — owner/manager/instructor/divemaster)", () => {
+  it("admits the in-water judgement roles, divemaster included", () => {
+    expect(canOverrideGearRequest(["owner"])).toBe(true);
+    expect(canOverrideGearRequest(["manager"])).toBe(true);
+    expect(canOverrideGearRequest(["instructor"])).toBe(true);
+    // Wider than canConfigureTrips on purpose: a divemaster sizes divers.
+    expect(canOverrideGearRequest(["divemaster"])).toBe(true);
+    expect(canConfigureTrips(["divemaster"])).toBe(false);
+  });
+
+  it("rejects deck crew and divers", () => {
+    for (const role of ["captain", "crew", "diver"] as const) {
+      expect(canOverrideGearRequest([role])).toBe(false);
+    }
+  });
+
+  it("rejects empty and undefined roles", () => {
+    expect(canOverrideGearRequest([])).toBe(false);
+    expect(canOverrideGearRequest(undefined)).toBe(false);
   });
 });
