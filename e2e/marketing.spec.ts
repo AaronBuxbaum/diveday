@@ -79,7 +79,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // The scope table is the importer's honesty table — a claimed waiver
   // acceptance is trusted, medical clearance included, and marked imported.
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
-  await expect(page.getByText("Never").first()).toBeVisible();
+  await expect(page.getByText("Stays behind").first()).toBeVisible();
 
   // Demo-before-trial funnel and cited competitor claims both land on the guide.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
@@ -166,10 +166,12 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // The scope table is the importer's honesty table — same safety spine.
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
 
-  // The owner-authorized free-import offer lands, phrased as a human commitment,
-  // with a real handoff: an email link the shop can act on.
-  await expect(page.getByRole("heading", { name: /we'll do it with you — free/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Email your spreadsheet to/ })).toHaveAttribute(
+  // The owner-authorized concierge switch offer lands, phrased as a human
+  // commitment, with a real handoff: an email link the shop can act on.
+  await expect(
+    page.getByRole("heading", { name: /switch you on — and off — ourselves/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /Email us at/ })).toHaveAttribute(
     "href",
     /^mailto:switch@dive\.day/,
   );
