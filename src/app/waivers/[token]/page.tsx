@@ -19,6 +19,7 @@ import {
   saveWaiverDraft,
 } from "@/db/waivers";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { emergencyContactSchema } from "@/lib/contact";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -36,11 +37,6 @@ const signatureSchema = z.object({
 const completeSignatureSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
   acknowledged: z.literal("on"),
-});
-
-const emergencyContactSchema = z.object({
-  emergencyContactName: z.string().trim().max(120).optional(),
-  emergencyContactPhone: z.string().trim().max(40).optional(),
 });
 
 /** Reads every question's yes/no answer for the presented questionnaire. */
