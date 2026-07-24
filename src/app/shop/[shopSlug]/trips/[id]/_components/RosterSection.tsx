@@ -79,6 +79,7 @@ export function RosterSection({
   markWaiverInPersonAction,
   markPaymentAction,
   removeBookingAction,
+  confirmIdentityAction,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -97,6 +98,7 @@ export function RosterSection({
   markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
+  confirmIdentityAction: (formData: FormData) => void;
 }) {
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
   // How many divers still have a waiver a staffer can send or resend — the
@@ -156,6 +158,9 @@ export function RosterSection({
                 ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
                 : [];
             const nitrox = nitroxByBooking.get(booking.id);
+            const identityUnconfirmed = Boolean(
+              readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
+            );
             return (
               <li
                 key={booking.id}
@@ -208,6 +213,23 @@ export function RosterSection({
                       </li>
                     ))}
                   </ul>
+                ) : null}
+
+                {/* This seat reused an existing diver's email under a different
+                    name (H-13). Staff verify it really is the same person before
+                    it can board on that person's certs/waiver — the one action
+                    that clears the identity_unconfirmed blocker above. */}
+                {identityUnconfirmed ? (
+                  <form action={confirmIdentityAction} className="mt-2">
+                    <input type="hidden" name="bookingId" value={booking.id} />
+                    <SubmitButton
+                      pendingLabel="Confirming…"
+                      confirmMessage={`Confirm this booking really is ${person.fullName}? Only do this once you’ve checked it’s the same person — not someone else sharing the email.`}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      Confirm this is {person.fullName}
+                    </SubmitButton>
+                  </form>
                 ) : null}
 
                 <div className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">

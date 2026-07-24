@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Twenty-four key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 96 screenshots per run
+ * Visual regression coverage (Argos). Twenty-five key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 100 screenshots per run
  * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 98 screenshots.
+ * via `capturePrint()`. That brings the run to 102 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -227,8 +227,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await capture(page, "diver-profile", scheme);
 
-        // A diver holding a lapsed card: the expired badge renders red and the
-        // card no longer counts as valid — the safety-relevant new state.
+        // A diver holding a card past its shop refresher-due date: the
+        // "refresher due" badge renders red and the card no longer counts as
+        // valid — the safety-relevant state (H-08: cards don't expire).
         await page.goto("/shop/blue-mantis/divers");
         await page
           .getByRole("row")
@@ -290,6 +291,28 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
+      });
+
+      // H-13: the roster's identity gate gets its own test so its capture never
+      // crowds the long staff-surfaces test's per-test time budget. A Night-trip
+      // seat booked through a shared inbox under a name that doesn't match the
+      // person on file shows the fail-closed "Confirm identity" affordance and
+      // blocker until staff vouch for it — a safety-critical state worth a baseline.
+      test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule");
+        await page
+          .locator("li")
+          .filter({ hasText: "Night Dive — City of Washington" })
+          .getByRole("link")
+          .click();
+        await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Guests" })
+          .click();
+        await page.waitForURL(/\/guests/);
+        await page.getByText("Identity unconfirmed").first().waitFor();
+        await capture(page, "trip-guests-identity", scheme);
       });
     });
   });

@@ -136,16 +136,17 @@ test("a disguised file is rejected by the server even though it claims an allowe
   );
 });
 
-test("an expired certification reads as expired and no longer counts as valid", async ({
+test("a certification past its refresher-due date reads as refresher due, not certified", async ({
   page,
 }) => {
-  // Yusuf Demir carries a verified card that lapsed weeks ago (see the seed).
+  // Yusuf Demir carries a verified card past its refresher-due date (see the seed).
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("link", { name: /Yusuf Demir/ }).click();
   await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
 
-  const expiredRow = page.locator("li").filter({ hasText: "expired" }).first();
-  await expect(expiredRow).toBeVisible();
-  // It reads as "expired", never "certified".
-  await expect(expiredRow).not.toContainText("certified");
+  // Real C-cards don't expire; a lapsed shop refresher-due date reads as
+  // "refresher due" (H-08), never as a still-valid "certified".
+  const refresherRow = page.locator("li").filter({ hasText: "refresher" }).first();
+  await expect(refresherRow).toBeVisible();
+  await expect(refresherRow).not.toContainText("certified");
 });
