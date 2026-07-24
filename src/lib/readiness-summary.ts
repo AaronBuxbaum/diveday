@@ -56,12 +56,15 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
       "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
   },
   under_minimum_age: {
-    // Never states the diver's age back to them, and never asserts they're too
-    // young: the date on file may simply be wrong, and this page can be read by
-    // a parent, the diver, or whoever holds the link.
+    // Deliberately word-for-word the `identity_unconfirmed` line. Anyone who
+    // can guess an email can book it onto a public course session and read the
+    // confirmation panel; naming minimum age here would hand them "is the
+    // holder of this address under N?" — the same oracle the booking refusal
+    // was pulled for, one step later. Distinguishable copy is the disclosure,
+    // so there must not be any. The shop sees the real reason.
     state: "waiting",
     detail:
-      "Your shop needs to check this course’s minimum age against the date of birth they have on file. Give them a call if you think it’s wrong.",
+      "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
   },
   waiver_not_sent: {
     // A waiver goes out the moment a diver joins, so this state is the rare

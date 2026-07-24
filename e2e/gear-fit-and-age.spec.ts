@@ -92,12 +92,9 @@ test.describe("staff", () => {
 });
 
 /**
- * The page half of ADR-0006's two layers for the H-06 gate. The server half —
- * `saveProfileAction` / `setNeedsStaffFitAction` re-checking live DB roles — is
- * unit-tested in `src/lib/authz.test.ts` and `src/db/rental-fit.test.ts`; this
- * asserts only what the deck crew's screen actually offers them. It reads and
- * never writes, so it can't perturb the seeded prep list the specs above and
- * the Argos baselines both render.
+ * Both layers of ADR-0006 for the H-06 gate: what the deck crew's screen
+ * offers, and what the server does when the screen is bypassed. The second is
+ * the one that matters — hiding a button is not authorization.
  */
 test.describe("deck crew", () => {
   test("a captain may raise the fit flag but not rewrite sizes or clear it", async ({ page }) => {
@@ -113,11 +110,38 @@ test.describe("deck crew", () => {
 
     // The already-flagged diver: clearing asserts "we can pack their stated
     // size after all", which is the judgement call, so the captain doesn't get
-    // it. An unattributed one-tap clear is how a diver ends up back in gear
-    // nobody re-checked.
+    // it.
     await goToDiver(page, DIVER_WITH_FIT);
     await expect(page.getByRole("button", { name: /Fit resolved/ })).toHaveCount(0);
     await expect(page.getByText("Clearing this is limited to")).toBeVisible();
+  });
+
+  test("the server refuses a captain's clear even when the button is bypassed", async ({
+    page,
+  }) => {
+    await signInAs(page, DEV_STAFF_LOGINS.captain);
+    await goToDiver(page, DIVER_WITH_FIT);
+    const flaggedHeading = page.getByRole("heading", { name: "Flagged for hands-on fitting" });
+    await expect(flaggedHeading).toBeVisible();
+
+    // The form is still on the page for a captain — only its submit button is
+    // withheld. Submitting it directly sends no `needed` field, which is
+    // exactly what a *clear* looks like. If the action trusted the rendered UI
+    // this would silently put the diver back on the list at a size the shop
+    // already said it was short of, with the attribution wiped in the same
+    // statement so nothing recorded that it happened.
+    await page.evaluate(() => {
+      const form = Array.from(document.querySelectorAll("form")).find((candidate) =>
+        candidate.textContent?.includes("Flagged for hands-on fitting"),
+      );
+      if (!form) throw new Error("the needs-staff-fit form is not on the page");
+      form.requestSubmit();
+    });
+
+    await expect(page.getByRole("status")).toContainText(
+      "Changing a diver's stated rental fit is limited to",
+    );
+    await expect(flaggedHeading).toBeVisible();
   });
 });
 

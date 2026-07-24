@@ -27,7 +27,7 @@ async function seededContext() {
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 
 async function bookVisitor(db: AppDb, shopId: string, tripId: string) {
-  return createBooking(db, { shopId, tripId, ...visitor });
+  return createBooking(db, { actor: "staff", shopId, tripId, ...visitor });
 }
 
 describe("createBooking (in-memory PGlite)", () => {
@@ -56,6 +56,7 @@ describe("createBooking (in-memory PGlite)", () => {
 
     await bookVisitor(db, shop.id, open.id);
     const second = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: night.id,
       fullName: "NORA QUINN",
@@ -79,8 +80,20 @@ describe("createBooking (in-memory PGlite)", () => {
   it("books multiple named divers together", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await createBookingParty(db, [
-      { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
-      { shopId: shop.id, tripId: open.id, fullName: "Sam Quinn", email: "sam@example.com" },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Nora Quinn",
+        email: "nora@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Sam Quinn",
+        email: "sam@example.com",
+      },
     ]);
     expect(outcome.ok).toBe(true);
     const roster = await getTripRoster(db, shop.id, open.id);
@@ -112,10 +125,22 @@ describe("createBooking (in-memory PGlite)", () => {
     const { db, shop, open } = await seededContext();
     const before = (await getTripRoster(db, shop.id, open.id)).length;
     const outcome = await createBookingParty(db, [
-      { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Nora Quinn",
+        email: "nora@example.com",
+      },
       // Same email as the first member → already_booked, so the first
       // member's insert must roll back too (all-or-nothing reservation).
-      { shopId: shop.id, tripId: open.id, fullName: "Nora Quinn", email: "nora@example.com" },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Nora Quinn",
+        email: "nora@example.com",
+      },
     ]);
     expect(outcome).toEqual({ ok: false, reason: "already_booked" });
     expect(await getTripRoster(db, shop.id, open.id)).toHaveLength(before);
@@ -173,6 +198,7 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
     const { db, shop, open } = await seededContext();
     const diver = await seedDiver(db, shop.id);
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       personId: diver.id,
@@ -192,6 +218,7 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
   it("rejects an unknown person id", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       personId: "00000000-0000-4000-8000-000000000000",
@@ -204,6 +231,7 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
     const diver = await seedDiver(db, shop.id);
     await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, diver.id));
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       personId: diver.id,
@@ -214,8 +242,14 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
   it("rejects re-booking the same trip by identity", async () => {
     const { db, shop, open } = await seededContext();
     const diver = await seedDiver(db, shop.id);
-    await createBooking(db, { shopId: shop.id, tripId: open.id, personId: diver.id });
+    await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: diver.id,
+    });
     const again = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       personId: diver.id,
@@ -227,6 +261,7 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
     const { db, shop, fullTrip } = await seededContext();
     const diver = await seedDiver(db, shop.id);
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: fullTrip.id,
       personId: diver.id,
@@ -259,6 +294,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
     if (!trip) throw new Error("trip missing");
     for (let seat = trip.booked; seat < trip.capacity; seat++) {
       const fill = await createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: open.id,
         fullName: `Fill Seat ${seat}`,
@@ -316,6 +352,7 @@ describe("createBooking identity safeguard (H-13)", () => {
 
     // Same person, different case and a middle initial, on another trip.
     const second = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: night.id,
       fullName: "Nora Q. Quinn",
@@ -334,6 +371,7 @@ describe("createBooking identity safeguard (H-13)", () => {
     // A different human on Nora's shared inbox books a second trip: reused
     // person, mismatched name — must not silently inherit her evidence.
     const shared = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: night.id,
       fullName: "Ben Quinn",
@@ -357,6 +395,7 @@ describe("createBooking identity safeguard (H-13)", () => {
     });
     if (!diver) throw new Error("diver setup failed");
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       personId: diver.id,

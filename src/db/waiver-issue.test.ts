@@ -13,6 +13,7 @@ async function seededBooking(email: string | null = "diver@example.com") {
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const outcome = await createBooking(db, {
+    actor: "staff",
     shopId: shop.id,
     tripId: trip.id,
     fullName: "Nora Quinn",
@@ -98,12 +99,14 @@ describe("issueWaiversForBookings (bulk roster send)", () => {
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("demo trip missing");
     const a = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: trip.id,
       fullName: "Ann Able",
       email: "ann@example.com",
     });
     const b = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: trip.id,
       fullName: "Ben Boyd",

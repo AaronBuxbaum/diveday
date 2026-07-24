@@ -45,6 +45,7 @@
  * "split the file" case, not a reason to remove the atomic single-transaction
  * commit in src/db/import.ts.
  */
+import { isPlausibleDateOfBirth } from "./age";
 import { isValidCalendarDate } from "./calendar-date";
 
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
@@ -73,6 +74,7 @@ export const IMPORT_FIELDS = [
   "full_name",
   "email",
   "phone",
+  "date_of_birth",
   "emergency_contact_name",
   "emergency_contact_phone",
   "certification_agency",
@@ -114,6 +116,7 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
   ],
   email: ["email", "email_address", "e_mail", "mail"],
   phone: ["phone", "phone_number", "mobile", "mobile_phone", "cell", "telephone", "phone_1"],
+  date_of_birth: ["date_of_birth", "dob", "birth_date", "birthdate", "born", "date_of_birth_dob"],
   emergency_contact_name: [
     "emergency_contact_name",
     "emergency_contact",
@@ -385,6 +388,8 @@ export type PreparedRow = {
   fullName: string;
   email: string | null;
   phone: string | null;
+  /** Only ever a real, plausible calendar date — an unusable one is dropped with a warning. */
+  dateOfBirth: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   cert: PreparedCert | null;
@@ -669,6 +674,23 @@ export function prepareContactImport(text: string): PreparedImport {
       });
     }
 
+    // Date of birth, if the file carries one. Dropped rather than guessed when
+    // it isn't a real calendar date or isn't plausible: the column feeds a
+    // course minimum-age gate, and a garbage year there is worse than the blank
+    // the gate already fails open on.
+    let dateOfBirth: string | null = null;
+    const dobRaw = clean(at(cells, "date_of_birth"));
+    if (dobRaw) {
+      if (isValidCalendarDate(dobRaw) && isPlausibleDateOfBirth(dobRaw)) {
+        dateOfBirth = dobRaw;
+      } else {
+        issues.push({
+          level: "warning",
+          message: `Date of birth "${dobRaw}" isn't a plausible calendar date (expected YYYY-MM-DD, 1900 or later, not in the future) — imported without it.`,
+        });
+      }
+    }
+
     let action: PreparedRow["action"] = "import";
     if (!fullName) {
       issues.push({ level: "error", message: "No name — row skipped." });
@@ -696,6 +718,7 @@ export function prepareContactImport(text: string): PreparedImport {
       fullName,
       email,
       phone: clean(at(cells, "phone")),
+      dateOfBirth,
       emergencyContactName: clean(at(cells, "emergency_contact_name")),
       emergencyContactPhone: clean(at(cells, "emergency_contact_phone")),
       cert: action === "import" ? cert : null,

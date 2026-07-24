@@ -46,10 +46,13 @@ export type RentalFit = {
   weightPreference: string | null;
   /**
    * Set when staff couldn't fill a requested size and flagged the diver for
-   * hands-on fitting instead (H-06). Their sized kit drops off the packing
-   * lines — packing a size nobody chose is exactly what this state exists to
-   * prevent — and they are named separately so the fitting actually happens.
-   * Tanks still count: those aren't sized, and a diver never loses their gas.
+   * hands-on fitting instead (H-06). Their pieces stay on the packing lines
+   * with the count intact — dropping them arrives a BCD short with nothing to
+   * fit them from — but a *sized* piece carries no size, because packing a
+   * size nobody chose is exactly what this state exists to prevent. Unsized
+   * kit (regulator, computer, GoPro), weights, and tanks are untouched: none
+   * has a stock size to be short of, and a diver never loses life support or
+   * gas over a wetsuit.
    */
   needsStaffFitAt?: Date | null;
   needsStaffFitNote?: string | null;
@@ -107,12 +110,21 @@ export type DivePrepChecklist = {
   diversWithoutFit: string[];
   /**
    * Divers whose stated size couldn't be filled, flagged for hands-on fitting
-   * (H-06). Their kit is deliberately absent from `lines` — fit them from what
-   * is actually aboard rather than packing against a size the shop is short of.
+   * (H-06). Their pieces stay on `lines` with the count intact and the size
+   * blanked — fit them from what is actually aboard rather than packing
+   * against a size the shop is short of.
    */
   diversNeedingStaffFit: {
     fullName: string;
     note: string | null;
+    /**
+     * What they asked for, e.g. "BCD L, wetsuit M". The person doing the
+     * check-in fit is usually the captain, who can't edit the fit and now
+     * sees no size anywhere on the packing line — without this, "bring a
+     * range in their band" means starting from scratch on a moving dock.
+     * It is a starting point, not an allocation.
+     */
+    statedSizes: string | null;
     /**
      * Whole days since the flag was raised. A shortage is a fact about one
      * day, so an old flag is a prompt to re-ask the diver rather than a
@@ -180,6 +192,20 @@ function rentedItems(fit: RentalFit): PrepItem[] {
       : { kind, size: size(value), fitAtCheckIn: false };
   /** A piece with no size at all; a flag never changes what to pack. */
   const unsized = (kind: RentalItemKind): PrepItem => ({ kind, size: null, fitAtCheckIn: false });
+  /**
+   * A piece that records a value but has no stock *size* to be short of, so
+   * the flag leaves it alone. Weights are the case: lead is bulk stock in 2 lb
+   * increments — a shop is never "out of 12 lb" — and usual weighting is the
+   * most safety-relevant number in the fit. Under-weighting is a diver who
+   * can't hold a safety stop; over-weighting is an over-inflated BCD and a bad
+   * ascent. Blanking it because there's no L BCD trades a real number for
+   * nothing, and "bring a range in their band" is meaningless applied to lead.
+   */
+  const stated = (kind: RentalItemKind, value: string | null): PrepItem => ({
+    kind,
+    size: size(value),
+    fitAtCheckIn: false,
+  });
 
   const items: PrepItem[] = [];
   if (fit.rentsBcd) items.push(sized("bcd", fit.bcdSize));
@@ -189,10 +215,27 @@ function rentedItems(fit: RentalFit): PrepItem[] {
     items.push(sized("boots", fit.bootSize));
   }
   if (fit.rentsMaskFins) items.push(sized("mask_fins", fit.finSize));
-  if (fit.rentsWeights) items.push(sized("weights", fit.weightPreference));
+  if (fit.rentsWeights) items.push(stated("weights", fit.weightPreference));
   if (fit.rentsDiveComputer) items.push(unsized("dive_computer"));
   if (fit.rentsGopro) items.push(unsized("gopro"));
   return items;
+}
+
+/**
+ * The sizes a flagged diver asked for, as one line: "BCD L, wetsuit M, boots 10".
+ * Only the pieces whose size the flag blanks on the packing line — the fitter
+ * already sees everything else there. Null when nothing sized was recorded,
+ * which is its own useful signal: there is no starting point to work from.
+ */
+function statedSizeSummary(fit: RentalFit): string | null {
+  const parts: string[] = [];
+  if (fit.rentsBcd && size(fit.bcdSize)) parts.push(`BCD ${size(fit.bcdSize)}`);
+  if (fit.rentsWetsuit) {
+    if (size(fit.wetsuitSize)) parts.push(`wetsuit ${size(fit.wetsuitSize)}`);
+    if (size(fit.bootSize)) parts.push(`boots ${size(fit.bootSize)}`);
+  }
+  if (fit.rentsMaskFins && size(fit.finSize)) parts.push(`fins ${size(fit.finSize)}`);
+  return parts.length > 0 ? parts.join(", ") : null;
 }
 
 /** A diver breathes enriched air only while their card is verified. */
@@ -242,6 +285,7 @@ export function buildDivePrepChecklist(input: {
       diversNeedingStaffFit.push({
         fullName: diver.fullName,
         note: diver.fit.needsStaffFitNote?.trim() || null,
+        statedSizes: statedSizeSummary(diver.fit),
         flaggedDaysAgo: Math.max(
           0,
           Math.floor((now.getTime() - diver.fit.needsStaffFitAt.getTime()) / DAY_MS),

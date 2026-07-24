@@ -94,8 +94,20 @@ async function checkoutContext() {
   });
   const reef = await pricedReefTrip(db, shop.id);
   const party = await createBookingParty(db, [
-    { shopId: shop.id, tripId: reef.id, fullName: "Pat Party", email: "pat@example.com" },
-    { shopId: shop.id, tripId: reef.id, fullName: "Sam Second", email: "sam@example.com" },
+    {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: reef.id,
+      fullName: "Pat Party",
+      email: "pat@example.com",
+    },
+    {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: reef.id,
+      fullName: "Sam Second",
+      email: "sam@example.com",
+    },
   ]);
   if (!party.ok) throw new Error(`party booking failed: ${party.reason}`);
   const bookingIds = party.bookings.map((b) => b.bookingId);

@@ -35,6 +35,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
   it("admits an uncertified participant to an instructor-staffed Discover Scuba session", async () => {
     const { db, shop, discover } = await courseContext();
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: discover.id,
       fullName: "Nora Quinn",
@@ -48,6 +49,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     await db.delete(tripAssignments).where(eq(tripAssignments.tripId, discover.id));
     await expect(
       createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: discover.id,
         fullName: "Nora Quinn",
@@ -84,6 +86,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
     for (let i = 0; i < 8; i++) {
       const outcome = await createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: `Ratio Diver ${i}`,
@@ -96,6 +99,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     // the trip's own capacity (20) still has room.
     await expect(
       createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: "Ratio Diver 9",
@@ -140,6 +144,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     // the ratio gate — confirming the ratio cap is scoped to entry-level only.
     for (let i = 0; i < 9; i++) {
       const outcome = await createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: `AOW Ratio Diver ${i}`,
@@ -197,7 +202,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       const { db, shop, trip } = await ageContext(15, startsAt);
       const person = await diverWithDob(db, shop.id, null, "no-dob@example.com");
       await expect(
-        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+        createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+        }),
       ).resolves.toMatchObject({ ok: true });
     });
 
@@ -206,6 +216,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       const { db, shop, trip } = await ageContext(15, startsAt);
       await expect(
         createBooking(db, {
+          actor: "staff",
           shopId: shop.id,
           tripId: trip.id,
           fullName: "Walk In",
@@ -222,7 +233,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, tenYearsAgo, "too-young@example.com");
       await expect(
-        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+        createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+        }),
       ).resolves.toEqual({ ok: false, reason: "course_min_age" });
     });
 
@@ -234,7 +250,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, thirtyYearsAgo, "old-enough@example.com");
       await expect(
-        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+        createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+        }),
       ).resolves.toMatchObject({ ok: true });
     });
 
@@ -252,7 +273,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
       // Staff path still refuses...
       await expect(
-        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+        createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+        }),
       ).resolves.toEqual({ ok: false, reason: "course_min_age" });
       // ...the public path books, and the under-age seat is caught by the
       // readiness blocker instead of by a refusal that leaks.
@@ -276,7 +302,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, turns15Soon, "birthday-first@example.com");
       await expect(
-        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+        createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+        }),
       ).resolves.toMatchObject({ ok: true });
     });
   });
@@ -319,6 +350,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     // PADI figure, but this course isn't PADI's, so only capacity (10) binds.
     for (let i = 0; i < 10; i++) {
       const outcome = await createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: `SSI Ratio Diver ${i}`,
@@ -328,6 +360,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     }
     await expect(
       createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: "SSI Ratio Diver 10",
@@ -363,6 +396,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
     await expect(
       createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: session.id,
         fullName: "Nora Quinn",
@@ -372,6 +406,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
     await expect(
       createBooking(db, {
+        actor: "staff",
         shopId: shop.id,
         tripId: session.id,
         fullName: "Priya Sharma",

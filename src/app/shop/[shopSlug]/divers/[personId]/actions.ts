@@ -31,7 +31,7 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { isPlausibleDateOfBirth } from "@/lib/age";
-import { isStaff } from "@/lib/authz";
+import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -355,9 +355,15 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
 
 /**
  * Flag (or clear) a diver for hands-on fitting at check-in — the H-06 fallback
- * for a size the shop can't fill. Open to every staff member on purpose: it is
- * the boat's own work, and it escalates to a human rather than overwriting the
- * diver's stated request, so it never needs the override gate above.
+ * for a size the shop can't fill.
+ *
+ * The two directions carry different authority, so they gate differently even
+ * though one action serves both. **Raising** is open to every staff member: it
+ * is the boat's own work, and it escalates to a human rather than overwriting
+ * the diver's stated request. **Clearing** asserts "we can pack their stated
+ * size after all" — the judgement call — so it takes the override gate. The
+ * clear direction is the *absence* of a form field, which is exactly why this
+ * has to be checked here and not left to the button the page renders.
  */
 export async function setNeedsStaffFitAction(
   shopSlug: string,
@@ -367,9 +373,9 @@ export async function setNeedsStaffFitAction(
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const db = await getDb();
-  // Re-read live roles like every other mutation on this page. Flagging is open
-  // to all *staff*, but it suppresses a diver's kit from the packing list, so a
-  // demoted or disabled account must not keep doing it on a stale JWT.
+  // Re-read live roles like every other mutation on this page. Even the open
+  // direction suppresses a size on the packing list, so a demoted or disabled
+  // account must not keep doing it on a stale JWT.
   const roles = await loadActiveStaffRoles(db, staff.user.shopId, staff.user.personId);
   if (!roles || !isStaff(roles)) {
     revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
@@ -378,6 +384,15 @@ export async function setNeedsStaffFitAction(
   const parsed = needsStaffFitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
   const needed = parsed.data.needed === "on";
+  // Hiding the button is the page layer; this is the server layer ADR-0006
+  // asks for. Without it a captain clears a flag by submitting the form with
+  // no `needed` field, and the diver goes back on the list at a size the shop
+  // already said it was short of — with the attribution wiped in the same
+  // statement, so nothing records that it happened.
+  if (!needed && !canOverrideGearRequest(roles)) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
+    return;
+  }
   const saved = await setNeedsStaffFit(db, {
     shopId: staff.user.shopId,
     personId,
@@ -418,6 +433,7 @@ export async function bookActivityAction(shopSlug: string, personId: string, for
   const current = await getDiverProfile(await getDb(), staff.user.shopId, personId);
   if (!tripId || !current?.person.email) redirect(`${base}?notice=booking-invalid`);
   const result = await createBooking(await getDb(), {
+    actor: "staff",
     shopId: staff.user.shopId,
     tripId,
     fullName: current.person.fullName,

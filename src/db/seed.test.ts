@@ -31,6 +31,7 @@ describe("resetDemoSchedule", () => {
     const open = before.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       fullName: "Walk-Up Wanda",
@@ -91,6 +92,7 @@ describe("resetDemoSchedule", () => {
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       fullName: "Capability Cameron",
@@ -127,6 +129,7 @@ describe("resetDemoSchedule", () => {
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       fullName: "Checkout Chris",
@@ -185,6 +188,7 @@ describe("resetDemoSchedule", () => {
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
     const outcome = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: open.id,
       fullName: "Login Logan",

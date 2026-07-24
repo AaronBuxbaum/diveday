@@ -35,11 +35,22 @@ reads "Fit at check-in" with the count intact, and they are also named in a
 `diversNeedingStaffFit` bucket that explains it. This is deliberately not "drop their kit": the
 count is the number the packer actually loads from, so removing the row loads the boat one BCD
 short and the crew arrives with nothing to fit them from. Unsized pieces — regulator, dive
-computer — are untouched by the flag entirely; a regulator has no size to be wrong about, and
-leaving life support ashore to avoid packing a wrong-size wetsuit is the strictly worse trade.
+computer, GoPro — are untouched by the flag entirely; a regulator has no size to be wrong about,
+and leaving life support ashore to avoid packing a wrong-size wetsuit is the strictly worse trade.
 (A `dive-domain-expert` review caught the first cut doing exactly that.)
 
+**Weights are untouched too**, though they do record a value. Lead is bulk stock in 2 lb
+increments — a shop is never "out of 12 lb" — so there is no stock size to be short of, and usual
+weighting is the most safety-relevant number in the whole fit: under-weighting is a diver who
+can't hold a safety stop, over-weighting is an over-inflated BCD and a bad ascent. Blanking it
+because there's no L BCD trades a real number for nothing.
+
 Their **tanks still count**. Gas isn't sized, and a diver never loses their air over a wetsuit.
+
+The check-in bucket carries **the sizes they asked for**, not just their name. The person doing
+the fit is usually the captain, who by design can't edit the fit and now sees no size on the
+packing line — "bring a range in their band" is an empty instruction if the band appears nowhere
+in the app.
 
 `rentalFitLine` — the one-line fit on rosters and manifests — gains a fourth state,
 `needs_staff_fit`, deliberately distinct from both "own kit" and "not asked". Collapsing it into
@@ -58,7 +69,10 @@ answer different questions and should not be collapsed.
 
 Enforced in both layers per ADR-0006: `saveProfileAction` re-checks against live roles
 (`canPersonOverrideGearRequest`), and the diver page renders the fit read-only for staff without
-it.
+it. `setNeedsStaffFitAction` applies the same gate to the *clear* direction. That one is easy to
+get wrong and was wrong in the first cut: a clear is the **absence** of a form field, so hiding
+the button changes nothing about what the action receives, and both review passes found a captain
+could clear any flag by submitting the form directly. Hiding a control is not authorization.
 
 Two boundaries matter more than they first look:
 
@@ -89,6 +103,11 @@ a course's existing `minimum_age` is enforced **only when a date is on file**:
   proves the submitter is the person on file for the email — the same uncertainty
   `identityUnconfirmedAt` exists for (H-13) — so it would judge a stranger by someone else's
   record. A `security-reviewer` pass caught this as an exploitable oracle in the first cut.
+- **The diver's own checklist never names age either.** `under_minimum_age` is filed under
+  `setup` and worded identically to `identity_unconfirmed`, so it collapses into the same generic
+  "your shop is finishing a check" line. Anyone who can guess an email can book it onto a public
+  session and read the confirmation panel; distinguishable copy there would be the same oracle one
+  step later. Staff see the real reason, with both numbers.
 - **Age is therefore also a readiness blocker** (`under_minimum_age`), re-evaluated on every read
   rather than once at enrollment. That is what makes the public path safe to let through, and it
   closes a second gap the domain review raised: a booking-time-only gate is inert for every diver
@@ -135,9 +154,13 @@ inversion buried in arithmetic.
   check-in" section explains the gap. Tank counts are unaffected.
 - Deck crew keep every action they need at the dock (record a first fit, flag for fitting) and
   lose only the ability to rewrite a request already on file.
-- The export bundle now carries `date_of_birth` and the two `needs_staff_fit_*` columns; without
-  them a shop that exported and re-imported silently lost every flag and every birth date — and
-  the latter is what H-08's fail-closed upgrade path depends on.
+- The export bundle now carries `date_of_birth`, `dive_insurance` (a pre-existing omission a new
+  column-level coverage test caught), and the three `needs_staff_fit_*` columns; without them a
+  shop that exported and re-imported silently lost every flag and every birth date — and the
+  latter is what H-08's fail-closed upgrade path depends on. The contact importer reads
+  `date_of_birth` back, dropping an implausible one with a warning rather than feeding a garbage
+  year to an age gate. The bundle now contains minors' birth dates, which is within the stated
+  posture of `canExportShopData` but worth naming.
 - H-06 is fully implemented. H-08's minimum-age piece is now enforced-when-known; the Junior-tier
   *depth* ceilings (12 m / 18 m / 21 m by age band) remain documented-but-unenforced, since those
   need a numeric site depth DiveDay still doesn't store — see
