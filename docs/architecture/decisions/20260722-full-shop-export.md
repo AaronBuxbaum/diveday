@@ -60,5 +60,10 @@ read API reuse; tests can unzip and assert the exact bundle. Hard: every schema 
 export decision to make — the schema-coverage test in `src/db/export.test.ts` enumerates every
 table and fails until a new one is exported, folded into another file, or added to the explicit
 exclusion list. Commits us to fflate; escape hatch is swapping the ZIP seam in
-`src/lib/export.ts` (one function), cost near zero. Revisit CSV scope when card-image storage
-moves beyond URL references, and revisit the owner/manager gate if finer role permissions land.
+`src/lib/export.ts` (one function), cost near zero.
+> Revised by [20260724-export-bundled-photos](20260724-export-bundled-photos.md): the bundle now
+> fetches and includes every DiveDay-stored image as a real file under `photos/`, not only a URL
+> reference — the "revisit CSV scope" note below is resolved for DiveDay's own storage. A URL never
+> stored through DiveDay (external or a bundled template asset) still exports as a reference only.
+
+Revisit the owner/manager gate if finer role permissions land.

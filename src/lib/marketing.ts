@@ -74,7 +74,7 @@ export const earlyAccessPriceAmount = earlyAccessPrice.price.replace(/[^\d.]/g, 
  */
 export const fullShopExport = {
   claim:
-    "Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard.",
+    "Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard, with every stored photo (card images, dive-site pictures, trip recaps) included as a real file, not just a link.",
   terms:
     "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
 } as const;

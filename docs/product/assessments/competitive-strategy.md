@@ -147,6 +147,10 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    **Imported certifications land as *claimed*, never *verified*** — the verified/claimed
    distinction we already model is exactly what makes a fast import honest instead of dangerous;
    staff verify at first contact, same as today. Medical flags import fail-closed.
+   *Updated 2026-07-24:* a row explicitly claiming a prior waiver acceptance is now trusted (medical
+   clearance included) and written as a distinctly-marked `imported` record — a product-owner
+   decision (H-17) that narrows the "medical never imports" rule above; see
+   [20260724-import-waiver-acceptance](../../architecture/decisions/20260724-import-waiver-acceptance.md).
 3. **Migration guides as public pages** *(S, marketing)*. "Switching from DiveShop360," "…from
    EVE" (the forced-migration pool), "…from DiveAdmin," "…from Smartwaiver," "…from
    FareHarbor/Rezdy." Each: exact click-path to the incumbent's own export, our scope table, the

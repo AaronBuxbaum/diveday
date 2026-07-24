@@ -75,10 +75,14 @@ new domain concept, define it here in the same PR.
   dive-site library and course catalog — soft-archived history included, credentials never. Leads
   with `contacts.csv`, a flat one-row-per-person file (names pre-split, best card with its
   verification status, nitrox flag, sizes) shaped for another system's import wizard, so leaving
-  never means hand-merging CSVs. Gated to owner/manager because it carries the roster's complete
-  medical evidence, which staff surfaces never show in full. The "leave anytime" half of the
-  data-portability strategy; its CSV schemas are the contract the planned importer and read API
-  reuse. See [20260722-full-shop-export](../architecture/decisions/20260722-full-shop-export.md).
+  never means hand-merging CSVs. Every image URL any CSV references that DiveDay's own storage
+  actually holds is also included as a real file under `photos/`, at the URL's own path, so a
+  photo survives after the account closes — a pasted external link or bundled template asset stays
+  a reference only (20260724-export-bundled-photos). Gated to owner/manager because it carries the
+  roster's complete medical evidence, which staff surfaces never show in full. The "leave anytime"
+  half of the data-portability strategy; its CSV schemas are the contract the planned importer and
+  read API reuse. See [20260722-full-shop-export](../architecture/decisions/20260722-full-shop-export.md)
+  and [20260724-export-bundled-photos](../architecture/decisions/20260724-export-bundled-photos.md).
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
   route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
   attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
@@ -179,6 +183,17 @@ new domain concept, define it here in the same PR.
   was reviewed and no answer needs physician sign-off. A flagged medical must instead go through the
   diver-facing link, which captures the questionnaire and routes to review — the medical block is
   never a checkbox.
+- **Imported waiver acceptance** — a contact-import row explicitly claiming a diver already accepted a
+  waiver (medical clearance included) at a prior shop. DiveDay trusts that claim and writes the same
+  immutable completed record any signature produces, marked `signatureMethod: "imported"` so it is
+  never confused with a release DiveDay itself watched a diver sign or a staff-attested paper copy.
+  Unlike the paper path, **no staff attestation is required** — a deliberate, knowingly-made
+  product-owner decision (H-17 in human-decisions.md) that reverses the contact importer's original
+  fail-closed medical rule. It carries the diver's real acceptance date when the row gives one (still
+  subject to the one-year signature-validity window), snapshots the shop's *current* template for
+  reference only (the diver never agreed to that text), and is never fabricated from a source
+  "verified" flag alone — it requires an explicit `waiver_accepted` claim. See
+  [20260724-import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md).
 - **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
   shop's **jurisdiction** (RSTC/WRSTC by default, or a UK variant). Defined as data in
   `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version it was answered

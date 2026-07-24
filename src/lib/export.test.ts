@@ -1,6 +1,14 @@
 import { strFromU8, unzipSync } from "fflate";
-import { describe, expect, it } from "vitest";
-import { buildCsv, buildExportBundle, csvCell, exportFileName, zipExportBundle } from "./export";
+import { describe, expect, it, vi } from "vitest";
+import {
+  buildCsv,
+  buildExportBundle,
+  csvCell,
+  exportFileName,
+  exportPhotoPath,
+  fetchExportPhotos,
+  zipExportBundle,
+} from "./export";
 
 describe("csv serialization", () => {
   it("escapes commas, quotes, and line breaks per RFC 4180", () => {
@@ -69,6 +77,7 @@ describe("export bundle", () => {
       },
       { file: "trips.csv", header: ["id"], rows: [], note: "Scheduled trips." },
     ],
+    photoUrls: [],
   };
   const now = new Date("2026-07-22T14:30:00Z");
 
@@ -100,5 +109,54 @@ describe("export bundle", () => {
     expect(strFromU8(unzipped["people.csv"])).toBe(
       'id,full_name\r\np1,Priya Sharma\r\np2,"Sean O\'Malley, Jr."\r\n',
     );
+  });
+
+  it("zips a Uint8Array photo file alongside the CSVs unmodified", () => {
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const files = [
+      ...buildExportBundle(input, now),
+      { name: "photos/cards/x.jpg", content: bytes },
+    ];
+    const unzipped = unzipSync(zipExportBundle(files));
+    expect(unzipped["photos/cards/x.jpg"]).toEqual(bytes);
+  });
+});
+
+describe("exportPhotoPath", () => {
+  it("mirrors a managed blob URL's pathname under photos/", () => {
+    expect(exportPhotoPath("https://xyz.public.blob.vercel-storage.com/recap/ab12-photo.jpg")).toBe(
+      "photos/recap/ab12-photo.jpg",
+    );
+  });
+});
+
+describe("fetchExportPhotos", () => {
+  const managed = "https://xyz.public.blob.vercel-storage.com/cards/a.jpg";
+
+  it("fetches only managed-blob URLs, dedupes, and never touches an external or root-relative link", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(new Uint8Array([9, 9]).buffer, { status: 200 }),
+    );
+    const photos = await fetchExportPhotos(
+      [managed, managed, "https://evil.example.com/x.jpg", "/dive-sites/default.jpg"],
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledWith(managed, expect.anything());
+    expect(photos).toEqual([{ path: "photos/cards/a.jpg", bytes: new Uint8Array([9, 9]) }]);
+  });
+
+  it("drops a photo that fails to fetch rather than failing the whole export", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 500 }));
+    const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch);
+    expect(photos).toEqual([]);
+  });
+
+  it("drops a photo whose fetch throws (network error, abort)", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch);
+    expect(photos).toEqual([]);
   });
 });

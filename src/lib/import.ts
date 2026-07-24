@@ -14,9 +14,18 @@
  *   - We never fabricate a card number. No number on the row → no card, and we
  *     say so — a made-up identifier would collide, and a card with no evidence
  *     is worse than no card.
- *   - Medical and health answers are never imported (fail-closed). A migrating
- *     shop collects a fresh signed waiver in DiveDay; a "cleared" flag from
- *     another system is not clearance here.
+ *   - A row that says the diver already accepted a waiver at the prior shop is
+ *     trusted here too (ADR 20260724-import-waiver-acceptance, product-owner
+ *     decision recorded in docs/product/human-decisions.md) — including its
+ *     medical clearance. This is a deliberate reversal of the original
+ *     fail-closed rule: the resulting record satisfies the waiver gate exactly
+ *     like any other completed record, but is marked `imported` everywhere it
+ *     shows so it is never confused with a release DiveDay itself watched a
+ *     diver sign or a staff-witnessed paper copy.
+ *   - Structured medical *answers* (individual questionnaire responses) are
+ *     never imported and never fabricated — there is no source shape that
+ *     maps onto this shop's own questionnaire. Only the accept/no-review-needed
+ *     outcome is trusted, per the row above.
  *   - Enriched-air is a claim, not a fill authorization — a nitrox card imports
  *     pending like any other, and only against a real card number.
  *
@@ -36,6 +45,8 @@
  * "split the file" case, not a reason to remove the atomic single-transaction
  * commit in src/db/import.ts.
  */
+import { isValidCalendarDate } from "./calendar-date";
+
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 export const MAX_IMPORT_ROWS = 5_000;
 export const MAX_IMPORT_COLUMNS = 40;
@@ -74,6 +85,11 @@ export const IMPORT_FIELDS = [
   "wetsuit_size",
   "boot_size",
   "fin_size",
+  "waiver_accepted",
+  "waiver_signed_at",
+  "waiver_source_name",
+  "waiver_document_url",
+  "medical_document_url",
 ] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -154,6 +170,44 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
   wetsuit_size: ["wetsuit_size", "wetsuit", "suit_size", "exposure_suit"],
   boot_size: ["boot_size", "boot", "boots"],
   fin_size: ["fin_size", "fin", "fins"],
+  waiver_accepted: [
+    "waiver_accepted",
+    "waiver_signed",
+    "waiver_on_file",
+    "liability_release_signed",
+    "release_signed",
+    "signed_waiver",
+    "waiver_complete",
+  ],
+  waiver_signed_at: [
+    "waiver_signed_at",
+    "waiver_date",
+    "release_signed_at",
+    "waiver_signature_date",
+    "signed_date",
+    "date_signed",
+  ],
+  waiver_source_name: [
+    "waiver_source_name",
+    "waiver_source",
+    "prior_shop",
+    "previous_shop",
+    "source_shop",
+    "imported_from",
+  ],
+  waiver_document_url: [
+    "waiver_document_url",
+    "waiver_scan_url",
+    "waiver_file_url",
+    "waiver_pdf_url",
+    "signed_waiver_url",
+  ],
+  medical_document_url: [
+    "medical_document_url",
+    "medical_history_url",
+    "medical_scan_url",
+    "medical_form_url",
+  ],
 };
 
 /**
@@ -210,15 +264,16 @@ export const IMPORT_HONESTY_TABLE: {
     detail: "Everyone imports as a diver. Staff roles and logins are never granted by import.",
   },
   {
-    what: "Medical & health history",
-    scope: "never",
+    what: "Signed waivers & medical clearance",
+    scope: "partial",
     detail:
-      "Never imported. A cleared flag from another system is not clearance here — collect a fresh signed waiver in DiveDay.",
+      "When a row says the diver already accepted a waiver at the prior shop, DiveDay trusts it — including its medical clearance — and the diver is not asked to sign again. The record is marked imported everywhere staff see it, snapshots your shop's current release for reference only (the diver did not agree to that exact text), and is dated to the acceptance date the row gives (or the import date if it doesn't). Individual medical answers are never reconstructed — only the accept/no-review-needed outcome carries over. This is a deliberate policy choice; see the imported-waiver ADR.",
   },
   {
-    what: "Signed waivers",
-    scope: "never",
-    detail: "Never imported. A waiver is evidence tied to your templates; it is re-signed here.",
+    what: "Waiver / medical documents",
+    scope: "partial",
+    detail:
+      "A row's waiver_document_url / medical_document_url is fetched once and re-stored in DiveDay's own storage for audit, the same way a pasted card photo is. Only image files (JPEG/PNG/WebP/HEIC, 5 MB max) are supported this way — a PDF link will not attach; keep the original on file elsewhere.",
   },
   {
     what: "Card on file / payment",
@@ -309,6 +364,21 @@ export type ImportIssue = { level: "error" | "warning" | "info"; message: string
 export type PreparedCert = { agency: ImportAgency; level: ImportLevel; identifier: string };
 export type PreparedNitrox = { agency: ImportAgency; identifier: string };
 
+/**
+ * A trusted claim that the diver already accepted a waiver (and its medical
+ * clearance) at a prior shop (ADR 20260724-import-waiver-acceptance).
+ * `signedAt` is a validated calendar date when the row gives one; otherwise
+ * the commit stamps the import time instead of guessing one. The document
+ * URLs are raw, staff-pasted text at this stage — `src/db/import.ts` fetches
+ * and re-stores them (or drops them) before anything is written.
+ */
+export type PreparedWaiver = {
+  signedAt: string | null;
+  sourceLabel: string | null;
+  documentUrl: string | null;
+  medicalDocumentUrl: string | null;
+};
+
 export type PreparedRow = {
   /** 1-based row number in the file body (header is not counted). */
   rowNumber: number;
@@ -325,6 +395,7 @@ export type PreparedRow = {
     bootSize: string | null;
     finSize: string | null;
   };
+  waiver: PreparedWaiver | null;
   /** "import" rows are written; "skip" rows never touch the database. */
   action: "import" | "skip";
   issues: ImportIssue[];
@@ -343,6 +414,7 @@ export type PreparedImport = {
     skipped: number;
     withCard: number;
     withNitrox: number;
+    withWaiver: number;
   };
   /** Set when the file has no header row, or no recognizable identity column. */
   fatal: string | null;
@@ -397,7 +469,7 @@ export function prepareContactImport(text: string): PreparedImport {
     unmappedColumns: [],
     ignoredMedicalColumns: [],
     rows: [],
-    totals: { total: 0, importable: 0, skipped: 0, withCard: 0, withNitrox: 0 },
+    totals: { total: 0, importable: 0, skipped: 0, withCard: 0, withNitrox: 0, withWaiver: 0 },
     fatal: null,
   };
   const byteLength = new TextEncoder().encode(text).length;
@@ -565,6 +637,38 @@ export function prepareContactImport(text: string): PreparedImport {
       finSize: clean(at(cells, "fin_size")),
     };
 
+    // Trusted per row (ADR 20260724-import-waiver-acceptance): a truthy
+    // waiver_accepted claims the diver already accepted a waiver — and its
+    // medical clearance — at the prior shop. A signed date is kept only when
+    // it is a real calendar date; an unparseable one is dropped with a note
+    // rather than silently misdating legal evidence.
+    let waiver: PreparedWaiver | null = null;
+    if (isTrueish(at(cells, "waiver_accepted"))) {
+      const signedAtRaw = clean(at(cells, "waiver_signed_at"));
+      let signedAt: string | null = null;
+      if (signedAtRaw) {
+        if (isValidCalendarDate(signedAtRaw)) {
+          signedAt = signedAtRaw;
+        } else {
+          issues.push({
+            level: "warning",
+            message: `Waiver accepted date "${signedAtRaw}" isn't a real calendar date (expected YYYY-MM-DD) — imported dated to today instead.`,
+          });
+        }
+      }
+      waiver = {
+        signedAt,
+        sourceLabel: clean(at(cells, "waiver_source_name")),
+        documentUrl: clean(at(cells, "waiver_document_url")),
+        medicalDocumentUrl: clean(at(cells, "medical_document_url")),
+      };
+      issues.push({
+        level: "info",
+        message:
+          "Waiver imported as accepted — trusted from the prior shop, including medical clearance, and marked “imported” so it's never confused with a release signed in DiveDay.",
+      });
+    }
+
     let action: PreparedRow["action"] = "import";
     if (!fullName) {
       issues.push({ level: "error", message: "No name — row skipped." });
@@ -597,6 +701,7 @@ export function prepareContactImport(text: string): PreparedImport {
       cert: action === "import" ? cert : null,
       nitrox: action === "import" ? nitrox : null,
       sizes,
+      waiver: action === "import" ? waiver : null,
       action,
       issues,
     };
@@ -614,6 +719,7 @@ export function prepareContactImport(text: string): PreparedImport {
       skipped: rows.length - importable.length,
       withCard: importable.filter((row) => row.cert).length,
       withNitrox: importable.filter((row) => row.nitrox).length,
+      withWaiver: importable.filter((row) => row.waiver).length,
     },
     fatal: null,
   };

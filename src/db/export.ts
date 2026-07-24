@@ -72,6 +72,31 @@ function bestCertification<
   );
 }
 
+/**
+ * The most recent live (non-superseded) *completed* waiver for the flat
+ * contacts file — a diver's round-trippable "has this shop's waiver on
+ * file" signal for another DiveDay shop's importer. `medical_review` never
+ * counts as accepted here: a live physician-referral hold must never be
+ * mistaken for clearance by a downstream import (the importer's own
+ * dedup/currency check is a second, independent guard against the same
+ * mistake, but the export must not hand out a misleading signal either).
+ */
+function bestWaiver<
+  Record extends {
+    status: string;
+    supersededAt: Date | null;
+    signedAt: Date | null;
+    completedAt: Date | null;
+  },
+>(records: Record[]): Record | undefined {
+  const completed = records.filter((r) => r.status === "completed" && !r.supersededAt);
+  const at = (r: Record) => (r.signedAt ?? r.completedAt)?.getTime() ?? 0;
+  return completed.reduce<Record | undefined>(
+    (best, r) => (!best || at(r) > at(best) ? r : best),
+    undefined,
+  );
+}
+
 /** Best-effort first/last split for import wizards; full_name stays authoritative. */
 function splitName(fullName: string): { first: string; last: string } {
   const parts = fullName.trim().split(/\s+/);
@@ -276,6 +301,32 @@ export async function loadShopExportBundleInput(
       );
       const fitByPerson = new Map(rentalFitRows.map((row) => [row.personId, row]));
 
+      const waiversByPerson = new Map<string, typeof waiverRows>();
+      for (const record of waiverRows) {
+        waiversByPerson.set(record.personId, [
+          ...(waiversByPerson.get(record.personId) ?? []),
+          record,
+        ]);
+      }
+
+      // Every image URL any CSV below references, for the photos/ bundle
+      // (ADR 20260724-export-bundled-photos). fetchExportPhotos filters this
+      // again to DiveDay's own storage — collecting a non-managed URL here is
+      // harmless, just never fetched.
+      const photoUrls = [
+        ...certificationRows.map((row) => row.cardImageUrl),
+        ...specialtyRows.map((row) => row.cardImageUrl),
+        ...recapPhotoRows.map((row) => row.imageUrl),
+        ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
+        ...creatureRows.map((row) => row.imageUrl),
+        ...momentRows.map((row) => row.imageUrl),
+        ...courseRows.flatMap((row) => [row.heroImageUrl, ...row.imageUrls]),
+        ...waiverRows.flatMap((row) => [
+          row.importSourceDocumentUrl,
+          row.importSourceMedicalDocumentUrl,
+        ]),
+      ].filter((url): url is string => Boolean(url));
+
       const tables: ExportTable[] = [
         {
           file: "shop.csv",
@@ -330,6 +381,9 @@ export async function loadShopExportBundleInput(
             "wetsuit_size",
             "boot_size",
             "fin_size",
+            "waiver_accepted",
+            "waiver_signed_at",
+            "waiver_source_name",
             "archived_at",
             "created_at",
           ],
@@ -337,6 +391,13 @@ export async function loadShopExportBundleInput(
             const name = splitName(row.fullName);
             const card = bestCertification(cardsByPerson.get(row.id) ?? [], todayLocal);
             const fit = fitByPerson.get(row.id);
+            const waiver = bestWaiver(waiversByPerson.get(row.id) ?? []);
+            const waiverSignedAt = waiver
+              ? calendarDateInTimezone(
+                  waiver.signedAt ?? waiver.completedAt ?? row.createdAt,
+                  shop.timezone,
+                )
+              : null;
             return [
               name.first,
               name.last,
@@ -356,6 +417,9 @@ export async function loadShopExportBundleInput(
               fit?.wetsuitSize,
               fit?.bootSize,
               fit?.finSize,
+              Boolean(waiver),
+              waiverSignedAt,
+              waiver?.signatureMethod === "imported" ? waiver.importedFromLabel : null,
               row.deletedAt,
               row.createdAt,
             ];
@@ -758,6 +822,9 @@ export async function loadShopExportBundleInput(
             "medical_answers",
             "superseded_at",
             "expires_at",
+            "imported_from_label",
+            "import_source_document_url",
+            "import_source_medical_document_url",
             "created_at",
           ],
           rows: waiverRows.map((row) => [
@@ -781,6 +848,9 @@ export async function loadShopExportBundleInput(
             row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null,
             row.supersededAt,
             row.expiresAt,
+            row.importedFromLabel,
+            row.importSourceDocumentUrl,
+            row.importSourceMedicalDocumentUrl,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["waiver_records.csv"],
@@ -1054,7 +1124,13 @@ export async function loadShopExportBundleInput(
         },
       ];
 
-      return { shopName: shop.name, shopSlug: shop.slug, timezone: shop.timezone, tables };
+      return {
+        shopName: shop.name,
+        shopSlug: shop.slug,
+        timezone: shop.timezone,
+        tables,
+        photoUrls: [...new Set(photoUrls)].sort(),
+      };
     },
     { accessMode: "read only", isolationLevel: "repeatable read" },
   );

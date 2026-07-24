@@ -15,6 +15,7 @@ import {
   completeWaiver,
   getEmergencyContactForBooking,
   getWaiverForToken,
+  requireTokenBookingId,
   saveBookingEmergencyContact,
   saveWaiverDraft,
 } from "@/db/waivers";
@@ -144,7 +145,7 @@ export default async function WaiverPage({
     // an issued token is ever kept.
     const readyCapability = await issueBookingCapability(db, {
       shopId: state.record.shopId,
-      bookingId: state.record.bookingId,
+      bookingId: requireTokenBookingId(state.record),
       purpose: "readiness",
     });
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
@@ -171,7 +172,8 @@ export default async function WaiverPage({
   }
 
   const { record } = state;
-  const emergencyContact = await getEmergencyContactForBooking(db, record.bookingId);
+  const recordBookingId = requireTokenBookingId(record);
+  const emergencyContact = await getEmergencyContactForBooking(db, recordBookingId);
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
@@ -205,7 +207,7 @@ export default async function WaiverPage({
     if (savedDraft && contact.success) {
       await saveBookingEmergencyContact(db, {
         shopId: record.shopId,
-        bookingId: record.bookingId,
+        bookingId: recordBookingId,
         name: contact.data.emergencyContactName,
         phone: contact.data.emergencyContactPhone,
       });

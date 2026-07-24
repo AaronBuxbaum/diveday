@@ -371,7 +371,9 @@ export default async function TripManifestPage({
                           <span className="font-bold">
                             {diver.medicalWaiver.source === "paper"
                               ? "Medical reviewed (paper)"
-                              : "Medical waiver signed"}
+                              : diver.medicalWaiver.source === "imported"
+                                ? "Medical clearance imported — not reviewed here"
+                                : "Medical waiver signed"}
                           </span>
                           <span className="mt-0.5 block text-muted">
                             {formatShortDate(diver.medicalWaiver.at, "en-US", shop.timezone)}

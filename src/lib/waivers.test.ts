@@ -127,6 +127,29 @@ describe("waiver signature currency", () => {
     });
     expect(isCompletedWaiverCurrent(justInside, 1, SIGN_NOW)).toBe(true);
   });
+
+  it("exempts an imported record from the template-version check, but not the age check", () => {
+    // Signed against a template version DiveDay never issued — the version
+    // gate would always (wrongly) read this as stale if it applied.
+    const imported = completedWaiver({ signatureMethod: "imported", templateVersion: 0 });
+    expect(isCompletedWaiverCurrent(imported, 1, SIGN_NOW)).toBe(true);
+    expect(isCompletedWaiverCurrent(imported, 999, SIGN_NOW)).toBe(true);
+    // The real acceptance date still ages it out exactly like any other.
+    const staleImported = completedWaiver({
+      signatureMethod: "imported",
+      templateVersion: 0,
+      signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+    });
+    expect(isCompletedWaiverCurrent(staleImported, 1, SIGN_NOW)).toBe(false);
+    // Medical-review and superseded still short-circuit an imported record too.
+    expect(
+      isCompletedWaiverCurrent(
+        completedWaiver({ signatureMethod: "imported", status: "medical_review" }),
+        1,
+        SIGN_NOW,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("medical waiver mark", () => {
@@ -151,6 +174,15 @@ describe("medical waiver mark", () => {
         }),
       ),
     ).toEqual({ at: signedAt, source: "paper" });
+  });
+
+  it("marks an imported acceptance distinctly, even though it carries no questionnaire", () => {
+    const signedAt = new Date(SIGN_NOW.getTime() - 60_000);
+    expect(
+      medicalWaiverMark(
+        completedWaiver({ medicalAnswers: null, signatureMethod: "imported", signedAt }),
+      ),
+    ).toEqual({ at: signedAt, source: "imported" });
   });
 
   it("surfaces nothing for an in-review, unrecognised, or absent record", () => {

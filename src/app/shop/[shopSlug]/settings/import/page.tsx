@@ -53,14 +53,16 @@ export default async function ImportContactsPage({
       <ShopPageHeader
         eyebrow="Settings"
         title="Import contacts"
-        description="Bring your divers, cards, and rental sizes in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land as claims your staff verify, and medical history never migrates."
+        description="Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land as claims your staff verify, and a row claiming a waiver was already accepted is trusted and marked imported."
       />
 
       <section className="rounded-2xl border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">What comes across</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          The safety spine holds through an import. Nothing arrives verified, and nothing medical
-          arrives at all.
+          The safety spine mostly holds through an import: nothing arrives verified. The one
+          deliberate exception is a waiver a row says was already accepted at the prior shop —
+          DiveDay trusts that, medical clearance included, rather than asking the diver to sign
+          again.
         </p>
         <ul className="mt-4 space-y-2">
           {IMPORT_HONESTY_TABLE.map((row) => (
