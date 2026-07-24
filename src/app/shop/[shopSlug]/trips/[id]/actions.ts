@@ -108,6 +108,8 @@ function addDiverNotice(reason: Exclude<BookingOutcome, { ok: true }>["reason"])
       return "diver-course-prerequisite";
     case "course_ratio_full":
       return "diver-course-ratio-full";
+    case "course_min_age":
+      return "diver-course-min-age";
     default:
       return "diver-unavailable";
   }

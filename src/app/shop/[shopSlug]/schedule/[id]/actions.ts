@@ -159,7 +159,9 @@ export async function bookSpot(
               ? "course-prerequisite"
               : outcome.reason === "course_ratio_full"
                 ? "course-ratio-full"
-                : "unavailable";
+                : outcome.reason === "course_min_age"
+                  ? "course-min-age"
+                  : "unavailable";
     return { error: ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unavailable };
   }
   const primaryBookingId = outcome.bookings[0]?.bookingId;

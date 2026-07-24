@@ -451,6 +451,11 @@ export async function seedDemoSchedule(
         phone: `+1-305-555-01${String(i + 10).padStart(2, "0")}`,
         emergencyContactName: customer.emergencyContact?.[0] ?? null,
         emergencyContactPhone: customer.emergencyContact?.[1] ?? null,
+        // A couple of dates on file so the H-08 minimum-age gate has something
+        // to demo; most divers deliberately have none, which is the fail-open
+        // case every existing shop starts from. Anchored to the seeded clock so
+        // the rendered age never drifts across Argos runs.
+        dateOfBirth: i < 2 ? dateAt(-365 * (28 + i * 5)) : null,
       })),
     )
     .returning();
@@ -2126,6 +2131,7 @@ async function seedRentalFit(
         fin: string;
         weights?: string;
         ownsRegulator?: boolean;
+        needsStaffFit?: boolean;
       },
     ]
   > = [
@@ -2134,7 +2140,10 @@ async function seedRentalFit(
     // A diver with their own reg — the prep list has to leave it off.
     [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M", ownsRegulator: true }],
     [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
-    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg" }],
+    // H-06 demo: the shop is out of this diver's size, so they're flagged for
+    // hands-on fitting — their kit is deliberately off the prep list and they
+    // get named in its "fit these divers at check-in" section instead.
+    [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg", needsStaffFit: true }],
     // Sizes half-recorded, which is how a fit book actually looks.
     [12, { bcd: null, wetsuit: "M", boot: "7", fin: "M" }],
   ];
@@ -2155,6 +2164,8 @@ async function seedRentalFit(
         bootSize: fit.boot,
         finSize: fit.fin,
         weightPreference: fit.weights ?? null,
+        needsStaffFitAt: fit.needsStaffFit ? nowDate() : null,
+        needsStaffFitNote: fit.needsStaffFit ? "No XL BCD left — fit from the spares" : null,
       };
     })
     .filter((row) => row !== null);
