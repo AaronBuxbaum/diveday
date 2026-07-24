@@ -10,7 +10,9 @@ Companions: [vision.md](vision.md) (what winning looks like),
 [competitive-analysis.md](assessments/competitive-analysis.md) and
 [competitive-strategy.md](assessments/competitive-strategy.md) (who we're up against and the
 portability wedge), [marketing.md](marketing.md) (the public-page rulebook and claims policy),
-[human-decisions.md](human-decisions.md) (the gate register this plan sequences).
+[human-decisions.md](human-decisions.md) (the gate register this plan sequences), and
+[stakeholders/](stakeholders/README.md) (the per-discipline playbooks — exact contacts, briefing
+packets, and question lists for every conversation this plan schedules).
 
 ## Where we stand
 
@@ -232,6 +234,10 @@ support load per shop measured and sustainable (else the cap holds until it is).
 
 ## Who needs to be talked to — stakeholder register
 
+Each row has a per-discipline playbook — who exactly, how to find them, the briefing packet to
+bring, and the question list — in [stakeholders/](stakeholders/README.md). This table stays the
+when/why snapshot; the playbooks carry the prep.
+
 | Who | Why | When | Owner gate |
 | --- | --- | --- | --- |
 | Recreational-liability attorney (scuba experience, launch jurisdiction) | Waiver/medical/retention/e-sign sufficiency | Phase 0, first call this week — longest lead | H-01–H-03, V-03 |
@@ -281,7 +287,9 @@ serves it.
 ## The next 30 days, in order
 
 1. Book the attorney (H-01–H-03) and submit Stripe Connect + Twilio A2P applications — the three
-   long-lead clocks start today.
+   long-lead clocks start today. Take the corporate-footing question (H-18) and DiveDay's own
+   E&O/cyber quotes (H-19) into the same week: the entity name goes on everything else. Playbooks:
+   [stakeholders/](stakeholders/README.md).
 2. Name the ops owner, enable and **rehearse** a Neon backup restore (H-04).
 3. Verify the Resend production sender and write the H-09 consent policy.
 4. Close H-12 at $99/location/month with the two-year founding lock and the founder-direct
