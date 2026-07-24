@@ -1,4 +1,4 @@
-# 20260724-course-admission-standards — PADI/SSI-sourced entry-level ratio gate
+# 20260724-course-admission-standards — PADI-sourced entry-level ratio gate
 
 - **Status:** Accepted
 - **Date:** 2026-07-24
@@ -30,6 +30,13 @@ Alternatives/Consequences for why, and what would be needed to add them.
   m/40 ft open water; open-water ratio matches the Open Water training figure (8:1).
   ([PADI Discover Scuba Diving FAQs](https://blog.padi.com/discover-scuba-diving-faqs/);
   [Discover Scuba Diving Program Age and Depth Limits](https://www.private-scuba.com/courses/discover-scuba-diving-program-limitations.html).)
+  **Confidence note:** these two DSD sources are a PADI marketing blog and a third-party dive-shop
+  page, not PADI's Instructor Manual / General Standards and Procedures (member-only). A
+  `dive-domain-expert` review of this ADR flagged that DSD participants have had zero prior water
+  time (unlike OW students, who complete confined dives first), and some operators run DSD tighter
+  than the certification-course ratio as a matter of prudence — this ratio number is the single
+  line item in this ADR worth a direct PADI/manual check before leaning on it operationally, even
+  though it's within the product owner's "trust public sources" instruction.
 - **Open Water Diver:** minimum age 15 (10 for Junior Open Water); depth ceiling 18 m/60 ft.
   ([PADI Certification Rules and Requirements](https://blog.padi.com/padi-certification-rules/);
   [How Old Do You Have To Be to Scuba Dive?](https://blog.padi.com/how-old-do-you-have-to-be-to-scuba-dive/).)
@@ -46,21 +53,53 @@ Alternatives/Consequences for why, and what would be needed to add them.
 
 ## Decision
 
-**Enforce the entry-level in-water ratio as a real booking gate.** `src/lib/course-ratios.ts`
-encodes `entryLevelCourseCapacity(instructorCount, assistantCount)`: 8 students per instructor,
-+2 per certified assistant (a Divemaster assigned as trip crew, in DiveDay's role model), capped
-at 12 per instructor. `src/db/bookings.ts`'s `createBookingRecord` applies it to any course
-session whose course carries no `minimum_certification_level` — the existing "DSD/OW, no
-pre-existing C-card gate" bucket the accepted baseline already established — alongside (not
-instead of) the trip's own stated capacity; whichever is stricter binds. A session exceeding its
-ratio returns a new `course_ratio_full` booking-outcome reason, surfaced to the public booker, the
-staff roster, and the diver-profile booking flow (`TripNoticeBanner.tsx`,
-`schedule/[id]/_components/types.ts`, `divers/[personId]/_components/NoticeBanner.tsx`).
+**Enforce the entry-level in-water ratio as a real booking gate, scoped to PADI courses only.**
+`src/lib/course-ratios.ts` encodes `entryLevelCourseCapacity(instructorCount, assistantCount)`: 8
+students per instructor, +2 per certified assistant (a Divemaster assigned as trip crew, in
+DiveDay's role model), capped at 12 per instructor. `src/db/bookings.ts`'s `createBookingRecord`
+applies it to a course session only when **both** `courses.agency === "padi"` **and** the course
+carries no `minimum_certification_level` — the existing "DSD/OW, no pre-existing C-card gate"
+bucket the accepted baseline already established — alongside (not instead of) the trip's own
+stated capacity; whichever is stricter binds. A session exceeding its ratio returns a new
+`course_ratio_full` booking-outcome reason, surfaced to the public booker, the staff roster, and
+the diver-profile booking flow (`TripNoticeBanner.tsx`, `schedule/[id]/_components/types.ts`,
+`divers/[personId]/_components/NoticeBanner.tsx`).
+
+**The agency check matters, not just for correctness in principle:** `courses.agency` is shop-set
+free text (`src/db/courses.ts`), so an SSI (or NAUI, etc.) Open Water course is a real, ordinary
+row in this schema today, not a hypothetical. The sourced ratio above is a PADI figure; DiveDay has
+not independently sourced an SSI number. Applying PADI's ratio to a non-PADI course would be a
+wrong-but-confident safety control — worse than the pre-existing state (capacity-only) — so
+non-PADI ungated courses fall back to capacity alone, same as before this gate existed. This is
+resolved with a code check (`course.agency === "padi"`) and a dedicated test
+(`src/db/courses.test.ts` — "does not ratio-gate an ungated course from a non-PADI agency").
+
+**The trip's currently-assigned crew is re-read at every booking**, so the ratio ceiling can also
+*fall* after divers are already booked — a manager pulling the assigned Divemaster or instructor
+off a session for an unrelated reason, after 8 divers are already on the roster, leaves that
+session over its own ratio with no code-level block (matching the existing `course_unstaffed`
+gate's booking-time-only reach, and deliberately never retroactively cancelling an already-paid
+seat). The trip Overview page (`trips/[id]/page.tsx`) surfaces a non-blocking staff warning when
+`booked > entryLevelCourseCapacity(currently-assigned crew)`, so the moment is visible before the
+boat sails even though nothing is auto-invalidated.
+
+**`tripAssignments` (trip crew) carries no per-trip role** — it is just `(tripId, personId)`; the
+"instructor" / "divemaster" distinction used here comes from the person's *global* `personRoles`
+tag, not anything scoped to what that person is actually doing on this specific trip. A Divemaster
+assigned to a session as, say, the boat captain counts identically toward the ratio's "certified
+assistant" bonus as one actually in the water shadowing the class. This is a pre-existing modeling
+gap in the crew-assignment schema, not introduced here, but this ratio gate is the first place it
+becomes safety-load-bearing rather than cosmetic — worth a dedicated look if DiveDay ever needs
+crew roles that are per-trip rather than global.
 
 Continuing-education courses (course row's `minimum_certification_level` set — AOW, Rescue,
 specialties) are **not** ratio-capped: they already gate on a verified card at booking, and PADI
-does not publish a comparably strict, agency-consistent numeric ratio for them the way it does for
-DSD/OW.
+does not publish a ratio for them as strict and universally consistent as the entry-level figure.
+**One exception worth flagging, not resolving here:** Rescue Diver's in-water scenario/stress-test
+day is widely treated as needing tight, hands-on supervision — a `dive-domain-expert` review raised
+this specifically as worth checking against a real published number before assuming "no ratio
+needed" covers every continuing-ed course, rather than just AOW-style dives under looser
+supervision. Left unenforced here pending that check, same as before this change (no regression).
 
 **Record the depth-ceiling and minimum-age standards as documented reference data, not enforced
 gates**, in the glossary and this ADR. DiveDay does not currently store a numeric dive-site depth
@@ -92,15 +131,20 @@ enforcement mechanism, informed by the numbers recorded here.
 
 ## Consequences
 
-- A shop running an entry-level course session with only one instructor and no Divemaster aboard
-  now has a real 8-seat ceiling, independent of whatever capacity they set on the trip — closing a
-  real safety gap where a DSD/OW session's public "capacity" could imply more room than PADI's own
-  ratio permits.
+- A PADI shop running an entry-level course session with only one instructor and no Divemaster
+  aboard now has a real 8-seat ceiling, independent of whatever capacity they set on the trip —
+  closing a real safety gap where a DSD/OW session's public "capacity" could imply more room than
+  PADI's own ratio permits.
 - Assigning an additional instructor or a Divemaster to trip crew immediately raises the ratio
   ceiling for that session (booking-time check, same as the existing capacity check) — no schema
-  change, no migration.
-- H-08's "must verify — needs the operator's agency-specific input" note for ratios is resolved;
-  the minimum-age/Junior-depth piece stays open pending the DOB-collection and fail-open/closed
-  call above.
+  change, no migration. The same re-read means the ceiling can fall too if crew is reduced after
+  booking; the trip Overview's non-blocking warning is the mitigation, not a hard block (see
+  Decision).
+- A non-PADI shop's ungated course (SSI, NAUI, etc.) is unaffected by this change — capacity-only,
+  same as before — until an agency-specific ratio is sourced and added.
+- H-08's "must verify — needs the operator's agency-specific input" note for **PADI** ratios is
+  resolved; the minimum-age/Junior-depth piece stays open pending the DOB-collection and
+  fail-open/closed call above; a non-PADI ratio and Rescue Diver's specific supervision needs stay
+  open pending their own sourcing.
 - Safety-critical surface (course/cert gating) — carries a `dive-domain-expert` review before
   merge per AGENTS.md.

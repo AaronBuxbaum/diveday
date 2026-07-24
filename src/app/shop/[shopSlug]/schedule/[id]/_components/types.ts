@@ -31,7 +31,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   "course-prerequisite":
     "This course needs a verified certification on file. Call the shop and they’ll help get your card checked.",
   "course-ratio-full":
-    "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor.",
+    "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
   fit: "We couldn’t save that rental fit. Please check the details and try again.",
   pay: "We couldn’t open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
 };
