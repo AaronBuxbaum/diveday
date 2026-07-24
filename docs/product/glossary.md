@@ -277,12 +277,13 @@ new domain concept, define it here in the same PR.
   today as a courtesy channel alongside reminder email. See
   [20260721-sms-whatsapp-notifications](../architecture/decisions/20260721-sms-whatsapp-notifications.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
-  "Reset demo data" affordance scoped to that one tenant. `isDemo` is reserved for the canonical
-  seeded example shop (Blue Mantis), bootstrapped in every environment and reached via "Try the live
-  demo". Onboarding a **trial** at `/onboard` creates a real shop that is *not* demo mode; the "Seed
-  with demo data" checkbox only preloads sample trips, and a trial never shows the playground banner
-  or a destructive reset (ADR 20260718-dynamic-demo-onboarding, revised by
-  20260720-trial-shops-are-not-demo).
+  "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
+  `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
+  daily reaper clears minted demos after 7 days. The canonical `isDemo` shop (Blue Mantis) is
+  bootstrapped in every environment as the fixture the e2e/Argos fleet tests against, and is never
+  reaped. Onboarding a **trial** at `/onboard` creates a real shop that is *not* demo mode and is
+  **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
+  20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   revenue collected, bookings, **fill rate**, and **waiver completion** for the trips that departed
   in a chosen month, plus a per-trip breakdown. Anchored to trip-departure month in the shop

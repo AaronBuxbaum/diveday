@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { resetDemoSchedule } from "@/db/seed";
+import { purgeMintedDemoShops, resetDemoSchedule } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 
 /**
@@ -34,5 +34,8 @@ export async function POST() {
   if (shop?.isDemo) {
     await resetDemoSchedule(db, shop.id);
   }
+  // Clear any disposable demo shops earlier tests minted via "Try the live
+  // demo", so they don't accumulate and bloat the shared test database.
+  await purgeMintedDemoShops(db);
   return NextResponse.json({ ok: true });
 }

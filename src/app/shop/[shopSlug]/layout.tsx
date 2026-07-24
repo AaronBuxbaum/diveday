@@ -3,6 +3,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
+import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
@@ -79,6 +80,10 @@ export default async function ShopLayout({
           currentName={session?.user?.name}
           shopSlug={shopSlug}
           availableRoles={availableRoles}
+          // A minted (per-visitor) demo is addressable by its slug and readable
+          // by anyone who has it, so warn against entering real customer data;
+          // the canonical fixture demo holds only sample data and stays quiet.
+          isMintedDemo={shop?.slug !== DEMO_SHOP_SLUG}
         />
       ) : null}
       {session?.user && shop ? (

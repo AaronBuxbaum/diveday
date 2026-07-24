@@ -40,9 +40,8 @@ test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) =
   await page.locator('input[name="ownerName"]').fill("Riva Okonkwo");
   await page.locator('input[name="ownerEmail"]').fill("riva-e2e@coralcove.example");
   await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
-  // Leave "Start with sample trips" unchecked: seeding is a convenience, and it must
-  // not turn the trial into a demo playground either way.
-  await page.locator('input[name="seedDemoData"]').uncheck();
+  // A real shop is never seeded — there's no sample-data option to toggle. It
+  // starts clean and must not be a demo playground (ADR 20260724).
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
 
   await expect(page).toHaveURL(/\/shop\/coral-cove-e2e/);

@@ -1,15 +1,18 @@
 import { hash } from "bcryptjs";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
+import { generateDemoShopIdentity } from "@/lib/demo-identity";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   bookingCapabilities,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
   certifications,
@@ -20,21 +23,25 @@ import {
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
+  mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
   notificationDeliveryAttempts,
   orderLineItems,
   orders,
+  paymentOperationIntents,
   people,
   personRoles,
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
+  shopStripeAccounts,
   shops,
   specialtyCertifications,
   tripAssignments,
   tripDives,
   tripRequirements,
+  tripSeries,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -254,76 +261,120 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
 }
 
 /**
- * Seed a dynamically created shop with the standard demo dataset (schedule,
- * bookings, rental fit, nitrox) for dynamic onboarding trials.
+ * Mint a brand-new, self-contained demo shop with a generated identity and the
+ * full demo dataset, and return how to sign into it. This is what "Try the live
+ * demo" creates now: each visitor gets their own disposable `isDemo` shop instead
+ * of sharing the canonical blue-mantis fixture (ADR 20260724-per-visitor-demo-shops).
+ *
+ * The staff are the same friendly cast as the canonical demo (Dana/Marcus/Keiko/
+ * Sal) so the demo banner and role switcher read identically, but their emails
+ * are namespaced under the unique slug so they never collide on the global
+ * `user_accounts.email` index. Sign-in for every role goes through the `isDemo`
+ * bypass token (src/lib/credentials.ts), so no real password is minted or stored.
+ *
+ * The random slug suffix makes collisions on the global `shops.slug` index
+ * astronomically unlikely under concurrent minting; a `23505` here means "the
+ * visitor hit that lottery" and the action can simply be retried.
  */
-export async function seedShopWithDemoData(db: DbExecutor, shopId: string): Promise<void> {
+export async function createDemoShop(
+  db: DbExecutor,
+): Promise<{ slug: string; ownerEmail: string }> {
+  // Aggregate storage cap (security review, finding 1): the per-IP rate limit
+  // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
+  // attacker could pile up minted shops between 7-day reaper passes. Before
+  // minting, evict the oldest minted demos so the live count never exceeds the
+  // ceiling — the canonical demo and real shops are never eligible (see below).
+  await enforceMintedDemoCap(db);
+
+  const identity = generateDemoShopIdentity();
+
+  const [shop] = await db
+    .insert(shops)
+    .values({
+      name: identity.name,
+      slug: identity.slug,
+      timezone: DEMO_SHOP_TIMEZONE,
+      rentalItems: [
+        "bcd",
+        "regulator",
+        "wetsuit",
+        "mask_fins",
+        "weights",
+        "dive_computer",
+        "gopro",
+      ],
+      rentalPricing: {
+        setCents: 4500,
+        perItemCents: {
+          bcd: 1500,
+          regulator: 1500,
+          wetsuit: 1200,
+          mask_fins: 800,
+          weights: 500,
+          dive_computer: 1000,
+          gopro: 2000,
+        },
+        nitroxCents: 1200,
+      },
+      isDemo: true,
+    })
+    .returning();
+  if (!shop) throw new Error("createDemoShop: failed to insert shop");
+
   await db.insert(waiverTemplates).values({
-    shopId,
+    shopId: shop.id,
     title: DEFAULT_WAIVER_TITLE,
     version: 1,
     body: DEFAULT_WAIVER_BODY,
   });
 
   const staffDefs = [
-    {
-      fullName: "Marcus Webb",
-      email: INSTRUCTOR_EMAIL,
-      roles: ["instructor"],
-      password: DEV_STAFF_LOGINS.instructor.password,
-    },
-    {
-      fullName: "Keiko Tanaka",
-      email: "keiko@bluemantis.example",
-      roles: ["divemaster"],
-      password: DEV_STAFF_LOGINS.divemaster.password,
-    },
-    {
-      fullName: "Sal Moretti",
-      email: "sal@bluemantis.example",
-      roles: ["captain"],
-      password: DEV_STAFF_LOGINS.captain.password,
-    },
+    { fullName: "Dana Reyes", local: "dana", roles: ["owner", "manager"] },
+    { fullName: "Marcus Webb", local: "marcus", roles: ["instructor"] },
+    { fullName: "Keiko Tanaka", local: "keiko", roles: ["divemaster"] },
+    { fullName: "Sal Moretti", local: "sal", roles: ["captain"] },
   ] as const;
 
   const staff = await db
     .insert(people)
     .values(
       staffDefs.map((s) => ({
-        shopId,
+        shopId: shop.id,
         fullName: s.fullName,
-        email: s.email,
+        email: identity.emailFor(s.local),
         emergencyContactName: "On file",
         emergencyContactPhone: "+1-305-555-0100",
       })),
     )
     .returning();
 
-  await db.insert(personRoles).values(
-    staff.flatMap((person, i) =>
-      staffDefs[i].roles.map((role) => ({
-        personId: person.id,
-        role,
-      })),
-    ),
-  );
+  await db
+    .insert(personRoles)
+    .values(
+      staff.flatMap((person, i) =>
+        staffDefs[i].roles.map((role) => ({ personId: person.id, role })),
+      ),
+    );
 
-  // Seed user accounts for these staff members so they can log in/switch on dynamic trial shops too
+  // Placeholder hashes: every demo sign-in uses the isDemo bypass token, so these
+  // accounts never need a password that matches.
   await db.insert(userAccounts).values(
     await Promise.all(
       staff.map(async (person, i) => ({
         personId: person.id,
-        email: staffDefs[i].email,
-        hashedPassword: await hash(staffDefs[i].password, 4),
+        email: identity.emailFor(staffDefs[i].local),
+        hashedPassword: await hash(crypto.randomUUID(), 4),
       })),
     ),
   );
 
-  // A trial shop is not the demo (ADR 20260720-trial-shops-are-not-demo): it can
-  // connect its own Stripe account, so it never gets the fabricated-invoice
-  // history — those orders are only safe where the order page disables their
-  // live Stripe actions, i.e. the demo shop.
-  await seedDemoSchedule(db, shopId, { history: false });
+  // No fabricated billing back-fill on a minted demo: `seedHistory` pins
+  // globally-unique waiver token hashes and Stripe ids that would collide with
+  // the canonical demo (and with a second minted demo). The billing/orders
+  // showcase lives on blue-mantis; a throwaway demo is the lean schedule.
+  await seedDemoSchedule(db, shop.id, { history: false });
+
+  return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
 
 /**
@@ -369,12 +420,26 @@ export async function seedDemoSchedule(
   shopId: string,
   opts: { history?: boolean } = {},
 ): Promise<void> {
+  // Look the instructor up by their role within the shop, not by a hardcoded
+  // email — so this seeds the canonical blue-mantis demo and any freshly-minted
+  // demo shop (whose staff carry per-shop-unique emails) alike.
   const [instructor] = await db
     .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.shopId, shopId), eq(people.email, INSTRUCTOR_EMAIL)))
+    .innerJoin(personRoles, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "instructor")))
     .limit(1);
   if (!instructor) throw new Error("seed: instructor missing from stable staff");
+
+  // Only the canonical blue-mantis demo pins the recap booking's id — the visual
+  // tests mint a recap link from that fixed id. A freshly-minted demo shop gets a
+  // random id so a second demo never collides on that primary key.
+  const [shopRow] = await db
+    .select({ slug: shops.slug })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const pinRecapBooking = shopRow?.slug === DEMO_SHOP_SLUG;
 
   const customers = await db
     .insert(people)
@@ -1442,11 +1507,12 @@ export async function seedDemoSchedule(
     ["Deep Diver — Spiegel Grove & the wall", [17]],
   ];
   const bookingRows = [
-    // The first reef booking is pinned so a recap link can be minted for the demo.
+    // The first reef booking is pinned (canonical demo only) so a recap link can
+    // be minted deterministically for the visual tests.
     ...customers.slice(0, 9).map((c, index) => ({
       tripId: reef.id,
       personId: c.id,
-      ...(index === 0 ? { id: DEMO_RECAP_BOOKING_ID } : {}),
+      ...(index === 0 && pinRecapBooking ? { id: DEMO_RECAP_BOOKING_ID } : {}),
     })),
     ...customers.slice(4, 7).map((c) => ({ tripId: night.id, personId: c.id })),
     ...customers.slice(0, 10).map((c) => ({ tripId: wreck.id, personId: c.id })),
@@ -1500,17 +1566,23 @@ export async function seedDemoSchedule(
         "What a day on the water — glassy surface and a curious green turtle on the second tank. Thanks for diving with us, and tag Blue Mantis in your shots!",
     })
     .where(eq(trips.id, reef.id));
+  // The first reef booking carries the recap photos. On the canonical demo this
+  // is the pinned id; on a minted demo it's whatever random id that booking got.
+  const recapBookingId = bookingRows_.find(
+    (b) => b.tripId === reef.id && b.personId === customers[0]?.id,
+  )?.id;
+  if (!recapBookingId) throw new Error("seed: recap booking missing from reef roster");
   await db.insert(recapPhotos).values([
     {
       shopId,
-      bookingId: DEMO_RECAP_BOOKING_ID,
+      bookingId: recapBookingId,
       tripId: reef.id,
       imageUrl: commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
       caption: "French angelfish cruising the coral",
     },
     {
       shopId,
-      bookingId: DEMO_RECAP_BOOKING_ID,
+      bookingId: recapBookingId,
       tripId: reef.id,
       imageUrl: commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
       caption: "A whole squad of blue tangs",
@@ -2196,5 +2268,163 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     await db.delete(people).where(inArray(people.id, nonStaffIds));
   }
 
-  await seedDemoSchedule(db, shopId);
+  // Re-seed at the richness the shop was minted with: the canonical demo keeps
+  // its billing back-fill, a minted demo stays lean. Re-seeding history on a
+  // minted demo would re-insert globally-unique waiver/Stripe ids that collide
+  // with the canonical demo (see createDemoShop).
+  const [resetShop] = await db
+    .select({ slug: shops.slug })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  await seedDemoSchedule(db, shopId, { history: resetShop?.slug === DEMO_SHOP_SLUG });
+}
+
+/** Default lifetime of a minted demo shop before the reaper clears it. */
+export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
+
+/**
+ * Delete a demo shop and every row it owns. There is no `ON DELETE CASCADE` on
+ * the shop-scoped foreign keys, so this is a hand-maintained topological delete:
+ * every table that references bookings, trips, orders, checkouts, dive sites, or
+ * people is cleared before those parents, and the shop row goes last. The
+ * **global** dive-site catalog (`globalDiveSites`) is shared across shops and is
+ * deliberately never touched. `reap-demos.test.ts` mints a demo, deletes it, and
+ * asserts every table is empty — that test is the guard on this ordering.
+ *
+ * Never call this on the canonical blue-mantis demo or any real shop; the reaper
+ * below only ever passes it a minted demo (`isDemo`, non-canonical slug).
+ */
+export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
+  const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
+  const tripIds = shopTrips.map((t) => t.id);
+  const shopPeople = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(eq(people.shopId, shopId));
+  const personIds = shopPeople.map((p) => p.id);
+
+  // Order/checkout/booking dependents first.
+  await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
+  await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
+  await db.delete(orders).where(eq(orders.shopId, shopId));
+  await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
+  await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
+  await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
+  await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
+  await db
+    .delete(notificationDeliveryAttempts)
+    .where(eq(notificationDeliveryAttempts.shopId, shopId));
+  await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
+  if (tripIds.length > 0) {
+    await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
+    await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
+  }
+  await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
+  await db.delete(bookings).where(eq(bookings.shopId, shopId));
+  await db.delete(trips).where(eq(trips.shopId, shopId));
+  await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
+
+  // People-scoped records and the shop's own catalog/config.
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
+  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
+  await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
+  await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
+  await db.delete(courses).where(eq(courses.shopId, shopId));
+  await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
+  await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+  await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
+
+  if (personIds.length > 0) {
+    await db.delete(userAccounts).where(inArray(userAccounts.personId, personIds));
+    await db.delete(personRoles).where(inArray(personRoles.personId, personIds));
+  }
+  await db.delete(people).where(eq(people.shopId, shopId));
+  await db.delete(shops).where(eq(shops.id, shopId));
+}
+
+/**
+ * Clear minted demo shops older than `maxAgeMs`. Selects only `isDemo` shops
+ * whose slug is not the canonical demo — so blue-mantis and every real shop are
+ * untouchable here — and deletes each in its own transaction so one failure
+ * doesn't strand the rest. Time comes through `now` (clock rule); the cron route
+ * supplies the TTL from env.
+ */
+export async function reapExpiredDemoShops(
+  db: AppDb,
+  opts: { now?: number; maxAgeMs?: number } = {},
+): Promise<{ deleted: number; slugs: string[] }> {
+  const now = opts.now ?? nowMs();
+  const maxAgeMs = opts.maxAgeMs ?? DEFAULT_DEMO_TTL_MS;
+  const cutoff = new Date(now - maxAgeMs);
+
+  const expired = await db
+    .select({ id: shops.id, slug: shops.slug })
+    .from(shops)
+    .where(
+      and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG), lt(shops.createdAt, cutoff)),
+    );
+
+  for (const shop of expired) {
+    await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+  }
+  return { deleted: expired.length, slugs: expired.map((s) => s.slug) };
+}
+
+/**
+ * Delete every minted demo shop right now, regardless of age — the canonical
+ * blue-mantis demo and all real shops are left alone. The e2e reset uses this so
+ * the shared test database doesn't accumulate the disposable shops each "Try the
+ * live demo" mints (age-based reaping is unreliable under the frozen e2e clock,
+ * since `created_at` is a real wall-clock default).
+ */
+export async function purgeMintedDemoShops(db: AppDb): Promise<number> {
+  const minted = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)));
+  for (const shop of minted) {
+    await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+  }
+  return minted.length;
+}
+
+/**
+ * Hard ceiling on how many minted demo shops may exist at once — the aggregate
+ * bound the per-IP rate limit can't provide (security review, finding 1).
+ * `DEMO_SHOP_MAX_LIVE` overrides it; a non-positive or non-numeric value keeps
+ * the default.
+ */
+export const DEFAULT_DEMO_SHOP_MAX_LIVE = 200;
+
+function mintedDemoCap(): number {
+  const configured = Number(process.env.DEMO_SHOP_MAX_LIVE);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_DEMO_SHOP_MAX_LIVE;
+}
+
+/**
+ * Evict the oldest minted demos until there is room for one more under the cap.
+ * Only minted demos are ever eligible — the canonical blue-mantis demo (by slug)
+ * and every real shop (`isDemo:false`) are excluded, so this can never delete a
+ * real tenant. Runs inside the caller's transaction so the eviction and the new
+ * mint commit together.
+ */
+export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
+  const cap = mintedDemoCap();
+  const live = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
+    .orderBy(asc(shops.createdAt));
+  const toEvict = live.length - (cap - 1);
+  for (let i = 0; i < toEvict; i++) {
+    await deleteDemoShopCascade(db, live[i].id);
+  }
 }
