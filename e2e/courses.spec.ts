@@ -170,6 +170,69 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat, Ravi/ })).toBeVisible();
   });
+
+  // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
+  // a solo instructor seats at most 8 students, independent of the trip's own
+  // stated capacity. Set the trip's capacity well above 8 so the ratio — not
+  // capacity — is what blocks the 9th booking.
+  test("a solo-instructor course session refuses a booking past the 8-seat ratio", async ({
+    page,
+  }) => {
+    const sessionTitle = `Ratio test session ${e2eNow().getTime()}`;
+    await page.goto("/shop/blue-mantis/trips/new");
+    await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
+    await page.getByLabel("Title").fill(sessionTitle);
+    await page.getByLabel("Date").fill(daysFromNow(22));
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("17:00");
+    await page.getByLabel("Capacity").fill("12");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+
+    await page.goto("/shop/blue-mantis/schedule");
+    await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
+    await page.getByLabel(/Marcus Webb/).check(); // the seeded instructor
+    await page.getByRole("button", { name: "Save crew" }).click();
+    const tripUrl = page.url();
+
+    await page.context().clearCookies();
+    const stamp = e2eNow().getTime();
+    const bookSlots = async (count: number, offset: number) => {
+      await page.goto(tripUrl.replace("/trips/", "/schedule/"));
+      const partySize = page.getByLabel("Number of divers");
+      await expect(partySize).toHaveAttribute("data-hydrated", "true");
+      await partySize.selectOption(String(count));
+      for (let i = 0; i < count; i++) {
+        const label = offset + i;
+        const nameField =
+          i === 0
+            ? page.getByLabel("Name", { exact: true })
+            : page.getByLabel(`Diver ${i + 1} name`);
+        const emailField =
+          i === 0
+            ? page.getByLabel("Email", { exact: true })
+            : page.getByLabel(`Diver ${i + 1} email`);
+        await nameField.fill(`Ratio Diver ${label}`);
+        await emailField.fill(`ratio-${stamp}-${label}@example.com`);
+      }
+      await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+      await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
+    };
+
+    // Two party bookings fill the 8-seat ratio (6 + 2); the trip's own
+    // capacity (12) still has four seats open.
+    await bookSlots(6, 0);
+    await bookSlots(2, 6);
+
+    // The 9th diver hits the ratio, not capacity.
+    await page.goto(tripUrl.replace("/trips/", "/schedule/"));
+    await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
+    await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await expect(
+      page.getByText("This session is at its instructor-to-student ratio limit"),
+    ).toBeVisible();
+  });
 });
 
 test("a diver with no workable date gets a written email instead of a dead end", async ({

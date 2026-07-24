@@ -133,10 +133,15 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     );
     if (instructorIds.size === 0) return { ok: false, reason: "course_unstaffed" };
     // Entry-level (no-card-required) sessions carry PADI's published in-water
-    // ratio — see src/lib/course-ratios.ts for the sourcing. Continuing-ed
+    // ratio — see src/lib/course-ratios.ts for the sourcing. Scoped to PADI
+    // specifically: the sourced ratio is a PADI figure, and `courses.agency`
+    // is shop-set free text (an SSI, NAUI, etc. course is a real, unremarkable
+    // row) — applying a PADI number to another agency's course would be a
+    // wrong-but-confident safety control, so those fall back to the trip's
+    // own stated capacity only, same as before this gate existed. Continuing-ed
     // courses (minimumCertificationLevel set) already gate on a verified card
     // and PADI does not publish a comparable numeric ratio for them.
-    if (!course.minimumCertificationLevel) {
+    if (course.agency === "padi" && !course.minimumCertificationLevel) {
       // A person holding both roles is the instructor, not their own assistant.
       const assistantCount = new Set(
         crew
