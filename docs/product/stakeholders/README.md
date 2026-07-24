@@ -24,7 +24,7 @@ keeps the three documents from drifting.
 
 | Discipline | Playbook | Primary stakeholders | Rollout timing | Gates |
 | --- | --- | --- | --- | --- |
-| Legal & liability | [legal.md](legal.md) | Scuba-liability attorney (FL), business counsel, CPA (entity input) | Phase 0, **book this week** — longest lead | H-01, H-02, H-03, H-17, H-18, V-03 |
+| Legal & liability | [legal.md](legal.md) | The owner's existing generalist attorney (engaged); a scuba-liability specialist (FL, not yet found); CPA (entity input). Tier split for who does what: [legal-engagement-scope.md](legal-engagement-scope.md) | Phase 0, **book this week** — longest lead | H-01, H-02, H-03, H-17, H-18, V-03 |
 | Insurance | [insurance.md](insurance.md) | Startup commercial broker (DiveDay's own E&O/cyber); dive-industry brokers + DAN (shop-side underwriting answer) | Phase 0, parallel with legal | H-19; the underwriting one-pager sales asset |
 | Finance, payments & tax | [finance-and-tax.md](finance-and-tax.md) | Stripe (Connect platform review), CPA, bank/bookkeeper | Phase 0 — **submit Stripe application immediately** | H-07 (remaining policy), H-12 (remaining terms) |
 | Privacy & communications | [privacy-and-communications.md](privacy-and-communications.md) | Privacy counsel, Twilio (A2P 10DLC), Resend (sender domain) | Phase 0 — **submit A2P immediately** (days-to-weeks) | H-02, H-04 (incident response), H-09 |
@@ -36,7 +36,8 @@ keeps the three documents from drifting.
 Four clocks start ticking on contact, not on need — start all four in the same week:
 
 1. **The attorney engagement** ([legal.md](legal.md)) — the rollout's longest lead; H-01–H-03
-   block every real waiver.
+   block every real waiver. Split across two attorneys: the generalist already engaged (send her
+   [the scope memo](legal-engagement-scope.md)) and a scuba-liability specialist still to find.
 2. **The Stripe Connect platform application** ([finance-and-tax.md](finance-and-tax.md)) —
    Stripe reviews platforms on their own schedule; it also needs the entity answer (H-18).
 3. **Twilio A2P 10DLC registration** ([privacy-and-communications.md](privacy-and-communications.md))
@@ -58,8 +59,9 @@ ask for their outputs:
 The rollout plan's [30-day list](../rollout.md#the-next-30-days-in-order) is the master sequence;
 this is the same work cut by discipline so each playbook can be executed independently:
 
-- **Legal:** shortlist attorneys via the referral paths, send the engagement request with the
-  briefing packet, and take the entity question (H-18) to counsel + CPA in the same call.
+- **Legal:** send the generalist [her scope memo](legal-engagement-scope.md) and take the entity
+  question (H-18) to her + the CPA in the same call; in parallel, shortlist specialist candidates
+  via the referral paths and send the specialist engagement request with the briefing packet.
 - **Finance:** submit the Stripe Connect platform application; book the CPA conversation
   (entity structure input, SaaS sales-tax posture).
 - **Privacy & comms:** submit Twilio A2P registration; verify the Resend production sender;
