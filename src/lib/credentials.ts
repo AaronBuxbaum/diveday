@@ -4,6 +4,15 @@ import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { isStaff, type Role } from "@/lib/authz";
 
+/**
+ * The password any demo person signs in with: accepted here for a person in an
+ * `isDemo` shop without a real password match. Not a secret — it only ever
+ * works on shops the ADR already treats as public, throwaway playgrounds — so
+ * it's safe to surface in the UI for a visitor to note down and sign back in
+ * with later.
+ */
+export const DEMO_BYPASS_PASSWORD = "demo-role-switcher-bypass-token";
+
 export type VerifiedUser = {
   id: string;
   personId: string;
@@ -39,7 +48,7 @@ export async function verifyCredentials(
 
   let ok = await compare(password, account.hashedPassword);
   if (!ok) {
-    if (shop.isDemo && password === "demo-role-switcher-bypass-token") {
+    if (shop.isDemo && password === DEMO_BYPASS_PASSWORD) {
       ok = true;
     }
   }

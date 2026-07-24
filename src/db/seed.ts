@@ -1611,6 +1611,41 @@ export async function seedDemoSchedule(
     },
   ]);
 
+  // A real booking never sits with zero waiver activity: the live
+  // booking-creation flow issues a waiver request the instant a diver joins a
+  // trip (issueWaiverOnJoin). The seed mirrors that so every upcoming
+  // booking already has a pending (issued, unsigned) waiver on file — except
+  // the reef trip's first-booked diver (the pinned recap booking above), who
+  // stays genuinely unsent. That one holdout is the shop's real-world
+  // straggler — a request that quietly never went out — and it's what keeps
+  // the "click Send waiver" flows (staff UI, e2e) demonstrable.
+  const waiverTemplate = await getCurrentWaiverTemplate(db, shopId);
+  if (!waiverTemplate) throw new Error("seed: waiver template missing before upcoming waivers");
+  let upcomingWaiverToken = 0;
+  const upcomingWaiverRows = bookingRows_
+    .filter((booking) => booking.id !== recapBookingId)
+    .map((booking) => {
+      upcomingWaiverToken++;
+      return {
+        shopId,
+        bookingId: booking.id,
+        personId: booking.personId,
+        templateId: waiverTemplate.id,
+        templateTitle: waiverTemplate.title,
+        templateVersion: waiverTemplate.version,
+        templateBody: waiverTemplate.body,
+        // Never a real bearer token (nobody is meant to sign these seeded
+        // links), but unique per shop row so a fleet of minted demo shops
+        // can never collide on the table's global tokenHash constraint.
+        tokenHash: `seed-waiver-${shopId}-${upcomingWaiverToken}`,
+        // Comfortably past every seeded upcoming trip (furthest is ~21 days
+        // out) so a fresh demo never opens with an already-expired link.
+        expiresAt: at(30, 12),
+        createdAt: nextCreatedAt(),
+      };
+    });
+  if (upcomingWaiverRows.length > 0) await db.insert(waiverRecords).values(upcomingWaiverRows);
+
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_);

@@ -62,6 +62,45 @@ function CopyLink({ link }: { link: WaiverFallbackLink }) {
   );
 }
 
+/** Why staff must hand the link over themselves, phrased for one diver or several. */
+function reasonCopy(reason: WaiverFallbackLink["reason"], count: number): string {
+  const plural = count > 1;
+  if (reason === "no_email") {
+    return plural ? `${count} have no email on file` : "No email on file";
+  }
+  return "This shop has no email provider configured yet";
+}
+
+/** One paragraph per delivery reason, so "no address on file" never reads as
+ * "the shop's email is broken" or the reverse. */
+function LinkGroups({ links }: { links: WaiverFallbackLink[] }) {
+  const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
+    no_email: links.filter((link) => link.reason === "no_email"),
+    unconfigured: links.filter((link) => link.reason === "unconfigured"),
+  };
+  return (
+    <>
+      {(Object.keys(groups) as Array<WaiverFallbackLink["reason"]>).map((reason) => {
+        const group = groups[reason];
+        if (group.length === 0) return null;
+        return (
+          <div key={reason} className="mt-2">
+            <p className="text-muted">
+              {reasonCopy(reason, group.length)} — share{" "}
+              {group.length === 1 ? "this private link" : "these private links"}:
+            </p>
+            <div className="mt-2 flex flex-col gap-1.5">
+              {group.map((link) => (
+                <CopyLink key={link.token} link={link} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function ResultNotice({ state }: { state: WaiverSendState }) {
   if (state.status !== "done") return null;
   const nothing =
@@ -88,19 +127,7 @@ function ResultNotice({ state }: { state: WaiverSendState }) {
           signed waiver — nothing reissued.
         </p>
       ) : null}
-      {state.links.length > 0 ? (
-        <div className="mt-2">
-          <p className="text-muted">
-            {state.links.length === 1 ? "No email on file" : `${state.links.length} have no email`}{" "}
-            — share {state.links.length === 1 ? "this private link" : "these private links"}:
-          </p>
-          <div className="mt-2 flex flex-col gap-1.5">
-            {state.links.map((link) => (
-              <CopyLink key={link.token} link={link} />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {state.links.length > 0 ? <LinkGroups links={state.links} /> : null}
       {state.errors.length > 0 ? (
         <p className="mt-1 text-danger">
           Couldn’t send to {state.errors.join(", ")} — open the roster to check the booking.
