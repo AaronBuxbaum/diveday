@@ -19,20 +19,24 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   await expect(page.getByRole("heading", { name: /You're on the boat, Rin/ })).toBeVisible();
 
   // Per-piece prices show next to the gear, the set price is offered, and the
-  // default full-set fit is estimated at the cheaper set price ($45.00).
+  // default full-set fit is estimated at the cheaper set price ($45.00). The demo
+  // shop stocks all six core items, so the set now includes the dive computer.
   const fit = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Rental fit" }) });
   await expect(
-    fit.getByText("A full set includes a BCD, regulator, wetsuit, mask & fins, and weights."),
+    fit.getByText(
+      "A full set includes BCD, regulator, wetsuit, mask & fins, weights, and dive computer.",
+    ),
   ).toBeVisible();
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   // Target the checkbox specifically: "BCD" also substring-matches the "BCD size"
   // select's label, which would make a bare getByLabel("BCD") ambiguous.
   await fit.getByRole("checkbox", { name: /BCD/ }).uncheck();
   // Dropping the BCD ($15) from the full set falls back to the per-piece sum of
-  // the remaining core kit: regulator $15 + wetsuit $12 + mask & fins $8 + weights $5.
-  await expect(fit.getByText(/Estimated rental: \$40\.00 per person/)).toBeVisible();
+  // the remaining core kit: regulator $15 + wetsuit $12 + mask & fins $8 +
+  // weights $5 + dive computer $10.
+  await expect(fit.getByText(/Estimated rental: \$50\.00 per person/)).toBeVisible();
   // Nitrox carries its per-dive surcharge in the label.
   await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
 });

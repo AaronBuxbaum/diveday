@@ -285,19 +285,21 @@ new domain concept, define it here in the same PR.
 ## Rental fit and prep
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
-  SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, and a
-  **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). Some shops also rent a **dive computer** or a
-  **GoPro** — optional add-ons, off by default.
+  SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
+  computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is part of
+  the default kit; the **GoPro** is the one optional add-on, off by default.
 - **Rental catalog** — the shop-level list of gear a shop actually rents (`shops.rental_items`,
   `src/lib/rentals.ts`). It gates the rental-fit forms: a diver is only offered — and only sees size
   fields for — gear the shop stocks, so a shop that doesn't rent GoPros never offers one. Defaults to
   the core kit; add-ons are opt-in in shop settings. Editing the catalog changes what is offered going
-  forward; it does not rewrite a fit a diver already recorded.
+  forward; it does not rewrite a fit a diver already recorded. The dive computer is part of that
+  core kit; only the GoPro is opt-in.
 - **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit (usually cheaper than the pieces), a
   **per-piece** price for any item, and a **per-dive nitrox** surcharge — all in minor units, all
-  optional. A diver renting all five core items is quoted the set; a partial kit is quoted per piece;
-  add-ons and nitrox are always separate. Prices are only a quote (`quoteRentalFit`) — never inventory
+  optional. A diver renting every core item the shop offers (up to all six, dive computer included)
+  is quoted the set; a partial kit is quoted per piece; the GoPro add-on and nitrox are always
+  separate. A shop that doesn't stock a core item still reaches its set with the core it does offer. Prices are only a quote (`quoteRentalFit`) — never inventory
   or an allocation — and an unpriced item is settled at the shop rather than quoted at zero. A shop that
   prices nothing keeps the "ask the shop what's included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
