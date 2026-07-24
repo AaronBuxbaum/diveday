@@ -16,7 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
-import type { RentalPricing } from "@/lib/rentals";
+import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
 /**
  * The domain spine. Multi-tenant from day one: every domain table carries
@@ -53,12 +53,15 @@ export const shops = pgTable(
     /**
      * The gear this shop rents (RentableItemKind values, src/lib/rentals.ts). Gates
      * which items a diver can pick in the rental-fit forms — a shop that doesn't
-     * rent GoPros never offers one. Defaults to the core kit; add-ons are opt-in.
+     * rent GoPros never offers one. Defaults to the core kit (which now includes
+     * the dive computer); the GoPro is the one opt-in add-on. Single-sourced from
+     * DEFAULT_SHOP_RENTAL_ITEMS so the stored default can never drift from the
+     * canonical kit again.
      */
     rentalItems: jsonb("rental_items")
       .$type<string[]>()
       .notNull()
-      .default(["bcd", "regulator", "wetsuit", "mask_fins", "weights"]),
+      .default([...DEFAULT_SHOP_RENTAL_ITEMS]),
     /**
      * What the shop charges for rental gear (minor units), src/lib/rentals.ts. A
      * set price for the full core kit, per-piece prices, and a per-dive nitrox

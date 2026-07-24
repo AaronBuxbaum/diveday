@@ -49,9 +49,11 @@ chosen battlegrounds — and re-read it before changing the spine.
   over naming the rival. Switching guides may name incumbents; they cite sources and never
   speculate.
 - **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
-  JSON-LD literals, or images — every copy is a future stale claim. The number and terms are
-  provisional until H-12 ([human-decisions.md](human-decisions.md)) is decided by the product
-  owner; do not publish price or billing terms through any new channel without that decision.
+  JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
+  the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
+  `marketing.ts` as today's price. The remaining commercial *terms* — billing cadence, taxes/fees,
+  support/onboarding, and the contract flow — are still undecided ([human-decisions.md](human-decisions.md));
+  do not publish billing terms through any new channel without that decision.
 - **Offline claims stay precise and human**: staff explicitly save a copy to the device; nothing
   invisibly caches, transfers between devices, or guarantees stale readiness is live. Captain's
   words ("saved to this phone", "checked again when service returns") — the machinery

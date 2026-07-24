@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import {
+  CORE_RENTAL_KINDS,
   hasAnyRentalPricing,
   offeredRentableItems,
   quoteRentalFit,
@@ -58,9 +59,23 @@ export function RentalFitForm({
   // useful before a diver commits their changes.
   const quote = quoteRentalFit(pricing, {
     rentedKinds: [...rentedKinds],
+    offeredKinds: [...offers],
     wantsNitrox: nitroxRequested,
     plannedDives,
   });
+  // Describe the set as exactly the core items this shop offers, so the copy can
+  // never promise a bundle the diver can't assemble (e.g. after the dive
+  // computer joined the core kit).
+  const coreSetLabels = offered
+    .filter((item) => (CORE_RENTAL_KINDS as readonly string[]).includes(item.kind))
+    // Lower-case mid-sentence, but keep all-caps acronyms like "BCD" intact.
+    .map((item) =>
+      item.label === item.label.toUpperCase() ? item.label : item.label.toLowerCase(),
+    );
+  const coreSetSentence =
+    coreSetLabels.length > 1
+      ? `${coreSetLabels.slice(0, -1).join(", ")}, and ${coreSetLabels[coreSetLabels.length - 1]}`
+      : (coreSetLabels[0] ?? "");
   return (
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">Rental fit</h3>
@@ -114,8 +129,8 @@ export function RentalFitForm({
               We plan one tank per dive, so {plannedDives} {plannedDives === 1 ? "tank" : "tanks"}{" "}
               for this trip.{" "}
               {showPricing
-                ? pricing.setCents !== null
-                  ? `A full set includes a BCD, regulator, wetsuit, mask & fins, and weights. Take it for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
+                ? pricing.setCents !== null && coreSetSentence
+                  ? `A full set includes ${coreSetSentence}. Take it for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
                   : "Prices are per piece."
                 : "Ask the shop what’s included in the trip price."}
             </p>

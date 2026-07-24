@@ -33,9 +33,9 @@ export type RentableItem = {
   label: string;
   /**
    * Whether a diver with no fit on file defaults to renting this. Core gear a
-   * shop stocks for everyone defaults on; add-ons a diver usually owns (a
-   * computer) or may not want (a GoPro) default off, so nobody is packed a
-   * GoPro they never asked for.
+   * shop stocks for everyone — now including the dive computer — defaults on;
+   * only the GoPro defaults off, so nobody is packed a GoPro they never asked
+   * for.
    */
   defaultRented: boolean;
 };
@@ -75,7 +75,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
     field: "rentsDiveComputer",
     name: "diveComputer",
     label: "Dive computer",
-    defaultRented: false,
+    defaultRented: true,
   },
   { kind: "gopro", field: "rentsGopro", name: "gopro", label: "GoPro", defaultRented: false },
 ] as const;
@@ -107,10 +107,10 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
 }
 
 /**
- * The core kit that makes up a "set". A shop usually prices these five as one
+ * The core kit that makes up a "set". A shop usually prices these six as one
  * cheaper bundle; a diver who takes all of them is quoted the set, and anyone
- * taking a partial set pays per piece. The add-ons (`dive_computer`, `gopro`)
- * and nitrox are always priced on their own, never folded into the set.
+ * taking a partial set pays per piece. The `gopro` add-on and nitrox are always
+ * priced on their own, never folded into the set.
  */
 export const CORE_RENTAL_KINDS = [
   "bcd",
@@ -118,6 +118,7 @@ export const CORE_RENTAL_KINDS = [
   "wetsuit",
   "mask_fins",
   "weights",
+  "dive_computer",
 ] as const satisfies readonly RentableItemKind[];
 
 export type CoreRentalKind = (typeof CORE_RENTAL_KINDS)[number];
@@ -181,27 +182,36 @@ const ITEM_LABEL: Record<RentableItemKind, string> = {
 };
 
 /**
- * What a diver is quoted for the gear they picked. A full core set is billed at
- * the set price when the shop offers one (cheaper than the pieces, by design); a
- * partial set is billed per piece. Add-ons and nitrox are always separate. Items
- * the shop hasn't priced are left off the total and reported in `unpricedKinds`,
- * so a quote is never silently short. `plannedDives` scales the per-dive nitrox
- * surcharge.
+ * What a diver is quoted for the gear they picked. Taking every core item the
+ * shop offers is billed at the set price when the shop has one (cheaper than the
+ * pieces, by design); a partial set is billed per piece. The GoPro add-on and
+ * nitrox are always separate. Items the shop hasn't priced are left off the
+ * total and reported in `unpricedKinds`, so a quote is never silently short.
+ * `plannedDives` scales the per-dive nitrox surcharge.
  */
 export function quoteRentalFit(
   pricing: RentalPricing,
   fit: {
     rentedKinds: readonly RentableItemKind[];
+    /**
+     * The kinds this shop actually stocks (its rental catalog). The "set" is
+     * every core item the shop offers, so a shop that doesn't rent a dive
+     * computer still reaches its set with the core it does stock — and set
+     * eligibility never depends on an item the diver can't pick.
+     */
+    offeredKinds: readonly RentableItemKind[];
     wantsNitrox: boolean;
     plannedDives: number;
   },
 ): RentalQuote {
   const rented = new Set(fit.rentedKinds);
+  const offered = new Set(fit.offeredKinds);
   const lines: RentalQuoteLine[] = [];
   const unpricedKinds: RentableItemKind[] = [];
 
-  const rentedCore = CORE_RENTAL_KINDS.filter((kind) => rented.has(kind));
-  const takesFullSet = rentedCore.length === CORE_RENTAL_KINDS.length;
+  const offeredCore = CORE_RENTAL_KINDS.filter((kind) => offered.has(kind));
+  const rentedCore = offeredCore.filter((kind) => rented.has(kind));
+  const takesFullSet = offeredCore.length > 0 && rentedCore.length === offeredCore.length;
   if (takesFullSet && pricing.setCents !== null) {
     lines.push({ kind: "set", label: "Full rental set", cents: pricing.setCents });
   } else {
@@ -212,7 +222,7 @@ export function quoteRentalFit(
     }
   }
 
-  for (const kind of ["dive_computer", "gopro"] as const) {
+  for (const kind of ["gopro"] as const) {
     if (!rented.has(kind)) continue;
     const cents = pricing.perItemCents[kind];
     if (cents === undefined) unpricedKinds.push(kind);
