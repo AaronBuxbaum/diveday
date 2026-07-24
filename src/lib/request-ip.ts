@@ -9,21 +9,30 @@ export type HeaderGetter = { get(name: string): string | null };
  * header" rule that governs `publicAppUrl()` in src/lib/notifications).
  *
  * Trusted-proxy policy: Vercel is the sole hosting target
- * (docs/architecture/decisions/20260718-vercel-hosting.md) and sits
- * directly in front of this app with no other customer-configurable proxy
- * hop, so `x-forwarded-for`'s first entry is the address Vercel's own edge
- * observed and can be trusted; `x-real-ip` is the fallback. Returns null
- * when neither header is present (local dev, a bare `next start`) — callers
- * should treat that as one shared "unknown" bucket, never as a reason to
- * skip rate limiting or to trust some other client-supplied override.
+ * (docs/architecture/decisions/20260718-vercel-hosting.md). Vercel's own
+ * docs (Headers → Request headers → `x-forwarded-for`) state: "If you are
+ * trying to use Vercel behind a proxy, we currently overwrite the
+ * X-Forwarded-For header and do not forward external IPs. This restriction
+ * is in place to prevent IP spoofing" — so a client-supplied value is
+ * discarded, not appended to, and the header's first entry is Vercel's own
+ * observed connecting IP. `x-vercel-forwarded-for` is preferred here anyway
+ * (checked first) because Vercel's same docs note it "is identical to
+ * `x-forwarded-for`. However, `x-forwarded-for` could be overwritten if
+ * you're using a proxy on top of Vercel" — i.e. it stays trustworthy even
+ * under a future customer-added proxy in front of Vercel, which
+ * `x-forwarded-for` alone would not. `x-real-ip` (also documented as
+ * identical) is the last fallback. Returns null when none of these headers
+ * are present (local dev, a bare `next start`) — callers should treat that
+ * as one shared "unknown" bucket, never as a reason to skip rate limiting
+ * or to trust some other client-supplied override.
  */
 export async function clientIp(source: HeaderGetter | null = null): Promise<string | null> {
   const list = source ?? (await headers());
-  const forwarded = list.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
+  for (const name of ["x-vercel-forwarded-for", "x-forwarded-for", "x-real-ip"]) {
+    const value = list.get(name);
+    if (!value) continue;
+    const first = value.split(",")[0]?.trim();
     if (first) return first;
   }
-  const real = list.get("x-real-ip");
-  return real?.trim() || null;
+  return null;
 }
