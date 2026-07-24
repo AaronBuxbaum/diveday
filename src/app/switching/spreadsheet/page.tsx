@@ -40,7 +40,7 @@ const scopeChip: Record<
   { label: string; className: string }
 > = {
   full: { label: "Imports fully", className: "bg-success/10 text-success" },
-  partial: { label: "Partial", className: "bg-warning/15 text-foreground" },
+  partial: { label: "Partial", className: "bg-warning/15 text-warning" },
   never: { label: "Never", className: "bg-danger/10 text-danger" },
 };
 
@@ -167,11 +167,11 @@ export default function SpreadsheetSwitchPage() {
               </a>
             </div>
 
-            <ul className="mt-10 space-y-2">
+            <ul className="mt-10 divide-y divide-border border-y border-border">
               {COLUMNS_THAT_MATTER.map((row) => (
                 <li
                   key={row.column}
-                  className="grid gap-1 rounded-xl border border-border bg-background px-4 py-3 sm:grid-cols-[11rem_1fr] sm:items-baseline sm:gap-3"
+                  className="grid gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:items-baseline sm:gap-3"
                 >
                   <span className="font-medium text-foreground">{row.column}</span>
                   <span className="text-sm leading-6 text-muted">{row.detail}</span>
@@ -287,16 +287,17 @@ export default function SpreadsheetSwitchPage() {
 
         <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Ready to get off the sheet?</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              See it before you switch a thing.
+            </h2>
             <p className="mt-2 max-w-xl text-muted">
-              Walk the live demo as the owner, the captain, or a diver first — then start a trial,
-              bring your spreadsheet, and see your roster land in DiveDay with the safety spine
-              intact.
+              Walk the live demo as the owner, the captain, or a diver — no sign-up, nothing to
+              import, just the working shop. Start a trial when it clicks.
             </p>
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
+              <form action={enterDemoAction} className="contents">
                 <input type="hidden" name="source" value="switching-spreadsheet" />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"

@@ -32,7 +32,7 @@ const scopeChip: Record<
   { label: string; className: string }
 > = {
   full: { label: "Imports fully", className: "bg-success/10 text-success" },
-  partial: { label: "Partial", className: "bg-warning/15 text-foreground" },
+  partial: { label: "Partial", className: "bg-warning/15 text-warning" },
   never: { label: "Never", className: "bg-danger/10 text-danger" },
 };
 
@@ -225,7 +225,7 @@ export default async function MigrationGuidePage({
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
+              <form action={enterDemoAction} className="contents">
                 <input type="hidden" name="source" value={`switching-${competitor}`} />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
