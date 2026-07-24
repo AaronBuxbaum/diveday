@@ -45,10 +45,10 @@ chosen battlegrounds — and re-read it before changing the spine.
 - **Authorized service offers** are the one exception to shipped-only: a commitment the shop makes
   to a customer, not a product feature, may be stated once the product owner has authorized it.
   Currently authorized: **free, personal help importing a shop's existing spreadsheet or data** (a
-  Jane-style concierge import, authorized 2026-07-24, on `/switching/spreadsheet`). Phrase these as
-  a human commitment ("we'll map it with you"), never as an automated product capability, and never
-  promise a turnaround time. A new service claim needs product-owner sign-off the same way the
-  price does.
+  Jane-style concierge import, authorized 2026-07-24, on `/switching/spreadsheet`, routed to the
+  `switch@dive.day` inbox). Phrase these as a human commitment ("we'll map it with you"), never as
+  an automated product capability, and never promise a turnaround time. A new service claim needs
+  product-owner sign-off the same way the price does.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased

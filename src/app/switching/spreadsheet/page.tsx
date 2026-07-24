@@ -26,13 +26,15 @@ import { IMPORT_HONESTY_TABLE } from "@/lib/import";
  *
  * The free personal-import offer is a service commitment authorized by the
  * product owner (docs/product/marketing.md, claims policy) — not a product
- * feature. It routes through the trial: help happens once the shop is in.
+ * feature. It routes to the switch@dive.day inbox (IMPORT_EMAIL) so a shop has
+ * a real handoff, not just the self-service importer.
  */
 
 export const metadata: Metadata = {
   title: "Move your dive shop off spreadsheets — DiveDay",
   description:
     "Running your dive shop from a spreadsheet? DiveDay reads the sheet you already keep — your divers, their cards, and their sizes — and adds the things a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+  alternates: { canonical: "/switching/spreadsheet" },
 };
 
 const scopeChip: Record<
@@ -43,6 +45,9 @@ const scopeChip: Record<
   partial: { label: "Partial", className: "bg-warning/15 text-warning" },
   never: { label: "Never", className: "bg-danger/10 text-danger" },
 };
+
+/** Where the free concierge-import offer routes (product-owner provided). */
+const IMPORT_EMAIL = "switch@dive.day";
 
 /** The columns that matter, in the owner's words — mirrors what the importer recognizes. */
 const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
@@ -94,10 +99,10 @@ export default function SpreadsheetSwitchPage() {
               The spreadsheet got you this far.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-              It won't tell you the diver on tomorrow's boat is on a lapsed card, chase the waiver
-              nobody signed, or let a diver book their own seat on a Sunday night. DiveDay reads the
-              sheet you already keep — your divers, their cards, their sizes — and takes the rest
-              off your hands. No system to rip out first; you already have the file.
+              It won't flag the diver on tomorrow's boat whose card nobody's verified, chase the
+              waiver no one signed, or let a diver book their own seat on a Sunday night. DiveDay
+              reads the sheet you already keep — your divers, their cards, their sizes — and takes
+              the rest off your hands. No system to rip out first; you already have the file.
             </p>
           </div>
         </section>
@@ -132,7 +137,7 @@ export default function SpreadsheetSwitchPage() {
               },
               {
                 title: "A manifest that's a head count, not a printout",
-                body: "The captain checks divers off dive by dive on a phone, and the roll call holds even when the signal doesn't.",
+                body: "The captain checks divers off dive by dive on a phone — working from a copy saved to it before the boat leaves, so roll call keeps going when the signal doesn't, then checks itself against the live manifest when service returns.",
               },
             ].map((item) => (
               <li key={item.title} className="rounded-2xl border border-border bg-surface p-6">
@@ -245,8 +250,9 @@ export default function SpreadsheetSwitchPage() {
                   <p className="mt-1.5 leading-7 text-muted">
                     DiveDay maps your columns automatically and previews the file before anything is
                     saved — how each column landed, which cards will come in as claims for staff to
-                    verify, and anything it's leaving behind. The whole file imports when you
-                    confirm.
+                    verify, and anything it's leaving behind, including any row it can't bring
+                    across (one with no name, or a repeated email). The rows that pass import when
+                    you confirm.
                   </p>
                 </div>
               </li>
@@ -274,14 +280,22 @@ export default function SpreadsheetSwitchPage() {
         <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-8 sm:p-10">
             <h2 className="text-2xl font-semibold tracking-tight">
-              Or hand us the sheet and we'll do it with you — free.
+              Or email us the sheet and we'll do it with you — free.
             </h2>
             <p className="mt-3 max-w-2xl text-lg leading-8 text-muted">
               However your spreadsheet looks — one tab or ten, headings that made sense only to you,
-              years of rows — you don't have to wrangle it alone. Start a trial and bring your sheet
-              as it is; we'll map the columns and bring your divers in with you, free, on any plan.
-              It's your data, and getting it in shouldn't be the hard part.
+              years of rows — you don't have to wrangle it alone. Send it to us as it is and we'll
+              map the columns and bring your divers in with you, free, on any plan. It's your data,
+              and getting it in shouldn't be the hard part.
             </p>
+            <div className="mt-6">
+              <a
+                href={`mailto:${IMPORT_EMAIL}?subject=Import%20my%20spreadsheet`}
+                className={buttonClass({ className: "cursor-pointer" })}
+              >
+                Email your spreadsheet to {IMPORT_EMAIL}
+              </a>
+            </div>
           </div>
         </section>
 
