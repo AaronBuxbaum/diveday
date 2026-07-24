@@ -297,8 +297,9 @@ new domain concept, define it here in the same PR.
 - **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit (usually cheaper than the pieces), a
   **per-piece** price for any item, and a **per-dive nitrox** surcharge — all in minor units, all
-  optional. A diver renting all six core items is quoted the set; a partial kit is quoted per piece;
-  the GoPro add-on and nitrox are always separate. Prices are only a quote (`quoteRentalFit`) — never inventory
+  optional. A diver renting every core item the shop offers (up to all six, dive computer included)
+  is quoted the set; a partial kit is quoted per piece; the GoPro add-on and nitrox are always
+  separate. A shop that doesn't stock a core item still reaches its set with the core it does offer. Prices are only a quote (`quoteRentalFit`) — never inventory
   or an allocation — and an unpriced item is settled at the shop rather than quoted at zero. A shop that
   prices nothing keeps the "ask the shop what's included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop

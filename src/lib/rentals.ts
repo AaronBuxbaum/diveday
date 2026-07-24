@@ -182,27 +182,36 @@ const ITEM_LABEL: Record<RentableItemKind, string> = {
 };
 
 /**
- * What a diver is quoted for the gear they picked. A full core set is billed at
- * the set price when the shop offers one (cheaper than the pieces, by design); a
- * partial set is billed per piece. Add-ons and nitrox are always separate. Items
- * the shop hasn't priced are left off the total and reported in `unpricedKinds`,
- * so a quote is never silently short. `plannedDives` scales the per-dive nitrox
- * surcharge.
+ * What a diver is quoted for the gear they picked. Taking every core item the
+ * shop offers is billed at the set price when the shop has one (cheaper than the
+ * pieces, by design); a partial set is billed per piece. The GoPro add-on and
+ * nitrox are always separate. Items the shop hasn't priced are left off the
+ * total and reported in `unpricedKinds`, so a quote is never silently short.
+ * `plannedDives` scales the per-dive nitrox surcharge.
  */
 export function quoteRentalFit(
   pricing: RentalPricing,
   fit: {
     rentedKinds: readonly RentableItemKind[];
+    /**
+     * The kinds this shop actually stocks (its rental catalog). The "set" is
+     * every core item the shop offers, so a shop that doesn't rent a dive
+     * computer still reaches its set with the core it does stock — and set
+     * eligibility never depends on an item the diver can't pick.
+     */
+    offeredKinds: readonly RentableItemKind[];
     wantsNitrox: boolean;
     plannedDives: number;
   },
 ): RentalQuote {
   const rented = new Set(fit.rentedKinds);
+  const offered = new Set(fit.offeredKinds);
   const lines: RentalQuoteLine[] = [];
   const unpricedKinds: RentableItemKind[] = [];
 
-  const rentedCore = CORE_RENTAL_KINDS.filter((kind) => rented.has(kind));
-  const takesFullSet = rentedCore.length === CORE_RENTAL_KINDS.length;
+  const offeredCore = CORE_RENTAL_KINDS.filter((kind) => offered.has(kind));
+  const rentedCore = offeredCore.filter((kind) => rented.has(kind));
+  const takesFullSet = offeredCore.length > 0 && rentedCore.length === offeredCore.length;
   if (takesFullSet && pricing.setCents !== null) {
     lines.push({ kind: "set", label: "Full rental set", cents: pricing.setCents });
   } else {

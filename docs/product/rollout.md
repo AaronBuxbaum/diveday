@@ -23,7 +23,8 @@ guides). **Nothing that blocks rollout is code.** What blocks rollout is:
 2. **Operational reality** — no named owner for secrets/backups/incidents (H-04), no live Stripe
    Connect platform application (H-07), no verified sender/consent policy (H-09), and the offline
    manifest is field-unproven (V-02).
-3. **Commercial reality** — the $99 founding-shop price is provisional (H-12), and no real shop has
+3. **Commercial reality** — the $99 founding-shop price is approved for now (H-12, 2026-07-24;
+   early-access, with billing/tax/support/contract terms still open), and no real shop has
    run a real dive day on the product (V-04).
 
 The rollout is therefore sequenced as four phases, each with explicit entry/exit criteria. Do not

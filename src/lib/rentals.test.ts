@@ -24,6 +24,18 @@ const PRICING: RentalPricing = {
   nitroxCents: 1000,
 };
 
+// A shop that stocks the whole catalog, so set eligibility turns only on what
+// the diver picks. Tests that need a shop without the computer pass their own.
+const ALL_OFFERED = [
+  "bcd",
+  "regulator",
+  "wetsuit",
+  "mask_fins",
+  "weights",
+  "dive_computer",
+  "gopro",
+] as const;
+
 describe("rentable items", () => {
   it("defaults a new shop to the core gear including the dive computer, not the GoPro", () => {
     expect(DEFAULT_SHOP_RENTAL_ITEMS).toEqual([
@@ -66,6 +78,7 @@ describe("rental pricing", () => {
   it("bills the full core kit — including the dive computer — at the cheaper set price", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+      offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
     });
@@ -74,13 +87,14 @@ describe("rental pricing", () => {
     expect(quote.unpricedKinds).toEqual([]);
   });
 
-  it("bills the core five without a dive computer per piece, never the set", () => {
+  it("bills the core five per piece when the shop offers a computer the diver skips", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
     });
-    // The dive computer is now part of the set, so five core items is a partial kit.
+    // The dive computer is part of the offered set, so five core items is a partial kit.
     expect(quote.lines.map((line) => line.kind)).toEqual([
       "bcd",
       "regulator",
@@ -91,9 +105,22 @@ describe("rental pricing", () => {
     expect(quote.subtotalCents).toBe(1500 + 1500 + 1200 + 800 + 500);
   });
 
+  it("still reaches the set with five core items when the shop doesn't stock a computer", () => {
+    const quote = quoteRentalFit(PRICING, {
+      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      // Catalog without a dive computer: the set is the core this shop offers.
+      offeredKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "gopro"],
+      wantsNitrox: false,
+      plannedDives: 2,
+    });
+    expect(quote.lines).toEqual([{ kind: "set", label: "Full rental set", cents: 4500 }]);
+    expect(quote.subtotalCents).toBe(4500);
+  });
+
   it("bills a partial kit per piece, never the set", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "wetsuit"],
+      offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
     });
@@ -112,6 +139,7 @@ describe("rental pricing", () => {
         "dive_computer",
         "gopro",
       ],
+      offeredKinds: ALL_OFFERED,
       wantsNitrox: true,
       plannedDives: 3,
     });
@@ -125,6 +153,7 @@ describe("rental pricing", () => {
       { ...PRICING, setCents: null },
       {
         rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+        offeredKinds: ALL_OFFERED,
         wantsNitrox: false,
         plannedDives: 1,
       },
@@ -143,7 +172,12 @@ describe("rental pricing", () => {
   it("reports chosen gear the shop hasn't priced instead of quoting it low", () => {
     const quote = quoteRentalFit(
       { setCents: null, perItemCents: { bcd: 1500 }, nitroxCents: null },
-      { rentedKinds: ["bcd", "wetsuit"], wantsNitrox: true, plannedDives: 2 },
+      {
+        rentedKinds: ["bcd", "wetsuit"],
+        offeredKinds: ALL_OFFERED,
+        wantsNitrox: true,
+        plannedDives: 2,
+      },
     );
     expect(quote.subtotalCents).toBe(1500);
     expect(quote.unpricedKinds).toEqual(["wetsuit"]);
