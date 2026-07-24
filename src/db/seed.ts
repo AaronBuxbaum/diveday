@@ -2292,6 +2292,15 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   const nonStaffIds = shopPeople.map((p) => p.id).filter((id) => !staffIds.has(id));
   if (nonStaffIds.length > 0) {
     await db.delete(personRoles).where(inArray(personRoles.personId, nonStaffIds));
+    // Login rows reference people (user_accounts.person_id), so they must go
+    // before the people they belong to or the delete below FK-violates (23503),
+    // aborts the whole reset mid-run, and leaks the churned schedule into the
+    // next spec's fixture. A non-staff person carries a login whenever a flow
+    // minted one for them — contact import (src/db/import.ts) and diver signup
+    // both do — so this is not hypothetical; it is what made trips.spec flake
+    // under the full suite. deleteDemoShopCascade already clears these; the
+    // per-reset path must too.
+    await db.delete(userAccounts).where(inArray(userAccounts.personId, nonStaffIds));
     await db.delete(people).where(inArray(people.id, nonStaffIds));
   }
 
