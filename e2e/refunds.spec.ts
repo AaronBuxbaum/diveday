@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
 
 /**
  * Refunds are staff-run (docs H-07): cancelling a paid booking never moves
@@ -37,14 +37,21 @@ test.describe("refunds", () => {
     await expect(page.getByRole("status")).toContainText("requirements updated");
   }
 
-  async function bookAndMarkPaid(page: import("@playwright/test").Page, title: string) {
+  async function bookAndMarkPaid(
+    page: import("@playwright/test").Page,
+    title: string,
+    // Distinguishes this helper's two call sites' divers: both tests reuse
+    // "Nora Quinn", and the frozen clock (unlike Date.now()) no longer makes
+    // their emails unique on its own.
+    emailTag: string,
+  ) {
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/$/);
 
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await page.getByLabel("Name").fill("Nora Quinn");
-    await page.getByLabel("Email").fill(`nora-${Date.now()}@example.com`);
+    await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
@@ -67,13 +74,13 @@ test.describe("refunds", () => {
   test("cancelling a paid counter booking inside the free-cancellation window flags a manual refund", async ({
     page,
   }) => {
-    const title = `Refund Window Trip ${Date.now()}`;
+    const title = `Refund Window Trip ${e2eNow().getTime()}`;
     await createPaymentRequiredTrip(page, {
       title,
       date: daysFromNow(5),
       cancellationWindowHours: 24,
     });
-    const noraRow = await bookAndMarkPaid(page, title);
+    const noraRow = await bookAndMarkPaid(page, title, "refund");
 
     page.once("dialog", (dialog) => void dialog.accept());
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
@@ -86,7 +93,7 @@ test.describe("refunds", () => {
   test("cancelling a paid booking past the cancellation deadline forfeits the refund", async ({
     page,
   }) => {
-    const title = `Forfeit Window Trip ${Date.now()}`;
+    const title = `Forfeit Window Trip ${e2eNow().getTime()}`;
     // A window far longer than the time left before departure puts the
     // deadline in the past the instant the trip is created.
     await createPaymentRequiredTrip(page, {
@@ -94,7 +101,7 @@ test.describe("refunds", () => {
       date: daysFromNow(1),
       cancellationWindowHours: 720,
     });
-    const noraRow = await bookAndMarkPaid(page, title);
+    const noraRow = await bookAndMarkPaid(page, title, "forfeit");
 
     page.once("dialog", (dialog) => void dialog.accept());
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
