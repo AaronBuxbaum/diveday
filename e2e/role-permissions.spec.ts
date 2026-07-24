@@ -20,6 +20,18 @@ async function firstDiverDetailHref(page: import("@playwright/test").Page): Prom
   return href;
 }
 
+async function firstTripManageHref(page: import("@playwright/test").Page): Promise<string> {
+  // Signed-in staff see the schedule's cards link straight to trip management.
+  // Exclude the "Schedule a trip" CTA (/trips/new) — we want a real trip's id.
+  await page.goto(`/shop/${SHOP}/schedule`);
+  const href = await page
+    .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href="/shop/${SHOP}/trips/new"])`)
+    .first()
+    .getAttribute("href");
+  if (!href) throw new Error("no trip management link found");
+  return href;
+}
+
 test.describe("H-14 role permissions", () => {
   test("the daily crew (captain) is denied money, legal, deletion, and trip config", async ({
     page,
@@ -44,6 +56,15 @@ test.describe("H-14 role permissions", () => {
     // Diver deletion is hidden.
     await page.goto(await firstDiverDetailHref(page));
     await expect(page.getByRole("heading", { name: "Remove from active divers" })).toHaveCount(0);
+
+    // On a trip's Overview, trip *definition* is hidden, but the day-of operating
+    // actions the glossary assigns to crew — conditions, crew, weather cancel —
+    // stay available.
+    await page.goto(await firstTripManageHref(page));
+    await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Publish crew prediction" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save crew" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel trip" })).toBeVisible();
   });
 
   test("an instructor may configure trips but not money or legal", async ({ page }) => {
@@ -76,5 +97,9 @@ test.describe("H-14 role permissions", () => {
 
     await page.goto(await firstDiverDetailHref(page));
     await expect(page.getByRole("heading", { name: "Remove from active divers" })).toBeVisible();
+
+    // Trip definition is available to the owner.
+    await page.goto(await firstTripManageHref(page));
+    await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
   });
 });
