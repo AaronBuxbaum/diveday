@@ -289,21 +289,21 @@ const smartwaiver: MigrationGuide = {
   slug: "smartwaiver",
   competitor: "Smartwaiver",
   cardSummary:
-    "Waivers only. Export your participant CSV and bring the people across — waivers are re-signed here, natively.",
+    "Export your participant CSV and bring the people across — a waiver your file already shows as signed comes in marked imported, so nobody has to sign twice.",
 
   metaTitle: "Switching from Smartwaiver to DiveDay",
   metaDescription:
-    "Moving off Smartwaiver? A step-by-step guide to exporting your participants and bringing them into DiveDay's native waivers — what comes across, what doesn't, and why.",
+    "Moving off Smartwaiver? A step-by-step guide to exporting your participants and bringing them, and their already-signed waivers, into DiveDay.",
 
   heroEyebrow: "Switching to DiveDay",
   heroTitle: "Moving your waivers off Smartwaiver",
   heroLede:
-    "Smartwaiver holds signed waivers and the people who signed them, exportable as a participant CSV. Here's how to bring those people into DiveDay — where waivers are native, versioned, and re-signed against your own template — with a plain account of what makes the trip and what stays behind.",
+    "Smartwaiver holds signed waivers and the people who signed them, exportable as a participant CSV. Here's how to bring those people — and, when your file shows a waiver already accepted, that acceptance too — into DiveDay, where waivers are native and versioned against your own template going forward.",
 
   context: [
-    "Smartwaiver does one thing — digital waivers — and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay's waivers are native and built into every tier, so moving off Smartwaiver means two things: bring the people across, and re-sign the waiver itself in DiveDay.",
-    "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact — the roster you need. What it doesn't hold is certification cards or rental sizes; a waiver system isn't where those live, so expect the import to be mostly contact data.",
-    "The waiver itself is re-signed here, not imported, and that's deliberate. A signed Smartwaiver PDF is evidence tied to Smartwaiver's template and Smartwaiver's questions; it isn't a satisfied DiveDay waiver. Your divers sign your DiveDay waiver once, and medical answers are collected fresh — a cleared flag from another system is never clearance here. The scope table below states this plainly.",
+    "Smartwaiver does one thing — digital waivers — and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay's waivers are native and built into every tier, so moving off Smartwaiver means bringing the people across and telling DiveDay which of them already have a waiver on file.",
+    "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact — the roster you need. What it doesn't hold is certification cards or rental sizes; a waiver system isn't where those live, so expect most of the file to be contact data.",
+    "If a row in your export marks a diver's waiver as already accepted, DiveDay's importer trusts that and brings the waiver across too — marked imported, dated to the acceptance date in your file, and satisfying the boarding gate without asking the diver to sign again. It isn't a copy of the signed Smartwaiver PDF itself (that stays in Smartwaiver, or you can attach a saved copy of it during import); it's your prior acceptance, carried forward. The importer's preview shows exactly what will happen, row by row, before anything is saved. The scope table below states this plainly.",
     "One rule we won't bend: you export your own participant CSV from your own Smartwaiver account. DiveDay never signs into Smartwaiver and never reaches across to pull your data — that's your data to hand us, not ours to take.",
   ],
 
@@ -328,16 +328,16 @@ const smartwaiver: MigrationGuide = {
     {
       title: "That CSV is your roster",
       detail:
-        "Names, email, phone, and any emergency contact you collected are what come across. That's the people; the waiver itself is re-signed in DiveDay.",
+        "Names, email, phone, and any emergency contact you collected are what come across, along with whichever column in your export shows a waiver as already signed — if it has one.",
     },
   ],
   exportNotes: [
     "Smartwaiver holds waivers, not certification cards or gear sizes — so mostly it's the people who migrate, and that's the roster you need.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names Smartwaiver and every other system use, and shows you exactly how each column mapped before you commit.",
-    "Signed waivers and their medical answers aren't imported — see the scope table below. Your divers re-sign your DiveDay waiver, and health answers are collected fresh.",
+    "A diver your file shows as already signed comes across marked imported, not asked to sign again — see the scope table below for exactly what that does and doesn't carry over.",
   ],
   importerNote:
-    "A Smartwaiver export is contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). The waivers themselves are re-signed in DiveDay against your own template.",
+    "A Smartwaiver export is mostly contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). A waiver your export shows as already accepted comes across too, marked imported.",
   sources: [
     { label: "Smartwaiver", url: "https://www.smartwaiver.com/" },
     {

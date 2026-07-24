@@ -295,7 +295,9 @@ export function RosterSection({
                         Signed {formatDateTimeTz(currentWaiver.completedAt, "en-US", shopTimezone)}
                         {currentWaiver.signatureMethod === "in_person_attested"
                           ? " · recorded from a paper copy"
-                          : ""}
+                          : currentWaiver.signatureMethod === "imported"
+                            ? " · imported from a prior shop"
+                            : ""}
                       </p>
                     ) : null}
                     {waiverStatus === "medical_review" ? (

@@ -172,6 +172,21 @@ export type TokenWaiverState =
   | { state: "available"; record: typeof waiverRecords.$inferSelect }
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
+/**
+ * `bookingId` is nullable on the schema only for an imported record
+ * (ADR 20260724-import-waiver-acceptance) — no completion link is ever issued
+ * for one, so it can never be reached through a token. Every record a token
+ * flow touches was born from `issueWaiverRequest` or `recordInPersonWaiver`,
+ * both of which always set a real booking; this narrows that invariant for
+ * token-reached callers rather than threading a null check through each one.
+ */
+export function requireTokenBookingId(record: { bookingId: string | null }): string {
+  if (!record.bookingId) {
+    throw new Error("Waiver record reached through a token has no bookingId");
+  }
+  return record.bookingId;
+}
+
 async function currentRecordForToken(db: AppDb, token: string) {
   const [record] = await db
     .select()
@@ -346,7 +361,7 @@ export async function completeWaiver(
     .returning({ id: waiverRecords.id, status: waiverRecords.status });
   if (saved) {
     if (input.emergencyContact) {
-      await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
+      await saveEmergencyContact(db, requireTokenBookingId(state.record), input.emergencyContact);
     }
     return { ok: true, status: completedStatus(saved.status), idempotent: false };
   }

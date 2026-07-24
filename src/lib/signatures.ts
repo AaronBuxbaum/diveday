@@ -9,7 +9,14 @@ export type SignatureCaptureInput = {
   signedAt?: Date;
 };
 
-export type SignatureMethod = "typed_consent" | "in_person_attested";
+/**
+ * "imported" is not captured through this provider interface — a contact
+ * import trusts a prior shop's own acceptance record rather than capturing a
+ * new signature (ADR 20260724-import-waiver-acceptance) — but it shares the
+ * column and every currency/display rule keyed on method, so it is declared
+ * here alongside the two real providers.
+ */
+export type SignatureMethod = "typed_consent" | "in_person_attested" | "imported";
 
 export type SignatureEvidence = {
   method: SignatureMethod;

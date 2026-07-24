@@ -3,30 +3,35 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAs } from "./helpers";
 
 /**
- * The contact importer (ADR 20260723-contact-importer): the intake side of the
- * portability wedge. The happy path proves the safety spine survives a bulk
- * import — a card the source calls "verified" lands claimed, and a medical
- * column is visibly left behind — and the failure path proves the roster can't
- * be written by staff below owner/manager.
+ * The contact importer (ADR 20260723-contact-importer, ADR
+ * 20260724-import-waiver-acceptance): the intake side of the portability
+ * wedge. The happy path proves the safety spine survives a bulk import — a
+ * card the source calls "verified" lands claimed, an unrecognized medical
+ * column is visibly left behind, and a row claiming a prior waiver acceptance
+ * is trusted and marked imported — and the failure path proves the roster
+ * can't be written by staff below owner/manager.
  */
 
 // A rival-style export: pre-split name, a "verified" flag we must not trust,
-// enriched-air with a card number, rental sizes, and a medical column.
+// enriched-air with a card number, rental sizes, an unrecognized medical
+// column, and a claimed prior waiver acceptance.
 const CONTACTS_CSV = [
-  "First Name,Last Name,Email,Cell,Cert Agency,Cert Level,Cert Number,Verified,Nitrox,Nitrox Number,Wetsuit,Medical Notes",
-  "Imported,Ingrid,imported.ingrid@example.com,305-555-0177,PADI,Advanced Open Water,AOW-IMP-1,true,yes,NX-IMP-1,3mm/M,none on file",
+  "First Name,Last Name,Email,Cell,Cert Agency,Cert Level,Cert Number,Verified,Nitrox,Nitrox Number,Wetsuit,Medical Notes,Waiver Accepted,Waiver Signed At,Waiver Source",
+  "Imported,Ingrid,imported.ingrid@example.com,305-555-0177,PADI,Advanced Open Water,AOW-IMP-1,true,yes,NX-IMP-1,3mm/M,none on file,yes,2025-05-01,Old Blue Reef Divers",
 ].join("\n");
 
 test.describe("contact import", () => {
   signedInAsOwner();
 
-  test("owner imports a CSV, cards land claimed, medical is left behind", async ({ page }) => {
+  test("owner imports a CSV: cards land claimed, an unrecognized medical column is left behind, and a claimed waiver is trusted and marked imported", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/settings/import");
     await expect(page.getByRole("heading", { name: "Import contacts" })).toBeVisible();
 
     // The published honesty table is on the page before any file is chosen.
     await expect(page.getByRole("heading", { name: "What comes across" })).toBeVisible();
-    await expect(page.getByText("Medical & health history")).toBeVisible();
+    await expect(page.getByText("Signed waivers & medical clearance")).toBeVisible();
 
     await page.setInputFiles('input[type="file"]', {
       name: "contacts.csv",
@@ -34,16 +39,22 @@ test.describe("contact import", () => {
       buffer: Buffer.from(CONTACTS_CSV, "utf-8"),
     });
 
-    // Preview: one importable row, the claimed-card note, and the medical column
-    // called out as deliberately dropped.
+    // Preview: one importable row, the claimed-card note, the medical column
+    // called out as deliberately dropped, and the waiver claim called out as
+    // trusted.
     await expect(page.getByText("Will import")).toBeVisible();
     await expect(page.getByText(/Card imported as claimed/)).toBeVisible();
     await expect(page.getByText(/Left behind on purpose/)).toBeVisible();
     await expect(page.getByText(/Medical Notes/)).toBeVisible();
+    await expect(
+      page.getByText(/trusted from the prior shop, including medical clearance/),
+    ).toBeVisible();
+    await expect(page.getByText("accepted · imported")).toBeVisible();
 
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
     await expect(page.getByText(/added as claimed — verify each at first contact/)).toBeVisible();
+    await expect(page.getByText(/1 waiver imported as accepted/)).toBeVisible();
 
     // The person is now on the roster.
     await page.goto("/shop/blue-mantis/divers?q=imported.ingrid@example.com");

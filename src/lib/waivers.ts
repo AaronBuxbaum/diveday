@@ -60,6 +60,13 @@ function signatureTime(record: WaiverRecord): number {
  * booking's own record and to any carried from another booking — so a signature
  * that is stale or against superseded terms is never treated as current, whoever
  * it was signed for. Fails closed on anything missing.
+ *
+ * An `imported` record (ADR 20260724-import-waiver-acceptance) is exempt from
+ * the template-version check: it was never signed against any version of this
+ * shop's own template, only snapshotted against the current one for reference,
+ * so comparing versions would always — and wrongly — read it as stale. Its
+ * `signedAt` is the diver's real acceptance date at the prior shop, so the
+ * validity window still ages it out exactly like any other signature.
  */
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
@@ -68,7 +75,11 @@ export function isCompletedWaiverCurrent(
 ): boolean {
   if (record.status !== "completed") return false;
   if (record.supersededAt) return false;
-  if (currentTemplateVersion !== null && record.templateVersion !== currentTemplateVersion) {
+  if (
+    record.signatureMethod !== "imported" &&
+    currentTemplateVersion !== null &&
+    record.templateVersion !== currentTemplateVersion
+  ) {
     return false;
   }
   const signedAt = record.signedAt ?? record.completedAt;
@@ -140,25 +151,28 @@ export type MedicalWaiverMark = {
   at: Date;
   /**
    * "digital" — the diver answered the medical questionnaire themselves.
-   * "paper" — staff attested a reviewed paper medical (in person). Both are a
-   * real review dated on the same 365-day clock; the source only changes wording.
+   * "paper" — staff attested a reviewed paper medical (in person).
+   * "imported" — trusted from the prior shop's own acceptance, never reviewed
+   * here (ADR 20260724-import-waiver-acceptance). All three are a real review
+   * dated on the same 365-day clock; the source only changes wording.
    */
-  source: "digital" | "paper";
+  source: "digital" | "paper" | "imported";
 };
 
 /**
  * When and how a diver's medical currency was last established, for spotting a
  * statement drifting toward a year stale. A digital completion carries the
  * questionnaire; a staff paper attestation (`in_person_attested`) carries a
- * staff-affirmed review with the same validity clock — so both surface a date,
- * *distinctly*, rather than a paper record reading as a missing medical next to
- * a dated one. Only a clean completion counts; a pending or in-review record has
- * no settled medical to show.
+ * staff-affirmed review; an imported record carries the prior shop's own
+ * clearance — all three surface a date, *distinctly*, rather than reading as a
+ * missing medical next to a dated one. Only a clean completion counts; a
+ * pending or in-review record has no settled medical to show.
  */
 export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMark | null {
   if (record === null || record.status !== "completed") return null;
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
+  if (record.signatureMethod === "imported") return { at, source: "imported" };
   if (record.medicalAnswers) return { at, source: "digital" };
   if (record.signatureMethod === "in_person_attested") return { at, source: "paper" };
   return null;
@@ -179,13 +193,17 @@ export type WaiverActivityEntry = {
 export function waiverActivityTimeline(records: readonly WaiverRecord[]): WaiverActivityEntry[] {
   const entries: WaiverActivityEntry[] = [];
   for (const record of records) {
-    entries.push({
-      recordId: record.id,
-      at: record.createdAt,
-      kind: "issued",
-      title: "Completion link issued",
-      detail: `${record.templateTitle} v${record.templateVersion}`,
-    });
+    // No link was ever issued for a paper-attested or imported record — both
+    // are born already completed, never handed a bearer token to complete.
+    if (record.signatureMethod !== "in_person_attested" && record.signatureMethod !== "imported") {
+      entries.push({
+        recordId: record.id,
+        at: record.createdAt,
+        kind: "issued",
+        title: "Completion link issued",
+        detail: `${record.templateTitle} v${record.templateVersion}`,
+      });
+    }
     if (record.startedAt) {
       entries.push({
         recordId: record.id,

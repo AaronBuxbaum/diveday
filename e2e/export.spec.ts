@@ -58,7 +58,11 @@ test.describe("full-shop data export", () => {
     const contacts = strFromU8(unzipped["contacts.csv"]);
     expect(contacts).toContain("first_name,last_name,full_name");
     expect(contacts).toContain("Priya,Sharma");
-    expect(strFromU8(unzipped["README.txt"])).toContain("Not included in this bundle:");
+    const readme = strFromU8(unzipped["README.txt"]);
+    expect(readme).toContain("Not included in this bundle:");
+    // Real photo files ride along under photos/ for anything DiveDay's own
+    // storage holds (ADR 20260724-export-bundled-photos), not only a URL.
+    expect(readme).toContain("photos/");
   });
 });
 

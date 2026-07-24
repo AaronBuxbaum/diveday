@@ -1085,9 +1085,14 @@ export const waiverRecords = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
+    /**
+     * Null only for an imported record (`signatureMethod: "imported"`): a
+     * contact import creates people, not bookings, so there is no booking to
+     * issue against. Every other record is issued in the context of one real
+     * booking, even though `personId` is what actually satisfies the sign-once
+     * gate on other bookings.
+     */
+    bookingId: uuid("booking_id").references(() => bookings.id),
     /**
      * The diver the signed release belongs to, denormalized from the booking so
      * a completed waiver is queryable per person. A diver signs once: a current
@@ -1126,6 +1131,16 @@ export const waiverRecords = pgTable(
     medicalAnswers: jsonb("medical_answers").$type<MedicalAnswers>(),
     medicalReviewRequired: boolean("medical_review_required").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    /**
+     * Provenance for an imported record (ADR 20260724-import-waiver-acceptance):
+     * a free-text label of the prior shop/system the row named, and any
+     * source document(s) re-stored through DiveDay's own image pipeline
+     * (never rendered from the raw import URL directly). All null for a
+     * record created any other way.
+     */
+    importedFromLabel: text("imported_from_label"),
+    importSourceDocumentUrl: text("import_source_document_url"),
+    importSourceMedicalDocumentUrl: text("import_source_medical_document_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

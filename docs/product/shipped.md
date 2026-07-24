@@ -160,11 +160,19 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 - **Full-shop data export** — Settings → Data export downloads one ZIP of documented CSVs (leading
   with an import-ready `contacts.csv`) plus a README manifest; the "leave anytime" half of the
   data-portability wedge ([full-shop-export](../architecture/decisions/20260722-full-shop-export.md)).
-- **Diver/customer CSV importer** — Settings → Import contacts brings people, cards, and rental sizes
-  in from a rival's export or DiveDay's own `contacts.csv`, matched by email so a re-import updates
-  rather than duplicates. The safety spine holds: imported certs land **claimed, never verified**,
-  no card number means no card, and medical answers never import (fail-closed); a scope table states
-  all of it up front. Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
+  Every image URL the CSVs reference that DiveDay's own storage actually holds — certification cards,
+  recap photos, dive-site and course imagery — now ships as a real file under `photos/` in the same
+  bundle, so photos survive after the account closes, not just links to them
+  ([export-bundled-photos](../architecture/decisions/20260724-export-bundled-photos.md)).
+- **Diver/customer CSV importer** — Settings → Import contacts brings people, cards, rental sizes, and
+  (2026-07-24) prior waiver acceptance in from a rival's export or DiveDay's own `contacts.csv`,
+  matched by email so a re-import updates rather than duplicates. The safety spine mostly holds:
+  imported certs land **claimed, never verified**, no card number means no card; a scope table states
+  it all up front. The one deliberate exception: a row explicitly claiming a waiver was already
+  accepted at the prior shop is trusted — medical clearance included — and written as an `imported`
+  record, a product-owner decision (H-17) that reverses the importer's original medical fail-closed
+  default; see [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md).
+  Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
   ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
 - **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
   (EVE, DiveShop360, DiveAdmin, Smartwaiver): each states how to export the shop's own data from

@@ -26,6 +26,11 @@ const FIELD_LABELS: Record<ImportField, string> = {
   wetsuit_size: "Wetsuit size",
   boot_size: "Boot size",
   fin_size: "Fin size",
+  waiver_accepted: "Waiver accepted",
+  waiver_signed_at: "Waiver signed",
+  waiver_source_name: "Waiver source",
+  waiver_document_url: "Waiver document",
+  medical_document_url: "Medical document",
 };
 
 const PREVIEW_LIMIT = 60;
@@ -107,8 +112,18 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
 
           {prepared.ignoredMedicalColumns.length > 0 ? (
             <p className="mt-3 text-sm text-warning">
-              Left behind on purpose: {prepared.ignoredMedicalColumns.join(", ")}. Medical and
-              health answers are never imported — collect a fresh signed waiver in DiveDay.
+              Left behind on purpose: {prepared.ignoredMedicalColumns.join(", ")}. These weren't
+              recognized as a waiver column, so their contents never import — individual medical
+              answers are never reconstructed from another system. A recognized “waiver accepted”
+              column is trusted instead; see below.
+            </p>
+          ) : null}
+          {prepared.totals.withWaiver > 0 ? (
+            <p className="mt-3 text-sm text-warning">
+              {prepared.totals.withWaiver} row{prepared.totals.withWaiver === 1 ? "" : "s"} claim a
+              waiver already accepted at a prior shop. DiveDay trusts that — including its medical
+              clearance — and marks the record “imported” so it's never confused with a release
+              signed here. See “What comes across” above.
             </p>
           ) : null}
           {prepared.unmappedColumns.length > 0 ? (
@@ -117,12 +132,13 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             </p>
           ) : null}
 
-          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {[
               { label: "Will import", value: prepared.totals.importable },
               { label: "Skipped", value: prepared.totals.skipped },
               { label: "Claimed cards", value: prepared.totals.withCard },
               { label: "Nitrox cards", value: prepared.totals.withNitrox },
+              { label: "Waivers", value: prepared.totals.withWaiver },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl bg-surface-sunken px-4 py-3">
                 <dt className="text-xs text-muted">{stat.label}</dt>
@@ -141,6 +157,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                   <th className="px-3 py-2 font-medium">Name</th>
                   <th className="px-3 py-2 font-medium">Email</th>
                   <th className="px-3 py-2 font-medium">Card</th>
+                  <th className="px-3 py-2 font-medium">Waiver</th>
                   <th className="px-3 py-2 font-medium">Notes</th>
                 </tr>
               </thead>
@@ -165,6 +182,13 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                         <span className="whitespace-nowrap">
                           {row.cert.level.replaceAll("_", " ")} · claimed
                         </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-muted">
+                      {row.waiver ? (
+                        <span className="whitespace-nowrap">accepted · imported</span>
                       ) : (
                         "—"
                       )}
@@ -235,6 +259,25 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                 : ""}
               {state.summary.rowsSkipped > 0 ? ` ${state.summary.rowsSkipped} row(s) skipped.` : ""}
             </p>
+            {state.summary.waiversAdded +
+              state.summary.waiversSkippedExisting +
+              state.summary.waiversSkippedNoTemplate >
+            0 ? (
+              <p className="mt-1 text-sm">
+                {state.summary.waiversAdded} waiver
+                {state.summary.waiversAdded === 1 ? "" : "s"} imported as accepted, marked
+                “imported” on the diver's profile.
+                {state.summary.waiversSkippedExisting > 0
+                  ? ` ${state.summary.waiversSkippedExisting} diver(s) already had a current waiver on file, left untouched.`
+                  : ""}
+                {state.summary.waiversSkippedNoTemplate > 0
+                  ? ` ${state.summary.waiversSkippedNoTemplate} skipped — set up a waiver template first.`
+                  : ""}
+                {state.summary.waiverDocumentsFailed > 0
+                  ? ` ${state.summary.waiverDocumentsFailed} document link(s) didn't fetch and were left off the record.`
+                  : ""}
+              </p>
+            ) : null}
             <Link
               href={diversHref}
               className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}

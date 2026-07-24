@@ -39,12 +39,12 @@ const faq = [
   },
   {
     question: "DiveDay is new. What happens to my data if this doesn't work out?",
-    answer: `You leave with your shop's records, whenever you choose. ${fullShopExport.claim} ${fullShopExport.terms} One caveat, stated in the export's own README: card and photo images come along as stored links, not files — save copies before closing an account.`,
+    answer: `You leave with your shop's records, whenever you choose. ${fullShopExport.claim} ${fullShopExport.terms}`,
   },
   {
     question: "What does switching to DiveDay actually involve?",
     answer:
-      "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, and their rental sizes — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify, and medical history never imports at all. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver.",
+      "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, their rental sizes, and any waivers your old system already had signed — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify; a waiver your old system already had signed comes over marked as imported, so nobody has to sign it again. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver.",
   },
   {
     question: "Does DiveDay connect to PADI or SSI?",
