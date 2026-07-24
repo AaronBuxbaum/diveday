@@ -3,12 +3,13 @@
  * ADR 20260724-import-waiver-acceptance). The safety normalization already
  * happened in src/lib/import.ts — this layer only writes what that plan
  * allows, and never more:
- *   - cards insert at the schema default status `pending` (claimed); nothing
- *     here can set `verified`;
+ *   - cards insert `verified` and flagged imported (`importedAt`), awaiting a
+ *     one-tap staff confirm — DiveDay trusts a card the shop's own system
+ *     already checked (ADR 20260724-import-verified-cards);
  *   - people are matched by email so re-running an import updates rather than
  *     duplicates the roster;
  *   - a card number already on file is left alone, so an import never disturbs
- *     an existing (possibly already-verified) card;
+ *     an existing (possibly already-confirmed) card;
  *   - a row claiming a prior waiver acceptance writes an immutable `completed`
  *     waiver record marked `imported`, snapshotting the shop's current
  *     template for reference only — never touched if the diver already has
@@ -305,13 +306,20 @@ export async function commitContactImport(
           summary.cardsSkippedExisting += 1;
         } else {
           seenCerts.add(key);
-          // No status set: the column defaults to `pending`. Claimed, by design.
+          // Imported cards land `verified` and flagged imported (`importedAt`),
+          // with `reviewedAt` left null so the diver UI surfaces a one-tap staff
+          // confirm (ADR 20260724-import-verified-cards). DiveDay trusts a card
+          // the shop's own system already checked; the imported marker keeps it
+          // distinguishable forever and expiry still applies.
           await tx.insert(certifications).values({
             shopId,
             personId,
             agency: row.cert.agency,
             level: row.cert.level,
             identifier: row.cert.identifier,
+            status: "verified",
+            importedAt: now,
+            importedFromLabel: row.cert.sourceLabel,
           });
           summary.cardsAdded += 1;
         }
@@ -323,11 +331,17 @@ export async function commitContactImport(
           summary.nitroxSkippedExisting += 1;
         } else {
           seenNitrox.add(key);
+          // Verified and flagged imported, same posture as a level card. A
+          // verified nitrox card authorizes enriched-air requests; the imported
+          // marker keeps it distinguishable and fills are re-checked at fill time.
           await tx.insert(nitroxCertifications).values({
             shopId,
             personId,
             agency: row.nitrox.agency,
             identifier: row.nitrox.identifier,
+            status: "verified",
+            importedAt: now,
+            importedFromLabel: row.nitrox.sourceLabel,
           });
           summary.nitroxAdded += 1;
         }

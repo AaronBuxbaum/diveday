@@ -44,11 +44,11 @@ async function accountPersonId(
 }
 
 describe("commitContactImport", () => {
-  it("creates divers with a diver role, a claimed card, and a rental fit", async () => {
+  it("creates divers with a diver role, a verified-and-flagged imported card, and a rental fit", async () => {
     const { db, shop } = await seededShopContext();
     const csv = [
-      "full_name,email,phone,certification_agency,certification_level,certification_number,certification_status,wetsuit_size,fin_size",
-      "Nadia Okonkwo,nadia.import@example.com,+1 305 555 0140,PADI,Advanced Open Water,AOW-778,verified,3mm/M,L",
+      "full_name,email,phone,certification_agency,certification_level,certification_number,prior_shop,wetsuit_size,fin_size",
+      "Nadia Okonkwo,nadia.import@example.com,+1 305 555 0140,PADI,Advanced Open Water,AOW-778,Blue Horizon Divers,3mm/M,L",
     ].join("\n");
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
@@ -68,8 +68,17 @@ describe("commitContactImport", () => {
       .select()
       .from(certifications)
       .where(eq(certifications.personId, person.id));
-    // The source said "verified"; the card is stored pending. This is the line.
-    expect(card).toMatchObject({ level: "advanced_open_water", agency: "padi", status: "pending" });
+    // Imported cards land verified (the prior system checked them), flagged
+    // imported with the prior-shop label, and reviewedAt null so the diver UI
+    // surfaces a one-tap confirm. This is the line (ADR 20260724-import-verified-cards).
+    expect(card).toMatchObject({
+      level: "advanced_open_water",
+      agency: "padi",
+      status: "verified",
+      importedFromLabel: "Blue Horizon Divers",
+      reviewedAt: null,
+    });
+    expect(card.importedAt).toBeInstanceOf(Date);
 
     const [profile] = await db
       .select()
@@ -131,7 +140,7 @@ describe("commitContactImport", () => {
     expect(profile).toMatchObject({ bcdSize: "M", wetsuitSize: "3mm/M", finSize: "L" });
   });
 
-  it("imports a nitrox card as claimed (pending), never a fill authorization", async () => {
+  it("imports a nitrox card as verified-and-flagged, surfaced for a confirm", async () => {
     const { db, shop } = await seededShopContext();
     const csv = [
       "full_name,email,nitrox_certified,nitrox_certification_number",
@@ -147,7 +156,10 @@ describe("commitContactImport", () => {
       .select()
       .from(nitroxCertifications)
       .where(eq(nitroxCertifications.personId, person.id));
-    expect(card).toMatchObject({ identifier: "NX-9001", status: "pending" });
+    // Verified on import (fills are re-checked at fill time), flagged imported,
+    // reviewedAt null so it surfaces the one-tap confirm.
+    expect(card).toMatchObject({ identifier: "NX-9001", status: "verified", reviewedAt: null });
+    expect(card.importedAt).toBeInstanceOf(Date);
   });
 
   it("writes nothing for skipped rows and reports the count", async () => {
