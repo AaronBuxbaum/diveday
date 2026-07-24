@@ -100,7 +100,8 @@ in [shipped.md](shipped.md). Fold new cross-cutting quality in here as it arises
 ## Production-readiness gates (human-owned)
 
 These block real operations regardless of code completeness; owners and evidence live in
-[human-decisions.md](human-decisions.md):
+[human-decisions.md](human-decisions.md), and the per-discipline playbooks for clearing them
+(who to talk to, with what prepared) live in [stakeholders/](stakeholders/README.md):
 
 - **V-02 — field-validate the offline manifest** on a phone, outdoors, wet hands, airplane-mode.
   Until it passes, the safety differentiator is unproven and unclaimable.
