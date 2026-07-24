@@ -189,6 +189,14 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   mechanics. Every competitor claim is sourced and honesty-flagged (the ~6% fee is reported-only,
   not FareHarbor-published; no live sync claimed)
   ([assessments/fareharbor-positioning.md](assessments/fareharbor-positioning.md)).
+- **Rezdy guide (coexist-led)** (2026-07-24) — `/switching/rezdy`, the second booking-channel guide
+  on the same `coexist` template. Rezdy is a general tours engine (part of a PE-backed group with
+  Checkfront and Regiondo) with a *monthly-subscription-plus-per-booking* model, so the leave pitch
+  is the recurring fee rather than FareHarbor's per-booking cut; its export path is verified
+  (self-serve Sales/Orders CSV plus an operator API), and the copy honestly concedes Rezdy's own
+  portability-friendliness. The wider survey of who gets a guide next — WeTravel, Rezgo, Bókun,
+  Bloowatch, Peek Pro, and why PADI/SSI are import rails, not switching targets — is in
+  [assessments/switching-guide-landscape.md](assessments/switching-guide-landscape.md).
 - **Marketing SEO substrate + try/run/leave repositioning** (2026-07-24) — the public pages argue
   the researched wedge instead of the category: home gains a "Safe to leave" portability band and
   founding-shop closing, `/product` a diver-arc moment (night-before brief, recap) and an "honest

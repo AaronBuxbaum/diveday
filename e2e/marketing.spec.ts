@@ -61,6 +61,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     /Switching from DiveAdmin/,
     /Switching from Smartwaiver/,
     /Switching from FareHarbor/,
+    /Switching from Rezdy/,
   ]) {
     await expect(page.getByRole("link", { name })).toBeVisible();
   }
@@ -111,8 +112,22 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
 
+  // Rezdy is the second booking-channel guide — same coexist template, its own
+  // copy (a monthly-plus-per-booking model rather than FareHarbor's fee).
+  await page.goto("/switching/rezdy");
+  await expect(
+    page.getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Keep Rezdy. Add the day it can't run." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Or leave the monthly fee and the per-booking cut behind." }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Get your data out of Rezdy" })).toBeVisible();
+
   // An unlisted incumbent has no page — no coming-soon shells.
-  const response = await page.goto("/switching/rezdy");
+  const response = await page.goto("/switching/checkfront");
   expect(response?.status()).toBe(404);
 });
 

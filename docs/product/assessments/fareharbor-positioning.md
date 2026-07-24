@@ -96,5 +96,7 @@ so the import is contact-shaped, like Smartwaiver's.
 
 This closes the FareHarbor half of competitive-strategy.md build item #3 ("migration guides as
 public pages … '…from FareHarbor/Rezdy'"), which had listed FareHarbor as a future, unbuilt guide.
-Rezdy — the comparable channel with a monthly-plus-fee model — remains the open follow-on; when its
-export path is verified it takes the same coexist-capable guide shape.
+Rezdy — the comparable channel with a monthly-plus-fee model — **shipped 2026-07-24** as the second
+coexist guide, its export path verified (self-serve Sales/Orders CSV plus an operator API). The full
+survey of who gets a guide next lives in
+[switching-guide-landscape.md](switching-guide-landscape.md).
