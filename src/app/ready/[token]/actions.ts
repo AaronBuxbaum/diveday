@@ -9,6 +9,7 @@ import { setBookingNitrox } from "@/db/nitrox";
 import { getReadyPageData } from "@/db/ready";
 import { saveRentalFit } from "@/db/rental-fit";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
+import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 
@@ -52,8 +53,10 @@ export async function signWaiverFromReady(token: string) {
 export async function saveEmergencyContactFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx) redirect(base(token));
-  const name = String(formData.get("emergencyContactName") ?? "").trim();
-  const phone = String(formData.get("emergencyContactPhone") ?? "").trim();
+  const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=contact`);
+  const name = (parsed.data.emergencyContactName ?? "").trim();
+  const phone = (parsed.data.emergencyContactPhone ?? "").trim();
   await saveBookingEmergencyContact(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,

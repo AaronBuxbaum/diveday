@@ -3,6 +3,21 @@
  * display dates to divers, so keep every user-facing date/time format here.
  */
 
+/**
+ * True for a real IANA timezone name — the only thing an app-wide "store UTC
+ * + IANA timezone" invariant (AGENTS.md) can trust. `Intl.DateTimeFormat`
+ * throws a `RangeError` for anything else, including a well-formed but
+ * nonexistent zone like `"Etc/Nowhere"` (CR-014).
+ */
+export function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Minor units (cents) to a localized currency string, e.g. 13000 → "$130.00". */
 export function formatMoneyCents(cents: number, currency = "usd", locale = "en-US"): string {
   return new Intl.NumberFormat(locale, {

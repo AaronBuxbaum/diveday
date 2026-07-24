@@ -108,8 +108,9 @@ export default async function OnboardPage({
                     name="ownerPassword"
                     type="password"
                     required
-                    placeholder="At least 6 characters"
-                    minLength={6}
+                    placeholder="At least 8 characters"
+                    minLength={8}
+                    maxLength={72}
                     className={controlClass}
                   />
                 </Field>
