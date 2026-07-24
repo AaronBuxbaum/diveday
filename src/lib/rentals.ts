@@ -33,9 +33,9 @@ export type RentableItem = {
   label: string;
   /**
    * Whether a diver with no fit on file defaults to renting this. Core gear a
-   * shop stocks for everyone defaults on; add-ons a diver usually owns (a
-   * computer) or may not want (a GoPro) default off, so nobody is packed a
-   * GoPro they never asked for.
+   * shop stocks for everyone — now including the dive computer — defaults on;
+   * only the GoPro defaults off, so nobody is packed a GoPro they never asked
+   * for.
    */
   defaultRented: boolean;
 };
@@ -75,7 +75,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
     field: "rentsDiveComputer",
     name: "diveComputer",
     label: "Dive computer",
-    defaultRented: false,
+    defaultRented: true,
   },
   { kind: "gopro", field: "rentsGopro", name: "gopro", label: "GoPro", defaultRented: false },
 ] as const;
@@ -107,10 +107,10 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
 }
 
 /**
- * The core kit that makes up a "set". A shop usually prices these five as one
+ * The core kit that makes up a "set". A shop usually prices these six as one
  * cheaper bundle; a diver who takes all of them is quoted the set, and anyone
- * taking a partial set pays per piece. The add-ons (`dive_computer`, `gopro`)
- * and nitrox are always priced on their own, never folded into the set.
+ * taking a partial set pays per piece. The `gopro` add-on and nitrox are always
+ * priced on their own, never folded into the set.
  */
 export const CORE_RENTAL_KINDS = [
   "bcd",
@@ -118,6 +118,7 @@ export const CORE_RENTAL_KINDS = [
   "wetsuit",
   "mask_fins",
   "weights",
+  "dive_computer",
 ] as const satisfies readonly RentableItemKind[];
 
 export type CoreRentalKind = (typeof CORE_RENTAL_KINDS)[number];
@@ -212,7 +213,7 @@ export function quoteRentalFit(
     }
   }
 
-  for (const kind of ["dive_computer", "gopro"] as const) {
+  for (const kind of ["gopro"] as const) {
     if (!rented.has(kind)) continue;
     const cents = pricing.perItemCents[kind];
     if (cents === undefined) unpricedKinds.push(kind);
