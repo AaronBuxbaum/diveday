@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
 import { HomeCTA } from "@/components/HomeCTA";
@@ -12,6 +13,35 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { earlyAccessPriceAmount } from "@/lib/marketing";
+
+export const metadata: Metadata = {
+  title: "Dive shop software for the whole dive day — DiveDay",
+  description:
+    "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Easy to try in a live demo, safe to run the boat on, and your data leaves with you any day.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "DiveDay — dive shop software for the whole dive day",
+    description:
+      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place — from first booking to final head count.",
+    url: "/",
+  },
+};
+
+const softwareApplicationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "DiveDay",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Dive shop software for bookings, waivers, cert checks, trip prep, and boat manifests.",
+  offers: {
+    "@type": "Offer",
+    price: earlyAccessPriceAmount,
+    priceCurrency: "USD",
+  },
+};
 
 const dailyMoments = [
   {
@@ -25,7 +55,7 @@ const dailyMoments = [
     role: "For the front desk",
     title: "One answer to “are they ready?”",
     description:
-      "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock.",
+      "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of quietly waving it through.",
     mockup: marketingMockups.frontDeskReadiness,
   },
 ] as const;
@@ -33,6 +63,13 @@ const dailyMoments = [
 export default function Home() {
   return (
     <div className="flex min-h-full flex-col">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data built from our own constants above and `<`-escaped below.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareApplicationJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <MarketingNav />
       <main className="flex-1">
         <section className="relative overflow-hidden border-b border-border">
@@ -74,14 +111,15 @@ export default function Home() {
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              The daily handoff
+              Safe to run the boat on
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               The right view for the person holding the work.
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
               Everyone works from the same day — what the front desk checks in the morning is
-              exactly what the captain sees at the dock.
+              exactly what the captain sees at the dock, down to who has boarded and why someone
+              can't yet.
             </p>
           </div>
 
@@ -106,7 +144,7 @@ export default function Home() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                  One operating system
+                  Instead of three apps and a whiteboard
                 </p>
                 <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
                   Every small requirement has a place to land.
@@ -125,40 +163,101 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            A better dive day starts here
-          </p>
-          <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
-            See how it feels when the whole shop is on the same page.
-          </h2>
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <div className="flex flex-col justify-center gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
-                <SubmitButton
-                  pendingLabel="Getting your shop ready…"
-                  className={buttonClass({
-                    size: "cta",
-                    className: "cursor-pointer disabled:opacity-70",
-                  })}
-                >
-                  Try the live demo
-                </SubmitButton>
-              </form>
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
+          <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+            <div className="max-w-2xl">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                Safe to leave
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                Your data leaves with you — any day, no phone call.
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-muted">
+                DiveDay is new, and you shouldn't have to take a new vendor on faith. So the exit is
+                built in: Settings → Data export hands you one ZIP of plain, documented CSV files —
+                divers, bookings, waiver records, payment history — led by a contacts file another
+                system can import. No email to support, no export fee, and it works the same on day
+                one of a trial.
+              </p>
+              <p className="mt-4 text-lg leading-8 text-muted">
+                Arriving instead of leaving? The importer shows exactly what comes across — and what
+                honestly doesn't — before a single row is saved.
+              </p>
               <Link
-                href="/onboard"
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "cta",
-                  className: "border-border-strong",
-                })}
+                href="/switching"
+                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
               >
-                Start a trial
+                Switching from EVE, DiveShop360, DiveAdmin, or Smartwaiver? Read the guides →
               </Link>
             </div>
-            <Link href="/pricing" className="text-sm font-medium text-primary hover:underline">
-              View pricing
-            </Link>
+            <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+              <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+                In the export
+              </p>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>One ZIP of documented CSV files, downloaded from Settings by you</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>Divers, bookings, waiver records, and payment history</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>A contacts file shaped for another system's import wizard</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>A README that explains every file — no decoding project later</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border bg-surface">
+          <div className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              Easy to try
+            </p>
+            <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
+              See how it feels when the whole shop is on the same page.
+            </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
+              DiveDay is early, and the first shops shape it. Founding shops get a direct line to
+              the people building DiveDay — what your crew runs into this season is what gets
+              attention next.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                <form action={enterDemoAction}>
+                  <input type="hidden" name="source" value="home-closing" />
+                  <SubmitButton
+                    pendingLabel="Getting your shop ready…"
+                    className={buttonClass({
+                      size: "cta",
+                      className: "cursor-pointer disabled:opacity-70",
+                    })}
+                  >
+                    Try the live demo
+                  </SubmitButton>
+                </form>
+                <Link
+                  href="/onboard"
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "cta",
+                    className: "border-border-strong",
+                  })}
+                >
+                  Start a trial
+                </Link>
+              </div>
+              <Link href="/pricing" className="text-sm font-medium text-primary hover:underline">
+                View pricing
+              </Link>
+            </div>
           </div>
         </section>
       </main>

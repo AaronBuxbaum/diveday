@@ -42,7 +42,7 @@ export const productFeatureGroups = [
       "Every trip and class shows who's leading it and who's crewing",
       "A live picture of bookings, blockers, and staffing gaps — before they become tomorrow's problem",
       "Walk the day as the front desk, the captain, or the diver before you commit",
-      "Your own shop workspace, ready with realistic practice data on day one",
+      "Leave any day with a one-ZIP export of your shop's records — no phone call, no fee",
     ],
   },
 ] as const;
@@ -59,3 +59,10 @@ export const earlyAccessPrice = {
     "A practice shop preloaded with realistic trips to train on",
   ],
 } as const;
+
+/**
+ * The bare amount inside `earlyAccessPrice.price`, for structured data that
+ * needs a number (JSON-LD offers). Derived here so the figure still has exactly
+ * one source; never restate it as a literal.
+ */
+export const earlyAccessPriceAmount = earlyAccessPrice.price.replace(/[^\d.]/g, "");

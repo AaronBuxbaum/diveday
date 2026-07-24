@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 
 interface HomeCTAProps {
-  enterDemoAction: () => Promise<void>;
+  enterDemoAction: (formData: FormData) => Promise<void>;
 }
 
 export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
@@ -13,6 +13,7 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
     <div className="flex flex-col items-start gap-3">
       <div className="flex flex-col gap-3 sm:flex-row">
         <form action={enterDemoAction}>
+          <input type="hidden" name="source" value="home-hero" />
           <SubmitButton
             pendingLabel="Getting your shop ready…"
             className={buttonClass({

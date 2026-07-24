@@ -9,10 +9,15 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Pricing" }).first()).toBeVisible();
 
+  // The portability story (safe to leave) is a first-class band on the homepage.
+  await expect(
+    page.getByRole("heading", { name: "Your data leaves with you — any day, no phone call." }),
+  ).toBeVisible();
+
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(
     page.getByRole("heading", {
-      name: "Everything the shop needs to make a safe departure feel easy.",
+      name: "Everything from the first booking to the last head count.",
     }),
   ).toBeVisible();
   await expect(
@@ -20,13 +25,24 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "A manifest that stays useful after the signal disappears.",
     }),
   ).toBeVisible();
+  // The honest-no scope block and the demo CTA both land on the product page.
+  await expect(page.getByRole("heading", { name: "What DiveDay doesn't do." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
-    page.getByRole("heading", { name: "One shop price. Every operational workflow." }),
+    page.getByRole("heading", { name: "One flat price for the whole shop." }),
   ).toBeVisible();
   await expect(page.getByText("$99", { exact: true })).toBeVisible();
   await expect(page.getByText(/The crew saves the manifest to their phone/)).toBeVisible();
+  // The objection layer answers the deal-killers, and a skeptic can reach the
+  // demo without committing to a trial form.
+  await expect(
+    page.getByRole("heading", {
+      name: "DiveDay is new. What happens to my data if this doesn't work out?",
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try the live demo first" })).toBeVisible();
 });
 
 test("migration guides walk a shop from an incumbent export into the importer", async ({

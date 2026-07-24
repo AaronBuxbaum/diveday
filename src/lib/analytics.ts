@@ -35,6 +35,15 @@ export type AnalyticsEvent =
       /** A checkout the diver never completed — the pay-at-booking abandonment signal. */
       name: "checkout_abandoned";
       isDeposit: boolean;
+    }
+  | {
+      /**
+       * A visitor entered the live demo — the primary skeptic funnel on the
+       * marketing pages. `source` names the page the click came from so the
+       * demo-vs-trial story can be read per surface.
+       */
+      name: "demo_entered";
+      source: string;
     };
 
 type EventProps = Record<string, string | number | boolean | null>;

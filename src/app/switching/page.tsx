@@ -67,6 +67,7 @@ export default function SwitchHubPage() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction}>
+                <input type="hidden" name="source" value="switching-hub" />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
                   className={buttonClass({
