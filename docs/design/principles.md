@@ -39,9 +39,13 @@ to do next; buttons are verbs ("Add diver", not "Submit"). No jargon divers don'
 use of the jargon they do (see [product/glossary.md](../product/glossary.md)).
 
 **Never surface the implementation.** Encryption, sync, snapshots, envelopes, reconciliation,
-tokens, caching, tenancy, "fail-closed", and database words stay out of user-facing copy. Say what
-the person gets — "saved on this phone", "works without signal", "DiveDay double-checks it when
-you're back in service" — not how we built it. Two carve-outs:
+tokens, caching, tenancy, "fail-closed", and database words stay out of user-facing copy. The same
+goes for our own process artifacts — ADRs, "requirements," specs, tickets, and any other
+engineering-doc vocabulary have no place in anything a shop owner or diver reads; those words
+belong in `docs/`, commit messages, and code comments, never in a page, email, or error message.
+Say what the person gets — "saved on this phone", "works without signal", "DiveDay double-checks
+it when you're back in service" — not how we built it, and not what we wrote down to decide to
+build it. Two carve-outs:
 
 - **Payment** may say "pay securely" — that is the reassurance people expect at a checkout, and
   nothing more technical than that.
