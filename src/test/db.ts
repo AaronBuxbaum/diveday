@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { drizzle } from "drizzle-orm/pglite";
 import { type AppDb, createTestDb } from "@/db/client";
 import { seedDemo } from "@/db/seed";
@@ -20,7 +21,10 @@ export async function seededTestDb(): Promise<AppDb> {
     await seedDemo(db, { history: false });
     return db;
   }
-  const client = new PGlite({ loadDataDir: new Blob([bytes], { type: "application/x-tar" }) });
+  const client = new PGlite({
+    loadDataDir: new Blob([bytes], { type: "application/x-tar" }),
+    extensions: { pg_trgm },
+  });
   return drizzle({ client });
 }
 

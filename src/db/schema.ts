@@ -130,6 +130,12 @@ export const people = pgTable(
     uniqueIndex("people_shop_email_unique")
       .on(table.shopId, sql`lower(${table.email})`)
       .where(sql`${table.deletedAt} is null and ${table.email} is not null`),
+    // Backs the command-palette/diver-roster leading-wildcard ILIKE search
+    // (src/db/search.ts, src/db/divers.ts) — a plain btree can't serve
+    // `ilike '%query%'`, only pg_trgm's GIN similarity index can (CR-018).
+    index("people_full_name_trgm_idx").using("gin", sql`${table.fullName} gin_trgm_ops`),
+    index("people_email_trgm_idx").using("gin", sql`${table.email} gin_trgm_ops`),
+    index("people_phone_trgm_idx").using("gin", sql`${table.phone} gin_trgm_ops`),
   ],
 );
 
@@ -335,6 +341,8 @@ export const diveSites = pgTable(
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
     index("dive_sites_shop_name_idx").on(table.shopId, table.name),
+    // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
+    index("dive_sites_name_trgm_idx").using("gin", sql`${table.name} gin_trgm_ops`),
   ],
 );
 
@@ -487,6 +495,8 @@ export const trips = pgTable(
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
+    index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
     check("trips_planned_dives_range", sql`${table.plannedDives} between 1 and 4`),
     check("trips_price_nonnegative", sql`${table.priceCents} is null or ${table.priceCents} >= 0`),
