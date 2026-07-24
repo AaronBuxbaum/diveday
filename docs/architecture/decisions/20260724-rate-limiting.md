@@ -30,13 +30,20 @@ per-source abuse control. PR #139 explicitly deferred per-token/IP recap limits 
   can be upgraded to a distributed store later without an application-code rewrite.
 - **Fail-open on any store error.** A rate limiter that can turn into an outage for legitimate
   traffic is worse than no rate limiter. `checkRateLimit` never throws.
-- **IP extraction trusts `x-forwarded-for` (first entry) / `x-real-ip`, no other hops.** Vercel is
-  the sole hosting target and sits directly in front of this app with no additional
-  customer-configurable proxy — see `src/lib/request-ip.ts`. This is a narrow, deliberate exception
-  to "never derive a canonical value from a request header" (the rule that governs `publicAppUrl()`
-  in `src/lib/notifications`): the IP is only ever a rate-limit bucket key, never used for an
-  authorization decision or a redirect target, so a spoofed value at worst lets an attacker share
-  someone else's bucket — it can never grant access to anything.
+- **IP extraction prefers `x-vercel-forwarded-for`, then `x-forwarded-for` (first entry), then
+  `x-real-ip`.** Vercel is the sole hosting target. Vercel's own documentation (Headers → Request
+  headers → `x-forwarded-for`, fetched and verified 2026-07-24) states: *"If you are trying to use
+  Vercel behind a proxy, we currently overwrite the X-Forwarded-For header and do not forward
+  external IPs. This restriction is in place to prevent IP spoofing"* — so a client-supplied value
+  is discarded, not appended to, and `x-forwarded-for`'s first entry is Vercel's own observed
+  connecting IP, not attacker-controlled. `x-vercel-forwarded-for` is checked first anyway: the same
+  docs note it *"is identical to `x-forwarded-for`. However, `x-forwarded-for` could be overwritten
+  if you're using a proxy on top of Vercel"* — so it stays trustworthy even under a future
+  customer-added proxy in front of Vercel, which `x-forwarded-for` alone would not. This is a
+  narrow, deliberate exception to "never derive a canonical value from a request header" (the rule
+  that governs `publicAppUrl()` in `src/lib/notifications`): the IP is only ever a rate-limit bucket
+  key, never used for an authorization decision or a redirect target, so even a successful spoof at
+  worst lets an attacker share someone else's bucket — it can never grant access to anything.
 - **Keys are hashed (SHA-256), never raw.** A bearer token, an email address, or an IP is never held
   as a literal in-memory Map key or written to a log line — only its hash (`rateLimitKey()`). This
   is opacity, not authentication; no salt is needed because the goal is "don't let a memory dump or
@@ -92,3 +99,18 @@ per-source abuse control. PR #139 explicitly deferred per-token/IP recap limits 
 - Any future PGlite-in-memory-store-style call site that constructs its own rate-limit store must
   keep using `checkRateLimit`'s fail-open contract — a custom store that throws on error would
   silently start blocking legitimate traffic instead of degrading safely.
+
+## Security review (2026-07-24)
+
+A `security-reviewer` pass raised the IP-spoofing question directly — its initial read of standard
+proxy behavior (edges *append* to `x-forwarded-for` rather than replace it) would have meant the
+original single-header design was bypassable. Verified against Vercel's own current documentation
+before changing anything: Vercel confirms it overwrites the header and discards a client-supplied
+value specifically to prevent spoofing, so the original design's core trust assumption held. Still
+adopted `x-vercel-forwarded-for` as the preferred header (see the IP-extraction bullet above) since
+Vercel's own docs identify it as strictly more robust with no downside in the standard case.
+`capabilityAction`'s shared-IP budget was raised 30→60/hour on the same review's separate,
+legitimate observation that a boat/dock WiFi's one shared IP can carry several divers each
+running multiple readiness/waiver actions on a busy morning. The review also re-confirmed the
+already-disclosed DNS-rebinding gap in `src/lib/storage/ingest-url.ts` (CR-020, see that ticket's
+own ADR) without finding anything new to fix there.
