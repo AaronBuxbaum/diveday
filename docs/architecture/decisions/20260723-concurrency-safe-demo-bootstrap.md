@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-010)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-010)
 found three related problems in `src/db/client.ts`'s `getDb()`/`init()` and `src/db/seed.ts`'s
 `seedIfEmpty()`:
 
