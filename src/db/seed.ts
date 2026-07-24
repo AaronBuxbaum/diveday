@@ -2141,7 +2141,7 @@ async function seedRentalFit(
     [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M", ownsRegulator: true }],
     [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
     // H-06 demo: the shop is out of this diver's size, so they're flagged for
-    // hands-on fitting — their kit is deliberately off the prep list and they
+    // hands-on fitting — their sizes are deliberately blanked on the prep list and they
     // get named in its "fit these divers at check-in" section instead.
     [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg", needsStaffFit: true }],
     // Sizes half-recorded, which is how a fit book actually looks.
