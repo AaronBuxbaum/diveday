@@ -69,7 +69,7 @@ const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
   {
     column: "Nitrox",
     detail:
-      "A yes/no column, plus the nitrox card number if you keep one. It's a claim, not a fill authorization.",
+      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across. Either way it's a claim, not a fill authorization.",
   },
   {
     column: "Rental sizes",
