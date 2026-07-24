@@ -1,5 +1,17 @@
 # Codebase review — 2026-07-23
 
+> ## 📦 Archived — tickets shipped, human decisions resolved (2026-07-24)
+>
+> All 21 tickets (CR-001–CR-021) are implemented and merged: CR-001–CR-012 shipped first, then
+> CR-013–CR-021 in [PR #144](https://github.com/AaronBuxbaum/diveday/pull/144). The three
+> [human-owned decisions](#human-owned-decisions) below are resolved — see
+> [human-decisions.md](../human-decisions.md#decision-register) (H-14, H-15, H-16) and
+> [20260724-staff-session-and-capability-migration-policy](../../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md)
+> for H-15/H-16's reasoning. H-14 (role authority boundaries) is decided but not yet built — see
+> [roadmap.md](../roadmap.md#7-staff-role-authority-boundaries-h-14-decided--not-yet-built).
+> Retained for the rationale behind each ticket; for current state see
+> [shipped.md](../shipped.md) and for open work see [roadmap.md](../roadmap.md).
+
 Status: evidence-backed engineering assessment, not a roadmap commitment.
 
 This is a whole-repository PR-style review begun at `9f83995` and reconciled through the current

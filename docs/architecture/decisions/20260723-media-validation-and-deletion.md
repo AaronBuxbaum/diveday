@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-012)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-012)
 found two related problems in `src/lib/storage/index.ts` and its callers:
 
 - **`storeImage` trusted the caller-supplied `contentType` string.** Nothing decoded the bytes or
