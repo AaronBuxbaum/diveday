@@ -483,6 +483,7 @@ export async function listTripReadiness(
         specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
+        identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
         now,
         timezone,
       }),

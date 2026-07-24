@@ -48,6 +48,13 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     state: "waiting",
     detail: "Your shop is confirming your readiness. Check back shortly.",
   },
+  identity_unconfirmed: {
+    // Gentle and non-accusatory: this often just means a family sharing one
+    // inbox. The shop clears it; there is nothing for the diver to do.
+    state: "waiting",
+    detail:
+      "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
+  },
   waiver_not_sent: {
     // A waiver goes out the moment a diver joins, so this state is the rare
     // leftover — a link that never issued (a delivery hiccup, or a waiver turned

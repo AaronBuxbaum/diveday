@@ -59,6 +59,36 @@ describe("findOrCreatePerson (CR-008)", () => {
     expect(second.person.id).toBe(first.person.id);
   });
 
+  it("reports nameMatches for the H-13 identity safeguard", async () => {
+    const { db, shop } = await seededShopContext();
+    const created = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+    });
+    // A brand-new person always matches — the submitted name IS the person.
+    expect(created.nameMatches).toBe(true);
+
+    // Same human, re-typed with a middle initial: reused and still a match.
+    const sameHuman = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Nora Q. Quinn",
+      email: "nora@example.com",
+    });
+    expect(sameHuman.created).toBe(false);
+    expect(sameHuman.nameMatches).toBe(true);
+
+    // A different human on the shared inbox: reused, but flagged as a mismatch.
+    const differentHuman = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Ben Quinn",
+      email: "nora@example.com",
+    });
+    expect(differentHuman.created).toBe(false);
+    expect(differentHuman.person.id).toBe(created.person.id);
+    expect(differentHuman.nameMatches).toBe(false);
+  });
+
   it("scopes to the shop: the same email at a different shop is a different person", async () => {
     const { db, shop } = await seededShopContext();
     const [otherShop] = await db

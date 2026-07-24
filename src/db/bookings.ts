@@ -1,6 +1,7 @@
-import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
@@ -132,6 +133,12 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   // only written after the capacity gate passes (`pendingInsert`).
   let person: typeof people.$inferSelect | undefined;
   let pendingInsert: { fullName: string; email: string; phone?: string } | null = null;
+  // Set when this booking reused an existing person by email but the submitted
+  // name did not match — a possible shared-inbox / different-human signal that
+  // must not silently inherit the matched person's evidence (H-13). Only the
+  // by-email path can raise it; the identity path re-books a diver picked from
+  // their own record and submits no name to disagree with.
+  let identityUnconfirmed = false;
   if ("personId" in req) {
     [person] = await tx
       .select()
@@ -149,7 +156,13 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       .from(people)
       .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
       .limit(1);
-    if (!person) pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
+    if (person) {
+      // Reuse-by-email before the capacity gate: flag a name that doesn't match
+      // the person already on file for this address.
+      identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
+    } else {
+      pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
+    }
   }
 
   // Existing-card courses deliberately fail closed at enrollment. Staff can
@@ -188,7 +201,12 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   }
 
   if (!person && pendingInsert) {
-    person = (await findOrCreatePerson(tx, { shopId: req.shopId, ...pendingInsert })).person;
+    // Under concurrency this can still resolve to an existing row (a racing
+    // insert won); `nameMatches` reflects the row that actually landed, so a
+    // simultaneous shared-inbox booking is flagged the same as a serial one.
+    const resolved = await findOrCreatePerson(tx, { shopId: req.shopId, ...pendingInsert });
+    person = resolved.person;
+    identityUnconfirmed = !resolved.nameMatches;
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
@@ -206,6 +224,9 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       .set({
         status: "booked",
         conditionsBriefedAt: trip.conditionsUpdatedAt,
+        // Re-booking this seat re-evaluates identity: a matching name now clears
+        // any stale flag, a mismatch (re)raises it.
+        identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
       })
       .where(eq(bookings.id, existing.id));
     return { ok: true, bookingId: existing.id, personName: person.fullName };
@@ -218,6 +239,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       tripId: trip.id,
       personId: person.id,
       conditionsBriefedAt: trip.conditionsUpdatedAt,
+      identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
@@ -303,4 +325,28 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
   // own audit trail honest and stops relying solely on that join.
   await revokeBookingCapabilities(db, { shopId, bookingId });
   return booking;
+}
+
+/**
+ * Staff confirm a flagged booking really is the person it was attached to
+ * (H-13): clears `identity_unconfirmed_at`, which drops the readiness blocker.
+ * Shop-scoped and idempotent — a no-op on an already-clear or unknown booking
+ * returns false so the caller can distinguish "confirmed" from "nothing to do".
+ * This never *creates* a separate diver; when it is genuinely a different human
+ * behind a shared inbox, staff resolve that by booking them under their own
+ * email, not by confirming here.
+ */
+export async function confirmBookingIdentity(db: AppDb, shopId: string, bookingId: string) {
+  const [booking] = await db
+    .update(bookings)
+    .set({ identityUnconfirmedAt: null })
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        isNotNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(booking);
 }
