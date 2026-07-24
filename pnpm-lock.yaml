@@ -53,8 +53,8 @@ importers:
         version: 4.4.3
     devDependencies:
       '@argos-ci/playwright':
-        specifier: ^7.3.6
-        version: 7.3.6(@types/node@26.1.1)
+        specifier: ^7.3.7
+        version: 7.3.7(@types/node@26.1.1)
       '@biomejs/biome':
         specifier: ^2.5.5
         version: 2.5.5
@@ -92,8 +92,8 @@ importers:
         specifier: ^17.4.2
         version: 17.4.2
       drizzle-kit:
-        specifier: 1.0.0-rc.4-ca0f029
-        version: 1.0.0-rc.4-ca0f029
+        specifier: 1.0.0-rc.4
+        version: 1.0.0-rc.4
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5
@@ -130,12 +130,12 @@ packages:
     resolution: {integrity: sha512-fiA4OZBEtQ5dfBxmx3BTV1n9PcogokZoTBHI0+ylNAzBbHTQMqICUgPCqKDVh2fINkmzIEeU5G408nJ2HJ8ffg==}
     engines: {node: '>=22.0.0'}
 
-  '@argos-ci/core@6.6.1':
-    resolution: {integrity: sha512-QN4PvPT+nPzOWiYWryM9aTEr2PoCGcaDxUd50rUIZ5yeAHDs590evxpEg53uHTjHdfQ+z/BBpNQ3IOD4Sc9Z/w==}
+  '@argos-ci/core@6.6.2':
+    resolution: {integrity: sha512-axbKi1Ta+uzmZcY1BvWmnUIEJf0lGFXHrETcdNEGNV2o7I9nlxpCWqrtWDGSWvZUyGLEqBh1LSViVbRjzD1PCA==}
     engines: {node: '>=22.0.0'}
 
-  '@argos-ci/playwright@7.3.6':
-    resolution: {integrity: sha512-jotrW91a21OstjhBfYOvb9cIPOT3rlgL/W8sX9eWNSKXAHkCqiWz7uOvvSD6RpKXQ8AvHV3N0ndmJFFHpM5Cbw==}
+  '@argos-ci/playwright@7.3.7':
+    resolution: {integrity: sha512-hVhO/gKJE2uZ2IoeOTZxO33x38/w0wD3VvbfQtN5+HPaJS4yof0A0PVEFh4BcVhx4V26KhoAUcdueL3BoRRUiw==}
     engines: {node: '>=22.0.0'}
 
   '@argos-ci/util@4.0.4':
@@ -280,8 +280,8 @@ packages:
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
 
-  '@drizzle-team/brocli@0.11.0':
-    resolution: {integrity: sha512-hD3pekGiPg0WPCCGAZmusBBJsDqGUR66Y452YgQsZOnkdQ7ViEPKuyP4huUGEZQefp8g34RRodXYmJ2TbCH+tg==}
+  '@drizzle-team/brocli@0.12.0':
+    resolution: {integrity: sha512-mlUE+rZ8CatQekLhnaiN91Iemdd+e2gFKooGlnRB3oPTL3VghLfX24dx7HrzMNeC1JrIB/0kpsfyty3f5HNfxQ==}
 
   '@electric-sql/pglite@0.5.4':
     resolution: {integrity: sha512-yYZUyyXrHU7tPlCjwZQJ6hIG9DscdCCn7Uk0mYKwC1FeHX286AbcmFveMiRBEak8e9iPupjsoVImN3yJZVed2g==}
@@ -1531,8 +1531,8 @@ packages:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
 
-  drizzle-kit@1.0.0-rc.4-ca0f029:
-    resolution: {integrity: sha512-hM1K72ptIPOpJDScHo7cAF+K8A8Tr3q2yHvBJvOZWvLn2lN+G4RDUvG3rT3ohlSE2O3BN/s7g3e3JiQLStt8iQ==}
+  drizzle-kit@1.0.0-rc.4:
+    resolution: {integrity: sha512-KZCpjRyu+oYHLj/UJogfFlOkWhHVkaEI2EOT1U3NDVXUzLoTyPjqwFxwOrlQxsY6jzRyxcz4EacqboGfhEeYrA==}
     hasBin: true
 
   drizzle-orm@1.0.0-rc.4-de6c356:
@@ -2561,7 +2561,7 @@ snapshots:
 
   '@argos-ci/browser@6.4.4': {}
 
-  '@argos-ci/core@6.6.1(@types/node@26.1.1)':
+  '@argos-ci/core@6.6.2(@types/node@26.1.1)':
     dependencies:
       '@argos-ci/api-client': 0.26.0
       '@argos-ci/util': 4.0.4
@@ -2576,10 +2576,10 @@ snapshots:
       - '@types/node'
       - supports-color
 
-  '@argos-ci/playwright@7.3.6(@types/node@26.1.1)':
+  '@argos-ci/playwright@7.3.7(@types/node@26.1.1)':
     dependencies:
       '@argos-ci/browser': 6.4.4
-      '@argos-ci/core': 6.6.1(@types/node@26.1.1)
+      '@argos-ci/core': 6.6.2(@types/node@26.1.1)
       '@argos-ci/util': 4.0.4
       chalk: 5.6.2
       debug: 4.4.3
@@ -2690,7 +2690,7 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
-  '@drizzle-team/brocli@0.11.0': {}
+  '@drizzle-team/brocli@0.12.0': {}
 
   '@electric-sql/pglite@0.5.4': {}
 
@@ -3527,9 +3527,9 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  drizzle-kit@1.0.0-rc.4-ca0f029:
+  drizzle-kit@1.0.0-rc.4:
     dependencies:
-      '@drizzle-team/brocli': 0.11.0
+      '@drizzle-team/brocli': 0.12.0
       '@js-temporal/polyfill': 0.5.1
       esbuild: 0.28.1
       get-tsconfig: 4.14.0
