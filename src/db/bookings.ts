@@ -45,8 +45,12 @@ export type BookingRequest = {
    * submitter by a person record they may have no relationship to. Staff
    * bookings keep the gate; the readiness blocker catches an under-age seat
    * whichever door it came through.
+   *
+   * Required, not optional: an omission here is a silently re-opened oracle,
+   * and there is no default that is right for both callers. Making it a type
+   * error costs three call sites once.
    */
-  actor?: "staff" | "public";
+  actor: "staff" | "public";
 } & BookingPerson;
 
 export type BookingOutcome =

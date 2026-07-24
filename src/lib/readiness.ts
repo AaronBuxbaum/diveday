@@ -129,7 +129,12 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   specialty_expired: "certification",
   nitrox_missing: "certification",
   nitrox_pending: "certification",
-  under_minimum_age: "certification",
+  // "setup", not "certification": age is not a card the diver holds, and it is
+  // entirely shop-side work. Filing it here also collapses it into the single
+  // generic setup line on the diver's own checklist, which is what keeps the
+  // public confirmation panel from disclosing that a given email belongs to
+  // someone under a course's minimum age.
+  under_minimum_age: "setup",
   payment_due: "payment",
 };
 

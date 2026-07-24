@@ -60,7 +60,13 @@ async function paidBookingContext(windowHours: number | null = 48) {
     cancellationWindowHours: windowHours,
   });
   const party = await createBookingParty(db, [
-    { shopId: shop.id, tripId: reef.id, fullName: "Pat Party", email: "pat@example.com" },
+    {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: reef.id,
+      fullName: "Pat Party",
+      email: "pat@example.com",
+    },
   ]);
   if (!party.ok) throw new Error(`party booking failed: ${party.reason}`);
   const bookingId = party.bookings[0].bookingId;
@@ -171,7 +177,13 @@ describe("refundBookingOnCancellation", () => {
   it("reports unpaid when nothing was captured", async () => {
     const { db, shop, reef, insideWindow } = await paidBookingContext(48);
     const party = await createBookingParty(db, [
-      { shopId: shop.id, tripId: reef.id, fullName: "Unpaid Uma", email: "uma@example.com" },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Unpaid Uma",
+        email: "uma@example.com",
+      },
     ]);
     if (!party.ok) throw new Error("booking failed");
     const outcome = await refundBookingOnCancellation(

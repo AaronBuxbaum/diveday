@@ -25,7 +25,7 @@ async function context() {
 
 async function bookVisitor(db: AppDb, shopId: string, tripId: string, fullName: string) {
   const email = `${fullName.toLowerCase().replace(/\s+/g, ".")}@example.com`;
-  const outcome = await createBooking(db, { shopId, tripId, fullName, email });
+  const outcome = await createBooking(db, { actor: "staff", shopId, tripId, fullName, email });
   if (!outcome.ok) throw new Error("expected booking to succeed");
   const [diver] = await db
     .select({ id: people.id })

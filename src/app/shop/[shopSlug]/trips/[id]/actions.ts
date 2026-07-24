@@ -380,6 +380,7 @@ export async function addBookingAction(shopSlug: string, tripId: string, formDat
   const parsed = parseAddDiver(formData);
   if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
   const outcome = await createBooking(await getDb(), {
+    actor: "staff",
     shopId: s.user.shopId,
     tripId,
     fullName: parsed.data.fullName,
@@ -409,6 +410,7 @@ export async function addExistingDiverAction(shopSlug: string, tripId: string, f
   const parsed = existingDiverSchema.safeParse({ personId: formData.get("personId") });
   if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
   const outcome = await createBooking(await getDb(), {
+    actor: "staff",
     shopId: s.user.shopId,
     tripId,
     personId: parsed.data.personId,

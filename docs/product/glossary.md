@@ -85,8 +85,10 @@ new domain concept, define it here in the same PR.
   and signed records (attester included), rental fit, orders and their lines, and the shop's
   dive-site library and course catalog — soft-archived history included, credentials never. Leads
   with `contacts.csv`, a flat one-row-per-person file (names pre-split, best card with its
-  verification status, nitrox flag, sizes) shaped for another system's import wizard, so leaving
-  never means hand-merging CSVs. Every image URL any CSV references that DiveDay's own storage
+  verification status, nitrox flag, sizes, date of birth) shaped for another system's import
+  wizard, so leaving never means hand-merging CSVs. It carries every diver's date of birth where
+  one is on file, minors included — a deliberate part of "the whole record leaves with you", and
+  why the download is owner/manager-gated. Every image URL any CSV references that DiveDay's own storage
   actually holds is also included as a real file under `photos/`, at the URL's own path, so a
   photo survives after the account closes — a pasted external link or bundled template asset stays
   a reference only (20260724-export-bundled-photos). Gated to owner/manager because it carries the
@@ -343,8 +345,10 @@ new domain concept, define it here in the same PR.
   size. The flagged diver keeps their line on the prep list — the count is what the packer loads
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
   off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
-  section. Unsized pieces (regulator, dive computer) are untouched by the flag; so are tanks, since
-  gas is never sized. Distinct from both "own kit" and "not asked yet" on
+  section, along with the sizes they asked for — the captain doing the fit can't edit the profile
+  and needs somewhere to start. Unsized pieces (regulator, dive computer, GoPro) are untouched by
+  the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
+  the fit's most safety-relevant number) and tanks, since gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
   See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).
 - **Gear-request override** — rewriting what a diver themselves asked for. Reserved to owners,
@@ -368,7 +372,9 @@ new domain concept, define it here in the same PR.
   two ways: a refusal on **staff-initiated** bookings, and an `under_minimum_age` readiness blocker
   re-evaluated on every read (which is what catches a date recorded *after* the booking). The
   anonymous public form never refuses on age — a refusal there answers "is this address a child
-  under N?" to anyone who can guess an address. Real age verification stays a dock-side ID check.
+  under N?" to anyone who can guess an address — and the diver-facing checklist deliberately words
+  the blocker identically to the identity one, so its presence discloses nothing either. Real age
+  verification stays a dock-side ID check.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.

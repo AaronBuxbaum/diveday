@@ -284,6 +284,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
     ).toEqual(["Booked Bianca"]);
 
     const booked = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: trip.id,
       personId: diver.id,

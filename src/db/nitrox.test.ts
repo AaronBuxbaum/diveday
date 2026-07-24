@@ -21,6 +21,7 @@ async function context() {
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("open trip missing");
   const booking = await createBooking(db, {
+    actor: "staff",
     shopId: shop.id,
     tripId: open.id,
     fullName: "Nora Quinn",

@@ -258,8 +258,16 @@ describe("needs-staff-fit fallback (H-06)", () => {
     // ...but he still gets a BCD line, so the boat isn't loaded one short.
     const benBcd = checklist.lines.find((l) => l.kind === "bcd" && l.fitAtCheckIn);
     expect(benBcd).toMatchObject({ count: 1, divers: ["Ben"], size: null });
+    // The sizes he asked for ride along: the captain doing the check-in fit
+    // can't edit the profile and sees no size on the line above, so without
+    // this there is nothing to bring a range around.
     expect(checklist.diversNeedingStaffFit).toEqual([
-      { fullName: "Ben", note: "No L BCD", flaggedDaysAgo: 0 },
+      {
+        fullName: "Ben",
+        note: "No L BCD",
+        statedSizes: "BCD M, wetsuit 5mm M, boots 9, fins M",
+        flaggedDaysAgo: 0,
+      },
     ]);
     // ...and he is not miscounted as a diver nobody ever asked.
     expect(checklist.diversWithoutFit).toEqual([]);
@@ -285,6 +293,29 @@ describe("needs-staff-fit fallback (H-06)", () => {
       fitAtCheckIn: false,
     });
     expect(lineFor(checklist, "dive_computer", null)?.count).toBe(1);
+  });
+
+  it("keeps a flagged diver's usual weighting — lead is bulk, not a size", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Ben",
+          fit: { ...fullFit, weightPreference: "6 kg", needsStaffFitAt: flaggedAt },
+        }),
+      ],
+      plannedDives: 1,
+      now: flaggedAt,
+    });
+    // A shop is never "out of 6 kg" — lead comes in 2 lb increments — and usual
+    // weighting is the most safety-relevant number in the fit: under-weighted
+    // is a diver who can't hold a safety stop, over-weighted is a bad ascent.
+    // Blanking it because there's no L BCD trades a real number for nothing.
+    expect(lineFor(checklist, "weights", "6 kg")).toMatchObject({
+      count: 1,
+      divers: ["Ben"],
+      fitAtCheckIn: false,
+    });
   });
 
   it("still counts a flagged diver's tanks — gas is never sized", () => {
@@ -317,7 +348,12 @@ describe("needs-staff-fit fallback (H-06)", () => {
       now: flaggedAt,
     });
     expect(checklist.diversNeedingStaffFit).toEqual([
-      { fullName: "Ada", note: null, flaggedDaysAgo: 0 },
+      {
+        fullName: "Ada",
+        note: null,
+        statedSizes: "BCD M, wetsuit 5mm M, boots 9, fins M",
+        flaggedDaysAgo: 0,
+      },
     ]);
   });
 

@@ -29,12 +29,13 @@ export const ERROR_MESSAGES: Record<string, string> = {
   unavailable: "This trip isn't taking bookings anymore.",
   "course-unavailable":
     "This course still needs an assigned instructor before it can take bookings.",
-  "course-prerequisite":
-    "This course needs a verified certification on file. Call the shop and they’ll help get your card checked.",
+  // No `course-prerequisite` or `course-min-age` entry on purpose. Both would
+  // tell an anonymous submitter something about the person on file for an
+  // email they merely typed — whether they hold a card, or whether they're a
+  // child under N. `bookSpot` collapses both to the generic `unavailable`, and
+  // leaving the copy here would be an invitation to wire them back up.
   "course-ratio-full":
     "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
-  "course-min-age":
-    "This course has a minimum age that the date of birth on file doesn’t meet for this date. Call the shop — they can check the date and talk through the options.",
   fit: "We couldn’t save that rental fit. Please check the details and try again.",
   pay: "We couldn’t open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
 };
