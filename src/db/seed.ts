@@ -2247,6 +2247,16 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  // Stripe checkout/refund state references bookings, trips, and orders, so it
+  // must be cleared before those parents or the deletes below FK-violate and
+  // abort the whole reset mid-run — leaving a prior payment test's trips and
+  // bookings to leak into the next test's fixture (this is what made trips.spec
+  // flake under the full suite). booking_checkout_bookings references both
+  // booking_checkouts and bookings; payment_operation_intents references trips,
+  // bookings, orders, and booking_checkouts — so both go before booking_checkouts.
+  await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
+  await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
+  await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
