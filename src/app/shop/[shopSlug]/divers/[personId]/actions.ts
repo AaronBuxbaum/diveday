@@ -322,6 +322,7 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
   // 20260724-role-authorization), re-checked against live roles.
   if (!(await canPersonRefund(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, `${base}?notice=not-authorized-refund`);
+    return;
   }
   // A demo shop's orders carry fabricated Stripe ids; refunding one would hit
   // live Stripe and fail. The button is rendered disabled to match (PaymentsSection).
@@ -358,6 +359,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
   // owner/manager only (H-14, ADR 20260724-role-authorization).
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, `${base}?notice=not-authorized-delete`);
+    return;
   }
   const deleted = await deleteDiver(db, staff.user.shopId, personId);
   revalidateAndRedirect(

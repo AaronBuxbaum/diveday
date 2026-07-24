@@ -45,13 +45,33 @@ handlers return 403, and server actions refuse (early return or an error state).
 | Refunds (money leaving the account) | `canRefund` | owner, manager |
 | Waiver templates (the legal instrument) | `canManageWaiverTemplates` | owner, manager |
 | Diver deletion (soft-delete a person, freeing their email) | `canDeleteDiver` | owner, manager |
-| Trip configuration (create/edit/cancel, requirements, crew) | `canConfigureTrips` | owner, manager, instructor |
+| Trip *definition* (create, edit details, admission requirements, whole-series ops, reinstate) | `canConfigureTrips` | owner, manager, instructor |
 
-Trip configuration opens to instructors because course sessions and their admission rules are
+Trip *definition* opens to instructors because course sessions and their admission rules are
 instructor-owned work; the other four stay owner/manager because they are money, a legal document,
 or an irreversible-feeling roster change. Captains, crew, and divemasters keep every *operating*
 surface — the roster, check-in, manifest, roll call, gear packing, readiness — which none of these
 predicates touch.
+
+The trip gate is drawn deliberately at *definition*, not "everything on the trip Overview". Three
+Overview actions the glossary assigns to the day-of crew stay on `requireStaffSession` (open to all
+staff), because a fun charter crewed by a captain and a divemaster with no instructor aboard must
+still be able to run its day:
+
+- **Predicted conditions** (`saveConditionsAction` / `clearConditionsAction`) — the crew who were on
+  the water record water temp, visibility, and surface state; the glossary makes this a crew
+  observation and gives the crew the go/no-go call.
+- **Day-of crew assignment** (`saveCrewAction`) — the crew list is part of the manifest, a legal
+  safety document, and must stay truthful when the on-water lead swaps a sick divemaster or a second
+  captain at the dock.
+- **A single trip's weather cancellation** (`cancelTripAction`) — the crew's go/no-go call, taking
+  today's charter off the board so booked divers are notified. It only flips trip status; no money
+  moves (per-booking refunds stay on the owner/manager path). Reinstating a trip and cancelling a
+  whole recurring series are bulk schedule management and stay `canConfigureTrips`.
+
+So `canConfigureTrips` guards trip *definition* and bulk schedule management; the day-of operating
+actions above are not gated by it. This split came out of the `dive-domain-expert` review, which
+flagged the first cut as one notch too wide.
 
 ## Alternatives considered
 

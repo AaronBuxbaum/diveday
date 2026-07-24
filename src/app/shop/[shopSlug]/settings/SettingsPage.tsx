@@ -131,7 +131,10 @@ async function saveRentalItemsAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
   const blocked = await paymentSettingsBlock(session);
-  if (blocked) revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
+  if (blocked) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
+    return;
+  }
   const selected = RENTABLE_ITEMS.filter((item) => formData.get(item.name) === "on").map(
     (item) => item.kind,
   );
@@ -163,7 +166,10 @@ async function saveRentalPricingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const blocked = await paymentSettingsBlock(session);
-  if (blocked) revalidateAndRedirect(settings, blocked);
+  if (blocked) {
+    revalidateAndRedirect(settings, blocked);
+    return;
+  }
   const set = parsePriceDollars(formData.get("setPrice"));
   const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
   let invalid = !set.ok || !nitrox.ok;
@@ -204,7 +210,10 @@ async function disconnectAction() {
   "use server";
   const session = await requireStaffSession();
   const blocked = await paymentSettingsBlock(session);
-  if (blocked) revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
+  if (blocked) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
+    return;
+  }
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account && !account.disconnectedAt) {
@@ -222,7 +231,10 @@ async function refreshAction() {
   "use server";
   const session = await requireStaffSession();
   const blocked = await paymentSettingsBlock(session);
-  if (blocked) revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
+  if (blocked) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
+    return;
+  }
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account) {

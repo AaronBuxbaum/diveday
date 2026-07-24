@@ -145,13 +145,31 @@ export default async function ManageTripPage({
       {canConfigure ? null : (
         <div className="mt-6">
           <ShopNotice tone="neutral" role="status">
-            You're viewing this trip. Editing its setup — details, conditions, requirements, crew,
-            and cancellation — is limited to owners, managers, and instructors. The roster,
-            check-in, manifest, and roll call stay open to all crew from the Guests and manifest
-            pages.
+            You're viewing this trip. Its setup — the details, admission requirements, and recurring
+            schedule — is edited by owners, managers, and instructors. Recording conditions,
+            adjusting who's on crew, and cancelling today's trip for weather stay open to you, as do
+            the roster, check-in, manifest, and roll call.
           </ShopNotice>
         </div>
       )}
+
+      {canConfigure ? (
+        <DetailsSection
+          action={saveDetails.bind(null, shopSlug, tripId)}
+          trip={trip}
+          diveSiteList={diveSiteList}
+          tripDiveList={tripDiveList}
+          startWall={startWall}
+          endWall={endWall}
+        />
+      ) : null}
+
+      {/* Conditions are crew-entered (glossary) — open to all staff. */}
+      <ConditionsSection
+        saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
+        clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+        trip={trip}
+      />
 
       <RecapNoteSection
         action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
@@ -159,74 +177,64 @@ export default async function ManageTripPage({
       />
 
       {canConfigure ? (
-        <>
-          <DetailsSection
-            action={saveDetails.bind(null, shopSlug, tripId)}
-            trip={trip}
-            diveSiteList={diveSiteList}
-            tripDiveList={tripDiveList}
-            startWall={startWall}
-            endWall={endWall}
-          />
-
-          <ConditionsSection
-            saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
-            clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
-            trip={trip}
-          />
-
-          <RequirementsSection
-            action={saveRequirementsAction.bind(null, shopSlug, tripId)}
-            trip={trip}
-            requirement={requirement}
-            siteRequirement={siteRequirement}
-          />
-
-          <CrewSection
-            action={saveCrewAction.bind(null, shopSlug, tripId)}
-            trip={trip}
-            staff={staff}
-            crewIds={crewIds}
-            hasCourseInstructor={hasCourseInstructor}
-          />
-
-          {series ? (
-            <SeriesSection
-              intervalWeeks={series.intervalWeeks}
-              occurrenceCount={series.occurrenceCount}
-              futureScheduledCount={series.futureScheduledCount}
-              applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
-              cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
-              extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
-            />
-          ) : null}
-
-          <section className="mt-12 border-t border-border pt-6">
-            {cancelled ? (
-              <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-                <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
-                  Reinstate trip
-                </SubmitButton>
-              </form>
-            ) : (
-              <form
-                action={cancelTripAction.bind(null, shopSlug, tripId)}
-                className="flex items-center gap-3"
-              >
-                <SubmitButton
-                  pendingLabel="Cancelling…"
-                  className={buttonClass({ variant: "danger" })}
-                >
-                  Cancel trip
-                </SubmitButton>
-                <p className="text-sm text-muted">
-                  Takes it off the public schedule. You can reinstate it any time.
-                </p>
-              </form>
-            )}
-          </section>
-        </>
+        <RequirementsSection
+          action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+          trip={trip}
+          requirement={requirement}
+          siteRequirement={siteRequirement}
+        />
       ) : null}
+
+      {/* Who's aboard is manifest accuracy (glossary) — open to all staff. */}
+      <CrewSection
+        action={saveCrewAction.bind(null, shopSlug, tripId)}
+        trip={trip}
+        staff={staff}
+        crewIds={crewIds}
+        hasCourseInstructor={hasCourseInstructor}
+      />
+
+      {canConfigure && series ? (
+        <SeriesSection
+          intervalWeeks={series.intervalWeeks}
+          occurrenceCount={series.occurrenceCount}
+          futureScheduledCount={series.futureScheduledCount}
+          applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
+          cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
+          extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
+        />
+      ) : null}
+
+      <section className="mt-12 border-t border-border pt-6">
+        {cancelled ? (
+          canConfigure ? (
+            <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
+              <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
+                Reinstate trip
+              </SubmitButton>
+            </form>
+          ) : (
+            <p className="text-sm text-muted">
+              This trip is cancelled. Putting it back on the schedule is limited to owners,
+              managers, and instructors.
+            </p>
+          )
+        ) : (
+          // A single trip's weather cancellation is the crew's go/no-go call
+          // (glossary) — open to all staff. Reinstating it is config work.
+          <form
+            action={cancelTripAction.bind(null, shopSlug, tripId)}
+            className="flex items-center gap-3"
+          >
+            <SubmitButton pendingLabel="Cancelling…" className={buttonClass({ variant: "danger" })}>
+              Cancel trip
+            </SubmitButton>
+            <p className="text-sm text-muted">
+              Takes it off the public schedule and notifies booked divers.
+            </p>
+          </form>
+        )}
+      </section>
     </>
   );
 }

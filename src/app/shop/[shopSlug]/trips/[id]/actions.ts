@@ -127,11 +127,17 @@ const backPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/
 const guestsPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}/guests`;
 
 /**
- * Trip *configuration* — what the dive is and who it admits — is owner/manager/
- * instructor work (H-14, ADR 20260724-role-authorization); the operating crew
- * runs the roster below but does not define trips. Re-checks live roles against
- * the DB and bounces a disallowed staff member to the trip Overview with a
- * not-authorized notice. Roster/booking actions in this file stay `requireStaffSession`.
+ * Trip *definition* — what the dive is and who it admits (details, admission
+ * requirements, and the whole-series operations) — is owner/manager/instructor
+ * work (H-14, ADR 20260724-role-authorization). Re-checks live roles against the
+ * DB and bounces a disallowed staff member to the trip Overview with a
+ * not-authorized notice.
+ *
+ * This is deliberately narrower than "everything on Overview": the *operating*
+ * actions the glossary assigns to the day-of crew — predicted-conditions entry,
+ * day-of crew assignment (manifest accuracy), and a single trip's weather
+ * cancellation — stay `requireStaffSession`, as do the roster/booking/recap
+ * actions. Only trip definition and bulk schedule management run through here.
  */
 async function requireTripConfig(shopSlug: string, tripId: string) {
   const s = await requireStaffSession();
@@ -196,7 +202,11 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireTripConfig(shopSlug, tripId);
+  // Predicted conditions are crew-entered — the divemaster/captain on the water
+  // record water temp, viz, and surface state and own the go/no-go call
+  // (glossary). This is operating work, not trip definition, so it stays open to
+  // all staff even though the rest of Overview is config-gated (H-14).
+  const s = await requireStaffSession();
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}?notice=invalid`);
   const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, parsed.data);
@@ -205,14 +215,21 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
 
 export async function clearConditionsAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireTripConfig(shopSlug, tripId);
+  // Crew-entered conditions (see saveConditionsAction) — operating work, open to
+  // all staff.
+  const s = await requireStaffSession();
   const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
   revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
 }
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireTripConfig(shopSlug, tripId);
+  // A single trip's cancellation is the crew's weather go/no-go call (glossary):
+  // the on-water lead must be able to take today's charter off the board so
+  // divers are notified. It only flips status (no money moves — refunds stay
+  // owner/manager on the per-booking path), so it's open to all staff. Bulk
+  // schedule management (reinstate, whole-series cancel, create) stays config.
+  const s = await requireStaffSession();
   await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
   revalidateAndRedirect(back, `${back}?notice=cancelled`);
 }
@@ -341,7 +358,11 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
 
 export async function saveCrewAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireTripConfig(shopSlug, tripId);
+  // Who is aboard is part of the manifest — a legal safety document that must
+  // stay truthful when the day-of lead swaps a sick divemaster or a second
+  // captain at the dock (glossary). Day-of crew assignment is operating work,
+  // open to all staff; trip *definition* below stays config-gated (H-14).
+  const s = await requireStaffSession();
   const ids = formData.getAll("crew").map(String);
   const saved = await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
   if (!saved) redirect(`${back}?notice=invalid`);
