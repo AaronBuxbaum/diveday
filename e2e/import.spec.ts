@@ -53,13 +53,18 @@ test.describe("contact import", () => {
 
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
-    await expect(page.getByText(/imported as verified/)).toBeVisible();
+    await expect(
+      page.getByText(/imported as verified — flagged imported, with a one-tap confirm on each/),
+    ).toBeVisible();
     await expect(page.getByText(/1 waiver imported as accepted/)).toBeVisible();
 
-    // The person is now on the roster, with the soft "to confirm" nudge.
+    // The person is now on the roster, with the soft "to confirm" nudge. The
+    // roster renders each diver twice (a mobile list, a desktop table); scope
+    // to the desktop row so the assertion doesn't land on the CSS-hidden copy.
     await page.goto("/shop/blue-mantis/divers?q=imported.ingrid@example.com");
-    await expect(page.getByRole("link", { name: /Imported Ingrid/ })).toBeVisible();
-    await expect(page.getByText(/to confirm/).first()).toBeVisible();
+    const row = page.getByRole("row").filter({ hasText: "Imported Ingrid" });
+    await expect(row).toBeVisible();
+    await expect(row.getByText(/to confirm/)).toBeVisible();
 
     // On the diver's record, the imported cards show verified + imported and a
     // one-tap Confirm card (a level card and a nitrox card); confirming one
