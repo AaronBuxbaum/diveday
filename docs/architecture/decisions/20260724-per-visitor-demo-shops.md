@@ -43,8 +43,16 @@ depends on one stable canonical demo (`blue-mantis`) reached via `DEV_STAFF_LOGI
   (`DEMO_RECAP_BOOKING_ID`) stay on `blue-mantis` only — generated demos use random ids.
 - **TTL reaper:** an idempotent cron endpoint (same shape as the pre-trip reminder cron) deletes
   generated demo shops older than **7 days** (window configurable via env), keyed on `shops.created_at`
-  and excluding the canonical demo. Demo-banner role names are driven from the shop's actual seeded
-  people rather than hardcoded.
+  and excluding the canonical demo.
+- **Abuse bounds:** minting is a public unauthenticated action, so two limits apply. A per-IP token
+  bucket (`demoCreate`) caps one visitor's burst; because that does *not* bound the fleet-wide total
+  (an IP-rotating attacker, a fail-open limiter, a multi-instance deployment), a hard **aggregate
+  cap** on live minted demos (`DEMO_SHOP_MAX_LIVE`, default 200) evicts the oldest minted demo before
+  each mint. Together with the reaper, total storage is bounded, not just per-visitor burst.
+- **Demo data is public, not private.** A minted demo is addressable by its slug and any visitor can
+  role-switch into it via the `isDemo` bypass token, so it is world-readable at owner level — fine
+  for a throwaway playground, but a minted-demo banner warns against entering real customer data. It
+  is deliberately *not* a private workspace.
 
 ## Alternatives considered
 
@@ -65,5 +73,7 @@ bounded by the reaper. The canonical `blue-mantis` fixture is unchanged, so the 
 `/api/test/reset` keep working; `demo.spec` is rewritten to assert generic identity (no "Dana")
 since the button now mints a generated shop. New surface to maintain: a slug/name generator, the
 `createDemoShop` seeding path (owner + unique emails), `shops.created_at`, and the reaper cron.
-Revisit if per-visitor minting proves abusable (add rate limiting/CAPTCHA on demo creation) or if
-the demo needs to outlive 7 days (make the window per-shop, or convert-to-trial on signup).
+Revisit if per-visitor minting proves abusable (tighten the aggregate cap, add a CAPTCHA) or if the
+demo needs to outlive 7 days (make the window per-shop, or convert-to-trial on signup). If demos
+must ever hold private data, bind the demo session to the mint (a cookie/nonce) so only the minting
+visitor can role-switch in, rather than anyone with the slug.
