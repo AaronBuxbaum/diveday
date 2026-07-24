@@ -9,9 +9,16 @@ import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/
 import { seedShopWithDemoData } from "@/db/seed";
 import { signIn } from "@/lib/auth";
 import { onboardSchema } from "@/lib/onboarding";
+import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export async function onboardAction(formData: FormData) {
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard).allowed) {
+    redirect(`/onboard?error=${encodeURIComponent(RATE_LIMIT_MESSAGE)}`);
+  }
+
   const rawData = Object.fromEntries(formData.entries());
   const parsed = onboardSchema.safeParse(rawData);
 

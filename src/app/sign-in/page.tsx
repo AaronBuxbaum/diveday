@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   title: "Sign in — DiveDay",
 };
 
+// Rate limiting lives in the Credentials provider's authorize() callback
+// (src/lib/auth.ts), not here — NextAuth invokes that for every credentials
+// attempt regardless of entry path (this page's action, or a direct POST to
+// /api/auth/callback/credentials), so it is the one chokepoint that can't
+// be bypassed. A check here too would double-consume the same budget
+// (CR-013).
 async function authenticate(formData: FormData) {
   "use server";
   try {

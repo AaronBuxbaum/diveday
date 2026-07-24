@@ -12,6 +12,8 @@ import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 
 /**
  * The transactional half of the diver's readiness page. Every action is
@@ -23,8 +25,17 @@ import { publicAppUrl } from "@/lib/notifications";
 
 const base = (token: string) => `/ready/${token}`;
 
-/** Resolve the token to its booking + shop context, or bounce to a plain notice. */
+/**
+ * Resolve the token to its booking + shop context, or bounce to a plain
+ * notice. Rate-limited by IP before verification, so this one chokepoint
+ * throttles every action in this file against both token guessing and
+ * replay spam of a known link (CR-013).
+ */
 async function contextFor(token: string) {
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+    return null;
+  }
   const db = await getDb();
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) return null;

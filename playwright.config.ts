@@ -42,6 +42,12 @@ const serverEnv = {
   // e2e/visual.spec.ts). src/lib/clock.ts reads this and, as a guard, ignores
   // it whenever a real DATABASE_URL is set, so it can never freeze production.
   DIVEDAY_CLOCK: E2E_FROZEN_CLOCK,
+  // The fleet can run as few as one worker (E2E_WORKER_COUNT), sharing one
+  // server and one 127.0.0.1 "IP" across every spec file — real per-IP
+  // throttling there would fail unrelated tests on nothing but replayed
+  // shared state. src/lib/rate-limit.ts reads this and, like DIVEDAY_CLOCK
+  // above, ignores it whenever a real DATABASE_URL is set.
+  DIVEDAY_RATE_LIMIT_DISABLED: "1",
   AUTH_TRUST_HOST: "true",
   AUTH_SECRET: process.env.AUTH_SECRET ?? "diveday-e2e-secret",
   // External providers are unit-tested through injected fetchers. Keeping them
