@@ -6,7 +6,17 @@ import { seededShopContext } from "@/test/db";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
-import { bookingCapabilities, bookings, people, personRoles, shops, userAccounts } from "./schema";
+import {
+  bookingCapabilities,
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  paymentOperationIntents,
+  people,
+  personRoles,
+  shops,
+  userAccounts,
+} from "./schema";
 import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
@@ -109,6 +119,64 @@ describe("resetDemoSchedule", () => {
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.shopId, shop.id));
     expect(remainingCapabilities).toHaveLength(0);
+  });
+
+  it("clears checkout and payment-intent rows so a churned playground resets cleanly", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+    if (!open) throw new Error("expected open trip missing");
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Checkout Chris",
+      email: "chris@example.com",
+    });
+    if (!outcome.ok) throw new Error("expected booking to succeed");
+
+    // A Stripe checkout and its payment-operation intent reference the booking,
+    // trip, and order. Before the reset cleared them, those rows blocked the
+    // bookings/trips deletes with an FK violation (23503) and left every
+    // subsequent e2e test's fixture dirty — the pre-existing gap that made
+    // trips.spec flake once a payment test (refunds/checkout) ran ahead of it in
+    // the same worker.
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: open.id,
+        stripeAccountId: "acct_test",
+        stripeSessionId: `cs_test_${outcome.bookingId}`,
+        amountPerDiverCents: 12000,
+        totalCents: 12000,
+      })
+      .returning();
+    if (!checkout) throw new Error("checkout insert failed");
+    await db
+      .insert(bookingCheckoutBookings)
+      .values({ shopId: shop.id, checkoutId: checkout.id, bookingId: outcome.bookingId });
+    await db.insert(paymentOperationIntents).values({
+      shopId: shop.id,
+      kind: "checkout_session",
+      tripId: open.id,
+      bookingId: outcome.bookingId,
+    });
+
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    const after = await upcomingTripsWithCounts(db, shop.id);
+    expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
+      trips.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity })),
+    );
+    expect(
+      await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.shopId, shop.id)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(paymentOperationIntents)
+        .where(eq(paymentOperationIntents.shopId, shop.id)),
+    ).toHaveLength(0);
   });
 
   it("keeps staff and their logins intact so the demo session survives", async () => {
