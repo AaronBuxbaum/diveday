@@ -36,6 +36,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
   },
   "diver-added": { tone: "success", text: "Diver added to the trip." },
   "diver-waitlisted": { tone: "success", text: "Diver added to the wait list." },
+  "identity-confirmed": {
+    tone: "success",
+    text: "Identity confirmed — this diver can be cleared to board.",
+  },
   "diver-invalid": { tone: "danger", text: "Enter a name and a valid email to add a diver." },
   "diver-full": {
     tone: "danger",

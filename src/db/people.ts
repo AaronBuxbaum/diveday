@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { personNamesMatch } from "@/lib/person-name";
 import { type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { people, personRoles } from "./schema";
 
@@ -13,6 +14,14 @@ export type FindOrCreatePersonInput = {
 export type FindOrCreatePersonResult = {
   person: typeof people.$inferSelect;
   created: boolean;
+  /**
+   * Whether the submitted `fullName` plausibly belongs to the returned person
+   * (H-13). Always `true` when `created` (the person *is* the submitted name);
+   * on a reuse it is the strict name comparison against the stored row, so a
+   * caller can route a mismatch to staff identity confirmation rather than let
+   * a different human inherit the matched person's evidence.
+   */
+  nameMatches: boolean;
 };
 
 /**
@@ -42,7 +51,13 @@ export async function findOrCreatePerson(
   input: FindOrCreatePersonInput,
 ): Promise<FindOrCreatePersonResult> {
   const existing = await selectActivePersonByEmail(tx, input.shopId, input.email);
-  if (existing) return { person: existing, created: false };
+  if (existing) {
+    return {
+      person: existing,
+      created: false,
+      nameMatches: personNamesMatch(existing.fullName, input.fullName),
+    };
+  }
 
   try {
     return await tx.transaction(async (tx2) => {
@@ -57,13 +72,19 @@ export async function findOrCreatePerson(
         .returning();
       if (!inserted) throw new Error("findOrCreatePerson: insert returned no row");
       await tx2.insert(personRoles).values({ personId: inserted.id, role: "diver" });
-      return { person: inserted, created: true };
+      return { person: inserted, created: true, nameMatches: true };
     });
   } catch (error) {
     if (!isUniqueConstraintViolation(error)) throw error;
     const winner = await selectActivePersonByEmail(tx, input.shopId, input.email);
     if (!winner) throw error; // the constraint violation proves a row exists; this would be a bug
-    return { person: winner, created: false };
+    // The racing insert won with *its* name; compare ours to what landed so a
+    // concurrent shared-inbox submission is flagged the same as the serial one.
+    return {
+      person: winner,
+      created: false,
+      nameMatches: personNamesMatch(winner.fullName, input.fullName),
+    };
   }
 }
 

@@ -580,6 +580,19 @@ export const bookings = pgTable(
      * drizzle can't type two tables that reference each other's primary key.
      */
     pendingCheckoutIntentId: uuid("pending_checkout_intent_id"),
+    /**
+     * Set when a self-service path (public booking) reused an existing person by
+     * email match but the submitted name did not match that person's stored name
+     * — a shared-inbox / minor-under-a-parent's-email signal that this booking
+     * may be a *different* human silently inheriting the matched person's
+     * verified certs and current waiver (H-13). While set, readiness fails closed
+     * with an `identity_unconfirmed` blocker so the diver can never board on
+     * borrowed evidence; staff clear it with a one-tap "confirm identity" once
+     * they've checked it really is the same person. Null on the identity path
+     * (an existing diver re-books themselves — no name is submitted) and on any
+     * matched-name booking.
+     */
+    identityUnconfirmedAt: timestamp("identity_unconfirmed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { type BookingOutcome, cancelBooking, createBooking, restoreBooking } from "@/db/bookings";
+import {
+  type BookingOutcome,
+  cancelBooking,
+  confirmBookingIdentity,
+  createBooking,
+  restoreBooking,
+} from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { setBookingPayment } from "@/db/payments";
@@ -487,6 +493,28 @@ export async function undoRemoveBookingAction(
   revalidateAndRedirect(
     back,
     `${back}?notice=${outcome === "trip_full" ? "booking-restore-full" : "booking-restored"}`,
+  );
+}
+
+/**
+ * Staff confirm a flagged booking is the person it was attached to (H-13),
+ * clearing the `identity_unconfirmed` readiness blocker. Same shop-scoped
+ * session gate as every roster action; a no-op on an already-clear booking
+ * still settles cleanly so a double-tap is harmless.
+ */
+export async function confirmDiverIdentityAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!bookingId) redirect(back);
+  const confirmed = await confirmBookingIdentity(await getDb(), s.user.shopId, bookingId);
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${confirmed ? "identity-confirmed" : "invalid"}&bid=${bookingId}`,
   );
 }
 

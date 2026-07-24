@@ -32,6 +32,7 @@ export const TODAY_HORIZON_MS = 7 * 24 * HOUR;
 
 export type TodayActionKind =
   | "medical_review"
+  | "identity"
   | "certification"
   | "waiver"
   | "payment"
@@ -52,17 +53,20 @@ export type TodayActionKind =
 const KIND_SEVERITY: Record<TodayActionKind, number> = {
   medical_review: 0,
   readiness_unavailable: 1,
-  certification: 2,
-  requirements: 3,
-  waiver: 4,
-  instructor_missing: 5,
-  nitrox_gate: 6,
-  dive_prep: 7,
-  payment: 8,
-  email_delivery: 9,
-  waitlist_seat: 10,
+  // An unconfirmed identity can hide a missing medical/cert for a different
+  // human, so it ranks with the other hard safety gates, above card/waiver work.
+  identity: 2,
+  certification: 3,
+  requirements: 4,
+  waiver: 5,
+  instructor_missing: 6,
+  nitrox_gate: 7,
+  dive_prep: 8,
+  payment: 9,
+  email_delivery: 10,
+  waitlist_seat: 11,
   // Dock-settleable and never a boarding blocker, so it rides at the bottom.
-  emergency_contact: 11,
+  emergency_contact: 12,
 };
 
 /**
@@ -73,6 +77,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
 export const ACTION_KIND_META = {
   medical_review: { label: "Medical", tone: "danger" },
   readiness_unavailable: { label: "Readiness", tone: "danger" },
+  identity: { label: "Identity", tone: "danger" },
   certification: { label: "Cards", tone: "warning" },
   requirements: { label: "Setup", tone: "warning" },
   waiver: { label: "Waiver", tone: "warning" },
@@ -177,6 +182,12 @@ export const BLOCKER_ACTIONS: Record<
     kind: "requirements",
     actionLabel: "Set requirements",
     groupLabel: "Set requirements",
+    target: "trip",
+  },
+  identity_unconfirmed: {
+    kind: "identity",
+    actionLabel: "Confirm identity",
+    groupLabel: "Confirm identities",
     target: "trip",
   },
   waiver_not_sent: {

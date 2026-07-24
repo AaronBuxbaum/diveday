@@ -27,6 +27,7 @@ import {
   addExistingDiverAction,
   addToWaitlistAction,
   bulkSendWaiversAction,
+  confirmDiverIdentityAction,
   deleteRecapPhotoAction,
   inviteWaitlistAction,
   issueWaiverAction,
@@ -192,6 +193,7 @@ export default async function TripGuestsPage({
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
+        confirmIdentityAction={confirmDiverIdentityAction.bind(null, shopSlug, tripId)}
       />
 
       <RecapPhotoGallery
