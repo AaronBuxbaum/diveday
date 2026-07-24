@@ -179,6 +179,51 @@ describe("resetDemoSchedule", () => {
     ).toHaveLength(0);
   });
 
+  it("clears non-staff logins so a churned playground resets cleanly", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+    if (!open) throw new Error("expected open trip missing");
+    const outcome = await createBooking(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Login Logan",
+      email: "logan@example.com",
+    });
+    if (!outcome.ok) throw new Error("expected booking to succeed");
+
+    // A non-staff diver can carry a login (user_accounts.person_id) — contact
+    // import (src/db/import.ts) and diver signup both mint one. Before the reset
+    // cleared it, that login blocked the delete of its owner with an FK
+    // violation (23503) and aborted the whole reset, leaking the churned
+    // schedule into every later e2e spec's fixture.
+    const [logan] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.email, "logan@example.com")));
+    if (!logan) throw new Error("expected booked diver row");
+    await db.insert(userAccounts).values({
+      personId: logan.id,
+      email: "logan@example.com",
+      hashedPassword: "x",
+      status: "active",
+    });
+
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    const after = await upcomingTripsWithCounts(db, shop.id);
+    expect(after.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity }))).toEqual(
+      trips.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity })),
+    );
+    // The diver and their orphaned login are both gone.
+    expect(
+      await db.select().from(people).where(eq(people.email, "logan@example.com")),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(userAccounts).where(eq(userAccounts.email, "logan@example.com")),
+    ).toHaveLength(0);
+  });
+
   it("keeps staff and their logins intact so the demo session survives", async () => {
     const { db, shop } = await seededShopContext();
     const staffBefore = await listStaff(db, shop.id);
