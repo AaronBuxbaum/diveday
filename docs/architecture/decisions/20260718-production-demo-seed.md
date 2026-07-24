@@ -1,6 +1,6 @@
 # 20260718-production-demo-seed — Seed the demo shop in every environment
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260724-per-visitor-demo-shops](20260724-per-visitor-demo-shops.md)
 - **Date:** 2026-07-18
 
 ## Context

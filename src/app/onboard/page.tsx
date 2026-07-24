@@ -117,31 +117,20 @@ export default async function OnboardPage({
               </FieldGrid>
             </section>
 
-            <div className="mt-2 rounded-lg border border-accent/30 bg-accent/5 p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  name="seedDemoData"
-                  type="checkbox"
-                  defaultChecked
-                  className="mt-1 h-4 w-4 rounded border-border-strong accent-primary"
-                />
-                <div>
-                  <span className="text-sm font-medium text-foreground">
-                    Start with sample trips
-                  </span>
-                  <p className="text-xs text-muted mt-0.5">
-                    We&apos;ll fill your schedule with realistic trips, bookings, gear requests, and
-                    divers so you can try the whole day before adding your own.
-                  </p>
-                </div>
-              </label>
-            </div>
+            <p className="mt-2 text-xs text-muted">
+              Your shop starts empty and ready for your own trips and divers. Want to explore a shop
+              that&apos;s already full of sample trips first?{" "}
+              <Link href="/" className="text-primary font-medium hover:underline">
+                Try the live demo
+              </Link>
+              .
+            </p>
 
             <SubmitButton
               pendingLabel="Setting up your shop…"
               className={buttonClass({ className: "mt-2" })}
             >
-              Create shop & start trial
+              Create shop &amp; start trial
             </SubmitButton>
           </form>
 

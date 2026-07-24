@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
-import { seedShopWithDemoData } from "@/db/seed";
 import { signIn } from "@/lib/auth";
 import { onboardSchema } from "@/lib/onboarding";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -27,8 +26,7 @@ export async function onboardAction(formData: FormData) {
     redirect(`/onboard?error=${encodeURIComponent(firstError)}`);
   }
 
-  const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword, seedDemoData } =
-    parsed.data;
+  const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword } = parsed.data;
 
   const db = await getDb();
   let onboardingError: string | null = null;
@@ -64,10 +62,10 @@ export async function onboardAction(formData: FormData) {
           name: shopName,
           slug: shopSlug,
           timezone,
-          // Seeding sample data is a convenience, not demo mode: a real trial
-          // shop must not get the Demo shop banner or the destructive
-          // "Reset demo data" button. isDemo is reserved for the canonical
-          // seeded demo tenant (seedIfEmpty / enterDemoAction).
+          // A real shop is never seeded and is never a demo. Sample/fake data
+          // lives only in a freshly-minted demo shop (createDemoShop), so a shop
+          // that later imports its real roster never has seeded rows mixed in.
+          // See ADR 20260724-per-visitor-demo-shops.
           isDemo: false,
         })
         .returning();
@@ -108,16 +106,15 @@ export async function onboardAction(formData: FormData) {
         hashedPassword,
       });
 
-      if (!seedDemoData) {
-        await tx.insert(waiverTemplates).values({
-          shopId: newShop.id,
-          title: DEFAULT_WAIVER_TITLE,
-          version: 1,
-          body: DEFAULT_WAIVER_BODY,
-        });
-      } else {
-        await seedShopWithDemoData(tx, newShop.id);
-      }
+      // Every new shop starts clean: just its default waiver, ready for the
+      // owner's own trips and divers. No sample data — that only ever lives in
+      // a demo shop (ADR 20260724-per-visitor-demo-shops).
+      await tx.insert(waiverTemplates).values({
+        shopId: newShop.id,
+        title: DEFAULT_WAIVER_TITLE,
+        version: 1,
+        body: DEFAULT_WAIVER_BODY,
+      });
     });
   } catch (err) {
     if (onboardingError) {

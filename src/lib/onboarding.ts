@@ -32,5 +32,4 @@ export const onboardSchema = z.object({
     .string()
     .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
     .max(MAX_PASSWORD_LENGTH, `Password must be at most ${MAX_PASSWORD_LENGTH} characters`),
-  seedDemoData: z.preprocess((val) => val === "on" || val === true, z.boolean()),
 });

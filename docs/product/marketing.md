@@ -22,8 +22,9 @@ argue from **proof we can demonstrate**, in one sentence:
 
 > **Easy to try, safe to run the boat on, safe to leave.**
 
-- **Easy to try** — the live demo (walk the day as owner, instructor, divemaster, captain, diver)
-  and the seeded trial shop. Demo before trial: it is the lowest-friction proof we own.
+- **Easy to try** — the live demo (walk the day as owner, instructor, divemaster, captain, diver),
+  a full sample shop minted fresh for each visitor, plus a trial shop of your own that starts clean.
+  Demo before trial: it is the lowest-friction proof we own.
 - **Safe to run the boat on** — boat-day depth (roll-call checkpoints, append-only history, the
   offline manifest) and fail-closed readiness ("no silent passes"). Verified rivals have neither.
 - **Safe to leave** — the full-shop export (one ZIP, documented CSVs, every tier, self-serve) and

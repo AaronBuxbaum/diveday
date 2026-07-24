@@ -8,7 +8,6 @@ const validInput = {
   ownerName: "Nora Quinn",
   ownerEmail: "nora@example.com",
   ownerPassword: "correct horse",
-  seedDemoData: "on",
 };
 
 describe("onboardSchema (CR-014)", () => {
