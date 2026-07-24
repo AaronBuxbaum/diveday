@@ -40,6 +40,15 @@ export type RentalFit = {
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
+  /**
+   * Set when staff couldn't fill a requested size and flagged the diver for
+   * hands-on fitting instead (H-06). Their sized kit drops off the packing
+   * lines — packing a size nobody chose is exactly what this state exists to
+   * prevent — and they are named separately so the fitting actually happens.
+   * Tanks still count: those aren't sized, and a diver never loses their gas.
+   */
+  needsStaffFitAt?: Date | null;
+  needsStaffFitNote?: string | null;
 };
 
 export type PrepDiver = {
@@ -85,6 +94,12 @@ export type DivePrepChecklist = {
   nitroxBlockers: NitroxBlocker[];
   /** Divers with no rental fit on file; staff still has to ask them. */
   diversWithoutFit: string[];
+  /**
+   * Divers whose stated size couldn't be filled, flagged for hands-on fitting
+   * (H-06). Their kit is deliberately absent from `lines` — fit them from what
+   * is actually aboard rather than packing against a size the shop is short of.
+   */
+  diversNeedingStaffFit: { fullName: string; note: string | null }[];
 };
 
 export const RENTAL_ITEM_LABELS: Record<RentalItemKind, string> = {
@@ -161,6 +176,7 @@ export function buildDivePrepChecklist(input: {
   const grouped = new Map<string, PrepLine>();
   const nitroxBlockers: NitroxBlocker[] = [];
   const diversWithoutFit: string[] = [];
+  const diversNeedingStaffFit: { fullName: string; note: string | null }[] = [];
   let nitroxDivers = 0;
 
   for (const diver of input.divers) {
@@ -175,6 +191,15 @@ export function buildDivePrepChecklist(input: {
 
     if (!diver.fit) {
       diversWithoutFit.push(diver.fullName);
+      continue;
+    }
+    // Flagged for hands-on fitting: name them and pack nothing sized for them,
+    // so nobody lays out a size the shop already knows it cannot fill.
+    if (diver.fit.needsStaffFitAt) {
+      diversNeedingStaffFit.push({
+        fullName: diver.fullName,
+        note: diver.fit.needsStaffFitNote?.trim() || null,
+      });
       continue;
     }
     for (const item of rentedItems(diver.fit)) {
@@ -219,6 +244,9 @@ export function buildDivePrepChecklist(input: {
     lines,
     nitroxBlockers,
     diversWithoutFit,
+    diversNeedingStaffFit: diversNeedingStaffFit.sort((a, b) =>
+      a.fullName.localeCompare(b.fullName),
+    ),
   };
 }
 
@@ -231,12 +259,23 @@ export function buildDivePrepChecklist(input: {
  * turns up at the dock in booties expecting a BCD.
  */
 export type RentalFitLine = {
-  state: "not_recorded" | "own_kit" | "rents";
+  state: "not_recorded" | "own_kit" | "rents" | "needs_staff_fit";
   text: string;
 };
 
 export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
   if (!fit) return { state: "not_recorded", text: "No fit on file — not asked yet" };
+  // A fourth state on purpose: "needs staff fit" is neither a size to hand over
+  // nor a diver nobody asked. It is an open job at the dock, and reading it as
+  // either of the others is how a diver ends up kitted from a size the shop
+  // does not have.
+  if (fit.needsStaffFitAt) {
+    const note = fit.needsStaffFitNote?.trim();
+    return {
+      state: "needs_staff_fit",
+      text: note ? `Needs staff fit — ${note}` : "Needs staff fit at check-in",
+    };
+  }
   const parts = rentedItems(fit).map((item) =>
     item.size ? `${RENTAL_ITEM_LABELS[item.kind]} ${item.size}` : RENTAL_ITEM_LABELS[item.kind],
   );

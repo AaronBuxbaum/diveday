@@ -147,6 +147,29 @@ export default async function TripPrepPage({
             </section>
           ) : null}
 
+          {checklist.diversNeedingStaffFit.length > 0 ? (
+            <section
+              aria-labelledby="staff-fit-heading"
+              className="mt-6 rounded-lg border border-warning/40 bg-warning/5 p-4"
+            >
+              <h2 id="staff-fit-heading" className="font-semibold">
+                Fit these divers at check-in
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                A size they asked for wasn’t available, so their kit is deliberately off the list
+                below — fit them in person from what’s aboard rather than packing a substitute.
+              </p>
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {checklist.diversNeedingStaffFit.map((diver) => (
+                  <li key={diver.fullName}>
+                    • {diver.fullName}
+                    {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           <section aria-labelledby="kit-heading" className="mt-8">
             <h2 id="kit-heading" className="text-lg font-semibold">
               Rental kit

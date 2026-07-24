@@ -70,6 +70,36 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
   return profile ?? null;
 }
 
+/**
+ * The safe fallback when a requested size isn't in stock (H-06): flag the diver
+ * for hands-on fitting at check-in rather than packing a size nobody chose.
+ * Open to any staff member — it escalates to a person, it never overwrites what
+ * the diver asked for, so it is the day's work rather than an override
+ * (`canOverrideGearRequest`). Returns null when the diver has no fit on file
+ * yet; there is nothing to flag against, and the prep list already names them
+ * under `diversWithoutFit`.
+ */
+export async function setNeedsStaffFit(
+  db: AppDb,
+  input: { shopId: string; personId: string; needed: boolean; note?: string },
+) {
+  const [profile] = await db
+    .update(rentalFitProfiles)
+    .set({
+      needsStaffFitAt: input.needed ? nowDate() : null,
+      needsStaffFitNote: input.needed ? optional(input.note) : null,
+      updatedAt: nowDate(),
+    })
+    .where(
+      and(
+        eq(rentalFitProfiles.shopId, input.shopId),
+        eq(rentalFitProfiles.personId, input.personId),
+      ),
+    )
+    .returning();
+  return profile ?? null;
+}
+
 export async function getRentalFit(db: AppDb, shopId: string, personId: string) {
   const [profile] = await db
     .select()

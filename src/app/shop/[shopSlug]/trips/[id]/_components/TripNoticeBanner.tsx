@@ -66,6 +66,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
     tone: "danger",
     text: "This session is at its instructor-to-student ratio limit — assign another instructor or a certified assistant, or add them to the wait list.",
   },
+  "diver-course-min-age": {
+    tone: "danger",
+    text: "That diver is under this course's minimum age on the day it runs, going by the date of birth on their profile. Correct the date if it's wrong.",
+  },
   "diver-unavailable": { tone: "danger", text: "This trip can't accept new divers right now." },
   "waiver-complete": { tone: "success", text: "That diver already has a completed waiver." },
   "waiver-in-person": {

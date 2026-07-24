@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonDeleteDiver, canPersonRefund } from "@/db/authz";
+import { canPersonDeleteDiver, canPersonOverrideGearRequest, canPersonRefund } from "@/db/authz";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
@@ -23,7 +23,7 @@ import {
   reviewCertification,
   reviewSpecialtyCertification,
 } from "@/db/readiness";
-import { saveRentalFit } from "@/db/rental-fit";
+import { saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -51,6 +51,9 @@ const personSchema = z.object({
   email: z.union([z.literal(""), z.email().max(320)]),
   phone: z.string().trim().max(40),
   diveInsurance: z.string().trim().max(120),
+  // Optional on the form and blank-able: H-08's minimum-age gate fails open, so
+  // a shop that never fills this in keeps booking exactly as it does today.
+  dateOfBirth: dateSchema,
 });
 const certificationSchema = z.object({
   agency: agencySchema,
@@ -292,9 +295,18 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
+  const db = await getDb();
+  // Rewriting what the diver themselves asked for is the instructor/divemaster/
+  // manager call (H-06, ADR 20260724-gear-fit-fallback). Any staff member can
+  // still flag them for hands-on fitting below — that's the safe fallback, not
+  // an override.
+  if (!(await canPersonOverrideGearRequest(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
+    return;
+  }
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
-  const saved = await saveRentalFit(await getDb(), {
+  const saved = await saveRentalFit(db, {
     shopId: staff.user.shopId,
     personId,
     rentsBcd: parsed.data.bcd === "on",
@@ -311,6 +323,30 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     weightPreference: parsed.data.weightPreference,
   });
   revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}`);
+}
+
+/**
+ * Flag (or clear) a diver for hands-on fitting at check-in — the H-06 fallback
+ * for a size the shop can't fill. Open to every staff member on purpose: it is
+ * the boat's own work, and it escalates to a human rather than overwriting the
+ * diver's stated request, so it never needs the override gate above.
+ */
+export async function setNeedsStaffFitAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const needed = formData.get("needed") === "on";
+  const saved = await setNeedsStaffFit(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    needed,
+    note: String(formData.get("needsStaffFitNote") ?? "").slice(0, 200),
+  });
+  const notice = !saved ? "invalid" : needed ? "fit-flagged" : "fit-cleared";
+  revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
