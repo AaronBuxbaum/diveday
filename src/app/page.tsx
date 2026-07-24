@@ -13,7 +13,7 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { earlyAccessPriceAmount } from "@/lib/marketing";
+import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 
 export const metadata: Metadata = {
   title: "Dive shop software for the whole dive day — DiveDay",
@@ -144,7 +144,7 @@ export default function Home() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                  Instead of three apps and a whiteboard
+                  Instead of three apps
                 </p>
                 <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
                   Every small requirement has a place to land.
@@ -152,7 +152,10 @@ export default function Home() {
               </div>
               <Link
                 href="/product"
-                className="inline-flex min-h-11 items-center justify-center self-start rounded-lg border border-border-strong px-4 py-2.5 text-sm font-semibold transition-colors duration-200 hover:bg-surface-sunken lg:self-auto"
+                className={buttonClass({
+                  variant: "secondary",
+                  className: "self-start border-border-strong lg:self-auto",
+                })}
               >
                 See the full product
               </Link>
@@ -174,10 +177,7 @@ export default function Home() {
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
                 DiveDay is new, and you shouldn't have to take a new vendor on faith. So the exit is
-                built in: Settings → Data export hands you one ZIP of plain, documented CSV files —
-                divers, bookings, waiver records, payment history — led by a contacts file another
-                system can import. No email to support, no export fee, and it works the same on day
-                one of a trial.
+                built in. {fullShopExport.claim} {fullShopExport.terms}
               </p>
               <p className="mt-4 text-lg leading-8 text-muted">
                 Arriving instead of leaving? The importer shows exactly what comes across — and what
@@ -185,7 +185,7 @@ export default function Home() {
               </p>
               <Link
                 href="/switching"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
+                className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
               >
                 Switching from EVE, DiveShop360, DiveAdmin, or Smartwaiver? Read the guides →
               </Link>
@@ -254,7 +254,7 @@ export default function Home() {
                   Start a trial
                 </Link>
               </div>
-              <Link href="/pricing" className="text-sm font-medium text-primary hover:underline">
+              <Link href="/pricing" className={buttonClass({ variant: "link" })}>
                 View pricing
               </Link>
             </div>

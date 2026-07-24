@@ -6,7 +6,7 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { FeatureGroupsGrid } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { earlyAccessPrice } from "@/lib/marketing";
+import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 
 export const metadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
@@ -33,19 +33,23 @@ const faq = [
       "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — or start a trial shop of your own, with sample trips ready to explore if you want them.",
   },
   {
-    question: "DiveDay is new. What happens to my data if this doesn't work out?",
+    question: "Does the manifest work offline?",
     answer:
-      "You leave with everything, whenever you choose. Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard. No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
+      "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts.",
+  },
+  {
+    question: "DiveDay is new. What happens to my data if this doesn't work out?",
+    answer: `You leave with your shop's records, whenever you choose. ${fullShopExport.claim} ${fullShopExport.terms} One caveat, stated in the export's own README: card and photo images come along as stored links, not files — save copies before closing an account.`,
   },
   {
     question: "What does switching to DiveDay actually involve?",
     answer:
-      "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, and their rental sizes — showing you exactly what will happen before anything is saved, and updating an existing diver instead of duplicating them when it recognizes an email. Imported cards arrive as claims for your staff to verify, and medical history never imports at all. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver.",
+      "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, and their rental sizes — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify, and medical history never imports at all. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver.",
   },
   {
     question: "Does DiveDay connect to PADI or SSI?",
     answer:
-      "No — the agencies don't give shop software a way to plug in. DiveDay does the honest version instead: divers photograph their card once, your staff look it up with the agency and mark it verified, and that card stays with the diver for every future booking. Course pages start from PADI and SSI catalog templates that you price and publish yourself.",
+      "No — no agency offers shop software a way to verify a C-card automatically, so DiveDay doesn't pretend. A photo of the card goes on the diver's profile once, your staff confirm the number with the agency and mark it certified, and that card stays with the diver for every future booking. Courses arrive as your shop's copy of the agency catalog, with DiveDay's published page templates as a starting point — you set the prices and choose what's visible.",
   },
   {
     question: "Does DiveDay replace my POS?",
@@ -61,11 +65,6 @@ const faq = [
     question: "What about multiple locations?",
     answer:
       "Each DiveDay workspace runs one shop today. If you operate more than one location, talk to us — we'd rather build that with you than pretend it's already here.",
-  },
-  {
-    question: "Does the manifest work offline?",
-    answer:
-      "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts.",
   },
 ] as const;
 
@@ -113,7 +112,7 @@ export default function PricingPage() {
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight">Complete shop access</h2>
               </div>
-              <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-foreground">
+              <span className="rounded-full border border-border bg-surface-sunken px-3 py-1 text-xs font-semibold text-muted">
                 Early access
               </span>
             </div>

@@ -37,7 +37,7 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
       </div>
       <Link
         href="/shop/blue-mantis/schedule"
-        className="text-sm font-medium text-primary hover:underline"
+        className={buttonClass({ variant: "link", className: "px-0" })}
       >
         See a live schedule →
       </Link>

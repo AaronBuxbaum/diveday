@@ -39,7 +39,7 @@ const notCovered = [
   {
     title: "A live line to PADI or SSI",
     detail:
-      "The agencies don't give shop software a way to plug in, so verification stays honest: staff look the card up with the agency and mark it verified themselves.",
+      "No agency offers software a way to verify a C-card automatically, so verification stays honest: staff look the card up with the agency and mark it certified themselves.",
   },
 ] as const;
 
@@ -54,7 +54,7 @@ export default function ProductPage() {
               The product
             </p>
             <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-              Everything from the first booking to the last head count.
+              From the first booking to the last head count.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
               DiveDay is organized around the trip itself. Every booking, waiver, certification,
@@ -138,7 +138,7 @@ export default function ProductPage() {
                 can&apos;t be ignored, a boarding history that keeps every correction, and a print
                 view straight from the same manifest.
               </p>
-              <p className="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm leading-6 text-muted">
+              <p className="mt-5 rounded-xl border border-border bg-surface-sunken p-4 text-sm leading-6 text-muted">
                 The crew saves the manifest to their phone before leaving the dock. Anything marked
                 offline stays clearly labeled until DiveDay is back in service and double-checks it
                 against the live manifest — nothing is ever quietly overwritten.
@@ -169,20 +169,25 @@ export default function ProductPage() {
                   <p className="text-xs font-semibold tracking-widest text-primary uppercase">
                     The night before
                   </p>
+                  <h3 className="mt-3 font-semibold leading-6">
+                    A brief in plain words, not a form letter
+                  </h3>
                   <p className="mt-3 text-sm leading-6 text-muted">
-                    A brief in plain words, not a form letter: when to be at the dock, what the
-                    water looks like, what to pack, and who to text if something changes — written
-                    gently enough for someone's first boat dive.
+                    When to be at the dock, what the water looks like, what to pack, and who to text
+                    if something changes — written gently enough for someone's first boat dive.
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-background p-5 sm:p-6">
                   <p className="text-xs font-semibold tracking-widest text-primary uppercase">
                     After the trip
                   </p>
+                  <h3 className="mt-3 font-semibold leading-6">
+                    A recap page they&apos;ll want to share
+                  </h3>
                   <p className="mt-3 text-sm leading-6 text-muted">
-                    A recap page of the sites they dived, a shout-out from the crew, and room for
-                    their own photos — with a nudge to bring a buddy next time. Divers share it; the
-                    shop gets remembered.
+                    The sites they dived, a shout-out from the crew, and room for their own photos —
+                    with a nudge to bring a buddy next time. Divers share it; the shop gets
+                    remembered.
                   </p>
                 </div>
               </div>

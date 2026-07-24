@@ -17,7 +17,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(
     page.getByRole("heading", {
-      name: "Everything from the first booking to the last head count.",
+      name: "From the first booking to the last head count.",
     }),
   ).toBeVisible();
   await expect(
