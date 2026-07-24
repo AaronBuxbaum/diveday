@@ -20,8 +20,10 @@ async function tripPathByTitle(page: import("@playwright/test").Page, title: str
   return href;
 }
 
-/** A seeded diver who definitely has a rental fit on file (seed.ts). */
+/** The seeded diver the shop is out of a size for — flagged for staff fit. */
 const DIVER_WITH_FIT = "Sam Whitfield";
+/** A seeded diver with a rental fit on file and no flag raised. */
+const DIVER_WITH_UNFLAGGED_FIT = "Priya Sharma";
 
 async function goToDiver(page: import("@playwright/test").Page, name: string) {
   await page.goto(`/shop/${SHOP}/divers?q=${encodeURIComponent(name)}`);
@@ -42,7 +44,7 @@ async function goToDiver(page: import("@playwright/test").Page, name: string) {
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("a flagged diver drops off the packing list and is named for a check-in fit", async ({
+  test("a flagged diver keeps their count but loses the size, and is named for a check-in fit", async ({
     page,
   }) => {
     // The seed flags one diver on today's reef trip — no XL BCD left. Read the
@@ -55,9 +57,12 @@ test.describe("staff", () => {
     await expect(fitSection).toBeVisible();
     await expect(fitSection).toContainText("No XL BCD left");
 
-    // Their stated XL kit must not appear as something to pull — laying out a
-    // substitute size is exactly what the flag exists to prevent.
+    // Their stated XL size must not appear as something to pull — laying out a
+    // substitute size is exactly what the flag exists to prevent...
     await expect(page.getByRole("table")).not.toContainText("XL");
+    // ...but the BCD line itself stays, because the count is what the packer
+    // loads from. Dropping it arrives a BCD short with nothing to fit them from.
+    await expect(page.getByRole("table")).toContainText("Fit at check-in");
   });
 
   test("an owner rewrites a diver's fit, flags them, and clears it when resolved", async ({
@@ -86,22 +91,34 @@ test.describe("staff", () => {
   });
 });
 
-test("a captain may flag a diver for fitting but not rewrite their stated sizes", async ({
-  page,
-}) => {
-  await signInAs(page, DEV_STAFF_LOGINS.captain);
-  await goToDiver(page, DIVER_WITH_FIT);
+/**
+ * The page half of ADR-0006's two layers for the H-06 gate. The server half —
+ * `saveProfileAction` / `setNeedsStaffFitAction` re-checking live DB roles — is
+ * unit-tested in `src/lib/authz.test.ts` and `src/db/rental-fit.test.ts`; this
+ * asserts only what the deck crew's screen actually offers them. It reads and
+ * never writes, so it can't perturb the seeded prep list the specs above and
+ * the Argos baselines both render.
+ */
+test.describe("deck crew", () => {
+  test("a captain may raise the fit flag but not rewrite sizes or clear it", async ({ page }) => {
+    await signInAs(page, DEV_STAFF_LOGINS.captain);
 
-  // Deck crew get the fit read-only, with the reason...
-  await expect(page.getByRole("button", { name: "Save rental fit" })).toHaveCount(0);
-  await expect(page.getByText("limited to instructors, divemasters, and managers")).toBeVisible();
-  // ...but keep the safe fallback, which is the action they actually need. This
-  // diver arrives flagged from the seed, so the control shows its resolve side —
-  // either way it is present and usable by a captain.
-  await expect(page.getByRole("button", { name: /Fit resolved/ })).toBeVisible();
-  await page.getByRole("button", { name: /Fit resolved/ }).click();
-  await expect(page.getByRole("status")).toContainText("packs from their stated sizes again");
-  await expect(page.getByRole("button", { name: "Flag for staff fit" })).toBeVisible();
+    // A diver with a fit on file but no flag: the stated sizes are read-only,
+    // and the safe fallback the captain actually needs at the dock is right
+    // there — a flag is an escalation, not an override.
+    await goToDiver(page, DIVER_WITH_UNFLAGGED_FIT);
+    await expect(page.getByRole("button", { name: "Save rental fit" })).toHaveCount(0);
+    await expect(page.getByText("limited to owners, managers, instructors, and")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Flag for staff fit" })).toBeEnabled();
+
+    // The already-flagged diver: clearing asserts "we can pack their stated
+    // size after all", which is the judgement call, so the captain doesn't get
+    // it. An unattributed one-tap clear is how a diver ends up back in gear
+    // nobody re-checked.
+    await goToDiver(page, DIVER_WITH_FIT);
+    await expect(page.getByRole("button", { name: /Fit resolved/ })).toHaveCount(0);
+    await expect(page.getByText("Clearing this is limited to")).toBeVisible();
+  });
 });
 
 test.describe("minimum age (H-08, fail open)", () => {
