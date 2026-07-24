@@ -5,10 +5,28 @@ import {
   formatTime,
   formatTimeRange,
   formatTimeRangeTz,
+  isValidTimeZone,
 } from "./format";
 
 const morning = new Date("2026-07-17T07:30:00Z");
 const midday = new Date("2026-07-17T11:00:00Z");
+
+describe("isValidTimeZone (CR-014)", () => {
+  it("accepts real IANA zones", () => {
+    expect(isValidTimeZone("America/New_York")).toBe(true);
+    expect(isValidTimeZone("Pacific/Honolulu")).toBe(true);
+    expect(isValidTimeZone("UTC")).toBe(true);
+  });
+
+  it("rejects a well-formed but nonexistent zone", () => {
+    expect(isValidTimeZone("Etc/Nowhere")).toBe(false);
+  });
+
+  it("rejects garbage and an empty string", () => {
+    expect(isValidTimeZone("not a timezone")).toBe(false);
+    expect(isValidTimeZone("")).toBe(false);
+  });
+});
 
 describe("formatShortDate", () => {
   it("renders weekday, month, and day", () => {

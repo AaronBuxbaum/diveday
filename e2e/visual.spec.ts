@@ -2,19 +2,19 @@ import { argosScreenshot } from "@argos-ci/playwright";
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Nineteen key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 76 screenshots per run (see ADR
- * 20260721-argos-visual-regression). Keep these counts in sync when adding a
- * surface; each `capture()` call costs 4 screenshots per CI run.
+ * Visual regression coverage (Argos). Twenty-one key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 84 screenshots per run
+ * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
+ * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 62 screenshots.
+ * via `capturePrint()`. That brings the run to 86 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -87,7 +87,11 @@ for (const scheme of ["light", "dark"] as const) {
     // in VIEWPORTS for the screenshots and restores this afterward.
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
-    test(`public surfaces render true to the design (${scheme})`, async ({ page }) => {
+    test(`public surfaces render true to the design (${scheme})`, async ({
+      page,
+      browser,
+      ownerStorageState,
+    }) => {
       await page.goto("/");
       await capture(page, "landing", scheme);
 
@@ -135,6 +139,64 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/switching/eve");
       await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
       await capture(page, "switching-eve", scheme);
+
+      // Two more safety-critical bearer-token pages, done last so minting
+      // them (a real send-waiver action, a real booking) never changes the
+      // seed-derived counts the captures above depend on (CR-019). Setup
+      // uses a disposable staff context — a saved session, not a live
+      // sign-in — so `page` itself stays the same unauthenticated visitor
+      // throughout, exactly as a real diver reaches these links.
+      const staffContext = await browser.newContext({ storageState: ownerStorageState });
+      const staffPage = await staffContext.newPage();
+      await staffPage.goto("/shop/blue-mantis/schedule");
+      await staffPage
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .click();
+      await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
+      await staffPage
+        .getByRole("navigation", { name: "Trip" })
+        .getByRole("link", { name: "Guests" })
+        .click();
+      await staffPage.waitForURL(/\/guests/);
+      const diverSection = staffPage
+        .locator("section")
+        .filter({ has: staffPage.getByRole("heading", { name: /^Divers/ }) });
+      await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+      await staffPage.getByRole("heading", { name: "Private waiver link ready" }).waitFor();
+      const waiverHref = await staffPage
+        .getByRole("link", { name: "Open waiver link" })
+        .getAttribute("href");
+      await staffContext.close();
+
+      // Active (unsigned) waiver — the safety-critical form itself, before any
+      // signature or medical answer is entered.
+      await page.goto(waiverHref ?? "/");
+      await page.getByRole("heading", { name: "A quick step before the dock" }).waitFor();
+      await capture(page, "waiver-active", scheme);
+
+      // A fresh visitor booking the same trip hands back a readiness link —
+      // the pre-trip checklist a diver actually uses on the way to the dock.
+      await page.goto("/shop/blue-mantis/schedule");
+      await page
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .click();
+      await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+      await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
+      await page
+        .getByLabel("Email", { exact: true })
+        .fill(`visual-regression-${scheme}@example.com`);
+      await page.getByRole("button", { name: /^Book/ }).click();
+      await page.getByRole("heading", { name: /You're on the boat/ }).waitFor();
+      const readinessHref = await page
+        .getByRole("link", { name: /readiness page/ })
+        .getAttribute("href");
+      await page.goto(readinessHref ?? "/");
+      await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
+      await capture(page, "readiness", scheme);
     });
 
     test.describe("staff", () => {

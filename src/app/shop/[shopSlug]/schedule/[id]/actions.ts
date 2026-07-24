@@ -17,6 +17,8 @@ import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import { ERROR_MESSAGES } from "./_components/types";
 
 /** Absolute readiness link for the confirmation email, or undefined with no origin/booking. */
@@ -43,8 +45,18 @@ export type TripRef = { shopSlug: string; tripId: string };
  */
 export type RentalFitRef = TripRef & { token: string };
 
-/** Resolve a `confirm` token to its live booking context, or null on anything invalid. */
+/**
+ * Resolve a `confirm` token to its live booking context, or null on anything
+ * invalid. Rate-limited by IP before verification, so this one chokepoint
+ * throttles every action in this file that confirms a booking token
+ * (rental fit, pay-for-booking) against both guessing and replay spam of a
+ * known link (CR-013).
+ */
 async function confirmContextFor(tripId: string, token: string) {
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("confirm-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+    return null;
+  }
   const db = await getDb();
   const capability = await verifyBookingCapability(db, { token, purpose: "confirm" });
   if (!capability) return null;
@@ -94,6 +106,11 @@ export async function bookSpot(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking).allowed) {
+    return { error: RATE_LIMIT_MESSAGE };
+  }
+
   const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
   if (!partySize.success) return { error: ERROR_MESSAGES.invalid };
 
@@ -279,6 +296,10 @@ export async function payForBooking(
 }
 
 export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: FormData) {
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin).allowed) {
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
+  }
   const parsed = bookSchema.safeParse({
     fullName: formData.get("fullName-0"),
     email: formData.get("email-0"),

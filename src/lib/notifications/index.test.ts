@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { bookingConfirmationEmail, waitlistInviteEmail, waiverRequestEmail } from "./email";
 import {
+  checkPublicHost,
   notificationProviderFromEnvironment,
   notify,
   publicAppUrl,
@@ -208,5 +209,52 @@ describe("publicAppUrl", () => {
   it("accepts a configured canonical origin and rejects an unconfigured one", () => {
     expect(publicAppUrl({ APP_HOST: "https://diveday.example/" })).toBe("https://diveday.example");
     expect(publicAppUrl({})).toBeNull();
+  });
+
+  it("returns null for a malformed value instead of throwing", () => {
+    expect(publicAppUrl({ APP_HOST: "not a url", NODE_ENV: "production" })).toBeNull();
+    expect(publicAppUrl({ APP_HOST: "http://diveday.example", NODE_ENV: "production" })).toBeNull();
+  });
+});
+
+describe("checkPublicHost", () => {
+  it("reports unset when APP_HOST is empty or missing", () => {
+    expect(checkPublicHost(undefined, true)).toEqual({ status: "unset" });
+    expect(checkPublicHost("  ", true)).toEqual({ status: "unset" });
+  });
+
+  it("accepts a bare HTTPS origin and strips a trailing slash", () => {
+    expect(checkPublicHost("https://diveday.example/", true)).toEqual({
+      status: "valid",
+      origin: "https://diveday.example",
+    });
+  });
+
+  it("rejects non-HTTPS origins in production", () => {
+    const result = checkPublicHost("http://diveday.example", true);
+    expect(result.status).toBe("invalid");
+  });
+
+  it("permits an explicit loopback exception outside production only", () => {
+    expect(checkPublicHost("http://localhost:3000", false)).toEqual({
+      status: "valid",
+      origin: "http://localhost:3000",
+    });
+    expect(checkPublicHost("http://127.0.0.1:3000", false).status).toBe("valid");
+    expect(checkPublicHost("http://localhost:3000", true).status).toBe("invalid");
+  });
+
+  it("rejects embedded credentials", () => {
+    expect(checkPublicHost("https://user:pass@diveday.example", true).status).toBe("invalid");
+  });
+
+  it("rejects a path, query, or fragment", () => {
+    expect(checkPublicHost("https://diveday.example/waivers", true).status).toBe("invalid");
+    expect(checkPublicHost("https://diveday.example/?ref=1", true).status).toBe("invalid");
+    expect(checkPublicHost("https://diveday.example/#frag", true).status).toBe("invalid");
+  });
+
+  it("rejects an unparseable value", () => {
+    expect(checkPublicHost("not a url", true).status).toBe("invalid");
   });
 });

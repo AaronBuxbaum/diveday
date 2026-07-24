@@ -12,6 +12,7 @@ import { splitMediaUrls } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
 
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 
@@ -77,6 +78,19 @@ export default async function NewDiveSitePage({
       .split("\n")
       .map((landmark) => landmark.trim())
       .filter(Boolean);
+    // Every media URL becomes first-party before it's ever stored — a public
+    // dive-site page must never make a live request to a staff-pasted
+    // third-party host (CR-020).
+    const media = await ingestDiveSiteMedia({
+      satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
+      routeImageUrl: parsed.data.routeImageUrl || undefined,
+      imageUrls,
+    });
+    if (!media.ok) {
+      redirect(
+        `${back}/new?error=${media.reason === "not_configured" ? "images-unconfigured" : "images"}`,
+      );
+    }
     const site = await createDiveSite(await getDb(), {
       shopId: activeSession.user.shopId,
       ...parsed.data,
@@ -84,9 +98,9 @@ export default async function NewDiveSitePage({
         parsed.data.forecastLatitude === "" ? undefined : parsed.data.forecastLatitude,
       forecastLongitude:
         parsed.data.forecastLongitude === "" ? undefined : parsed.data.forecastLongitude,
-      satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
-      routeImageUrl: parsed.data.routeImageUrl || undefined,
-      imageUrls,
+      satelliteImageUrl: media.satelliteImageUrl,
+      routeImageUrl: media.routeImageUrl,
+      imageUrls: media.imageUrls,
       minimumCertificationLevel: parsed.data.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
@@ -114,8 +128,10 @@ export default async function NewDiveSitePage({
       {error ? (
         <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
           {error === "images"
-            ? "Use up to six complete HTTP(S) image links, one per line."
-            : "That didn’t save. Check the required name and links, then try again."}
+            ? "One of those image links couldn’t be used — use up to six complete HTTP(S) links, one per line, to a real, reachable image."
+            : error === "images-unconfigured"
+              ? "Image hosting isn’t set up for this shop yet — leave the image links blank for now, or ask your admin to configure it."
+              : "That didn’t save. Check the required name and links, then try again."}
         </p>
       ) : null}
       <SiteForm action={createAction} submitLabel="Save site briefing" />

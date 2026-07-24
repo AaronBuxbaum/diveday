@@ -37,6 +37,7 @@ export interface ImageStorageProvider {
 export const MAX_CARD_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_COURSE_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_RECAP_IMAGE_BYTES = MAX_IMAGE_BYTES;
+export const MAX_DIVE_SITE_IMAGE_BYTES = MAX_IMAGE_BYTES;
 const ALLOWED_CONTENT_TYPES = new Set<string>(ALLOWED_IMAGE_CONTENT_TYPES);
 
 type Fetch = typeof fetch;
@@ -223,6 +224,21 @@ export async function storeRecapImage(
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
   return storeImage({ ...upload, keyPrefix: "recap" }, MAX_RECAP_IMAGE_BYTES, provider);
+}
+
+/**
+ * Store a dive-site briefing photo (satellite/route/gallery). Same
+ * validation as the others, its own `dive-sites` key prefix. The only
+ * caller is `src/lib/storage/ingest-url.ts` (CR-020) — a staff-pasted
+ * third-party URL is fetched once server-side and re-stored here rather
+ * than rendered directly, so public dive-site pages never make a live
+ * request to a host outside this app.
+ */
+export async function storeDiveSiteImage(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "dive-sites" }, MAX_DIVE_SITE_IMAGE_BYTES, provider);
 }
 
 async function storeImage(

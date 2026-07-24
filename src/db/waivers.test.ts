@@ -178,6 +178,34 @@ describe("waiver records (in-memory PGlite)", () => {
     expect(history.map((row) => row.version)).toEqual([2, 1]);
   });
 
+  it("gives concurrent saves distinct, gapless versions instead of colliding (CR-015)", async () => {
+    const { db, shop, template } = await waiverContext();
+    expect(template.version).toBe(1);
+
+    const [a, b, c] = await Promise.all([
+      saveWaiverTemplate(db, {
+        shopId: shop.id,
+        title: template.title,
+        body: "Concurrent A body.",
+      }),
+      saveWaiverTemplate(db, {
+        shopId: shop.id,
+        title: "A different title",
+        body: "Concurrent B body.",
+      }),
+      saveWaiverTemplate(db, {
+        shopId: shop.id,
+        title: template.title,
+        body: "Concurrent C body.",
+      }),
+    ]);
+
+    const versions = [a.version, b.version, c.version].sort((x, y) => x - y);
+    expect(versions).toEqual([2, 3, 4]);
+    const history = await listWaiverTemplateHistory(db, shop.id);
+    expect(history.map((row) => row.version)).toEqual([4, 3, 2, 1]);
+  });
+
   it("keeps a completed record faithful to the version it was signed against", async () => {
     const { db, shop, booking, template } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });

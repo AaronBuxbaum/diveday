@@ -10,7 +10,15 @@ import {
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import type { MedicalAnswers } from "./schema";
-import { bookings, people, personRoles, trips, waiverRecords, waiverTemplates } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  trips,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
@@ -48,6 +56,15 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
  */
 export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInput) {
   return db.transaction(async (tx) => {
+    // Locks the shop row before computing the next version — under READ
+    // COMMITTED, two concurrent saves could otherwise both read the same max
+    // version and both insert, colliding or creating an ambiguous legal
+    // ordering (CR-015). Locking the shop row (rather than the existing
+    // waiver_templates rows) also correctly serializes a shop's very first
+    // template, when a row lock on the target table would have nothing yet
+    // to hold. PGlite is single-connection so tests can't exhibit the race —
+    // the lock is for production Postgres.
+    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
     const existing = await tx
       .select({ version: waiverTemplates.version })
       .from(waiverTemplates)

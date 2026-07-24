@@ -129,6 +129,10 @@ const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; te
     tone: "danger",
     text: "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
   },
+  "error-contact": {
+    tone: "danger",
+    text: "That name or phone number is too long — try a shorter version.",
+  },
   "error-pay": {
     tone: "danger",
     text: "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",

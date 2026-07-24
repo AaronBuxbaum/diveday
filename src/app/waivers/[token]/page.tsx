@@ -19,9 +19,12 @@ import {
   saveWaiverDraft,
 } from "@/db/waivers";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { emergencyContactSchema } from "@/lib/contact";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 
 export const metadata: Metadata = {
   title: "Complete your waiver — DiveDay",
@@ -36,11 +39,6 @@ const signatureSchema = z.object({
 const completeSignatureSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
   acknowledged: z.literal("on"),
-});
-
-const emergencyContactSchema = z.object({
-  emergencyContactName: z.string().trim().max(120).optional(),
-  emergencyContactPhone: z.string().trim().max(40).optional(),
 });
 
 /** Reads every question's yes/no answer for the presented questionnaire. */
@@ -188,6 +186,10 @@ export default async function WaiverPage({
 
   async function saveDraftAction(formData: FormData) {
     "use server";
+    const ip = await clientIp();
+    if (!checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+      redirect(`/waivers/${token}?error=invalid`);
+    }
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
@@ -216,6 +218,10 @@ export default async function WaiverPage({
 
   async function completeAction(formData: FormData) {
     "use server";
+    const ip = await clientIp();
+    if (!checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+      redirect(`/waivers/${token}?error=invalid`);
+    }
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);

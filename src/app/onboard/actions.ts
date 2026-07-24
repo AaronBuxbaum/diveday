@@ -4,30 +4,21 @@ import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { z } from "zod";
 import { getDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { seedShopWithDemoData } from "@/db/seed";
 import { signIn } from "@/lib/auth";
+import { onboardSchema } from "@/lib/onboarding";
+import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
-const onboardSchema = z.object({
-  shopName: z.string().trim().min(1, "Shop name is required").max(100),
-  shopSlug: z
-    .string()
-    .trim()
-    .min(1, "Slug is required")
-    .max(50)
-    .toLowerCase()
-    .regex(/^[a-z0-9-]+$/, "Slug must only contain letters, numbers, and hyphens"),
-  timezone: z.string().trim().min(1, "Timezone is required"),
-  ownerName: z.string().trim().min(1, "Owner name is required").max(100),
-  ownerEmail: z.string().trim().email("Invalid email address").max(150),
-  ownerPassword: z.string().min(6, "Password must be at least 6 characters"),
-  seedDemoData: z.preprocess((val) => val === "on" || val === true, z.boolean()),
-});
-
 export async function onboardAction(formData: FormData) {
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard).allowed) {
+    redirect(`/onboard?error=${encodeURIComponent(RATE_LIMIT_MESSAGE)}`);
+  }
+
   const rawData = Object.fromEntries(formData.entries());
   const parsed = onboardSchema.safeParse(rawData);
 
@@ -132,9 +123,14 @@ export async function onboardAction(formData: FormData) {
     if (onboardingError) {
       redirect(`/onboard?error=${encodeURIComponent(onboardingError)}`);
     }
-    const message =
-      err instanceof Error ? err.message : "An unexpected error occurred during onboarding.";
-    redirect(`/onboard?error=${encodeURIComponent(message)}`);
+    // Never surface a raw exception to an unauthenticated visitor — it can
+    // carry internal detail (a DB driver error, a stack fragment). The real
+    // cause goes to the server log, where the shop's technical owner can see
+    // it; the visitor gets a generic, actionable message (CR-014).
+    console.error("onboardAction: failed to create shop", err);
+    redirect(
+      `/onboard?error=${encodeURIComponent("Something went wrong creating your shop. Please try again.")}`,
+    );
   }
 
   // 2. Sign in the new owner and redirect to dashboard

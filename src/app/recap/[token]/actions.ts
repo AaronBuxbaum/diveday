@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { addRecapPhoto, canAddRecapPhoto } from "@/db/recap";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { verifyRecapToken } from "@/lib/recap-links";
+import { clientIp } from "@/lib/request-ip";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 
 /**
@@ -18,8 +20,21 @@ import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
  */
 export async function uploadRecapPhotoAction(token: string, formData: FormData) {
   const back = `/recap/${token}`;
+  // Checked before verifying the token, so this also throttles brute-force
+  // token guessing, not just abuse of a link already known to be valid
+  // (CR-013).
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("recap-upload-ip", ip), RATE_LIMITS.recapUploadByIp).allowed) {
+    redirect(`${back}?photo=error`);
+  }
   const bookingId = verifyRecapToken(token);
   if (!bookingId) redirect(`${back}?photo=error`);
+  if (
+    !checkRateLimit(rateLimitKey("recap-upload-booking", bookingId), RATE_LIMITS.recapUploadByToken)
+      .allowed
+  ) {
+    redirect(`${back}?photo=error`);
+  }
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) redirect(`${back}?photo=none`);
   const caption = String(formData.get("caption") ?? "");

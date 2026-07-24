@@ -149,6 +149,43 @@ describe("orders", () => {
     ).toEqual({ ok: false, reason: "invalid" });
   });
 
+  it("rejects a line item outside its numeric or enum bounds (CR-016)", async () => {
+    const { db, shop, entry } = await orderContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_123");
+    await setShopStripeAccountStatus(db, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const base = { shopId: shop.id, personId: entry.person.id, createdByPersonId: entry.person.id };
+    const goodItem = lineItems[0];
+    if (!goodItem) throw new Error("fixture missing");
+
+    const cases: Array<Record<string, unknown>> = [
+      { ...goodItem, kind: "not_a_real_kind" },
+      { ...goodItem, quantity: 0 },
+      { ...goodItem, quantity: 1.5 },
+      { ...goodItem, quantity: 101 },
+      { ...goodItem, unitAmountCents: -1 },
+      { ...goodItem, unitAmountCents: 1.5 },
+      { ...goodItem, unitAmountCents: 100_000 * 100 + 1 },
+      { ...goodItem, description: "" },
+      { ...goodItem, description: "x".repeat(201) },
+    ];
+    for (const badItem of cases) {
+      expect(
+        await createOrder(db, { ...base, lineItems: [badItem as never] }, fakeInvoicing()),
+      ).toEqual({ ok: false, reason: "invalid" });
+    }
+
+    // Too many line items in one order, even if each is individually valid.
+    const tooMany = Array.from({ length: 21 }, () => goodItem);
+    expect(await createOrder(db, { ...base, lineItems: tooMany }, fakeInvoicing())).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+  });
+
   it("creates an order, invoices the connected account, and lists/fetches it", async () => {
     const { db, shop, entry } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");

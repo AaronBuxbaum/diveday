@@ -4,6 +4,10 @@ import {
   IMPORT_AGENCIES,
   IMPORT_HONESTY_TABLE,
   IMPORT_LEVELS,
+  MAX_IMPORT_BYTES,
+  MAX_IMPORT_CELL_LENGTH,
+  MAX_IMPORT_COLUMNS,
+  MAX_IMPORT_ROWS,
   normalizeLevel,
   parseCsv,
   prepareContactImport,
@@ -80,6 +84,42 @@ describe("prepareContactImport — mapping", () => {
   it("assembles a full name from first + last", () => {
     const prepared = prepareContactImport("first_name,last_name\nGrace,Hopper");
     expect(prepared.rows[0]).toMatchObject({ fullName: "Grace Hopper", action: "import" });
+  });
+});
+
+describe("prepareContactImport — explicit bounds (CR-016)", () => {
+  it("rejects a file over the byte limit with a friendly reason and no rows", () => {
+    const oversizedName = "x".repeat(MAX_IMPORT_BYTES + 1);
+    const prepared = prepareContactImport(`full_name\n${oversizedName}`);
+    expect(prepared.fatal).toMatch(/too large/i);
+    expect(prepared.rows).toHaveLength(0);
+  });
+
+  it("rejects a file with more columns than the limit", () => {
+    const headers = Array.from({ length: MAX_IMPORT_COLUMNS + 1 }, (_, i) => `col${i}`).join(",");
+    const prepared = prepareContactImport(`full_name,${headers}\nAda,x`);
+    expect(prepared.fatal).toMatch(/too many columns/i);
+  });
+
+  it("rejects a file with more rows than the limit", () => {
+    const rows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `Diver ${i}`).join("\n");
+    const prepared = prepareContactImport(`full_name\n${rows}`);
+    expect(prepared.fatal).toMatch(/too many rows/i);
+    expect(prepared.rows).toHaveLength(0);
+  });
+
+  it("accepts a file right at the row limit", () => {
+    const rows = Array.from({ length: MAX_IMPORT_ROWS }, (_, i) => `Diver ${i}`).join("\n");
+    const prepared = prepareContactImport(`full_name\n${rows}`);
+    expect(prepared.fatal).toBeNull();
+    expect(prepared.rows).toHaveLength(MAX_IMPORT_ROWS);
+  });
+
+  it("rejects a single cell over the length limit instead of silently truncating it", () => {
+    const hugeCell = "x".repeat(MAX_IMPORT_CELL_LENGTH + 1);
+    const prepared = prepareContactImport(`full_name\n${hugeCell}`);
+    expect(prepared.fatal).toMatch(/longer than/i);
+    expect(prepared.rows).toHaveLength(0);
   });
 });
 
