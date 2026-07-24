@@ -28,6 +28,11 @@ const faq = [
       "The founding-shop price covers every currently available DiveDay workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons.",
   },
   {
+    question: "How does billing work?",
+    answer:
+      "Month to month, per location. Cancel whenever you like and leave with your shop's records through the export button — no setup fee and no annual contract.",
+  },
+  {
     question: "Can I see it before I commit?",
     answer:
       "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — it's a shop already full of sample trips. Or start a trial shop of your own: it begins empty, ready for your first trip.",
