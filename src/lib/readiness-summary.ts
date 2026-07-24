@@ -92,7 +92,7 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   certification_expired: {
     state: "action",
     detail:
-      "Your certification on file has lapsed — check with your shop about a refresher or updated proof.",
+      "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
   },
   certification_insufficient: {
     state: "action",
@@ -109,7 +109,8 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   },
   specialty_expired: {
     state: "action",
-    detail: "Your specialty card on file has lapsed — check with your shop about updating it.",
+    detail:
+      "Your specialty card on file is past the refresher date your shop set — check with them about it before you dive.",
   },
   nitrox_missing: {
     state: "action",
@@ -255,7 +256,7 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
 const REMINDER_ACTION: Partial<Record<ReadinessBlockerCode, string>> = {
   waiver_pending: "sign your waiver",
   certification_missing: "send your shop your certification card",
-  certification_expired: "sort out your lapsed certification with the shop",
+  certification_expired: "check on your shop's refresher date for your certification",
   certification_insufficient: "check your certification level with the shop",
   specialty_missing: "send your shop your specialty card",
   specialty_expired: "update your specialty card with the shop",

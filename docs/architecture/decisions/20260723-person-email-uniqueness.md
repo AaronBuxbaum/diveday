@@ -97,7 +97,13 @@ notice short of staff spotting a duplicate on the roster.
   never forked); the safeguard only withholds *readiness* until a human vouches for the match. The
   **soft-delete-frees-the-email window** was reviewed in the same decision and accepted as-is: it
   already fails closed (a new claimant gets a blank record, never the deleted person's evidence), so
-  no additional mitigation ships. See [H-13](../../product/human-decisions.md) and the
+  no additional mitigation ships. **Accepted limitation of name-matching:** because the comparison
+  drops single-character tokens (so a re-typed middle initial doesn't fire), two genuinely different
+  people on one inbox distinguished *only* by a middle initial — or two true namesakes ("Jane Doe"
+  and "Jane Doe") — match and are not flagged; the second could inherit the first's evidence. This
+  is intrinsic to name-based matching, and the alternative (firing on every initial) would train
+  staff to confirm reflexively and blunt the gate. Security and dive-domain reviews accepted it as a
+  floor, not a regression. See [H-13](../../product/human-decisions.md) and the
   [identity match key glossary entry](../../product/glossary.md#modeling-notes).
 - **Concurrency-closing path is not exercisable in the current test suite:** the catch-and-reread
   branch in `findOrCreatePerson`/`createDiver`/`updateDiver`/`restoreDiver`/`commitContactImport`
