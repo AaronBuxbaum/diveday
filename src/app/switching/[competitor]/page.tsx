@@ -75,6 +75,41 @@ export default async function MigrationGuidePage({
           </div>
         </section>
 
+        {/* Coexist framing: for a booking channel a shop keeps (FareHarbor),
+            the "keep the storefront, we run the water" division of labor, plus
+            the honest alternative of leaving. Absent for the leave-it guides. */}
+        {guide.coexist && (
+          <section className="border-y border-border">
+            <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                Keep it, or leave it
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {guide.coexist.heading}
+              </h2>
+              <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{guide.coexist.intro}</p>
+
+              <ul className="mt-10 grid gap-5 sm:grid-cols-2">
+                {guide.coexist.runsInDiveDay.map((item) => (
+                  <li key={item.title} className="rounded-2xl border border-border bg-surface p-6">
+                    <h3 className="font-semibold leading-6">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">{item.detail}</p>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="mt-8 max-w-2xl leading-7 text-muted">{guide.coexist.bridgeNote}</p>
+
+              <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {guide.coexist.replace.heading}
+                </h3>
+                <p className="mt-2 leading-7 text-muted">{guide.coexist.replace.body}</p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Step 1: export from the incumbent (files the shop makes itself). */}
         <section className="border-y border-border bg-surface">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
@@ -215,7 +250,9 @@ export default async function MigrationGuidePage({
         <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Ready to make the move off {guide.competitor}?
+              {guide.coexist
+                ? `Run the dive day ${guide.competitor} can't.`
+                : `Ready to make the move off ${guide.competitor}?`}
             </h2>
             <p className="mt-2 max-w-xl text-muted">
               Walk the live demo as the owner, the captain, or a diver first — then start a trial
