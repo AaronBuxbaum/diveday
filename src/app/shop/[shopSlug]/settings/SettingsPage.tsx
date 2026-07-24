@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   getShopById,
@@ -60,7 +61,29 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   },
   disconnected: { tone: "success", text: "Stripe account disconnected." },
   refreshed: { tone: "success", text: "Payment status refreshed from Stripe." },
+  not_authorized: {
+    tone: "danger",
+    text: "Payment settings — the Stripe connection and rental catalog and prices — are limited to owners and managers.",
+  },
 };
+
+/**
+ * Payment settings (Stripe Connect and the rental catalog/prices) are
+ * owner/manager work (H-14, ADR 20260724-role-authorization), re-checked
+ * against live roles. Returns the settings redirect target when the actor
+ * lacks the gate, or null when they may proceed. The other sections here
+ * (contact, packing, dock call) are ordinary shop settings any staff can edit.
+ */
+async function paymentSettingsBlock(session: {
+  user: { shopId: string; personId: string; shopSlug: string };
+}): Promise<string | null> {
+  const allowed = await canPersonManagePaymentSettings(
+    await getDb(),
+    session.user.shopId,
+    session.user.personId,
+  );
+  return allowed ? null : `/shop/${session.user.shopSlug}/settings?notice=not_authorized`;
+}
 
 const contactSchema = z.object({
   // Empty clears the field; anything else must be a real address, because this
@@ -107,6 +130,8 @@ async function saveDockCallAction(formData: FormData) {
 async function saveRentalItemsAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
+  const blocked = await paymentSettingsBlock(session);
+  if (blocked) revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
   const selected = RENTABLE_ITEMS.filter((item) => formData.get(item.name) === "on").map(
     (item) => item.kind,
   );
@@ -137,6 +162,8 @@ async function saveRentalPricingAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
   const settings = `/shop/${session.user.shopSlug}/settings`;
+  const blocked = await paymentSettingsBlock(session);
+  if (blocked) revalidateAndRedirect(settings, blocked);
   const set = parsePriceDollars(formData.get("setPrice"));
   const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
   let invalid = !set.ok || !nitrox.ok;
@@ -176,6 +203,8 @@ async function saveContactAction(formData: FormData) {
 async function disconnectAction() {
   "use server";
   const session = await requireStaffSession();
+  const blocked = await paymentSettingsBlock(session);
+  if (blocked) revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account && !account.disconnectedAt) {
@@ -192,6 +221,8 @@ async function disconnectAction() {
 async function refreshAction() {
   "use server";
   const session = await requireStaffSession();
+  const blocked = await paymentSettingsBlock(session);
+  if (blocked) revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account) {
@@ -262,6 +293,11 @@ export default async function PaymentsSettingsPage({
   const offeredKinds = new Set(toRentableKinds(shop.rentalItems));
   const account = await getShopStripeAccount(db, session.user.shopId);
   const ready = canAcceptPayments(account);
+  const canPayments = await canPersonManagePaymentSettings(
+    db,
+    session.user.shopId,
+    session.user.personId,
+  );
   const connectConfigured = Boolean(
     process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CONNECT_CLIENT_ID && process.env.APP_HOST,
   );
@@ -369,152 +405,166 @@ export default async function PaymentsSettingsPage({
         </FieldGrid>
       </section>
 
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">What we rent</h2>
-        <p className="mt-1 text-sm text-muted">
-          The gear divers can ask for when they set their rental fit. Untick anything you don't rent
-          — a shop that doesn't stock GoPros never offers one, and it drops off the kit form and the
-          prep list.
-        </p>
-        <form action={saveRentalItemsAction} className="mt-4">
-          <fieldset>
-            <legend className="sr-only">Rentable gear</legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {RENTABLE_ITEMS.map((item) => (
-                <label
-                  key={item.kind}
-                  className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
-                >
-                  <input
-                    name={item.name}
-                    type="checkbox"
-                    defaultChecked={offeredKinds.has(item.kind)}
-                    className="size-4 accent-primary"
+      {canPayments ? null : (
+        <div className="mt-6">
+          <ShopNotice tone="neutral" role="status">
+            The rental catalog, rental prices, and Stripe connection are payment settings, limited
+            to owners and managers. The contact, packing, and dock-call settings above are open to
+            all staff.
+          </ShopNotice>
+        </div>
+      )}
+
+      {canPayments ? (
+        <>
+          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <h2 className="font-medium">What we rent</h2>
+            <p className="mt-1 text-sm text-muted">
+              The gear divers can ask for when they set their rental fit. Untick anything you don't
+              rent — a shop that doesn't stock GoPros never offers one, and it drops off the kit
+              form and the prep list.
+            </p>
+            <form action={saveRentalItemsAction} className="mt-4">
+              <fieldset>
+                <legend className="sr-only">Rentable gear</legend>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {RENTABLE_ITEMS.map((item) => (
+                    <label
+                      key={item.kind}
+                      className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                    >
+                      <input
+                        name={item.name}
+                        type="checkbox"
+                        defaultChecked={offeredKinds.has(item.kind)}
+                        className="size-4 accent-primary"
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
+                Save rental catalog
+              </SubmitButton>
+            </form>
+          </section>
+
+          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <h2 className="font-medium">Rental prices</h2>
+            <p className="mt-1 text-sm text-muted">
+              What a diver is quoted when they set their rental fit. Price the full set for the
+              diver who takes everything (usually cheaper than the pieces), and per-piece for a
+              partial kit — a diver renting all five core items is quoted the set, anyone renting
+              fewer pays per piece. Leave a box blank to settle that item at the shop.
+            </p>
+            <form action={saveRentalPricingAction} className="mt-4">
+              <FieldGrid columns={2}>
+                <PriceField
+                  name="setPrice"
+                  label="Full set"
+                  hint="(BCD, reg, wetsuit, mask & fins, weights)"
+                  cents={shop.rentalPricing.setCents}
+                />
+                {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
+                  <PriceField
+                    key={item.kind}
+                    name={`price_${item.name}`}
+                    label={item.label}
+                    cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
                   />
-                  {item.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
-            Save rental catalog
-          </SubmitButton>
-        </form>
-      </section>
+                ))}
+                <PriceField
+                  name="nitroxPrice"
+                  label="Enriched air"
+                  hint="(per dive)"
+                  cents={shop.rentalPricing.nitroxCents}
+                />
+              </FieldGrid>
+              <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-4" })}>
+                Save rental prices
+              </SubmitButton>
+            </form>
+          </section>
 
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Rental prices</h2>
-        <p className="mt-1 text-sm text-muted">
-          What a diver is quoted when they set their rental fit. Price the full set for the diver
-          who takes everything (usually cheaper than the pieces), and per-piece for a partial kit —
-          a diver renting all five core items is quoted the set, anyone renting fewer pays per
-          piece. Leave a box blank to settle that item at the shop.
-        </p>
-        <form action={saveRentalPricingAction} className="mt-4">
-          <FieldGrid columns={2}>
-            <PriceField
-              name="setPrice"
-              label="Full set"
-              hint="(BCD, reg, wetsuit, mask & fins, weights)"
-              cents={shop.rentalPricing.setCents}
-            />
-            {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
-              <PriceField
-                key={item.kind}
-                name={`price_${item.name}`}
-                label={item.label}
-                cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
-              />
-            ))}
-            <PriceField
-              name="nitroxPrice"
-              label="Enriched air"
-              hint="(per dive)"
-              cents={shop.rentalPricing.nitroxCents}
-            />
-          </FieldGrid>
-          <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-4" })}>
-            Save rental prices
-          </SubmitButton>
-        </form>
-      </section>
-
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        {!account ? (
-          <div>
-            <h2 className="font-medium">No Stripe account connected</h2>
-            <p className="mt-1 text-sm text-muted">
-              Connect a Stripe account you own — DiveDay never touches your money, and payments for
-              orders and invoices go straight into your own Stripe balance.
-            </p>
-            {connectConfigured ? (
-              <Link
-                href={`/shop/${shopSlug}/settings/connect`}
-                className={buttonClass({ className: "mt-4" })}
-              >
-                Connect Stripe
-              </Link>
-            ) : (
-              <p className="mt-4 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-                Online payments aren't switched on for this DiveDay setup yet — ask whoever runs
-                your hosting to finish the Stripe configuration.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-medium">
-                {account.disconnectedAt
-                  ? "Stripe account disconnected"
-                  : "Stripe account connected"}
-              </h2>
-              <Badge tone={ready ? "success" : "warning"}>
-                {ready ? "Ready for payments" : "Not ready yet"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm text-muted">
-              Account ending in {account.stripeAccountId.slice(-6)}
-            </p>
-            <ul className="mt-4 divide-y divide-border">
-              <StatusRow label="Charges enabled" ok={account.chargesEnabled} />
-              <StatusRow label="Payouts enabled" ok={account.payoutsEnabled} />
-              <StatusRow label="Onboarding details submitted" ok={account.detailsSubmitted} />
-            </ul>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              {account.disconnectedAt ? (
-                connectConfigured ? (
-                  <Link href={`/shop/${shopSlug}/settings/connect`} className={buttonClass()}>
-                    Reconnect Stripe
+          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            {!account ? (
+              <div>
+                <h2 className="font-medium">No Stripe account connected</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Connect a Stripe account you own — DiveDay never touches your money, and payments
+                  for orders and invoices go straight into your own Stripe balance.
+                </p>
+                {connectConfigured ? (
+                  <Link
+                    href={`/shop/${shopSlug}/settings/connect`}
+                    className={buttonClass({ className: "mt-4" })}
+                  >
+                    Connect Stripe
                   </Link>
-                ) : null
-              ) : (
-                <>
-                  <form action={refreshAction}>
-                    <SubmitButton
-                      pendingLabel="Refreshing…"
-                      className={buttonClass({
-                        variant: "secondary",
-                        className: "text-foreground",
-                      })}
-                    >
-                      Refresh status
-                    </SubmitButton>
-                  </form>
-                  <form action={disconnectAction}>
-                    <SubmitButton
-                      pendingLabel="Disconnecting…"
-                      className={buttonClass({ variant: "danger" })}
-                    >
-                      Disconnect
-                    </SubmitButton>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
+                ) : (
+                  <p className="mt-4 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+                    Online payments aren't switched on for this DiveDay setup yet — ask whoever runs
+                    your hosting to finish the Stripe configuration.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-medium">
+                    {account.disconnectedAt
+                      ? "Stripe account disconnected"
+                      : "Stripe account connected"}
+                  </h2>
+                  <Badge tone={ready ? "success" : "warning"}>
+                    {ready ? "Ready for payments" : "Not ready yet"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  Account ending in {account.stripeAccountId.slice(-6)}
+                </p>
+                <ul className="mt-4 divide-y divide-border">
+                  <StatusRow label="Charges enabled" ok={account.chargesEnabled} />
+                  <StatusRow label="Payouts enabled" ok={account.payoutsEnabled} />
+                  <StatusRow label="Onboarding details submitted" ok={account.detailsSubmitted} />
+                </ul>
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  {account.disconnectedAt ? (
+                    connectConfigured ? (
+                      <Link href={`/shop/${shopSlug}/settings/connect`} className={buttonClass()}>
+                        Reconnect Stripe
+                      </Link>
+                    ) : null
+                  ) : (
+                    <>
+                      <form action={refreshAction}>
+                        <SubmitButton
+                          pendingLabel="Refreshing…"
+                          className={buttonClass({
+                            variant: "secondary",
+                            className: "text-foreground",
+                          })}
+                        >
+                          Refresh status
+                        </SubmitButton>
+                      </form>
+                      <form action={disconnectAction}>
+                        <SubmitButton
+                          pendingLabel="Disconnecting…"
+                          className={buttonClass({ variant: "danger" })}
+                        >
+                          Disconnect
+                        </SubmitButton>
+                      </form>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        </>
+      ) : null}
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { canPersonDeleteDiver, canPersonRefund } from "@/db/authz";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
@@ -317,6 +318,11 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
   const staff = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
+  // Money leaving the account is owner/manager work (H-14, ADR
+  // 20260724-role-authorization), re-checked against live roles.
+  if (!(await canPersonRefund(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-refund`);
+  }
   // A demo shop's orders carry fabricated Stripe ids; refunding one would hit
   // live Stripe and fail. The button is rendered disabled to match (PaymentsSection).
   const shop = await getShopById(db, staff.user.shopId);
@@ -347,7 +353,13 @@ export async function bookActivityAction(shopSlug: string, personId: string, for
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
-  const deleted = await deleteDiver(await getDb(), staff.user.shopId, personId);
+  const db = await getDb();
+  // Soft-deleting a person frees their email and pulls them from shop work —
+  // owner/manager only (H-14, ADR 20260724-role-authorization).
+  if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-delete`);
+  }
+  const deleted = await deleteDiver(db, staff.user.shopId, personId);
   revalidateAndRedirect(
     `/shop/${staff.user.shopSlug}/divers`,
     deleted

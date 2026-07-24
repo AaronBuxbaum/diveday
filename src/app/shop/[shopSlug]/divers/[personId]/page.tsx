@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
+import { canPersonDeleteDiver, canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
@@ -35,6 +36,13 @@ export default async function DiverDetailPage({
   const shop = await getShopById(db, session.user.shopId);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
   if (!shop || !diver) notFound();
+  // Refunds and diver deletion are owner/manager only (H-14, ADR
+  // 20260724-role-authorization); hide those controls from other staff. The
+  // server actions re-check regardless — hiding is a courtesy, not the gate.
+  const [canRefund, canDelete] = await Promise.all([
+    canPersonRefund(db, shop.id, session.user.personId),
+    canPersonDeleteDiver(db, shop.id, session.user.personId),
+  ]);
   const upcoming = (await upcomingTripsWithCounts(db, shop.id)).filter(
     (trip) =>
       !diver.bookings.some(
@@ -71,9 +79,15 @@ export default async function DiverDetailPage({
         shopSlug={shopSlug}
         personId={personId}
       />
-      <PaymentsSection diver={diver} shop={shop} shopSlug={shopSlug} personId={personId} />
+      <PaymentsSection
+        diver={diver}
+        shop={shop}
+        shopSlug={shopSlug}
+        personId={personId}
+        canRefund={canRefund}
+      />
       <ShopHistory diver={diver} shop={shop} shopSlug={shopSlug} />
-      <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} />
+      {canDelete ? <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} /> : null}
     </main>
   );
 }
