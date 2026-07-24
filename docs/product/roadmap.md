@@ -105,9 +105,9 @@ These block real operations regardless of code completeness; owners and evidence
 - **V-02 — field-validate the offline manifest** on a phone, outdoors, wet hands, airplane-mode.
   Until it passes, the safety differentiator is unproven and unclaimable.
 - **Pricing posture** — the public price is **approved for now** (`src/lib/marketing.ts`,
-  early-access and still moving; H-12, 2026-07-24). H-12 also closed the founding-cohort terms: a
-  **two-year price lock** and **founder-direct, same-day support**, both still owed public copy.
-  Billing cadence, taxes/fees, and the contract flow remain open. See
+  early-access and still moving; H-12, 2026-07-24). H-12 also closed the founding-cohort terms —
+  a **two-year price lock** and **founder-direct, same-day support** — both now published on the
+  pricing and home pages. Billing cadence, taxes/fees, and the contract flow remain open. See
   [competitive-analysis.md](assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
   notification consent — H-01…H-11.

@@ -59,7 +59,7 @@ const faq = [
   {
     question: "Why be a founding shop?",
     answer:
-      "Because early shops steer. Founding shops get a direct line to the people building DiveDay, what your crew runs into shapes what ships next, and every new feature lands in the one plan there is — there are no higher tiers to move things into.",
+      "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years and get a founder-direct line with same-day responses; every new feature lands in the one plan there is, with no higher tiers to move things into.",
   },
   {
     question: "What about multiple locations?",

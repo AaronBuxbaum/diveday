@@ -59,12 +59,13 @@ chosen battlegrounds — and re-read it before changing the spine.
 - **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
-  `marketing.ts` as today's price. H-12 also closed two commercial terms — **price locked for two
-  years for the founding cohort** and **founder-direct, same-day-response support** for the
-  founding cohort — but neither is yet published as a page claim; that copy is a follow-up
-  implementation task, not authorized by this note alone. Billing cadence, taxes/fees, and the
-  contract flow remain undecided ([human-decisions.md](human-decisions.md)); do not publish
-  billing terms through any new channel without that decision.
+  `marketing.ts` as today's price. H-12 also closed two commercial terms, now published as
+  founding-shop claims (pricing card + FAQ in `src/app/pricing/page.tsx`, closing band in
+  `src/app/page.tsx`, both sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
+  two years for the founding cohort** and **founder-direct, same-day-response support** for the
+  founding cohort. Billing cadence, taxes/fees, and the contract flow remain undecided
+  ([human-decisions.md](human-decisions.md)); do not publish billing terms through any new channel
+  without that decision.
 - **Offline claims stay precise and human**: staff explicitly save a copy to the device; nothing
   invisibly caches, transfers between devices, or guarantees stale readiness is live. Captain's
   words ("saved to this phone", "checked again when service returns") — the machinery
