@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/shops";
@@ -66,8 +67,17 @@ export default async function DiversPage({
   async function restoreDiverAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
+    const db = await getDb();
+    // Restoring is the inverse of the owner/manager-only deletion, so it takes
+    // the same gate (H-14, ADR 20260724-role-authorization).
+    if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
+      revalidateAndRedirect(
+        `/shop/${staff.user.shopSlug}/divers`,
+        `/shop/${staff.user.shopSlug}/divers?notice=not-authorized`,
+      );
+    }
     const personId = String(formData.get("personId") ?? "");
-    const restored = personId && (await restoreDiver(await getDb(), staff.user.shopId, personId));
+    const restored = personId && (await restoreDiver(db, staff.user.shopId, personId));
     revalidateAndRedirect(
       `/shop/${staff.user.shopSlug}/divers`,
       `/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "invalid"}`,
@@ -81,10 +91,13 @@ export default async function DiversPage({
         ? "Diver removed. Their history is preserved, but they no longer appear in active work."
         : notice === "restored"
           ? "Diver restored to active shop work."
-          : notice === "invalid"
-            ? "Check the diver's name, email, and phone number."
-            : null;
-  const noticeIsError = notice === "duplicate" || notice === "invalid";
+          : notice === "not-authorized"
+            ? "Removing or restoring a diver is limited to owners and managers."
+            : notice === "invalid"
+              ? "Check the diver's name, email, and phone number."
+              : null;
+  const noticeIsError =
+    notice === "duplicate" || notice === "invalid" || notice === "not-authorized";
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

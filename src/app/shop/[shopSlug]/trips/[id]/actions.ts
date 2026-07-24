@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
 import {
   type BookingOutcome,
   cancelBooking,
@@ -12,7 +13,7 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { setBookingPayment } from "@/db/payments";
+import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
@@ -125,9 +126,30 @@ function parseAddDiver(formData: FormData) {
 const backPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}`;
 const guestsPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}/guests`;
 
+/**
+ * Trip *definition* — what the dive is and who it admits (details, admission
+ * requirements, and the whole-series operations) — is owner/manager/instructor
+ * work (H-14, ADR 20260724-role-authorization). Re-checks live roles against the
+ * DB and bounces a disallowed staff member to the trip Overview with a
+ * not-authorized notice.
+ *
+ * This is deliberately narrower than "everything on Overview": the *operating*
+ * actions the glossary assigns to the day-of crew — predicted-conditions entry,
+ * day-of crew assignment (manifest accuracy), and a single trip's weather
+ * cancellation — stay `requireStaffSession`, as do the roster/booking/recap
+ * actions. Only trip definition and bulk schedule management run through here.
+ */
+async function requireTripConfig(shopSlug: string, tripId: string) {
+  const s = await requireStaffSession();
+  if (!(await canPersonConfigureTrips(await getDb(), s.user.shopId, s.user.personId))) {
+    redirect(`${backPath(shopSlug, tripId)}?notice=not-authorized`);
+  }
+  return s;
+}
+
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = await requireTripConfig(shopSlug, tripId);
   const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}?notice=invalid`);
   const {
@@ -180,6 +202,10 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
+  // Predicted conditions are crew-entered — the divemaster/captain on the water
+  // record water temp, viz, and surface state and own the go/no-go call
+  // (glossary). This is operating work, not trip definition, so it stays open to
+  // all staff even though the rest of Overview is config-gated (H-14).
   const s = await requireStaffSession();
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}?notice=invalid`);
@@ -189,6 +215,8 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
 
 export async function clearConditionsAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
+  // Crew-entered conditions (see saveConditionsAction) — operating work, open to
+  // all staff.
   const s = await requireStaffSession();
   const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
   revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
@@ -196,6 +224,11 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
+  // A single trip's cancellation is the crew's weather go/no-go call (glossary):
+  // the on-water lead must be able to take today's charter off the board so
+  // divers are notified. It only flips status (no money moves — refunds stay
+  // owner/manager on the per-booking path), so it's open to all staff. Bulk
+  // schedule management (reinstate, whole-series cancel, create) stays config.
   const s = await requireStaffSession();
   await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
   revalidateAndRedirect(back, `${back}?notice=cancelled`);
@@ -203,7 +236,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
 
 export async function reinstateTripAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = await requireTripConfig(shopSlug, tripId);
   await setTripStatus(await getDb(), s.user.shopId, tripId, "scheduled");
   revalidateAndRedirect(back, `${back}?notice=reinstated`);
 }
@@ -216,7 +249,7 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
 /** Push this date's editable details across every upcoming date in the series. */
 export async function applySeriesDetailsAction(shopSlug: string, tripId: string, seriesId: string) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = await requireTripConfig(shopSlug, tripId);
   const result = await applyDetailsToFutureSeries(await getDb(), s.user.shopId, seriesId, tripId);
   const notice = !result
     ? "series-error"
@@ -229,7 +262,7 @@ export async function applySeriesDetailsAction(shopSlug: string, tripId: string,
 /** Cancel every upcoming date in the series at once; each stays reinstatable. */
 export async function cancelSeriesAction(shopSlug: string, tripId: string, seriesId: string) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = await requireTripConfig(shopSlug, tripId);
   const cancelled = await cancelFutureSeriesTrips(await getDb(), s.user.shopId, seriesId);
   revalidateAndRedirect(
     back,
@@ -249,7 +282,7 @@ export async function extendSeriesAction(
   formData: FormData,
 ) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = await requireTripConfig(shopSlug, tripId);
   const parsed = extendSeriesSchema.safeParse({ count: formData.get("count") });
   if (!parsed.success) redirect(`${back}?notice=series-error`);
   const db = await getDb();
@@ -325,6 +358,10 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
 
 export async function saveCrewAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
+  // Who is aboard is part of the manifest — a legal safety document that must
+  // stay truthful when the day-of lead swaps a sick divemaster or a second
+  // captain at the dock (glossary). Day-of crew assignment is operating work,
+  // open to all staff; trip *definition* below stays config-gated (H-14).
   const s = await requireStaffSession();
   const ids = formData.getAll("crew").map(String);
   const saved = await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
@@ -440,6 +477,22 @@ export async function inviteWaitlistAction(
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
+/**
+ * Whether a just-cancelled booking held a captured payment, so a staff member
+ * who lacks refund permission (H-14) can be told a refund may be owed rather
+ * than a bare "spot is open". Deliberately coarse — it doesn't apply the
+ * cancellation window; the owner/manager who picks it up runs the real
+ * `refundBookingOnCancellation` path and its window/forfeit logic.
+ */
+async function bookingRefundMayBeOwed(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  bookingId: string,
+): Promise<boolean> {
+  const payment = await getBookingPayment(db, shopId, bookingId);
+  return payment?.status === "paid" || payment?.status === "deposit_paid";
+}
+
 function refundNotice(refund: CancellationRefundOutcome): string {
   switch (refund.status) {
     case "refunded":
@@ -468,6 +521,17 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!bookingId) redirect(back);
   const dbi = await getDb();
   await cancelBooking(dbi, s.user.shopId, bookingId);
+  // Freeing the seat is roster work any staff member does, but moving money is
+  // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member
+  // can cancel the booking; the auto-refund below only fires when the actor may
+  // refund. When they can't, the seat is still freed and a paid booking hands
+  // the refund up to an owner/manager instead of quietly refunding under a role
+  // that isn't allowed to.
+  if (!(await canPersonRefund(dbi, s.user.shopId, s.user.personId))) {
+    const owed = await bookingRefundMayBeOwed(dbi, s.user.shopId, bookingId);
+    const notice = owed ? "booking-removed-refund-owner" : "booking-removed";
+    revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+  }
   // A cancel inside the shop's stated window auto-refunds a Stripe payment;
   // everything else (no window, counter payment, Stripe off) degrades to the
   // staff-run refund the notice calls out. The seat is already freed above, so
@@ -604,7 +668,7 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
 
 export async function saveRequirementsAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   // Re-derive the course flag server-side rather than trusting a client field:
   // a course session's admission rules are frozen and must not be editable here,

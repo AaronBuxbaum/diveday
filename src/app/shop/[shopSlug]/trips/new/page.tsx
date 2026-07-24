@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
@@ -64,6 +65,15 @@ const formSchema = z.object({
 async function scheduleTrip(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
+  // Defining a trip is owner/manager/instructor work (H-14, ADR
+  // 20260724-role-authorization), re-checked against live roles.
+  if (!(await canPersonConfigureTrips(await getDb(), session.user.shopId, session.user.personId))) {
+    revalidateAndRedirect(
+      `/shop/${session.user.shopSlug}/trips/new`,
+      `/shop/${session.user.shopSlug}/trips/new?error=not-authorized`,
+    );
+    return;
+  }
 
   const parsed = formSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
@@ -160,6 +170,7 @@ async function scheduleTrip(formData: FormData) {
 const ERROR_MESSAGES: Record<string, string> = {
   invalid: "That didn't save — check the date, times, and capacity, then try again.",
   "end-before-start": "The trip has to end after it starts — check the times.",
+  "not-authorized": "Scheduling and editing trips is limited to owners, managers, and instructors.",
 };
 
 export default async function NewTripPage({
@@ -173,9 +184,10 @@ export default async function NewTripPage({
   const { shopSlug } = await params;
   const { error, course: selectedCourseId } = await searchParams;
   const db = await getDb();
-  const [courseList, diveSiteList] = await Promise.all([
+  const [courseList, diveSiteList, canConfigure] = await Promise.all([
     listActiveCourses(db, session.user.shopId),
     listDiveSites(db, session.user.shopId),
+    canPersonConfigureTrips(db, session.user.shopId, session.user.personId),
   ]);
   const selectedCourse = courseList.find((course) => course.id === selectedCourseId);
   const message = error ? ERROR_MESSAGES[error] : undefined;
@@ -194,119 +206,108 @@ export default async function NewTripPage({
         </ShopNotice>
       ) : null}
 
-      <form action={scheduleTrip} className="mt-8 flex flex-col gap-5">
-        <FieldGrid columns={1} className="gap-y-5">
-          <Field
-            label="Course"
-            hint="(optional)"
-            description={
-              selectedCourse ? (
-                <>
-                  {selectedCourse.minimumCertificationLevel
-                    ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
-                    : "No existing C-card required"}
-                  {" · add an instructor before sharing the session"}
-                </>
-              ) : undefined
-            }
-          >
-            <select
-              name="courseId"
-              defaultValue={selectedCourse?.id ?? ""}
-              className={controlClass}
-            >
-              <option value="">Ordinary charter / trip</option>
-              {courseList.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Title">
-            <input
-              name="title"
-              type="text"
-              required
-              maxLength={120}
-              placeholder={
-                selectedCourse
-                  ? `${selectedCourse.title} — Session 1`
-                  : "Two-Tank Reef — Molasses & French"
-              }
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <TripDiveFields
-          diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
-        />
-        <FieldGrid columns={1}>
-          <Field label="Description" hint="(optional)">
-            <textarea
-              name="description"
-              rows={2}
-              maxLength={500}
-              placeholder="Sites, conditions, who it's for, required certs."
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={3} className="gap-y-5">
-          <Field label="Date">
-            <input name="date" type="date" required className={controlClass} />
-          </Field>
-          <Field label="Departs">
-            <input name="startTime" type="time" required className={controlClass} />
-          </Field>
-          <Field label="Returns">
-            <input name="endTime" type="time" required className={controlClass} />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={1} className="sm:w-40">
-          <Field label="Capacity">
-            <input
-              name="capacity"
-              type="number"
-              required
-              min={1}
-              max={60}
-              defaultValue={12}
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-        </FieldGrid>
-        {/* The field is narrow; its helper text is not, so only the input is capped. */}
-        <FieldGrid columns={1}>
-          <Field
-            label="Price per diver"
-            hint="(optional)"
-            description="Pre-fills the trip fee when staff invoice a diver from this trip's roster."
-          >
-            <input
-              name="priceDollars"
-              type="number"
-              step="0.01"
-              min={0}
-              placeholder="$0.00"
-              className={`${controlClass} tabular-nums sm:w-40`}
-            />
-          </Field>
-        </FieldGrid>
-        <fieldset className="rounded-lg border border-border bg-surface p-5">
-          <legend className="px-1 text-sm font-medium">Pay at booking</legend>
-          <p className="text-sm text-muted">
-            Optional. When the trip is priced and the shop takes card payments, divers pay online as
-            they book. Leave the deposit blank to charge the full fare up front.
-          </p>
-          <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+      {canConfigure ? null : (
+        <div className="mt-8">
+          <ShopNotice tone="neutral" role="status">
+            Scheduling and editing trips is limited to owners, managers, and instructors. The crew
+            runs the day on the water — the roster, check-in, manifest, and roll call — from each
+            trip's own page.
+          </ShopNotice>
+        </div>
+      )}
+
+      {canConfigure ? (
+        <form action={scheduleTrip} className="mt-8 flex flex-col gap-5">
+          <FieldGrid columns={1} className="gap-y-5">
             <Field
-              label="Deposit per diver"
+              label="Course"
               hint="(optional)"
-              description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare."
+              description={
+                selectedCourse ? (
+                  <>
+                    {selectedCourse.minimumCertificationLevel
+                      ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
+                      : "No existing C-card required"}
+                    {" · add an instructor before sharing the session"}
+                  </>
+                ) : undefined
+              }
+            >
+              <select
+                name="courseId"
+                defaultValue={selectedCourse?.id ?? ""}
+                className={controlClass}
+              >
+                <option value="">Ordinary charter / trip</option>
+                {courseList.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Title">
+              <input
+                name="title"
+                type="text"
+                required
+                maxLength={120}
+                placeholder={
+                  selectedCourse
+                    ? `${selectedCourse.title} — Session 1`
+                    : "Two-Tank Reef — Molasses & French"
+                }
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+          <TripDiveFields
+            diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
+          />
+          <FieldGrid columns={1}>
+            <Field label="Description" hint="(optional)">
+              <textarea
+                name="description"
+                rows={2}
+                maxLength={500}
+                placeholder="Sites, conditions, who it's for, required certs."
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+          <FieldGrid columns={3} className="gap-y-5">
+            <Field label="Date">
+              <input name="date" type="date" required className={controlClass} />
+            </Field>
+            <Field label="Departs">
+              <input name="startTime" type="time" required className={controlClass} />
+            </Field>
+            <Field label="Returns">
+              <input name="endTime" type="time" required className={controlClass} />
+            </Field>
+          </FieldGrid>
+          <FieldGrid columns={1} className="sm:w-40">
+            <Field label="Capacity">
+              <input
+                name="capacity"
+                type="number"
+                required
+                min={1}
+                max={60}
+                defaultValue={12}
+                className={`${controlClass} tabular-nums`}
+              />
+            </Field>
+          </FieldGrid>
+          {/* The field is narrow; its helper text is not, so only the input is capped. */}
+          <FieldGrid columns={1}>
+            <Field
+              label="Price per diver"
+              hint="(optional)"
+              description="Pre-fills the trip fee when staff invoice a diver from this trip's roster."
             >
               <input
-                name="depositDollars"
+                name="priceDollars"
                 type="number"
                 step="0.01"
                 min={0}
@@ -314,71 +315,94 @@ export default async function NewTripPage({
                 className={`${controlClass} tabular-nums sm:w-40`}
               />
             </Field>
-            <Field
-              label="Free cancellation window"
-              hint="(optional)"
-              description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window."
-            >
-              <div className="flex items-center gap-2">
+          </FieldGrid>
+          <fieldset className="rounded-lg border border-border bg-surface p-5">
+            <legend className="px-1 text-sm font-medium">Pay at booking</legend>
+            <p className="text-sm text-muted">
+              Optional. When the trip is priced and the shop takes card payments, divers pay online
+              as they book. Leave the deposit blank to charge the full fare up front.
+            </p>
+            <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+              <Field
+                label="Deposit per diver"
+                hint="(optional)"
+                description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare."
+              >
                 <input
-                  name="cancellationWindowHours"
+                  name="depositDollars"
                   type="number"
-                  step={1}
+                  step="0.01"
                   min={0}
-                  max={720}
-                  placeholder="48"
-                  className={`${controlClass} tabular-nums sm:w-28`}
+                  placeholder="$0.00"
+                  className={`${controlClass} tabular-nums sm:w-40`}
                 />
-                <span className="text-sm text-muted">hours</span>
-              </div>
-            </Field>
-          </FieldGrid>
-        </fieldset>
-        <fieldset className="rounded-lg border border-border bg-surface p-5">
-          <legend className="px-1 text-sm font-medium">Repeat</legend>
-          <p className="text-sm text-muted">
-            Put the same trip on the board for several weeks at once. Each date is created as its
-            own trip — book, crew, and edit them one at a time.
-          </p>
-          <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field label="How often">
-              <select name="repeatIntervalWeeks" defaultValue="0" className={controlClass}>
-                <option value="0">Doesn't repeat</option>
-                <option value="1">Every week</option>
-                <option value="2">Every 2 weeks</option>
-                <option value="4">Every 4 weeks</option>
-              </select>
-            </Field>
-            <Field
-              label="Number of trips"
-              description={`Up to ${MAX_SERIES_OCCURRENCES}, counting the first. Ignored when it doesn't repeat.`}
+              </Field>
+              <Field
+                label="Free cancellation window"
+                hint="(optional)"
+                description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window."
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    name="cancellationWindowHours"
+                    type="number"
+                    step={1}
+                    min={0}
+                    max={720}
+                    placeholder="48"
+                    className={`${controlClass} tabular-nums sm:w-28`}
+                  />
+                  <span className="text-sm text-muted">hours</span>
+                </div>
+              </Field>
+            </FieldGrid>
+          </fieldset>
+          <fieldset className="rounded-lg border border-border bg-surface p-5">
+            <legend className="px-1 text-sm font-medium">Repeat</legend>
+            <p className="text-sm text-muted">
+              Put the same trip on the board for several weeks at once. Each date is created as its
+              own trip — book, crew, and edit them one at a time.
+            </p>
+            <FieldGrid columns={2} className="mt-4 gap-y-5">
+              <Field label="How often">
+                <select name="repeatIntervalWeeks" defaultValue="0" className={controlClass}>
+                  <option value="0">Doesn't repeat</option>
+                  <option value="1">Every week</option>
+                  <option value="2">Every 2 weeks</option>
+                  <option value="4">Every 4 weeks</option>
+                </select>
+              </Field>
+              <Field
+                label="Number of trips"
+                description={`Up to ${MAX_SERIES_OCCURRENCES}, counting the first. Ignored when it doesn't repeat.`}
+              >
+                <input
+                  name="repeatCount"
+                  type="number"
+                  min={MIN_SERIES_OCCURRENCES}
+                  max={MAX_SERIES_OCCURRENCES}
+                  defaultValue={8}
+                  className={`${controlClass} tabular-nums`}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              type="submit"
+              className={buttonClass({ size: "lg", className: "rounded-xl text-base" })}
             >
-              <input
-                name="repeatCount"
-                type="number"
-                min={MIN_SERIES_OCCURRENCES}
-                max={MAX_SERIES_OCCURRENCES}
-                defaultValue={8}
-                className={`${controlClass} tabular-nums`}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
-        <div className="mt-2 flex items-center gap-3">
-          <button
-            type="submit"
-            className={buttonClass({ size: "lg", className: "rounded-xl text-base" })}
-          >
-            Put it on the board
-          </button>
-          <Link
-            href={`/shop/${shopSlug}`}
-            className="text-sm font-medium text-muted hover:text-foreground"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+              Put it on the board
+            </button>
+            <Link
+              href={`/shop/${shopSlug}`}
+              className="text-sm font-medium text-muted hover:text-foreground"
+            >
+              Cancel
+            </Link>
+          </div>
+        </form>
+      ) : null}
     </main>
   );
 }
