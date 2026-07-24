@@ -111,3 +111,20 @@ export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
     (role) => role === "owner" || role === "manager" || role === "instructor",
   );
 }
+
+/**
+ * Rewrite what a diver themselves asked for in their rental fit — sizes, and
+ * which pieces they want (H-06). Deliberately *not* the same thing as packing
+ * the boat: any staff member may substitute a real available item and flag a
+ * diver for hands-on fitting, because that is the day's work and the safe
+ * fallback. Overwriting the diver's stated request is the in-water judgement
+ * call — an instructor, divemaster, or manager decides a diver needs a
+ * different size than they believe they do, and owns that if it's wrong.
+ * See ADR 20260724-gear-fit-fallback.
+ */
+export function canOverrideGearRequest(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some(
+    (role) =>
+      role === "owner" || role === "manager" || role === "instructor" || role === "divemaster",
+  );
+}

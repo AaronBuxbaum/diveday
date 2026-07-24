@@ -11,6 +11,11 @@ test("landing demo CTA drops a visitor into the staff shop, and reset restores t
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 
+  // A minted demo shows the visitor how to sign back in if their session
+  // expires — the shop is throwaway, so plain-text credentials are fine.
+  await expect(page.getByText(/Session expired\? Sign back in at/)).toBeVisible();
+  await expect(page.getByText("demo-role-switcher-bypass-token")).toBeVisible();
+
   // Reset confirms with a notice and the session survives it.
   await page.getByRole("button", { name: "Reset demo data" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Demo data reset" })).toBeVisible();

@@ -62,12 +62,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     if (!entry) throw new Error("demo booking missing");
 
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    // Every reef diver but the seed's first-booked one already has a waiver
+    // issued (waiver_pending, collapsed into its own group row); that one
+    // diver alone is genuinely unsent, so she gets a named row of her own
+    // rather than joining a "N divers" group.
     const waiverRow = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
-      work.actions.find((action) => action.id === `blockers:${reef.id}:waiver_not_sent`);
-    // Exact roster-abbreviation copy is pinned in src/lib/today.test.ts; here
-    // only the assembled counts matter.
-    expect(waiverRow(before)?.subject).toBe("9 divers");
-    expect(waiverRow(before)?.detail).toContain("Waiver has not been sent.");
+      work.actions.find((action) => action.id === `blocker:${entry.booking.id}:waiver_not_sent`);
+    expect(waiverRow(before)?.subject).toBe(entry.person.fullName);
+    expect(waiverRow(before)?.detail).toBe("Waiver has not been sent.");
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
@@ -78,7 +80,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     });
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(waiverRow(after)?.subject).toBe("8 divers");
+    expect(waiverRow(after)).toBeUndefined();
     expect(after.departures[0]?.ready).toBe(1);
     expect(after.departures[0]?.blocked).toBe(8);
   });
