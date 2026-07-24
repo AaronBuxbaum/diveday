@@ -88,6 +88,7 @@ export function combineCertRequirements(
 
 export type ReadinessBlockerCode =
   | "requirements_not_configured"
+  | "identity_unconfirmed"
   | "waiver_not_sent"
   | "waiver_pending"
   | "waiver_expired"
@@ -112,6 +113,7 @@ export type BlockerCategory = "waiver" | "certification" | "payment" | "setup";
 export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   requirements_not_configured: "setup",
   readiness_unavailable: "setup",
+  identity_unconfirmed: "setup",
   waiver_not_sent: "waiver",
   waiver_pending: "waiver",
   waiver_expired: "waiver",
@@ -143,6 +145,12 @@ export type ReadinessInput = {
   nitroxCertifications?: readonly NitroxCertification[];
   /** The booking's current payment state; absent is treated as unpaid. */
   paymentStatus?: PaymentStatus | null;
+  /**
+   * The booking reused an existing person by email under a mismatched name and
+   * has not been staff-confirmed (H-13). Fails closed until staff confirm it is
+   * the same human, so a shared-inbox booking can't board on borrowed evidence.
+   */
+  identityUnconfirmed?: boolean;
   now?: Date;
   /** The shop's IANA timezone — required so cert/specialty expiry reads against its local calendar date (CR-009), never UTC. */
   timezone: string;
@@ -225,7 +233,10 @@ function certificationBlocker(
         certification.expiresAt && isCalendarDateExpired(certification.expiresAt, todayLocal),
     )
   ) {
-    return { code: "certification_expired", message: "Certification on file has expired." };
+    return {
+      code: "certification_expired",
+      message: "Certification on file is past its refresher-due date.",
+    };
   }
   return { code: "certification_missing", message: "No certification is on file for this trip." };
 }
@@ -259,7 +270,7 @@ function specialtyBlocker(
   if (cards.some((card) => card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal))) {
     return {
       code: "specialty_expired",
-      message: `${label} specialty card on file has expired.`,
+      message: `${label} specialty card on file is past its refresher-due date.`,
     };
   }
   return {
@@ -297,16 +308,25 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const now = input.now ?? nowDate();
   const todayLocal = calendarDateInTimezone(now, input.timezone);
   const blockers: ReadinessBlocker[] = [];
+
+  // Evaluated ahead of — and independently of — the trip's own requirements: a
+  // booking that reused an existing person under a mismatched name must never
+  // board on that person's certs/waiver until staff confirm it is the same
+  // human (H-13), even on a trip whose requirements aren't configured yet.
+  if (input.identityUnconfirmed) {
+    blockers.push({
+      code: "identity_unconfirmed",
+      message:
+        "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
+    });
+  }
+
   if (!input.requirement) {
-    return {
-      status: "blocked",
-      blockers: [
-        {
-          code: "requirements_not_configured",
-          message: "Trip requirements have not been configured yet.",
-        },
-      ],
-    };
+    blockers.push({
+      code: "requirements_not_configured",
+      message: "Trip requirements have not been configured yet.",
+    });
+    return { status: "blocked", blockers };
   }
 
   if (input.requirement.requiresWaiver) {
