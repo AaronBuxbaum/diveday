@@ -6,8 +6,8 @@ import { seededShopContext } from "@/test/db";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
 import * as schema from "./schema";
-import { certifications, people, personRoles, shops, userAccounts } from "./schema";
-import { issueWaiverRequest } from "./waivers";
+import { certifications, people, personRoles, shops, userAccounts, waiverRecords } from "./schema";
+import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
   "shop.csv",
@@ -313,6 +313,105 @@ describe("full-shop export dataset", () => {
     expect(records.header).not.toContain("token_hash");
   });
 
+  it("round-trips an imported waiver's provenance through waiver_records.csv, contacts.csv, and the photo bundle (ADR 20260724-import-waiver-acceptance)", async () => {
+    const { db, shop } = await seededShopContext();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Imported Ida", email: "ida.import@example.com" })
+      .returning();
+    const template = await getCurrentWaiverTemplate(db, shop.id);
+    if (!template) throw new Error("no template");
+    const docUrl = "https://xyz.public.blob.vercel-storage.com/import-waivers/ida-waiver.jpg";
+    const medicalDocUrl =
+      "https://xyz.public.blob.vercel-storage.com/import-waivers/ida-medical.jpg";
+    await db.insert(waiverRecords).values({
+      shopId: shop.id,
+      bookingId: null,
+      personId: diver.id,
+      templateId: template.id,
+      templateTitle: template.title,
+      templateVersion: template.version,
+      templateBody: template.body,
+      status: "completed",
+      tokenHash: "imported-ida",
+      expiresAt: new Date("2026-01-01T00:00:00Z"),
+      signedName: "Imported Ida",
+      signatureMethod: "imported",
+      consentedAt: new Date("2025-05-01T16:00:00Z"),
+      signedAt: new Date("2025-05-01T16:00:00Z"),
+      medicalReviewRequired: false,
+      completedAt: new Date("2025-05-01T16:00:00Z"),
+      importedFromLabel: "Old Blue Reef Divers",
+      importSourceDocumentUrl: docUrl,
+      importSourceMedicalDocumentUrl: medicalDocUrl,
+    });
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+
+    const records = table(input, "waiver_records.csv");
+    const row = records.rows.find(
+      (candidate) => candidate[records.header.indexOf("person_id")] === diver.id,
+    );
+    expect(row).toBeDefined();
+    expect(row?.[records.header.indexOf("imported_from_label")]).toBe("Old Blue Reef Divers");
+    expect(row?.[records.header.indexOf("import_source_document_url")]).toBe(docUrl);
+    expect(row?.[records.header.indexOf("import_source_medical_document_url")]).toBe(medicalDocUrl);
+
+    const contacts = table(input, "contacts.csv");
+    const contactRow = contacts.rows.find(
+      (candidate) => candidate[contacts.header.indexOf("email")] === "ida.import@example.com",
+    );
+    expect(contactRow).toBeDefined();
+    expect(contactRow?.[contacts.header.indexOf("waiver_accepted")]).toBe(true);
+    expect(contactRow?.[contacts.header.indexOf("waiver_signed_at")]).toBe("2025-05-01");
+    expect(contactRow?.[contacts.header.indexOf("waiver_source_name")]).toBe(
+      "Old Blue Reef Divers",
+    );
+
+    expect(input.photoUrls).toContain(docUrl);
+    expect(input.photoUrls).toContain(medicalDocUrl);
+  });
+
+  it("excludes a live medical_review hold from contacts.csv's waiver_accepted signal", async () => {
+    const { db, shop } = await seededShopContext();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Held Holly", email: "holly.import@example.com" })
+      .returning();
+    const template = await getCurrentWaiverTemplate(db, shop.id);
+    if (!template) throw new Error("no template");
+    await db.insert(waiverRecords).values({
+      shopId: shop.id,
+      bookingId: null,
+      personId: diver.id,
+      templateId: template.id,
+      templateTitle: template.title,
+      templateVersion: template.version,
+      templateBody: template.body,
+      status: "medical_review",
+      tokenHash: "held-holly",
+      expiresAt: new Date(),
+      signedName: "Held Holly",
+      signatureMethod: "typed_consent",
+      consentedAt: new Date(),
+      signedAt: new Date(),
+      medicalReviewRequired: true,
+      completedAt: new Date(),
+    });
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+    const contacts = table(input, "contacts.csv");
+    const contactRow = contacts.rows.find(
+      (candidate) => candidate[contacts.header.indexOf("email")] === "holly.import@example.com",
+    );
+    expect(contactRow).toBeDefined();
+    // A live referral hold is never mistaken for accepted, even in the flat
+    // migration file — a downstream import must never read it as clearance.
+    expect(contactRow?.[contacts.header.indexOf("waiver_accepted")]).toBe(false);
+  });
+
   it("keeps soft-archived people in the bundle with their deleted_at", async () => {
     const { db, shop } = await seededShopContext();
     const diver = await createDiver(db, {
@@ -437,5 +536,51 @@ describe("export counts (the settings page's cheap view)", () => {
   it("returns null for an unknown shop", async () => {
     const { db } = await seededShopContext();
     expect(await loadShopExportCounts(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+});
+
+describe("photoUrls (ADR 20260724-export-bundled-photos)", () => {
+  it("collects every image URL referenced anywhere in the bundle, deduped and sorted", async () => {
+    const { db, shop } = await seededShopContext();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Photo Person", email: "photo.person@example.com" })
+      .returning();
+    const managedA = "https://xyz.public.blob.vercel-storage.com/cards/a.jpg";
+    const managedB = "https://xyz.public.blob.vercel-storage.com/cards/b.jpg";
+    await db.insert(certifications).values([
+      {
+        shopId: shop.id,
+        personId: diver.id,
+        agency: "padi",
+        level: "open_water",
+        identifier: "PHOTO-1",
+        cardImageUrl: managedA,
+      },
+      {
+        shopId: shop.id,
+        personId: diver.id,
+        agency: "padi",
+        level: "advanced_open_water",
+        identifier: "PHOTO-2",
+        // Same URL again — must be deduped, not fetched/counted twice.
+        cardImageUrl: managedA,
+      },
+    ]);
+    // A card with no image contributes nothing (not null, not undefined).
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: diver.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "PHOTO-3",
+    });
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+    expect(input.photoUrls).toContain(managedA);
+    expect(input.photoUrls.filter((url) => url === managedA)).toHaveLength(1);
+    expect(input.photoUrls).not.toContain(managedB);
+    expect(input.photoUrls).toEqual([...input.photoUrls].sort());
   });
 });

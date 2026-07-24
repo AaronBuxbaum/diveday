@@ -208,18 +208,69 @@ describe("prepareContactImport — safety rules", () => {
     const prepared = prepareContactImport(csv);
     expect(prepared.totals).toMatchObject({ importable: 1, withCard: 1, withNitrox: 1 });
   });
+
+  it("trusts a truthy waiver_accepted and carries the source label and document URLs through", () => {
+    const csv = [
+      "full_name,waiver_accepted,waiver_signed_at,waiver_source_name,waiver_document_url,medical_document_url",
+      "Wanda Waiver,yes,2025-01-15,Old Shop,https://old.example.com/w.jpg,https://old.example.com/m.jpg",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.waiver).toEqual({
+      signedAt: "2025-01-15",
+      sourceLabel: "Old Shop",
+      documentUrl: "https://old.example.com/w.jpg",
+      medicalDocumentUrl: "https://old.example.com/m.jpg",
+    });
+    expect(
+      row.issues.some((i) =>
+        /trusted from the prior shop, including medical clearance/.test(i.message),
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves waiver null when waiver_accepted is absent or falsy", () => {
+    expect(
+      prepareContactImport("full_name,waiver_accepted\nNo Claim,no").rows[0].waiver,
+    ).toBeNull();
+    expect(prepareContactImport("full_name\nNo Column").rows[0].waiver).toBeNull();
+  });
+
+  it("drops an unparseable waiver_signed_at rather than misdating legal evidence", () => {
+    const csv = "full_name,waiver_accepted,waiver_signed_at\nBad Date,yes,not-a-real-date";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.waiver).toMatchObject({ signedAt: null });
+    expect(row.issues.some((i) => /isn't a real calendar date/.test(i.message))).toBe(true);
+  });
+
+  it("rejects an impossible calendar date the same way a malformed one is rejected", () => {
+    const csv = "full_name,waiver_accepted,waiver_signed_at\nFeb Bad,yes,2025-02-31";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.waiver?.signedAt).toBeNull();
+  });
+
+  it("counts waivers only among importable rows", () => {
+    const csv = [
+      "full_name,email,waiver_accepted",
+      "Keep,keep@example.com,yes",
+      ",skip@example.com,yes",
+    ].join("\n");
+    expect(prepareContactImport(csv).totals.withWaiver).toBe(1);
+  });
 });
 
 describe("IMPORT_HONESTY_TABLE", () => {
-  it("states medical, waivers, and payment as never-imported", () => {
+  it("states payment as never-imported", () => {
     const never = IMPORT_HONESTY_TABLE.filter((row) => row.scope === "never").map((r) => r.what);
-    expect(never).toEqual(
-      expect.arrayContaining([
-        "Medical & health history",
-        "Signed waivers",
-        "Card on file / payment",
-      ]),
+    expect(never).toEqual(expect.arrayContaining(["Card on file / payment"]));
+  });
+
+  it("states waiver/medical acceptance as trusted (partial), never claiming full or silent", () => {
+    const waiver = IMPORT_HONESTY_TABLE.find(
+      (r) => r.what === "Signed waivers & medical clearance",
     );
+    expect(waiver?.scope).toBe("partial");
+    expect(waiver?.detail).toMatch(/trust/i);
+    expect(waiver?.detail).toMatch(/imported/i);
   });
 
   it("marks certifications and nitrox partial (claimed, never verified)", () => {

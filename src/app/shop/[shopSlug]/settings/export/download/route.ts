@@ -1,7 +1,12 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportBundleInput } from "@/db/export";
 import { nowDate } from "@/lib/clock";
-import { buildExportBundle, exportFileName, zipExportBundle } from "@/lib/export";
+import {
+  buildExportBundle,
+  exportFileName,
+  fetchExportPhotos,
+  zipExportBundle,
+} from "@/lib/export";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -23,7 +28,12 @@ export async function GET() {
   const input = await loadShopExportBundleInput(db, session.user.shopId, now);
   if (!input) return new Response("Shop not found", { status: 404 });
 
-  const zip = zipExportBundle(buildExportBundle(input, now));
+  const photos = await fetchExportPhotos(input.photoUrls);
+  const files = [
+    ...buildExportBundle(input, now),
+    ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
+  ];
+  const zip = zipExportBundle(files);
   const fileName = exportFileName(input.shopSlug, now, input.timezone);
   return new Response(new Uint8Array(zip), {
     headers: {

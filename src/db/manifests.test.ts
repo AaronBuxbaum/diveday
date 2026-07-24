@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
+import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { getTripManifest, recordRollCall, updateLatestRollCallNote } from "./manifests";
-import { rollCallEvents } from "./schema";
+import { rollCallEvents, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
@@ -63,6 +64,38 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       readiness: { status: "ready" },
       rollCall: { state: "boarded", recordedByName: staff.fullName },
     });
+  });
+
+  it("carries an imported waiver's medical mark onto the manifest, distinctly from a real review (ADR 20260724-import-waiver-acceptance)", async () => {
+    const { db, shop, reef, booking, template } = await manifestContext();
+    const now = nowDate();
+    await db.insert(waiverRecords).values({
+      shopId: shop.id,
+      bookingId: null,
+      personId: booking.person.id,
+      templateId: template.id,
+      templateTitle: template.title,
+      templateVersion: template.version,
+      templateBody: template.body,
+      status: "completed",
+      tokenHash: hashWaiverToken(createWaiverToken()),
+      expiresAt: now,
+      signedName: booking.person.fullName,
+      signatureMethod: "imported",
+      consentedAt: now,
+      signedAt: now,
+      medicalReviewRequired: false,
+      completedAt: now,
+      importedFromLabel: "Old Blue Reef Divers",
+    });
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    // The manifest is the surface a crew reads for a go/no-go call — an
+    // imported acceptance must be visibly distinct from a real DiveDay
+    // review, never folded into the same "digital" label.
+    expect(diver?.medicalWaiver).toMatchObject({ source: "imported" });
+    expect(diver?.readiness.blockers.some((b) => /waiver/i.test(b.message))).toBe(false);
   });
 
   it("allows an explicit not-boarded record but refuses to board blocked evidence", async () => {

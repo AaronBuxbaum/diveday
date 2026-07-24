@@ -1,21 +1,32 @@
 /**
- * Applies a prepared contact import to one shop (ADR 20260723-contact-importer).
- * The safety normalization already happened in src/lib/import.ts — this layer
- * only writes what that plan allows, and never more:
+ * Applies a prepared contact import to one shop (ADR 20260723-contact-importer,
+ * ADR 20260724-import-waiver-acceptance). The safety normalization already
+ * happened in src/lib/import.ts — this layer only writes what that plan
+ * allows, and never more:
  *   - cards insert at the schema default status `pending` (claimed); nothing
  *     here can set `verified`;
  *   - people are matched by email so re-running an import updates rather than
  *     duplicates the roster;
  *   - a card number already on file is left alone, so an import never disturbs
- *     an existing (possibly already-verified) card.
+ *     an existing (possibly already-verified) card;
+ *   - a row claiming a prior waiver acceptance writes an immutable `completed`
+ *     waiver record marked `imported`, snapshotting the shop's current
+ *     template for reference only — never touched if the diver already has
+ *     current signed/medical-review evidence on file.
  * Everything is scoped by the shopId the caller reads from the session, never a
- * URL, and the whole batch commits in one transaction so a preview and its
- * commit describe the same roster.
+ * URL, and the whole batch commits in one transaction (document fetches happen
+ * once, beforehand, outside it) so a preview and its commit describe the same
+ * roster.
  */
 
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { canImportShopData, type Role } from "@/lib/authz";
+import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { PreparedImport, PreparedRow } from "@/lib/import";
+import { storeImportWaiverDocument } from "@/lib/storage";
+import { ingestImageUrl } from "@/lib/storage/ingest-url";
+import { createWaiverToken, hashWaiverToken, isCompletedWaiverCurrent } from "@/lib/waivers";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
   certifications,
@@ -24,7 +35,9 @@ import {
   personRoles,
   rentalFitProfiles,
   userAccounts,
+  waiverRecords,
 } from "./schema";
+import { getCurrentWaiverTemplate } from "./waivers";
 
 export type ImportSummary = {
   peopleCreated: number;
@@ -33,8 +46,92 @@ export type ImportSummary = {
   cardsSkippedExisting: number;
   nitroxAdded: number;
   nitroxSkippedExisting: number;
+  /** Imported as a trusted, completed `imported` waiver record (ADR 20260724-import-waiver-acceptance). */
+  waiversAdded: number;
+  /** The diver already had a current signed/medical-review record on file, untouched. */
+  waiversSkippedExisting: number;
+  /** The shop has no waiver template configured, so there was nothing to snapshot against. */
+  waiversSkippedNoTemplate: number;
+  /** A waiver_document_url / medical_document_url did not fetch/store and was left off the record. */
+  waiverDocumentsFailed: number;
   rowsSkipped: number;
 };
+
+/**
+ * A batch import can carry up to MAX_IMPORT_ROWS (5,000) rows, each with up to
+ * two document URLs — an unbounded `Promise.all` over every fetch at once
+ * would open thousands of simultaneous outbound connections from one staff
+ * submission. Capped low and fixed regardless of row count: this is
+ * resource-exhaustion protection for the server, not a per-shop rate limit.
+ */
+const DOCUMENT_FETCH_CONCURRENCY = 6;
+
+/** Runs `worker` over `items` with at most `concurrency` calls in flight at once. */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function run() {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await worker(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => run()));
+  return results;
+}
+
+/**
+ * Fetches each row's raw waiver_document_url / medical_document_url once,
+ * server-side, and re-stores it in DiveDay's own image storage — the same
+ * SSRF-safe pipeline a staff-pasted dive-site image goes through
+ * (`src/lib/storage/ingest-url.ts`) — before anything is written. Network I/O
+ * on purpose stays outside `commitContactImport`'s transaction; a failed or
+ * unconfigured fetch drops that one document (counted, never fatal to the
+ * row). Fetches run at a bounded concurrency (`DOCUMENT_FETCH_CONCURRENCY`),
+ * never one `Promise.all` per document across the whole batch.
+ */
+async function resolveImportWaiverDocuments(
+  rows: readonly PreparedRow[],
+): Promise<{ rows: PreparedRow[]; documentsFailed: number }> {
+  type DocField = "documentUrl" | "medicalDocumentUrl";
+  const tasks: { rowIndex: number; field: DocField; url: string }[] = [];
+  rows.forEach((row, rowIndex) => {
+    if (!row.waiver) return;
+    if (row.waiver.documentUrl) {
+      tasks.push({ rowIndex, field: "documentUrl", url: row.waiver.documentUrl });
+    }
+    if (row.waiver.medicalDocumentUrl) {
+      tasks.push({ rowIndex, field: "medicalDocumentUrl", url: row.waiver.medicalDocumentUrl });
+    }
+  });
+  if (tasks.length === 0) return { rows: [...rows], documentsFailed: 0 };
+
+  let documentsFailed = 0;
+  const resolved = await mapWithConcurrency(tasks, DOCUMENT_FETCH_CONCURRENCY, async (task) => {
+    const result = await ingestImageUrl(task.url, (upload) => storeImportWaiverDocument(upload));
+    if (result.status === "stored" || result.status === "unchanged") return result.url;
+    documentsFailed += 1;
+    return null;
+  });
+
+  const patchesByRow = new Map<number, Partial<Record<DocField, string | null>>>();
+  tasks.forEach((task, i) => {
+    const patch = patchesByRow.get(task.rowIndex) ?? {};
+    patch[task.field] = resolved[i];
+    patchesByRow.set(task.rowIndex, patch);
+  });
+
+  const rowsOut = rows.map((row, rowIndex) => {
+    const patch = patchesByRow.get(rowIndex);
+    if (!patch || !row.waiver) return row;
+    return { ...row, waiver: { ...row.waiver, ...patch } };
+  });
+  return { rows: rowsOut, documentsFailed };
+}
 
 const cardKey = (agency: string, identifier: string) => `${agency}:${identifier.toLowerCase()}`;
 
@@ -51,8 +148,9 @@ export async function commitContactImport(
   db: AppDb,
   shopId: string,
   prepared: PreparedImport,
+  importedByPersonId: string,
 ): Promise<ImportSummary> {
-  const rows = prepared.rows.filter((row) => row.action === "import");
+  const preparedRows = prepared.rows.filter((row) => row.action === "import");
   const summary: ImportSummary = {
     peopleCreated: 0,
     peopleUpdated: 0,
@@ -60,11 +158,23 @@ export async function commitContactImport(
     cardsSkippedExisting: 0,
     nitroxAdded: 0,
     nitroxSkippedExisting: 0,
-    rowsSkipped: prepared.rows.length - rows.length,
+    waiversAdded: 0,
+    waiversSkippedExisting: 0,
+    waiversSkippedNoTemplate: 0,
+    waiverDocumentsFailed: 0,
+    rowsSkipped: prepared.rows.length - preparedRows.length,
   };
-  if (rows.length === 0) return summary;
+  if (preparedRows.length === 0) return summary;
+
+  const { rows, documentsFailed } = await resolveImportWaiverDocuments(preparedRows);
+  summary.waiverDocumentsFailed = documentsFailed;
+  const now = nowDate();
 
   return db.transaction(async (tx) => {
+    const template = rows.some((row) => row.waiver)
+      ? await getCurrentWaiverTemplate(tx, shopId)
+      : null;
+
     // Match existing divers by email so a re-import updates the roster instead
     // of minting a second person row (and orphaning the first's cards, waivers,
     // and fit). Emails were lower-cased and de-duplicated in prepare.
@@ -220,6 +330,75 @@ export async function commitContactImport(
             identifier: row.nitrox.identifier,
           });
           summary.nitroxAdded += 1;
+        }
+      }
+
+      // Trusted acceptance (ADR 20260724-import-waiver-acceptance): only when
+      // the row claimed one, the shop has a template to snapshot, and the
+      // diver has no *current* evidence already — an import must never
+      // disturb or duplicate evidence already on file, the same rule the
+      // cert/nitrox blocks above follow. A live medical_review hold always
+      // wins regardless of age: it is an unresolved referral block, and an
+      // import must never be able to silently out-date it with a newer-dated
+      // "clean" record (effectiveWaiverForBooking picks whichever of a hold
+      // and a clean signature is more recent, so an import naively treated as
+      // "already current" or freely insertable could otherwise clear a diver
+      // who currently has a pending physician review). A *stale, expired*
+      // completed record does not block the import — the diver already needs
+      // a fresh signature per the shop's own currency rule, so a row with a
+      // more current claim should fill that gap, not be silently dropped.
+      if (row.waiver) {
+        if (!template) {
+          summary.waiversSkippedNoTemplate += 1;
+        } else {
+          const existingRecords = await tx
+            .select()
+            .from(waiverRecords)
+            .where(
+              and(
+                eq(waiverRecords.shopId, shopId),
+                eq(waiverRecords.personId, personId),
+                inArray(waiverRecords.status, ["completed", "medical_review"]),
+                isNull(waiverRecords.supersededAt),
+              ),
+            );
+          const hasActiveHold = existingRecords.some((r) => r.status === "medical_review");
+          const hasCurrentCompleted = existingRecords.some(
+            (r) => r.status === "completed" && isCompletedWaiverCurrent(r, template.version, now),
+          );
+          if (hasActiveHold || hasCurrentCompleted) {
+            summary.waiversSkippedExisting += 1;
+          } else {
+            const signedAt = row.waiver.signedAt
+              ? calendarDateToUtcMidnight(row.waiver.signedAt)
+              : now;
+            await tx.insert(waiverRecords).values({
+              shopId,
+              bookingId: null,
+              personId,
+              templateId: template.id,
+              templateTitle: template.title,
+              templateVersion: template.version,
+              templateBody: template.body,
+              status: "completed",
+              // No link is ever handed out for an imported record; a random
+              // unusable hash keeps the unique token column satisfied without
+              // granting bearer access (mirrors recordInPersonWaiver).
+              tokenHash: hashWaiverToken(createWaiverToken()),
+              expiresAt: now,
+              signedName: row.fullName,
+              signatureMethod: "imported",
+              recordedByPersonId: importedByPersonId,
+              consentedAt: signedAt,
+              signedAt,
+              medicalReviewRequired: false,
+              completedAt: now,
+              importedFromLabel: row.waiver.sourceLabel,
+              importSourceDocumentUrl: row.waiver.documentUrl,
+              importSourceMedicalDocumentUrl: row.waiver.medicalDocumentUrl,
+            });
+            summary.waiversAdded += 1;
+          }
         }
       }
     }

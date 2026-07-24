@@ -241,6 +241,21 @@ export async function storeDiveSiteImage(
   return storeImage({ ...upload, keyPrefix: "dive-sites" }, MAX_DIVE_SITE_IMAGE_BYTES, provider);
 }
 
+/**
+ * Store a contact-import waiver or medical document scan. Same validation as
+ * the others, its own `import-waivers` key prefix so imported evidence never
+ * shares a namespace with a card, brochure, or diver's own recap photo. Only
+ * called from the server-side commit path (`src/db/import.ts`), on a URL a
+ * staff member pasted into an import row — never rendered from that raw URL
+ * directly (ADR 20260724-import-waiver-acceptance).
+ */
+export async function storeImportWaiverDocument(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "import-waivers" }, MAX_IMAGE_BYTES, provider);
+}
+
 async function storeImage(
   upload: ImageUpload,
   maxBytes: number,
