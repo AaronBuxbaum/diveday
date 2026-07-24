@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { redirect } from "next/navigation";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { requireStaffSession } from "@/lib/session";
@@ -19,19 +20,7 @@ export default async function DataExportPage() {
 
   // Checked against the database, not the JWT — see the download route.
   if (!(await canPersonExportShopData(db, session.user.shopId, session.user.personId))) {
-    return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader
-          eyebrow="Settings"
-          title="Data export"
-          description="Download everything this shop keeps in DiveDay as plain CSV files."
-        />
-        <ShopNotice tone="warning" role="status">
-          The full export includes every diver's contact details and signed medical forms, so it's
-          limited to the shop's owner or manager. Ask them to run it if you need a copy.
-        </ShopNotice>
-      </main>
-    );
+    redirect(`/shop/${session.user.shopSlug}`);
   }
 
   const families = await loadShopExportCounts(db, session.user.shopId);

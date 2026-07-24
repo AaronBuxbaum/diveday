@@ -2,20 +2,22 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { searchShopAction } from "@/app/actions/search";
 import type { SearchResults } from "@/db/search";
 
 type PaletteItem = { key: string; label: string; detail?: string; href: string };
 type PaletteGroup = { heading: string; items: PaletteItem[] };
 
-const GO_TO: { label: string; suffix: string }[] = [
+const BASE_GO_TO: { label: string; suffix: string }[] = [
   { label: "Today", suffix: "" },
   { label: "Blockers", suffix: "/blockers" },
   { label: "Schedule", suffix: "/schedule" },
   { label: "Divers", suffix: "/divers" },
-  { label: "Waivers", suffix: "/waivers" },
   { label: "Settings", suffix: "/settings" },
 ];
+
+const WAIVERS_GO_TO = { label: "Waivers", suffix: "/waivers" };
 
 const EMPTY: SearchResults = { divers: [], trips: [] };
 
@@ -29,9 +31,11 @@ const EMPTY: SearchResults = { divers: [], trips: [] };
 export function CommandPalette({
   shopSlug,
   boatBoardingHref,
+  canViewWaivers,
 }: {
   shopSlug: string;
   boatBoardingHref?: string;
+  canViewWaivers: boolean;
 }) {
   const router = useRouter();
   const listId = useId();
@@ -91,7 +95,8 @@ export function CommandPalette({
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
       goto.push({ key: "goto:boarding", label: "Boarding — today's boat", href: boatBoardingHref });
     }
-    for (const entry of GO_TO) {
+    const goTo = canViewWaivers ? [...BASE_GO_TO, WAIVERS_GO_TO] : BASE_GO_TO;
+    for (const entry of goTo) {
       if (q === "" || entry.label.toLowerCase().includes(q)) {
         goto.push({
           key: `goto:${entry.suffix}`,
@@ -125,7 +130,7 @@ export function CommandPalette({
     }
     if (goto.length > 0) out.push({ heading: "Go to", items: goto });
     return out;
-  }, [results, query, boatBoardingHref, root]);
+  }, [results, query, boatBoardingHref, root, canViewWaivers]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
@@ -189,82 +194,89 @@ export function CommandPalette({
         </kbd>
       </button>
 
-      {open ? (
-        // Click-away backdrop; Escape and the toggle button also close it.
-        // biome-ignore lint/a11y/noStaticElementInteractions: presentational backdrop
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/30 px-4 pt-[12vh] backdrop-blur-sm"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
-        >
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-            <input
-              ref={inputRef}
-              type="text"
-              role="combobox"
-              aria-expanded="true"
-              aria-controls={listId}
-              aria-activedescendant={activeKey ? `${listId}-${activeKey}` : undefined}
-              aria-label="Search divers, trips, and pages"
-              autoComplete="off"
-              placeholder="Search divers, trips, or jump to a page…"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setActive(0);
+      {open
+        ? createPortal(
+            // The header this button lives in has `backdrop-blur`, which makes it a
+            // containing block for `position: fixed` descendants — a portal escapes
+            // that so the backdrop covers the full viewport instead of just the
+            // header's own box.
+            // Click-away backdrop; Escape and the toggle button also close it.
+            // biome-ignore lint/a11y/noStaticElementInteractions: presentational backdrop
+            <div
+              className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/30 px-4 pt-[12vh] backdrop-blur-sm"
+              role="presentation"
+              onClick={(event) => {
+                if (event.target === event.currentTarget) setOpen(false);
               }}
-              onKeyDown={onKeyDown}
-              className="w-full border-b border-border bg-transparent px-5 py-4 text-base outline-none placeholder:text-muted"
-            />
-            <div id={listId} role="listbox" className="max-h-[60vh] overflow-y-auto py-2">
-              {flat.length === 0 ? (
-                <p className="px-5 py-6 text-center text-sm text-muted">
-                  {query.trim().length < 2
-                    ? "Type to search people and trips, or jump to a page."
-                    : "No matches. Try a name, email, or trip title."}
-                </p>
-              ) : (
-                groups.map((group) => (
-                  <div key={group.heading}>
-                    <p className="px-5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted uppercase">
-                      {group.heading}
+            >
+              <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  role="combobox"
+                  aria-expanded="true"
+                  aria-controls={listId}
+                  aria-activedescendant={activeKey ? `${listId}-${activeKey}` : undefined}
+                  aria-label="Search divers, trips, and pages"
+                  autoComplete="off"
+                  placeholder="Search divers, trips, or jump to a page…"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setActive(0);
+                  }}
+                  onKeyDown={onKeyDown}
+                  className="w-full border-b border-border bg-transparent px-5 py-4 text-base outline-none placeholder:text-muted"
+                />
+                <div id={listId} role="listbox" className="max-h-[60vh] overflow-y-auto py-2">
+                  {flat.length === 0 ? (
+                    <p className="px-5 py-6 text-center text-sm text-muted">
+                      {query.trim().length < 2
+                        ? "Type to search people and trips, or jump to a page."
+                        : "No matches. Try a name, email, or trip title."}
                     </p>
-                    {group.items.map((item) => {
-                      const isActive = item.key === activeKey;
-                      return (
-                        <button
-                          key={item.key}
-                          id={`${listId}-${item.key}`}
-                          type="button"
-                          role="option"
-                          aria-selected={isActive}
-                          tabIndex={-1}
-                          onMouseMove={() =>
-                            setActive(flat.findIndex((entry) => entry.key === item.key))
-                          }
-                          onClick={() => go(item)}
-                          className={`flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left ${
-                            isActive ? "bg-primary/10" : ""
-                          }`}
-                        >
-                          <span className="min-w-0 truncate font-medium">{item.label}</span>
-                          {item.detail ? (
-                            <span className="shrink-0 truncate text-sm text-muted">
-                              {item.detail}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+                  ) : (
+                    groups.map((group) => (
+                      <div key={group.heading}>
+                        <p className="px-5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted uppercase">
+                          {group.heading}
+                        </p>
+                        {group.items.map((item) => {
+                          const isActive = item.key === activeKey;
+                          return (
+                            <button
+                              key={item.key}
+                              id={`${listId}-${item.key}`}
+                              type="button"
+                              role="option"
+                              aria-selected={isActive}
+                              tabIndex={-1}
+                              onMouseMove={() =>
+                                setActive(flat.findIndex((entry) => entry.key === item.key))
+                              }
+                              onClick={() => go(item)}
+                              className={`flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left ${
+                                isActive ? "bg-primary/10" : ""
+                              }`}
+                            >
+                              <span className="min-w-0 truncate font-medium">{item.label}</span>
+                              {item.detail ? (
+                                <span className="shrink-0 truncate text-sm text-muted">
+                                  {item.detail}
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

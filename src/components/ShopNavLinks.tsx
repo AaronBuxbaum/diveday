@@ -16,15 +16,23 @@ const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
   { label: "Schedule", suffix: "/schedule", alsoMatch: "/trips" },
 ];
 
-const moreLinks = [
-  ["Dive sites", "/dive-sites"],
-  ["Courses", "/courses"],
-  ["Waivers", "/waivers"],
-  ["Reports", "/reports"],
-  ["Settings", "/settings"],
-  ["Import contacts", "/settings/import"],
-  ["Data export", "/settings/export"],
-] as const;
+/** Owner/manager surfaces (H-14) carry a gate key; everyone else always sees the link. */
+export type ShopNavGates = {
+  waivers: boolean;
+  reports: boolean;
+  import: boolean;
+  export: boolean;
+};
+
+const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
+  { label: "Dive sites", suffix: "/dive-sites" },
+  { label: "Courses", suffix: "/courses" },
+  { label: "Waivers", suffix: "/waivers", gate: "waivers" },
+  { label: "Reports", suffix: "/reports", gate: "reports" },
+  { label: "Settings", suffix: "/settings" },
+  { label: "Import contacts", suffix: "/settings/import", gate: "import" },
+  { label: "Data export", suffix: "/settings/export", gate: "export" },
+];
 
 function isCurrent(pathname: string, href: string, root: string) {
   return href === root ? pathname === root : pathname === href || pathname.startsWith(`${href}/`);
@@ -34,11 +42,20 @@ function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
 
-export function ShopNavLinks({ root, className = "" }: { root: string; className?: string }) {
+export function ShopNavLinks({
+  root,
+  gates,
+  className = "",
+}: {
+  root: string;
+  gates: ShopNavGates;
+  className?: string;
+}) {
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const moreIsActive = moreLinks.some(([, suffix]) =>
-    isCurrent(pathname, `${root}${suffix}`, root),
+  const visibleMoreLinks = moreLinks.filter((link) => !link.gate || gates[link.gate]);
+  const moreIsActive = visibleMoreLinks.some((link) =>
+    isCurrent(pathname, `${root}${link.suffix}`, root),
   );
   const closeMore = () => {
     if (detailsRef.current) {
@@ -89,7 +106,7 @@ export function ShopNavLinks({ root, className = "" }: { root: string; className
         </summary>
         {/* One column, one link per row — a two-column grid wrapped short labels onto two lines. */}
         <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-2xl border border-border bg-surface p-2 shadow-xl">
-          {moreLinks.map(([label, suffix]) => {
+          {visibleMoreLinks.map(({ label, suffix }) => {
             const href = `${root}${suffix}`;
             const active = isCurrent(pathname, href, root);
             return (

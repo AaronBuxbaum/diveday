@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { redirect } from "next/navigation";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData } from "@/db/import";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
@@ -33,19 +34,7 @@ export default async function ImportContactsPage({
   const db = await getDb();
 
   if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
-    return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader
-          eyebrow="Settings"
-          title="Import contacts"
-          description="Bring your divers, cards, and rental sizes in from a CSV."
-        />
-        <ShopNotice tone="warning">
-          Importing writes to the whole roster, so it's limited to the shop's owner or manager. Ask
-          them to run it if you have a file to bring in.
-        </ShopNotice>
-      </main>
-    );
+    redirect(`/shop/${shopSlug}`);
   }
 
   return (
