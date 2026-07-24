@@ -33,18 +33,19 @@ export type ExportStep = {
 /**
  * Optional "works alongside" framing, for an incumbent that is a booking and
  * distribution *channel* rather than a records system to leave outright (today:
- * FareHarbor — a general tours-and-activities booking engine, owned by Booking
- * Holdings, that a dive shop bolts a storefront onto). It is the same "bring
- * your POS, we run the water" division of labor the product page already draws,
- * extended to a booking channel: keep the incumbent for the storefront it's
- * genuinely good at, run the dive day it was never built for in DiveDay.
+ * FareHarbor and Rezdy — general tours-and-activities booking engines a dive
+ * shop bolts a storefront onto). It is the same "bring your POS, we run the
+ * water" division of labor the product page already draws, extended to a booking
+ * channel: keep the incumbent for the storefront it's genuinely good at, run the
+ * dive day it was never built for in DiveDay.
  *
  * Honesty guardrails baked into the shape (marketing.md): there is no
  * integration between DiveDay and any such channel, so `bridgeNote` must state
  * plainly that the CSV import below is the only bridge — never imply a live
  * sync. `runsInDiveDay` items are shipped-only, demonstrable in the live demo.
  * When this field is absent a guide is a straight leave-it migration like the
- * other four.
+ * records-system guides. Candidates for the next channel guides are surveyed in
+ * docs/product/assessments/switching-guide-landscape.md.
  */
 export type CoexistFraming = {
   /** Section heading — coexist-led, the day the incumbent can't run. */
@@ -84,8 +85,8 @@ export type MigrationGuide = {
 
   /**
    * Optional coexist framing, for a booking/distribution channel a shop can
-   * keep rather than a records system to leave (today: FareHarbor). Rendered as
-   * a section above the export steps; absent for the straight leave-it guides.
+   * keep rather than a records system to leave (today: FareHarbor, Rezdy).
+   * Rendered as a section above the export steps; absent for the leave-it guides.
    */
   coexist?: CoexistFraming;
 
@@ -513,15 +514,147 @@ const fareharbor: MigrationGuide = {
   ],
 };
 
+const rezdy: MigrationGuide = {
+  slug: "rezdy",
+  competitor: "Rezdy",
+  cardSummary:
+    "A general tours booking platform with a big reseller marketplace — not dive software. Keep it for distribution and run the dive day it can't, or leave the monthly fee plus per-booking cut behind. Either way, bring your divers across.",
+
+  metaTitle: "Rezdy and DiveDay — run the dive day, or switch",
+  metaDescription:
+    "On Rezdy? Keep its reseller marketplace and run the dive day it was never built for — cert checks, waivers, and the roll-call manifest — or leave the monthly subscription and per-booking fee behind. Bring your divers across, with an honest account of what comes with them.",
+
+  heroEyebrow: "Rezdy + DiveDay",
+  heroTitle: "Rezdy sells the seats. DiveDay runs the boat.",
+  heroLede:
+    "Rezdy takes the online booking and pushes your trips out to its reseller marketplace and the big OTAs — and then the dive day still runs on a clipboard, because a general booking engine was never built for cards, waivers, or a roll call on the water. Here's how DiveDay runs that day: keep Rezdy for the storefront, or leave the monthly-fee-plus-per-booking-cut behind and take the booking here too. Either way, bringing your divers across is the same few minutes.",
+
+  context: [
+    "Rezdy is an online booking platform for tours, activities, and experiences — built in Australia, now part of a group with Checkfront and Regiondo under a private-equity-backed parent. Plenty of dive shops run their storefront on it, and it's genuinely good at that job: guests book and pay online, and its channel manager pushes your trips out to a marketplace of resellers and OTAs — GetYourGuide, Viator, Expedia, Google Things to Do — that you'd struggle to reach on your own. We're not here to talk you out of any of that.",
+    "What it isn't is dive software. Rezdy publishes no certification gating, no dive-medical waivers, no boat manifest built for a roll call, and no rental-gear fit — because it's a general booking engine, not a dive shop's back office. Selling a course as a bookable product isn't the same as tracking whether the diver in front of you is actually carded for the dive. So your guests book beautifully, and then the part that keeps people safe on the water still runs on a clipboard.",
+    "The storefront isn't free either: Rezdy charges a monthly subscription plus a cut of every online booking (3% on its current published pricing, with a no-monthly-fee option that still takes the 3%). To its credit, Rezdy doesn't lock you in — no setup fee, no contract, a self-serve CSV export, and an API you can turn on yourself. That's a fair way to treat your data, and it's exactly what makes running DiveDay alongside Rezdy — or moving off it entirely — a low-risk decision rather than a fight.",
+    "So there are two honest ways DiveDay fits a Rezdy shop, below: keep Rezdy for the storefront and add the dive day it can't run, or take the booking in DiveDay too and leave the monthly fee and the per-booking cut behind. Whichever you pick, you bring your divers across the same way — and the safety spine holds either way.",
+  ],
+
+  coexist: {
+    heading: "Keep Rezdy. Add the day it can't run.",
+    intro:
+      'DiveDay runs the water side — everything between "booked" and "back at the dock" that a booking engine was never built to touch. Point-for-point, this is what Rezdy leaves to your clipboard:',
+    runsInDiveDay: [
+      {
+        title: "Readiness that won't let an unready diver board",
+        detail:
+          "The trip and the dive site decide what each diver needs; if a card or waiver can't be verified, DiveDay says so plainly instead of passing them through. Rezdy takes the booking — it never checks whether the diver is cleared to get on the boat.",
+      },
+      {
+        title: "Certification checks that actually gate the dive",
+        detail:
+          "Every card is captured pending and verified by your staff, never trusted on sight; a deep dive won't clear a diver who isn't carded for it, and a nitrox request gets plain air until staff verify the card. A general booking engine has no concept of a C-card.",
+      },
+      {
+        title: "Native waivers with medical review — in every tier",
+        detail:
+          "Waivers are built in and versioned against your own release, and a medical answer that calls for a physician's sign-off blocks the diver until that review — it doesn't just warn. Not a form stapled to a checkout, and not a paid add-on.",
+      },
+      {
+        title: "A roll-call manifest that survives the dock",
+        detail:
+          "Big Boarded / Not-boarded buttons for wet thumbs, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp.",
+      },
+      {
+        title: "Rental fit and the trip's packing list",
+        detail:
+          "Every diver's sizes become the boat's kit list, with a tank per diver per dive split by air and nitrox. Rezdy doesn't know a diver's wetsuit size.",
+      },
+      {
+        title: "The night-before brief and a recap they share",
+        detail:
+          "Each diver gets a plain-language brief the night before — dock time, conditions, what to bring — and a shareable recap page after. The booking confirmation was the start; this is the rest of the relationship.",
+      },
+    ],
+    bridgeNote:
+      "Rezdy keeps doing what it's good at — taking the online booking and pushing your trips to its reseller marketplace and the OTAs, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two systems: you bring your divers into DiveDay with the CSV export below, and re-import as your roster grows. What you get back for that is the dive day itself.",
+    replace: {
+      heading: "Or leave the monthly fee and the per-booking cut behind.",
+      body: "If you're not leaning on Rezdy's marketplace, you're paying a monthly subscription and a slice of every booking for a storefront you could run here. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, and the same native waivers. And Rezdy makes this easy on you — no lock-in contract, a self-serve CSV export, an API you can turn on yourself — so bringing your divers across and pointing your booking link at DiveDay is a clean move, not a fight. The steps below are the same either way.",
+    },
+  },
+
+  exportHeading: "Get your data out of Rezdy",
+  exportIntro:
+    "Rezdy runs in a browser, and — to its credit — it's open about letting your data out as CSV. The goal is your people as a spreadsheet. Menu labels shift between updates and Rezdy's own help centre is the authoritative source for the exact path, so treat these as the shape of it, not word-for-word buttons.",
+  exportSteps: [
+    {
+      title: "Sign into your Rezdy dashboard as an owner or manager",
+      detail:
+        "Reports and your customer list live in the dashboard, behind an owner or manager login.",
+    },
+    {
+      title: "Open the Sales / Orders report (or Reports → Data export)",
+      detail:
+        "Rezdy's Orders report lists your bookings and the customers on them; the newer Data export covers the same ground. Either one is a route to your people.",
+    },
+    {
+      title: "Set the date range wide and export to CSV",
+      detail:
+        "Set the range as wide as it goes so a slow season isn't left behind, then use Export to CSV. Rezdy's export includes every column, not just the ones shown on screen.",
+    },
+    {
+      title: "Or export your customer list directly",
+      detail:
+        "Rezdy has customer-list import/export tooling, so your contacts can come out as their own spreadsheet — whichever is cleaner for you. Save the file where you'll find it.",
+    },
+    {
+      title: "Prefer the API? It's yours to turn on",
+      detail:
+        "Unlike some booking platforms, Rezdy lets an operator request an API key from Integrations → Rezdy API inside the app. You don't need it for this move — the CSV is enough — but it's there, and it's a fair sign of how open Rezdy is with your data.",
+    },
+  ],
+  exportNotes: [
+    "Rezdy doesn't lock your data in — no setup fee, no contract, self-serve CSV export and an operator API. Confirm the exact menu path against Rezdy's own help centre, since labels shift between updates.",
+    "Your column headings don't have to match anything. DiveDay recognizes the common names Rezdy and every other system use, and shows you exactly how each column mapped before you commit.",
+    "Certification cards and rental sizes aren't in a Rezdy export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
+  ],
+  importerNote:
+    "A Rezdy export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the customer or Orders file; DiveDay matches divers by email, so a later re-import updates the same people instead of duplicating them.",
+  sources: [
+    {
+      label: "Rezdy — booking software for tours & activities",
+      url: "https://rezdy.com/booking-software/",
+    },
+    {
+      label: "Rezdy Channel Manager — the reseller marketplace",
+      url: "https://rezdy.com/channel-manager/",
+    },
+    {
+      label: "Rezdy pricing — subscription plus a per-booking fee",
+      url: "https://rezdy.com/pricing/",
+    },
+    {
+      label: "Rezdy Help — the Sales / Orders report and its CSV export",
+      url: "https://support.rezdy.com/hc/en-us/articles/203690794-How-To-Use-the-Sales-Orders-Report",
+    },
+    {
+      label: "Rezdy developer docs — the operator-accessible API",
+      url: "https://developers.rezdy.com/",
+    },
+    {
+      label: "Rezdy, Checkfront & Regiondo join one group (2023)",
+      url: "https://rezdy.com/blog/rezdy-checkfront-regiondo/",
+    },
+  ],
+};
+
 /**
  * Every guide in this registry is a real, published page — there are no
  * roadmap or "coming soon" entries (marketing claims policy in
  * docs/product/marketing.md is shipped-only). A future incumbent gets an entry
  * here, and a route, only once its export click-path is real.
  *
- * Most entries are a straight leave-it migration; FareHarbor additionally
- * carries a `coexist` block because it's a booking/distribution channel a shop
- * can keep, not a records system to leave — see CoexistFraming above.
+ * Most entries are a straight leave-it migration; the booking-channel guides
+ * (FareHarbor, Rezdy) additionally carry a `coexist` block, because a channel is
+ * something a shop can keep and run DiveDay alongside, not a records system to
+ * leave — see CoexistFraming above.
  */
 export const MIGRATION_GUIDES: MigrationGuide[] = [
   eve,
@@ -529,6 +662,7 @@ export const MIGRATION_GUIDES: MigrationGuide[] = [
   diveadmin,
   smartwaiver,
   fareharbor,
+  rezdy,
 ];
 
 /** Slugs with a page — the source for generateStaticParams and route validity. */
