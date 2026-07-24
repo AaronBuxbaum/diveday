@@ -57,6 +57,8 @@ export const earlyAccessPrice = {
     "Every staff role, from front desk to captain, in one place",
     "New features as they ship, all through early access",
     "A practice shop preloaded with realistic trips to train on",
+    "Today's price, locked for two years — no surprise increases while you help shape what ships next",
+    "A founder-direct line for support — write in, hear back the same day",
   ],
 } as const;
 
