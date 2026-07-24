@@ -75,34 +75,29 @@ describe("rental pricing", () => {
     );
   });
 
-  it("bills the full core kit — including the dive computer — at the cheaper set price", () => {
+  it("bills the five core items at the set price and the dive computer as its own line", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
     });
-    expect(quote.lines).toEqual([{ kind: "set", label: "Full rental set", cents: 4500 }]);
-    expect(quote.subtotalCents).toBe(4500);
+    // The computer is default-on but priced separately, never folded into the set.
+    expect(quote.lines.map((line) => line.kind)).toEqual(["set", "dive_computer"]);
+    expect(quote.subtotalCents).toBe(4500 + 1000);
     expect(quote.unpricedKinds).toEqual([]);
   });
 
-  it("bills the core five per piece when the shop offers a computer the diver skips", () => {
+  it("keeps the full-set discount when the diver skips the offered computer", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
     });
-    // The dive computer is part of the offered set, so five core items is a partial kit.
-    expect(quote.lines.map((line) => line.kind)).toEqual([
-      "bcd",
-      "regulator",
-      "wetsuit",
-      "mask_fins",
-      "weights",
-    ]);
-    expect(quote.subtotalCents).toBe(1500 + 1500 + 1200 + 800 + 500);
+    // The computer isn't part of the set, so an own-computer diver still gets the set price.
+    expect(quote.lines).toEqual([{ kind: "set", label: "Full rental set", cents: 4500 }]);
+    expect(quote.subtotalCents).toBe(4500);
   });
 
   it("still reaches the set with five core items when the shop doesn't stock a computer", () => {
@@ -143,9 +138,14 @@ describe("rental pricing", () => {
       wantsNitrox: true,
       plannedDives: 3,
     });
-    expect(quote.lines.map((line) => line.kind)).toEqual(["set", "gopro", "nitrox"]);
-    // set 4500 + gopro 2000 + nitrox 1000 × 3 dives
-    expect(quote.subtotalCents).toBe(4500 + 2000 + 3000);
+    expect(quote.lines.map((line) => line.kind)).toEqual([
+      "set",
+      "dive_computer",
+      "gopro",
+      "nitrox",
+    ]);
+    // set 4500 + dive computer 1000 + gopro 2000 + nitrox 1000 × 3 dives
+    expect(quote.subtotalCents).toBe(4500 + 1000 + 2000 + 3000);
   });
 
   it("falls back to per-piece when the shop has no set price", () => {
