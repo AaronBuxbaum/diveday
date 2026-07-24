@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-005)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-005)
 found that `startBookingCheckout`, `createOrder`, and `refundOrder` call Stripe *before* any durable
 local row exists to describe the attempt — the local `booking_checkouts`/`orders` insert only
 happens after Stripe responds. A crash between the two leaves a real Stripe object (a Checkout

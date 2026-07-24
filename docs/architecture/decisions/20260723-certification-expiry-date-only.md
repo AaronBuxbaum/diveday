@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-009)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-009)
 found that certification and specialty-card expiry was captured as a date-only input but persisted
 and interpreted as a UTC timestamp fixed at `T23:59:59.999Z`. In a negative UTC offset (e.g.
 `America/St_Thomas`, UTC-4) that instant falls hours before the shop's own local day ends, so a

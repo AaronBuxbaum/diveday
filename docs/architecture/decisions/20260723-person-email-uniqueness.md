@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-008)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-008)
 found that booking, wait-list, staff diver-creation, and CSV import all matched a person by
 `(shop_id, email)` with a plain read-then-write: select for an existing active row, insert one if
 none exists. Nothing in the database enforced uniqueness. Two concurrent writers for the same

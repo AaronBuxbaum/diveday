@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-011)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-011)
 found that every upload surface — card/specialty capture, course hero and gallery photos, recap
 photos — validates and promises a 5 MB image (`MAX_CARD_IMAGE_BYTES` and siblings in
 `src/lib/storage/index.ts`, and matching UI copy going back to
@@ -115,7 +115,7 @@ tenant-isolation or authorization regression, confirmed every client-side check 
 check is correctly ordered (before any upload attempt) and scoped (new files only). Its one
 substantive note was on the recap-endpoint tradeoff two bullets up: **this paragraph is that
 tracked dependency**, not just a narrative mention — CR-013 ("Put abuse controls on public write
-boundaries," `docs/product/assessments/codebase-review-20260723.md`) is the ticket responsible for
+boundaries," `docs/product/archive/codebase-review-20260723.md`) is the ticket responsible for
 closing it, and whoever picks up CR-013 should read this ADR first. The reviewer also suggested a
 cheaper interim mitigation worth recording rather than building under this ticket's scope: move
 `uploadRecapPhotoAction` off the shared Server Action body limit entirely by rewriting it as its
