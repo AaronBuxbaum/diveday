@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-020)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-020)
 found that dive-site `satelliteImageUrl`, `routeImageUrl`, and the `imageUrls` gallery accepted
 any HTTP(S) URL and rendered it directly on public dive-site/trip pages
 (`src/components/DiveBriefingCard.tsx`) — a staff-selected third-party host could observe every

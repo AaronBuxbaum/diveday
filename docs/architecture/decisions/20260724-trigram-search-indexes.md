@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-018)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-018)
 found that the command palette (`src/db/search.ts`) and diver roster/booking picker
 (`src/db/divers.ts`) both search with a leading-wildcard `ilike '%query%'`, while their own
 comments claimed the columns were "indexed `ilike`." No such index existed — a plain btree index

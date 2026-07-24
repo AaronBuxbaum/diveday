@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-013)
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-013)
 found that onboarding (account/shop creation plus password hashing), sign-in, recap uploads,
 wait-list joins, bookings, and every action behind a booking capability token had no centralized
 per-source abuse control. PR #139 explicitly deferred per-token/IP recap limits at the time.

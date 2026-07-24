@@ -5,7 +5,7 @@
 
 ## Context
 
-[The 2026-07-23 codebase review](../../product/assessments/codebase-review-20260723.md) (CR-002,
+[The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-002,
 CR-003) found that `/ready/[token]` granted write authority — issue waivers, overwrite emergency
 contacts and rental fit, toggle nitrox, start payment — through a stateless HMAC-signed token
 (`src/lib/readiness-links.ts`) with no expiry and no way to revoke it: a leaked historical URL kept
