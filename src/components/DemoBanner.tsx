@@ -10,6 +10,11 @@ interface DemoBannerProps {
   shopSlug: string;
   /** Roles that have a seeded person in this shop; others are hidden. */
   availableRoles: string[];
+  /**
+   * A per-visitor minted demo (not the shared fixture): addressable by slug and
+   * readable by anyone who has it, so it shows a "don't enter real data" notice.
+   */
+  isMintedDemo?: boolean;
 }
 
 const ROLES_INFO = [
@@ -60,6 +65,7 @@ export function DemoBanner({
   currentName,
   shopSlug,
   availableRoles,
+  isMintedDemo = false,
 }: DemoBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -121,6 +127,13 @@ export function DemoBanner({
             </form>
           </div>
         </div>
+
+        {isMintedDemo ? (
+          <p className="mt-2 text-xs text-muted">
+            This demo is open to anyone with its link — explore freely, but don&apos;t enter real
+            customer details.
+          </p>
+        ) : null}
 
         {/* Expandable Role Switched Panel */}
         {isExpanded ? (

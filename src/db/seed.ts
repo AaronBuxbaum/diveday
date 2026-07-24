@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import { and, eq, inArray, lt, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
@@ -279,6 +279,13 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
 export async function createDemoShop(
   db: DbExecutor,
 ): Promise<{ slug: string; ownerEmail: string }> {
+  // Aggregate storage cap (security review, finding 1): the per-IP rate limit
+  // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
+  // attacker could pile up minted shops between 7-day reaper passes. Before
+  // minting, evict the oldest minted demos so the live count never exceeds the
+  // ceiling — the canonical demo and real shops are never eligible (see below).
+  await enforceMintedDemoCap(db);
+
   const identity = generateDemoShopIdentity();
 
   const [shop] = await db
@@ -2387,4 +2394,37 @@ export async function purgeMintedDemoShops(db: AppDb): Promise<number> {
     await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
   }
   return minted.length;
+}
+
+/**
+ * Hard ceiling on how many minted demo shops may exist at once — the aggregate
+ * bound the per-IP rate limit can't provide (security review, finding 1).
+ * `DEMO_SHOP_MAX_LIVE` overrides it; a non-positive or non-numeric value keeps
+ * the default.
+ */
+export const DEFAULT_DEMO_SHOP_MAX_LIVE = 200;
+
+function mintedDemoCap(): number {
+  const configured = Number(process.env.DEMO_SHOP_MAX_LIVE);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_DEMO_SHOP_MAX_LIVE;
+}
+
+/**
+ * Evict the oldest minted demos until there is room for one more under the cap.
+ * Only minted demos are ever eligible — the canonical blue-mantis demo (by slug)
+ * and every real shop (`isDemo:false`) are excluded, so this can never delete a
+ * real tenant. Runs inside the caller's transaction so the eviction and the new
+ * mint commit together.
+ */
+export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
+  const cap = mintedDemoCap();
+  const live = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
+    .orderBy(asc(shops.createdAt));
+  const toEvict = live.length - (cap - 1);
+  for (let i = 0; i < toEvict; i++) {
+    await deleteDemoShopCascade(db, live[i].id);
+  }
 }

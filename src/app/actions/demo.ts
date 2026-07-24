@@ -43,7 +43,22 @@ export async function enterDemoAction(formData?: FormData) {
   }
 
   const db = await getDb();
-  const { slug, ownerEmail } = await db.transaction(async (tx) => createDemoShop(tx));
+  // Retry once on the astronomically-rare generated-slug/email collision
+  // (23505) so it degrades to a fresh identity rather than a 500 (security
+  // review, minor). createDemoShop never redirects, so nothing here swallows a
+  // NEXT_REDIRECT.
+  let minted: { slug: string; ownerEmail: string } | null = null;
+  for (let attempt = 0; attempt < 2 && !minted; attempt++) {
+    try {
+      minted = await db.transaction(async (tx) => createDemoShop(tx));
+    } catch (err) {
+      const isUniqueViolation = (err as { code?: string } | null)?.code === "23505";
+      if (attempt === 0 && isUniqueViolation) continue;
+      throw err;
+    }
+  }
+  if (!minted) redirect("/sign-in?error=1");
+  const { slug, ownerEmail } = minted;
 
   try {
     await signIn("credentials", {

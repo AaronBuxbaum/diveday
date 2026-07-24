@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
@@ -71,6 +71,33 @@ describe("createDemoShop", () => {
     expect(await findShop(db, b.slug)).toBeDefined();
     // The canonical demo still stands alongside both.
     expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
+  });
+
+  it("evicts the oldest minted demo once the live cap is reached", async () => {
+    const db = await seededTestDb();
+    const prev = process.env.DEMO_SHOP_MAX_LIVE;
+    process.env.DEMO_SHOP_MAX_LIVE = "2";
+    try {
+      const a = await createDemoShop(db);
+      const b = await createDemoShop(db);
+      const c = await createDemoShop(db);
+
+      // Cap is 2, so minting c evicts the oldest minted demo (a); b and c stay,
+      // and the canonical demo is never a candidate.
+      expect(await findShop(db, a.slug)).toBeUndefined();
+      expect(await findShop(db, b.slug)).toBeDefined();
+      expect(await findShop(db, c.slug)).toBeDefined();
+      expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
+
+      const liveMinted = await db
+        .select({ id: shops.id })
+        .from(shops)
+        .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)));
+      expect(liveMinted.length).toBe(2);
+    } finally {
+      if (prev === undefined) delete process.env.DEMO_SHOP_MAX_LIVE;
+      else process.env.DEMO_SHOP_MAX_LIVE = prev;
+    }
   });
 });
 
