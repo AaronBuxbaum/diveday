@@ -25,16 +25,17 @@ const PRICING: RentalPricing = {
 };
 
 describe("rentable items", () => {
-  it("defaults a new shop to the core gear, not the add-ons", () => {
+  it("defaults a new shop to the core gear including the dive computer, not the GoPro", () => {
     expect(DEFAULT_SHOP_RENTAL_ITEMS).toEqual([
       "bcd",
       "regulator",
       "wetsuit",
       "mask_fins",
       "weights",
+      "dive_computer",
     ]);
-    // The add-ons exist but are opt-in.
-    expect(RENTABLE_ITEMS.map((item) => item.kind)).toContain("dive_computer");
+    // The dive computer is now part of the default kit; only the GoPro is opt-in.
+    expect(DEFAULT_SHOP_RENTAL_ITEMS).toContain("dive_computer");
     expect(RENTABLE_ITEMS.map((item) => item.kind)).toContain("gopro");
     expect(DEFAULT_SHOP_RENTAL_ITEMS).not.toContain("gopro");
   });
@@ -62,15 +63,32 @@ describe("rental pricing", () => {
     );
   });
 
-  it("bills the full core kit at the cheaper set price", () => {
+  it("bills the full core kit — including the dive computer — at the cheaper set price", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
       wantsNitrox: false,
       plannedDives: 2,
     });
     expect(quote.lines).toEqual([{ kind: "set", label: "Full rental set", cents: 4500 }]);
     expect(quote.subtotalCents).toBe(4500);
     expect(quote.unpricedKinds).toEqual([]);
+  });
+
+  it("bills the core five without a dive computer per piece, never the set", () => {
+    const quote = quoteRentalFit(PRICING, {
+      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      wantsNitrox: false,
+      plannedDives: 2,
+    });
+    // The dive computer is now part of the set, so five core items is a partial kit.
+    expect(quote.lines.map((line) => line.kind)).toEqual([
+      "bcd",
+      "regulator",
+      "wetsuit",
+      "mask_fins",
+      "weights",
+    ]);
+    expect(quote.subtotalCents).toBe(1500 + 1500 + 1200 + 800 + 500);
   });
 
   it("bills a partial kit per piece, never the set", () => {
@@ -85,7 +103,15 @@ describe("rental pricing", () => {
 
   it("adds add-ons and per-dive nitrox on top of the set", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "gopro"],
+      rentedKinds: [
+        "bcd",
+        "regulator",
+        "wetsuit",
+        "mask_fins",
+        "weights",
+        "dive_computer",
+        "gopro",
+      ],
       wantsNitrox: true,
       plannedDives: 3,
     });
@@ -98,7 +124,7 @@ describe("rental pricing", () => {
     const quote = quoteRentalFit(
       { ...PRICING, setCents: null },
       {
-        rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+        rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
         wantsNitrox: false,
         plannedDives: 1,
       },
@@ -109,8 +135,9 @@ describe("rental pricing", () => {
       "wetsuit",
       "mask_fins",
       "weights",
+      "dive_computer",
     ]);
-    expect(quote.subtotalCents).toBe(1500 + 1500 + 1200 + 800 + 500);
+    expect(quote.subtotalCents).toBe(1500 + 1500 + 1200 + 800 + 500 + 1000);
   });
 
   it("reports chosen gear the shop hasn't priced instead of quoting it low", () => {
