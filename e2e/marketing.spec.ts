@@ -129,7 +129,7 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   expect(templateBody).not.toContain("@");
 
   // The scope table is the importer's honesty table — same safety spine.
-  await expect(page.getByText("Medical & health history")).toBeVisible();
+  await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
 
   // The owner-authorized free-import offer lands, phrased as a human commitment,
   // with a real handoff: an email link the shop can act on.
