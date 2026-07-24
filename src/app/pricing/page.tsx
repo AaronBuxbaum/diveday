@@ -30,7 +30,7 @@ const faq = [
   {
     question: "Can I see it before I commit?",
     answer:
-      "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — or start a trial shop of your own, with sample trips ready to explore if you want them.",
+      "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — it's a shop already full of sample trips. Or start a trial shop of your own: it begins empty, ready for your first trip.",
   },
   {
     question: "Does the manifest work offline?",

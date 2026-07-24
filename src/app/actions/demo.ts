@@ -4,19 +4,29 @@ import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
-import { resetDemoSchedule } from "@/db/seed";
+import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
 
 /**
- * One-click into the demo: sign in as the example shop's owner and land on the
- * staff dashboard. Database initialization guarantees the demo shop and login
- * exist before this action can run. Forms may carry a hidden `source` field
- * naming the page the click came from.
+ * The password any demo person signs in with: `credentials` accepts it for a
+ * person in an `isDemo` shop without a real password match (src/lib/credentials.ts).
+ * Reused here for the initial owner sign-in and, below, for role switching.
+ */
+const DEMO_BYPASS_PASSWORD = "demo-role-switcher-bypass-token";
+
+/**
+ * One-click into the demo: mint a fresh, disposable demo shop with a generated
+ * identity, then sign the visitor in as its owner and land on the staff
+ * dashboard. Each visitor gets their own throwaway shop rather than sharing the
+ * canonical fixture (ADR 20260724-per-visitor-demo-shops); a 7-day reaper clears
+ * them. Forms may carry a hidden `source` field naming the page the click came
+ * from.
  */
 export async function enterDemoAction(formData?: FormData) {
   const sourceField = formData?.get("source");
@@ -24,11 +34,22 @@ export async function enterDemoAction(formData?: FormData) {
     name: "demo_entered",
     source: typeof sourceField === "string" && sourceField !== "" ? sourceField : "unknown",
   });
+
+  // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
+  // total growth, this bounds the burst one visitor can drive.
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("demo-create", ip), RATE_LIMITS.demoCreate).allowed) {
+    redirect("/sign-in?error=1");
+  }
+
+  const db = await getDb();
+  const { slug, ownerEmail } = await db.transaction(async (tx) => createDemoShop(tx));
+
   try {
     await signIn("credentials", {
-      email: DEV_STAFF_LOGINS.owner.email,
-      password: DEV_STAFF_LOGINS.owner.password,
-      redirectTo: `/shop/${DEMO_SHOP_SLUG}`,
+      email: ownerEmail,
+      password: DEMO_BYPASS_PASSWORD,
+      redirectTo: `/shop/${slug}`,
     });
   } catch (error) {
     if (error instanceof AuthError) redirect("/sign-in?error=1");
@@ -99,7 +120,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     try {
       await signIn("credentials", {
         email: targetEmail,
-        password: "demo-role-switcher-bypass-token",
+        password: DEMO_BYPASS_PASSWORD,
         redirectTo: `/shop/${shopSlug}`,
       });
     } catch (error) {
