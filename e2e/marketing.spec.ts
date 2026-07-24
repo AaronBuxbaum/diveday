@@ -120,13 +120,23 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   expect(templateHref).toBe("/diveday-diver-import-template.csv");
   const template = await page.request.get(templateHref ?? "");
   expect(template.ok()).toBeTruthy();
-  expect(await template.text()).toContain("certification_number");
+  const templateBody = await template.text();
+  // Nitrox needs its card-number column, or a "yes" flag lands nothing.
+  expect(templateBody).toContain("certification_number");
+  expect(templateBody).toContain("nitrox_certification_number");
+  // Header-only: no example people to accidentally import into a real roster.
+  expect(templateBody).not.toContain("@");
 
   // The scope table is the importer's honesty table — same safety spine.
   await expect(page.getByText("Medical & health history")).toBeVisible();
 
-  // The owner-authorized free-import offer lands, phrased as a human commitment.
+  // The owner-authorized free-import offer lands, phrased as a human commitment,
+  // with a real handoff: an email link the shop can act on.
   await expect(page.getByRole("heading", { name: /we'll do it with you — free/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Email your spreadsheet to/ })).toHaveAttribute(
+    "href",
+    /^mailto:switch@dive\.day/,
+  );
 
   // Demo-before-trial funnel, same as every guide.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();

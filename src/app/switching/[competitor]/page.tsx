@@ -178,8 +178,8 @@ export default async function MigrationGuidePage({
                     DiveDay maps your columns automatically and previews the file before anything is
                     saved — how each column landed, which cards will come in as claims for staff to
                     verify, and anything it's leaving behind. Rows with an email match an existing
-                    diver so a re-import updates them instead of duplicating; the whole file imports
-                    when you confirm.
+                    diver so a re-import updates them instead of duplicating; the rows that pass
+                    import when you confirm.
                   </p>
                 </div>
               </li>
