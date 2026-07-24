@@ -44,7 +44,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@argos-ci/playwright": "^7.3.6",
+    "@argos-ci/playwright": "^7.3.7",
     "@biomejs/biome": "^2.5.5",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.3",
@@ -57,7 +57,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "dotenv": "^17.4.2",
-    "drizzle-kit": "1.0.0-rc.4-ca0f029",
+    "drizzle-kit": "1.0.0-rc.4",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "msw": "^2.15.0",
