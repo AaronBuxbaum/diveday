@@ -180,12 +180,20 @@ export default function Home() {
                 built in. {fullShopExport.claim} {fullShopExport.terms}
               </p>
               <p className="mt-4 text-lg leading-8 text-muted">
-                Arriving instead of leaving? The importer shows exactly what comes across — and what
-                honestly doesn't — before a single row is saved.
+                Arriving instead of leaving? Bring the spreadsheet you already keep — the importer
+                maps your columns and shows exactly what comes across, and what honestly doesn't,
+                before a single row is saved. Or hand us the sheet and we'll bring your divers in
+                with you, free.
               </p>
               <Link
-                href="/switching"
+                href="/switching/spreadsheet"
                 className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
+              >
+                Running the day on a spreadsheet? See how it comes across →
+              </Link>
+              <Link
+                href="/switching"
+                className={buttonClass({ variant: "link", className: "mt-2 text-left" })}
               >
                 Switching from EVE, DiveShop360, DiveAdmin, or Smartwaiver? Read the guides →
               </Link>
