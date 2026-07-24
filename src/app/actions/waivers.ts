@@ -57,7 +57,7 @@ export async function sendWaiversAction(
     if (result.delivery === "sent") {
       state.sent.push(result.diverName);
     } else {
-      state.links.push({ name: result.diverName, token: result.token });
+      state.links.push({ name: result.diverName, token: result.token, reason: result.delivery });
     }
   }
 

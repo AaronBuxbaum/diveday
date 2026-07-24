@@ -8,6 +8,7 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
 import { auth } from "@/lib/auth";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 
 /**
  * Staff-surface shell. If the shop is a demo shop, it hangs the demo banner
@@ -84,6 +85,8 @@ export default async function ShopLayout({
           // by anyone who has it, so warn against entering real customer data;
           // the canonical fixture demo holds only sample data and stays quiet.
           isMintedDemo={shop?.slug !== DEMO_SHOP_SLUG}
+          currentEmail={session?.user?.email}
+          demoPassword={DEMO_BYPASS_PASSWORD}
         />
       ) : null}
       {session?.user && shop ? (
