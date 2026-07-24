@@ -238,6 +238,35 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       ).resolves.toMatchObject({ ok: true });
     });
 
+    it("does not refuse an anonymous public booking on someone else's date of birth", async () => {
+      // Refusing here would answer "is the holder of this address under N?" to
+      // anyone who can guess an address — a disclosure about a minor, to an
+      // unauthenticated caller, and unsound besides: the public form never
+      // proves the submitter is the person on file for that email (H-13).
+      const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      const tenYearsAgo = new Date(Date.now() - 10 * 365.25 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const person = await diverWithDob(db, shop.id, tenYearsAgo, "public-probe@example.com");
+
+      // Staff path still refuses...
+      await expect(
+        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+      ).resolves.toEqual({ ok: false, reason: "course_min_age" });
+      // ...the public path books, and the under-age seat is caught by the
+      // readiness blocker instead of by a refusal that leaks.
+      await expect(
+        createBooking(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          actor: "public",
+          fullName: "Age Diver public-probe@example.com",
+          email: "public-probe@example.com",
+        }),
+      ).resolves.toMatchObject({ ok: true });
+    });
+
     it("measures age on the course date, so a birthday before it admits the diver", async () => {
       // Turns 15 in ~40 days; the session runs ~100 days out, after that.
       const startsAt = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);

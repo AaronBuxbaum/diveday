@@ -55,6 +55,14 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail:
       "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
   },
+  under_minimum_age: {
+    // Never states the diver's age back to them, and never asserts they're too
+    // young: the date on file may simply be wrong, and this page can be read by
+    // a parent, the diver, or whoever holds the link.
+    state: "waiting",
+    detail:
+      "Your shop needs to check this course’s minimum age against the date of birth they have on file. Give them a call if you think it’s wrong.",
+  },
   waiver_not_sent: {
     // A waiver goes out the moment a diver joins, so this state is the rare
     // leftover — a link that never issued (a delivery hiccup, or a waiver turned

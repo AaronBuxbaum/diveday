@@ -190,6 +190,14 @@ export const BLOCKER_ACTIONS: Record<
     groupLabel: "Confirm identities",
     target: "trip",
   },
+  under_minimum_age: {
+    // Targets the diver: the fix is either a corrected date of birth on their
+    // record or a conversation with the family, never a change to the trip.
+    kind: "certification",
+    actionLabel: "Check date of birth",
+    groupLabel: "Check dates of birth",
+    target: "diver",
+  },
   waiver_not_sent: {
     kind: "waiver",
     actionLabel: "Send waiver",

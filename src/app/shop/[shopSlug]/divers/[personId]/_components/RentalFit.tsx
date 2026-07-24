@@ -21,6 +21,9 @@ export function RentalFit({
   canOverride: boolean;
 }) {
   const profile = diver.rentalFit;
+  // Recording a first fit is data entry, open to any staff member; only
+  // rewriting one already on file is the gated override (H-06).
+  const mayEdit = canOverride || !profile;
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
   return (
@@ -34,16 +37,16 @@ export function RentalFit({
           built from — never an equipment reservation or a substitute for a dock-side fit check.
         </p>
       </div>
-      {canOverride ? null : (
+      {mayEdit ? null : (
         <p className="mt-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
           <span className="font-medium text-foreground">{rentalFitLine(profile ?? null).text}</span>
           <br />
-          Changing what this diver asked for is limited to instructors, divemasters, and managers.
-          If a size isn’t available, flag them for hands-on fitting below.
+          Changing what this diver asked for is limited to owners, managers, instructors, and
+          divemasters. If a size isn’t available, flag them for hands-on fitting below.
         </p>
       )}
 
-      {canOverride ? (
+      {mayEdit ? (
         <FieldGrid
           as="form"
           action={saveProfileAction.bind(null, shopSlug, personId)}
@@ -134,6 +137,7 @@ export function RentalFit({
         shopSlug={shopSlug}
         personId={personId}
         hasFit={Boolean(profile)}
+        canResolve={canOverride}
       />
     </section>
   );
@@ -141,20 +145,27 @@ export function RentalFit({
 
 /**
  * The H-06 safe fallback: when the shop can't fill a requested size, flag the
- * diver for hands-on fitting instead of packing a size they never chose. Open
- * to every staff member — unlike editing the fit above, this escalates to a
- * person rather than overwriting what the diver asked for.
+ * diver for hands-on fitting instead of packing a size they never chose.
+ *
+ * *Raising* the flag is open to every staff member — it escalates to a person
+ * rather than overwriting what the diver asked for, and the captain who finds
+ * the empty rack is exactly who needs it. *Clearing* it is the judgement call
+ * ("we can pack her stated size after all"), so it takes the same gate as
+ * editing the fit: an unattributed one-tap clear would put a diver back into
+ * gear nobody re-checked, which is the very thing stickiness protects against.
  */
 function StaffFitFallback({
   profile,
   shopSlug,
   personId,
   hasFit,
+  canResolve,
 }: {
   profile: DiverProfile["rentalFit"];
   shopSlug: string;
   personId: string;
   hasFit: boolean;
+  canResolve: boolean;
 }) {
   const flagged = Boolean(profile?.needsStaffFitAt);
   if (!hasFit) return null;
@@ -168,20 +179,27 @@ function StaffFitFallback({
       </h3>
       <p className="mt-1 text-sm text-muted">
         {flagged
-          ? "This diver is packed as “needs staff fit” — their sizes are off the prep list, and the crew fits them from what’s aboard at check-in."
-          : "Flag them for hands-on fitting at check-in. Their kit drops off the packing list so nobody lays out a size the shop is short of — better than quietly substituting one."}
+          ? "Flagged for hands-on fitting — they still count on the prep list, but without a size, and the crew fits them from what’s aboard at check-in."
+          : "Flag them for hands-on fitting at check-in. Their count stays on the packing list but the size comes off, so nobody lays out a size the shop is short of — better than quietly substituting one."}
       </p>
       {flagged ? (
         <>
           {profile?.needsStaffFitNote ? (
             <p className="mt-2 text-sm font-medium">{profile.needsStaffFitNote}</p>
           ) : null}
-          <SubmitButton
-            pendingLabel="Clearing…"
-            className={buttonClass({ variant: "secondary", className: "mt-4 text-foreground" })}
-          >
-            Fit resolved — pack their sizes again
-          </SubmitButton>
+          {canResolve ? (
+            <SubmitButton
+              pendingLabel="Clearing…"
+              className={buttonClass({ variant: "secondary", className: "mt-4 text-foreground" })}
+            >
+              Fit resolved — pack their sizes again
+            </SubmitButton>
+          ) : (
+            <p className="mt-3 text-sm text-muted">
+              Clearing this is limited to owners, managers, instructors, and divemasters — they
+              confirm the diver can be packed to their stated sizes again.
+            </p>
+          )}
         </>
       ) : (
         <FieldGrid columns={1} className="mt-3">

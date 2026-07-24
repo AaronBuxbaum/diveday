@@ -2,7 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonDeleteDiver, canPersonOverrideGearRequest, canPersonRefund } from "@/db/authz";
+import {
+  canPersonDeleteDiver,
+  canPersonOverrideGearRequest,
+  canPersonRefund,
+  loadActiveStaffRoles,
+} from "@/db/authz";
 import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
@@ -23,8 +28,10 @@ import {
   reviewCertification,
   reviewSpecialtyCertification,
 } from "@/db/readiness";
-import { saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
+import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
+import { isPlausibleDateOfBirth } from "@/lib/age";
+import { isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -52,8 +59,19 @@ const personSchema = z.object({
   phone: z.string().trim().max(40),
   diveInsurance: z.string().trim().max(120),
   // Optional on the form and blank-able: H-08's minimum-age gate fails open, so
-  // a shop that never fills this in keeps booking exactly as it does today.
-  dateOfBirth: dateSchema,
+  // a shop that never fills this in keeps booking exactly as it does today. The
+  // plausibility bound is the one place it fails *closed*: a future or
+  // pre-1900 date is a typo, and a future one would silently refuse every
+  // age-gated course.
+  dateOfBirth: z.union([
+    z.literal(""),
+    z
+      .string()
+      .refine(isValidCalendarDate, "not a real calendar date")
+      // Arrow, not a bare reference: zod passes a second argument to the
+      // predicate, which would land in the injectable `now` parameter.
+      .refine((value) => isPlausibleDateOfBirth(value), "not a plausible date of birth"),
+  ]),
 });
 const certificationSchema = z.object({
   agency: agencySchema,
@@ -66,6 +84,10 @@ const specialtyCertificationSchema = z.object({
   specialty: specialtySchema,
   identifier: z.string().trim().min(2).max(120),
   expiresOn: dateSchema,
+});
+const needsStaffFitSchema = z.object({
+  needed: z.string().optional(),
+  needsStaffFitNote: z.string().trim().max(200).optional(),
 });
 const profileSchema = z.object({
   bcd: z.string().optional(),
@@ -296,11 +318,17 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const db = await getDb();
-  // Rewriting what the diver themselves asked for is the instructor/divemaster/
-  // manager call (H-06, ADR 20260724-gear-fit-fallback). Any staff member can
-  // still flag them for hands-on fitting below — that's the safe fallback, not
-  // an override.
-  if (!(await canPersonOverrideGearRequest(db, staff.user.shopId, staff.user.personId))) {
+  // The gate is on *overriding* a stated request, not on writing the record
+  // (H-06, ADR 20260724-gear-fit-fallback). A diver with nothing on file has
+  // stated nothing to override, so recording their sizes for the first time is
+  // ordinary data entry — the Saturday walk-up whose only staff on the floor
+  // are the captain and a deckhand must not end up on a napkin. Changing a fit
+  // that already exists is the in-water judgement call, and stays gated.
+  const existing = await getRentalFit(db, staff.user.shopId, personId);
+  if (
+    existing &&
+    !(await canPersonOverrideGearRequest(db, staff.user.shopId, staff.user.personId))
+  ) {
     revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
     return;
   }
@@ -338,12 +366,24 @@ export async function setNeedsStaffFitAction(
 ) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
-  const needed = formData.get("needed") === "on";
-  const saved = await setNeedsStaffFit(await getDb(), {
+  const db = await getDb();
+  // Re-read live roles like every other mutation on this page. Flagging is open
+  // to all *staff*, but it suppresses a diver's kit from the packing list, so a
+  // demoted or disabled account must not keep doing it on a stale JWT.
+  const roles = await loadActiveStaffRoles(db, staff.user.shopId, staff.user.personId);
+  if (!roles || !isStaff(roles)) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
+    return;
+  }
+  const parsed = needsStaffFitSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  const needed = parsed.data.needed === "on";
+  const saved = await setNeedsStaffFit(db, {
     shopId: staff.user.shopId,
     personId,
     needed,
-    note: String(formData.get("needsStaffFitNote") ?? "").slice(0, 200),
+    note: parsed.data.needsStaffFitNote,
+    byPersonId: staff.user.personId,
   });
   const notice = !saved ? "invalid" : needed ? "fit-flagged" : "fit-cleared";
   revalidateAndRedirect(base, `${base}?notice=${notice}`);
