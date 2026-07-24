@@ -4,6 +4,7 @@ import {
   canDeleteDiver,
   canManagePaymentSettings,
   canManageWaiverTemplates,
+  canOverrideGearRequest,
   canRefund,
   type Role,
 } from "@/lib/authz";
@@ -70,3 +71,7 @@ export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: s
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);
+
+/** Live DB-checked companion of the H-06 gear-override gate (src/lib/authz.ts). */
+export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canOverrideGearRequest);

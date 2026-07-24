@@ -5,7 +5,13 @@ import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
-import { getRentalFit, listTripPrepDivers, rentalFitByBooking, saveRentalFit } from "./rental-fit";
+import {
+  getRentalFit,
+  listTripPrepDivers,
+  rentalFitByBooking,
+  saveRentalFit,
+  setNeedsStaffFit,
+} from "./rental-fit";
 import { people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -116,6 +122,48 @@ describe("saveRentalFit / getRentalFit", () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
+  });
+});
+
+describe("setNeedsStaffFit (H-06 fallback)", () => {
+  it("flags a diver with a note, then clears both on resolve", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Fit Fallback");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+
+    const flagged = await setNeedsStaffFit(db, {
+      shopId,
+      personId,
+      needed: true,
+      note: "No L BCD in stock",
+    });
+    expect(flagged?.needsStaffFitAt).toBeInstanceOf(Date);
+    expect(flagged?.needsStaffFitNote).toBe("No L BCD in stock");
+
+    const cleared = await setNeedsStaffFit(db, { shopId, personId, needed: false });
+    expect(cleared?.needsStaffFitAt).toBeNull();
+    // The stale note goes with the flag — it described a shortage that's over.
+    expect(cleared?.needsStaffFitNote).toBeNull();
+  });
+
+  it("leaves the flag alone when the diver's sizes are edited", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Sticky Flag");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await setNeedsStaffFit(db, { shopId, personId, needed: true, note: "No L BCD" });
+
+    // A stale flag costs one extra look; a silently-cleared one puts a diver in
+    // gear nobody checked. Only the explicit clear above may take it down.
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "S" });
+    const after = await getRentalFit(db, shopId, personId);
+    expect(after?.bcdSize).toBe("S");
+    expect(after?.needsStaffFitAt).toBeInstanceOf(Date);
+  });
+
+  it("returns null for a diver with no fit on file to flag against", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "No Fit Yet");
+    expect(await setNeedsStaffFit(db, { shopId, personId, needed: true })).toBeNull();
   });
 });
 

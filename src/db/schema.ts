@@ -112,6 +112,15 @@ export const people = pgTable(
     emergencyContactName: text("emergency_contact_name"),
     emergencyContactPhone: text("emergency_contact_phone"),
     /**
+     * Date-only, no timezone (CR-009): a birthday is a calendar fact, not an
+     * instant. Nullable and **fails open** by product decision (H-08, option B):
+     * a course's `minimum_age` is enforced only for a diver who actually has a
+     * date on file, so shipping this never blocks the divers already on the
+     * books. Real age verification stays a dock-side ID check; this catches the
+     * mis-aged booking early when the data happens to be there.
+     */
+    dateOfBirth: date("date_of_birth", { mode: "string" }),
+    /**
      * Dive-accident insurance the diver carries — DAN or another provider, as
      * free text ("DAN #12345"). A safety detail the crew wants on hand in an
      * incident, never a gate; null until the diver or staff records it
@@ -1378,6 +1387,16 @@ export const rentalFitProfiles = pgTable(
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),
     note: text("note"),
+    /**
+     * The safe fallback when a requested size isn't available (H-06): staff
+     * flag the diver for hands-on fitting at check-in instead of silently
+     * packing a different size. Set/cleared only by its own action — a size
+     * edit never clears it, because a stale flag costs one extra look while a
+     * wrongly-cleared one puts a diver in gear nobody checked.
+     */
+    needsStaffFitAt: timestamp("needs_staff_fit_at", { withTimezone: true }),
+    /** What's short ("no L BCD in stock"), in the flagging staff member's words. */
+    needsStaffFitNote: text("needs_staff_fit_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
