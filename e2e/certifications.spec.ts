@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import sharp from "sharp";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { e2eNow } from "./helpers";
 
 signedInAsOwner();
 
@@ -29,7 +30,7 @@ test("staff captures and verifies level and specialty cards before either can be
   await expect(form.locator('input[name="cardImage"]')).toBeVisible();
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="level"]').selectOption("advanced_open_water");
-  await form.getByLabel("Card number").fill(`PADI-AOW-${Date.now()}`);
+  await form.getByLabel("Card number").fill(`PADI-AOW-${e2eNow().getTime()}`);
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("pending");
 
@@ -39,7 +40,7 @@ test("staff captures and verifies level and specialty cards before either can be
 
   // Specialty card: gated exactly the same way, on the same record.
   await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
-  const cardNo = `PADI-WRECK-${Date.now()}`;
+  const cardNo = `PADI-WRECK-${e2eNow().getTime()}`;
   const specialty = specialtyForm(page);
   await specialty.locator('select[name="agency"]').selectOption("padi");
   await specialty.locator('select[name="specialty"]').selectOption("wreck");
@@ -102,7 +103,7 @@ test("a real photo passes the server's decode/re-encode pipeline end to end (CR-
   const form = levelForm(page);
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="level"]').selectOption("advanced_open_water");
-  await form.getByLabel("Card number").fill(`PADI-PIPELINE-${Date.now()}`);
+  await form.getByLabel("Card number").fill(`PADI-PIPELINE-${e2eNow().getTime()}`);
   await form
     .locator('input[name="cardImage"]')
     .setInputFiles({ name: "card.jpg", mimeType: "image/jpeg", buffer: jpeg });
@@ -123,7 +124,7 @@ test("a disguised file is rejected by the server even though it claims an allowe
   const form = levelForm(page);
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="level"]').selectOption("advanced_open_water");
-  await form.getByLabel("Card number").fill(`PADI-DISGUISED-${Date.now()}`);
+  await form.getByLabel("Card number").fill(`PADI-DISGUISED-${e2eNow().getTime()}`);
   await form.locator('input[name="cardImage"]').setInputFiles({
     name: "card.jpg",
     mimeType: "image/jpeg", // claims to be a JPEG — only the real decode below catches it

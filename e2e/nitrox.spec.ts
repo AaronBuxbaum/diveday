@@ -18,7 +18,7 @@ test.describe("staff", () => {
     page,
   }) => {
     // A unique card number keeps the flow self-contained and re-run safe.
-    const cardNo = `EANX-T${Date.now()}`;
+    const cardNo = `EANX-T${e2eNow().getTime()}`;
 
     // Nitrox evidence is handled with the diver's other cards, then verified there.
     await page.goto("/shop/blue-mantis/divers");

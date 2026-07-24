@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow } from "./helpers";
+import { daysFromNow, e2eNow } from "./helpers";
 
 signedInAsOwner();
 
@@ -7,7 +7,7 @@ test("a repeating series is scheduled, then rolled forward and cancelled as one"
   page,
 }) => {
   // Unique title so the assertions target this spec's own series.
-  const title = `Series Test ${Date.now()}`;
+  const title = `Series Test ${e2eNow().getTime()}`;
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);

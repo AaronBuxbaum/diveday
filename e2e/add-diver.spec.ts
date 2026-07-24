@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow } from "./helpers";
+import { daysFromNow, e2eNow } from "./helpers";
 
 signedInAsOwner();
 
@@ -7,7 +7,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // Unique title so assertions target this spec's own trip, never a seeded
   // one. (Isolation across tests comes from the per-test demo reset in
   // fixtures.ts, not from this suffix.)
-  const title = `Walk-in Test Trip ${Date.now()}`;
+  const title = `Walk-in Test Trip ${e2eNow().getTime()}`;
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);
@@ -35,7 +35,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByLabel("Name").fill("Walk-in Wanda");
-  await addDiver.getByLabel("Email").fill(`wanda-${Date.now()}@example.com`);
+  await addDiver.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
@@ -45,7 +45,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
   await addDiver.getByLabel("Name").fill("Waitlist Wally");
-  await addDiver.getByLabel("Email").fill(`wally-${Date.now()}@example.com`);
+  await addDiver.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to wait list" }).click();
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
@@ -65,7 +65,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 });
 
 test("staff adds a returning diver by picking them, no re-entry", async ({ page }) => {
-  const title = `Returning Diver Trip ${Date.now()}`;
+  const title = `Returning Diver Trip ${e2eNow().getTime()}`;
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);
@@ -112,8 +112,8 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 });
 
 test("staff sends waivers to a multi-selected roster in one action", async ({ page }) => {
-  const title = `Bulk Waiver Trip ${Date.now()}`;
-  const stamp = Date.now();
+  const title = `Bulk Waiver Trip ${e2eNow().getTime()}`;
+  const stamp = e2eNow().getTime();
 
   await page.goto("/shop/blue-mantis/trips/new");
   await page.getByLabel("Title").fill(title);

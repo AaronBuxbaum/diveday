@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
 
 signedInAsOwner();
 
@@ -7,7 +7,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // Unique title so assertions target this spec's own trip, never a seeded
   // one. (Isolation across tests comes from the per-test demo reset in
   // fixtures.ts, not from this suffix.)
-  const title = `Turtle Reef Special ${Date.now()}`;
+  const title = `Turtle Reef Special ${e2eNow().getTime()}`;
 
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: "Schedule a trip" }).click();

@@ -1,12 +1,12 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
 
   test("staff reuses a dive-site briefing on a trip that divers can explore", async ({ page }) => {
-    const siteName = `Turtle Garden ${Date.now()}`;
-    const tripTitle = `Turtle Garden charter ${Date.now()}`;
+    const siteName = `Turtle Garden ${e2eNow().getTime()}`;
+    const tripTitle = `Turtle Garden charter ${e2eNow().getTime()}`;
 
     // "Dive sites" now lives in the nav's "More" group; navigate directly.
     await page.goto("/shop/blue-mantis/dive-sites");
@@ -85,7 +85,7 @@ test.describe("staff", () => {
     // the raw URL. src/lib/storage/ingest-url.test.ts covers the full range
     // of blocked addresses and the not_configured/blocked distinction.
     await page.goto("/shop/blue-mantis/dive-sites/new");
-    await page.getByLabel("Name").fill(`Ingestion Check ${Date.now()}`);
+    await page.getByLabel("Name").fill(`Ingestion Check ${e2eNow().getTime()}`);
     await page.getByLabel("Satellite map image URL").fill("http://127.0.0.1:1/reef-sat.jpg");
     await page.getByRole("button", { name: "Save site briefing" }).click();
     await expect(page.getByText(/couldn.t be used/)).toBeVisible();

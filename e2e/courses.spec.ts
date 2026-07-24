@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow } from "./helpers";
+import { daysFromNow, e2eNow } from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -133,7 +133,7 @@ test.describe("staff", () => {
     // Schedule this run's own session rather than spending a seeded seat: the e2e
     // database persists across runs, so a test that books the demo session works
     // exactly six times and then fails as "full".
-    const sessionTitle = `Open Water Diver — session ${Date.now()}`;
+    const sessionTitle = `Open Water Diver — session ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/trips/new");
     await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
     await page.getByLabel("Title").fill(sessionTitle);
@@ -164,9 +164,9 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "Book this date" }).last().click();
     await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
 
-    const diver = `Ravi ${Date.now()}`;
+    const diver = `Ravi ${e2eNow().getTime()}`;
     await page.getByLabel("Name").fill(diver);
-    await page.getByLabel("Email").fill(`ravi-${Date.now()}@example.com`);
+    await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat, Ravi/ })).toBeVisible();
   });
