@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Twenty-one key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 84 screenshots per run
+ * Visual regression coverage (Argos). Twenty-four key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 96 screenshots per run
  * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 86 screenshots.
+ * via `capturePrint()`. That brings the run to 98 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -139,6 +139,14 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/switching/eve");
       await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
       await capture(page, "switching-eve", scheme);
+
+      // The non-incumbent switching guide: shops coming from a spreadsheet — the
+      // market's largest under-served pool. Its own layout (columns-that-matter,
+      // the downloadable template, the free-import offer) around the same shared
+      // honesty table every guide renders.
+      await page.goto("/switching/spreadsheet");
+      await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
+      await capture(page, "switching-spreadsheet", scheme);
 
       // Two more safety-critical bearer-token pages, done last so minting
       // them (a real send-waiver action, a real booking) never changes the

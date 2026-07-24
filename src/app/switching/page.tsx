@@ -10,7 +10,7 @@ import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 export const metadata: Metadata = {
   title: "Switching to DiveDay — migration guides",
   description:
-    "Leaving EVE, DiveShop360, DiveAdmin, or Smartwaiver? Step-by-step guides to export your data and bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
+    "On a spreadsheet, or leaving EVE, DiveShop360, DiveAdmin, or Smartwaiver? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
 };
 
 export default function SwitchHubPage() {
@@ -27,15 +27,29 @@ export default function SwitchHubPage() {
               The door swings both ways.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              Most shops stay on software they've outgrown because leaving looks painful. These
-              guides make the move concrete: how to export your own data from your current system,
-              exactly what comes across into DiveDay, and what — honestly — stays behind.
+              Most shops stay on a spreadsheet, or software they've outgrown, because moving looks
+              painful. These guides make the move concrete: how to get your divers out of whatever
+              you use now, exactly what comes across into DiveDay, and what — honestly — stays
+              behind.
             </p>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
           <div className="grid gap-5 md:grid-cols-2">
+            <Link
+              href="/switching/spreadsheet"
+              className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
+            >
+              <h2 className="text-xl font-semibold tracking-tight">Coming from a spreadsheet</h2>
+              <p className="mt-3 flex-1 leading-7 text-muted">
+                Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep —
+                and add the jobs a list can't do, like checking every card before the boat leaves.
+              </p>
+              <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
+                Read the guide →
+              </span>
+            </Link>
             {MIGRATION_GUIDES.map((guide) => (
               <Link
                 key={guide.slug}
@@ -66,7 +80,7 @@ export default function SwitchHubPage() {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
+              <form action={enterDemoAction} className="contents">
                 <input type="hidden" name="source" value="switching-hub" />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"

@@ -32,7 +32,7 @@ const scopeChip: Record<
   { label: string; className: string }
 > = {
   full: { label: "Imports fully", className: "bg-success/10 text-success" },
-  partial: { label: "Partial", className: "bg-warning/15 text-foreground" },
+  partial: { label: "Partial", className: "bg-warning/15 text-warning" },
   never: { label: "Never", className: "bg-danger/10 text-danger" },
 };
 
@@ -178,8 +178,8 @@ export default async function MigrationGuidePage({
                     DiveDay maps your columns automatically and previews the file before anything is
                     saved — how each column landed, which cards will come in as claims for staff to
                     verify, and anything it's leaving behind. Rows with an email match an existing
-                    diver so a re-import updates them instead of duplicating; the whole file imports
-                    when you confirm.
+                    diver so a re-import updates them instead of duplicating; the rows that pass
+                    import when you confirm.
                   </p>
                 </div>
               </li>
@@ -225,7 +225,7 @@ export default async function MigrationGuidePage({
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
+              <form action={enterDemoAction} className="contents">
                 <input type="hidden" name="source" value={`switching-${competitor}`} />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
