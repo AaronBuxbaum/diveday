@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
+import type { AppDb } from "./client";
 import {
   archiveCourse,
   createCourse,
@@ -12,7 +13,7 @@ import {
   updateCourse,
   updateCourseContent,
 } from "./courses";
-import { courses, tripAssignments, tripRequirements } from "./schema";
+import { courses, people, tripAssignments, tripRequirements } from "./schema";
 import {
   createTrip,
   getTripWithBooked,
@@ -146,6 +147,109 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       });
       expect(outcome).toEqual({ ok: false, reason: "course_prerequisite" });
     }
+  });
+
+  // H-08 option B: a course's minimum age is enforced only for a diver who
+  // actually has a date of birth on file, and is measured on the day the
+  // course runs rather than the day it's booked.
+  describe("course minimum age", () => {
+    async function ageContext(minimumAge: number, startsAt: Date) {
+      const { db, shop } = await courseContext();
+      const [course] = await db
+        .insert(courses)
+        .values({
+          shopId: shop.id,
+          title: `Age-gated course ${startsAt.getTime()}`,
+          slug: `age-gated-course-${startsAt.getTime()}`,
+          minimumAge,
+        })
+        .returning();
+      if (!course) throw new Error("failed to create age-gated course");
+      const staff = await listStaff(db, shop.id);
+      const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+      if (!instructor) throw new Error("seeded instructor missing");
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        title: "Age gate session",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+        capacity: 8,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("failed to create age-gate trip");
+      await setTripCrew(db, shop.id, trip.id, [instructor.person.id]);
+      return { db, shop, trip };
+    }
+
+    /** A diver already on file, so the booking reuses the row carrying the DOB. */
+    async function diverWithDob(db: AppDb, shopId: string, dob: string | null, email: string) {
+      const [person] = await db
+        .insert(people)
+        .values({ shopId, fullName: `Age Diver ${email}`, email, dateOfBirth: dob })
+        .returning();
+      if (!person) throw new Error("failed to insert age-test diver");
+      return person;
+    }
+
+    it("fails open for a diver with no date of birth on file", async () => {
+      const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      const person = await diverWithDob(db, shop.id, null, "no-dob@example.com");
+      await expect(
+        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+      ).resolves.toMatchObject({ ok: true });
+    });
+
+    it("fails open for a brand-new walk-in, who has no date on file yet", async () => {
+      const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      await expect(
+        createBooking(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: "Walk In",
+          email: "walk-in-age@example.com",
+        }),
+      ).resolves.toMatchObject({ ok: true });
+    });
+
+    it("refuses a diver under the minimum age on the course date", async () => {
+      const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      const tenYearsAgo = new Date(Date.now() - 10 * 365.25 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const person = await diverWithDob(db, shop.id, tenYearsAgo, "too-young@example.com");
+      await expect(
+        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+      ).resolves.toEqual({ ok: false, reason: "course_min_age" });
+    });
+
+    it("admits a diver who is old enough", async () => {
+      const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      const thirtyYearsAgo = new Date(Date.now() - 30 * 365.25 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const person = await diverWithDob(db, shop.id, thirtyYearsAgo, "old-enough@example.com");
+      await expect(
+        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+      ).resolves.toMatchObject({ ok: true });
+    });
+
+    it("measures age on the course date, so a birthday before it admits the diver", async () => {
+      // Turns 15 in ~40 days; the session runs ~100 days out, after that.
+      const startsAt = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      const turns15Soon = new Date(Date.now() - (15 * 365.25 - 40) * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const person = await diverWithDob(db, shop.id, turns15Soon, "birthday-first@example.com");
+      await expect(
+        createBooking(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+      ).resolves.toMatchObject({ ok: true });
+    });
   });
 
   // The sourced ratio (src/lib/course-ratios.ts) is a PADI figure; DiveDay does
