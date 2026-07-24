@@ -194,8 +194,9 @@ export default function SpreadsheetSwitchPage() {
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
             This is the same scope table DiveDay shows before it imports a single row. The safety
-            spine holds through the move: nothing arrives already verified, and nothing medical
-            arrives at all.
+            spine mostly holds through the move: nothing arrives already verified. The one
+            deliberate exception is a waiver a row says was already accepted — trusted, medical
+            clearance included, rather than asked for again.
           </p>
 
           <ul className="mt-8 space-y-2">
