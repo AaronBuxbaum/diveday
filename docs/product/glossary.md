@@ -340,16 +340,20 @@ new domain concept, define it here in the same PR.
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
   staff flag the diver for hands-on fitting at check-in instead of quietly packing a different
-  size. The flagged diver's sized kit drops **off** the prep list — packing a substitute is exactly
-  what the flag prevents — and they're named in their own "fit these divers at check-in" section.
-  Their tanks still count; gas is never sized. Distinct from both "own kit" and "not asked yet" on
+  size. The flagged diver keeps their line on the prep list — the count is what the packer loads
+  from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
+  off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
+  section. Unsized pieces (regulator, dive computer) are untouched by the flag; so are tanks, since
+  gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
   See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).
 - **Gear-request override** — rewriting what a diver themselves asked for. Reserved to owners,
   managers, instructors, and **divemasters** (`canOverrideGearRequest`) — sizing a diver is in-water
   judgement. Deliberately wider than `canConfigureTrips`, which excludes divemasters. Substituting
-  a real available item and flagging for staff fit stay open to every staff member: those are the
-  day's work, not an override.
+  a real available item, recording a diver's *first* fit (there is nothing on file to override),
+  and **raising** the needs-staff-fit flag stay open to every staff member: those are the day's
+  work, not an override. **Clearing** that flag is gated — it asserts the stated size packs after
+  all, which is the judgement call.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
   for. Purely derived — nothing on it is an allocation. Rules in `src/lib/dive-prep.ts`.
@@ -360,8 +364,11 @@ new domain concept, define it here in the same PR.
   is checking a course's `minimum_age` on the day that course runs — not the day it's booked, so a
   diver whose birthday falls in between is admitted. **Fails open** by product decision (H-08,
   option B): a diver with no date on file books exactly as they always have, because nothing
-  collected one before and failing closed would lock out every existing diver overnight. Real age
-  verification stays a dock-side ID check.
+  collected one before and failing closed would lock out every existing diver overnight. Enforced
+  two ways: a refusal on **staff-initiated** bookings, and an `under_minimum_age` readiness blocker
+  re-evaluated on every read (which is what catches a date recorded *after* the booking). The
+  anonymous public form never refuses on age — a refusal there answers "is this address a child
+  under N?" to anyone who can guess an address. Real age verification stays a dock-side ID check.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified.

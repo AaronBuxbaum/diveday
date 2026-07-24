@@ -1,7 +1,7 @@
 import type { getBookingForTrip } from "@/db/bookings";
 import type { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
-import type { getRentalFit } from "@/db/rental-fit";
+import type { DiverRentalFit } from "@/db/rental-fit";
 import type { getShopBySlug } from "@/db/shops";
 import type { getTripWithBooked, listTripDives } from "@/db/trips";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
@@ -12,7 +12,8 @@ export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;
 export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
-export type RentalFit = Awaited<ReturnType<typeof getRentalFit>> | null;
+/** Diver-facing projection — never the raw row (src/db/rental-fit.ts). */
+export type RentalFit = DiverRentalFit | null;
 export type AutomatedForecast = Awaited<ReturnType<typeof fetchAutomatedMarineForecast>>;
 
 export type DiveBriefing = TripDive & {

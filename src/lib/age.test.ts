@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageOnDate, checkMinimumAge } from "./age";
+import { ageOnDate, checkMinimumAge, isPlausibleDateOfBirth, maxPlausibleBirthDate } from "./age";
 
 describe("ageOnDate", () => {
   it("counts whole years once the birthday has passed", () => {
@@ -53,5 +53,37 @@ describe("checkMinimumAge", () => {
       minimumAge: 15,
     });
     expect(checkMinimumAge("2011-12-01", 15, "2026-12-15")).toEqual({ status: "meets", age: 15 });
+  });
+});
+
+describe("isPlausibleDateOfBirth", () => {
+  // Early UTC: before 10:00 UTC, UTC+14 is still on the same calendar day, so
+  // the bound here is plainly "today".
+  const now = new Date("2026-07-24T02:00:00.000Z");
+
+  it("accepts an ordinary birth date", () => {
+    expect(isPlausibleDateOfBirth("1988-02-29", now)).toBe(true);
+  });
+
+  it("accepts today", () => {
+    expect(isPlausibleDateOfBirth("2026-07-24", now)).toBe(true);
+  });
+
+  it("rejects a future date — the year typo that would silently refuse every age-gated course", () => {
+    expect(isPlausibleDateOfBirth("2062-03-04", now)).toBe(false);
+    expect(isPlausibleDateOfBirth("2026-07-25", now)).toBe(false);
+  });
+
+  it("rejects a pre-1900 date", () => {
+    expect(isPlausibleDateOfBirth("1899-12-31", now)).toBe(false);
+    expect(isPlausibleDateOfBirth("1900-01-01", now)).toBe(true);
+  });
+
+  it("gives the furthest-ahead timezone its own today rather than the server's", () => {
+    // 12:00 UTC on the 24th is already the 25th in Kiritimati (UTC+14). A shop
+    // there recording a birth date on their calendar must not be refused.
+    const lateUtc = new Date("2026-07-24T12:00:00.000Z");
+    expect(maxPlausibleBirthDate(lateUtc)).toBe("2026-07-25");
+    expect(isPlausibleDateOfBirth("2026-07-25", lateUtc)).toBe(true);
   });
 });

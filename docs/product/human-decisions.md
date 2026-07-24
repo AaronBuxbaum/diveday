@@ -147,8 +147,10 @@ and [PADI diver medical questionnaire](https://www.padi.com/sites/default/files/
 - **Safety boundary:** a request is not a reservation or fit approval. Staff still assigns a real,
   available item and confirms fit/weight at check-in.
 - **Must verify (H-06):** shop inventory packages, thickness/temperature guidance, measurement
-  method, substitution authority, tank policy, and the safe fallback when a requested size
-  is not available. (Computer policy is decided: default-on for every diver, priced separately.)
+  method, and tank policy. (Computer policy is decided: default-on for every diver, priced
+  separately. Substitution authority and the unavailable-size fallback are decided *and built* —
+  `canOverrideGearRequest` and the needs-staff-fit state, see
+  [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).)
 
 Source: [example dive-rental reservation form with package and size fields](https://www.sailcaribbeandivers.com/wp-content/uploads/2024/10/SCD-RENTAL-FORM-2024-25.pdf).
 

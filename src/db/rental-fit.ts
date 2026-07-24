@@ -81,13 +81,21 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
  */
 export async function setNeedsStaffFit(
   db: AppDb,
-  input: { shopId: string; personId: string; needed: boolean; note?: string },
+  input: {
+    shopId: string;
+    personId: string;
+    needed: boolean;
+    note?: string;
+    /** The staff member raising or clearing it — attribution, not authorization. */
+    byPersonId?: string;
+  },
 ) {
   const [profile] = await db
     .update(rentalFitProfiles)
     .set({
       needsStaffFitAt: input.needed ? nowDate() : null,
       needsStaffFitNote: input.needed ? optional(input.note) : null,
+      needsStaffFitBy: input.needed ? (input.byPersonId ?? null) : null,
       updatedAt: nowDate(),
     })
     .where(
@@ -98,6 +106,56 @@ export async function setNeedsStaffFit(
     )
     .returning();
   return profile ?? null;
+}
+
+/**
+ * The rental fit as the *diver* may see it — what they told the shop, and
+ * nothing the shop wrote about them. `rental_fit_profiles` carries staff-only
+ * columns (`needs_staff_fit_note` is crew shorthand about a person: "claims M,
+ * is obviously XXL"), and the diver-facing surfaces that render this form are
+ * client components on capability-token and public routes, so the whole row
+ * would ship in the flight payload for anyone holding the link to read.
+ *
+ * Project explicitly rather than trusting `getRentalFit` to stay narrow: this
+ * is the boundary, and the next column added to that table must not cross it
+ * by default.
+ */
+export type DiverRentalFit = {
+  rentsBcd: boolean;
+  rentsRegulator: boolean;
+  rentsWetsuit: boolean;
+  rentsMaskFins: boolean;
+  rentsWeights: boolean;
+  rentsDiveComputer: boolean;
+  rentsGopro: boolean;
+  bcdSize: string | null;
+  wetsuitSize: string | null;
+  bootSize: string | null;
+  finSize: string | null;
+  weightPreference: string | null;
+  /** The diver's own words to the crew — theirs to read and rewrite. */
+  note: string | null;
+};
+
+export function toDiverRentalFit(
+  profile: Awaited<ReturnType<typeof getRentalFit>>,
+): DiverRentalFit | null {
+  if (!profile) return null;
+  return {
+    rentsBcd: profile.rentsBcd,
+    rentsRegulator: profile.rentsRegulator,
+    rentsWetsuit: profile.rentsWetsuit,
+    rentsMaskFins: profile.rentsMaskFins,
+    rentsWeights: profile.rentsWeights,
+    rentsDiveComputer: profile.rentsDiveComputer,
+    rentsGopro: profile.rentsGopro,
+    bcdSize: profile.bcdSize,
+    wetsuitSize: profile.wetsuitSize,
+    bootSize: profile.bootSize,
+    finSize: profile.finSize,
+    weightPreference: profile.weightPreference,
+    note: profile.note,
+  };
 }
 
 export async function getRentalFit(db: AppDb, shopId: string, personId: string) {

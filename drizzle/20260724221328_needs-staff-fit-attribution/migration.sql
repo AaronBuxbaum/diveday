@@ -1,0 +1,2 @@
+ALTER TABLE "rental_fit_profiles" ADD COLUMN "needs_staff_fit_by" uuid;--> statement-breakpoint
+ALTER TABLE "rental_fit_profiles" ADD CONSTRAINT "rental_fit_profiles_needs_staff_fit_by_people_id_fkey" FOREIGN KEY ("needs_staff_fit_by") REFERENCES "people"("id");

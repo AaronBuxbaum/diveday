@@ -3,6 +3,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { maxPlausibleBirthDate } from "@/lib/age";
 import { savePersonAction } from "../actions";
 import type { DiverProfile } from "./shared";
 
@@ -105,6 +106,11 @@ export function DiverHeader({
                   <input
                     name="dateOfBirth"
                     type="date"
+                    // Mirrors the server-side plausibility bound so a mistyped
+                    // year is caught in the field, not by a redirect to
+                    // `?notice=invalid`.
+                    max={maxPlausibleBirthDate()}
+                    min="1900-01-01"
                     defaultValue={diver.person.dateOfBirth ?? ""}
                     className={controlClass}
                   />

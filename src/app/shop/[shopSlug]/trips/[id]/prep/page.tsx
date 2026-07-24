@@ -156,14 +156,27 @@ export default async function TripPrepPage({
                 Fit these divers at check-in
               </h2>
               <p className="mt-1 text-sm text-muted">
-                A size they asked for wasn’t available, so their kit is deliberately off the list
-                below — fit them in person from what’s aboard rather than packing a substitute.
+                A size they asked for wasn’t available. They still count on the list below, but
+                without a size — bring a range in their band and fit them in person rather than
+                packing a substitute.
               </p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.diversNeedingStaffFit.map((diver) => (
                   <li key={diver.fullName}>
                     • {diver.fullName}
                     {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
+                    {/* How old the flag is: a shortage is about one day, so a
+                        months-old flag is a prompt to re-ask, not to trust. */}
+                    <span className="text-muted">
+                      {" "}
+                      (flagged{" "}
+                      {diver.flaggedDaysAgo === 0
+                        ? "today"
+                        : diver.flaggedDaysAgo === 1
+                          ? "yesterday"
+                          : `${diver.flaggedDaysAgo} days ago`}
+                      )
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -176,8 +189,8 @@ export default async function TripPrepPage({
             </h2>
             {checklist.lines.length === 0 ? (
               <p className="mt-3 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-                {checklist.diversWithoutFit.length > 0
-                  ? "Nothing to pull from the fits on file — but the divers listed above were never asked."
+                {checklist.diversWithoutFit.length > 0 || checklist.diversNeedingStaffFit.length > 0
+                  ? "Nothing to pull from the fits on file — but the divers listed above still need sorting out."
                   : "Nothing to pull — every diver on this trip brings their own kit."}
               </p>
             ) : (
@@ -202,17 +215,22 @@ export default async function TripPrepPage({
                   <tbody>
                     {checklist.lines.map((line) => (
                       <tr
-                        key={`${line.kind}:${line.size ?? ""}`}
+                        key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
                         className="border-b border-border last:border-0"
                       >
                         <td className="px-3 py-3 font-medium sm:px-4">{line.label}</td>
                         <td className="px-3 py-3 sm:px-4">
-                          {line.size ??
+                          {line.fitAtCheckIn ? (
+                            // The count is real; the size deliberately isn't.
+                            <span className="font-medium text-warning">Fit at check-in</span>
+                          ) : (
+                            (line.size ??
                             (UNSIZED_ITEM_KINDS.includes(line.kind) ? (
                               <span className="text-muted">—</span>
                             ) : (
                               <span className="text-muted">Not recorded</span>
-                            ))}
+                            )))
+                          )}
                         </td>
                         <td className="px-3 py-3 tabular-nums sm:px-4">{line.count}</td>
                         <td className="px-3 py-3 text-muted sm:px-4">{line.divers.join(", ")}</td>

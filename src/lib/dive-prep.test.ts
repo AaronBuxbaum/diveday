@@ -239,7 +239,7 @@ describe("buildDivePrepChecklist rental lines", () => {
 describe("needs-staff-fit fallback (H-06)", () => {
   const flaggedAt = new Date("2026-07-24T12:00:00Z");
 
-  it("keeps a flagged diver's sizes off the packing lines", () => {
+  it("keeps a flagged diver's stated size off the lines but keeps their count", () => {
     const checklist = buildDivePrepChecklist({
       divers: [
         diver({ bookingId: "b1", fullName: "Ada" }),
@@ -250,14 +250,41 @@ describe("needs-staff-fit fallback (H-06)", () => {
         }),
       ],
       plannedDives: 2,
+      now: flaggedAt,
     });
-    // Only Ada's kit is laid out — packing Ben's stated size is exactly what
-    // the flag exists to prevent.
-    expect(lineFor(checklist, "bcd", "M")?.count).toBe(1);
+    // Ben's BCD is not laid out in his stated size — that is what the flag
+    // prevents...
     expect(lineFor(checklist, "bcd", "M")?.divers).toEqual(["Ada"]);
-    expect(checklist.diversNeedingStaffFit).toEqual([{ fullName: "Ben", note: "No L BCD" }]);
+    // ...but he still gets a BCD line, so the boat isn't loaded one short.
+    const benBcd = checklist.lines.find((l) => l.kind === "bcd" && l.fitAtCheckIn);
+    expect(benBcd).toMatchObject({ count: 1, divers: ["Ben"], size: null });
+    expect(checklist.diversNeedingStaffFit).toEqual([
+      { fullName: "Ben", note: "No L BCD", flaggedDaysAgo: 0 },
+    ]);
     // ...and he is not miscounted as a diver nobody ever asked.
     expect(checklist.diversWithoutFit).toEqual([]);
+  });
+
+  it("never drops a flagged diver's unsized life support", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Ben",
+          fit: { ...fullFit, rentsDiveComputer: true, needsStaffFitAt: flaggedAt },
+        }),
+      ],
+      plannedDives: 1,
+      now: flaggedAt,
+    });
+    // A regulator has no size to be wrong about. Leaving one off the boat to
+    // avoid packing a wrong-size wetsuit is the strictly worse trade.
+    expect(lineFor(checklist, "regulator", null)).toMatchObject({
+      count: 1,
+      divers: ["Ben"],
+      fitAtCheckIn: false,
+    });
+    expect(lineFor(checklist, "dive_computer", null)?.count).toBe(1);
   });
 
   it("still counts a flagged diver's tanks — gas is never sized", () => {
@@ -271,6 +298,7 @@ describe("needs-staff-fit fallback (H-06)", () => {
         }),
       ],
       plannedDives: 3,
+      now: flaggedAt,
     });
     expect(checklist.tanks.total).toBe(6);
     expect(checklist.diverCount).toBe(2);
@@ -286,8 +314,26 @@ describe("needs-staff-fit fallback (H-06)", () => {
         }),
       ],
       plannedDives: 1,
+      now: flaggedAt,
     });
-    expect(checklist.diversNeedingStaffFit).toEqual([{ fullName: "Ada", note: null }]);
+    expect(checklist.diversNeedingStaffFit).toEqual([
+      { fullName: "Ada", note: null, flaggedDaysAgo: 0 },
+    ]);
+  });
+
+  it("reports how stale the flag is, so an old one prompts a re-ask", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Ada",
+          fit: { ...fullFit, needsStaffFitAt: flaggedAt },
+        }),
+      ],
+      plannedDives: 1,
+      now: new Date(flaggedAt.getTime() + 30 * 24 * 60 * 60 * 1000),
+    });
+    expect(checklist.diversNeedingStaffFit[0]?.flaggedDaysAgo).toBe(30);
   });
 });
 

@@ -12,7 +12,7 @@ import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-s
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { getBookingPayment } from "@/db/payments";
 import { getBookingReadiness, getTripRequirements } from "@/db/readiness";
-import { getRentalFit } from "@/db/rental-fit";
+import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
@@ -122,7 +122,9 @@ export default async function TripDetailPage({
           resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
           getBookingReadiness(db, shop.id, confirmed.booking.id),
           getTripRequirements(db, shop.id, tripId),
-          getRentalFit(db, shop.id, confirmed.person.id),
+          // Projected: this page is public and the form is a client
+          // component, so staff-only fit columns must not ship to the browser.
+          getRentalFit(db, shop.id, confirmed.person.id).then(toDiverRentalFit),
           verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
           issueBookingCapability(db, {
             shopId: shop.id,

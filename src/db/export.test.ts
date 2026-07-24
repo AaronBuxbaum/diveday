@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq, getTableName } from "drizzle-orm";
+import { and, eq, getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { seededShopContext } from "@/test/db";
@@ -88,6 +88,57 @@ const EXCLUDED_TABLES = [
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
 ];
 
+/**
+ * Columns on an exported table that deliberately stay out of the bundle. The
+ * default for anything absent from this map is "must be exported" — a new
+ * column has to be argued out, not quietly forgotten.
+ */
+const EXCLUDED_COLUMNS: Record<string, string[]> = {
+  // `shop_id` is the same value on every row of a single-shop bundle.
+  shops: ["jurisdiction", "is_demo"], // DiveDay-side config, not shop records
+  people: ["shop_id"],
+  certifications: ["shop_id"],
+  specialty_certifications: ["shop_id"],
+  nitrox_certifications: ["shop_id"],
+  trips: ["shop_id", "recap_shoutout"], // recap copy travels with recap_photos.csv
+  trip_series: ["shop_id"],
+  trip_dives: [],
+  trip_requirements: ["shop_id"],
+  trip_assignments: [],
+  bookings: [
+    "shop_id",
+    "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
+    "identity_unconfirmed_at", // H-13 review state, not a shop record
+  ],
+  trip_waitlist_entries: ["shop_id"],
+  roll_call_events: ["shop_id"],
+  waiver_templates: ["shop_id"],
+  waiver_records: [
+    "shop_id",
+    "template_body", // the frozen copy; waiver_templates.csv carries the text
+    "token_hash", // bearer credential — never exported
+    "draft_signer_name", // unsubmitted draft state, not a signed record
+    "draft_acknowledged",
+    "draft_medical_answers",
+  ],
+  rental_fit_profiles: ["shop_id"],
+  orders: [
+    "shop_id",
+    "stripe_account_id", // provider linkage, useless outside this Stripe account
+    "stripe_customer_id",
+  ],
+  order_line_items: ["shop_id"],
+  dive_sites: [
+    "shop_id",
+    "source_template_id", // provenance into DiveDay's catalog, not the shop's
+    "source_template_version",
+  ],
+  dive_site_creatures: ["shop_id"],
+  dive_site_moments: ["shop_id"],
+  recap_photos: ["shop_id"],
+  courses: ["shop_id"],
+};
+
 function table(
   input: NonNullable<Awaited<ReturnType<typeof loadShopExportBundleInput>>>,
   file: string,
@@ -119,6 +170,38 @@ describe("schema coverage", () => {
     // And the lists must not carry stale names a rename would orphan.
     const actual = new Set(tableNames);
     expect([...decided].filter((name) => !actual.has(name))).toEqual([]);
+  });
+
+  it("forces every column of an exported table to be exported or deliberately excluded", async () => {
+    const { db, shop } = await seededShopContext();
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("seeded shop failed to load");
+
+    // A column counts as exported if it appears in *any* file's header — some
+    // ride in a rollup (contacts.csv) rather than their own table's CSV.
+    const exportedColumns = new Set(input.tables.flatMap((table) => table.header));
+    const exportedTables = new Set(EXPORTED_TABLES);
+
+    const undecided: Record<string, string[]> = {};
+    for (const value of Object.values(schema)) {
+      let name: string;
+      try {
+        name = getTableName(value as Parameters<typeof getTableName>[0]);
+      } catch {
+        continue;
+      }
+      if (!exportedTables.has(name)) continue;
+      const missing = Object.values(getTableColumns(value as Parameters<typeof getTableColumns>[0]))
+        .map((column) => column.name)
+        .filter((column) => !exportedColumns.has(column))
+        .filter((column) => !(EXCLUDED_COLUMNS[name] ?? []).includes(column));
+      if (missing.length > 0) undecided[name] = missing;
+    }
+    // The table-level test above passes happily when a *new column* on an
+    // already-exported table never reaches the bundle — which is exactly how a
+    // shop exports, re-imports, and silently loses a field. Adding a column
+    // now forces a decision here too.
+    expect(undecided).toEqual({});
   });
 });
 
