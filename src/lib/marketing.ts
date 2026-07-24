@@ -31,7 +31,7 @@ export const productFeatureGroups = [
     features: [
       "Every diver's rental sizes on the trip's prep list, so the boat is packed without a clipboard",
       "Dive-site briefings with the route and conditions notes crews actually use",
-      "Nitrox requested per booking, refused unless the diver's enriched-air card checks out",
+      "Nitrox requested per booking — filled as plain air until the diver's enriched-air card is verified",
       "Save the manifest to a phone and roll call keeps working with no signal — every dive, print backup included",
     ],
   },
@@ -42,7 +42,7 @@ export const productFeatureGroups = [
       "Every trip and class shows who's leading it and who's crewing",
       "A live picture of bookings, blockers, and staffing gaps — before they become tomorrow's problem",
       "Walk the day as the front desk, the captain, or the diver before you commit",
-      "Your own shop workspace, ready with realistic practice data on day one",
+      "Leave any day with a one-ZIP export of your shop's records — no phone call, no fee",
     ],
   },
 ] as const;
@@ -58,4 +58,23 @@ export const earlyAccessPrice = {
     "New features as they ship, all through early access",
     "A practice shop preloaded with realistic trips to train on",
   ],
+} as const;
+
+/**
+ * The bare amount inside `earlyAccessPrice.price`, for structured data that
+ * needs a number (JSON-LD offers). Derived here so the figure still has exactly
+ * one source; never restate it as a literal.
+ */
+export const earlyAccessPriceAmount = earlyAccessPrice.price.replace(/[^\d.]/g, "");
+
+/**
+ * The full-shop export claim, shared by the home "Safe to leave" band and the
+ * pricing data-exit FAQ so the two surfaces can never drift apart. Contents
+ * verified against src/lib/export.ts; keep them in sync with the bundle.
+ */
+export const fullShopExport = {
+  claim:
+    "Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard.",
+  terms:
+    "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
 } as const;

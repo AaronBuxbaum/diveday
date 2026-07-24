@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { publicAppUrl } from "@/lib/notifications";
 import { Observability } from "./observability-client";
 
 const geistSans = Geist({
@@ -14,9 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // The canonical origin comes from APP_HOST (the same source bearer-token
+  // links use); localhost keeps relative-URL resolution working in dev/e2e.
+  metadataBase: new URL(publicAppUrl() ?? "http://localhost:3000"),
   title: "DiveDay — a calmer way to run a dive day",
   description:
     "Bookings, waivers, cert checks, trip prep, and boat manifests — one calm system for the whole dive shop.",
+  openGraph: {
+    siteName: "DiveDay",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

@@ -173,6 +173,15 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   of the portability wedge. Content in `src/lib/migration-guides.ts`, pages in `src/app/switching/`
   ([marketing.md](marketing.md#migration-guides)). Backups and the read API are the open follow-ons
   in [roadmap.md](roadmap.md).
+- **Marketing SEO substrate + try/run/leave repositioning** (2026-07-24) — the public pages argue
+  the researched wedge instead of the category: home gains a "Safe to leave" portability band and
+  founding-shop closing, `/product` a diver-arc moment (night-before brief, recap) and an "honest
+  no" scope section, `/pricing` a nine-question objection FAQ (data exit, PADI/SSI, POS, switching
+  cost); demo CTA on every sales page with a typed `demo_entered` funnel event; sitewide
+  `metadataBase`/canonicals/OG card image, `robots.ts` + `sitemap.ts`, and `FAQPage` +
+  `SoftwareApplication` JSON-LD reading price from `src/lib/marketing.ts`
+  ([marketing.md](marketing.md), [assessments/marketing-review.md](assessments/marketing-review.md)
+  M1–M5).
 - **Night-before brief + post-trip recap** — the 24-hour reminder becomes a plain-language
   night-before brief (conditions, what to bring, dock time, who to text; softer first-timer voice),
   and after departure an automatic `/recap/[token]` gives each diver a shareable page of the sites
