@@ -9,16 +9,10 @@ import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
-
-/**
- * The password any demo person signs in with: `credentials` accepts it for a
- * person in an `isDemo` shop without a real password match (src/lib/credentials.ts).
- * Reused here for the initial owner sign-in and, below, for role switching.
- */
-const DEMO_BYPASS_PASSWORD = "demo-role-switcher-bypass-token";
 
 /**
  * One-click into the demo: mint a fresh, disposable demo shop with a generated
