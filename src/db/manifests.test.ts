@@ -123,8 +123,9 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
 
   it("boards a diver whose readiness lapsed after departure at an after-dive head count", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
-    // The seed reef trip's divers are all blocked (no waiver). At departure the
-    // readiness gate refuses to board a blocked diver.
+    // The seed reef trip's first-booked diver has no waiver on file at all
+    // (the rest have one pending, still blocked). At departure the readiness
+    // gate refuses to board a blocked diver.
     await expect(
       recordRollCall(db, {
         shopId: shop.id,
