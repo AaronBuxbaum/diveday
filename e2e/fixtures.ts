@@ -10,7 +10,29 @@ import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
  * server — this is what lets the suite run `fullyParallel` without one test's
  * mutation leaking into another's assertions.
  */
-export const test = base.extend<object, { workerBaseURL: string; ownerStorageState: string }>({
+export const test = base.extend<
+  { demoReset: void },
+  { workerBaseURL: string; ownerStorageState: string }
+>({
+  // Reset this worker's demo shop to the seeded fixture before every test so
+  // each starts from the same baseline regardless of order. This is an `auto`
+  // fixture, not a top-level `test.beforeEach`: a `beforeEach` declared in an
+  // imported fixtures module only attaches to some spec files (the ones whose
+  // tests sit at the file's top level), so the many specs that wrap their tests
+  // in `test.describe(...)` silently ran with no reset — their trips and
+  // bookings then leaked into every later spec's fixture and made the shared
+  // public-schedule assertions (trips.spec) flake. An `auto` fixture runs for
+  // every test that uses this `test`, describe-nested or not. It depends only
+  // on `request` (an API call to the worker's own server), so parallel resets
+  // never interfere; the browser clock is frozen in the `context` fixture below.
+  demoReset: [
+    async ({ request }, use) => {
+      await request.post("/api/test/reset");
+      await use();
+    },
+    { auto: true },
+  ],
+
   // Pin the browser clock to the same instant the server is frozen at
   // (DIVEDAY_CLOCK, see src/lib/clock.ts) at context creation, so the override
   // is in place before the first navigation of every test — including the first
@@ -87,15 +109,5 @@ export function signedInAsOwner() {
     },
   });
 }
-
-/**
- * Reset this worker's demo shop to the seeded fixture before every test so each
- * starts from the same baseline regardless of order. It runs against the
- * worker's own database, so parallel resets never interfere. (The browser clock
- * is frozen in the `context` fixture above, before this runs.)
- */
-test.beforeEach(async ({ request }) => {
-  await request.post("/api/test/reset");
-});
 
 export { expect };

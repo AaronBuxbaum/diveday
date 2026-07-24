@@ -72,6 +72,7 @@ async function scheduleTrip(formData: FormData) {
       `/shop/${session.user.shopSlug}/trips/new`,
       `/shop/${session.user.shopSlug}/trips/new?error=not-authorized`,
     );
+    return;
   }
 
   const parsed = formSchema.safeParse(Object.fromEntries(formData));
@@ -325,7 +326,7 @@ export default async function NewTripPage({
               <Field
                 label="Deposit per diver"
                 hint="(optional)"
-                description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price."
+                description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare."
               >
                 <input
                   name="depositDollars"
@@ -339,7 +340,7 @@ export default async function NewTripPage({
               <Field
                 label="Free cancellation window"
                 hint="(optional)"
-                description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run."
+                description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window."
               >
                 <div className="flex items-center gap-2">
                   <input

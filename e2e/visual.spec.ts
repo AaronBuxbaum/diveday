@@ -148,6 +148,16 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
       await capture(page, "switching-spreadsheet", scheme);
 
+      // The FareHarbor guide: the coexist-led variant of the template, for a
+      // booking channel a shop keeps rather than a records system it leaves —
+      // the "keep it, or leave it" section (run-the-day cards + the leave path)
+      // that no other guide renders.
+      await page.goto("/switching/fareharbor");
+      await page
+        .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
+        .waitFor();
+      await capture(page, "switching-fareharbor", scheme);
+
       // Two more safety-critical bearer-token pages, done last so minting
       // them (a real send-waiver action, a real booking) never changes the
       // seed-derived counts the captures above depend on (CR-019). Setup

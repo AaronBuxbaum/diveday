@@ -30,6 +30,38 @@ export type ExportStep = {
   detail: string;
 };
 
+/**
+ * Optional "works alongside" framing, for an incumbent that is a booking and
+ * distribution *channel* rather than a records system to leave outright (today:
+ * FareHarbor — a general tours-and-activities booking engine, owned by Booking
+ * Holdings, that a dive shop bolts a storefront onto). It is the same "bring
+ * your POS, we run the water" division of labor the product page already draws,
+ * extended to a booking channel: keep the incumbent for the storefront it's
+ * genuinely good at, run the dive day it was never built for in DiveDay.
+ *
+ * Honesty guardrails baked into the shape (marketing.md): there is no
+ * integration between DiveDay and any such channel, so `bridgeNote` must state
+ * plainly that the CSV import below is the only bridge — never imply a live
+ * sync. `runsInDiveDay` items are shipped-only, demonstrable in the live demo.
+ * When this field is absent a guide is a straight leave-it migration like the
+ * other four.
+ */
+export type CoexistFraming = {
+  /** Section heading — coexist-led, the day the incumbent can't run. */
+  heading: string;
+  /** One or two sentences setting up the division of labor. */
+  intro: string;
+  /** The dive-day jobs DiveDay runs that a booking engine has no concept of. */
+  runsInDiveDay: { title: string; detail: string }[];
+  /**
+   * Concede the incumbent's real strength (its distribution network / checkout)
+   * and state the honest no-live-sync caveat: the CSV export below is the bridge.
+   */
+  bridgeNote: string;
+  /** The alternative path: drop the channel entirely and take the booking in DiveDay. */
+  replace: { heading: string; body: string };
+};
+
 export type MigrationGuide = {
   /** URL segment: /switching/<slug>. */
   slug: string;
@@ -49,6 +81,13 @@ export type MigrationGuide = {
 
   /** Honest framing of the incumbent — paragraphs, no marketing puffery. */
   context: string[];
+
+  /**
+   * Optional coexist framing, for a booking/distribution channel a shop can
+   * keep rather than a records system to leave (today: FareHarbor). Rendered as
+   * a section above the export steps; absent for the straight leave-it guides.
+   */
+  coexist?: CoexistFraming;
 
   // The export click-path: how to get the data out of the incumbent's system.
   exportHeading: string;
@@ -347,13 +386,150 @@ const smartwaiver: MigrationGuide = {
   ],
 };
 
+const fareharbor: MigrationGuide = {
+  slug: "fareharbor",
+  competitor: "FareHarbor",
+  cardSummary:
+    "A booking engine for tours, not dive software. Keep its booking button and hotel/OTA network and run the dive day it can't — or leave the per-booking fee behind entirely. Either way, bring your divers across.",
+
+  metaTitle: "FareHarbor and DiveDay — run the dive day, or switch",
+  metaDescription:
+    "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for — cert checks, waivers, and the roll-call manifest — or leave the per-booking fee behind. Bring your divers across, with an honest account of what comes with them.",
+
+  heroEyebrow: "FareHarbor + DiveDay",
+  heroTitle: "FareHarbor fills the seats. DiveDay runs the boat.",
+  heroLede:
+    "FareHarbor takes the online booking and puts you in front of its hotel and reseller network — and then the dive day still runs on a clipboard, because a general booking engine was never built for cards, waivers, or a roll call on the water. Here's how DiveDay runs that day: keep FareHarbor for the storefront, or leave the per-booking fee behind and take the booking here too. Either way, bringing your divers across is the same few minutes.",
+
+  context: [
+    "FareHarbor is an online booking platform for tours, activities, and rentals — owned by Booking Holdings, the company behind Booking.com — and plenty of dive shops run their storefront on it. It's genuinely good at that job: guests book and pay online, and its distribution network puts your trips in front of hotels, concierges, and resellers you'd never reach on your own. We're not here to talk you out of any of that.",
+    "What it isn't is dive software. FareHarbor makes no claim to certification gating, medical waivers that fail closed, rental-gear fit, or a boat manifest built for a roll call — because it's a general booking engine, not a dive shop's back office. Its \"manifest\" is a passenger list you can download; it has no concept of a C-card. So your guests book beautifully, and then the part that keeps people safe on the water still runs on a clipboard.",
+    "And the storefront isn't free: FareHarbor charges nothing monthly, but it takes a fee on every booking — added to your guest's checkout price — for as long as you use it. It doesn't publish the rate; you hear it on a sales call (third parties report around 6%). A cut of every booking, forever, is the thing a growing shop feels.",
+    "So there are two honest ways DiveDay fits a FareHarbor shop, below: keep FareHarbor for the storefront and add the dive day it can't run, or take the booking in DiveDay too and leave the per-booking fee behind. Whichever you pick, you bring your divers across the same way — and the safety spine holds either way.",
+  ],
+
+  coexist: {
+    heading: "Keep FareHarbor. Add the day it can't run.",
+    intro:
+      'DiveDay runs the water side — everything between "booked" and "back at the dock" that a booking engine was never built to touch. Point-for-point, this is what FareHarbor leaves to your clipboard:',
+    runsInDiveDay: [
+      {
+        title: "Readiness that won't let an unready diver board",
+        detail:
+          "The trip and the dive site decide what each diver needs; if a card or waiver can't be verified, DiveDay says so plainly instead of passing them through. FareHarbor takes the booking — it never checks whether the diver is cleared to get on the boat.",
+      },
+      {
+        title: "Certification checks that actually gate the dive",
+        detail:
+          "Every card is captured pending and verified by your staff, never trusted on sight; a deep dive won't clear a diver who isn't carded for it, and a nitrox request gets plain air until staff verify the card. A general booking engine has no concept of a C-card.",
+      },
+      {
+        title: "Native waivers with medical review — in every tier",
+        detail:
+          "Waivers are built in and versioned against your own release, and a medical answer that calls for a physician's sign-off blocks the diver until that review — it doesn't just warn. Not a form stapled to a checkout, and not a paid add-on.",
+      },
+      {
+        title: "A roll-call manifest that survives the dock",
+        detail:
+          "Big Boarded / Not-boarded buttons for wet thumbs, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp.",
+      },
+      {
+        title: "Rental fit and the trip's packing list",
+        detail:
+          "Every diver's sizes become the boat's kit list, with a tank per diver per dive split by air and nitrox. FareHarbor doesn't know a diver's wetsuit size.",
+      },
+      {
+        title: "The night-before brief and a recap they share",
+        detail:
+          "Each diver gets a plain-language brief the night before — dock time, conditions, what to bring — and a shareable recap page after. The booking confirmation was the start; this is the rest of the relationship.",
+      },
+    ],
+    bridgeNote:
+      "FareHarbor keeps doing what it's good at — taking the online booking and putting you in front of its hotel and reseller network, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two systems: you bring your divers into DiveDay with the CSV export below, and re-import as your roster grows. What you get back for that is the dive day itself.",
+    replace: {
+      heading: "Or leave the per-booking fee behind.",
+      body: "If FareHarbor is really just your booking button — you're not leaning on its distribution network — you don't need to keep paying on every booking to keep it. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, and the same native waivers. Bring your divers across once, point your booking link at DiveDay, and the per-booking fee stops. The steps below are the same either way.",
+    },
+  },
+
+  exportHeading: "Get your data out of FareHarbor",
+  exportIntro:
+    "FareHarbor runs in a browser, and your data comes out of the Dashboard's reports — there's no single \"export everything\" button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path, not word-for-word buttons.",
+  exportSteps: [
+    {
+      title: "Sign into your FareHarbor Dashboard as an owner or admin",
+      detail:
+        "Reports live in the Dashboard, behind an owner or admin login — not the guest-facing booking page.",
+    },
+    {
+      title: "Open Reports and run the Contacts (customer) report",
+      detail:
+        "FareHarbor's Contacts report is your customer list — names, email, phone — for a date range. That roster is what you need; the rest of the reports are booking and sales records.",
+    },
+    {
+      title: "Set the date range as wide as it goes",
+      detail:
+        "The Contacts report is scoped to a range, not a single all-time dump, so widen it as far as FareHarbor allows before you run it — otherwise a slow season or a lapsed regular quietly gets left behind.",
+    },
+    {
+      title: "Download it as CSV",
+      detail:
+        "FareHarbor's reports and manifests download as CSV straight from the Dashboard. Save the file where you'll find it — that file is all DiveDay needs.",
+    },
+    {
+      title: "Don't wait on the API",
+      detail:
+        "FareHarbor has an API, but access is partner-gated — you email their support to request it, and it's built for resellers, not a self-serve export you can run yourself. The Dashboard CSV is your route out, and it's enough.",
+    },
+  ],
+  exportNotes: [
+    'The Contacts report is date-scoped, not a one-click "everything" export — set the range as wide as FareHarbor allows so seasonal and lapsed customers come along.',
+    "Your column headings don't have to match anything. DiveDay recognizes the common names FareHarbor and every other system use, and shows you exactly how each column mapped before you commit.",
+    "Certification cards and rental sizes aren't in a FareHarbor export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
+  ],
+  importerNote:
+    "A FareHarbor export is mostly contact data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the Contacts file; DiveDay matches divers by email, so a later re-import updates the same people instead of duplicating them.",
+  sources: [
+    {
+      label: "FareHarbor — booking software for tours & activities",
+      url: "https://fareharbor.com/",
+    },
+    {
+      label: "Booking Holdings acquires FareHarbor (2018)",
+      url: "https://www.bookingholdings.com/press-releases/booking-holdings-announces-it-has-signed-an-agreement-to-acquire-fareharbor/",
+    },
+    {
+      label: "FareHarbor Distribution Network — for operators",
+      url: "https://fareharbor.com/scale/distribution-network/operators/",
+    },
+    {
+      label: "FareHarbor Help — downloading a manifest or report as CSV",
+      url: "https://help.fareharbor.com/hc/en-us/articles/40897898334619-How-do-I-download-a-manifest-or-report",
+    },
+    {
+      label: "FareHarbor's per-booking fee model, explained (TrekkSoft, third-party)",
+      url: "https://www.trekksoft.com/en/blog/fareharbor-pricing-guide-what-to-know-before-you-buy",
+    },
+  ],
+};
+
 /**
  * Every guide in this registry is a real, published page — there are no
  * roadmap or "coming soon" entries (marketing claims policy in
  * docs/product/marketing.md is shipped-only). A future incumbent gets an entry
  * here, and a route, only once its export click-path is real.
+ *
+ * Most entries are a straight leave-it migration; FareHarbor additionally
+ * carries a `coexist` block because it's a booking/distribution channel a shop
+ * can keep, not a records system to leave — see CoexistFraming above.
  */
-export const MIGRATION_GUIDES: MigrationGuide[] = [eve, diveshop360, diveadmin, smartwaiver];
+export const MIGRATION_GUIDES: MigrationGuide[] = [
+  eve,
+  diveshop360,
+  diveadmin,
+  smartwaiver,
+  fareharbor,
+];
 
 /** Slugs with a page — the source for generateStaticParams and route validity. */
 export const MIGRATION_GUIDE_SLUGS: string[] = MIGRATION_GUIDES.map((guide) => guide.slug);

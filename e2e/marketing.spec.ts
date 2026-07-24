@@ -54,12 +54,13 @@ test("migration guides walk a shop from an incumbent export into the importer", 
 
   await expect(page.getByRole("heading", { name: "The door swings both ways." })).toBeVisible();
 
-  // The four named incumbents each have a live guide (no coming-soon entries).
+  // The named incumbents each have a live guide (no coming-soon entries).
   for (const name of [
     /Switching from EVE/,
     /Switching from DiveShop360/,
     /Switching from DiveAdmin/,
     /Switching from Smartwaiver/,
+    /Switching from FareHarbor/,
   ]) {
     await expect(page.getByRole("link", { name })).toBeVisible();
   }
@@ -91,8 +92,27 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   await expect(page.getByText(/For a Smartwaiver export:/)).toBeVisible();
 
+  // FareHarbor is a booking channel, not a records system, so its guide is
+  // coexist-led: keep the storefront and run the dive day, or leave the fee —
+  // then the same export/scope/import mechanics every guide shares.
+  await page.goto("/switching/fareharbor");
+  await expect(
+    page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Keep FareHarbor. Add the day it can't run." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Or leave the per-booking fee behind." }),
+  ).toBeVisible();
+  // It still renders the shared three-part promise and the honesty table.
+  await expect(
+    page.getByRole("heading", { name: "Get your data out of FareHarbor" }),
+  ).toBeVisible();
+  await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
+
   // An unlisted incumbent has no page — no coming-soon shells.
-  const response = await page.goto("/switching/fareharbor");
+  const response = await page.goto("/switching/rezdy");
   expect(response?.status()).toBe(404);
 });
 
