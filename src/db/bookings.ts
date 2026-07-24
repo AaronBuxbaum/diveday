@@ -1,6 +1,7 @@
-import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
@@ -42,6 +43,7 @@ export type BookingOutcome =
         | "already_booked"
         | "course_unstaffed"
         | "course_prerequisite"
+        | "course_ratio_full"
         | "person_not_found";
     };
 
@@ -114,14 +116,35 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     : [];
   // A course session is unsafe to market as open until an instructor is on
   // the session. This is a booking gate, not a cosmetic staff warning.
+  let entryLevelSeatCap: number | null = null;
   if (course) {
-    const [instructor] = await tx
-      .select({ personId: tripAssignments.personId })
+    const crew = await tx
+      .select({ personId: tripAssignments.personId, role: personRoles.role })
       .from(tripAssignments)
       .innerJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
-      .where(and(eq(tripAssignments.tripId, trip.id), eq(personRoles.role, "instructor")))
-      .limit(1);
-    if (!instructor) return { ok: false, reason: "course_unstaffed" };
+      .where(
+        and(
+          eq(tripAssignments.tripId, trip.id),
+          inArray(personRoles.role, ["instructor", "divemaster"]),
+        ),
+      );
+    const instructorIds = new Set(
+      crew.filter((row) => row.role === "instructor").map((row) => row.personId),
+    );
+    if (instructorIds.size === 0) return { ok: false, reason: "course_unstaffed" };
+    // Entry-level (no-card-required) sessions carry PADI's published in-water
+    // ratio — see src/lib/course-ratios.ts for the sourcing. Continuing-ed
+    // courses (minimumCertificationLevel set) already gate on a verified card
+    // and PADI does not publish a comparable numeric ratio for them.
+    if (!course.minimumCertificationLevel) {
+      // A person holding both roles is the instructor, not their own assistant.
+      const assistantCount = new Set(
+        crew
+          .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
+          .map((row) => row.personId),
+      ).size;
+      entryLevelSeatCap = entryLevelCourseCapacity(instructorIds.size, assistantCount);
+    }
   }
 
   // Resolve the diver. A returning diver picked by identity reuses that exact
@@ -196,8 +219,12 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     .select({ booked: count(bookings.id) })
     .from(bookings)
     .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
-  if ((row?.booked ?? 0) >= trip.capacity) {
+  const booked = row?.booked ?? 0;
+  if (booked >= trip.capacity) {
     return { ok: false, reason: "trip_full" };
+  }
+  if (entryLevelSeatCap !== null && booked >= entryLevelSeatCap) {
+    return { ok: false, reason: "course_ratio_full" };
   }
 
   if (!person && pendingInsert) {

@@ -62,6 +62,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
     tone: "danger",
     text: "That diver doesn't have a verified certification on file for this course's prerequisite.",
   },
+  "diver-course-ratio-full": {
+    tone: "danger",
+    text: "This session is at its instructor-to-student ratio limit — assign another instructor or a certified assistant, or add them to the wait list.",
+  },
   "diver-unavailable": { tone: "danger", text: "This trip can't accept new divers right now." },
   "waiver-complete": { tone: "success", text: "That diver already has a completed waiver." },
   "waiver-in-person": {
