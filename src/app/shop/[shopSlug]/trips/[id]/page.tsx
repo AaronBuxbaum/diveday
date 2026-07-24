@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
@@ -68,16 +69,25 @@ export default async function ManageTripPage({
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
-  const [staff, crewIds, requirement, diveSiteList, tripDiveList, siteRequirement, series] =
-    await Promise.all([
-      listStaff(db, shop.id),
-      getTripCrewIds(db, shop.id, tripId),
-      getTripRequirements(db, shop.id, tripId),
-      listDiveSites(db, shop.id),
-      listTripDives(db, shop.id, tripId),
-      getTripSiteRequirement(db, shop.id, tripId),
-      getTripSeriesSummary(db, shop.id, tripId),
-    ]);
+  const [
+    staff,
+    crewIds,
+    requirement,
+    diveSiteList,
+    tripDiveList,
+    siteRequirement,
+    series,
+    canConfigure,
+  ] = await Promise.all([
+    listStaff(db, shop.id),
+    getTripCrewIds(db, shop.id, tripId),
+    getTripRequirements(db, shop.id, tripId),
+    listDiveSites(db, shop.id),
+    listTripDives(db, shop.id, tripId),
+    getTripSiteRequirement(db, shop.id, tripId),
+    getTripSeriesSummary(db, shop.id, tripId),
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+  ]);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
@@ -132,15 +142,29 @@ export default async function ManageTripPage({
 
       <TripNoticeBanner notice={notice} count={count} />
 
-      <DetailsSection
-        action={saveDetails.bind(null, shopSlug, tripId)}
-        trip={trip}
-        diveSiteList={diveSiteList}
-        tripDiveList={tripDiveList}
-        startWall={startWall}
-        endWall={endWall}
-      />
+      {canConfigure ? null : (
+        <div className="mt-6">
+          <ShopNotice tone="neutral" role="status">
+            You're viewing this trip. Its setup — the details, admission requirements, and recurring
+            schedule — is edited by owners, managers, and instructors. Recording conditions,
+            adjusting who's on crew, and cancelling today's trip for weather stay open to you, as do
+            the roster, check-in, manifest, and roll call.
+          </ShopNotice>
+        </div>
+      )}
 
+      {canConfigure ? (
+        <DetailsSection
+          action={saveDetails.bind(null, shopSlug, tripId)}
+          trip={trip}
+          diveSiteList={diveSiteList}
+          tripDiveList={tripDiveList}
+          startWall={startWall}
+          endWall={endWall}
+        />
+      ) : null}
+
+      {/* Conditions are crew-entered (glossary) — open to all staff. */}
       <ConditionsSection
         saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
@@ -152,13 +176,16 @@ export default async function ManageTripPage({
         shoutout={trip.recapShoutout}
       />
 
-      <RequirementsSection
-        action={saveRequirementsAction.bind(null, shopSlug, tripId)}
-        trip={trip}
-        requirement={requirement}
-        siteRequirement={siteRequirement}
-      />
+      {canConfigure ? (
+        <RequirementsSection
+          action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+          trip={trip}
+          requirement={requirement}
+          siteRequirement={siteRequirement}
+        />
+      ) : null}
 
+      {/* Who's aboard is manifest accuracy (glossary) — open to all staff. */}
       <CrewSection
         action={saveCrewAction.bind(null, shopSlug, tripId)}
         trip={trip}
@@ -167,7 +194,7 @@ export default async function ManageTripPage({
         hasCourseInstructor={hasCourseInstructor}
       />
 
-      {series ? (
+      {canConfigure && series ? (
         <SeriesSection
           intervalWeeks={series.intervalWeeks}
           occurrenceCount={series.occurrenceCount}
@@ -180,12 +207,21 @@ export default async function ManageTripPage({
 
       <section className="mt-12 border-t border-border pt-6">
         {cancelled ? (
-          <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-            <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
-              Reinstate trip
-            </SubmitButton>
-          </form>
+          canConfigure ? (
+            <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
+              <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
+                Reinstate trip
+              </SubmitButton>
+            </form>
+          ) : (
+            <p className="text-sm text-muted">
+              This trip is cancelled. Putting it back on the schedule is limited to owners,
+              managers, and instructors.
+            </p>
+          )
         ) : (
+          // A single trip's weather cancellation is the crew's go/no-go call
+          // (glossary) — open to all staff. Reinstating it is config work.
           <form
             action={cancelTripAction.bind(null, shopSlug, tripId)}
             className="flex items-center gap-3"
@@ -194,7 +230,7 @@ export default async function ManageTripPage({
               Cancel trip
             </SubmitButton>
             <p className="text-sm text-muted">
-              Takes it off the public schedule. You can reinstate it any time.
+              Takes it off the public schedule and notifies booked divers.
             </p>
           </form>
         )}

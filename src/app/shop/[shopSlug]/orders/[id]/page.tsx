@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import { getShopById } from "@/db/shops";
@@ -87,6 +88,12 @@ async function refundAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
   const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  // Money leaving the account is owner/manager work, re-checked against live
+  // roles (H-14, ADR 20260724-role-authorization).
+  if (!(await canPersonRefund(db, session.user.shopId, session.user.personId))) {
+    revalidateAndRedirect(back, `${back}?notice=not_authorized`);
+    return;
+  }
   if (await isDemoShop(db, session.user.shopId)) {
     revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
     return;
@@ -95,7 +102,12 @@ async function refundAction(formData: FormData) {
   revalidateAndRedirect(back, `${back}?notice=${updated ? "refunded" : "refund_failed"}`);
 }
 
-const FAILED_NOTICES = new Set(["refresh_failed", "void_failed", "refund_failed"]);
+const FAILED_NOTICES = new Set([
+  "refresh_failed",
+  "void_failed",
+  "refund_failed",
+  "not_authorized",
+]);
 
 const NOTICE_MESSAGES: Record<string, string> = {
   refreshed: "Status refreshed from Stripe.",
@@ -104,6 +116,8 @@ const NOTICE_MESSAGES: Record<string, string> = {
   void_failed: "Couldn't void this order — it may already be paid or void.",
   refunded: "Payment refunded — the trip now shows as unpaid for this diver.",
   refund_failed: "Couldn't refund this order — it may not have a refundable payment yet.",
+  not_authorized:
+    "Refunds are limited to owners and managers — ask one of them to issue this refund.",
   demo_disabled:
     "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
 };
@@ -150,6 +164,9 @@ export default async function OrderDetailPage({
   const order = await getOrder(db, session.user.shopId, id);
   if (!order) notFound();
   const demo = await isDemoShop(db, session.user.shopId);
+  // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
+  // hide the control from other staff. refundAction re-checks regardless.
+  const canRefund = await canPersonRefund(db, session.user.shopId, session.user.personId);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -256,7 +273,7 @@ export default async function OrderDetailPage({
               </>
             )
           ) : null}
-          {order.order.status === "paid" ? (
+          {canRefund && order.order.status === "paid" ? (
             demo ? (
               <DisabledDemoButton label="Refund payment" variant="danger" />
             ) : (

@@ -58,3 +58,56 @@ export function canImportShopData(roles: readonly Role[] | undefined): boolean {
 export function canViewShopReports(roles: readonly Role[] | undefined): boolean {
   return canExportShopData(roles);
 }
+
+/**
+ * Role boundaries on the five surfaces the product owner scoped as "not every
+ * staff member's job" (H-14). Until now any staff role could reach all of them;
+ * the daily crew — captains, crew, and divemasters — run the water, but money,
+ * legal templates, roster deletion, and what a trip *is* are owner/manager work
+ * (trip *configuration* also opens to instructors, who own course sessions and
+ * their admission rules). Each predicate below is one surface; server actions
+ * and route guards call these, and the UI hides the control when they're false
+ * so a crew member is never shown a button they'll be bounced from.
+ * See ADR 20260724-role-authorization.
+ */
+
+/** Owner/manager gate shared by the money/policy/roster-deletion surfaces. */
+function isOwnerOrManager(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner" || role === "manager");
+}
+
+/** Connect/disconnect Stripe, set the rental catalog and its prices. */
+export function canManagePaymentSettings(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/** Issue or record a refund — money leaving the shop's account. */
+export function canRefund(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/** Create or edit the shop's waiver template — the legal instrument itself. */
+export function canManageWaiverTemplates(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * Soft-delete a diver, which frees their email and drops them from the roster.
+ * The daily crew adds and checks in divers; removing a person record is an
+ * owner/manager call.
+ */
+export function canDeleteDiver(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * Create, edit, cancel a trip, or set its requirements/crew — defining what the
+ * dive *is* and who it admits. Opens to instructors as well, since course
+ * sessions and their admission rules are instructor-owned, but stays closed to
+ * captains, crew, and divemasters, who operate the trips owners/managers set up.
+ */
+export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some(
+    (role) => role === "owner" || role === "manager" || role === "instructor",
+  );
+}
