@@ -75,12 +75,13 @@ test("the export never leaves without a staff session", async ({ request }) => {
   expect(response.headers().location).toContain("/sign-in");
 });
 
-test("staff outside owner/manager are told why they can't export", async ({ page, request }) => {
+test("staff outside owner/manager can't reach export", async ({ page, request }) => {
   // The bundle carries the whole roster's medical evidence, so a captain —
-  // staff everywhere else in the app — is refused here, with the reason.
+  // staff everywhere else in the app — has no use for this surface. Bounced
+  // to Today rather than shown a read-only/explained page.
   await signInAs(page, DEV_STAFF_LOGINS.captain);
   await page.goto("/shop/blue-mantis/settings/export");
-  await expect(page.getByText(/limited to the shop's owner or manager/)).toBeVisible();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   await expect(page.getByRole("link", { name: "Download export" })).toHaveCount(0);
 
   const cookies = await page.context().cookies();

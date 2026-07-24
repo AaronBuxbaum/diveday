@@ -38,7 +38,8 @@ test.describe("owner", () => {
 test("reports are gated to the owner or manager, not the daily crew", async ({ page }) => {
   await signInAs(page, DEV_STAFF_LOGINS.captain);
   await page.goto("/shop/blue-mantis/reports");
-  // The captain reaches the page but sees the owner-only notice, never revenue.
-  await expect(page.getByText(/limited to the owner or manager/)).toBeVisible();
+  // The captain has no use for revenue, so the surface doesn't exist for
+  // them — bounced to Today rather than shown a read-only/explained page.
+  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   await expect(page.getByRole("region", { name: "This month's numbers" })).toHaveCount(0);
 });
