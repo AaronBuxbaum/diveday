@@ -5,7 +5,7 @@ test.describe("staff", () => {
   signedInAsOwner();
 
   test("full loop: staff schedules, visitor books, staff sees the roster", async ({ page }) => {
-    const title = `Eagle Ray Run ${Date.now()}`;
+    const title = `Eagle Ray Run ${e2eNow().getTime()}`;
 
     // Staff puts a trip on the board.
     await page.goto("/shop/blue-mantis/trips/new");
@@ -30,9 +30,9 @@ test.describe("staff", () => {
     await expect(partySize).toHaveAttribute("data-hydrated", "true");
     await partySize.selectOption("2");
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
-    await page.getByLabel("Email", { exact: true }).fill(`nora-${Date.now()}@example.com`);
+    await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
-    await page.getByLabel("Diver 2 email").fill(`sam-${Date.now()}@example.com`);
+    await page.getByLabel("Diver 2 email").fill(`sam-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: "Book these spots" }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
@@ -84,7 +84,7 @@ test.describe("staff", () => {
   test("staff edits a trip and cancelling removes it from the public schedule", async ({
     page,
   }) => {
-    const title = `Drift Dive ${Date.now()}`;
+    const title = `Drift Dive ${e2eNow().getTime()}`;
     const renamed = `${title} (PM)`;
 
     await page.goto("/shop/blue-mantis/trips/new");
@@ -131,7 +131,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(page.getByRole("heading", { name: "This boat's full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
   await page.getByLabel("Name").fill("Nora Quinn");
-  await page.getByLabel("Email").fill(`waitlist-${Date.now()}@example.com`);
+  await page.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Join the wait list" }).click();
   await expect(page.getByRole("heading", { name: /You're on the wait list, Nora/ })).toBeVisible();
 
