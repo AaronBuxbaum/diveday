@@ -17,6 +17,7 @@ import {
   listStaff,
   listTripDives,
 } from "@/db/trips";
+import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
@@ -91,12 +92,25 @@ export default async function ManageTripPage({
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
+  const assignedCrew = staff.filter((entry) => crewIds.includes(entry.person.id));
   const hasCourseInstructor = Boolean(
-    trip.course &&
-      staff.some(
-        (entry) => crewIds.includes(entry.person.id) && entry.roles.includes("instructor"),
-      ),
+    trip.course && assignedCrew.some((entry) => entry.roles.includes("instructor")),
   );
+  // Staff can freely change crew after divers are already booked (H-14 lets
+  // any staff member do this — it's day-of operating work). If that leaves an
+  // entry-level (PADI, ungated) session's current crew short of the ratio its
+  // booked count assumed, this is the visible nudge to fix it before sailing —
+  // never a retroactive block on the bookings already taken.
+  const entryLevelRatioCap =
+    trip.course?.agency === "padi" && !trip.course.minimumCertificationLevel
+      ? entryLevelCourseCapacity(
+          assignedCrew.filter((entry) => entry.roles.includes("instructor")).length,
+          assignedCrew.filter(
+            (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+          ).length,
+        )
+      : null;
+  const overRatio = entryLevelRatioCap !== null && trip.booked > entryLevelRatioCap;
 
   return (
     <>
@@ -183,6 +197,17 @@ export default async function ManageTripPage({
           requirement={requirement}
           siteRequirement={siteRequirement}
         />
+      ) : null}
+
+      {overRatio ? (
+        <div className="mt-6">
+          <ShopNotice tone="warning" role="status">
+            {trip.booked} divers are booked, but the current crew only covers {entryLevelRatioCap}{" "}
+            under PADI's published entry-level ratio (8 per instructor, +2 per certified assistant).
+            Assign another instructor or a certified assistant before this session sails — existing
+            bookings are unaffected either way.
+          </ShopNotice>
+        </div>
       ) : null}
 
       {/* Who's aboard is manifest accuracy (glossary) — open to all staff. */}

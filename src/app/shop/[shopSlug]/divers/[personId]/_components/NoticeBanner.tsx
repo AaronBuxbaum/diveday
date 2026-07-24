@@ -32,21 +32,24 @@ export function NoticeBanner({ notice }: { notice?: string }) {
                                   ? "Assign an instructor before booking this course."
                                   : notice === "course_prerequisite"
                                     ? "Mark the required certification certified before booking this course."
-                                    : notice === "trip_unavailable" || notice === "booking-invalid"
-                                      ? "Add an email and choose an available activity."
-                                      : notice === "refund-failed"
-                                        ? "That payment could not be refunded. It may not be paid, or Stripe may need attention."
-                                        : notice === "demo-disabled"
-                                          ? "This is a demo order — it isn’t backed by a live Stripe invoice, so it can’t be refunded."
-                                          : notice === "deleted"
-                                            ? "Diver removed from active shop work. Their booking and card history is preserved."
-                                            : notice === "not-authorized-refund"
-                                              ? "Refunds are limited to owners and managers — ask one of them to issue this refund."
-                                              : notice === "not-authorized-delete"
-                                                ? "Removing a diver is limited to owners and managers — ask one of them to do it."
-                                                : notice === "invalid"
-                                                  ? "Check the details and try again."
-                                                  : null;
+                                    : notice === "course_ratio_full"
+                                      ? "This session is at its instructor-to-student ratio limit. Assign another instructor or certified assistant, or choose another activity."
+                                      : notice === "trip_unavailable" ||
+                                          notice === "booking-invalid"
+                                        ? "Add an email and choose an available activity."
+                                        : notice === "refund-failed"
+                                          ? "That payment could not be refunded. It may not be paid, or Stripe may need attention."
+                                          : notice === "demo-disabled"
+                                            ? "This is a demo order — it isn’t backed by a live Stripe invoice, so it can’t be refunded."
+                                            : notice === "deleted"
+                                              ? "Diver removed from active shop work. Their booking and card history is preserved."
+                                              : notice === "not-authorized-refund"
+                                                ? "Refunds are limited to owners and managers — ask one of them to issue this refund."
+                                                : notice === "not-authorized-delete"
+                                                  ? "Removing a diver is limited to owners and managers — ask one of them to do it."
+                                                  : notice === "invalid"
+                                                    ? "Check the details and try again."
+                                                    : null;
   const errorNotice = [
     "card-restore-conflict",
     "image",
@@ -61,6 +64,7 @@ export function NoticeBanner({ notice }: { notice?: string }) {
     "booking-invalid",
     "not-authorized-refund",
     "not-authorized-delete",
+    "course_ratio_full",
   ].includes(notice ?? "");
 
   if (!noticeText) return null;

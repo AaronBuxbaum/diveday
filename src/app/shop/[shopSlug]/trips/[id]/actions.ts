@@ -106,6 +106,8 @@ function addDiverNotice(reason: Exclude<BookingOutcome, { ok: true }>["reason"])
       return "diver-course-unstaffed";
     case "course_prerequisite":
       return "diver-course-prerequisite";
+    case "course_ratio_full":
+      return "diver-course-ratio-full";
     default:
       return "diver-unavailable";
   }

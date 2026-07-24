@@ -157,7 +157,9 @@ export async function bookSpot(
             ? "course-unavailable"
             : outcome.reason === "course_prerequisite"
               ? "course-prerequisite"
-              : "unavailable";
+              : outcome.reason === "course_ratio_full"
+                ? "course-ratio-full"
+                : "unavailable";
     return { error: ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unavailable };
   }
   const primaryBookingId = outcome.bookings[0]?.bookingId;
