@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { sql } from "drizzle-orm";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/pglite";
@@ -102,7 +103,13 @@ async function init(): Promise<AppDb> {
   }
 
   const dataDir = process.env.PGLITE_DATA_DIR ?? ".pglite";
-  const client = dataDir === "memory" ? new PGlite() : new PGlite(dataDir);
+  // pg_trgm backs the trigram GIN search indexes (CR-018) — PGlite bundles
+  // the extension's wasm but only loads it when explicitly requested here,
+  // unlike Neon/real Postgres where CREATE EXTENSION alone is enough.
+  const client =
+    dataDir === "memory"
+      ? new PGlite({ extensions: { pg_trgm } })
+      : new PGlite(dataDir, { extensions: { pg_trgm } });
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
   // PGlite is single-connection (no cross-process race to guard against),
@@ -116,7 +123,7 @@ async function init(): Promise<AppDb> {
 
 /** Fresh in-memory database for tests: migrated, unseeded, isolated per call. */
 export async function createTestDb(): Promise<AppDb> {
-  const db = drizzle({ client: new PGlite() });
+  const db = drizzle({ client: new PGlite({ extensions: { pg_trgm } }) });
   await migrate(db, { migrationsFolder: "drizzle" });
   return db;
 }
