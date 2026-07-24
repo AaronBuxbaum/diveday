@@ -12,6 +12,15 @@ contract set), and **V-03** (flow review against the approved policies).
 **Pseudorandom LLC** (S-corp election; current business: software contracting and mentorship) —
 see [the entity decision](#the-entity-decision-h-18).
 
+**Two attorneys, not one (owner-confirmed 2026-07-24):** the owner already has a generalist
+attorney and prefers to default to her — reaching for the scuba-liability specialist only where the
+exposure is genuinely dive-specific, with room to "upgrade" a Tier 1/2 item to specialist review if
+it turns out closer to the line than expected. The full tier-by-tier split, written as a document
+ready to send the generalist as her engagement brief, is
+[legal-engagement-scope.md](legal-engagement-scope.md). This page below still covers *finding* and
+*briefing* the specialist (who is not yet engaged) — the deliverables list and question list here
+are scoped to her Tier 3 work plus the Tier 2 items she signs off on, not the whole engagement.
+
 ## Why this blocks rollout
 
 - The waiver/medical flow is a core pillar shipped on [provisional
@@ -25,11 +34,11 @@ see [the entity decision](#the-entity-decision-h-18).
 
 ## Who to talk to
 
-| Stakeholder | Role | How to find them |
-| --- | --- | --- |
-| Recreational-liability attorney with scuba release experience, licensed in Florida | H-01–H-03 deliverables; the specialist review | DAN's risk-mitigation program refers; dive-industry insurance brokers (the PADI-endorsed broker, historically Vicencia & Buckley / HUB International) work with these attorneys daily and will name names; DEMA member legal resources; Florida Bar referral filtered to recreational/sports liability |
-| General business counsel | Entity structure (H-18), terms of service, pilot agreement, privacy policy | Any competent startup/small-business attorney; may be the same firm as above but is a different specialty — do not let the liability specialist improvise corporate work or vice versa |
-| CPA | Tax half of the entity decision (S-corp interaction) | See [finance-and-tax.md](finance-and-tax.md) — run H-18 past both counsel and CPA before forming anything |
+| Stakeholder | Role | Status | How to find them |
+| --- | --- | --- | --- |
+| The owner's existing generalist attorney | Tier 1 (entity, SaaS contract set, H-17 sanity check) and Tier 2 first drafts (H-02 retention, the general half of H-03) — full scope in [legal-engagement-scope.md](legal-engagement-scope.md) | **Already have her** — send the scope memo, no search needed | — |
+| Recreational-liability attorney with scuba release experience, licensed in Florida | Tier 3: H-01's waiver/medical template and minors' release, and Tier 2 sign-off on H-02/H-03 | **Not yet engaged** — find and brief her | DAN's risk-mitigation program refers; dive-industry insurance brokers (the PADI-endorsed broker, historically Vicencia & Buckley / HUB International) work with these attorneys daily and will name names; DEMA member legal resources; Florida Bar referral filtered to recreational/sports liability |
+| CPA | Tax half of the entity decision (S-corp interaction) | See [finance-and-tax.md](finance-and-tax.md) | Run H-18 past both the generalist and the CPA before forming anything |
 
 Selection bar for the liability specialist: has drafted or defended scuba/dive-charter releases
 in Florida, is comfortable opining on electronically signed exculpatory releases, and will quote
@@ -38,36 +47,33 @@ not drafting from scratch).
 
 ## When
 
-- **This week:** shortlist (2–3 candidates), send the engagement request with the briefing packet
-  below. This is item 1 on the rollout's [30-day list](../rollout.md#the-next-30-days-in-order).
+- **This week:** send the generalist the [engagement scope memo](legal-engagement-scope.md) —
+  no search needed, she's already engaged. In parallel, shortlist 2–3 specialist candidates and
+  send the specialist engagement request with the briefing packet below. This is item 1 on the
+  rollout's [30-day list](../rollout.md#the-next-30-days-in-order).
 - **Before any pilot agreement is signed (~early Sept):** H-18 entity direction chosen, pilot
   agreement template done, E&O/cyber bound ([insurance.md](insurance.md)).
 - **Before any real shop sends a real waiver:** H-01–H-03 outcomes recorded and V-03 performed.
 
-## The engagement — deliverables to request (one engagement, in writing)
+## The specialist's engagement — deliverables to request (one engagement, in writing)
+
+The generalist's Tier 1/2 scope (entity, SaaS contract set, H-17 sanity check, first drafts of
+H-02/H-03) is in [legal-engagement-scope.md](legal-engagement-scope.md) and does not need to be
+asked of the specialist. What the specialist's engagement should produce:
 
 1. **H-01:** approved Florida waiver template + medical questionnaire, including the
    minor/guardian flow (the glossary's Junior-certification rules and Discover Scuba Diving
    participants are the hard cases).
-2. **H-02:** retention/deletion policy for waivers and medical flags — retention horizon against
-   the applicable limitations periods (including tolling for minors), the deletion-request
-   workflow, permitted staff access, and the backup/audit exception.
-3. **H-03:** a written opinion on whether typed name + explicit consent + timestamp is a
-   sufficient assurance level for the intended Florida release, or the criteria a specialist
+2. **H-02 sign-off:** confirm the generalist's draft retention window actually matches what the
+   release needs to hold up evidentially, and that the immutability model satisfies spoliation
+   expectations.
+3. **H-03 sign-off:** a written opinion on whether typed name + explicit consent + timestamp is a
+   sufficient assurance level for *this specific* Florida release, or the criteria a specialist
    e-signature provider must meet (the `SignatureProvider` seam exists; if required it becomes
    the one Phase-0 engineering task, per the rollout's
    [pre-decided responses](../rollout.md#risks-and-pre-decided-responses)).
-4. **H-17 sanity check:** the owner decided imported waiver records (a prior shop's own
-   acceptance, medical clearance included) are trusted, marked `imported`, no staff attestation
-   ([ADR](../../architecture/decisions/20260724-import-waiver-acceptance.md)). Ask counsel
-   whether that posture needs a disclosure or intake boundary before a live shop relies on it.
-5. **The SaaS contract set (with business counsel):** design-partner pilot agreement (free,
-   concierge, case-study rights, no-warranty posture, data handling and return-on-exit);
-   founding-shop subscription terms that encode the published price-lock and support claims;
-   privacy policy (jointly with [privacy-and-communications.md](privacy-and-communications.md));
-   and a **"your waiver is your responsibility" clause** — DiveDay ships template *shapes*, the
-   shop owns its approved language; the terms must say so explicitly.
-6. **H-18:** entity recommendation — see below.
+4. **A written opinion** on whether the release/medical/consent flow, taken as a whole, is likely
+   enforceable for scuba-specific claims in Florida.
 
 ## Briefing packet — have this assembled before the first call
 
@@ -97,23 +103,26 @@ Everything already exists; the packet is links and screenshots, not new writing:
 - Minors: does Florida's parental pre-injury release statute cover a dive shop's activities, what
   statutory language is mandatory, and how must the guardian flow capture it?
 - What limitations period (plus tolling for minors) should set the H-02 retention floor, and does
-  our immutability model satisfy spoliation expectations?
-- Is typed-name consent sufficient under Florida's UETA adoption / federal E-SIGN for an
-  exculpatory release, or is identity-assurance (e.g. specialist provider) required (H-03)?
+  our immutability model satisfy spoliation expectations? (Confirming the generalist's draft, not
+  originating it — see [the scope memo](legal-engagement-scope.md#tier-2--generalist-drafts-specialist-blesses-before-it-goes-live).)
+- Is typed-name consent sufficient under Florida's UETA adoption / federal E-SIGN for *this
+  specific* exculpatory release, or is identity-assurance (e.g. specialist provider) required
+  (H-03)? (The general UETA/E-SIGN question is the generalist's; this is the narrower
+  adventure-sport-scrutiny layer on top.)
 - Medical questionnaire: what duty does *collecting* medical flags create for the shop and for
   DiveDay, and what handling/access boundary does that imply (feeds H-02 and the privacy policy)?
-- When a shop churns and exports its records, who is custodian of waiver evidence afterward, and
-  what must the terms of service say about it?
-- What indemnification should DiveDay's terms require from shops for their use of templates and
-  their own operational decisions?
+
+The indemnification and post-churn evidence-custody questions that used to live here are Tier 1
+generalist work — see [legal-engagement-scope.md](legal-engagement-scope.md#tier-1--generalist-no-specialist-needed).
 
 ## The entity decision (H-18)
 
 **Question:** run DiveDay inside Pseudorandom LLC (S-corp; software contracting + mentorship), or
 form a dedicated entity?
 
-**Recommendation to take into the counsel/CPA conversation: form a dedicated DiveDay LLC before
-any pilot agreement is signed.** Rationale:
+**Tier 1 — the generalist's call, no specialist needed. Recommendation to take into the
+generalist/CPA conversation: form a dedicated DiveDay LLC before any pilot agreement is signed.**
+Rationale:
 
 - **Risk pooling.** DiveDay is safety-adjacent (manifests, medical flags, waivers) and holds
   medical data. A claim or breach against DiveDay should not reach Pseudorandom's consulting
@@ -126,7 +135,7 @@ any pilot agreement is signed.** Rationale:
   explainable but weaker than a dedicated entity, and migrating signed pilots later is friction.
 - **Cost is trivial** relative to the exposure — formation plus an annual report fee.
 
-Open questions for counsel + CPA (do not decide these unilaterally):
+Open questions for the generalist + CPA (do not decide these unilaterally):
 
 - Sibling LLC owned personally vs. subsidiary of Pseudorandom (isolation is cleaner as a sibling;
   tax/payroll mechanics may argue otherwise given the S-corp).
