@@ -50,9 +50,9 @@ export function ShopNav({
           <CommandPalette
             shopSlug={shopSlug}
             boatBoardingHref={boatBoardingHref}
-            canViewWaivers={navGates.waivers}
+            canManageWaivers={navGates.waivers}
           />
-          <KeyboardShortcuts shopSlug={shopSlug} canViewWaivers={navGates.waivers} />
+          <KeyboardShortcuts shopSlug={shopSlug} canManageWaivers={navGates.waivers} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"

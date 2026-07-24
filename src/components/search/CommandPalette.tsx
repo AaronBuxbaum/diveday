@@ -31,11 +31,11 @@ const EMPTY: SearchResults = { divers: [], trips: [] };
 export function CommandPalette({
   shopSlug,
   boatBoardingHref,
-  canViewWaivers,
+  canManageWaivers,
 }: {
   shopSlug: string;
   boatBoardingHref?: string;
-  canViewWaivers: boolean;
+  canManageWaivers: boolean;
 }) {
   const router = useRouter();
   const listId = useId();
@@ -95,7 +95,7 @@ export function CommandPalette({
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
       goto.push({ key: "goto:boarding", label: "Boarding — today's boat", href: boatBoardingHref });
     }
-    const goTo = canViewWaivers ? [...BASE_GO_TO, WAIVERS_GO_TO] : BASE_GO_TO;
+    const goTo = canManageWaivers ? [...BASE_GO_TO, WAIVERS_GO_TO] : BASE_GO_TO;
     for (const entry of goTo) {
       if (q === "" || entry.label.toLowerCase().includes(q)) {
         goto.push({
@@ -130,7 +130,7 @@ export function CommandPalette({
     }
     if (goto.length > 0) out.push({ heading: "Go to", items: goto });
     return out;
-  }, [results, query, boatBoardingHref, root, canViewWaivers]);
+  }, [results, query, boatBoardingHref, root, canManageWaivers]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

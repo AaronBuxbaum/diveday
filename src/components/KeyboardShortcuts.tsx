@@ -34,10 +34,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 export function KeyboardShortcuts({
   shopSlug,
-  canViewWaivers,
+  canManageWaivers,
 }: {
   shopSlug: string;
-  canViewWaivers: boolean;
+  canManageWaivers: boolean;
 }) {
   const router = useRouter();
   const root = `/shop/${shopSlug}`;
@@ -45,8 +45,8 @@ export function KeyboardShortcuts({
   // Timestamp of a pending "g", so the next key completes the sequence.
   const pendingG = useRef<number | null>(null);
   const navShortcuts = useMemo(
-    () => (canViewWaivers ? [...BASE_NAV_SHORTCUTS, WAIVERS_SHORTCUT] : BASE_NAV_SHORTCUTS),
-    [canViewWaivers],
+    () => (canManageWaivers ? [...BASE_NAV_SHORTCUTS, WAIVERS_SHORTCUT] : BASE_NAV_SHORTCUTS),
+    [canManageWaivers],
   );
 
   useEffect(() => {
