@@ -51,8 +51,16 @@ new domain concept, define it here in the same PR.
   *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
   — the same card, two independent gates (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
-  cert. DSD participants have stricter ratios and depth limits and always dive with an
-  instructor.
+  cert. Minimum age 10; maximum depth 6 m/20 ft confined water, 12 m/40 ft open water. Always
+  dives with an instructor, at the same in-water ratio as Open Water training (below).
+- **Entry-level in-water ratio** — PADI's published maximum for a no-card-required session (DSD,
+  Open Water training dives): **8 students per instructor**, extendable by **2 per certified
+  assistant** (a Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**.
+  Enforced as a booking gate (`src/lib/course-ratios.ts`, H-08) on any course session whose course
+  carries no `minimum_certification_level` — the same "no pre-existing C-card gate" bucket the
+  baseline already uses for DSD/OW. Continuing-education courses (AOW, Rescue, specialty) already
+  gate on a verified card and PADI does not publish a comparably strict numeric ratio for them, so
+  they are not ratio-capped.
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
 
 ## Operations
