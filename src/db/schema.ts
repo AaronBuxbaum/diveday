@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   doublePrecision,
   index,
@@ -26,56 +27,60 @@ import type { RentalPricing } from "@/lib/rentals";
 /** Selects which diver medical questionnaire a shop presents (src/lib/medical.ts). */
 export const medicalJurisdiction = pgEnum("medical_jurisdiction", ["rstc", "uk"]);
 
-export const shops = pgTable("shops", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  /** IANA timezone of the physical shop — all schedule display uses this. */
-  timezone: text("timezone").notNull(),
-  /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
-  jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
-  /**
-   * Where a diver who is not booking yet should write. Published on public
-   * pages, so it is the shop's front-desk address rather than an owner's
-   * personal one — nullable because a shop that has not chosen one must not
-   * have a member of staff's address guessed on its behalf.
-   */
-  contactEmail: text("contact_email"),
-  contactPhone: text("contact_phone"),
-  /** Diver-facing suggestions shown on every trip; owners configure these once per shop. */
-  packingList: jsonb("packing_list")
-    .$type<string[]>()
-    .notNull()
-    .default(["Swimsuit and towel", "Reef-safe sun protection", "Logbook"]),
-  /**
-   * The gear this shop rents (RentableItemKind values, src/lib/rentals.ts). Gates
-   * which items a diver can pick in the rental-fit forms — a shop that doesn't
-   * rent GoPros never offers one. Defaults to the core kit; add-ons are opt-in.
-   */
-  rentalItems: jsonb("rental_items")
-    .$type<string[]>()
-    .notNull()
-    .default(["bcd", "regulator", "wetsuit", "mask_fins", "weights"]),
-  /**
-   * What the shop charges for rental gear (minor units), src/lib/rentals.ts. A
-   * set price for the full core kit, per-piece prices, and a per-dive nitrox
-   * surcharge — all optional. Never inventory or an allocation, only what a diver
-   * is quoted. Defaults to unpriced, which keeps the "ask the shop" behaviour.
-   */
-  rentalPricing: jsonb("rental_pricing")
-    .$type<RentalPricing>()
-    .notNull()
-    .default({ setCents: null, perItemCents: {}, nitroxCents: null }),
-  /**
-   * How many minutes before departure divers are asked to be at the dock. The
-   * shop's real muster time varies (gear setup, cert check, briefing), so it is
-   * configurable rather than a hardcoded "30 minutes" in every confirmation and
-   * reminder. Defaults to 30.
-   */
-  dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
-  isDemo: boolean("is_demo").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const shops = pgTable(
+  "shops",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    /** IANA timezone of the physical shop — all schedule display uses this. */
+    timezone: text("timezone").notNull(),
+    /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
+    jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
+    /**
+     * Where a diver who is not booking yet should write. Published on public
+     * pages, so it is the shop's front-desk address rather than an owner's
+     * personal one — nullable because a shop that has not chosen one must not
+     * have a member of staff's address guessed on its behalf.
+     */
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    /** Diver-facing suggestions shown on every trip; owners configure these once per shop. */
+    packingList: jsonb("packing_list")
+      .$type<string[]>()
+      .notNull()
+      .default(["Swimsuit and towel", "Reef-safe sun protection", "Logbook"]),
+    /**
+     * The gear this shop rents (RentableItemKind values, src/lib/rentals.ts). Gates
+     * which items a diver can pick in the rental-fit forms — a shop that doesn't
+     * rent GoPros never offers one. Defaults to the core kit; add-ons are opt-in.
+     */
+    rentalItems: jsonb("rental_items")
+      .$type<string[]>()
+      .notNull()
+      .default(["bcd", "regulator", "wetsuit", "mask_fins", "weights"]),
+    /**
+     * What the shop charges for rental gear (minor units), src/lib/rentals.ts. A
+     * set price for the full core kit, per-piece prices, and a per-dive nitrox
+     * surcharge — all optional. Never inventory or an allocation, only what a diver
+     * is quoted. Defaults to unpriced, which keeps the "ask the shop" behaviour.
+     */
+    rentalPricing: jsonb("rental_pricing")
+      .$type<RentalPricing>()
+      .notNull()
+      .default({ setCents: null, perItemCents: {}, nitroxCents: null }),
+    /**
+     * How many minutes before departure divers are asked to be at the dock. The
+     * shop's real muster time varies (gear setup, cert check, briefing), so it is
+     * configurable rather than a hardcoded "30 minutes" in every confirmation and
+     * reminder. Defaults to 30.
+     */
+    dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
+    isDemo: boolean("is_demo").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`)],
+);
 
 export type MedicalJurisdiction = (typeof medicalJurisdiction.enumValues)[number];
 
@@ -482,6 +487,18 @@ export const trips = pgTable(
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
+    check("trips_planned_dives_range", sql`${table.plannedDives} between 1 and 4`),
+    check("trips_price_nonnegative", sql`${table.priceCents} is null or ${table.priceCents} >= 0`),
+    check(
+      "trips_deposit_nonnegative",
+      sql`${table.depositCents} is null or ${table.depositCents} >= 0`,
+    ),
+    check(
+      "trips_cancellation_window_nonnegative",
+      sql`${table.cancellationWindowHours} is null or ${table.cancellationWindowHours} >= 0`,
+    ),
+    check("trips_ends_after_starts", sql`${table.endsAt} > ${table.startsAt}`),
   ],
 );
 
@@ -623,6 +640,10 @@ export const bookingPayments = pgTable(
   (table) => [
     uniqueIndex("booking_payments_booking_unique").on(table.bookingId),
     index("booking_payments_shop_status_idx").on(table.shopId, table.status),
+    check(
+      "booking_payments_amount_nonnegative",
+      sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
+    ),
   ],
 );
 
@@ -796,6 +817,8 @@ export const orders = pgTable(
     uniqueIndex("orders_stripe_invoice_unique").on(table.stripeInvoiceId),
     index("orders_shop_status_idx").on(table.shopId, table.status),
     index("orders_shop_booking_idx").on(table.shopId, table.bookingId),
+    check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
   ],
 );
 
@@ -843,6 +866,8 @@ export const bookingCheckouts = pgTable(
   (table) => [
     uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
+    check("booking_checkouts_amount_per_diver_nonnegative", sql`${table.amountPerDiverCents} >= 0`),
+    check("booking_checkouts_total_nonnegative", sql`${table.totalCents} >= 0`),
   ],
 );
 
@@ -886,7 +911,11 @@ export const orderLineItems = pgTable(
     unitAmountCents: integer("unit_amount_cents").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("order_line_items_order_idx").on(table.orderId)],
+  (table) => [
+    index("order_line_items_order_idx").on(table.orderId),
+    check("order_line_items_quantity_positive", sql`${table.quantity} > 0`),
+    check("order_line_items_unit_amount_nonnegative", sql`${table.unitAmountCents} >= 0`),
+  ],
 );
 
 export const paymentOperationKind = pgEnum("payment_operation_kind", [
