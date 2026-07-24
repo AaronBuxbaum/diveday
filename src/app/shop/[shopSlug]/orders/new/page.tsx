@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/orders";
+import { orderLineItemKind } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { bookingInvoiceLines } from "@/lib/courses";
@@ -33,11 +34,15 @@ const LINE_ITEM_ROWS = 4;
 
 type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
 
-const dollarsSchema = z
-  .string()
-  .trim()
-  .transform((value) => Number(value))
-  .pipe(z.number().nonnegative().finite());
+// Bounds match the house convention for a bounded dollar-to-cents amount
+// (courses edit action: .max(100_000)) and an explicit integer quantity
+// range (trip capacity/party-size actions: .int().min().max()) — CR-016.
+const dollarsSchema = z.coerce.number().nonnegative().max(100_000);
+const quantitySchema = z.coerce.number().int().min(1).max(100);
+const lineDescriptionSchema = z.string().trim().min(1).max(200);
+// Sourced from the pg enum, not a hand-typed literal list, so it can never
+// drift from what the database will actually accept.
+const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
 
 async function createOrderAction(formData: FormData) {
   "use server";
@@ -46,18 +51,29 @@ async function createOrderAction(formData: FormData) {
   const bookingId = String(formData.get("bookingId") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
 
-  const lineItems = [];
+  const lineItems: {
+    kind: LineItemKind;
+    description: string;
+    quantity: number;
+    unitAmountCents: number;
+  }[] = [];
   for (let i = 0; i < LINE_ITEM_ROWS; i++) {
-    const itemDescription = String(formData.get(`description-${i}`) ?? "").trim();
-    if (!itemDescription) continue;
-    const kind = String(formData.get(`kind-${i}`) ?? "other");
-    const quantity = Number(formData.get(`quantity-${i}`) ?? "1") || 1;
+    const rawDescription = String(formData.get(`description-${i}`) ?? "").trim();
+    if (!rawDescription) continue;
+    const itemDescription = lineDescriptionSchema.safeParse(rawDescription);
+    const kind = lineItemKindSchema.safeParse(formData.get(`kind-${i}`));
+    const quantity = quantitySchema.safeParse(formData.get(`quantity-${i}`) ?? "1");
     const dollars = dollarsSchema.safeParse(formData.get(`unitAmount-${i}`));
-    if (!dollars.success) continue;
+    // A filled-in row with an out-of-bounds value fails the whole submission
+    // rather than silently dropping the row — a staff member who typed four
+    // line items should never end up with a three-line invoice unexplained.
+    if (!itemDescription.success || !kind.success || !quantity.success || !dollars.success) {
+      redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
+    }
     lineItems.push({
-      kind: kind as LineItemKind,
-      description: itemDescription,
-      quantity,
+      kind: kind.data,
+      description: itemDescription.data,
+      quantity: quantity.data,
       unitAmountCents: Math.round(dollars.data * 100),
     });
   }

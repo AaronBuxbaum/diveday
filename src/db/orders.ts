@@ -10,7 +10,15 @@ import {
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import type { Order, OrderLineItemKind, OrderStatus } from "./schema";
-import { bookings, courses, orderLineItems, orders, people, trips } from "./schema";
+import {
+  bookings,
+  courses,
+  orderLineItemKind,
+  orderLineItems,
+  orders,
+  people,
+  trips,
+} from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 export type NewOrderLineItem = {
@@ -33,6 +41,30 @@ export type CreateOrderOutcome =
   | { ok: true; order: Order }
   | { ok: false; reason: "not_connected" | "invalid" | "stripe_failed" };
 
+// Defense-in-depth bounds (CR-016) matching the action-layer zod schema in
+// src/app/shop/[shopSlug]/orders/new/page.tsx, so a caller that bypasses that
+// form (a direct createOrder call, a future admin tool) can't persist an
+// out-of-bounds line item either.
+const MAX_LINE_ITEM_QUANTITY = 100;
+const MAX_LINE_ITEM_UNIT_AMOUNT_CENTS = 100_000 * 100;
+const MAX_LINE_ITEM_DESCRIPTION_LENGTH = 200;
+const MAX_LINE_ITEMS_PER_ORDER = 20;
+const orderLineItemKindValues = new Set<string>(orderLineItemKind.enumValues);
+
+function lineItemIsValid(item: NewOrderLineItem): boolean {
+  return (
+    orderLineItemKindValues.has(item.kind) &&
+    Number.isInteger(item.quantity) &&
+    item.quantity >= 1 &&
+    item.quantity <= MAX_LINE_ITEM_QUANTITY &&
+    Number.isInteger(item.unitAmountCents) &&
+    item.unitAmountCents >= 0 &&
+    item.unitAmountCents <= MAX_LINE_ITEM_UNIT_AMOUNT_CENTS &&
+    item.description.trim().length > 0 &&
+    item.description.length <= MAX_LINE_ITEM_DESCRIPTION_LENGTH
+  );
+}
+
 function mapStripeStatus(stripeStatus: string): OrderStatus {
   if (stripeStatus === "paid" || stripeStatus === "void" || stripeStatus === "uncollectible") {
     return stripeStatus;
@@ -51,10 +83,10 @@ export async function createOrder(
   input: NewOrderInput,
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<CreateOrderOutcome> {
-  if (input.lineItems.length === 0) return { ok: false, reason: "invalid" };
-  for (const item of input.lineItems) {
-    if (item.quantity < 1 || item.unitAmountCents < 0) return { ok: false, reason: "invalid" };
+  if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
+    return { ok: false, reason: "invalid" };
   }
+  if (!input.lineItems.every(lineItemIsValid)) return { ok: false, reason: "invalid" };
 
   const account = await getShopStripeAccount(db, input.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };

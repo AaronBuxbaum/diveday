@@ -24,6 +24,23 @@
  * the shop owner's language; keep the two in step.
  */
 
+/**
+ * Explicit bounds (CR-016) — CSV parsing previously relied only on the
+ * accidental byte ceiling of the framework's Server Action body limit
+ * (see docs/architecture/decisions/20260723-upload-transport-limit.md), with
+ * no cap on rows, columns, or a single cell's length. `prepareContactImport`
+ * enforces these before parsing/mapping so an oversized file fails fast with
+ * a friendly reason instead of racing the transport limit or the DB
+ * transaction below. One shop's real roster (a few thousand divers) fits
+ * comfortably under these; a bigger migration is a deliberately out-of-scope
+ * "split the file" case, not a reason to remove the atomic single-transaction
+ * commit in src/db/import.ts.
+ */
+export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+export const MAX_IMPORT_ROWS = 5_000;
+export const MAX_IMPORT_COLUMNS = 40;
+export const MAX_IMPORT_CELL_LENGTH = 2_000;
+
 /** Certification agencies we can name; anything else lands as "other". Mirrors the pg enum. */
 export const IMPORT_AGENCIES = ["padi", "ssi", "naui", "sdi", "tdi", "other"] as const;
 export type ImportAgency = (typeof IMPORT_AGENCIES)[number];
@@ -383,10 +400,37 @@ export function prepareContactImport(text: string): PreparedImport {
     totals: { total: 0, importable: 0, skipped: 0, withCard: 0, withNitrox: 0 },
     fatal: null,
   };
+  const byteLength = new TextEncoder().encode(text).length;
+  if (byteLength > MAX_IMPORT_BYTES) {
+    const limitMb = (MAX_IMPORT_BYTES / (1024 * 1024)).toFixed(0);
+    return { ...empty, fatal: `The file is too large — the limit is ${limitMb} MB.` };
+  }
   if (grid.length === 0) return { ...empty, fatal: "The file is empty." };
 
   const headers = grid[0];
   const bodyRows = grid.slice(1);
+  if (headers.length > MAX_IMPORT_COLUMNS) {
+    return {
+      ...empty,
+      fatal: `Too many columns (${headers.length}) — the limit is ${MAX_IMPORT_COLUMNS}.`,
+    };
+  }
+  if (bodyRows.length > MAX_IMPORT_ROWS) {
+    return {
+      ...empty,
+      fatal: `Too many rows (${bodyRows.length}) — the limit is ${MAX_IMPORT_ROWS} per import. Split the file and import it in batches.`,
+    };
+  }
+  for (let r = 0; r < grid.length; r++) {
+    const row = grid[r];
+    if (row?.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)) {
+      const where = r === 0 ? "the header row" : `row ${r}`;
+      return {
+        ...empty,
+        fatal: `A cell in ${where} is longer than ${MAX_IMPORT_CELL_LENGTH} characters — check for a pasted document instead of a spreadsheet.`,
+      };
+    }
+  }
 
   const mapping: ColumnMapping[] = [];
   const unmappedColumns: string[] = [];

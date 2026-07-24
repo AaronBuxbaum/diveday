@@ -51,6 +51,29 @@ test.describe("contact import", () => {
   });
 });
 
+test.describe("contact import — explicit bounds (CR-016)", () => {
+  signedInAsOwner();
+
+  test("a file with too many columns is rejected client-side with a friendly reason", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import");
+    // MAX_IMPORT_COLUMNS is 40 in src/lib/import.ts — 42 headers trips the
+    // limit without needing a slow multi-megabyte fixture.
+    const headers = ["full_name", ...Array.from({ length: 41 }, (_, i) => `col${i}`)].join(",");
+    const oversizedCsv = `${headers}\nAda,${"x,".repeat(41)}x`;
+
+    await page.setInputFiles('input[type="file"]', {
+      name: "too-wide.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(oversizedCsv, "utf-8"),
+    });
+
+    await expect(page.getByText(/too many columns/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Import/ })).toHaveCount(0);
+  });
+});
+
 test("import is refused for staff below owner/manager", async ({ page }) => {
   // A captain is staff everywhere else, but the importer writes the whole
   // roster, so they're told why they can't and get no upload control.
