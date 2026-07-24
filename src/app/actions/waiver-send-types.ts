@@ -10,7 +10,13 @@
 export type WaiverSendSurface = "today" | "blockers";
 
 /** A private fallback link staff must hand over when email did not go out. */
-export type WaiverFallbackLink = { name: string; token: string };
+export type WaiverFallbackLink = {
+  name: string;
+  token: string;
+  /** Why staff must hand this over themselves — a missing address reads very
+   * differently from a shop that has no email provider wired up at all. */
+  reason: "no_email" | "unconfigured";
+};
 
 export type WaiverSendState = {
   status: "idle" | "done";
