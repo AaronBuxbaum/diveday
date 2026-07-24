@@ -162,8 +162,11 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    2026-07-24** as a coexist-led variant — it's a booking/distribution *channel*, not a records
    system, so the guide leads with "keep FareHarbor, run the dive day it can't" and offers the clean
    leave path, over the same export/scope/import mechanics; see
-   [fareharbor-positioning.md](fareharbor-positioning.md). **Rezdy** remains a future addition — not
-   yet built, and (per the marketing claims policy) not shown until it is. See
+   [fareharbor-positioning.md](fareharbor-positioning.md). **Rezdy shipped 2026-07-24** as the second
+   coexist guide (monthly-sub-plus-per-booking model, verified self-serve CSV/API export). The full
+   survey of remaining candidates — WeTravel, Rezgo, Bókun, Bloowatch, Peek Pro, and why the
+   agencies (PADI/SSI) are import rails, not switching targets — is in
+   [switching-guide-landscape.md](switching-guide-landscape.md). See
    [marketing.md](../marketing.md#migration-guides).
 4. **Scheduled backup export to shop-owned storage** *(S–M)*. Weekly bundle from #1 to the shop's
    email/Drive. Matches DiveAdmin's one real portability lever and converts "your data is yours"
@@ -210,8 +213,9 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
 2. Migration guides (#3) belong to the marketing surface ([marketing.md](../marketing.md)); they
    shipped as a `/switching` hub with "Switching from EVE" first (`/switching/eve`) — the live-now pool —
    followed by live guides for DiveShop360, DiveAdmin, and Smartwaiver, and (2026-07-24) a
-   coexist-led FareHarbor guide ([fareharbor-positioning.md](fareharbor-positioning.md)). A Rezdy
-   guide is a future addition, unbuilt for now.
+   coexist-led FareHarbor guide, and (2026-07-24) a coexist-led Rezdy guide
+   ([fareharbor-positioning.md](fareharbor-positioning.md),
+   [switching-guide-landscape.md](switching-guide-landscape.md) for what's next).
 3. Backup export (#4) and the read API + webhooks (#5) are P2; the API needs an ADR.
 4. The pricing decision ([competitive-analysis.md](competitive-analysis.md#pricing-posture))
    gains a datum: both named rivals confirm the specialist ceiling ($119 DiveAdmin, $149–199+setup

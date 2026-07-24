@@ -6,7 +6,7 @@ describe("migration guides", () => {
     expect(MIGRATION_GUIDE_SLUGS).toEqual(MIGRATION_GUIDES.map((g) => g.slug));
     // EVE ships first, and the named incumbents from the strategy are all present.
     expect(MIGRATION_GUIDE_SLUGS[0]).toBe("eve");
-    for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver", "fareharbor"]) {
+    for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver", "fareharbor", "rezdy"]) {
       expect(MIGRATION_GUIDE_SLUGS).toContain(slug);
     }
   });
@@ -15,23 +15,26 @@ describe("migration guides", () => {
     expect(getMigrationGuide("eve")?.competitor).toBe("EVE");
     expect(getMigrationGuide("smartwaiver")?.competitor).toBe("Smartwaiver");
     expect(getMigrationGuide("fareharbor")?.competitor).toBe("FareHarbor");
-    // No coming-soon / roadmap entries — an unlisted incumbent (e.g. Rezdy) has no page.
-    expect(getMigrationGuide("rezdy")).toBeNull();
+    expect(getMigrationGuide("rezdy")?.competitor).toBe("Rezdy");
+    // No coming-soon / roadmap entries — an unlisted incumbent (e.g. Checkfront) has no page.
+    expect(getMigrationGuide("checkfront")).toBeNull();
     expect(getMigrationGuide("nope")).toBeNull();
   });
 
-  it("carries the coexist framing only where it belongs — FareHarbor, not the leave-it guides", () => {
-    // FareHarbor is a booking/distribution channel, so it earns the coexist block;
-    // the records-system guides stay straight leave-it migrations.
-    const fareharbor = getMigrationGuide("fareharbor");
-    expect(fareharbor?.coexist).toBeDefined();
-    expect(fareharbor?.coexist?.runsInDiveDay.length).toBeGreaterThan(0);
-    for (const item of fareharbor?.coexist?.runsInDiveDay ?? []) {
-      expect(item.title.trim().length).toBeGreaterThan(0);
-      expect(item.detail.trim().length).toBeGreaterThan(0);
+  it("carries the coexist framing only on the booking-channel guides, not the leave-it ones", () => {
+    // FareHarbor and Rezdy are booking/distribution channels, so they earn the
+    // coexist block; the records-system guides stay straight leave-it migrations.
+    for (const slug of ["fareharbor", "rezdy"]) {
+      const guide = getMigrationGuide(slug);
+      expect(guide?.coexist, `${slug} coexist`).toBeDefined();
+      expect(guide?.coexist?.runsInDiveDay.length).toBeGreaterThan(0);
+      for (const item of guide?.coexist?.runsInDiveDay ?? []) {
+        expect(item.title.trim().length).toBeGreaterThan(0);
+        expect(item.detail.trim().length).toBeGreaterThan(0);
+      }
+      expect(guide?.coexist?.bridgeNote.trim().length).toBeGreaterThan(0);
+      expect(guide?.coexist?.replace.body.trim().length).toBeGreaterThan(0);
     }
-    expect(fareharbor?.coexist?.bridgeNote.trim().length).toBeGreaterThan(0);
-    expect(fareharbor?.coexist?.replace.body.trim().length).toBeGreaterThan(0);
     for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver"]) {
       expect(getMigrationGuide(slug)?.coexist).toBeUndefined();
     }

@@ -158,6 +158,15 @@ for (const scheme of ["light", "dark"] as const) {
         .waitFor();
       await capture(page, "switching-fareharbor", scheme);
 
+      // The Rezdy guide: the second booking-channel guide, same coexist template
+      // with its own copy (a monthly-plus-per-booking model). Baselined so its
+      // page — and the extra hub card it adds — stay pixel-stable.
+      await page.goto("/switching/rezdy");
+      await page
+        .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
+        .waitFor();
+      await capture(page, "switching-rezdy", scheme);
+
       // Two more safety-critical bearer-token pages, done last so minting
       // them (a real send-waiver action, a real booking) never changes the
       // seed-derived counts the captures above depend on (CR-019). Setup
