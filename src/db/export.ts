@@ -472,6 +472,11 @@ export async function loadShopExportBundleInput(
             "review_note",
             "reviewed_at",
             "card_image_url",
+            // Provenance from the contact importer (ADR 20260724-import-verified-cards):
+            // a non-null imported_at is the definitive "this card was migrated, not
+            // carded on sight" marker, permanent even after a staff confirm.
+            "imported_at",
+            "imported_from_label",
             "deleted_at",
             "created_at",
           ],
@@ -487,6 +492,8 @@ export async function loadShopExportBundleInput(
             row.reviewNote,
             row.reviewedAt,
             row.cardImageUrl,
+            row.importedAt,
+            row.importedFromLabel,
             row.deletedAt,
             row.createdAt,
           ]),
@@ -537,6 +544,8 @@ export async function loadShopExportBundleInput(
             "status",
             "review_note",
             "reviewed_at",
+            "imported_at",
+            "imported_from_label",
             "deleted_at",
             "created_at",
           ],
@@ -549,6 +558,8 @@ export async function loadShopExportBundleInput(
             row.status,
             row.reviewNote,
             row.reviewedAt,
+            row.importedAt,
+            row.importedFromLabel,
             row.deletedAt,
             row.createdAt,
           ]),
