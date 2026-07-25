@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { controlClass } from "@/components/ui/form";
 import {
+  isRollCallCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpointLabel,
   rollCallCheckpoints,
@@ -39,9 +40,14 @@ export function OfflineManifestView() {
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
-  // doesn't land back on "Before departure". An unrecognized value falls back
-  // to departure — the manifest lookup below falls back the same way if this
-  // checkpoint doesn't match any saved entry.
+  // doesn't land back on "Before departure". This first pass only checks the
+  // value's shape — the trip's actual planned-dive count isn't known until
+  // the envelope loads below, so an in-range-looking but nonexistent
+  // checkpoint (a stale URL, a trip whose dive count later shrank) is caught
+  // once that arrives. Without that second check, `checkpoint` would disagree
+  // with the manifest actually rendered (the lookup below falls back to the
+  // first saved manifest), misrecording roll-call actions and misreporting
+  // `isDeparture` against a checkpoint that isn't the one on screen.
   const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>(() => {
     const requested = searchParams.get("checkpoint");
     return requested && /^(departure|after_dive_\d+)$/.test(requested)
@@ -83,6 +89,18 @@ export function OfflineManifestView() {
     loadOfflineManifest(tripId)
       .then((saved) => {
         setEnvelope(saved);
+        // The requested checkpoint's shape was checked before the trip's
+        // planned-dive count was known; re-validate against it now so a
+        // stale or out-of-range checkpoint (from an edited URL, or a trip
+        // whose dive count shrank since it was saved) can't leave `checkpoint`
+        // pointing at something the manifest lookup below silently falls back
+        // away from.
+        const plannedDives = saved?.snapshot.manifests[0]?.trip.plannedDives;
+        if (plannedDives !== undefined) {
+          setCheckpoint((current) =>
+            isRollCallCheckpoint(current, plannedDives) ? current : "departure",
+          );
+        }
         setMessage(
           saved
             ? "The manifest saved on this device is ready."

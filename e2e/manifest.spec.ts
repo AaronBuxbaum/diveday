@@ -223,3 +223,29 @@ test("the live manifest response never enters Cache Storage", async ({ page }) =
   });
   expect(liveManifestCached).toBe(false);
 });
+
+test("an out-of-range checkpoint in the offline URL falls back to departure, not just its shape", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Manifest" })
+    .click();
+  await page.getByRole("button", { name: "Save now" }).click();
+  await expect(page.getByText(/Saved\. Open the offline roll call/)).toBeVisible();
+
+  const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
+  // "after_dive_999" matches the checkpoint shape but doesn't exist on this
+  // trip. Before validating against the saved trip's planned-dive count, the
+  // manifest lookup silently fell back to departure's roster while the
+  // heading and `isDeparture` still read the raw, nonexistent checkpoint —
+  // showing one checkpoint's data under another's label.
+  await page.goto(`/offline-manifest?trip=${tripId}&checkpoint=after_dive_999`);
+  await expect(page.getByRole("heading", { name: "Before departure roll call" })).toBeVisible();
+});
