@@ -1346,6 +1346,84 @@ export const specialtyCertifications = pgTable(
   ],
 );
 
+/**
+ * A visit the diver made **before DiveDay** — one row per booking the shop's
+ * prior system recorded, brought across by the contact importer
+ * (ADR 20260725-import-prior-visits).
+ *
+ * This table is deliberately inert. It is the shop's own history, kept as
+ * history: nothing here is read by readiness, capacity, roll call, trip prep,
+ * or owner reporting, and nothing here opens a gate. It exists so a diver's
+ * profile can say "you have dived with this shop eleven times since 2019"
+ * instead of starting every migrated regular at zero.
+ *
+ * Three shapes of dishonesty are ruled out by construction rather than by
+ * convention:
+ *
+ *   - **It is not a trip and not a booking.** Reconstructing `trips`/`bookings`
+ *     rows would require inventing capacity, planned dives, and a roll call
+ *     that never happened here — a fabricated safety document. A prior visit
+ *     points at no trip, so there is nothing to fabricate and nothing for the
+ *     dock to act on.
+ *   - **A booking is not a dive.** `statusLabel` carries the prior system's own
+ *     word for the row ("Completed", "Cancelled", "No-show") verbatim, because
+ *     an orders export contains all three and counting them alike would invent
+ *     dives the diver never made. Never normalized to a DiveDay enum: the
+ *     vocabularies are not the same and mapping one onto the other is a guess.
+ *   - **The money is a label, not an amount.** `amountLabel` is the raw text the
+ *     file held ("$180.00", "160,00 €") — never parsed to minor units, never
+ *     given a currency column, never summed. Storing text is what makes
+ *     "display-only" structural: there is no number here for a future reporting
+ *     query to pick up by accident, and no locale to misread (`1.234,56`).
+ */
+export const priorVisits = pgTable(
+  "prior_visits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /**
+     * Date-only and shop-local, like certification expiry (CR-009). A prior
+     * system's export gives a calendar day, not an instant with a zone, and
+     * inventing a departure time would be inventing a trip.
+     */
+    visitedOn: date("visited_on", { mode: "string" }).notNull(),
+    /** What the prior system called it ("Two-tank Molasses Reef"); free text. */
+    title: text("title"),
+    /** The source's own status word, verbatim and un-mapped. See the note above. */
+    statusLabel: text("status_label"),
+    /** Display-only money as text. Never parsed, never summed. See the note above. */
+    amountLabel: text("amount_label"),
+    /** The prior shop/system this came from, for the profile's provenance line. */
+    sourceLabel: text("source_label"),
+    /** The prior system's own booking/order id, when the export carried one. */
+    sourceReference: text("source_reference"),
+    /**
+     * What re-running the same import twice keys on. Derived in
+     * `src/lib/import.ts` (`priorVisitDedupeKey`): the source's booking/order id
+     * when the file has one, otherwise the row's own date/title/amount. A second
+     * import of the same file must not double a diver's history, and an orders
+     * export is exactly the file an owner re-runs as their roster grows.
+     */
+    dedupeKey: text("dedupe_key").notNull(),
+    /** Always set — every row here arrived by import, never by hand. */
+    importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("prior_visits_shop_person_idx").on(table.shopId, table.personId, table.visitedOn),
+    uniqueIndex("prior_visits_shop_person_dedupe_unique").on(
+      table.shopId,
+      table.personId,
+      table.dedupeKey,
+    ),
+  ],
+);
+
 /** One explicit requirement set per trip; absence is deliberately not treated as ready. */
 export const tripRequirements = pgTable(
   "trip_requirements",

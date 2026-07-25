@@ -51,6 +51,15 @@ new domain concept, define it here in the same PR.
   leaks (H-24, [20260725-imported-card-sighting](../architecture/decisions/20260725-imported-card-sighting.md)).
   A card this shop captured itself is unaffected: **Mark certified** already means a staffer looked the
   number up with the agency. There is deliberately no bulk confirm.
+- **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
+  the contact importer from a bookings or orders export (one row per booking). It is a **booking
+  record, not a dive record**: an export holds cancellations and no-shows, so the source's own status
+  word and its price are kept verbatim and never mapped onto a DiveDay booking status or a currency
+  amount. A prior visit points at no trip — it is never on the schedule, never in a manifest, never
+  in capacity or owner reporting — and its amount is display text that nothing sums. It shows only on
+  the diver's profile, merged into **Shop history** newest-first and marked imported. Distinct from a
+  **booking**, which is a seat on a trip this shop ran here and has a roll call behind it.
+  See [20260725-import-prior-visits](../architecture/decisions/20260725-import-prior-visits.md).
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
@@ -108,7 +117,8 @@ new domain concept, define it here in the same PR.
 - **Export bundle** — the self-serve ZIP of the shop's records as documented RFC-4180 CSVs plus a
   README manifest: people and roles, all certification kinds, trips with their boarding gates and
   crew, series, bookings with payment state, wait lists, the roll-call ledger, waiver templates
-  and signed records (attester included), rental fit, orders and their lines, and the shop's
+  and signed records (attester included), rental fit, orders and their lines, any **prior visits**
+  imported from a previous system, and the shop's
   dive-site library and course catalog — soft-archived history included, credentials never. Leads
   with `contacts.csv`, a flat one-row-per-person file (names pre-split, best card with its
   verification status, nitrox flag, sizes, date of birth) shaped for another system's import

@@ -27,6 +27,7 @@ const EXPECTED_FILES = [
   "waiver_templates.csv",
   "waiver_records.csv",
   "rental_fit.csv",
+  "prior_visits.csv",
   "orders.csv",
   "order_line_items.csv",
   "dive_sites.csv",
@@ -54,6 +55,7 @@ const EXPORTED_TABLES = [
   "waiver_templates",
   "waiver_records",
   "rental_fit_profiles",
+  "prior_visits",
   "orders",
   "order_line_items",
   "dive_sites",
@@ -122,6 +124,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_medical_answers",
   ],
   rental_fit_profiles: ["shop_id"],
+  prior_visits: [
+    "shop_id",
+    // The re-import idempotency key, derived from the columns that *are*
+    // exported (src/lib/import.ts, `priorVisitDedupeKey`) — a DiveDay-side
+    // implementation detail, not a fact about the shop's history.
+    "dedupe_key",
+    "created_at", // when the import ran; `imported_at` already carries that
+  ],
   orders: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account

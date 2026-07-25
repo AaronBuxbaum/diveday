@@ -7,13 +7,18 @@ import { seededShopContext } from "@/test/db";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { canPersonImportShopData, commitContactImport } from "./import";
 import {
+  bookings,
   certifications,
   nitroxCertifications,
+  orders,
   people,
   personRoles,
+  priorVisits,
   rentalFitProfiles,
+  rollCallEvents,
   shops,
   specialtyCertifications,
+  trips,
   userAccounts,
   waiverRecords,
   waiverTemplates,
@@ -577,6 +582,129 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
       .from(waiverRecords)
       .where(eq(waiverRecords.personId, person.id));
     expect(record?.importSourceDocumentUrl).toBeNull();
+  });
+});
+
+describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits)", () => {
+  const bookingsExport = [
+    "customer_name,email,booking_date,tour_name,booking_status,total,booking_id,prior_shop",
+    "Ines Vela,ines.visits@example.com,2024-05-11,Two-tank Molasses Reef,Completed,$165.00,CCD-1,Coral Coast Divers",
+    "Ines Vela,ines.visits@example.com,2025-02-02,Night dive Benwood,Cancelled,$95.00,CCD-2,Coral Coast Divers",
+  ].join("\n");
+
+  async function visitsFor(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    email: string,
+  ) {
+    const person = await personByEmail(db, shopId, email);
+    if (!person) throw new Error(`no person for ${email}`);
+    return db
+      .select()
+      .from(priorVisits)
+      .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, person.id)))
+      .orderBy(priorVisits.visitedOn);
+  }
+
+  it("writes one inert history row per booking, verbatim", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const summary = await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(bookingsExport),
+      importer,
+    );
+    expect(summary).toMatchObject({ peopleCreated: 1, rowsMerged: 1, visitsAdded: 2 });
+
+    const visits = await visitsFor(db, shop.id, "ines.visits@example.com");
+    expect(visits).toHaveLength(2);
+    expect(visits[0]).toMatchObject({
+      visitedOn: "2024-05-11",
+      title: "Two-tank Molasses Reef",
+      statusLabel: "Completed",
+      amountLabel: "$165.00",
+      sourceLabel: "Coral Coast Divers",
+      sourceReference: "CCD-1",
+    });
+    // The prior system's own word, not a DiveDay booking status.
+    expect(visits[1].statusLabel).toBe("Cancelled");
+    expect(visits[0].importedAt).toBeInstanceOf(Date);
+  });
+
+  it("touches no operational table — the migration can never reach the dock", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const before = {
+      trips: (await db.select().from(trips).where(eq(trips.shopId, shop.id))).length,
+      bookings: (await db.select().from(bookings).where(eq(bookings.shopId, shop.id))).length,
+      rollCall: (await db.select().from(rollCallEvents).where(eq(rollCallEvents.shopId, shop.id)))
+        .length,
+      orders: (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
+    };
+    await commitContactImport(db, shop.id, prepareContactImport(bookingsExport), importer);
+    expect({
+      trips: (await db.select().from(trips).where(eq(trips.shopId, shop.id))).length,
+      bookings: (await db.select().from(bookings).where(eq(bookings.shopId, shop.id))).length,
+      rollCall: (await db.select().from(rollCallEvents).where(eq(rollCallEvents.shopId, shop.id)))
+        .length,
+      orders: (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
+    }).toEqual(before);
+  });
+
+  it("does not double a diver's history when the same export is re-imported", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    await commitContactImport(db, shop.id, prepareContactImport(bookingsExport), importer);
+    const again = await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(bookingsExport),
+      importer,
+    );
+    expect(again).toMatchObject({ visitsAdded: 0, visitsSkippedExisting: 2 });
+    expect(await visitsFor(db, shop.id, "ines.visits@example.com")).toHaveLength(2);
+  });
+
+  it("still de-duplicates when the export carries no booking reference", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const csv = [
+      "customer_name,email,booking_date,tour_name,total",
+      "Nora Ref,nora.noref@example.com,2024-05-11,Two-tank,$165.00",
+    ].join("\n");
+    await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    const again = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(again).toMatchObject({ visitsAdded: 0, visitsSkippedExisting: 1 });
+    expect(await visitsFor(db, shop.id, "nora.noref@example.com")).toHaveLength(1);
+  });
+
+  it("keeps two same-day bookings apart when the export distinguishes them", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const csv = [
+      "customer_name,email,booking_date,tour_name,booking_id",
+      "Dana Twice,dana.twice@example.com,2024-05-11,Morning two-tank,CCD-10",
+      "Dana Twice,dana.twice@example.com,2024-05-11,Afternoon single,CCD-11",
+    ].join("\n");
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary.visitsAdded).toBe(2);
+    expect(await visitsFor(db, shop.id, "dana.twice@example.com")).toHaveLength(2);
+  });
+
+  it("scopes visits to the importing shop", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    await commitContactImport(db, shop.id, prepareContactImport(bookingsExport), importer);
+    const [other] = await db
+      .select()
+      .from(shops)
+      .where(eq(shops.slug, "blue-mantis"))
+      .limit(1)
+      .then((rows) => (rows[0]?.id === shop.id ? [] : rows));
+    const strayShopId = other?.id ?? "00000000-0000-0000-0000-000000000000";
+    const stray = await db.select().from(priorVisits).where(eq(priorVisits.shopId, strayShopId));
+    expect(stray).toHaveLength(0);
   });
 });
 
