@@ -24,7 +24,7 @@ exists. If the network fails on a later reload of that same live manifest page, 
 navigation handler — scoped to that one route by trip id, nothing broader — redirects to the cached
 offline shell instead of surfacing the browser's own offline error. With no snapshot saved yet, the
 shell just says so plainly; it never fabricates a roster. This closes the gap where a captain who
-never tapped "Save for offline" had no page at all to land on once signal dropped.
+never tapped "Save now" had no page at all to land on once signal dropped.
 
 Every snapshot displays its saved time and one of three freshness states: current (up to 15
 minutes), aging (up to four hours), or stale. Stale snapshots remain usable because a boat may be

@@ -37,7 +37,17 @@ const FRESHNESS_PILL = {
 export function OfflineManifestView() {
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
-  const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
+  // A failed reload of the live manifest carries its checkpoint through the
+  // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
+  // doesn't land back on "Before departure". An unrecognized value falls back
+  // to departure — the manifest lookup below falls back the same way if this
+  // checkpoint doesn't match any saved entry.
+  const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>(() => {
+    const requested = searchParams.get("checkpoint");
+    return requested && /^(departure|after_dive_\d+)$/.test(requested)
+      ? (requested as RollCallCheckpoint)
+      : "departure";
+  });
   const [message, setMessage] = useState("Opening the manifest saved on this device…");
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
@@ -100,8 +110,8 @@ export function OfflineManifestView() {
           {message}
         </p>
         <p className="mt-2 text-muted">
-          While you still have signal, open the trip&apos;s live manifest and tap “Save for offline”
-          — then roll call works all the way out to the site.
+          While you still have signal, open the trip&apos;s live manifest and tap “Save now” — then
+          roll call works all the way out to the site.
         </p>
       </main>
     );
