@@ -179,7 +179,11 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   confirm, because a specialty authorizes a riskier dive; boarding still never waits (H-23,
   [import-specialty-cards](../architecture/decisions/20260725-import-specialty-cards.md)). A card's
   **expiry** travels with it, a past date included, and a diver's **dive insurance** comes across as
-  free text. A row explicitly
+  free text. Confirming an imported specialty or nitrox card — the tap that opens the dive or the fill
+  — requires an explicit **card sighting** the staffer attests to and the record keeps, and a
+  **technical rating** (Advanced Nitrox, Trimix, CCR, cave, deco) imports as nothing rather than as the
+  nearest-looking recreational rung, named in the preview so a shop knows to enter it by hand (H-24,
+  [imported-card-sighting](../architecture/decisions/20260725-imported-card-sighting.md)). A row explicitly
   claiming a waiver was already accepted at the prior shop is likewise trusted — medical clearance
   included — and written as an `imported` record (H-17,
   [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md)); waiver/

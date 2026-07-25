@@ -149,7 +149,9 @@ thing a later change can flatten by accident. A shop that imports specialties an
 will see `specialty_import_unconfirmed` on every specialty trip; the Today queue groups those as
 "Confirm imported specialties" so the work is visible rather than mysterious.
 
-Left deliberately for a later change, and named here so it is not mistaken for an oversight: the
+Left deliberately for a later change, and named here so it is not mistaken for an oversight — the
+first two of these were closed the same day by
+[20260725-imported-card-sighting](20260725-imported-card-sighting.md) (H-24): the
 one-tap **Confirm card** asserts nothing in particular — it stamps `reviewedAt` with no prompt and no
 attestation, where "Mark certified" means a staffer looked the number up with the agency. The
 `dive-domain-expert` review recommends the confirm state what it asserts ("I've seen this diver's Deep

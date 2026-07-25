@@ -87,6 +87,10 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
     tone: "danger",
     text: "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
   },
+  "card-sighting-required": {
+    tone: "danger",
+    text: "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
+  },
   invalid: { tone: "danger", text: "Check the details and try again." },
 };
 

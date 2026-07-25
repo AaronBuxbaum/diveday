@@ -6,6 +6,7 @@ import {
   IMPORT_FIELDS,
   IMPORT_HONESTY_TABLE,
   IMPORT_LEVELS,
+  isTechnicalCertName,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_CELL_LENGTH,
   MAX_IMPORT_COLUMNS,
@@ -45,12 +46,43 @@ describe("normalizeLevel", () => {
   it("maps agency dialects onto ladder rungs, advanced before open water", () => {
     expect(normalizeLevel("Advanced Open Water")).toBe("advanced_open_water");
     expect(normalizeLevel("AOW")).toBe("advanced_open_water");
+    expect(normalizeLevel("Advanced Adventurer")).toBe("advanced_open_water"); // SSI's AOW
+    expect(normalizeLevel("Advanced")).toBe("advanced_open_water");
     expect(normalizeLevel("Open Water Diver")).toBe("open_water");
     expect(normalizeLevel("OW")).toBe("open_water");
     expect(normalizeLevel("Rescue Diver")).toBe("rescue");
     expect(normalizeLevel("Divemaster")).toBe("divemaster");
     expect(normalizeLevel("Master Scuba Diver")).toBeNull();
     expect(normalizeLevel("")).toBeNull();
+  });
+
+  it("never reads a technical rating as a nearby recreational rung", () => {
+    // The defect this closes: a bare /advanced/ rule read TDI Advanced Nitrox —
+    // a decompression-adjacent gas certification — as Advanced Open Water, and a
+    // ladder card clears its gate on `status` alone, so that handed a technical
+    // diver's gas ticket a verified recreational clearance two rungs up.
+    expect(normalizeLevel("Advanced Nitrox")).toBeNull();
+    expect(normalizeLevel("TDI Advanced Nitrox Diver")).toBeNull();
+    expect(normalizeLevel("Advanced Trimix")).toBeNull();
+    expect(normalizeLevel("Helitrox Decompression Procedures")).toBeNull();
+    expect(normalizeLevel("CCR Air Diluent")).toBeNull();
+    expect(normalizeLevel("Full Cave")).toBeNull();
+    expect(normalizeLevel("Intro to Tech")).toBeNull();
+    expect(normalizeLevel("Extended Range")).toBeNull();
+    expect(normalizeLevel("Advanced Sidemount")).toBeNull();
+    // And the recreational rungs still resolve — the guard is not a blanket
+    // refusal of anything with "advanced" in it.
+    expect(normalizeLevel("Advanced Open Water Diver")).toBe("advanced_open_water");
+  });
+
+  it("names a technical rating so the reason can be shown, and doesn't over-claim", () => {
+    expect(isTechnicalCertName("Advanced Nitrox")).toBe(true);
+    expect(isTechnicalCertName("Full Cave Diver")).toBe(true);
+    // A recreational specialty is not "technical" — it just isn't a rung, and
+    // gets the ordinary "isn't a level we gate on" note instead.
+    expect(isTechnicalCertName("Sidemount")).toBe(false);
+    expect(isTechnicalCertName("Advanced Open Water")).toBe(false);
+    expect(isTechnicalCertName("Rescue Diver")).toBe(false);
   });
 });
 
@@ -183,8 +215,33 @@ describe("prepareContactImport — safety rules", () => {
     ).toBe(true);
   });
 
+  it("declines a technical rating and says why, rather than importing a nearby rung", () => {
+    // "or just show that it didn't import and why" — the row imports the diver,
+    // no card, and the note names the reason in the shop's own terms.
+    const csv =
+      "full_name,certification_agency,certification_level,certification_number\nTec Tina,TDI,Advanced Nitrox,AN-88";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.action).toBe("import");
+    expect(row.cert).toBeNull();
+    expect(row.specialties).toEqual([]);
+    expect(
+      row.issues.some(
+        (i) =>
+          i.level === "warning" &&
+          /technical or overhead-environment rating/i.test(i.message) &&
+          /not imported/i.test(i.message),
+      ),
+    ).toBe(true);
+    // Specifically not the old outcome: no Advanced Open Water card anywhere.
+    expect(row.issues.some((i) => /advanced open water/i.test(i.message))).toBe(false);
+  });
+
   it("leaves an unrecognized level for a human, importing the person anyway", () => {
-    const csv = "full_name,certification_level,certification_number\nEugenie Clark,Tec 40,T-40";
+    // "Master Scuba Diver" is a real PADI recognition and perfectly recreational,
+    // it just isn't a rung DiveDay gates on — so it gets the generic note. (This
+    // case used "Tec 40", which now gets the more specific technical-rating note.)
+    const csv =
+      "full_name,certification_level,certification_number\nEugenie Clark,Master Scuba Diver,MSD-40";
     const [row] = prepareContactImport(csv).rows;
     expect(row.action).toBe("import");
     expect(row.cert).toBeNull();
@@ -235,10 +292,13 @@ describe("prepareContactImport — safety rules", () => {
         status: "verified",
       },
     ]);
-    // The card is verified on arrival, but the gate is not: say both.
+    // The card is verified on arrival, but the gate is not: say both, and say
+    // what the confirm asserts rather than that it's one tap (H-24).
     expect(
       row.issues.some(
-        (i) => /imported as verified/i.test(i.message) && /one-tap staff confirm/i.test(i.message),
+        (i) =>
+          /imported as verified/i.test(i.message) &&
+          /waits until a staffer confirms they've seen the card/i.test(i.message),
       ),
     ).toBe(true);
   });

@@ -278,6 +278,27 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
   }
 }
 
+/**
+ * Why a review was refused, so a caller can say something specific.
+ * `card_sighting_required` is the imported-card case below.
+ */
+export type ReviewRefusal = "not_found" | "card_sighting_required";
+
+/**
+ * Confirming an **imported** specialty card is the tap that opens a specialty
+ * gate — depth past 18 m for Deep — on the strength of a spreadsheet cell that
+ * DiveDay itself never checked. So it is the one review that requires the staffer
+ * to state what they are asserting (`cardSighted`), the same shape as the paper
+ * waiver's medical attestation (`recordInPersonWaiver`): a bare button that opens
+ * a safety gate while asserting nothing is where this posture's value leaks away
+ * (`dive-domain-expert` review, H-24).
+ *
+ * A card captured by this shop (`importedAt` null) is unaffected — "Mark
+ * certified" already means a staffer looked the number up with the agency, and
+ * adding a second checkbox to it would be friction with no claim behind it.
+ * The attestation is recorded in `reviewNote` so the audit trail says what was
+ * asserted and not merely that a click happened.
+ */
 export async function reviewSpecialtyCertification(
   db: AppDb,
   input: {
@@ -285,13 +306,37 @@ export async function reviewSpecialtyCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    /** The staffer asserts they have seen the card, or checked it with the agency. */
+    cardSighted?: boolean;
   },
-) {
+): Promise<
+  | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
+  | { ok: false; reason: ReviewRefusal }
+> {
+  const [existing] = await db
+    .select({ importedAt: specialtyCertifications.importedAt })
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.id, input.certificationId),
+        eq(specialtyCertifications.shopId, input.shopId),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+  if (existing.importedAt && !input.cardSighted) {
+    return { ok: false, reason: "card_sighting_required" };
+  }
+
   const [certification] = await db
     .update(specialtyCertifications)
     .set({
       status: input.status,
-      reviewNote: input.reviewNote?.trim() || null,
+      reviewNote: reviewNoteFor(
+        input.reviewNote,
+        Boolean(existing.importedAt && input.cardSighted),
+      ),
       reviewedAt: nowDate(),
     })
     .where(
@@ -305,7 +350,17 @@ export async function reviewSpecialtyCertification(
       ),
     )
     .returning();
-  return certification ?? null;
+  return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+}
+
+/** What the staffer asserted, kept on the row rather than only in their memory. */
+export const CARD_SIGHTING_NOTE =
+  "Staff confirmed an imported card: seen in person, or the number checked with the issuing agency.";
+
+export function reviewNoteFor(note: string | undefined, attested: boolean): string | null {
+  const own = note?.trim();
+  if (!attested) return own || null;
+  return own ? `${CARD_SIGHTING_NOTE} ${own}` : CARD_SIGHTING_NOTE;
 }
 
 /** Soft-archive a specialty card. Shop-scoped, mirroring `archiveCertification`. */
