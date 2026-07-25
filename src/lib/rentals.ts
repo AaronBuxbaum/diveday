@@ -4,6 +4,13 @@
  * so the checkbox set, the stored columns, and the shop's offer never drift
  * apart. "boots" is deliberately absent: it is not selected on its own but rides
  * along with a wetsuit in the prep list (src/lib/dive-prep.ts).
+ *
+ * Nitrox fills are a separate concept, kept out of this list: most shops don't
+ * fill enriched air at all, and unlike the items above a fill has no size or
+ * `rental_fit_profiles` column — it's a per-booking request, gated by a
+ * verified card (src/db/nitrox.ts). It still lives in the same stored catalog
+ * (`shops.rental_items`) so shop settings has one "what we offer" list; see
+ * {@link NITROX_CATALOG_ITEM} and {@link shopOffersNitrox}.
  */
 
 export type RentableItemKind =
@@ -14,6 +21,9 @@ export type RentableItemKind =
   | "weights"
   | "dive_computer"
   | "gopro";
+
+/** Everything a shop's catalog can hold: the rental-fit gear plus nitrox fills. */
+export type ShopCatalogKind = RentableItemKind | "nitrox";
 
 export type RentalFitField =
   | "rentsBcd"
@@ -81,30 +91,51 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   { kind: "gopro", field: "rentsGopro", name: "gopro", label: "GoPro", defaultRented: false },
 ] as const;
 
+/**
+ * The catalog entry for nitrox fills — shaped like {@link RentableItem} minus
+ * `field`, since a fill has no `rental_fit_profiles` column to toggle. Most
+ * shops don't fill enriched air, so this defaults off, unlike every core gear
+ * item above.
+ */
+export const NITROX_CATALOG_ITEM = {
+  kind: "nitrox",
+  name: "nitrox",
+  label: "Nitrox fills",
+  defaultRented: false,
+} as const satisfies { kind: ShopCatalogKind; name: string; label: string; defaultRented: boolean };
+
+/** Every entry a shop's "what we rent" settings can show and save. */
+export const SHOP_CATALOG_ITEMS = [...RENTABLE_ITEMS, NITROX_CATALOG_ITEM] as const;
+
 /** The catalog a new shop starts with: the core gear, not the optional add-ons. */
 export const DEFAULT_SHOP_RENTAL_ITEMS: RentableItemKind[] = RENTABLE_ITEMS.filter(
   (item) => item.defaultRented,
 ).map((item) => item.kind);
 
-const KINDS = new Set<string>(RENTABLE_ITEMS.map((item) => item.kind));
+const KINDS = new Set<string>(SHOP_CATALOG_ITEMS.map((item) => item.kind));
 
-/** Narrow arbitrary stored/form strings to the known rentable kinds, order preserved. */
-export function toRentableKinds(values: readonly string[]): RentableItemKind[] {
+/** Narrow arbitrary stored/form strings to the known catalog kinds, order preserved. */
+export function toRentableKinds(values: readonly string[]): ShopCatalogKind[] {
   const seen = new Set<string>();
-  const kinds: RentableItemKind[] = [];
+  const kinds: ShopCatalogKind[] = [];
   for (const value of values) {
     if (KINDS.has(value) && !seen.has(value)) {
       seen.add(value);
-      kinds.push(value as RentableItemKind);
+      kinds.push(value as ShopCatalogKind);
     }
   }
   return kinds;
 }
 
-/** The rentable items a shop offers, in canonical order, from its stored catalog. */
+/** The rentable gear a shop offers, in canonical order, from its stored catalog. */
 export function offeredRentableItems(rentalItems: readonly string[]): RentableItem[] {
   const offered = new Set(toRentableKinds(rentalItems));
   return RENTABLE_ITEMS.filter((item) => offered.has(item.kind));
+}
+
+/** Whether this shop fills nitrox tanks at all — the gate for every nitrox-request surface. */
+export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
+  return toRentableKinds(rentalItems).includes("nitrox");
 }
 
 /**

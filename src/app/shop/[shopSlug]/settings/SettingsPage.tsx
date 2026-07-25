@@ -26,7 +26,12 @@ import {
 } from "@/db/stripe-accounts";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
-import { RENTABLE_ITEMS, type RentalPricing, toRentableKinds } from "@/lib/rentals";
+import {
+  RENTABLE_ITEMS,
+  type RentalPricing,
+  SHOP_CATALOG_ITEMS,
+  toRentableKinds,
+} from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
@@ -135,7 +140,7 @@ async function saveRentalItemsAction(formData: FormData) {
     revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
     return;
   }
-  const selected = RENTABLE_ITEMS.filter((item) => formData.get(item.name) === "on").map(
+  const selected = SHOP_CATALOG_ITEMS.filter((item) => formData.get(item.name) === "on").map(
     (item) => item.kind,
   );
   await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
@@ -432,15 +437,16 @@ export default async function PaymentsSettingsPage({
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
             <h2 className="font-medium">What we rent</h2>
             <p className="mt-1 text-sm text-muted">
-              The gear divers can ask for when they set their rental fit. Untick anything you don't
-              rent — a shop that doesn't stock GoPros never offers one, and it drops off the kit
-              form and the prep list.
+              The gear and services divers can ask for when they set their rental fit. Untick
+              anything you don't offer — a shop that doesn't stock GoPros never offers one, and it
+              drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts
+              unticked.
             </p>
             <form action={saveRentalItemsAction} className="mt-4">
               <fieldset>
-                <legend className="sr-only">Rentable gear</legend>
+                <legend className="sr-only">Rentable gear and services</legend>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {RENTABLE_ITEMS.map((item) => (
+                  {SHOP_CATALOG_ITEMS.map((item) => (
                     <label
                       key={item.kind}
                       className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
@@ -486,12 +492,14 @@ export default async function PaymentsSettingsPage({
                     cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
                   />
                 ))}
-                <PriceField
-                  name="nitroxPrice"
-                  label="Enriched air"
-                  hint="(per dive)"
-                  cents={shop.rentalPricing.nitroxCents}
-                />
+                {offeredKinds.has("nitrox") ? (
+                  <PriceField
+                    name="nitroxPrice"
+                    label="Enriched air"
+                    hint="(per dive)"
+                    cents={shop.rentalPricing.nitroxCents}
+                  />
+                ) : null}
               </FieldGrid>
               <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-4" })}>
                 Save rental prices
