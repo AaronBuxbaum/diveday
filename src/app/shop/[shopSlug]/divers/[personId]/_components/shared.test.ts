@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardDisplayStatus, isCardExpired } from "./shared";
+import { cardDisplayStatus, isCardExpired, isImportedCard, needsImportConfirm } from "./shared";
 
 const TODAY = "2026-07-21";
 
@@ -33,5 +33,22 @@ describe("certification card display state", () => {
     expect(cardDisplayStatus({ status: "pending", expiresAt: "2026-01-01" }, TODAY)).toBe(
       "pending",
     );
+  });
+});
+
+describe("imported card provenance and confirm nudge", () => {
+  it("flags any card with an importedAt as imported", () => {
+    expect(isImportedCard({ importedAt: new Date() })).toBe(true);
+    expect(isImportedCard({ importedAt: null })).toBe(false);
+    expect(isImportedCard({})).toBe(false);
+  });
+
+  it("needs a confirm only while imported and not yet reviewed", () => {
+    // Imported, no staff review yet → the one-tap confirm nudge shows.
+    expect(needsImportConfirm({ importedAt: new Date(), reviewedAt: null })).toBe(true);
+    // Imported but a staffer already confirmed → no nudge; the imported flag stays.
+    expect(needsImportConfirm({ importedAt: new Date(), reviewedAt: new Date() })).toBe(false);
+    // A hand-entered card (never imported) is not a confirm-nudge case.
+    expect(needsImportConfirm({ importedAt: null, reviewedAt: null })).toBe(false);
   });
 });

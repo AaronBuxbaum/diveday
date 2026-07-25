@@ -124,18 +124,35 @@ describe("prepareContactImport — explicit bounds (CR-016)", () => {
 });
 
 describe("prepareContactImport — safety rules", () => {
-  it("imports a card as claimed and never trusts a source 'verified' flag", () => {
+  it("imports a card as verified-and-flagged, carrying the row's source label", () => {
     const csv = [
-      "full_name,certification_agency,certification_level,certification_number,certification_status",
-      "Jacques Cousteau,PADI,Rescue Diver,RES-42,verified",
+      "full_name,certification_agency,certification_level,certification_number,prior_shop",
+      "Jacques Cousteau,PADI,Rescue Diver,RES-42,Calypso Divers",
     ].join("\n");
     const [row] = prepareContactImport(csv).rows;
-    expect(row.cert).toEqual({ agency: "padi", level: "rescue", identifier: "RES-42" });
-    // The plan carries no verified state anywhere — the DB default (pending) stands.
-    expect(JSON.stringify(row.cert)).not.toMatch(/verified/);
-    expect(row.issues.some((i) => /claimed/i.test(i.message) && /verified/i.test(i.message))).toBe(
-      true,
-    );
+    // The prepared card carries the prior-shop provenance; the DB write lands it
+    // `verified` + flagged imported (see src/db/import.test.ts).
+    expect(row.cert).toEqual({
+      agency: "padi",
+      level: "rescue",
+      identifier: "RES-42",
+      sourceLabel: "Calypso Divers",
+    });
+    expect(
+      row.issues.some((i) => /imported as verified/i.test(i.message) && /confirm/i.test(i.message)),
+    ).toBe(true);
+  });
+
+  it("imports a card with a null source label when the row names no prior shop", () => {
+    const csv =
+      "full_name,certification_agency,certification_level,certification_number\nMarie Tharp,PADI,Open Water,OW-7";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.cert).toEqual({
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-7",
+      sourceLabel: null,
+    });
   });
 
   it("never fabricates a card number: a level with no number imports no card", () => {
@@ -162,11 +179,16 @@ describe("prepareContactImport — safety rules", () => {
     expect(row.cert).toMatchObject({ agency: "other", level: "divemaster" });
   });
 
-  it("imports nitrox as a claimed card only with a card number", () => {
+  it("imports nitrox as a verified-and-flagged card only with a card number", () => {
     const withNumber = prepareContactImport(
       "full_name,nitrox_certified,nitrox_certification_number\nA Diver,yes,NX-1",
     ).rows[0];
-    expect(withNumber.nitrox).toEqual({ agency: "other", identifier: "NX-1" });
+    expect(withNumber.nitrox).toEqual({ agency: "other", identifier: "NX-1", sourceLabel: null });
+    expect(
+      withNumber.issues.some(
+        (i) => /imported as verified/i.test(i.message) && /confirm/i.test(i.message),
+      ),
+    ).toBe(true);
 
     const flagOnly = prepareContactImport("full_name,nitrox_certified\nB Diver,yes").rows[0];
     expect(flagOnly.nitrox).toBeNull();
@@ -259,23 +281,43 @@ describe("prepareContactImport — safety rules", () => {
 });
 
 describe("IMPORT_HONESTY_TABLE", () => {
-  it("states payment as never-imported", () => {
-    const never = IMPORT_HONESTY_TABLE.filter((row) => row.scope === "never").map((r) => r.what);
-    expect(never).toEqual(expect.arrayContaining(["Card on file / payment"]));
+  it("uses only the two calm scope buckets — no alarm-red partial/never chips", () => {
+    for (const row of IMPORT_HONESTY_TABLE) {
+      expect(["included", "stays-behind"]).toContain(row.scope);
+    }
   });
 
-  it("states waiver/medical acceptance as trusted (partial), never claiming full or silent", () => {
+  it("keeps payment and booking history behind, with an honest reason", () => {
+    const behind = IMPORT_HONESTY_TABLE.filter((row) => row.scope === "stays-behind").map(
+      (r) => r.what,
+    );
+    expect(behind).toEqual(
+      expect.arrayContaining(["Card on file / payment", "Booking, trip & service history"]),
+    );
+  });
+
+  it("states waiver/medical acceptance as trusted and marked imported", () => {
     const waiver = IMPORT_HONESTY_TABLE.find(
       (r) => r.what === "Signed waivers & medical clearance",
     );
-    expect(waiver?.scope).toBe("partial");
+    expect(waiver?.scope).toBe("included");
     expect(waiver?.detail).toMatch(/trust/i);
     expect(waiver?.detail).toMatch(/imported/i);
   });
 
-  it("marks certifications and nitrox partial (claimed, never verified)", () => {
+  it("marks certifications and nitrox as coming across verified and flagged imported", () => {
     const cert = IMPORT_HONESTY_TABLE.find((r) => r.what === "Certification card");
-    expect(cert?.scope).toBe("partial");
-    expect(cert?.detail).toMatch(/never verified/i);
+    expect(cert?.scope).toBe("included");
+    expect(cert?.detail).toMatch(/verified/i);
+    expect(cert?.detail).toMatch(/imported/i);
+
+    const nitrox = IMPORT_HONESTY_TABLE.find((r) => r.what === "Enriched air (nitrox)");
+    expect(nitrox?.scope).toBe("included");
+    expect(nitrox?.detail).toMatch(/verified/i);
+  });
+
+  it("says waiver/medical documents accept both images and PDFs", () => {
+    const docs = IMPORT_HONESTY_TABLE.find((r) => r.what === "Waiver / medical documents");
+    expect(docs?.detail).toMatch(/pdf/i);
   });
 });

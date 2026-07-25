@@ -30,6 +30,11 @@ system is not clearance under this shop's waiver.
   - **Imported cards land `claimed` (`pending`), never `verified`.** Nothing in the write path can
     set `verified`; a source "verified/certified" column is noted and ignored. Staff re-verify at
     first contact, identical to a hand-entered card.
+    > Superseded by [20260724-import-verified-cards](20260724-import-verified-cards.md): imported
+    > level and nitrox cards now land `verified` and flagged `imported` (a non-null `importedAt`),
+    > surfaced for a one-tap staff confirm rather than re-captured as an unverified claim — a
+    > product-owner decision (H-20). "No fabricated identifiers" and email matching below are
+    > unchanged.
   - **No fabricated identifiers.** A card imports only with a recognized level *and* a real card
     number; a level with no number imports no card (a card with no number cannot be verified and
     would collide on the shop-unique index). An unrecognized level is left for a human.
@@ -43,6 +48,9 @@ system is not clearance under this shop's waiver.
     > exactly as below; only the one recognized claim column changed.
   - **Enriched air is a claim, not a fill authorization.** A nitrox card imports `pending` and only
     against a real nitrox card number; it never authorizes a fill until staff verify it.
+    > Superseded by [20260724-import-verified-cards](20260724-import-verified-cards.md): a nitrox card
+    > now imports `verified` and flagged `imported`, authorizing enriched-air requests on import;
+    > every fill is still re-checked at fill time. "Only against a real card number" is unchanged.
   - **People match by email**, so a re-import updates the roster instead of duplicating it; a card
     number already on file is left untouched so an import never disturbs already-verified evidence.
 - Layering mirrors the export: CSV parsing, column mapping, validation, and the honesty table are
@@ -64,6 +72,10 @@ system is not clearance under this shop's waiver.
 - **Trust the source's verification status** — rejected on domain review: it is exactly the safety
   spine the strategy says never to bypass. The `claimed`/`verified` distinction is what makes a fast
   import honest instead of dangerous.
+  > Reversed by [20260724-import-verified-cards](20260724-import-verified-cards.md) on the product
+  > owner's explicit direction (H-20): the source's verification is now trusted, with a permanent
+  > `imported` flag and a soft one-tap confirm as the mitigation instead of a full re-verify. See that
+  > ADR for the safety tradeoff and its escape hatch.
 - **Fabricate a card number when one is missing** — rejected: a card with no number cannot be
   verified and collides on the unique index; "no number, no card" is honest and safe.
 - **Import medical answers as satisfied** — rejected, fail-closed: another system's clearance is not
@@ -86,8 +98,10 @@ the commit so the honesty rules live in one place. The migration guides (public 
 backups can build on this surface next. Hard: the header-alias map and level normalization are
 best-effort against formats we can't all test from here — per-competitor verification belongs to the
 migration guides, and the honesty table says so. Agencies outside the pg enum (RAID, CMAS, GUE)
-flatten to `other` on import — safe (the card is `pending` and re-verified by hand) and disclosed
-per-row, but a line for the migration guides; widening the enum is a separate schema change.
+flatten to `other` on import — disclosed per-row, but a line for the migration guides; widening the
+enum is a separate schema change. (Since
+[20260724-import-verified-cards](20260724-import-verified-cards.md) the card lands `verified` and
+flagged `imported` with a one-tap confirm rather than `pending`.)
 Specialty cards (deep/wreck/night/drysuit) are not part of the contact file and don't import at all;
 the honesty table states this so a migrating shop re-enters them by hand rather than discovering the
 gap on the boat. A schema change touching people/certifications/

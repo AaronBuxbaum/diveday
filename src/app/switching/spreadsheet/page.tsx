@@ -4,6 +4,7 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
+import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 
@@ -24,10 +25,11 @@ import { IMPORT_HONESTY_TABLE } from "@/lib/import";
  * IMPORT_HONESTY_TABLE verbatim, the same source the importer and every
  * incumbent guide use, so the promise and the running code cannot drift.
  *
- * The free personal-import offer is a service commitment authorized by the
- * product owner (docs/product/marketing.md, claims policy) — not a product
- * feature. It routes to the switch@dive.day inbox (IMPORT_EMAIL) so a shop has
- * a real handoff, not just the self-service importer.
+ * The concierge switch offer is a service commitment authorized by the product
+ * owner (docs/product/marketing.md, claims policy) — not a product feature. It
+ * is the shared `SwitchingConcierge` block, routed to the switch@dive.day inbox,
+ * so a shop has a real handoff (in and out) on every switching page, not just
+ * the self-service importer and export.
  */
 
 export const metadata: Metadata = {
@@ -41,13 +43,9 @@ const scopeChip: Record<
   (typeof IMPORT_HONESTY_TABLE)[number]["scope"],
   { label: string; className: string }
 > = {
-  full: { label: "Imports fully", className: "bg-success/10 text-success" },
-  partial: { label: "Partial", className: "bg-warning/15 text-warning" },
-  never: { label: "Never", className: "bg-danger/10 text-danger" },
+  included: { label: "Comes across", className: "bg-success/10 text-success" },
+  "stays-behind": { label: "Stays behind", className: "bg-surface-sunken text-muted" },
 };
-
-/** Where the free concierge-import offer routes (product-owner provided). */
-const IMPORT_EMAIL = "switch@dive.day";
 
 /** The columns that matter, in the owner's words — mirrors what the importer recognizes. */
 const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
@@ -69,12 +67,12 @@ const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
   {
     column: "Certification",
     detail:
-      "Agency, level, and card number. The card number is what lets a card come across at all — it arrives as a claim your staff verify, never pre-verified.",
+      "Agency, level, and card number. The card number is what lets a card come across at all — it arrives verified and flagged imported, ready to use, with a one-tap confirm for staff.",
   },
   {
     column: "Nitrox",
     detail:
-      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across. Either way it's a claim, not a fill authorization.",
+      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across, imported as a verified nitrox card. The enriched-air fill gives plain air until a staffer taps the one-tap confirm.",
   },
   {
     column: "Rental sizes",
@@ -193,10 +191,10 @@ export default function SpreadsheetSwitchPage() {
             What comes across — and what doesn't
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-            This is the same scope table DiveDay shows before it imports a single row. The safety
-            spine mostly holds through the move: nothing arrives already verified. The one
-            deliberate exception is a waiver a row says was already accepted — trusted, medical
-            clearance included, rather than asked for again.
+            This is the same scope table DiveDay shows before it imports a single row. A card
+            already in your sheet was checked by you, so DiveDay trusts it: cards come across
+            verified and flagged imported, with a one-tap confirm for staff. Card expiry still
+            applies, and individual medical answers are never reconstructed.
           </p>
 
           <ul className="mt-8 space-y-2">
@@ -250,8 +248,8 @@ export default function SpreadsheetSwitchPage() {
                   <h3 className="font-semibold leading-6">Check the preview</h3>
                   <p className="mt-1.5 leading-7 text-muted">
                     DiveDay maps your columns automatically and previews the file before anything is
-                    saved — how each column landed, which cards will come in as claims for staff to
-                    verify, and anything it's leaving behind, including any row it can't bring
+                    saved — how each column landed, which cards will come in verified and flagged
+                    imported, and anything it's leaving behind, including any row it can't bring
                     across (one with no name, or a repeated email). The rows that pass import when
                     you confirm.
                   </p>
@@ -262,14 +260,12 @@ export default function SpreadsheetSwitchPage() {
                   3
                 </span>
                 <div className="pt-1">
-                  <h3 className="font-semibold leading-6">
-                    Import, then verify cards as divers arrive
-                  </h3>
+                  <h3 className="font-semibold leading-6">Import — your roster is ready</h3>
                   <p className="mt-1.5 leading-7 text-muted">
-                    Your roster and rental sizes are ready immediately. Imported cards wait as
-                    unverified claims — your staff confirm each one at first contact, exactly as
-                    they would a card entered by hand, so no one boards on evidence no one here has
-                    checked.
+                    Roster, rental sizes, and cards are ready immediately: cards land verified and
+                    flagged imported, so divers are trip-ready from the first booking. Each imported
+                    card carries a one-tap confirm on the diver's record for staff to give it a look
+                    when they get a moment — no boarding waits on it.
                   </p>
                 </div>
               </li>
@@ -277,28 +273,8 @@ export default function SpreadsheetSwitchPage() {
           </div>
         </section>
 
-        {/* The owner-authorized free import offer. */}
-        <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-8 sm:p-10">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Or email us the sheet and we'll do it with you — free.
-            </h2>
-            <p className="mt-3 max-w-2xl text-lg leading-8 text-muted">
-              However your spreadsheet looks — one tab or ten, headings that made sense only to you,
-              years of rows — you don't have to wrangle it alone. Send it to us as it is and we'll
-              map the columns and bring your divers in with you, free, on any plan. It's your data,
-              and getting it in shouldn't be the hard part.
-            </p>
-            <div className="mt-6">
-              <a
-                href={`mailto:${IMPORT_EMAIL}?subject=Import%20my%20spreadsheet`}
-                className={buttonClass({ className: "cursor-pointer" })}
-              >
-                Email your spreadsheet to {IMPORT_EMAIL}
-              </a>
-            </div>
-          </div>
-        </section>
+        {/* The owner-authorized concierge switch offer (shared across /switching). */}
+        <SwitchingConcierge />
 
         <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
           <div>

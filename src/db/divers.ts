@@ -326,6 +326,14 @@ async function summarizeDivers(
       pendingSpecialtyOrNitroxCount:
         specialty.filter((card) => card.status === "pending").length +
         nitrox.filter((card) => card.status === "pending").length,
+      // Imported cards land verified but flagged, awaiting a one-tap staff
+      // confirm (ADR 20260724-import-verified-cards). They already count as
+      // valid, so this is a soft "give these a look" nudge, kept separate from
+      // the pending-review count above. Specialty cards are never imported (no
+      // column in a contact file), so only level and nitrox cards are counted.
+      importedUnconfirmedCount: [...cards, ...nitrox].filter(
+        (card) => card.importedAt && !card.reviewedAt,
+      ).length,
       nitroxCertificationCount: nitrox.length,
       rentalFit: profileByPerson.get(person.id) ?? null,
     };

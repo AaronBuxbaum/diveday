@@ -1,9 +1,10 @@
-import { and, asc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { listTripReadiness } from "./readiness";
 import {
@@ -199,8 +200,9 @@ async function ungatedNitroxByTrip(
       and(
         eq(nitroxCertifications.personId, bookings.personId),
         eq(nitroxCertifications.shopId, bookings.shopId),
-        eq(nitroxCertifications.status, "verified"),
-        isNull(nitroxCertifications.deletedAt),
+        // Shared fill-gate predicate: an imported-but-unconfirmed card does not
+        // authorize a fill (ADR 20260724-import-verified-cards).
+        authorizesNitroxFill,
       ),
     )
     .where(
