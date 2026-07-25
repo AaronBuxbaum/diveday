@@ -35,6 +35,17 @@
  *     expiry backstops — waits for the one-tap staff confirm (`reviewedAt`); an
  *     imported-but-unconfirmed card gives plain air (src/db/nitrox.ts). A card
  *     entered by hand is unaffected.
+ *   - A specialty card (deep, wreck, night, drysuit) imports the same way, and
+ *     is the strictest of the three (ADR 20260725-import-specialty-cards):
+ *     verified and flagged, but the specialty *gate* stays shut until the
+ *     one-tap confirm, because a specialty is what authorizes a materially
+ *     riskier dive (deep gates depth past 18 m). One card number can only ever
+ *     become one card, so a cell naming two specialties imports neither and says
+ *     so rather than inventing a number for the second.
+ *   - A card's expiry comes across when the row carries a real calendar date,
+ *     including one already in the past — an expired card on file is a fact
+ *     readiness must see, and the alternative is a migrated card that looks
+ *     valid forever.
  *
  * The published honesty table (IMPORT_HONESTY_TABLE) states the same scope in
  * the shop owner's language; keep the two in step.
@@ -52,8 +63,9 @@
  * "split the file" case, not a reason to remove the atomic single-transaction
  * commit in src/db/import.ts.
  */
+import type { DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
-import { isValidCalendarDate } from "./calendar-date";
+import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 export const MAX_IMPORT_ROWS = 5_000;
@@ -84,10 +96,14 @@ export const IMPORT_FIELDS = [
   "date_of_birth",
   "emergency_contact_name",
   "emergency_contact_phone",
+  "dive_insurance",
   "certification_agency",
   "certification_level",
   "certification_number",
   "certification_status",
+  "certification_expires_at",
+  "specialty",
+  "specialty_certification_number",
   "nitrox_certified",
   "nitrox_certification_number",
   "bcd_size",
@@ -137,6 +153,18 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "ice_phone",
     "next_of_kin_phone",
   ],
+  // Free text as the diver carries it ("DAN #12345"). Never a gate — a safety
+  // detail the crew wants on hand in an incident (docs/product/glossary.md).
+  dive_insurance: [
+    "dive_insurance",
+    "insurance",
+    "dive_accident_insurance",
+    "insurance_provider",
+    "dan",
+    "dan_number",
+    "dan_membership",
+    "dan_member_number",
+  ],
   certification_agency: ["certification_agency", "cert_agency", "agency", "certifying_agency"],
   certification_level: [
     "certification_level",
@@ -167,6 +195,47 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "verified",
     "verification_status",
     "status",
+  ],
+  // The card's own refresher-due date. Applies to whichever card this row's
+  // level/specialty column produces — nitrox cards carry no expiry at all.
+  certification_expires_at: [
+    // The staff-facing name for this date is "refresher due" (H-08) — a shop
+    // whose sheet uses our own wording must be recognized, not ignored.
+    "refresher_due",
+    "refresher_due_date",
+    "refresher_date",
+    "refresher",
+    "certification_expires_at",
+    "certification_expiry",
+    "certification_expiration",
+    "certification_expiration_date",
+    "cert_expires",
+    "cert_expiry",
+    "card_expires",
+    "card_expiry",
+    "expires",
+    "expires_at",
+    "expiry",
+    "expiry_date",
+    "expiration_date",
+    "valid_until",
+  ],
+  specialty: [
+    "specialty",
+    "specialties",
+    "specialty_card",
+    "specialty_cards",
+    "specialty_certification",
+    "specialty_certifications",
+    "specialty_level",
+    "specialty_type",
+  ],
+  specialty_certification_number: [
+    "specialty_certification_number",
+    "specialty_number",
+    "specialty_cert_number",
+    "specialty_card_number",
+    "specialty_certification_no",
   ],
   nitrox_certified: ["nitrox_certified", "nitrox", "enriched_air", "eanx", "nitrox_certification"],
   nitrox_certification_number: [
@@ -256,6 +325,12 @@ export const IMPORT_HONESTY_TABLE: {
     detail: "Name and phone carry over when present.",
   },
   {
+    what: "Dive insurance (DAN)",
+    scope: "included",
+    detail:
+      "Carried across as free text, exactly as your file holds it (“DAN #12345”). Never a gate — it's the detail the crew wants on hand in an incident.",
+  },
+  {
     what: "Rental sizes",
     scope: "included",
     detail: "BCD, wetsuit, boot, and fin sizes become a rental-fit profile.",
@@ -264,7 +339,13 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Certification card",
     scope: "included",
     detail:
-      "Imported verified and flagged imported — DiveDay trusts the card your system already checked, so a diver is ready from the first trip. A card lands with a card number and a recognized level; staff give it a one-tap confirm, and expiry still applies. Unrecognized levels are left for a person to enter.",
+      "Imported verified and flagged imported — DiveDay trusts the card your system already checked, so a diver is ready from the first trip. A card lands with a card number and a recognized level; staff give it a one-tap confirm. A refresher-due date comes across with it, read from whatever date format your file writes, and a date already past lands as a card that's due rather than one that looks current forever. Two things import for staff review instead of as verified: a card your own file marks unverified, and a card whose refresher date we can't read — we won't guess at a date the boat depends on. Unrecognized levels are left for a person to enter.",
+  },
+  {
+    what: "Specialty cards (deep, wreck, night, drysuit)",
+    scope: "included",
+    detail:
+      "Imported as verified specialty cards, flagged imported — from a specialty column, or from a certification row that names one (“PADI Deep Diver”). Your diver's agency number is what carries them, the same number their level card uses, so a “Deep, Wreck” cell comes across as both cards and a certification file with one row per card brings in every card a diver holds. A specialty is what clears a riskier dive, so this one is stricter than a level card: the dive that requires it waits on the one-tap staff confirm, and everything else about the diver's day does not.",
   },
   {
     what: "Enriched air (nitrox)",
@@ -276,7 +357,7 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Signed waivers & medical clearance",
     scope: "included",
     detail:
-      "When a row says the diver already accepted a waiver at the prior shop, DiveDay trusts it — including its medical clearance — and the diver is not asked to sign again. The record is marked imported everywhere staff see it, snapshots your shop's current release for reference only (the diver did not agree to that exact text), and is dated to the acceptance date the row gives (or the import date if it doesn't). Individual medical answers are never reconstructed — only the accept/no-review-needed outcome carries over. This is a deliberate policy choice; see the imported-waiver ADR.",
+      "When a row says the diver already accepted a waiver at the prior shop, DiveDay trusts it — including its medical clearance — and the diver is not asked to sign again. The record is marked imported everywhere staff see it, snapshots your shop's current release for reference only (the diver did not agree to that exact text), and is dated to the acceptance date the row gives (or the import date if it doesn't). Individual medical answers are never reconstructed — only the accept/no-review-needed outcome carries over. Trusting a prior shop's acceptance is a deliberate choice on our side, not an accident of the import.",
   },
   {
     what: "Waiver / medical documents",
@@ -288,12 +369,6 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Role",
     scope: "included",
     detail: "Everyone imports as a diver. Staff roles and logins are never granted by import.",
-  },
-  {
-    what: "Specialty cards (deep, wreck, night, drysuit)",
-    scope: "stays-behind",
-    detail:
-      "A contact file has no column for them, so they stay behind — re-enter and verify each by hand. Until then a diver isn't cleared for a dive that requires one (deep gates depth past 18 m).",
   },
   {
     what: "Card on file / payment",
@@ -388,16 +463,48 @@ export type ImportIssue = { level: "error" | "warning" | "info"; message: string
  * provenance and surfaced for a one-tap staff confirm (ADR
  * 20260724-import-verified-cards).
  */
+/**
+ * `verified` is the normal import posture — the shop's own system checked this
+ * card (ADR 20260724-import-verified-cards). `pending` is the fail-closed
+ * fallback for a row that undercuts that premise: the source's own status column
+ * says the card was never verified, or it carries a refresher-due date nobody can
+ * read. Those cards import as staff-review claims instead.
+ */
+export type PreparedCardStatus = "verified" | "pending";
+
 export type PreparedCert = {
   agency: ImportAgency;
   level: ImportLevel;
   identifier: string;
   sourceLabel: string | null;
+  /** The card's own refresher-due date when the row carried a readable one (CR-009). */
+  expiresAt: string | null;
+  status: PreparedCardStatus;
+};
+
+/**
+ * A migrated specialty card (ADR 20260725-import-specialty-cards). Lands
+ * `verified` and flagged imported like a level card, but its *gate* stays shut
+ * until a staffer confirms it — see `specialtyBlocker` in src/lib/readiness.ts.
+ */
+export type PreparedSpecialty = {
+  agency: ImportAgency;
+  specialty: DiveSpecialty;
+  identifier: string;
+  sourceLabel: string | null;
+  expiresAt: string | null;
+  status: PreparedCardStatus;
 };
 export type PreparedNitrox = {
   agency: ImportAgency;
   identifier: string;
   sourceLabel: string | null;
+  /**
+   * Downgraded to `pending` only by the source's own "not verified" status —
+   * never by an unreadable refresher-due date, since a nitrox card has no expiry
+   * column for that date to belong to.
+   */
+  status: PreparedCardStatus;
 };
 
 /**
@@ -425,7 +532,16 @@ export type PreparedRow = {
   dateOfBirth: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  /** Free text as the diver carries it ("DAN #12345"); never a gate. */
+  diveInsurance: string | null;
   cert: PreparedCert | null;
+  /**
+   * Every specialty this row names — a "Specialties" cell holding "Deep, Wreck"
+   * is two cards, not a conflict, because the row's one agency number is the
+   * diver's number and the table is keyed on the specialty too
+   * (ADR 20260725-import-specialty-cards).
+   */
+  specialties: PreparedSpecialty[];
   nitrox: PreparedNitrox | null;
   sizes: {
     bcdSize: string | null;
@@ -434,8 +550,19 @@ export type PreparedRow = {
     finSize: string | null;
   };
   waiver: PreparedWaiver | null;
-  /** "import" rows are written; "skip" rows never touch the database. */
-  action: "import" | "skip";
+  /**
+   * `import` writes the person and everything on the row. `merge` is a row whose
+   * email already appeared earlier in the same file: it is the *same diver*, so
+   * its cards, waiver, and sizes are written onto that diver and its contact
+   * fields are left alone (the first row wins). That is the shape of a
+   * certification export — one row per card, so a three-card diver appears three
+   * times — and treating those rows as duplicate *people* silently discarded
+   * every card after the first (`dive-domain-expert` review). `skip` never
+   * touches the database.
+   */
+  action: "import" | "merge" | "skip";
+  /** For a `merge` row, the earlier row number this diver came in on. */
+  mergedIntoRow: number | null;
   issues: ImportIssue[];
 };
 
@@ -448,9 +575,14 @@ export type PreparedImport = {
   rows: PreparedRow[];
   totals: {
     total: number;
+    /** Rows that bring in a diver. */
     importable: number;
+    /** Rows that add evidence to a diver an earlier row already brought in. */
+    merged: number;
     skipped: number;
     withCard: number;
+    /** Specialty *cards*, not rows — one row can name several. */
+    withSpecialty: number;
     withNitrox: number;
     withWaiver: number;
   };
@@ -466,6 +598,41 @@ function normalizeAgency(raw: string | undefined): { agency: ImportAgency; recog
   return { agency: "other", recognized: false };
 }
 
+/**
+ * Map a free-text certification name to a specialty gate, or null when it names
+ * no specialty we gate on. Checked *before* `normalizeLevel` on a shared
+ * level/certification column, so "Advanced Wreck Diver" reads as the wreck
+ * specialty it is rather than being mistaken for the Advanced Open Water rung
+ * by the `/advanced/` rule below.
+ */
+export function normalizeSpecialty(raw: string | null | undefined): DiveSpecialty | null {
+  return specialtiesNamed(raw)[0] ?? null;
+}
+
+/**
+ * Every specialty a cell names, in a stable order. Scanned across the whole cell
+ * rather than a delimiter split, because delimiters are not dependable ("Deep
+ * Wreck Diver", "Deep/Wreck", "Deep & Wreck" all name two) — and a multi-value
+ * cell is the normal shape of a "Specialties" column, so each one it names
+ * becomes its own card. That is safe because the specialties of one diver share
+ * one agency number (a PADI number identifies the diver, not the card) and
+ * `specialty_certifications` is keyed on the specialty as well as the number.
+ *
+ * Each pattern requires the dive word, not merely the substring: "Deep Blue
+ * Club" is a shop's own label, not a depth clearance, and while an extra card
+ * would only ever land gate-held, a card nobody earned should not appear at all.
+ */
+export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[] {
+  const value = (raw ?? "").trim().toLowerCase();
+  if (!value) return [];
+  const found: DiveSpecialty[] = [];
+  if (/\bdry.?suit\b/.test(value)) found.push("drysuit");
+  if (/\bwreck\b/.test(value)) found.push("wreck");
+  if (/\bnight\b/.test(value)) found.push("night");
+  if (/\bdeep\b/.test(value)) found.push("deep");
+  return found;
+}
+
 /** Map a free-text level to a ladder rung, or null when it is not a rung we gate on. */
 export function normalizeLevel(raw: string | undefined): ImportLevel | null {
   const value = (raw ?? "").trim().toLowerCase();
@@ -479,7 +646,122 @@ export function normalizeLevel(raw: string | undefined): ImportLevel | null {
   return null;
 }
 
+/**
+ * The widest a card number may be. Matches the hand-entry form's own bound
+ * (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`), which the bulk path
+ * had no equivalent of: the unique indexes are btrees over `lower(identifier)`,
+ * and one 2,000-character cell (the only cap that used to apply) overflows a
+ * btree tuple and aborts the whole import with an opaque database error
+ * (`security-reviewer` finding). Bounded here so the row is skipped with a
+ * reason instead.
+ */
+const MIN_CARD_NUMBER_LENGTH = 2;
+const MAX_CARD_NUMBER_LENGTH = 120;
+
+/** Free-text personal fields we copy verbatim, capped to the column's form bound. */
+const MAX_FREE_TEXT_LENGTH = 120;
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/**
+ * The refresher-due date a shop tracks on a card, read from the formats real
+ * exports actually emit — not ISO alone. EVE runs on a US-locale Windows box and
+ * a spreadsheet writes whatever the machine's locale says, so `05/04/2030` and
+ * `4-May-2030` are the common cases and ISO is the lucky one.
+ *
+ * Ambiguity is resolved, never guessed at silently: `05/04/2030` is read as
+ * month-first (US), which is what the systems in the guides emit, and a
+ * day-first file's dates land on the wrong day only when both parts are ≤ 12 —
+ * so a value whose first part is > 12 is read day-first instead. Callers report
+ * which reading they used.
+ *
+ * Returns null for anything it cannot read *or* cannot believe: a year outside
+ * 1900–2200 is a typo or a sentinel ("9999-12-31" is how a card becomes valid
+ * forever), and year 0–99 is additionally unrepresentable in a Postgres `date`.
+ */
+export function parseCardDate(raw: string | null | undefined): {
+  date: CalendarDate;
+  assumedMonthFirst: boolean;
+} | null {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  const slash = /^(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})$/.exec(value);
+  const named = /^(\d{1,2})[\s-]([a-zA-Z]{3,})[\s-](\d{2,4})$/.exec(value);
+  const namedFirst = /^([a-zA-Z]{3,})[\s-](\d{1,2}),?[\s-]?(\d{2,4})$/.exec(value);
+
+  let year: number;
+  let month: number;
+  let day: number;
+  let assumedMonthFirst = false;
+  // Only a year the file actually wrote in two digits gets a century added; a
+  // written-out "0000" is a bad value, not shorthand for 2000.
+  let yearWasTwoDigit = false;
+
+  if (iso) {
+    [year, month, day] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  } else if (slash) {
+    const first = Number(slash[1]);
+    const second = Number(slash[2]);
+    // > 12 can only be a day, so that file is day-first; otherwise assume the
+    // month-first reading the guides' own systems emit.
+    assumedMonthFirst = first <= 12;
+    month = assumedMonthFirst ? first : second;
+    day = assumedMonthFirst ? second : first;
+    year = Number(slash[3]);
+    yearWasTwoDigit = slash[3].length === 2;
+  } else if (named || namedFirst) {
+    const match = named ?? namedFirst;
+    if (!match) return null;
+    const monthName = (named ? match[2] : match[1]).slice(0, 3).toLowerCase();
+    const index = MONTHS.indexOf(monthName);
+    if (index < 0) return null;
+    month = index + 1;
+    day = Number(named ? match[1] : match[2]);
+    year = Number(match[3]);
+    yearWasTwoDigit = match[3].length === 2;
+  } else {
+    return null;
+  }
+
+  // A two-digit year is this century: a refresher date is never in the 1900s.
+  if (yearWasTwoDigit) year += 2000;
+  if (year < 1900 || year > 2200) return null;
+  const candidate = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  if (!isValidCalendarDate(candidate)) return null;
+  return { date: candidate, assumedMonthFirst };
+}
+
 const TRUEISH = new Set(["true", "yes", "y", "1", "certified", "nitrox", "eanx", "enriched air"]);
+
+/**
+ * A source column explicitly saying the prior system had *not* verified this
+ * card. The whole verified-on-import posture rests on "the shop's own system
+ * already checked it" (ADR 20260724-import-verified-cards) — where the file says
+ * in as many words that it didn't, that premise is absent, so the card lands
+ * `pending` for a staff review instead (`dive-domain-expert` review).
+ */
+const NOT_VERIFIED = new Set([
+  "false",
+  "no",
+  "n",
+  "0",
+  "unverified",
+  "not verified",
+  "unconfirmed",
+  "pending",
+  "pending review",
+  "awaiting verification",
+  "claimed",
+  "expired",
+  "lapsed",
+  "rejected",
+]);
+
+function saysNotVerified(raw: string | undefined): boolean {
+  return NOT_VERIFIED.has((raw ?? "").trim().toLowerCase());
+}
 
 function isTrueish(raw: string | undefined): boolean {
   return TRUEISH.has((raw ?? "").trim().toLowerCase());
@@ -495,6 +777,24 @@ function clean(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+/** Free text copied verbatim onto a person, bounded to the hand-entry form's cap. */
+function freeText(value: string | null): string | null {
+  if (!value) return null;
+  return value.length > MAX_FREE_TEXT_LENGTH ? value.slice(0, MAX_FREE_TEXT_LENGTH) : value;
+}
+
+/**
+ * A card number we are willing to key a unique index on. Out-of-range lengths
+ * return null so the caller declines the card with a reason — the same
+ * no-number-no-card path — rather than handing Postgres a 2,000-character btree
+ * key that aborts the entire import (`security-reviewer` finding).
+ */
+function cardNumber(value: string | null): string | null {
+  if (!value) return null;
+  if (value.length < MIN_CARD_NUMBER_LENGTH || value.length > MAX_CARD_NUMBER_LENGTH) return null;
+  return value;
+}
+
 /**
  * Turn raw CSV text into a validated, safety-normalized import plan. Pure: no
  * database, no clock, no framework — the browser preview and the server commit
@@ -507,7 +807,16 @@ export function prepareContactImport(text: string): PreparedImport {
     unmappedColumns: [],
     ignoredMedicalColumns: [],
     rows: [],
-    totals: { total: 0, importable: 0, skipped: 0, withCard: 0, withNitrox: 0, withWaiver: 0 },
+    totals: {
+      total: 0,
+      importable: 0,
+      merged: 0,
+      skipped: 0,
+      withCard: 0,
+      withSpecialty: 0,
+      withNitrox: 0,
+      withWaiver: 0,
+    },
     fatal: null,
   };
   const byteLength = new TextEncoder().encode(text).length;
@@ -586,7 +895,9 @@ export function prepareContactImport(text: string): PreparedImport {
     };
   }
 
-  const seenEmails = new Set<string>();
+  // email → the row number that brought that diver in, so a later row carrying
+  // the same email can say which row it merges into.
+  const seenEmails = new Map<string, number>();
   const rows: PreparedRow[] = bodyRows.map((cells, bodyIndex) => {
     const rowNumber = bodyIndex + 1;
     const issues: ImportIssue[] = [];
@@ -613,15 +924,133 @@ export function prepareContactImport(text: string): PreparedImport {
     // imported card is stamped with where the shop verified it before.
     const sourceLabel = clean(at(cells, "waiver_source_name"));
 
+    // The card's refresher-due date, kept only when it is a real calendar date.
+    // A past date is imported as-is rather than dropped: an expired card on file
+    // is a fact readiness must see, and dropping it would leave a migrated card
+    // looking valid forever (which is what this column existing fixes).
+    // The refresher-due date the shop tracks on the card, read from the formats
+    // real exports emit (`parseCardDate`). Two things fail closed here rather
+    // than quietly producing a card that outlives its refresher:
+    //   - a value present but unreadable, or unbelievable (year 9999, a sentinel
+    //     for "never"), lands the row's cards `pending` instead of upgrading them
+    //     to no-expiry — an unreadable gate input is not a pass; and
+    //   - a date already past is imported as-is, because an overdue card on file
+    //     is a fact readiness must see.
+    let cardExpiresAt: string | null = null;
+    let expiryUnreadable = false;
+    const expiresRaw = clean(at(cells, "certification_expires_at"));
+    if (expiresRaw) {
+      const parsed = parseCardDate(expiresRaw);
+      if (!parsed) {
+        expiryUnreadable = true;
+        issues.push({
+          level: "warning",
+          message: `Refresher-due date "${expiresRaw}" can't be read as a date — the card imports for staff review instead of as verified, so nobody boards on a date we guessed.`,
+        });
+      } else {
+        cardExpiresAt = parsed.date;
+        if (parsed.assumedMonthFirst && expiresRaw !== parsed.date) {
+          issues.push({
+            level: "info",
+            message: `Refresher-due date "${expiresRaw}" read as ${parsed.date} (month first). Check it if your file writes day first.`,
+          });
+        }
+      }
+    }
+
+    // The prior system's own verification column, when it has one. A card only
+    // lands `verified` on the premise that the shop's system already checked it
+    // (ADR 20260724-import-verified-cards) — where the file says outright that it
+    // hadn't, that premise is gone and the card is a claim for staff to review.
+    const statusRaw = at(cells, "certification_status");
+    const sourceSaysUnverified = saysNotVerified(statusRaw);
+    if (sourceSaysUnverified) {
+      issues.push({
+        level: "warning",
+        message: `Your file marks this card "${clean(statusRaw)}" — imported for staff review rather than as verified, since your own records don't call it checked.`,
+      });
+    }
+    const cardStatus: PreparedCardStatus =
+      sourceSaysUnverified || expiryUnreadable ? "pending" : "verified";
+    // A nitrox card has no expiry column, so an unreadable refresher-due date
+    // says nothing about it — only the source's own status can downgrade it.
+    const nitroxStatus: PreparedCardStatus = sourceSaysUnverified ? "pending" : "verified";
+
+    const levelRaw = clean(at(cells, "certification_level"));
+    const certNumber = cardNumber(clean(at(cells, "certification_number")));
+    const { agency, recognized: agencyKnown } = normalizeAgency(at(cells, "certification_agency"));
+    const specialtyRaw = clean(at(cells, "specialty"));
+    // A specialty column, or a level/certification column that names one ("PADI
+    // Deep Diver") — the shape a rival's certification export actually takes, one
+    // row per card (ADR 20260725-import-specialty-cards).
+    const specialtySource = specialtyRaw ?? (normalizeSpecialty(levelRaw) ? levelRaw : null);
+    // An agency number identifies the *diver*, not the card: a PADI diver's Deep
+    // and Wreck cards carry the same PADI number (glossary — "C-card"). So a
+    // specialty column legitimately uses this row's card number when it has no
+    // number column of its own, and a cell naming two specialties becomes two
+    // cards under that one number — `specialty_certifications` is keyed on the
+    // specialty as well, and each lands with its gate held either way.
+    const specialtyNumber =
+      cardNumber(clean(at(cells, "specialty_certification_number"))) ?? certNumber;
+    const namedSpecialties = specialtiesNamed(specialtySource);
+    const specialties: PreparedSpecialty[] = [];
+    if (specialtySource && namedSpecialties.length === 0) {
+      issues.push({
+        level: "warning",
+        message: `Specialty "${specialtySource}" isn't a specialty we gate on (deep, wreck, night, drysuit) — nothing imported for it.`,
+      });
+    } else if (namedSpecialties.length > 0) {
+      if (!specialtyNumber) {
+        issues.push({
+          level: "warning",
+          message: `Specialty "${specialtySource}" has no card number on the row — not imported. A card without a number can't be verified.`,
+        });
+      } else {
+        for (const named of namedSpecialties) {
+          specialties.push({
+            agency,
+            specialty: named,
+            identifier: specialtyNumber,
+            sourceLabel,
+            expiresAt: cardExpiresAt,
+            status: cardStatus,
+          });
+        }
+        issues.push({
+          level: "info",
+          message:
+            cardStatus === "verified"
+              ? `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported as verified from your records — flagged imported. A dive that requires one waits on the one-tap staff confirm.`
+              : `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported for staff review — see the note above.`,
+        });
+        if (!agencyKnown) {
+          issues.push({
+            level: "info",
+            message: "Certification agency unrecognized — imported as “other”.",
+          });
+        }
+      }
+    }
+
     // Certification: imported as verified-and-flagged, and only with a real card
     // number (ADR 20260724-import-verified-cards). The prior system already
     // checked it; DiveDay trusts that, marks it imported, and surfaces a one-tap
     // staff confirm rather than re-capturing it as an unverified claim.
     let cert: PreparedCert | null = null;
-    const levelRaw = clean(at(cells, "certification_level"));
-    const certNumber = clean(at(cells, "certification_number"));
-    const { agency, recognized: agencyKnown } = normalizeAgency(at(cells, "certification_agency"));
-    if (levelRaw) {
+    // A level column that names a specialty is never *also* read as a ladder
+    // rung — whether or not that is where this row's specialty came from. The
+    // test has to be on what the column says, not on which column won above: a
+    // row carrying `specialty` = "Deep" *and* `certification_level` =
+    // "Advanced Wreck Diver" would otherwise file a technical wreck rating as a
+    // verified Advanced Open Water card, which clears its gate on the spot.
+    const levelNamesSpecialty = specialtiesNamed(levelRaw).length > 0;
+    if (levelRaw && levelNamesSpecialty && specialtySource !== levelRaw) {
+      issues.push({
+        level: "warning",
+        message: `Certification "${levelRaw}" names a specialty, not a level, and this row's specialty column was used instead — no level card imported. Add that card by hand if it's a separate one.`,
+      });
+    }
+    if (levelRaw && !levelNamesSpecialty) {
       const level = normalizeLevel(levelRaw);
       if (!level) {
         issues.push({
@@ -631,14 +1060,23 @@ export function prepareContactImport(text: string): PreparedImport {
       } else if (!certNumber) {
         issues.push({
           level: "warning",
-          message: `Certification level "${levelRaw}" has no card number — card not imported. A card without a number can't be verified.`,
+          message: `Certification level "${levelRaw}" has no usable card number — card not imported. A card without a number can't be verified.`,
         });
       } else {
-        cert = { agency, level, identifier: certNumber, sourceLabel };
+        cert = {
+          agency,
+          level,
+          identifier: certNumber,
+          sourceLabel,
+          expiresAt: cardExpiresAt,
+          status: cardStatus,
+        };
         issues.push({
           level: "info",
           message:
-            "Card imported as verified from your records — flagged imported, with a one-tap confirm for staff.",
+            cardStatus === "verified"
+              ? "Card imported as verified from your records — flagged imported, with a one-tap confirm for staff."
+              : "Card imported for staff review — see the note above.",
         });
         if (!agencyKnown) {
           issues.push({
@@ -657,9 +1095,9 @@ export function prepareContactImport(text: string): PreparedImport {
       const flagged =
         isTrueish(at(cells, "nitrox_certified")) ||
         Boolean(clean(at(cells, "nitrox_certification_number")));
-      const nitroxNumber = clean(at(cells, "nitrox_certification_number"));
+      const nitroxNumber = cardNumber(clean(at(cells, "nitrox_certification_number")));
       if (flagged && nitroxNumber) {
-        nitrox = { agency, identifier: nitroxNumber, sourceLabel };
+        nitrox = { agency, identifier: nitroxNumber, sourceLabel, status: nitroxStatus };
         issues.push({
           level: "info",
           message:
@@ -731,17 +1169,23 @@ export function prepareContactImport(text: string): PreparedImport {
     }
 
     let action: PreparedRow["action"] = "import";
+    let mergedIntoRow: number | null = null;
     if (!fullName) {
       issues.push({ level: "error", message: "No name — row skipped." });
       action = "skip";
     } else if (email && seenEmails.has(email)) {
+      // The same diver, not a duplicate to throw away: a certification export
+      // lists one row per card, so this is how a diver's second and third cards
+      // arrive. Their evidence lands on the diver row 1 brought in; contact
+      // fields are left as row 1 gave them.
+      action = "merge";
+      mergedIntoRow = seenEmails.get(email) ?? null;
       issues.push({
-        level: "error",
-        message: `Duplicate of an earlier row with email "${email}" — skipped so the first wins.`,
+        level: "info",
+        message: `Same diver as row ${mergedIntoRow} (${email}) — this row's cards and waiver are added to them, contact details left as the earlier row has them.`,
       });
-      action = "skip";
     }
-    if (action === "import" && email) seenEmails.add(email);
+    if (action === "import" && email) seenEmails.set(email, rowNumber);
     if (action === "import" && !email) {
       // Matching and de-duping are email-only, so an email-less row always comes
       // in as a fresh record and a later re-import can't find it to update. Say
@@ -760,16 +1204,24 @@ export function prepareContactImport(text: string): PreparedImport {
       dateOfBirth,
       emergencyContactName: clean(at(cells, "emergency_contact_name")),
       emergencyContactPhone: clean(at(cells, "emergency_contact_phone")),
-      cert: action === "import" ? cert : null,
-      nitrox: action === "import" ? nitrox : null,
+      diveInsurance: freeText(clean(at(cells, "dive_insurance"))),
+      // A `merge` row writes its evidence (that is the point of it); only a
+      // `skip` row contributes nothing at all.
+      cert: action === "skip" ? null : cert,
+      specialties: action === "skip" ? [] : specialties,
+      nitrox: action === "skip" ? null : nitrox,
       sizes,
-      waiver: action === "import" ? waiver : null,
+      waiver: action === "skip" ? null : waiver,
       action,
+      mergedIntoRow,
       issues,
     };
   });
 
   const importable = rows.filter((row) => row.action === "import");
+  const merged = rows.filter((row) => row.action === "merge");
+  // Evidence counts span both, because a merge row's whole purpose is its cards.
+  const written = [...importable, ...merged];
   return {
     mapping,
     unmappedColumns,
@@ -778,10 +1230,12 @@ export function prepareContactImport(text: string): PreparedImport {
     totals: {
       total: rows.length,
       importable: importable.length,
-      skipped: rows.length - importable.length,
-      withCard: importable.filter((row) => row.cert).length,
-      withNitrox: importable.filter((row) => row.nitrox).length,
-      withWaiver: importable.filter((row) => row.waiver).length,
+      merged: merged.length,
+      skipped: rows.length - importable.length - merged.length,
+      withCard: written.filter((row) => row.cert).length,
+      withSpecialty: written.reduce((sum, row) => sum + row.specialties.length, 0),
+      withNitrox: written.filter((row) => row.nitrox).length,
+      withWaiver: written.filter((row) => row.waiver).length,
     },
     fatal: null,
   };

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { certificationAgency, certificationLevel } from "@/db/schema";
+import { INTERNAL_VOCABULARY } from "@/test/copy";
 import {
   IMPORT_AGENCIES,
+  IMPORT_FIELDS,
   IMPORT_HONESTY_TABLE,
   IMPORT_LEVELS,
   MAX_IMPORT_BYTES,
@@ -53,6 +55,19 @@ describe("normalizeLevel", () => {
 });
 
 describe("prepareContactImport — mapping", () => {
+  it("maps every field from its own name, so no field shadows another", () => {
+    // Header matching walks IMPORT_FIELDS in order and takes the first field
+    // that claims a header, so an alias shared between two fields would make the
+    // later one unreachable — silently, and with the shop's column landing on the
+    // wrong thing. A file whose headers are exactly the canonical field names
+    // must therefore map each one to itself, all 27, none swallowed.
+    const headers = IMPORT_FIELDS.join(",");
+    const prepared = prepareContactImport(`${headers}\n${IMPORT_FIELDS.map(() => "x").join(",")}`);
+    expect(prepared.fatal).toBeNull();
+    expect(prepared.mapping.map((m) => m.field)).toEqual([...IMPORT_FIELDS]);
+    expect(prepared.unmappedColumns).toEqual([]);
+  });
+
   it("auto-maps rival header dialects and flags medical + unmapped columns", () => {
     const csv = [
       "First Name,Last Name,E-mail,Cell,Cert Level,Cert Number,Medical Notes,Loyalty Tier",
@@ -137,6 +152,8 @@ describe("prepareContactImport — safety rules", () => {
       level: "rescue",
       identifier: "RES-42",
       sourceLabel: "Calypso Divers",
+      expiresAt: null,
+      status: "verified",
     });
     expect(
       row.issues.some((i) => /imported as verified/i.test(i.message) && /confirm/i.test(i.message)),
@@ -152,6 +169,8 @@ describe("prepareContactImport — safety rules", () => {
       level: "open_water",
       identifier: "OW-7",
       sourceLabel: null,
+      expiresAt: null,
+      status: "verified",
     });
   });
 
@@ -159,9 +178,9 @@ describe("prepareContactImport — safety rules", () => {
     const csv = "full_name,certification_level\nMarie Tharp,Open Water";
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toBeNull();
-    expect(row.issues.some((i) => i.level === "warning" && /no card number/i.test(i.message))).toBe(
-      true,
-    );
+    expect(
+      row.issues.some((i) => i.level === "warning" && /no usable card number/i.test(i.message)),
+    ).toBe(true);
   });
 
   it("leaves an unrecognized level for a human, importing the person anyway", () => {
@@ -183,7 +202,12 @@ describe("prepareContactImport — safety rules", () => {
     const withNumber = prepareContactImport(
       "full_name,nitrox_certified,nitrox_certification_number\nA Diver,yes,NX-1",
     ).rows[0];
-    expect(withNumber.nitrox).toEqual({ agency: "other", identifier: "NX-1", sourceLabel: null });
+    expect(withNumber.nitrox).toEqual({
+      agency: "other",
+      identifier: "NX-1",
+      sourceLabel: null,
+      status: "verified",
+    });
     expect(
       withNumber.issues.some(
         (i) => /imported as verified/i.test(i.message) && /confirm/i.test(i.message),
@@ -195,13 +219,219 @@ describe("prepareContactImport — safety rules", () => {
     expect(flagOnly.issues.some((i) => /add and verify a nitrox card/i.test(i.message))).toBe(true);
   });
 
+  it("imports a specialty card from an explicit specialty column and its own number", () => {
+    const csv = [
+      "full_name,certification_agency,specialty,specialty_certification_number,prior_shop",
+      "Deep Diver,PADI,Deep Diver,DP-11,Calypso Divers",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.specialties).toEqual([
+      {
+        agency: "padi",
+        specialty: "deep",
+        identifier: "DP-11",
+        sourceLabel: "Calypso Divers",
+        expiresAt: null,
+        status: "verified",
+      },
+    ]);
+    // The card is verified on arrival, but the gate is not: say both.
+    expect(
+      row.issues.some(
+        (i) => /imported as verified/i.test(i.message) && /one-tap staff confirm/i.test(i.message),
+      ),
+    ).toBe(true);
+  });
+
+  it("reads a specialty out of a certification row that names one, and files no ladder card", () => {
+    // The one-row-per-certification shape a rival's cert export actually emits.
+    const csv = [
+      "full_name,certification_agency,certification_level,certification_number",
+      "Wreck Fan,SSI,Wreck Diver,WR-3",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.specialties).toEqual([
+      expect.objectContaining({ specialty: "wreck", identifier: "WR-3", agency: "ssi" }),
+    ]);
+    expect(row.cert).toBeNull();
+    // Not "isn't a level we gate on" — it *is* a card we gate on, just not a rung.
+    expect(row.issues.some((i) => /isn't a level/i.test(i.message))).toBe(false);
+  });
+
+  it("keeps a real ladder rung out of the specialty path", () => {
+    const csv =
+      "full_name,certification_level,certification_number\nLadder Only,Advanced Open Water,AOW-1";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.specialties).toEqual([]);
+    expect(row.cert).toMatchObject({ level: "advanced_open_water", identifier: "AOW-1" });
+  });
+
+  it("reads 'Advanced Wreck Diver' as the wreck specialty, not the Advanced rung", () => {
+    const csv =
+      "full_name,certification_level,certification_number\nAmbiguous,Advanced Wreck Diver,AW-1";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.specialties).toEqual([expect.objectContaining({ specialty: "wreck" })]);
+    expect(row.cert).toBeNull();
+  });
+
+  it("never files a specialty-named level column as a ladder card, even alongside a specialty column", () => {
+    // The sharp case: "Advanced Wreck Diver" is a penetration rating, and filing
+    // it as a verified Advanced Open Water card would clear that gate on the spot.
+    const csv =
+      "full_name,certification_level,certification_number,specialty,specialty_certification_number\nBoth,Advanced Wreck Diver,AW-2,Deep Diver,DP-2";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.cert).toBeNull();
+    expect(row.specialties).toEqual([expect.objectContaining({ specialty: "deep" })]);
+    expect(row.issues.some((i) => /names a specialty, not a level/i.test(i.message))).toBe(true);
+  });
+
+  it("imports every specialty a cell names, under the diver's one agency number", () => {
+    // An agency number identifies the diver, not the card, so a "Deep & Wreck"
+    // cell is two cards under one number — not a conflict to refuse.
+    const csv = "full_name,specialty,specialty_certification_number\nTwo Cards,Deep & Wreck,ONE-1";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.specialties.map((c) => c.specialty).sort()).toEqual(["deep", "wreck"]);
+    expect(row.specialties.every((c) => c.identifier === "ONE-1")).toBe(true);
+  });
+
+  it("uses the row's card number for a specialty column that has no number of its own", () => {
+    // A PADI diver's Deep card carries the same PADI number as their level card.
+    const csv =
+      "full_name,certification_level,certification_number,specialty\nOne Number,Open Water,PADI-9,Deep Diver";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.cert).toMatchObject({ level: "open_water", identifier: "PADI-9" });
+    expect(row.specialties).toEqual([
+      expect.objectContaining({ specialty: "deep", identifier: "PADI-9" }),
+    ]);
+  });
+
+  it("never fabricates a specialty card number", () => {
+    const noNumber = prepareContactImport("full_name,specialty\nNo Number,Night Diver").rows[0];
+    expect(noNumber.specialties).toEqual([]);
+    expect(
+      noNumber.issues.some((i) => i.level === "warning" && /no card number/i.test(i.message)),
+    ).toBe(true);
+  });
+
+  it("declines a card number too long to key an index on, instead of failing the import", () => {
+    const huge = "X".repeat(200);
+    const csv = `full_name,certification_level,certification_number\nLong Number,Open Water,${huge}`;
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.cert).toBeNull();
+    expect(row.action).toBe("import");
+    expect(row.issues.some((i) => /no usable card number/i.test(i.message))).toBe(true);
+  });
+
+  it("leaves a specialty it doesn't gate on for a human", () => {
+    const csv = "full_name,specialty,specialty_certification_number\nSidemount Fan,Sidemount,SM-1";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.action).toBe("import");
+    expect(row.specialties).toEqual([]);
+    expect(row.issues.some((i) => /isn't a specialty we gate on/i.test(i.message))).toBe(true);
+  });
+
+  it("merges a repeated email's cards onto the same diver instead of discarding them", () => {
+    // The shape of a certification export: one row per card, so a three-card
+    // diver appears three times. Treating rows 2-3 as duplicate people is how
+    // every card after the first used to be silently dropped.
+    const csv = [
+      "full_name,email,certification_agency,certification_level,certification_number",
+      "Multi Card,multi@example.com,PADI,Advanced Open Water,AOW-5",
+      "Multi Card,multi@example.com,PADI,Deep Diver,AOW-5",
+      "Multi Card,multi@example.com,PADI,Wreck Diver,AOW-5",
+    ].join("\n");
+    const prepared = prepareContactImport(csv);
+    expect(prepared.rows.map((r) => r.action)).toEqual(["import", "merge", "merge"]);
+    expect(prepared.rows[1].mergedIntoRow).toBe(1);
+    // Every card survives — one ladder card and two specialty cards.
+    expect(prepared.rows[0].cert).toMatchObject({ level: "advanced_open_water" });
+    expect(prepared.rows[1].specialties).toEqual([expect.objectContaining({ specialty: "deep" })]);
+    expect(prepared.rows[2].specialties).toEqual([expect.objectContaining({ specialty: "wreck" })]);
+    expect(prepared.totals).toMatchObject({ importable: 1, merged: 2, skipped: 0, withCard: 1 });
+    expect(prepared.totals.withSpecialty).toBe(2);
+  });
+
+  it("still skips a nameless row outright", () => {
+    const prepared = prepareContactImport("full_name,email\n,orphan@example.com");
+    expect(prepared.rows[0].action).toBe("skip");
+    expect(prepared.rows[0].cert).toBeNull();
+  });
+
+  it("recognizes the staff-facing “refresher due” header, not only expiry spellings", () => {
+    // The label the app and the switching pages both use — a shop copying our
+    // own wording into their sheet must not have the column silently ignored.
+    const [row] = prepareContactImport(
+      "full_name,certification_level,certification_number,refresher_due\nRefresher Rae,Rescue Diver,RS-77,2031-03-02",
+    ).rows;
+    expect(row.cert).toMatchObject({ identifier: "RS-77", expiresAt: "2031-03-02" });
+  });
+
+  it("carries a card expiry across, including one already past", () => {
+    const csv = [
+      "full_name,certification_level,certification_number,certification_expires_at",
+      "Expiring,Rescue Diver,RS-1,2030-06-01",
+      "Expired,Rescue Diver,RS-2,2020-06-01",
+    ].join("\n");
+    const rows = prepareContactImport(csv).rows;
+    expect(rows[0].cert).toMatchObject({ expiresAt: "2030-06-01" });
+    // A past date is a fact readiness must see, not something to drop: the
+    // alternative is a migrated card that looks valid forever.
+    expect(rows[1].cert).toMatchObject({ expiresAt: "2020-06-01" });
+  });
+
+  it("imports a card for staff review when its refresher-due date can't be read", () => {
+    const csv =
+      "full_name,certification_level,certification_number,card_expiry\nBad Date,Rescue Diver,RS-3,next June";
+    const [row] = prepareContactImport(csv).rows;
+    // Fails closed: an unreadable gate input must not become a card that never
+    // comes due, so the card lands pending for a staffer instead.
+    expect(row.cert).toMatchObject({ identifier: "RS-3", expiresAt: null, status: "pending" });
+    expect(
+      row.issues.some((i) => i.level === "warning" && /can't be read as a date/i.test(i.message)),
+    ).toBe(true);
+  });
+
+  it("reads the date formats real exports emit, and refuses a sentinel year", () => {
+    const read = (value: string) =>
+      prepareContactImport(
+        `full_name,certification_level,certification_number,card_expiry\nD,Rescue Diver,RS-9,${value}`,
+      ).rows[0].cert;
+    // US-locale Windows (EVE) and spreadsheet defaults, not ISO alone.
+    expect(read("05/04/2030")).toMatchObject({ expiresAt: "2030-05-04" });
+    expect(read("4-May-2030")).toMatchObject({ expiresAt: "2030-05-04" });
+    // Quoted because the value itself contains the CSV separator.
+    expect(read('"May 4, 2030"')).toMatchObject({ expiresAt: "2030-05-04" });
+    // First part > 12 can only be a day, so that file is read day-first.
+    expect(read("25/12/2030")).toMatchObject({ expiresAt: "2030-12-25" });
+    // "Never expires" sentinels and impossible years are not dates we believe.
+    expect(read("9999-12-31")).toMatchObject({ expiresAt: null, status: "pending" });
+    expect(read("0000-01-01")).toMatchObject({ expiresAt: null, status: "pending" });
+  });
+
+  it("imports a card for staff review when the file itself says it was never verified", () => {
+    const csv = [
+      "full_name,certification_level,certification_number,cert_status",
+      "Unverified Uma,Open Water,OW-11,unverified",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    // The whole verified-on-import posture rests on the prior system having
+    // checked the card. Here it says it didn't.
+    expect(row.cert).toMatchObject({ identifier: "OW-11", status: "pending" });
+    expect(row.issues.some((i) => /don't call it checked/i.test(i.message))).toBe(true);
+  });
+
+  it("carries dive insurance across as the free text the file holds", () => {
+    const [row] = prepareContactImport("full_name,dan_number\nInsured Diver,DAN #12345").rows;
+    expect(row.diveInsurance).toBe("DAN #12345");
+  });
+
   it("drops a malformed email so it can't mis-match a diver on dedup", () => {
     const [row] = prepareContactImport("full_name,email\nBad Row,not-an-email").rows;
     expect(row.email).toBeNull();
     expect(row.issues.some((i) => /doesn't look valid/i.test(i.message))).toBe(true);
   });
 
-  it("skips a nameless row and de-dupes repeated emails within the file", () => {
+  it("skips a nameless row, and folds a repeated email onto the first row's diver", () => {
     const csv = [
       "full_name,email",
       ",orphan@example.com",
@@ -211,8 +441,11 @@ describe("prepareContactImport — safety rules", () => {
     const prepared = prepareContactImport(csv);
     expect(prepared.rows[0].action).toBe("skip"); // no name
     expect(prepared.rows[1].action).toBe("import");
-    expect(prepared.rows[2].action).toBe("skip"); // duplicate email (case-insensitive)
-    expect(prepared.totals).toMatchObject({ total: 3, importable: 1, skipped: 2 });
+    // Case-insensitive, and the same diver — the contact details of row 2 win,
+    // but the row is not thrown away: any evidence on it lands on that diver.
+    expect(prepared.rows[2].action).toBe("merge");
+    expect(prepared.rows[2].mergedIntoRow).toBe(2);
+    expect(prepared.totals).toMatchObject({ total: 3, importable: 1, merged: 1, skipped: 1 });
   });
 
   it("round-trips a cell the export guarded against spreadsheet-formula injection", () => {
@@ -221,14 +454,19 @@ describe("prepareContactImport — safety rules", () => {
     expect(row.fullName).toBe("=cmd");
   });
 
-  it("counts cards and nitrox only among importable rows", () => {
+  it("counts cards, specialties, and nitrox only among importable rows", () => {
     const csv = [
-      "full_name,email,certification_level,certification_number,nitrox_certified,nitrox_certification_number",
-      "Keep,keep@example.com,Open Water,OW-1,yes,NX-1",
-      ",skip@example.com,Open Water,OW-2,yes,NX-2",
+      "full_name,email,certification_level,certification_number,specialty,specialty_certification_number,nitrox_certified,nitrox_certification_number",
+      "Keep,keep@example.com,Open Water,OW-1,Deep Diver,DP-1,yes,NX-1",
+      ",skip@example.com,Open Water,OW-2,Deep Diver,DP-2,yes,NX-2",
     ].join("\n");
     const prepared = prepareContactImport(csv);
-    expect(prepared.totals).toMatchObject({ importable: 1, withCard: 1, withNitrox: 1 });
+    expect(prepared.totals).toMatchObject({
+      importable: 1,
+      withCard: 1,
+      withSpecialty: 1,
+      withNitrox: 1,
+    });
   });
 
   it("trusts a truthy waiver_accepted and carries the source label and document URLs through", () => {
@@ -319,5 +557,30 @@ describe("IMPORT_HONESTY_TABLE", () => {
   it("says waiver/medical documents accept both images and PDFs", () => {
     const docs = IMPORT_HONESTY_TABLE.find((r) => r.what === "Waiver / medical documents");
     expect(docs?.detail).toMatch(/pdf/i);
+  });
+
+  it("brings specialty cards across, and says the dive waits on the staff confirm", () => {
+    const specialty = IMPORT_HONESTY_TABLE.find((r) => r.what?.startsWith("Specialty cards"));
+    expect(specialty?.scope).toBe("included");
+    expect(specialty?.detail).toMatch(/verified/i);
+    // The gate rule is the whole reason this row can be honest — it must be
+    // stated on the row itself, not buried in a page's surrounding prose.
+    expect(specialty?.detail).toMatch(/confirm/i);
+  });
+
+  it("brings dive insurance across without implying it is a gate", () => {
+    const insurance = IMPORT_HONESTY_TABLE.find((r) => r.what === "Dive insurance (DAN)");
+    expect(insurance?.scope).toBe("included");
+    expect(insurance?.detail).toMatch(/never a gate/i);
+  });
+
+  it("never leaks internal vocabulary into a table three surfaces render verbatim", () => {
+    // This table is rendered on both switching pages and in the import wizard.
+    // An ADR id or a decision-register id here reaches a shop owner as a dead
+    // end — say the thing the reference points at instead.
+    for (const row of IMPORT_HONESTY_TABLE) {
+      expect(row.what, `${row.what} — what`).not.toMatch(INTERNAL_VOCABULARY);
+      expect(row.detail, `${row.what} — detail`).not.toMatch(INTERNAL_VOCABULARY);
+    }
   });
 });

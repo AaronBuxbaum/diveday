@@ -1311,15 +1311,37 @@ export const specialtyCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /**
+     * Import provenance, mirroring `certifications.importedAt` — an imported
+     * specialty card lands `verified` and flagged
+     * (ADR 20260725-import-specialty-cards). It diverges from a ladder card in
+     * one deliberate way: the *gate* does not open on an imported card alone.
+     * `specialtyBlocker` (src/lib/readiness.ts) holds a specialty requirement
+     * until a staffer taps the one-tap confirm that stamps `reviewedAt`,
+     * because a specialty is what authorizes a materially riskier dive (deep
+     * gates depth past 18 m) and a spreadsheet cell is not a card sighting.
+     * Same shape as nitrox's fill hold, expressed in the readiness layer
+     * instead of SQL because that is where specialty gates are evaluated.
+     */
+    importedAt: timestamp("imported_at", { withTimezone: true }),
+    importedFromLabel: text("imported_from_label"),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
-    // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
-    uniqueIndex("specialty_certifications_shop_agency_identifier_unique")
-      .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
+    // Case-insensitive like certifications_shop_agency_identifier_unique (CR-009),
+    // but keyed on the **specialty** as well — an agency number identifies the
+    // *diver*, not the card (docs/product/glossary.md, "C-card": agency, level,
+    // cert/diver number). A PADI diver's Deep and Wreck cards carry the same PADI
+    // number, so keying without the specialty let a shop hold only one specialty
+    // card per diver: the second was refused by `createSpecialtyCertification` and
+    // silently skipped by the importer, and the remedy the copy offered ("give
+    // each card its own number") does not exist at any agency
+    // (`dive-domain-expert` review, ADR 20260725-import-specialty-cards).
+    uniqueIndex("specialty_certifications_shop_agency_specialty_identifier_unique")
+      .on(table.shopId, table.agency, table.specialty, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
   ],
 );

@@ -47,6 +47,18 @@ describe("buildDiverChecklist", () => {
     expect(waiver?.code).toBe("waiver_pending");
   });
 
+  it("puts an unconfirmed imported specialty card on the shop, not the diver", () => {
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [{ code: "specialty_import_unconfirmed", message: "..." }],
+    });
+    const cert = items.find((item) => item.category === "certification");
+    // The card is already on file — there is nothing for the diver to send, so
+    // this must never read as an action or ask them to chase a card.
+    expect(cert?.state).toBe("waiting");
+    expect(cert?.detail.toLowerCase()).not.toContain("send");
+  });
+
   it("never claims an email is coming for an unsent waiver", () => {
     const items = buildDiverChecklist(requirement(), {
       status: "blocked",

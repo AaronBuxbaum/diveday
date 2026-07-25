@@ -123,6 +123,13 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     detail:
       "Your specialty card on file is past the refresher date your shop set — check with them about it before you dive.",
   },
+  // "waiting", not "action": the card is on file and came across in the shop's
+  // migration — there is nothing for the diver to send, only a staff confirm.
+  specialty_import_unconfirmed: {
+    state: "waiting",
+    detail:
+      "Your specialty card came across from your shop’s old system and is with them to confirm.",
+  },
   nitrox_missing: {
     state: "action",
     detail:
