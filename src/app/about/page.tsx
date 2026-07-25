@@ -41,7 +41,7 @@ const plainTruths = [
   },
   {
     title: "It's still moving.",
-    body: "Early access means the shops using it now are the ones deciding what gets built next. That's the trade: a product that bends toward your season, and one that is still changing while you use it.",
+    body: "Early access means the shops that join first steer what gets built next, not a roadmap set months in advance in a room far from the water. That's the trade: a product that bends toward your season, and one that is still changing while you use it.",
   },
 ] as const;
 
@@ -60,10 +60,10 @@ export default function AboutPage() {
                 Built by someone who fell for diving, then saw what the shops were running on.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-                DiveDay is made in Florida by its founder — a software engineer who got certified in
-                2024, got obsessed, and started building this after one long conversation with a
-                shop owner. It is not a side product of a bigger company, and there is no roadmap
-                set in a room far away from a boat.
+                DiveDay isn't a side product tucked inside a bigger company, and it isn't run by a
+                committee that has never seen a boat. One founder is accountable for every call it
+                makes — and every one of those calls gets built in direct contact with the people
+                who actually run the dive day: the front desk, the crew, the divers themselves.
               </p>
             </div>
           </div>
@@ -81,28 +81,28 @@ export default function AboutPage() {
             </div>
             <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
               <p>
-                I got certified in 2024 and it took over my life almost immediately. I also build
-                software for a living — I worked on Google Maps, helped build a biotech company that
-                went public, and I work on self-driving cars now.
+                This started with one dive shop owner walking me through how his day actually ran: a
+                whiteboard for tomorrow, a clipboard for the boat, a spreadsheet somebody maintains
+                by hand, and two or three apps that don't speak to each other. It was costing him
+                money, and worse, it was costing him the attention that should have been going to
+                his divers. None of that was his fault, or his staff's — they're good at their jobs.
+                The tools just never showed up.
               </p>
               <p>
-                Then a shop owner walked me through how his day actually runs: a whiteboard for
-                tomorrow, a clipboard for the boat, a spreadsheet somebody maintains by hand, and
-                two or three apps that don't speak to each other. It was costing him money, and
-                worse, it was costing him the attention that should have been going to his divers.
-                None of that is anyone's fault. The staff are good at their jobs. The tools just
-                never showed up.
+                I'd gotten certified in 2024 and was already obsessed. I also build software for a
+                living — Google Maps, a biotech company through its IPO, and now self-driving cars —
+                so I recognized the shape of the problem right away: an entire industry running on
+                tools nobody had actually built for it. Most of what exists for dive shops is dated
+                at best and actively hostile at worst — desktop-bound, slow, built for a back office
+                rather than a wet dock. So shops keep the paper, because paper at least never fights
+                back.
               </p>
               <p>
-                Most of the software written for this industry is dated at best and actively hostile
-                at worst — desktop-bound, slow, built for a back office rather than a wet dock. So
-                shops keep the paper, because paper at least never fights back.
-              </p>
-              <p>
-                I want a shop to spend its day on the parts of diving it fell in love with, and not
-                on paperwork. That means software that's genuinely a pleasure to use — fast,
-                beautiful, forgiving, and workable on a phone in the sun with wet hands. It's why
-                the only test I care about is whether your crew actually wants to open it.
+                DiveDay exists so a shop can spend its day on the parts of diving it fell in love
+                with, and not on paperwork. That means software that's genuinely a pleasure to use —
+                fast, beautiful, forgiving, workable on a phone in the sun with wet hands — built in
+                conversation with the people who actually run the boats, not around them. The only
+                test that matters is whether your crew wants to open it.
               </p>
             </div>
           </div>

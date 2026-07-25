@@ -67,7 +67,9 @@ chosen battlegrounds — and re-read it before changing the spine.
   published on `/about`: certified in 2024; a software engineer who worked on Google Maps, helped
   build a biotech company that went public, and works on self-driving cars; and the origin — a
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
-  list needs its own confirmation.
+  list needs its own confirmation — **the founder's home location is explicitly not confirmed and
+  must not appear on the page**; an earlier draft stated "made in Florida" without confirmation and
+  that was a real violation of this rule, corrected 2026-07-25.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
