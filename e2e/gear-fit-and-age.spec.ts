@@ -201,4 +201,75 @@ test.describe("minimum age (H-08, fail open)", () => {
     // Not getByRole("alert"): Next's route announcer is also one.
     await expect(page.getByText("under this course's minimum age")).toBeVisible();
   });
+
+  test("names the real reason on the diver's own checklist once a date on file makes them under age (H-22)", async ({
+    page,
+  }) => {
+    const stamp = e2eNow().getTime();
+    const sessionTitle = `Age disclosure session ${stamp}`;
+    await page.goto(`/shop/${SHOP}/trips/new`);
+    await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
+    await page.getByLabel("Title").fill(sessionTitle);
+    await page.getByLabel("Date").fill(daysFromNow(24));
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("17:00");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+
+    const tripPath = await tripPathByTitle(page, sessionTitle);
+    await page.goto(tripPath);
+    await page.getByLabel(/Marcus Webb/).check();
+    await page.getByRole("button", { name: "Save crew" }).click();
+
+    // Staff must step aside for the public flow: /schedule/[id] redirects a
+    // signed-in staff member of this shop straight to the trip's own staff
+    // page, so "Book this date" would never reach the public booking form.
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // The PUBLIC form — actor: "public" in bookSpot — never refuses on age.
+    // No date is on file yet, so this books exactly like any other walk-in
+    // and never even raises the blocker.
+    const diverName = `Late Bloomer ${stamp}`;
+    await page.goto(`/shop/${SHOP}/courses/open-water-diver`);
+    await page.getByRole("link", { name: "Book this date" }).last().click();
+    // The booking form is controlled, so wait for hydration before typing —
+    // otherwise a fill can land before React attaches and gets silently lost.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Name").fill(diverName);
+    await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    // The confirmation heading greets by first name only ("...boat, Late! 🤿").
+    await expect(
+      page.getByRole("heading", {
+        name: new RegExp(`You're on the boat, ${diverName.split(" ")[0]}`),
+      }),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: /readiness page/ }).click();
+    await expect(page).toHaveURL(/\/ready\//);
+    const readyUrl = page.url();
+    // Fails open with no date on file: nothing age-related shown yet.
+    await expect(page.getByText(/minimum age/)).toHaveCount(0);
+
+    // Staff sign back in to record a date of birth putting them at 8 on the
+    // course date — exactly the "recorded after the booking" case the
+    // blocker exists to catch, since a booking-time-only gate would be inert
+    // for this diver.
+    await signInAs(page, DEV_STAFF_LOGINS.owner);
+    await goToDiver(page, diverName);
+    await page.getByText("Edit details").click();
+    await page.getByLabel("Date of birth").fill(daysFromNow(-365 * 8));
+    await page.getByRole("button", { name: "Save details" }).click();
+    await expect(page.getByRole("status")).toContainText("Diver details updated");
+
+    // Same link, unchanged: the diver never re-requested it, but their own
+    // checklist now names the real reason — no identity mismatch is in play
+    // for this diver, so it isn't hidden behind the generic identity line.
+    await page.goto(readyUrl);
+    // The exact copy — including that it never states the diver's actual age
+    // back — is pinned at the unit level (readiness-summary.test.ts); this
+    // just confirms the real flow reaches it.
+    await expect(page.getByText(/minimum age that the date of birth on file/)).toBeVisible();
+  });
 });
