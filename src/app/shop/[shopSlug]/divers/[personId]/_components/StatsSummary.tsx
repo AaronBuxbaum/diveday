@@ -11,17 +11,21 @@ export function StatsSummary({ diver }: { diver: DiverProfile }) {
             diver.specialtyCertifications.length +
             diver.nitroxCertifications.length}
         </p>
-        {/* An imported specialty card counts as needing attention even though
-            its status is `verified`: its gate stays shut until a staffer
-            confirms it, so a header reading "0 pending review" would say
-            all-clear while a deep dive is still blocked
-            (ADR 20260725-import-specialty-cards). */}
+        {/* An imported specialty or nitrox card counts as needing attention even
+            though its status is `verified`: each one's gate — the specialty dive,
+            the enriched-air fill — stays shut until a staffer attests they have
+            seen the card (H-24). A header reading "0 pending review" would say
+            all-clear while a deep dive or a fill is still blocked. A level card
+            is not counted: it cleared readiness on arrival, so its confirm is a
+            soft nudge and lives on the card itself. */}
         <p className="text-sm text-muted">
           {diver.certifications.filter((card) => card.status === "pending").length +
             diver.specialtyCertifications.filter(
               (card) => card.status === "pending" || needsImportConfirm(card),
             ).length +
-            diver.nitroxCertifications.filter((card) => card.status === "pending").length}{" "}
+            diver.nitroxCertifications.filter(
+              (card) => card.status === "pending" || needsImportConfirm(card),
+            ).length}{" "}
           needing a look
         </p>
       </div>

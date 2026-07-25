@@ -116,30 +116,33 @@ export function needsImportConfirm(card: ImportedCard): boolean {
 }
 
 /**
- * A *specialty* card's badge must not read the same as a hand-verified one while
- * its gate is still shut (ADR 20260725-import-specialty-cards,
- * `dive-domain-expert` review). A level or nitrox card that lands imported is
- * genuinely valid on arrival — green "certified" is true of it. An imported
- * specialty card is not: the dive it authorizes stays blocked until a staffer
- * confirms it, so at a busy desk "certified" alone reads as "fine for the 30 m
- * wall". This is the display state that says otherwise.
+ * The badge for a card **whose gate is still shut** — an imported specialty card
+ * (the dive it authorizes waits) or an imported nitrox card (the fill waits, and
+ * gives plain air meanwhile). Neither may read the same as a hand-verified card,
+ * which does clear: at a busy desk a green "certified" alone gets a diver told
+ * they're fine for the 30 m wall, or gets them handed an EANx tank
+ * (ADR 20260725-import-specialty-cards, 20260725-imported-card-sighting).
+ *
+ * A *level* card is deliberately not in this set: an imported level card is
+ * genuinely valid on arrival (20260724-import-verified-cards), so green
+ * "certified" is true of it and its confirm is only a nudge.
  */
-export type SpecialtyDisplayStatus = CardDisplayStatus | "confirm_to_clear";
+export type HeldCardDisplayStatus = CardDisplayStatus | "confirm_to_clear";
 
-export const SPECIALTY_STATUS_LABELS: Record<SpecialtyDisplayStatus, string> = {
+export const HELD_CARD_STATUS_LABELS: Record<HeldCardDisplayStatus, string> = {
   ...CARD_STATUS_LABELS,
   confirm_to_clear: "certified · confirm to clear",
 };
 
-export function specialtyDisplayStatus(
+export function heldCardDisplayStatus(
   card: { status: CardStatus; expiresAt?: CalendarDate | null } & ImportedCard,
   todayLocal: CalendarDate,
-): SpecialtyDisplayStatus {
+): HeldCardDisplayStatus {
   const base = cardDisplayStatus(card, todayLocal);
   return base === "verified" && needsImportConfirm(card) ? "confirm_to_clear" : base;
 }
 
-export function specialtyStatusTone(status: SpecialtyDisplayStatus): BadgeTone {
+export function heldCardStatusTone(status: HeldCardDisplayStatus): BadgeTone {
   // Warning, not success: the card is on file, and the gate is not open yet.
   return status === "confirm_to_clear" ? "warning" : statusTone(status);
 }

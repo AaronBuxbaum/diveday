@@ -105,8 +105,28 @@ describe("nitrox certification workflow", () => {
     const beforeConfirm = await setBookingNitrox(db, { shopId, bookingId, wantsNitrox: true });
     expect(beforeConfirm).toMatchObject({ ok: true, wantsNitrox: true, certified: false });
 
-    // The one-tap confirm stamps reviewedAt → now the fill is authorized.
-    await reviewNitroxCertification(db, { shopId, certificationId: card.id, status: "verified" });
+    // The confirm is refused outright without the staff attestation — this tap is
+    // the only thing between a spreadsheet cell and an enriched-air fill (H-24).
+    const bare = await reviewNitroxCertification(db, {
+      shopId,
+      certificationId: card.id,
+      status: "verified",
+    });
+    expect(bare).toEqual({ ok: false, reason: "card_sighting_required" });
+    expect([...(await verifiedNitroxPersonIds(db, shopId))]).not.toContain(personId);
+
+    // With it, the confirm stamps reviewedAt → now the fill is authorized, and
+    // the row records what was asserted rather than just that a click happened.
+    const confirmed = await reviewNitroxCertification(db, {
+      shopId,
+      certificationId: card.id,
+      status: "verified",
+      cardSighted: true,
+    });
+    expect(confirmed.ok).toBe(true);
+    if (confirmed.ok) {
+      expect(confirmed.certification.reviewNote).toContain("checked with the issuing agency");
+    }
     expect([...(await verifiedNitroxPersonIds(db, shopId))]).toContain(personId);
     const afterConfirm = await setBookingNitrox(db, { shopId, bookingId, wantsNitrox: true });
     expect(afterConfirm).toMatchObject({ ok: true, certified: true });

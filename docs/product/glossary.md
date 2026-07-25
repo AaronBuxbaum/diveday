@@ -43,6 +43,14 @@ new domain concept, define it here in the same PR.
   yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
   warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
   read as the same thing at a busy desk.
+- **Card sighting** — the attestation a staffer makes when confirming an **imported** specialty or
+  nitrox card: *“I've seen this diver's card, or checked the number with the issuing agency.”* Those
+  two confirms are the only thing standing between a spreadsheet cell and the dive (or the fill) the
+  card authorizes, so each requires the claim explicitly and records it in the card's `review_note` —
+  a bare button that opens a safety gate while asserting nothing is where the imported-card posture
+  leaks (H-24, [20260725-imported-card-sighting](../architecture/decisions/20260725-imported-card-sighting.md)).
+  A card this shop captured itself is unaffected: **Mark certified** already means a staffer looked the
+  number up with the agency. There is deliberately no bulk confirm.
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
@@ -421,6 +429,13 @@ new domain concept, define it here in the same PR.
   inherent gate (minimum level + required specialties); a trip carries its own; the readiness
   service composes them — the **stricter** minimum level and the **union** of specialties
   ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
+- **Technical / overhead rating** — trimix, helitrox, rebreather (CCR/SCR), cave and cavern,
+  decompression procedures, extended range, TDI's Tec and Advanced Nitrox tickets. DiveDay's ladder is
+  the *recreational* one and models none of these, so the importer **declines** them by name rather
+  than bending one onto the nearest-looking rung — "Advanced Nitrox" is a gas certification, not
+  Advanced Open Water, and a ladder card clears its gate on status alone. A shop that gates on one
+  records it by hand. Distinguished from a recreational card that simply isn't a rung (Master Scuba
+  Diver, Sidemount, Photography), which gets the ordinary "isn't a level we gate on" note.
 - **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
   Night, Drysuit) is a distinct yes/no gate. Levels live in `certifications`; specialties live in
   `specialty_certifications`, both captured pending and usable only once verified — except a card

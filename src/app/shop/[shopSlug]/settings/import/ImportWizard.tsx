@@ -144,7 +144,10 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             </p>
           ) : null}
 
-          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          {/* Seven tiles across a max-w-3xl column wrapped their labels to different
+              heights, which knocked the numbers off a shared baseline. Four wide,
+              two rows. */}
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: "Divers in file", value: prepared.totals.importable },
               // A certification export lists one row per card, so rows that add
