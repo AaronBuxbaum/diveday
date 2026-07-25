@@ -142,6 +142,44 @@ describe("buildDiverChecklist", () => {
     expect(items[0]?.category).toBe("setup");
     expect(items[0]?.state).toBe("waiting");
   });
+
+  // H-22 (2026-07-25): the age blocker names the real reason, unlike the
+  // still-generic identity blocker it used to be word-for-word identical to.
+  it("names the real reason for an under-age diver whose identity isn't in question", () => {
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [
+        {
+          code: "under_minimum_age",
+          message: "Under this course’s minimum age: 8 on the course date, and it requires 10.",
+        },
+      ],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]?.category).toBe("setup");
+    expect(items[0]?.detail.toLowerCase()).toContain("minimum age");
+    // Never states the diver's actual age back, and never asserts they're too
+    // young outright — the date on file could simply be wrong.
+    expect(items[0]?.detail).not.toContain("8");
+  });
+
+  it("still shows the generic identity line, not the age reason, when both blockers apply", () => {
+    // calculateReadiness always pushes identity_unconfirmed before
+    // under_minimum_age (src/lib/readiness.ts), and buildDiverChecklist takes
+    // the setup bucket's first blocker — this is what keeps the age reason
+    // from leaking to a booking whose submitted name doesn't match the one on
+    // file, which is the one case H-13's safeguard can actually catch.
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [
+        { code: "identity_unconfirmed", message: "..." },
+        { code: "under_minimum_age", message: "..." },
+      ],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]?.detail.toLowerCase()).toContain("confirm your details");
+    expect(items[0]?.detail.toLowerCase()).not.toContain("minimum age");
+  });
 });
 
 describe("nextDiverStep", () => {

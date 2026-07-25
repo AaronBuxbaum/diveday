@@ -398,9 +398,12 @@ new domain concept, define it here in the same PR.
   two ways: a refusal on **staff-initiated** bookings, and an `under_minimum_age` readiness blocker
   re-evaluated on every read (which is what catches a date recorded *after* the booking). The
   anonymous public form never refuses on age — a refusal there answers "is this address a child
-  under N?" to anyone who can guess an address — and the diver-facing checklist deliberately words
-  the blocker identically to the identity one, so its presence discloses nothing either. Real age
-  verification stays a dock-side ID check.
+  under N?" to anyone who can guess an address. The diver-facing checklist **does** name the real
+  reason (H-22, decided 2026-07-25) unless a name mismatch on the same booking is also unresolved
+  — a known, documented, narrower residual gap rather than a full close: an attacker who already
+  knows a specific person's exact name and email is not stopped. See
+  [20260725-checklist-age-disclosure](../architecture/decisions/20260725-checklist-age-disclosure.md).
+  Real age verification stays a dock-side ID check.
 - **Nitrox / EANx** — enriched-air breathing gas with a higher oxygen fraction than air
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified. A card

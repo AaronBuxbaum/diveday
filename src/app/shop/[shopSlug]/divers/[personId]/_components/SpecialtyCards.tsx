@@ -9,15 +9,13 @@ import { SPECIALTY_LABELS } from "@/lib/readiness";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
 import {
   AGENCY_LABELS,
-  CARD_STATUS_LABELS,
   type DiverProfile,
+  HELD_CARD_STATUS_LABELS,
+  heldCardDisplayStatus,
+  heldCardStatusTone,
   isImportedCard,
   needsImportConfirm,
   type Shop,
-  SPECIALTY_STATUS_LABELS,
-  specialtyDisplayStatus,
-  specialtyStatusTone,
-  statusTone,
 } from "./shared";
 
 export function SpecialtyCards({
@@ -108,7 +106,7 @@ export function SpecialtyCards({
         ) : (
           <>
             {diver.specialtyCertifications.map((card) => {
-              const display = specialtyDisplayStatus(card, todayLocal);
+              const display = heldCardDisplayStatus(card, todayLocal);
               const expired = display === "expired";
               return (
                 <li key={card.id} className="px-4 py-4">
@@ -137,8 +135,8 @@ export function SpecialtyCards({
                       ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone={specialtyStatusTone(display)}>
-                        {SPECIALTY_STATUS_LABELS[display]}
+                      <Badge tone={heldCardStatusTone(display)}>
+                        {HELD_CARD_STATUS_LABELS[display]}
                       </Badge>
                       {isImportedCard(card) ? (
                         <Badge tone="neutral">
@@ -183,57 +181,62 @@ export function SpecialtyCards({
                 </li>
               );
             })}
-            {diver.nitroxCertifications.map((card) => (
-              <li key={card.id} className="px-4 py-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">{AGENCY_LABELS[card.agency]} · Nitrox</p>
-                    <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={statusTone(card.status)}>{CARD_STATUS_LABELS[card.status]}</Badge>
-                    {isImportedCard(card) ? (
-                      <Badge tone="neutral">
-                        {card.importedFromLabel
-                          ? `imported · ${card.importedFromLabel}`
-                          : "imported"}
+            {diver.nitroxCertifications.map((card) => {
+              const display = heldCardDisplayStatus(card, todayLocal);
+              return (
+                <li key={card.id} className="px-4 py-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium">{AGENCY_LABELS[card.agency]} · Nitrox</p>
+                      <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={heldCardStatusTone(display)}>
+                        {HELD_CARD_STATUS_LABELS[display]}
                       </Badge>
-                    ) : null}
-                    {card.status === "pending" && !needsImportConfirm(card) ? (
-                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
+                      {isImportedCard(card) ? (
+                        <Badge tone="neutral">
+                          {card.importedFromLabel
+                            ? `imported · ${card.importedFromLabel}`
+                            : "imported"}
+                        </Badge>
+                      ) : null}
+                      {card.status === "pending" && !needsImportConfirm(card) ? (
+                        <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
+                          <input type="hidden" name="certificationId" value={card.id} />
+                          <input type="hidden" name="cardType" value="nitrox" />
+                          <SubmitButton
+                            pendingLabel="Marking certified…"
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            Mark certified
+                          </SubmitButton>
+                        </form>
+                      ) : null}
+                      <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="cardType" value="nitrox" />
+                        {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                         <SubmitButton
-                          pendingLabel="Marking certified…"
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                          pendingLabel="Deleting…"
+                          className={buttonClass({ variant: "danger", size: "sm" })}
                         >
-                          Mark certified
+                          Delete
                         </SubmitButton>
                       </form>
-                    ) : null}
-                    <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
-                      <input type="hidden" name="certificationId" value={card.id} />
-                      <input type="hidden" name="cardType" value="nitrox" />
-                      {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
-                      <SubmitButton
-                        pendingLabel="Deleting…"
-                        className={buttonClass({ variant: "danger", size: "sm" })}
-                      >
-                        Delete
-                      </SubmitButton>
-                    </form>
+                    </div>
                   </div>
-                </div>
-                {needsImportConfirm(card) ? (
-                  <ConfirmImportedCard
-                    action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                    certificationId={card.id}
-                    cardType="nitrox"
-                    what="the enriched-air fill this card allows"
-                  />
-                ) : null}
-              </li>
-            ))}
+                  {needsImportConfirm(card) ? (
+                    <ConfirmImportedCard
+                      action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                      certificationId={card.id}
+                      cardType="nitrox"
+                      what="the enriched-air fill this card allows"
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
           </>
         )}
       </ul>

@@ -570,6 +570,34 @@ export async function seedDemoSchedule(
     ]);
   }
 
+  // The imported-card states, on customer[12] (Hana Kobayashi) — the diver whose
+  // level card already arrives imported, and whose profile the visual baseline
+  // captures. She is booked on nothing (bookings use customers 0-9), so carding
+  // her cannot flip any seeded trip's readiness, manifest, or Today queue.
+  //
+  // Without these rows the two states H-23/H-24 exist for have no baseline at
+  // all: the amber "certified · confirm to clear" badge, and the confirm that
+  // requires a staffer to attest they have seen the card. Both are what stands
+  // between a spreadsheet cell and a depth gate or a gas fill, so both should be
+  // protected from a silent regression.
+  if (customers[12]) {
+    await db.insert(specialtyCertifications).values([
+      {
+        shopId,
+        personId: customers[12].id,
+        agency: "padi" as const,
+        specialty: "deep" as const,
+        identifier: "DEMO-SPEC-DEEP-13",
+        status: "verified" as const,
+        // Verified but unconfirmed: the gate stays shut and the card reads
+        // "certified · confirm to clear" (ADR 20260725-import-specialty-cards).
+        importedAt: nextCreatedAt(),
+        importedFromLabel: "Coral Coast Divers",
+        createdAt: nextCreatedAt(),
+      },
+    ]);
+  }
+
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
@@ -2259,6 +2287,24 @@ async function seedNitrox(
       status: "pending" as const,
     },
   ]);
+
+  // The imported nitrox state, on the same diver as the imported specialty card
+  // above: verified so it is never a boarding blocker, unconfirmed so the *fill*
+  // still gives plain air (authorizesNitroxFill) and the confirm asks the staffer
+  // to attest they have seen the card (H-24).
+  if (customers[12]) {
+    await db.insert(nitroxCertifications).values([
+      {
+        shopId,
+        personId: customers[12].id,
+        agency: "padi" as const,
+        identifier: "EANX-0013",
+        status: "verified" as const,
+        importedAt: nowDate(),
+        importedFromLabel: "Coral Coast Divers",
+      },
+    ]);
+  }
 
   // An enriched-air request from a diver whose card is verified, on the
   // nitrox-required wreck charter.
