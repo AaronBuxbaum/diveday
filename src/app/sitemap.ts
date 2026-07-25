@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/product", priority: 0.9 },
     { path: "/pricing", priority: 0.9 },
     { path: "/onboard", priority: 0.8 },
+    { path: "/about", priority: 0.6 },
     { path: "/switching", priority: 0.7 },
     { path: "/switching/spreadsheet", priority: 0.8 },
     ...MIGRATION_GUIDE_SLUGS.map((slug) => ({ path: `/switching/${slug}`, priority: 0.8 })),
