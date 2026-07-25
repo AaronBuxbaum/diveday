@@ -1,7 +1,7 @@
 import type { getBookingForTrip } from "@/db/bookings";
 import type { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
-import type { getRentalFit } from "@/db/rental-fit";
+import type { DiverRentalFit } from "@/db/rental-fit";
 import type { getShopBySlug } from "@/db/shops";
 import type { getTripWithBooked, listTripDives } from "@/db/trips";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
@@ -12,7 +12,8 @@ export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;
 export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
-export type RentalFit = Awaited<ReturnType<typeof getRentalFit>> | null;
+/** Diver-facing projection — never the raw row (src/db/rental-fit.ts). */
+export type RentalFit = DiverRentalFit | null;
 export type AutomatedForecast = Awaited<ReturnType<typeof fetchAutomatedMarineForecast>>;
 
 export type DiveBriefing = TripDive & {
@@ -28,12 +29,13 @@ export const ERROR_MESSAGES: Record<string, string> = {
   unavailable: "This trip isn't taking bookings anymore.",
   "course-unavailable":
     "This course still needs an assigned instructor before it can take bookings.",
-  "course-prerequisite":
-    "This course needs a verified certification on file. Call the shop and they’ll help get your card checked.",
+  // No `course-prerequisite` or `course-min-age` entry on purpose. Both would
+  // tell an anonymous submitter something about the person on file for an
+  // email they merely typed — whether they hold a card, or whether they're a
+  // child under N. `bookSpot` collapses both to the generic `unavailable`, and
+  // leaving the copy here would be an invitation to wire them back up.
   "course-ratio-full":
     "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
-  "course-min-age":
-    "This course has a minimum age that the date of birth on file doesn’t meet for this date. Call the shop — they can check the date and talk through the options.",
   fit: "We couldn’t save that rental fit. Please check the details and try again.",
   pay: "We couldn’t open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
 };

@@ -22,6 +22,7 @@ async function bookedContext() {
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
   const outcome = await createBooking(db, {
+    actor: "staff",
     shopId: shop.id,
     tripId: reef.id,
     fullName: "Claim Test Diver",
@@ -140,6 +141,7 @@ describe("claimBookingsForCheckout / releaseBookingCheckoutClaim", () => {
   it("gives back a partial claim when any booking in the party is already held", async () => {
     const { db, shop, reef, bookingId: freeBookingId } = await bookedContext();
     const held = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: reef.id,
       fullName: "Held Booking Diver",

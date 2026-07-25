@@ -26,6 +26,7 @@ async function bookVisitor(
   tripId: string,
 ) {
   const outcome = await createBooking(db, {
+    actor: "staff",
     shopId,
     tripId,
     fullName: "Nora Quinn",
@@ -224,6 +225,7 @@ describe("booking capabilities (in-memory PGlite)", () => {
     const { db, shop, open, other } = await seededContext();
     const bookingA = await bookVisitor(db, shop.id, open.id);
     const outcomeB = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: other.id,
       fullName: "Nora Quinn",

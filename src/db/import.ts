@@ -221,6 +221,7 @@ export async function commitContactImport(
           .set({
             fullName: row.fullName,
             ...(row.phone ? { phone: row.phone } : {}),
+            ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
             ...(row.emergencyContactName ? { emergencyContactName: row.emergencyContactName } : {}),
             ...(row.emergencyContactPhone
               ? { emergencyContactPhone: row.emergencyContactPhone }
@@ -250,6 +251,7 @@ export async function commitContactImport(
                 fullName: row.fullName,
                 email: row.email,
                 phone: row.phone,
+                dateOfBirth: row.dateOfBirth,
                 emergencyContactName: row.emergencyContactName,
                 emergencyContactPhone: row.emergencyContactPhone,
               })

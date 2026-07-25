@@ -15,6 +15,7 @@ async function seededBooking() {
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const booking = await createBooking(db, {
+    actor: "staff",
     shopId: shop.id,
     tripId: trip.id,
     fullName: "Nora Quinn",

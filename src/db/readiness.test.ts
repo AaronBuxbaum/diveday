@@ -62,6 +62,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     );
     if (!other) throw new Error("expected a second open non-course trip in the seed");
     const booked = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: other.id,
       fullName: rosterEntry.person.fullName,

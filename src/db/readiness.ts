@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { SiteCertRequirement } from "@/lib/readiness";
 import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
@@ -10,6 +10,7 @@ import type { DiveSpecialty } from "./schema";
 import {
   bookings,
   certifications,
+  courses,
   diveSites,
   nitroxCertifications,
   people,
@@ -382,16 +383,29 @@ export async function listTripReadiness(
   tripId: string,
   now: Date = nowDate(),
 ) {
-  const [requirement, siteRequirement, waiverRows, currentTemplate, shopRow] = await Promise.all([
-    getTripRequirements(db, shopId, tripId),
-    getTripSiteRequirement(db, shopId, tripId),
-    listTripWaiverStatuses(db, shopId, tripId),
-    getCurrentWaiverTemplate(db, shopId),
-    db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
-  ]);
+  const [requirement, siteRequirement, waiverRows, currentTemplate, shopRow, courseRow] =
+    await Promise.all([
+      getTripRequirements(db, shopId, tripId),
+      getTripSiteRequirement(db, shopId, tripId),
+      listTripWaiverStatuses(db, shopId, tripId),
+      getCurrentWaiverTemplate(db, shopId),
+      db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
+      // The course's stated minimum age and the day this session runs — age is
+      // measured on the course date, not today (H-08).
+      db
+        .select({ startsAt: trips.startsAt, minimumAge: courses.minimumAge })
+        .from(trips)
+        .leftJoin(courses, eq(courses.id, trips.courseId))
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+        .limit(1),
+    ]);
   const [shop] = shopRow;
   if (!shop) throw new Error(`listTripReadiness: shop ${shopId} not found`);
   const timezone = shop.timezone;
+  const courseMinimumAge = courseRow[0]?.minimumAge ?? null;
+  const courseDate = courseRow[0]?.startsAt
+    ? calendarDateInTimezone(courseRow[0].startsAt, timezone)
+    : null;
   const bookingIds = waiverRows.map((row) => row.booking.id);
   const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
@@ -484,6 +498,9 @@ export async function listTripReadiness(
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
         identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
+        courseMinimumAge,
+        courseDate,
+        dateOfBirth: row.person.dateOfBirth,
         now,
         timezone,
       }),

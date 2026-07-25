@@ -1,4 +1,32 @@
-import type { CalendarDate } from "./calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "./calendar-date";
+import { nowDate } from "./clock";
+
+/** Nobody diving today was born before this. A date under it is a typo, not a diver. */
+const OLDEST_PLAUSIBLE_BIRTH_YEAR = 1900;
+
+/**
+ * A cheap typo guard on the one field where a slip is silently punitive: a
+ * future date of birth yields a *negative* age, so `2062-03-04` for `1962-03-04`
+ * turns the fail-open gate into a hard refusal on every age-gated course, with
+ * nothing on screen explaining why. Rejecting it at the form is the boring fix.
+ * This is plausibility, not verification — the dock-side ID check is the control.
+ */
+export function isPlausibleDateOfBirth(dateOfBirth: CalendarDate, now: Date = nowDate()): boolean {
+  const year = Number(dateOfBirth.slice(0, 4));
+  if (year < OLDEST_PLAUSIBLE_BIRTH_YEAR) return false;
+  return dateOfBirth <= maxPlausibleBirthDate(now);
+}
+
+/**
+ * The upper bound `isPlausibleDateOfBirth` enforces, also handed to the date
+ * input's `max` so the browser refuses the typo before the round trip. It is
+ * the furthest-ahead timezone's "today" (UTC+14), not the server's: a shop in
+ * Kiritimati entering a real birth date on their own calendar is not
+ * committing a typo, and a day of slack is a cheaper error than refusing them.
+ */
+export function maxPlausibleBirthDate(now: Date = nowDate()): CalendarDate {
+  return calendarDateInTimezone(now, "Pacific/Kiritimati");
+}
 
 /**
  * Whole years old on a given calendar date. Both dates are date-only

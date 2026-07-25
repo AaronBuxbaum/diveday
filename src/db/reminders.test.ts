@@ -44,7 +44,13 @@ async function reminderContext() {
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
   const party = await createBookingParty(db, [
-    { shopId: shop.id, tripId: reef.id, fullName: "Pat Party", email: "reminders-pat@example.com" },
+    {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: reef.id,
+      fullName: "Pat Party",
+      email: "reminders-pat@example.com",
+    },
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
   const bookingId = party.bookings[0].bookingId;

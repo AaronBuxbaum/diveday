@@ -14,6 +14,7 @@ const FIELD_LABELS: Record<ImportField, string> = {
   full_name: "Full name",
   email: "Email",
   phone: "Phone",
+  date_of_birth: "Date of birth",
   emergency_contact_name: "Emergency contact",
   emergency_contact_phone: "Emergency phone",
   certification_agency: "Cert agency",

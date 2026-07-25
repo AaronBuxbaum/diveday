@@ -7,6 +7,7 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import { checkMinimumAge } from "./age";
 import { type CalendarDate, calendarDateInTimezone, isCalendarDateExpired } from "./calendar-date";
 import { nowDate } from "./clock";
 import { waiverState } from "./waivers";
@@ -102,6 +103,7 @@ export type ReadinessBlockerCode =
   | "specialty_expired"
   | "nitrox_missing"
   | "nitrox_pending"
+  | "under_minimum_age"
   | "payment_due"
   | "readiness_unavailable";
 
@@ -127,6 +129,12 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   specialty_expired: "certification",
   nitrox_missing: "certification",
   nitrox_pending: "certification",
+  // "setup", not "certification": age is not a card the diver holds, and it is
+  // entirely shop-side work. Filing it here also collapses it into the single
+  // generic setup line on the diver's own checklist, which is what keeps the
+  // public confirmation panel from disclosing that a given email belongs to
+  // someone under a course's minimum age.
+  under_minimum_age: "setup",
   payment_due: "payment",
 };
 
@@ -151,6 +159,18 @@ export type ReadinessInput = {
    * the same human, so a shared-inbox booking can't board on borrowed evidence.
    */
   identityUnconfirmed?: boolean;
+  /**
+   * The course's stated minimum age and the diver's date of birth, if the shop
+   * has one on file (H-08). Checked here as well as at booking, because a
+   * booking-time-only gate is inert for every diver whose date was recorded
+   * *after* they booked — which, since nothing collected dates before this
+   * shipped, is nearly all of them. Fails open: no date, no minimum, no
+   * blocker.
+   */
+  courseMinimumAge?: number | null;
+  dateOfBirth?: CalendarDate | null;
+  /** The shop-local calendar date the course runs, which is when age is measured. */
+  courseDate?: CalendarDate | null;
   now?: Date;
   /** The shop's IANA timezone — required so cert/specialty expiry reads against its local calendar date (CR-009), never UTC. */
   timezone: string;
@@ -319,6 +339,20 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       message:
         "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
     });
+  }
+
+  // Also ahead of the trip's requirements, and for the same reason: an
+  // under-age student is under-age whether or not anyone has configured the
+  // trip's cert gates yet. Measured on the day the course runs, matching the
+  // booking gate (src/db/bookings.ts).
+  if (input.courseDate) {
+    const age = checkMinimumAge(input.dateOfBirth, input.courseMinimumAge, input.courseDate);
+    if (age.status === "under") {
+      blockers.push({
+        code: "under_minimum_age",
+        message: `Under this course’s minimum age: ${age.age} on the course date, and it requires ${age.minimumAge}. Check the date of birth on file before boarding.`,
+      });
+    }
   }
 
   if (!input.requirement) {
