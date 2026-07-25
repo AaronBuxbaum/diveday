@@ -29,8 +29,14 @@ async function cacheOfflineShell() {
     }),
   );
   const cache = await caches.open(CACHE_NAME);
-  await cache.put(OFFLINE_SHELL, response);
+  // Assets before the shell that references them: a cache write can still
+  // fail on its own (storage quota, eviction) even after every fetch
+  // succeeded. Writing leaves last means that failure aborts before the
+  // shell HTML is replaced, so the previous — still fully self-consistent —
+  // shell and asset set keep serving instead of a new document pointing at
+  // bundles that were never actually written.
   await Promise.all(assetEntries.map(([asset, assetResponse]) => cache.put(asset, assetResponse)));
+  await cache.put(OFFLINE_SHELL, response);
 }
 
 self.addEventListener("install", (event) => {
