@@ -101,3 +101,48 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await context.setOffline(false);
   await expect(page.getByRole("status").filter({ hasText: "caught up" })).toBeVisible();
 });
+
+test("a captain who never tapped Save for offline still lands on a page after a failed reload", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Manifest" })
+    .click();
+
+  // The manifest page primes the offline shell in the background — no tap
+  // required. Wait for that to land before cutting the network, the same way
+  // an explicit "Save for offline" would. Polled from the page's main world
+  // (not waitForFunction's utility world, where the worker's controller and
+  // cache state can lag) so the three readiness signals are read atomically.
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
+        const cache = await caches.open("diveday-offline-manifest-shell-v1");
+        return (
+          !!navigator.serviceWorker.controller &&
+          !!registration?.active &&
+          (await cache.match("/offline-manifest")) !== undefined
+        );
+      }),
+    )
+    .toBe(true);
+
+  await context.setOffline(true);
+  await page.reload();
+  // No snapshot was ever saved, so the worker still redirects here rather
+  // than letting the reload fail outright — the shell says so plainly
+  // instead of fabricating a roster.
+  await expect(page).toHaveURL(/\/offline-manifest\?trip=/);
+  await expect(page.getByText("Nothing saved on this phone yet")).toBeVisible();
+
+  await context.setOffline(false);
+});

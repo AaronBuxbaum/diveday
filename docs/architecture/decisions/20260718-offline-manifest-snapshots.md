@@ -18,6 +18,14 @@ Offline use is an explicit device action: staff saves a versioned snapshot into 
 with a non-exportable device-local AES-GCM key. A service worker caches only the data-free offline
 shell and its same-origin static assets; it never caches an authenticated manifest response.
 
+Saving that snapshot stays explicit, but reaching it does not have to be: opening the live manifest
+also registers the service worker and primes the offline shell in the background, before any snapshot
+exists. If the network fails on a later reload of that same live manifest page, the worker's
+navigation handler — scoped to that one route by trip id, nothing broader — redirects to the cached
+offline shell instead of surfacing the browser's own offline error. With no snapshot saved yet, the
+shell just says so plainly; it never fabricates a roster. This closes the gap where a captain who
+never tapped "Save for offline" had no page at all to land on once signal dropped.
+
 Every snapshot displays its saved time and one of three freshness states: current (up to 15
 minutes), aging (up to four hours), or stale. Stale snapshots remain usable because a boat may be
 offline for a full operating day, but only a diver recorded as ready in that snapshot may be marked

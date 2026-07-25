@@ -1,5 +1,10 @@
 const CACHE_NAME = "diveday-offline-manifest-shell-v1";
 const OFFLINE_SHELL = "/offline-manifest";
+// Matches the live, authenticated roll-call page this shell backs up —
+// never any other /shop route — so a captain who reloads mid-departure with
+// no signal lands on their saved device copy instead of the browser's own
+// offline error, without this worker reaching beyond the manifest.
+const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
 
 async function cacheOfflineShell() {
   const cache = await caches.open(CACHE_NAME);
@@ -63,6 +68,24 @@ self.addEventListener("fetch", (event) => {
         .catch(async () => (await caches.match(OFFLINE_SHELL)) || Response.error()),
     );
     return;
+  }
+
+  if (event.request.mode === "navigate") {
+    const liveManifestMatch = url.pathname.match(LIVE_MANIFEST_PATTERN);
+    if (liveManifestMatch) {
+      const tripId = liveManifestMatch[1];
+      event.respondWith(
+        // Network-first: the live manifest is never served from cache — this
+        // only ever substitutes the device's own offline copy, and only once
+        // the network genuinely fails.
+        fetch(event.request).catch(async () => {
+          const cachedShell = await caches.match(OFFLINE_SHELL);
+          if (!cachedShell) return Response.error();
+          return Response.redirect(`${OFFLINE_SHELL}?trip=${encodeURIComponent(tripId)}`, 302);
+        }),
+      );
+      return;
+    }
   }
 
   if (url.pathname.startsWith("/_next/static/")) {

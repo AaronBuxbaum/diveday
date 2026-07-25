@@ -57,6 +57,11 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   }, [router, tripId]);
 
   useEffect(() => {
+    // Best-effort and silent: this only readies the data-free offline shell so
+    // a reload has somewhere to land if signal drops before staff ever taps
+    // "Save for offline" below. It never substitutes for that explicit save —
+    // the shell has no roster until a snapshot is saved into it.
+    primeOfflineManifestShell().catch(() => {});
     refresh()
       .then(reconcile)
       .catch(() => setMessage("This device couldn't open its saved copy. Save a fresh one."));
