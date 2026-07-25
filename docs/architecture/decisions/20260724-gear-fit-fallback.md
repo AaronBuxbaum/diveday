@@ -103,11 +103,12 @@ a course's existing `minimum_age` is enforced **only when a date is on file**:
   proves the submitter is the person on file for the email — the same uncertainty
   `identityUnconfirmedAt` exists for (H-13) — so it would judge a stranger by someone else's
   record. A `security-reviewer` pass caught this as an exploitable oracle in the first cut.
-- **The diver's own checklist never names age either.** `under_minimum_age` is filed under
-  `setup` and worded identically to `identity_unconfirmed`, so it collapses into the same generic
-  "your shop is finishing a check" line. Anyone who can guess an email can book it onto a public
-  session and read the confirmation panel; distinguishable copy there would be the same oracle one
-  step later. Staff see the real reason, with both numbers.
+- **The diver's own checklist originally never named age either**, worded identically to
+  `identity_unconfirmed` so the presence of either disclosed nothing. **Amended 2026-07-25
+  (H-22, [20260725-checklist-age-disclosure](20260725-checklist-age-disclosure.md)):** the
+  product owner chose to name the real reason for the common non-adversarial case, accepting a
+  narrower, documented residual gap in exchange — see that record for the tradeoff. Staff always
+  saw the real reason, with both numbers.
 - **Age is therefore also a readiness blocker** (`under_minimum_age`), re-evaluated on every read
   rather than once at enrollment. That is what makes the public path safe to let through, and it
   closes a second gap the domain review raised: a booking-time-only gate is inert for every diver

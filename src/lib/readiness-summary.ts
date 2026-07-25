@@ -56,15 +56,29 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
       "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
   },
   under_minimum_age: {
-    // Deliberately word-for-word the `identity_unconfirmed` line. Anyone who
-    // can guess an email can book it onto a public course session and read the
-    // confirmation panel; naming minimum age here would hand them "is the
-    // holder of this address under N?" — the same oracle the booking refusal
-    // was pulled for, one step later. Distinguishable copy is the disclosure,
-    // so there must not be any. The shop sees the real reason.
+    // Names the real reason (H-22, product-owner decision 2026-07-25). This
+    // was word-for-word the `identity_unconfirmed` line until then, on the
+    // reasoning that a `course_min_age` disclosure lets anyone who can guess
+    // an email learn whether that email belongs to a child under a course's
+    // minimum age (10/12/15/18) — the same oracle the public booking refusal
+    // was pulled for, one step later.
+    //
+    // Naming it here is a *known, accepted* narrowing of that protection, not
+    // a closure of it: `identity_unconfirmed` only flags a submitted name that
+    // doesn't match the name already on file (H-13, `!nameMatches`), so an
+    // attacker who already knows the child's real name — arguably the more
+    // concerning, targeted case — gets `nameMatches: true` on the very first
+    // request and never trips it. `buildDiverChecklist` picks the setup
+    // bucket's *first* blocker, and `calculateReadiness` always pushes
+    // `identity_unconfirmed` before `under_minimum_age` (src/lib/readiness.ts)
+    // — so this copy is only ever shown when no identity mismatch is present,
+    // and the mismatched-name case still gets the generic line above. The
+    // known-name case does not. The product owner chose
+    // this trade for the common case's clarity, with the gap written down
+    // rather than silently accepted. See H-22, docs/product/human-decisions.md.
     state: "waiting",
     detail:
-      "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
+      "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, give the shop a call and they’ll sort it out.",
   },
   waiver_not_sent: {
     // A waiver goes out the moment a diver joins, so this state is the rare
