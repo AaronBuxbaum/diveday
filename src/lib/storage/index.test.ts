@@ -9,7 +9,9 @@ import {
   MAX_COURSE_IMAGE_BYTES,
   storeCardImage,
   storeCourseImage,
+  storeImportWaiverDocument,
 } from "./index";
+import { MAX_IMAGE_BYTES } from "./limits";
 
 let realJpeg: Buffer;
 
@@ -259,5 +261,65 @@ describe("isManagedBlobUrl (CR-012 review finding)", () => {
 
   it("fails closed on an unparseable URL instead of throwing", () => {
     expect(isManagedBlobUrl("not a url")).toBe(false);
+  });
+});
+
+describe("import document storage — images and PDFs", () => {
+  const fakePdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+
+  it("stores a PDF as-is, bypassing the image pipeline, with an application/pdf type and .pdf name", async () => {
+    const provider = {
+      upload: vi.fn().mockResolvedValue({ status: "stored", url: "https://blob.example/x.pdf" }),
+    };
+    const result = await storeImportWaiverDocument(
+      { filename: "waiver.pdf", contentType: "application/pdf", bytes: fakePdf },
+      provider,
+    );
+    expect(result).toEqual({ status: "stored", url: "https://blob.example/x.pdf" });
+    expect(provider.upload).toHaveBeenCalledTimes(1);
+    const arg = provider.upload.mock.calls[0][0];
+    expect(arg.contentType).toBe("application/pdf");
+    expect(arg.filename).toMatch(/\.pdf$/);
+    // The raw PDF bytes are stored unchanged — never re-encoded to JPEG.
+    expect(arg.bytes).toBe(fakePdf);
+    expect(arg.keyPrefix).toBe("import-waivers");
+  });
+
+  it("routes on magic bytes, not the claimed type: a mislabeled non-PDF is rejected", async () => {
+    const provider = { upload: vi.fn() };
+    const notReallyPdf = Buffer.from("this is not a pdf".repeat(20));
+    expect(
+      await storeImportWaiverDocument(
+        { filename: "waiver.pdf", contentType: "application/pdf", bytes: notReallyPdf },
+        provider,
+      ),
+    ).toEqual({ status: "failed" });
+    expect(provider.upload).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized PDF before touching the provider", async () => {
+    const provider = { upload: vi.fn() };
+    const huge = Buffer.concat([fakePdf, Buffer.alloc(MAX_IMAGE_BYTES + 1)]);
+    expect(
+      await storeImportWaiverDocument(
+        { filename: "big.pdf", contentType: "application/pdf", bytes: huge },
+        provider,
+      ),
+    ).toEqual({ status: "failed" });
+    expect(provider.upload).not.toHaveBeenCalled();
+  });
+
+  it("still takes the image path for an image document (re-encoded to JPEG)", async () => {
+    const provider = {
+      upload: vi.fn().mockResolvedValue({ status: "stored", url: "https://blob.example/x.jpg" }),
+    };
+    const result = await storeImportWaiverDocument(
+      { filename: "scan.jpg", contentType: "image/jpeg", bytes: realJpeg },
+      provider,
+    );
+    expect(result).toEqual({ status: "stored", url: "https://blob.example/x.jpg" });
+    const arg = provider.upload.mock.calls[0][0];
+    expect(arg.contentType).toBe("image/jpeg");
+    expect(arg.filename).toMatch(/\.jpg$/);
   });
 });

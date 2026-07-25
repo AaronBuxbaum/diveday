@@ -12,6 +12,8 @@ import {
   CARD_STATUS_LABELS,
   cardDisplayStatus,
   type DiverProfile,
+  isImportedCard,
+  needsImportConfirm,
   type Shop,
   statusTone,
 } from "./shared";
@@ -135,14 +137,21 @@ export function CertificationCards({
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone(display)}>{CARD_STATUS_LABELS[display]}</Badge>
-                  {card.status === "pending" ? (
+                  {isImportedCard(card) ? (
+                    <Badge tone="neutral">
+                      {card.importedFromLabel ? `imported · ${card.importedFromLabel}` : "imported"}
+                    </Badge>
+                  ) : null}
+                  {card.status === "pending" || needsImportConfirm(card) ? (
                     <form action={reviewAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       <SubmitButton
-                        pendingLabel="Marking certified…"
+                        pendingLabel={
+                          needsImportConfirm(card) ? "Confirming…" : "Marking certified…"
+                        }
                         className={buttonClass({ variant: "secondary", size: "sm" })}
                       >
-                        Mark certified
+                        {needsImportConfirm(card) ? "Confirm card" : "Mark certified"}
                       </SubmitButton>
                     </form>
                   ) : null}

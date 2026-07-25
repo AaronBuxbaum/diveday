@@ -166,21 +166,30 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   ([export-bundled-photos](../architecture/decisions/20260724-export-bundled-photos.md)).
 - **Diver/customer CSV importer** — Settings → Import contacts brings people, cards, rental sizes, and
   (2026-07-24) prior waiver acceptance in from a rival's export or DiveDay's own `contacts.csv`,
-  matched by email so a re-import updates rather than duplicates. The safety spine mostly holds:
-  imported certs land **claimed, never verified**, no card number means no card; a scope table states
-  it all up front. The one deliberate exception: a row explicitly claiming a waiver was already
-  accepted at the prior shop is trusted — medical clearance included — and written as an `imported`
-  record, a product-owner decision (H-17) that reverses the importer's original medical fail-closed
-  default; see [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md).
-  Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
+  matched by email so a re-import updates rather than duplicates. Imported cards land **`verified` and
+  flagged `imported`** — DiveDay trusts a card the shop's own system already checked and surfaces a
+  soft one-tap **Confirm card** nudge rather than re-capturing it as an unverified claim; card expiry
+  still applies and no card imports without a real number. The one gate the confirm actually holds is
+  the **enriched-air fill** — an imported nitrox card gives plain air until confirmed (a nitrox card
+  has no expiry backstop and a wrong fill is the highest-consequence failure), per `dive-domain-expert`
+  review; boarding and depth clear immediately (product-owner decision H-20,
+  [import-verified-cards](../architecture/decisions/20260724-import-verified-cards.md)). A row explicitly
+  claiming a waiver was already accepted at the prior shop is likewise trusted — medical clearance
+  included — and written as an `imported` record (H-17,
+  [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md)); waiver/
+  medical document links (image **or PDF**, 5 MB) are re-stored in DiveDay's own storage. A scope table
+  states it all up front. Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
   ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
 - **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
   (EVE, DiveShop360, DiveAdmin, Smartwaiver): each states how to export the shop's own data from
   that system, renders the importer's `IMPORT_HONESTY_TABLE` scope table verbatim, and walks the
   DiveDay import. High-intent SEO capture of "leaving &lt;incumbent&gt;" searches and the third leg
-  of the portability wedge. Content in `src/lib/migration-guides.ts`, pages in `src/app/switching/`
-  ([marketing.md](marketing.md#migration-guides)). Backups and the read API are the open follow-ons
-  in [roadmap.md](roadmap.md).
+  of the portability wedge. Every switching page (hub, incumbent guides, spreadsheet) also carries the
+  shared **concierge switch offer** — a person will help you bring your data in *and*, if DiveDay is
+  ever not right, take it back out, free (`SwitchingConcierge`, routed to `switch@dive.day`; an
+  authorized service claim, H-20). Content in `src/lib/migration-guides.ts`, pages in
+  `src/app/switching/` ([marketing.md](marketing.md#migration-guides)). Backups and the read API are
+  the open follow-ons in [roadmap.md](roadmap.md).
 - **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
   an optional `coexist` block, because FareHarbor is a booking/distribution *channel* (a general
   tours engine, Booking-Holdings-owned), not a records system to leave: the guide leads with "keep

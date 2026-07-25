@@ -1253,6 +1253,20 @@ export const certifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /**
+     * Provenance for a card brought in by the contact importer
+     * (ADR 20260724-import-verified-cards). A non-null `importedAt` is the
+     * definitive "this card was migrated" marker — mirroring `waiverRecords`'
+     * `signatureMethod: "imported"`. Imported cards land `verified` (the prior
+     * system already checked them) but with `reviewedAt` still null, so the
+     * pair `importedAt IS NOT NULL AND reviewedAt IS NULL` is exactly the
+     * "verified, awaiting a staff confirm" set the diver UI surfaces. Confirming
+     * stamps `reviewedAt` through the normal review path; the imported provenance
+     * stays forever so an imported card is never mistaken for one this shop
+     * carded on sight. `importedFromLabel` is the optional prior-shop/system name.
+     */
+    importedAt: timestamp("imported_at", { withTimezone: true }),
+    importedFromLabel: text("imported_from_label"),
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -1421,6 +1435,16 @@ export const nitroxCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /**
+     * Import provenance, mirroring `certifications.importedAt` — an imported
+     * nitrox card lands `verified` (flagged) awaiting a staff confirm
+     * (ADR 20260724-import-verified-cards). Enriched-air fill authorization
+     * reads `verified`, so a confirmed-or-not imported nitrox card can clear a
+     * fill; the imported marker keeps it distinguishable and expiry/fill-time
+     * re-checks still apply.
+     */
+    importedAt: timestamp("imported_at", { withTimezone: true }),
+    importedFromLabel: text("imported_from_label"),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
