@@ -24,6 +24,7 @@ import {
   reviewSpecialtyCertification,
   upsertTripRequirements,
 } from "./readiness";
+import { specialtyCertifications } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -160,6 +161,70 @@ describe("trip readiness (in-memory PGlite)", () => {
     });
   });
 
+  it("opens a depth gate only when a staffer says they've seen the imported card", async () => {
+    // The whole point of H-23's posture: an imported specialty card is verified,
+    // and the deep dive still waits. H-24 adds that the tap which opens it has to
+    // assert something — a bare click on a spreadsheet-sourced card is what the
+    // posture exists to prevent.
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: null,
+      requiredSpecialties: ["deep"],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    const [imported] = await db
+      .insert(specialtyCertifications)
+      .values({
+        shopId: shop.id,
+        personId: rosterEntry.person.id,
+        agency: "padi",
+        specialty: "deep",
+        identifier: "PADI-IMPORTED-DEEP",
+        status: "verified",
+        importedAt: new Date("2026-07-01T00:00:00Z"),
+        importedFromLabel: "Reef Runners",
+      })
+      .returning();
+
+    // Verified, imported, unconfirmed → the deep dive is blocked, and the blocker
+    // names the fix rather than the fault.
+    expect(
+      (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
+    ).toContainEqual(expect.objectContaining({ code: "specialty_import_unconfirmed" }));
+
+    // A confirm with no attestation is refused, and the gate stays shut.
+    expect(
+      await reviewSpecialtyCertification(db, {
+        shopId: shop.id,
+        certificationId: imported.id,
+        status: "verified",
+      }),
+    ).toEqual({ ok: false, reason: "card_sighting_required" });
+    expect(
+      (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
+    ).toContainEqual(expect.objectContaining({ code: "specialty_import_unconfirmed" }));
+
+    // With the attestation the gate opens, and the row records what was asserted.
+    const confirmed = await reviewSpecialtyCertification(db, {
+      shopId: shop.id,
+      certificationId: imported.id,
+      status: "verified",
+      cardSighted: true,
+    });
+    expect(confirmed.ok).toBe(true);
+    if (confirmed.ok) {
+      expect(confirmed.certification.reviewNote).toContain("seen in person");
+    }
+    expect(await getBookingReadiness(db, shop.id, rosterEntry.booking.id)).toEqual({
+      status: "ready",
+      blockers: [],
+    });
+  });
+
   it("gates a required specialty on a verified specialty card, fail-closed", async () => {
     const { db, shop, reef, rosterEntry } = await readinessContext();
     await upsertTripRequirements(db, {
@@ -188,11 +253,14 @@ describe("trip readiness (in-memory PGlite)", () => {
       (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
     ).toContainEqual(expect.objectContaining({ code: "specialty_pending" }));
 
-    await reviewSpecialtyCertification(db, {
+    // A card this shop captured itself needs no attestation — "Mark certified"
+    // already means a staffer looked the number up with the agency (H-24).
+    const reviewed = await reviewSpecialtyCertification(db, {
       shopId: shop.id,
       certificationId: pending.id,
       status: "verified",
     });
+    expect(reviewed.ok).toBe(true);
     expect(await getBookingReadiness(db, shop.id, rosterEntry.booking.id)).toEqual({
       status: "ready",
       blockers: [],

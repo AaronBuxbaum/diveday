@@ -73,11 +73,13 @@ test.describe("contact import", () => {
     // clears its nudge but keeps the imported flag.
     await page.getByRole("link", { name: /Imported Ingrid/ }).click();
     await expect(page.getByText("Old Blue Reef Divers").first()).toBeVisible();
-    const confirmButtons = page.getByRole("button", { name: "Confirm card" });
-    await expect(confirmButtons.first()).toBeVisible();
-    const before = await confirmButtons.count();
-    await confirmButtons.first().click();
-    await expect(confirmButtons).toHaveCount(before - 1);
+    // A level card's confirm stays one tap: it clears a soft nudge, not a gate —
+    // that card already satisfied readiness on arrival (H-24 scopes the
+    // attestation to the confirms that open something).
+    const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
+    await levelCard.getByRole("button", { name: "Confirm card" }).click();
+    await expect(levelCard.getByRole("button", { name: "Confirm card" })).toHaveCount(0);
+    await expect(levelCard.getByText("imported", { exact: false }).first()).toBeVisible();
   });
 });
 
@@ -172,11 +174,15 @@ test.describe("contact import — specialty cards", () => {
     await expect(page.getByText("PADI · Deep")).toBeVisible();
     await expect(page.getByText("PADI · Rescue Diver")).toBeVisible();
     await expect(page.getByText("certified · confirm to clear")).toBeVisible();
-    await page
-      .locator("li")
-      .filter({ hasText: "PADI · Deep" })
-      .getByRole("button", { name: "Confirm card" })
-      .click();
+    // The confirm is no longer a bare tap: it states what the staffer asserts,
+    // because this is what opens the deep dive (H-24).
+    const deepCard = page.locator("li").filter({ hasText: "PADI · Deep" });
+    await deepCard.getByText("Confirm card").first().click();
+    await expect(
+      deepCard.getByText(/I've seen this diver's card, or checked the number/),
+    ).toBeVisible();
+    await deepCard.getByRole("checkbox", { name: /I've seen this diver's card/ }).check();
+    await deepCard.getByRole("button", { name: "Confirm card" }).click();
 
     await page.goto("/shop/blue-mantis/schedule");
     await page.locator("li").filter({ hasText: title }).click();

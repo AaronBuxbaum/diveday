@@ -220,20 +220,32 @@ export async function reviewSpecialtyAction(
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
-  const updated = certificationId
+  // An imported card's confirm carries an explicit attestation, because that tap
+  // is what opens the specialty gate (or the enriched-air fill) on evidence
+  // DiveDay never checked itself (H-24). The domain layer refuses without it —
+  // this only forwards what the staffer ticked.
+  const cardSighted = formData.get("cardSighted") === "on";
+  const outcome = certificationId
     ? formData.get("cardType") === "nitrox"
       ? await reviewNitroxCertification(await getDb(), {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
+          cardSighted,
         })
       : await reviewSpecialtyCertification(await getDb(), {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
+          cardSighted,
         })
     : null;
-  revalidateAndRedirect(base, `${base}?notice=${updated ? "verified" : "invalid"}`);
+  const notice = outcome?.ok
+    ? "verified"
+    : outcome?.reason === "card_sighting_required"
+      ? "card-sighting-required"
+      : "invalid";
+  revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
 /**

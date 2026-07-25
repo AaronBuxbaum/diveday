@@ -82,12 +82,12 @@ const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
   {
     column: "Specialty",
     detail:
-      "Deep, wreck, night, or drysuit — one cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number. They arrive verified and flagged imported, and the dive that needs one opens on the one-tap staff confirm.",
+      "Deep, wreck, night, or drysuit — one cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number. They arrive verified and flagged imported, and the dive that needs one opens once a staffer confirms they've seen that card.",
   },
   {
     column: "Nitrox",
     detail:
-      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across, imported as a verified nitrox card. The enriched-air fill gives plain air until a staffer taps the one-tap confirm.",
+      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across, imported as a verified nitrox card. The enriched-air fill gives plain air until a staffer confirms they've seen that card.",
   },
   {
     column: "Rental sizes",
