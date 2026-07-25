@@ -58,6 +58,37 @@ test.describe("staff", () => {
   });
 });
 
+// blue-mantis is the shared demo fixture every other spec in the suite reads
+// from, and its rental catalog survives the per-test reset (resetDemoSchedule
+// only clears bookings/trips, not shop settings — src/db/seed.ts). Toggling
+// its "what we rent" catalog here would leak into whatever test runs next in
+// this worker, so this exercises a freshly onboarded trial shop instead: a
+// real (non-demo) shop, its own unique slug, never touched by demo reset, and
+// nobody else's fixture to pollute.
+test("a freshly onboarded shop starts without nitrox, and turning it on unlocks the price field", async ({
+  page,
+}) => {
+  await page.goto("/onboard");
+  await page.locator('input[name="shopName"]').fill("Nitrox Off Divers");
+  await page.locator('input[name="shopSlug"]').fill("nitrox-off-e2e");
+  await page.locator('input[name="ownerName"]').fill("Nadia Cole");
+  await page.locator('input[name="ownerEmail"]').fill("nadia-nitrox-e2e@example.com");
+  await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+  await expect(page).toHaveURL(/\/shop\/nitrox-off-e2e/);
+
+  await page.goto("/shop/nitrox-off-e2e/settings");
+  const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
+  await expect(nitroxCheckbox).not.toBeChecked();
+  // Most shops don't fill nitrox: no price field to fill in until it's ticked.
+  await expect(page.locator('input[name="nitroxPrice"]')).toHaveCount(0);
+
+  await nitroxCheckbox.check();
+  await page.getByRole("button", { name: "Save rental catalog" }).click();
+  await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+  await expect(page.locator('input[name="nitroxPrice"]')).toHaveCount(1);
+});
+
 test("a diver without a verified card can request nitrox but is flagged, not blocked", async ({
   page,
 }) => {

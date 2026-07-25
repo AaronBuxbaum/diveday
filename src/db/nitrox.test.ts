@@ -13,6 +13,7 @@ import {
   verifiedNitroxPersonIds,
 } from "./nitrox";
 import { bookings, nitroxCertifications, people } from "./schema";
+import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -303,5 +304,35 @@ describe("setBookingNitrox", () => {
       }),
     ).toBe(false);
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
+  });
+
+  it("refuses to turn on a request when the shop's catalog doesn't offer nitrox", async () => {
+    const ctx = await context();
+    await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    // The seeded shop offers nitrox by default; drop it from the catalog to
+    // exercise the "most shops don't fill nitrox" case.
+    await setShopRentalItems(ctx.db, ctx.shopId, ["bcd", "regulator"]);
+    const outcome = await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: true,
+    });
+    // Downgraded to false, same shape as a plain clear — never a fill, however
+    // verified the diver's card is, when the shop doesn't fill nitrox at all.
+    expect(outcome).toEqual({ ok: true, wantsNitrox: false, certified: true });
+    expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
+  });
+
+  it("still lets a request through once the shop adds nitrox to its catalog", async () => {
+    const ctx = await context();
+    await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
+    await setShopRentalItems(ctx.db, ctx.shopId, ["bcd"]);
+    await setShopRentalItems(ctx.db, ctx.shopId, ["bcd", "nitrox"]);
+    const outcome = await setBookingNitrox(ctx.db, {
+      shopId: ctx.shopId,
+      bookingId: ctx.bookingId,
+      wantsNitrox: true,
+    });
+    expect(outcome).toEqual({ ok: true, wantsNitrox: true, certified: true });
   });
 });
