@@ -258,6 +258,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
         await capture(page, "diver-profile-expired", scheme);
 
+        // A diver whose level card was brought in by the contact importer: it
+        // reads verified with an "imported" provenance chip and a one-tap
+        // "Confirm card" nudge (ADR 20260724-import-verified-cards).
+        await page.goto("/shop/blue-mantis/divers");
+        await page
+          .getByRole("row")
+          .filter({ hasText: "Hana Kobayashi" })
+          .getByText("HK", { exact: true })
+          .click();
+        await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
+        await capture(page, "diver-profile-imported", scheme);
+
         // The seeded reef trip: schedule card → Overview (what the dive is) →
         // Guests (who is attending) → Manifest (the day-of boarding + roll call).
         await page.goto("/shop/blue-mantis/schedule");
