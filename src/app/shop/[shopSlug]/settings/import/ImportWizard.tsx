@@ -36,6 +36,11 @@ const FIELD_LABELS: Record<ImportField, string> = {
   waiver_source_name: "Waiver source",
   waiver_document_url: "Waiver document",
   medical_document_url: "Medical document",
+  visit_date: "Past visit date",
+  visit_title: "Past visit",
+  visit_status: "Past visit status",
+  visit_amount: "Past visit amount",
+  visit_reference: "Booking reference",
 };
 
 const PREVIEW_LIMIT = 60;
@@ -138,6 +143,15 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
               signed here. See “What comes across” above.
             </p>
           ) : null}
+          {prepared.totals.withVisit > 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              {prepared.totals.withVisit} row{prepared.totals.withVisit === 1 ? "" : "s"} record a
+              past booking. Those come across as history on the diver's profile — what was booked,
+              when, and what your old system called it — and nothing more: they never become trips
+              on your schedule, never count toward capacity or reporting, and a booking is not proof
+              anyone dived.
+            </p>
+          ) : null}
           {prepared.unmappedColumns.length > 0 ? (
             <p className="mt-1 text-xs text-muted">
               Not recognized, so ignored: {prepared.unmappedColumns.join(", ")}.
@@ -161,6 +175,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
               { label: "Specialties", value: prepared.totals.withSpecialty },
               { label: "Nitrox cards", value: prepared.totals.withNitrox },
               { label: "Waivers", value: prepared.totals.withWaiver },
+              { label: "Past visits", value: prepared.totals.withVisit },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl bg-surface-sunken px-4 py-3">
                 <dt className="text-xs text-muted">{stat.label}</dt>
@@ -340,6 +355,15 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                   : ""}
                 {state.summary.waiverDocumentsFailed > 0
                   ? ` ${state.summary.waiverDocumentsFailed} document link(s) didn't fetch and were left off the record.`
+                  : ""}
+              </p>
+            ) : null}
+            {state.summary.visitsAdded + state.summary.visitsSkippedExisting > 0 ? (
+              <p className="mt-1 text-sm">
+                {state.summary.visitsAdded} past visit
+                {state.summary.visitsAdded === 1 ? "" : "s"} added to divers' shop history.
+                {state.summary.visitsSkippedExisting > 0
+                  ? ` ${state.summary.visitsSkippedExisting} were already imported and were left as they are — re-running the same export doesn't double anyone's history.`
                   : ""}
               </p>
             ) : null}

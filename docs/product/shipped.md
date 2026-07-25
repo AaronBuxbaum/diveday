@@ -188,7 +188,15 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   included — and written as an `imported` record (H-17,
   [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md)); waiver/
   medical document links (image **or PDF**, 5 MB) are re-stored in DiveDay's own storage. A scope table
-  states it all up front. Pure prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
+  states it all up front. **Prior visits** come across from the same file when it is a bookings or
+  orders export (one row per booking, the customer repeated): each becomes an inert history line on
+  the diver's profile — the date, the old system's own title, its own status word, and the price it
+  recorded, all verbatim — merged into Shop history newest-first and marked imported. It is a booking
+  record, never a dive record and never a trip: nothing reaches the schedule, a manifest, capacity, or
+  reporting, and the amounts are display text nothing sums. A visit with no readable date is declined
+  rather than dated by guess, and re-running the same export doesn't double anyone's history
+  ([import-prior-visits](../architecture/decisions/20260725-import-prior-visits.md)). Pure
+  prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
   ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
 - **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
   (EVE, DiveShop360, DiveAdmin, Smartwaiver): each states how to export the shop's own data from

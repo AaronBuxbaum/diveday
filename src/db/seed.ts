@@ -32,6 +32,7 @@ import {
   paymentOperationIntents,
   people,
   personRoles,
+  priorVisits,
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
@@ -2306,6 +2307,57 @@ async function seedNitrox(
     ]);
   }
 
+  // History carried in from the shop's previous system, on the same diver as
+  // the imported cards above (ADR 20260725-import-prior-visits). Hana is booked
+  // on nothing, so her history can never touch a seeded trip's readiness,
+  // manifest, or Today queue — which is also the point being demonstrated:
+  // imported visits are inert.
+  //
+  // The three rows are the three shapes the profile has to render honestly: a
+  // completed booking, one the old system recorded as cancelled (struck through,
+  // never counted as a dive), and one with no price on it. Clock-anchored like
+  // every other seeded date so the visual baseline stays pixel-stable.
+  if (customers[12]) {
+    await db.insert(priorVisits).values([
+      {
+        shopId,
+        personId: customers[12].id,
+        visitedOn: dateAt(-384),
+        title: "Two-tank morning — Molasses Reef",
+        statusLabel: "Completed",
+        amountLabel: "$165.00",
+        sourceLabel: "Coral Coast Divers",
+        sourceReference: "CCD-20418",
+        dedupeKey: "ref:ccd-20418",
+        importedAt: nowDate(),
+      },
+      {
+        shopId,
+        personId: customers[12].id,
+        visitedOn: dateAt(-201),
+        title: "Night dive — Benwood Wreck",
+        statusLabel: "Cancelled",
+        amountLabel: "$95.00",
+        sourceLabel: "Coral Coast Divers",
+        sourceReference: "CCD-22677",
+        dedupeKey: "ref:ccd-22677",
+        importedAt: nowDate(),
+      },
+      {
+        shopId,
+        personId: customers[12].id,
+        visitedOn: dateAt(-97),
+        title: "Drysuit specialty — pool session",
+        statusLabel: "Completed",
+        amountLabel: null,
+        sourceLabel: "Coral Coast Divers",
+        sourceReference: "CCD-24003",
+        dedupeKey: "ref:ccd-24003",
+        importedAt: nowDate(),
+      },
+    ]);
+  }
+
   // An enriched-air request from a diver whose card is verified, on the
   // nitrox-required wreck charter.
   const wreckBookingForCert = bookingRows.find(
@@ -2343,6 +2395,8 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  // References people, so it clears before them like any other people-scoped row.
+  await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
@@ -2476,6 +2530,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));

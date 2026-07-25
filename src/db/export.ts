@@ -31,6 +31,7 @@ import {
   orders,
   people,
   personRoles,
+  priorVisits,
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
@@ -286,6 +287,12 @@ export async function loadShopExportBundleInput(
         .from(rentalFitProfiles)
         .where(eq(rentalFitProfiles.shopId, shopId))
         .orderBy(asc(rentalFitProfiles.createdAt), asc(rentalFitProfiles.id));
+
+      const priorVisitRows = await tx
+        .select()
+        .from(priorVisits)
+        .where(eq(priorVisits.shopId, shopId))
+        .orderBy(asc(priorVisits.visitedOn), asc(priorVisits.id));
 
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
@@ -924,6 +931,38 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["rental_fit.csv"],
         },
         {
+          // History the shop brought in from its previous system
+          // (ADR 20260725-import-prior-visits). In the bundle because a shop's
+          // own history is its own to take back out, and out of the operational
+          // files because that is exactly what it never was.
+          file: "prior_visits.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "visited_on",
+            "title",
+            "status_label",
+            "amount_label",
+            "source_label",
+            "source_reference",
+            "imported_at",
+          ],
+          rows: priorVisitRows.map((row) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.visitedOn,
+            row.title,
+            row.statusLabel,
+            row.amountLabel,
+            row.sourceLabel,
+            row.sourceReference,
+            row.importedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["prior_visits.csv"],
+        },
+        {
           file: "orders.csv",
           header: [
             "id",
@@ -1245,6 +1284,9 @@ export async function loadShopExportCounts(
     ),
     "rental_fit.csv": await countOf(
       db.select({ n: count() }).from(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId)),
+    ),
+    "prior_visits.csv": await countOf(
+      db.select({ n: count() }).from(priorVisits).where(eq(priorVisits.shopId, shopId)),
     ),
     "orders.csv": await countOf(
       db.select({ n: count() }).from(orders).where(eq(orders.shopId, shopId)),

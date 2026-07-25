@@ -56,6 +56,8 @@ export const EXPORT_FILE_NOTES = {
   "waiver_records.csv":
     "Issued and signed waiver evidence; the signed text is the referenced template version. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in. signature_method 'imported' means the record was trusted from a prior shop's own acceptance during a contact import, never reviewed by this shop — imported_from_label and the import_source_*_url columns carry that record's provenance; only 'imported' rows ever populate them.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
+  "prior_visits.csv":
+    "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say cancelled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "orders.csv":
     "Shop-issued orders and invoices with their Stripe references — reconcilable against the shop's own Stripe account, which stays the shop's.",
   "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
