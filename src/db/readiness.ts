@@ -298,6 +298,10 @@ export async function reviewSpecialtyCertification(
       and(
         eq(specialtyCertifications.id, input.certificationId),
         eq(specialtyCertifications.shopId, input.shopId),
+        // Never re-verify an archived card: this is the mutation that opens a
+        // specialty (depth) gate, and an archived card is out of every readiness
+        // read by design (`security-reviewer` finding).
+        isNull(specialtyCertifications.deletedAt),
       ),
     )
     .returning();

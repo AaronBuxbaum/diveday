@@ -1,6 +1,6 @@
 # 20260724-import-verified-cards — Trust a prior system's cards on import, and accept PDF import documents
 
-- **Status:** Accepted
+- **Status:** Accepted (specialty scope superseded in part by [20260725-import-specialty-cards](20260725-import-specialty-cards.md))
 - **Date:** 2026-07-24
 - **Supersedes (in part):** [20260723-contact-importer](20260723-contact-importer.md)'s "Imported
   cards land `claimed` (`pending`), never `verified`" rule, its "Enriched air is a claim, not a fill

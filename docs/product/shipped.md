@@ -169,11 +169,17 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   matched by email so a re-import updates rather than duplicates. Imported cards land **`verified` and
   flagged `imported`** — DiveDay trusts a card the shop's own system already checked and surfaces a
   soft one-tap **Confirm card** nudge rather than re-capturing it as an unverified claim; card expiry
-  still applies and no card imports without a real number. The one gate the confirm actually holds is
+  applies and comes across with the card, and no card imports without a real number. The one gate the confirm actually holds is
   the **enriched-air fill** — an imported nitrox card gives plain air until confirmed (a nitrox card
   has no expiry backstop and a wrong fill is the highest-consequence failure), per `dive-domain-expert`
   review; boarding and depth clear immediately (product-owner decision H-20,
-  [import-verified-cards](../architecture/decisions/20260724-import-verified-cards.md)). A row explicitly
+  [import-verified-cards](../architecture/decisions/20260724-import-verified-cards.md)). **Specialty
+  cards (deep, wreck, night, drysuit) come across the same way** — from a specialty column or a
+  certification row that names one — with the one difference that the specialty *gate* waits on the
+  confirm, because a specialty authorizes a riskier dive; boarding still never waits (H-23,
+  [import-specialty-cards](../architecture/decisions/20260725-import-specialty-cards.md)). A card's
+  **expiry** travels with it, a past date included, and a diver's **dive insurance** comes across as
+  free text. A row explicitly
   claiming a waiver was already accepted at the prior shop is likewise trusted — medical clearance
   included — and written as an `imported` record (H-17,
   [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md)); waiver/

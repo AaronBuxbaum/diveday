@@ -12,6 +12,8 @@ import {
   people,
   personRoles,
   rentalFitProfiles,
+  shops,
+  specialtyCertifications,
   userAccounts,
   waiverRecords,
   waiverTemplates,
@@ -159,6 +161,193 @@ describe("commitContactImport", () => {
     // Verified on import (fills are re-checked at fill time), flagged imported,
     // reviewedAt null so it surfaces the one-tap confirm.
     expect(card).toMatchObject({ identifier: "NX-9001", status: "verified", reviewedAt: null });
+    expect(card.importedAt).toBeInstanceOf(Date);
+  });
+
+  it("imports a specialty card verified-and-flagged, with its gate held for a confirm", async () => {
+    const { db, shop } = await seededShopContext();
+    const csv = [
+      "full_name,email,certification_agency,specialty,specialty_certification_number,prior_shop",
+      "Dana Deep,dana.import@example.com,PADI,Deep Diver,DP-4242,Blue Horizon Divers",
+    ].join("\n");
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary.specialtyAdded).toBe(1);
+
+    const person = await personByEmail(db, shop.id, "dana.import@example.com");
+    if (!person) throw new Error("person not created");
+    const [card] = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.personId, person.id));
+    // Verified because the prior system checked it, flagged imported, and
+    // reviewedAt null — which is exactly what `specialtyBlocker` holds the deep
+    // gate on until a staffer taps confirm (ADR 20260725-import-specialty-cards).
+    expect(card).toMatchObject({
+      specialty: "deep",
+      agency: "padi",
+      identifier: "DP-4242",
+      status: "verified",
+      importedFromLabel: "Blue Horizon Divers",
+      reviewedAt: null,
+    });
+    expect(card.importedAt).toBeInstanceOf(Date);
+
+    // The same card on a second run is left alone, on this same diver.
+    const again = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(again).toMatchObject({ specialtyAdded: 0, specialtySkippedExisting: 1 });
+    expect(again.cardsHeldByAnotherDiver).toBe(0);
+  });
+
+  it("gives one diver every specialty their agency number carries", async () => {
+    // A PADI number identifies the diver, so Deep and Wreck share it. Before the
+    // table was keyed on the specialty, the second card was silently dropped.
+    const { db, shop } = await seededShopContext();
+    const csv = [
+      "full_name,email,certification_agency,specialty,specialty_certification_number",
+      "Multi Molly,molly.import@example.com,PADI,Deep & Wreck,PADI-5150",
+    ].join("\n");
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary.specialtyAdded).toBe(2);
+
+    const person = await personByEmail(db, shop.id, "molly.import@example.com");
+    if (!person) throw new Error("person not created");
+    const cards = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.personId, person.id));
+    expect(cards.map((c) => c.specialty).sort()).toEqual(["deep", "wreck"]);
+    expect(cards.every((c) => c.identifier === "PADI-5150")).toBe(true);
+  });
+
+  it("brings in every card of a one-row-per-card certification file", async () => {
+    // The file the switching guides tell a shop to export: one row per card, so
+    // the same diver's email repeats. Those rows must add cards, not be
+    // discarded as duplicate people (`dive-domain-expert` review).
+    const { db, shop } = await seededShopContext();
+    const csv = [
+      "full_name,email,certification_agency,certification_level,certification_number",
+      "Cert Cass,cass.import@example.com,PADI,Advanced Open Water,PADI-777",
+      "Cert Cass,cass.import@example.com,PADI,Deep Diver,PADI-777",
+      "Cert Cass,cass.import@example.com,PADI,Night Diver,PADI-777",
+    ].join("\n");
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary).toMatchObject({
+      peopleCreated: 1,
+      rowsMerged: 2,
+      cardsAdded: 1,
+      specialtyAdded: 2,
+      rowsSkipped: 0,
+    });
+
+    // One diver, three cards, no duplicate person.
+    const person = await personByEmail(db, shop.id, "cass.import@example.com");
+    if (!person) throw new Error("person not created");
+    const specialties = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.personId, person.id));
+    expect(specialties.map((c) => c.specialty).sort()).toEqual(["deep", "night"]);
+    const levels = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, person.id));
+    expect(levels).toHaveLength(1);
+  });
+
+  it("reports a card number held by a different diver as exactly that, and writes nothing", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(
+        "full_name,email,certification_level,certification_number\nFirst Holder,first.import@example.com,Open Water,SHARED-1",
+      ),
+      importer,
+    );
+    // A second diver carrying the same number: the unique index forbids the
+    // card, and calling that "already on file" would tell the owner this diver
+    // is carded when they are not (`security-reviewer` finding).
+    const summary = await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(
+        "full_name,email,certification_level,certification_number\nSecond Holder,second.import@example.com,Open Water,SHARED-1",
+      ),
+      importer,
+    );
+    expect(summary).toMatchObject({
+      peopleCreated: 1,
+      cardsAdded: 0,
+      cardsSkippedExisting: 0,
+      cardsHeldByAnotherDiver: 1,
+    });
+    const second = await personByEmail(db, shop.id, "second.import@example.com");
+    if (!second) throw new Error("second person not created");
+    expect(
+      await db.select().from(certifications).where(eq(certifications.personId, second.id)),
+    ).toHaveLength(0);
+  });
+
+  it("never sees another shop's divers or card numbers", async () => {
+    const { db, shop } = await seededShopContext();
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-import", timezone: "America/New_York" })
+      .returning();
+    const [rivalDiver] = await db
+      .insert(people)
+      .values({ shopId: rival.id, fullName: "Rival Rae", email: "shared.import@example.com" })
+      .returning();
+    await db.insert(specialtyCertifications).values({
+      shopId: rival.id,
+      personId: rivalDiver.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "RIVAL-1",
+      status: "verified",
+    });
+
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const summary = await commitContactImport(
+      db,
+      shop.id,
+      prepareContactImport(
+        "full_name,email,certification_agency,specialty,specialty_certification_number\nShared Email,shared.import@example.com,PADI,Deep Diver,RIVAL-1",
+      ),
+      importer,
+    );
+    // The rival's identical email did not match, and its identical card number
+    // did not block: both are scoped to their own shop.
+    expect(summary).toMatchObject({ peopleCreated: 1, specialtyAdded: 1 });
+    const ours = await personByEmail(db, shop.id, "shared.import@example.com");
+    expect(ours?.id).not.toBe(rivalDiver.id);
+    const rivalCards = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.personId, rivalDiver.id));
+    expect(rivalCards).toHaveLength(1);
+  });
+
+  it("imports a card pending when the file says the prior system never verified it", async () => {
+    const { db, shop } = await seededShopContext();
+    const csv = [
+      "full_name,email,certification_level,certification_number,cert_status",
+      "Unverified Uma,uma.import@example.com,Open Water,OW-4004,unverified",
+    ].join("\n");
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    const person = await personByEmail(db, shop.id, "uma.import@example.com");
+    if (!person) throw new Error("person not created");
+    const [card] = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, person.id));
+    // Pending, but still flagged imported: provenance is a fact either way.
+    expect(card).toMatchObject({ status: "pending", identifier: "OW-4004" });
     expect(card.importedAt).toBeInstanceOf(Date);
   });
 

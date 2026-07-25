@@ -157,8 +157,9 @@ export default async function MigrationGuidePage({
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
             This is the same scope table DiveDay shows before it imports a single row. A card your
             system already checked comes across verified and flagged imported, ready to use, with a
-            one-tap confirm for staff — card expiry still applies, and individual medical answers
-            are never reconstructed.
+            one-tap confirm for staff, and its refresher-due date comes with it. A specialty card is
+            the one that waits on that confirm before it clears the dive it authorizes; individual
+            medical answers are never reconstructed.
           </p>
 
           <ul className="mt-8 space-y-2">
@@ -229,7 +230,9 @@ export default async function MigrationGuidePage({
                     Roster, rental sizes, and cards are ready immediately: cards land verified and
                     flagged imported, so divers are trip-ready from the first booking. Each imported
                     card carries a one-tap confirm on the diver's record for staff to give it a look
-                    when they get a moment — no boarding waits on it.
+                    when they get a moment — no boarding waits on it. The one thing that does wait
+                    is a dive that requires a specialty card: that gate opens when a staffer
+                    confirms the card, which is one tap on the diver's record.
                   </p>
                 </div>
               </li>

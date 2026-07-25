@@ -10,11 +10,13 @@ import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from
 import {
   AGENCY_LABELS,
   CARD_STATUS_LABELS,
-  cardDisplayStatus,
   type DiverProfile,
   isImportedCard,
   needsImportConfirm,
   type Shop,
+  SPECIALTY_STATUS_LABELS,
+  specialtyDisplayStatus,
+  specialtyStatusTone,
   statusTone,
 } from "./shared";
 
@@ -39,7 +41,8 @@ export function SpecialtyCards({
           </h2>
           <p className="mt-1 text-sm text-muted">
             Specialty cards live with the diver. A verified Nitrox card — confirmed here if it was
-            imported — is required before an EANx fill or tank handoff.
+            imported — is required before an EANx fill or tank handoff. An imported specialty card
+            clears its dive once you confirm it here.
           </p>
         </div>
         <details>
@@ -105,7 +108,7 @@ export function SpecialtyCards({
         ) : (
           <>
             {diver.specialtyCertifications.map((card) => {
-              const display = cardDisplayStatus(card, todayLocal);
+              const display = specialtyDisplayStatus(card, todayLocal);
               const expired = display === "expired";
               return (
                 <li
@@ -136,15 +139,29 @@ export function SpecialtyCards({
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={statusTone(display)}>{CARD_STATUS_LABELS[display]}</Badge>
-                    {card.status === "pending" ? (
+                    <Badge tone={specialtyStatusTone(display)}>
+                      {SPECIALTY_STATUS_LABELS[display]}
+                    </Badge>
+                    {isImportedCard(card) ? (
+                      <Badge tone="neutral">
+                        {card.importedFromLabel
+                          ? `imported · ${card.importedFromLabel}`
+                          : "imported"}
+                      </Badge>
+                    ) : null}
+                    {/* An imported specialty card holds its gate until this confirm
+                        (ADR 20260725-import-specialty-cards), so the label says what
+                        the tap is for rather than repeating "mark certified". */}
+                    {card.status === "pending" || needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <SubmitButton
-                          pendingLabel="Marking certified…"
+                          pendingLabel={
+                            needsImportConfirm(card) ? "Confirming…" : "Marking certified…"
+                          }
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          Mark certified
+                          {needsImportConfirm(card) ? "Confirm card" : "Mark certified"}
                         </SubmitButton>
                       </form>
                     ) : null}
