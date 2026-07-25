@@ -94,3 +94,23 @@ export function statusTone(status: CardDisplayStatus): BadgeTone {
       return "warning";
   }
 }
+
+/**
+ * Import provenance shared by level, specialty, and nitrox cards
+ * (ADR 20260724-import-verified-cards). A card brought in by the contact
+ * importer lands `verified` with `importedAt` set and `reviewedAt` still null —
+ * DiveDay trusts the card the shop's own system already checked, but keeps it
+ * marked imported forever so it is never mistaken for one this shop carded on
+ * sight. `needsImportConfirm` is the one-tap-confirm nudge: an imported card no
+ * staff member here has confirmed yet. Confirming stamps `reviewedAt` through
+ * the normal review path; the imported marker stays.
+ */
+export type ImportedCard = { importedAt?: Date | string | null; reviewedAt?: Date | string | null };
+
+export function isImportedCard(card: ImportedCard): boolean {
+  return Boolean(card.importedAt);
+}
+
+export function needsImportConfirm(card: ImportedCard): boolean {
+  return Boolean(card.importedAt) && !card.reviewedAt;
+}

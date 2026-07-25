@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { redirect } from "next/navigation";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData } from "@/db/import";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
@@ -12,9 +13,8 @@ const scopeChip: Record<
   (typeof IMPORT_HONESTY_TABLE)[number]["scope"],
   { label: string; className: string }
 > = {
-  full: { label: "Imports fully", className: "bg-success/10 text-success" },
-  partial: { label: "Partial", className: "bg-warning/15 text-foreground" },
-  never: { label: "Never", className: "bg-danger/10 text-danger" },
+  included: { label: "Comes across", className: "bg-success/10 text-success" },
+  "stays-behind": { label: "Stays behind", className: "bg-surface-sunken text-muted" },
 };
 
 /**
@@ -33,19 +33,7 @@ export default async function ImportContactsPage({
   const db = await getDb();
 
   if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
-    return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader
-          eyebrow="Settings"
-          title="Import contacts"
-          description="Bring your divers, cards, and rental sizes in from a CSV."
-        />
-        <ShopNotice tone="warning">
-          Importing writes to the whole roster, so it's limited to the shop's owner or manager. Ask
-          them to run it if you have a file to bring in.
-        </ShopNotice>
-      </main>
-    );
+    redirect(`/shop/${shopSlug}`);
   }
 
   return (
@@ -53,16 +41,15 @@ export default async function ImportContactsPage({
       <ShopPageHeader
         eyebrow="Settings"
         title="Import contacts"
-        description="Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land as claims your staff verify, and a row claiming a waiver was already accepted is trusted and marked imported."
+        description="Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land verified and flagged imported, with a one-tap confirm on each diver's record, and a row claiming a waiver was already accepted is trusted and marked imported."
       />
 
       <section className="rounded-2xl border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">What comes across</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          The safety spine mostly holds through an import: nothing arrives verified. The one
-          deliberate exception is a waiver a row says was already accepted at the prior shop —
-          DiveDay trusts that, medical clearance included, rather than asking the diver to sign
-          again.
+          A card already in your system was checked there, so DiveDay trusts it: imported cards land
+          verified and flagged imported, ready from the first trip, with a one-tap confirm for
+          staff. Card expiry still applies, and individual medical answers are never reconstructed.
         </p>
         <ul className="mt-4 space-y-2">
           {IMPORT_HONESTY_TABLE.map((row) => (

@@ -4,6 +4,7 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
+import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
@@ -67,6 +68,9 @@ export default function SwitchHubPage() {
             ))}
           </div>
         </section>
+
+        {/* The owner-authorized concierge switch offer (shared across /switching). */}
+        <SwitchingConcierge />
 
         <section className="border-t border-border bg-surface">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">

@@ -27,35 +27,36 @@ const templateSchema = z.object({
 const jurisdictionSchema = z.object({ jurisdiction: z.enum(["rstc", "uk"]) });
 
 export default async function WaiverTemplatesPage({
+  params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
+  const { shopSlug } = await params;
   const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
-  const current = await getCurrentWaiverTemplate(db, shop.id);
   // The waiver is the shop's legal instrument; editing it (and the medical
   // jurisdiction it presents) is owner/manager work (H-14, ADR
-  // 20260724-role-authorization). Other staff see it read-only.
+  // 20260724-role-authorization). Other roles have no use for it, so the
+  // surface doesn't exist for them rather than showing a read-only copy.
   const canManage = await canPersonManageWaiverTemplates(
     db,
     session.user.shopId,
     session.user.personId,
   );
+  if (!canManage) redirect(`/shop/${shopSlug}`);
+  const current = await getCurrentWaiverTemplate(db, shop.id);
 
   async function saveWaiverAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
     const editor = await getDb();
     if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-      revalidateAndRedirect(
-        `/shop/${staff.user.shopSlug}/waivers`,
-        `/shop/${staff.user.shopSlug}/waivers?notice=not-authorized`,
-      );
+      redirect(`/shop/${staff.user.shopSlug}`);
     }
     const parsed = templateSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
@@ -75,10 +76,7 @@ export default async function WaiverTemplatesPage({
     const staff = await requireStaffSession();
     const editor = await getDb();
     if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-      revalidateAndRedirect(
-        `/shop/${staff.user.shopSlug}/waivers`,
-        `/shop/${staff.user.shopSlug}/waivers?notice=not-authorized`,
-      );
+      redirect(`/shop/${staff.user.shopSlug}`);
     }
     const parsed = jurisdictionSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
@@ -101,14 +99,12 @@ export default async function WaiverTemplatesPage({
         : "Your waiver is saved. Every future edit is kept as a new version."
       : notice === "jurisdiction"
         ? "Medical questionnaire updated for new waivers."
-        : notice === "not-authorized"
-          ? "Editing the waiver is limited to owners and managers."
-          : notice === "invalid"
-            ? "That didn’t save. Give the waiver a name and at least a short release."
-            : undefined;
-  const bannerIsError = notice === "invalid" || notice === "not-authorized";
+        : notice === "invalid"
+          ? "That didn’t save. Give the waiver a name and at least a short release."
+          : undefined;
+  const bannerIsError = notice === "invalid";
 
-  const editForm = canManage ? (
+  const editForm = (
     <form action={saveWaiverAction} className="flex flex-col gap-5">
       <FieldGrid columns={1} className="gap-y-5">
         <Field label="Release text">
@@ -129,10 +125,6 @@ export default async function WaiverTemplatesPage({
         </SubmitButton>
       </div>
     </form>
-  ) : (
-    <p className="whitespace-pre-wrap text-sm text-foreground">
-      {current?.body ?? DEFAULT_WAIVER_BODY}
-    </p>
   );
 
   return (
@@ -155,49 +147,34 @@ export default async function WaiverTemplatesPage({
         </div>
       ) : null}
 
-      {canManage ? null : (
-        <div className="mt-6">
-          <ShopNotice tone="neutral" role="status">
-            You can read the shop's waiver here, but editing it and the medical questionnaire is
-            limited to owners and managers.
-          </ShopNotice>
-        </div>
-      )}
-
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Medical questionnaire</h2>
         <p className="mt-1 text-sm text-muted">
           Which diver medical form waivers present. A “yes” to any question is a physician-referral
           blocker, not a checkbox.
         </p>
-        {canManage ? (
-          <form
-            action={chooseJurisdictionAction}
-            className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-end"
+        <form
+          action={chooseJurisdictionAction}
+          className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-end"
+        >
+          <FieldGrid columns={1} className="flex-1">
+            <Field label="Jurisdiction">
+              <select name="jurisdiction" defaultValue={shop.jurisdiction} className={controlClass}>
+                {Object.entries(MEDICAL_JURISDICTION_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </FieldGrid>
+          <SubmitButton
+            pendingLabel="Saving…"
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            <FieldGrid columns={1} className="flex-1">
-              <Field label="Jurisdiction">
-                <select
-                  name="jurisdiction"
-                  defaultValue={shop.jurisdiction}
-                  className={controlClass}
-                >
-                  {Object.entries(MEDICAL_JURISDICTION_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </FieldGrid>
-            <SubmitButton
-              pendingLabel="Saving…"
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              Save questionnaire
-            </SubmitButton>
-          </form>
-        ) : null}
+            Save questionnaire
+          </SubmitButton>
+        </form>
         <p className="mt-2 text-sm text-muted">
           Current form:{" "}
           <strong className="font-medium text-foreground">{questionnaire.title}</strong> ·{" "}

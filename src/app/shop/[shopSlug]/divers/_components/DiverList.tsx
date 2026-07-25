@@ -50,6 +50,11 @@ function pendingCount(diver: DiverSummary): number {
   return diver.pendingCertificationCount + diver.pendingSpecialtyOrNitroxCount;
 }
 
+/** Imported cards are already valid; this is the soft one-tap-confirm nudge. */
+function confirmCount(diver: DiverSummary): number {
+  return diver.importedUnconfirmedCount;
+}
+
 function cardCount(diver: DiverSummary): number {
   return diver.certificationCount + diver.specialtyCount + diver.nitroxCertificationCount;
 }
@@ -244,6 +249,9 @@ export function DiverList({
                     {pendingCount(diver) > 0 ? (
                       <Badge tone="warning">{pendingCount(diver)} pending review</Badge>
                     ) : null}
+                    {confirmCount(diver) > 0 ? (
+                      <Badge tone="neutral">{confirmCount(diver)} to confirm</Badge>
+                    ) : null}
                   </span>
                 </Link>
               </li>
@@ -312,9 +320,13 @@ export function DiverList({
                       <div className="flex flex-wrap gap-2">
                         {pendingCount(diver) > 0 ? (
                           <Badge tone="warning">{pendingCount(diver)} pending review</Badge>
-                        ) : (
+                        ) : null}
+                        {confirmCount(diver) > 0 ? (
+                          <Badge tone="neutral">{confirmCount(diver)} to confirm</Badge>
+                        ) : null}
+                        {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
                           <span className="text-muted">None</span>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                   </tr>

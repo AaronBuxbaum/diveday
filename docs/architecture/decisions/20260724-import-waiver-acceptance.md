@@ -4,8 +4,9 @@
 - **Date:** 2026-07-24
 - **Supersedes (in part):** [20260723-contact-importer](20260723-contact-importer.md)'s "Medical/health
   answers never import (fail-closed)" rule and its "Import medical answers as satisfied — rejected"
-  alternative. Every other rule in that ADR (claimed-not-verified cards, no fabricated identifiers,
-  nitrox as a claim, email matching) is unchanged.
+  alternative. (The claimed-not-verified-cards and nitrox-as-a-claim rules of that ADR were later
+  reversed separately by [20260724-import-verified-cards](20260724-import-verified-cards.md); no
+  fabricated identifiers and email matching remain unchanged.)
 
 ## Context
 
@@ -57,11 +58,12 @@ resolve them — it only decides what an *import* does, not what DiveDay's own w
   the diver already has a current `completed`/`medical_review` record, or if the shop has no waiver
   template configured to snapshot against.
 - `waiver_document_url` / `medical_document_url` are fetched once, server-side, and re-stored through
-  DiveDay's own image pipeline (`storeImportWaiverDocument`, reusing the existing SSRF-safe
-  `ingestImageUrl`) before being written — never rendered from the raw staff-pasted URL directly. Only
-  image formats are supported this slice (the same JPEG/PNG/WebP/HEIC, 5 MB allowlist every other
-  image upload uses); a PDF link will not attach. This is a stated gap, not a silent one — the import
-  wizard's honesty table says so.
+  DiveDay's own pipeline (`storeImportWaiverDocument`, reusing the existing SSRF-safe
+  `ingestImageUrl`) before being written — never rendered from the raw staff-pasted URL directly.
+  Images take the shared decode/re-encode path (JPEG/PNG/WebP/HEIC, 5 MB).
+  > Extended by [20260724-import-verified-cards](20260724-import-verified-cards.md): PDF documents are
+  > now accepted too — routed by `%PDF-` magic bytes and stored as-is (the `sharp` pipeline can't
+  > decode a PDF), under the same 5 MB cap. The "a PDF link will not attach" gap below is closed.
 - The published import honesty table (`IMPORT_HONESTY_TABLE`) is rewritten to describe this
   truthfully: "partial" scope for "Signed waivers & medical clearance," stating plainly that DiveDay
   trusts the source including medical clearance, marks the record `imported`, and never reconstructs
@@ -84,6 +86,8 @@ resolve them — it only decides what an *import* does, not what DiveDay's own w
 - **PDF document support in this slice** — deferred: the existing image-storage pipeline
   decodes/re-encodes images specifically; PDF needs its own validation path, out of scope here and
   stated as a gap rather than silently dropped.
+  > Since delivered in [20260724-import-verified-cards](20260724-import-verified-cards.md): a
+  > magic-byte-routed PDF path that stores the bytes as-is, without the image pipeline.
 
 ## Security review notes (2026-07-24)
 

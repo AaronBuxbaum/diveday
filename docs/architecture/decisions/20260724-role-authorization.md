@@ -1,6 +1,8 @@
 # 20260724-role-authorization — Role boundaries on five staff surfaces
 
-- **Status:** Accepted
+- **Status:** Accepted (presentation contract for the four standalone-page surfaces — waivers,
+  reports, export, import — superseded by [20260724-role-gated-surfaces-hide-not-explain](20260724-role-gated-surfaces-hide-not-explain.md);
+  the five predicates and both-layer enforcement below are unchanged)
 - **Date:** 2026-07-24
 
 ## Context

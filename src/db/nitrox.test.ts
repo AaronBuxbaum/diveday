@@ -12,7 +12,7 @@ import {
   setBookingNitrox,
   verifiedNitroxPersonIds,
 } from "./nitrox";
-import { bookings, people } from "./schema";
+import { bookings, nitroxCertifications, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -80,6 +80,36 @@ describe("nitrox certification workflow", () => {
 
     await reviewNitroxCertification(db, { shopId, certificationId: cert.id, status: "verified" });
     expect([...(await verifiedNitroxPersonIds(db, shopId))]).toContain(personId);
+  });
+
+  it("does not authorize a fill from an imported nitrox card until it's confirmed here", async () => {
+    // An imported nitrox card lands `verified` (so it never blocks boarding) but
+    // flagged imported with reviewedAt null: the fill waits for the one-tap
+    // confirm (ADR 20260724-import-verified-cards, dive-domain-expert carve-out).
+    const { db, shopId, bookingId, personId } = await context();
+    const [card] = await db
+      .insert(nitroxCertifications)
+      .values({
+        shopId,
+        personId,
+        agency: "padi",
+        identifier: "NX-IMPORTED",
+        status: "verified",
+        importedAt: new Date("2026-07-01T00:00:00Z"),
+        importedFromLabel: "Reef Runners",
+      })
+      .returning();
+
+    // Verified, but imported-and-unconfirmed → does NOT authorize a fill.
+    expect([...(await verifiedNitroxPersonIds(db, shopId))]).not.toContain(personId);
+    const beforeConfirm = await setBookingNitrox(db, { shopId, bookingId, wantsNitrox: true });
+    expect(beforeConfirm).toMatchObject({ ok: true, wantsNitrox: true, certified: false });
+
+    // The one-tap confirm stamps reviewedAt → now the fill is authorized.
+    await reviewNitroxCertification(db, { shopId, certificationId: card.id, status: "verified" });
+    expect([...(await verifiedNitroxPersonIds(db, shopId))]).toContain(personId);
+    const afterConfirm = await setBookingNitrox(db, { shopId, bookingId, wantsNitrox: true });
+    expect(afterConfirm).toMatchObject({ ok: true, certified: true });
   });
 
   it("refuses a card whose identifier only differs by case from a live one (CR-009)", async () => {

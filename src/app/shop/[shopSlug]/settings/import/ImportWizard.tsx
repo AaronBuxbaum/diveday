@@ -137,7 +137,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             {[
               { label: "Will import", value: prepared.totals.importable },
               { label: "Skipped", value: prepared.totals.skipped },
-              { label: "Claimed cards", value: prepared.totals.withCard },
+              { label: "Cards", value: prepared.totals.withCard },
               { label: "Nitrox cards", value: prepared.totals.withNitrox },
               { label: "Waivers", value: prepared.totals.withWaiver },
             ].map((stat) => (
@@ -181,7 +181,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                     <td className="px-3 py-2 text-muted">
                       {row.cert ? (
                         <span className="whitespace-nowrap">
-                          {row.cert.level.replaceAll("_", " ")} · claimed
+                          {row.cert.level.replaceAll("_", " ")} · imported
                         </span>
                       ) : (
                         "—"
@@ -253,8 +253,8 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             <p className="mt-1 text-sm">
               {state.summary.cardsAdded} card{state.summary.cardsAdded === 1 ? "" : "s"} and{" "}
               {state.summary.nitroxAdded} nitrox card
-              {state.summary.nitroxAdded === 1 ? "" : "s"} added as claimed — verify each at first
-              contact.
+              {state.summary.nitroxAdded === 1 ? "" : "s"} imported as verified — flagged imported,
+              with a one-tap confirm on each diver's record.
               {state.summary.cardsSkippedExisting + state.summary.nitroxSkippedExisting > 0
                 ? ` ${state.summary.cardsSkippedExisting + state.summary.nitroxSkippedExisting} card(s) already on file were left untouched.`
                 : ""}
