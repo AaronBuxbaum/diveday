@@ -28,11 +28,21 @@ new domain concept, define it here in the same PR.
   spreadsheet. It lands `verified` (DiveDay assumes the shop's own system already checked it) but is
   permanently flagged `imported` (a non-null `importedAt`, with an optional prior-shop
   `importedFromLabel`), so it is never mistaken for a card this shop carded on sight. A level card
-  satisfies readiness and clears depth gates on import, with expiry still applied; staff get a soft
-  one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding never waits on it. The one
-  exception is the **enriched-air fill**: an imported nitrox card gives plain air until that confirm,
-  because a wrong fill is the highest-consequence failure and a nitrox card has no expiry backstop
-  (ADR 20260724-import-verified-cards).
+  satisfies readiness and clears depth gates on import, with its refresher-due date still applied;
+  staff get a soft one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding never waits
+  on it. **Two gates do wait for that confirm.** The **enriched-air fill**: an imported nitrox card
+  gives plain air until it, because a wrong fill is the highest-consequence failure and a nitrox card
+  has no refresher-date backstop (ADR 20260724-import-verified-cards). And any **specialty** gate: an
+  imported specialty card is `verified` but does not clear the dive it authorizes until a staffer
+  confirms it, because a specialty is what permits a materially riskier dive (deep gates depth past
+  18 m) and a spreadsheet cell is not a card sighting (H-23,
+  ADR 20260725-import-specialty-cards). Two things import `pending` rather than `verified`: a card the
+  source file's own status column marks unverified, and a card whose refresher-due date cannot be
+  read — an unreadable gate input is never treated as a pass.
+- **Confirm to clear** — the display state of an imported specialty card no staffer has confirmed
+  yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
+  warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
+  read as the same thing at a busy desk.
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
@@ -410,8 +420,12 @@ new domain concept, define it here in the same PR.
   ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
 - **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
   Night, Drysuit) is a distinct yes/no gate. Levels live in `certifications`; specialties live in
-  `specialty_certifications`, both captured pending and usable only once verified. **Nitrox** is
-  not in this set — it gates the per-booking mix request, not a site.
+  `specialty_certifications`, both captured pending and usable only once verified — except a card
+  brought in by the importer, which lands `verified` but (for a specialty only) still holds its gate
+  until a staff confirm (see **Imported certification**). A diver's agency number identifies the
+  *diver*, not the card, so their Deep and Wreck cards carry the same number; the specialty table is
+  keyed on `(shop, agency, specialty, lower(identifier))` so one number can hold each of a diver's
+  specialties. **Nitrox** is not in this set — it gates the per-booking mix request, not a site.
 - Bookings, waivers, certs, rental fit, and manifests all hang off the same trip/session spine —
   the manifest is a *view* of checked-in bookings plus staff, not a separate data entry task.
 - **Identity match key** — self-service paths (booking, wait-list, CSV import) treat a shop's

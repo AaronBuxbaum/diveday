@@ -320,8 +320,19 @@ async function summarizeDivers(
       // The roster list is a client component, so the whole row would ship to
       // the browser — including every diver's date of birth, which nothing on
       // that list renders and some of which belongs to minors. Drop it at the
-      // boundary rather than relying on the UI not to show it.
-      person: { ...person, dateOfBirth: null },
+      // boundary rather than relying on the UI not to show it. The same argument
+      // covers dive insurance (an insurance policy identifier) and the
+      // emergency contact (a third party's name and number, never the diver's
+      // own): the list renders name, email, and phone, and the importer now
+      // fills those other columns roster-wide in one click, so what used to be
+      // incidental is systemic (`security-reviewer` finding).
+      person: {
+        ...person,
+        dateOfBirth: null,
+        diveInsurance: null,
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+      },
       certificationCount: cards.length,
       pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
       specialtyCount: specialty.length,
@@ -331,11 +342,12 @@ async function summarizeDivers(
         specialty.filter((card) => card.status === "pending").length +
         nitrox.filter((card) => card.status === "pending").length,
       // Imported cards land verified but flagged, awaiting a one-tap staff
-      // confirm (ADR 20260724-import-verified-cards). They already count as
-      // valid, so this is a soft "give these a look" nudge, kept separate from
-      // the pending-review count above. Specialty cards are never imported (no
-      // column in a contact file), so only level and nitrox cards are counted.
-      importedUnconfirmedCount: [...cards, ...nitrox].filter(
+      // confirm (ADR 20260724-import-verified-cards). Level and nitrox cards
+      // already count as valid, so for them this is a soft "give these a look"
+      // nudge, kept separate from the pending-review count above. An imported
+      // *specialty* card is counted here too and is more than a nudge: its gate
+      // stays shut until the confirm (ADR 20260725-import-specialty-cards).
+      importedUnconfirmedCount: [...cards, ...specialty, ...nitrox].filter(
         (card) => card.importedAt && !card.reviewedAt,
       ).length,
       nitroxCertificationCount: nitrox.length,

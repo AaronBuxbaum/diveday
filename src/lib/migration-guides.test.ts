@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { INTERNAL_VOCABULARY } from "@/test/copy";
 import { getMigrationGuide, MIGRATION_GUIDE_SLUGS, MIGRATION_GUIDES } from "./migration-guides";
 
 describe("migration guides", () => {
@@ -93,6 +94,30 @@ describe("migration guides", () => {
         .join(" ")
         .toLowerCase();
       expect(prose).not.toMatch(/your (eve )?(password|credentials|login)/);
+    }
+  });
+
+  it("never leaks internal vocabulary into copy a shop owner reads", () => {
+    // These pages are rendered verbatim. An ADR id, a decision-register id, a
+    // reviewer-agent name, or a source path is how *we* talk to each other about
+    // a decision — a shop owner reading "see the imported-waiver ADR" has been
+    // handed a dead end. Say the thing the copy is pointing at instead.
+    for (const guide of MIGRATION_GUIDES) {
+      const copy = [
+        guide.cardSummary,
+        guide.metaTitle,
+        guide.metaDescription,
+        guide.heroEyebrow,
+        guide.heroTitle,
+        guide.heroLede,
+        ...guide.context,
+        guide.exportHeading,
+        guide.exportIntro,
+        ...guide.exportSteps.flatMap((s) => [s.title, s.detail]),
+        ...guide.exportNotes,
+        guide.importerNote ?? "",
+      ].join(" ");
+      expect(copy).not.toMatch(INTERNAL_VOCABULARY);
     }
   });
 });

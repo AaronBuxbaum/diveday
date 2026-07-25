@@ -80,6 +80,27 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // acceptance is trusted, medical clearance included, and marked imported.
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
   await expect(page.getByText("Stays behind").first()).toBeVisible();
+  // Specialty cards moved into the green column and say what waits on staff.
+  await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
+
+  // Nothing on a published page may cite how *we* talk about a decision. The
+  // honesty table and the guides render verbatim, so a note written for the next
+  // agent ("see the imported-waiver ADR") would ship to a buyer as a dead end —
+  // and this reads the rendered page, so it also catches copy a component
+  // assembles rather than a data file. Unit-level guard: src/test/copy.ts.
+  const rendered = await page.locator("body").innerText();
+  for (const pattern of [
+    /\bADRs?\b/,
+    /\b20\d{6}-[a-z-]+\b/,
+    /\bH-\d\d\b/,
+    /\bCR-\d{3}\b/,
+    /\bsrc\/[a-z]/,
+    /dive-domain-expert|security-reviewer/,
+  ]) {
+    expect(rendered, `internal reference matching ${pattern} on a published page`).not.toMatch(
+      pattern,
+    );
+  }
 
   // Demo-before-trial funnel and cited competitor claims both land on the guide.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();

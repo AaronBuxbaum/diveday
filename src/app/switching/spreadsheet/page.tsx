@@ -65,9 +65,24 @@ const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
     detail: "A name and a phone number, when you have them, land on the diver's card.",
   },
   {
+    column: "Dive insurance",
+    detail:
+      "However you keep it — a DAN number, a provider name — comes across as written. It's never a gate; it's what the crew wants on hand in an incident.",
+  },
+  {
     column: "Certification",
     detail:
       "Agency, level, and card number. The card number is what lets a card come across at all — it arrives verified and flagged imported, ready to use, with a one-tap confirm for staff.",
+  },
+  {
+    column: "Refresher due",
+    detail:
+      "If you track a refresher date on a card, it comes across with it — written however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A date already past lands as a card that's due, which is the point. A date we can't read lands the card for staff review rather than as verified: we won't guess at a date the boat depends on.",
+  },
+  {
+    column: "Specialty",
+    detail:
+      "Deep, wreck, night, or drysuit — one cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number. They arrive verified and flagged imported, and the dive that needs one opens on the one-tap staff confirm.",
   },
   {
     column: "Nitrox",
@@ -193,8 +208,10 @@ export default function SpreadsheetSwitchPage() {
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
             This is the same scope table DiveDay shows before it imports a single row. A card
             already in your sheet was checked by you, so DiveDay trusts it: cards come across
-            verified and flagged imported, with a one-tap confirm for staff. Card expiry still
-            applies, and individual medical answers are never reconstructed.
+            verified and flagged imported, with a one-tap confirm for staff — and their
+            refresher-due dates come with them. A specialty card is the one that waits on that
+            confirm before it clears the dive it authorizes. Individual medical answers are never
+            reconstructed.
           </p>
 
           <ul className="mt-8 space-y-2">
@@ -265,7 +282,9 @@ export default function SpreadsheetSwitchPage() {
                     Roster, rental sizes, and cards are ready immediately: cards land verified and
                     flagged imported, so divers are trip-ready from the first booking. Each imported
                     card carries a one-tap confirm on the diver's record for staff to give it a look
-                    when they get a moment — no boarding waits on it.
+                    when they get a moment — no boarding waits on it. The one thing that does wait
+                    is a dive that requires a specialty card: that gate opens when a staffer
+                    confirms the card, which is one tap on the diver's record.
                   </p>
                 </div>
               </li>

@@ -114,3 +114,32 @@ export function isImportedCard(card: ImportedCard): boolean {
 export function needsImportConfirm(card: ImportedCard): boolean {
   return Boolean(card.importedAt) && !card.reviewedAt;
 }
+
+/**
+ * A *specialty* card's badge must not read the same as a hand-verified one while
+ * its gate is still shut (ADR 20260725-import-specialty-cards,
+ * `dive-domain-expert` review). A level or nitrox card that lands imported is
+ * genuinely valid on arrival — green "certified" is true of it. An imported
+ * specialty card is not: the dive it authorizes stays blocked until a staffer
+ * confirms it, so at a busy desk "certified" alone reads as "fine for the 30 m
+ * wall". This is the display state that says otherwise.
+ */
+export type SpecialtyDisplayStatus = CardDisplayStatus | "confirm_to_clear";
+
+export const SPECIALTY_STATUS_LABELS: Record<SpecialtyDisplayStatus, string> = {
+  ...CARD_STATUS_LABELS,
+  confirm_to_clear: "certified · confirm to clear",
+};
+
+export function specialtyDisplayStatus(
+  card: { status: CardStatus; expiresAt?: CalendarDate | null } & ImportedCard,
+  todayLocal: CalendarDate,
+): SpecialtyDisplayStatus {
+  const base = cardDisplayStatus(card, todayLocal);
+  return base === "verified" && needsImportConfirm(card) ? "confirm_to_clear" : base;
+}
+
+export function specialtyStatusTone(status: SpecialtyDisplayStatus): BadgeTone {
+  // Warning, not success: the card is on file, and the gate is not open yet.
+  return status === "confirm_to_clear" ? "warning" : statusTone(status);
+}

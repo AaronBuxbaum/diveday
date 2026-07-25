@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -17,10 +17,14 @@ const FIELD_LABELS: Record<ImportField, string> = {
   date_of_birth: "Date of birth",
   emergency_contact_name: "Emergency contact",
   emergency_contact_phone: "Emergency phone",
+  dive_insurance: "Dive insurance",
   certification_agency: "Cert agency",
   certification_level: "Cert level",
   certification_number: "Cert number",
   certification_status: "Cert status",
+  certification_expires_at: "Refresher due",
+  specialty: "Specialty",
+  specialty_certification_number: "Specialty number",
   nitrox_certified: "Nitrox",
   nitrox_certification_number: "Nitrox number",
   bcd_size: "BCD size",
@@ -49,6 +53,12 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
   const [csvText, setCsvText] = useState("");
   const [prepared, setPrepared] = useState<PreparedImport | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The whole preview runs in the browser off this input's change event, so a
+  // file chosen before hydration is silently dropped. Marked here so a test can
+  // wait for the real thing rather than race it (same pattern as the booking
+  // party fields).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -81,6 +91,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             ref={inputRef}
             type="file"
             accept=".csv,text/csv"
+            data-hydrated={hydrated ? "true" : "false"}
             className="sr-only"
             onChange={(event) => onFile(event.target.files?.[0])}
           />
@@ -133,11 +144,18 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             </p>
           ) : null}
 
-          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             {[
-              { label: "Will import", value: prepared.totals.importable },
+              { label: "Divers in file", value: prepared.totals.importable },
+              // A certification export lists one row per card, so rows that add
+              // cards to a diver an earlier row brought in are the norm, not
+              // duplicates to explain away.
+              { label: "Extra card rows", value: prepared.totals.merged },
               { label: "Skipped", value: prepared.totals.skipped },
               { label: "Cards", value: prepared.totals.withCard },
+              // "Specialties", not "Specialty cards": a two-line label in one
+              // tile drops that tile's number below the other five.
+              { label: "Specialties", value: prepared.totals.withSpecialty },
               { label: "Nitrox cards", value: prepared.totals.withNitrox },
               { label: "Waivers", value: prepared.totals.withWaiver },
             ].map((stat) => (
@@ -176,12 +194,32 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                           skipped
                         </span>
                       ) : null}
+                      {row.action === "merge" ? (
+                        <span className="ml-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
+                          same diver as row {row.mergedIntoRow}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 text-muted">{row.email ?? "—"}</td>
+                    {/* One row can carry a level card and a specialty card (a
+                        certification export lists one card per row, so usually
+                        it's one or the other). Both belong here — a specialty
+                        showing as "—" would read as "nothing came across". */}
                     <td className="px-3 py-2 text-muted">
-                      {row.cert ? (
-                        <span className="whitespace-nowrap">
-                          {row.cert.level.replaceAll("_", " ")} · imported
+                      {row.cert || row.specialties.length > 0 ? (
+                        <span className="flex flex-col gap-0.5">
+                          {row.cert ? (
+                            <span className="whitespace-nowrap">
+                              {row.cert.level.replaceAll("_", " ")} ·{" "}
+                              {row.cert.status === "verified" ? "imported" : "for review"}
+                            </span>
+                          ) : null}
+                          {row.specialties.map((card) => (
+                            <span key={card.specialty} className="whitespace-nowrap">
+                              {card.specialty} specialty ·{" "}
+                              {card.status === "verified" ? "imported" : "for review"}
+                            </span>
+                          ))}
                         </span>
                       ) : (
                         "—"
@@ -251,15 +289,38 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
               Imported. {state.summary.peopleCreated} added, {state.summary.peopleUpdated} updated.
             </p>
             <p className="mt-1 text-sm">
-              {state.summary.cardsAdded} card{state.summary.cardsAdded === 1 ? "" : "s"} and{" "}
-              {state.summary.nitroxAdded} nitrox card
-              {state.summary.nitroxAdded === 1 ? "" : "s"} imported as verified — flagged imported,
-              with a one-tap confirm on each diver's record.
-              {state.summary.cardsSkippedExisting + state.summary.nitroxSkippedExisting > 0
-                ? ` ${state.summary.cardsSkippedExisting + state.summary.nitroxSkippedExisting} card(s) already on file were left untouched.`
+              {state.summary.cardsAdded} card{state.summary.cardsAdded === 1 ? "" : "s"},{" "}
+              {state.summary.specialtyAdded} specialty card
+              {state.summary.specialtyAdded === 1 ? "" : "s"}, and {state.summary.nitroxAdded}{" "}
+              nitrox card
+              {state.summary.nitroxAdded === 1 ? "" : "s"} imported and flagged imported, with a
+              one-tap confirm on each diver's record.
+              {state.summary.rowsMerged > 0
+                ? ` ${state.summary.rowsMerged} row(s) added cards to a diver an earlier row brought in.`
+                : ""}
+              {state.summary.cardsSkippedExisting +
+                state.summary.specialtySkippedExisting +
+                state.summary.nitroxSkippedExisting >
+              0
+                ? ` ${state.summary.cardsSkippedExisting + state.summary.specialtySkippedExisting + state.summary.nitroxSkippedExisting} card(s) already on those divers' records were left untouched.`
                 : ""}
               {state.summary.rowsSkipped > 0 ? ` ${state.summary.rowsSkipped} row(s) skipped.` : ""}
             </p>
+            {/* Never folded into "already on file": that number belongs to a
+                different diver, so nothing was written for this one. */}
+            {state.summary.cardsHeldByAnotherDiver > 0 ? (
+              <p className="mt-1 text-sm">
+                {state.summary.cardsHeldByAnotherDiver} card number(s) in the file are already on a
+                different diver in your shop, so those cards were not added to anyone. Check the
+                file for a repeated number, then enter those cards by hand.
+              </p>
+            ) : null}
+            {state.summary.specialtyAdded > 0 ? (
+              <p className="mt-1 text-sm">
+                A dive that requires one of those specialties waits on that confirm — tap it on the
+                diver's record and the gate opens.
+              </p>
+            ) : null}
             {state.summary.waiversAdded +
               state.summary.waiversSkippedExisting +
               state.summary.waiversSkippedNoTemplate >
