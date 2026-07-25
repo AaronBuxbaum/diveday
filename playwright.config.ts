@@ -54,6 +54,10 @@ const serverEnv = {
   // out of the browser suite makes it deterministic without mocking our own
   // server or database.
   DIVEDAY_DISABLE_EXTERNAL_HTTP: "1",
+  // The demo owner doubles as the platform operator here, so /admin has a
+  // signed-in identity to exercise (20260724-resend-webhook-email-events).
+  // Unset in a real deploy, /admin is unreachable for everyone.
+  PLATFORM_ADMIN_EMAILS: "dana@bluemantis.example",
   NEXT_TELEMETRY_DISABLED: "1",
 };
 

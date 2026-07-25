@@ -88,6 +88,16 @@ built yet: the actual role/permission matrix (which role(s) may reach each surfa
 `src/lib/authz.ts` and the relevant server actions, and an ADR recording the chosen matrix. Requires
 `security-reviewer` and `dive-domain-expert` review before merge per AGENTS.md's hard rules.
 
+### 8. Sending from DiveDay's own addresses (receive-only today)
+
+`/admin/inbox` receives mail sent to the platform's role addresses (`hello@`, `legal@`) and tracks
+what's been handled, but there is no way to answer from inside DiveDay
+([20260724-resend-webhook-email-events](../architecture/decisions/20260724-resend-webhook-email-events.md)).
+Replies happen in the operator's own mail client and are not recorded, so a thread's second half is
+invisible here. Not built yet: composing a reply from the address a message was sent to, threading
+it with `In-Reply-To`/`References` so it lands in the sender's existing thread, and recording the
+sent copy against the message it answers.
+
 ## Delight backlog
 
 Cross-cutting quality to fold into slices as they're touched, not defer to a final "polish" pass.

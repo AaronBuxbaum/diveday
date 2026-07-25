@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
+  applyProviderEmailEvent,
   listDeliveryAttempts,
   listNotificationDeliveryIssues,
   recordNotificationDelivery,
@@ -103,5 +104,113 @@ describe("notification delivery status", () => {
     const issues = await listNotificationDeliveryIssues(db, shop.id);
     const issue = issues.find((i) => i.booking.id === booking.bookingId);
     expect(issue?.attempts).toBe(2);
+  });
+});
+
+describe("provider-reported delivery events", () => {
+  async function sentConfirmation(providerMessageId = "resend-message-id") {
+    const { db, shop, trip, booking } = await seededBooking();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "sent", providerMessageId },
+    });
+    return { db, shop, trip, booking, providerMessageId };
+  }
+
+  it("raises a bounce as a staff issue even though the send itself succeeded", async () => {
+    const { db, shop, booking, providerMessageId } = await sentConfirmation();
+
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "bounced",
+        detail: "mailbox unavailable",
+        occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+      }),
+    ).resolves.toBe("applied");
+
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    expect(issues).toMatchObject([
+      {
+        delivery: {
+          status: "sent",
+          providerStatus: "bounced",
+          providerDetail: "mailbox unavailable",
+        },
+        booking: { id: booking.bookingId },
+      },
+    ]);
+  });
+
+  it("leaves a delivered message off the issue list", async () => {
+    const { db, shop, providerMessageId } = await sentConfirmation();
+    await applyProviderEmailEvent(db, {
+      providerMessageId,
+      status: "delivered",
+      detail: null,
+      occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+    });
+
+    await expect(listNotificationDeliveryIssues(db, shop.id)).resolves.toEqual([]);
+  });
+
+  it("drops an out-of-order event rather than overwriting a newer outcome", async () => {
+    const { db, shop, providerMessageId } = await sentConfirmation();
+    await applyProviderEmailEvent(db, {
+      providerMessageId,
+      status: "bounced",
+      detail: "mailbox unavailable",
+      occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+    });
+
+    // Webhook delivery is at-least-once and unordered: the earlier "we sent it"
+    // event can easily arrive after the later bounce.
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "sent",
+        detail: null,
+        occurredAt: new Date("2026-07-24T17:00:00.000Z"),
+      }),
+    ).resolves.toBe("stale");
+
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    expect(issues[0]?.delivery.providerStatus).toBe("bounced");
+  });
+
+  it("reports an unknown message id without failing, so Resend stops retrying", async () => {
+    const { db } = await sentConfirmation();
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId: "a-message-we-never-sent",
+        status: "delivered",
+        detail: null,
+        occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+      }),
+    ).resolves.toBe("unknown_message");
+  });
+
+  it("clears the old bounce when staff re-send the same notification", async () => {
+    const { db, shop, booking, providerMessageId } = await sentConfirmation();
+    await applyProviderEmailEvent(db, {
+      providerMessageId,
+      status: "bounced",
+      detail: "mailbox unavailable",
+      occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+    });
+
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      kind: "booking_confirmation",
+      delivery: { status: "sent", providerMessageId: "a-fresh-message-id" },
+      isRetry: true,
+    });
+
+    // The replacement message has its own provider story; the previous
+    // message's bounce must not be shown against it.
+    await expect(listNotificationDeliveryIssues(db, shop.id)).resolves.toEqual([]);
   });
 });

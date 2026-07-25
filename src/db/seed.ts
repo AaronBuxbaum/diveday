@@ -23,6 +23,7 @@ import {
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
+  inboundEmails,
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
@@ -32,6 +33,8 @@ import {
   paymentOperationIntents,
   people,
   personRoles,
+  platformMailboxes,
+  platformMailboxMembers,
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
@@ -154,6 +157,95 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   const existing = await db.select({ id: shops.id }).from(shops).limit(1);
   if (existing.length > 0) return;
   await seedDemo(db);
+  await seedPlatformMail(db);
+}
+
+/**
+ * DiveDay's own role addresses and the mail sitting in them
+ * (20260724-resend-webhook-email-events).
+ *
+ * Platform data, not shop data: it is seeded alongside the demo but is never
+ * touched by `resetDemoSchedule`, because resetting a shop's playground has
+ * nothing to do with the operator's mailbox.
+ *
+ * **No mailbox membership is seeded, deliberately.** `seedIfEmpty` runs on the
+ * first cold start of a *real* deployment too, and the only person it could
+ * name is the demo shop's owner — an identity anyone can assume, since the
+ * demo tenant's logins are published constants and `DEMO_BYPASS_PASSWORD`
+ * authenticates any person in an `isDemo` shop. Granting that identity a
+ * mailbox would put DiveDay's own inbound mail one public password behind,
+ * with `PLATFORM_ADMIN_EMAILS` unset and nothing in the console's own gate
+ * wrong. Access is configuration (`PLATFORM_ADMIN_EMAILS`) or an operator's
+ * explicit grant; the seed creates neither.
+ */
+export async function resetPlatformMail(db: DbExecutor): Promise<void> {
+  await db.delete(inboundEmails);
+  await db.delete(platformMailboxMembers);
+  await db.delete(platformMailboxes);
+  await seedPlatformMail(db);
+}
+
+export async function seedPlatformMail(db: DbExecutor): Promise<void> {
+  const existing = await db.select({ id: platformMailboxes.id }).from(platformMailboxes).limit(1);
+  if (existing.length > 0) return;
+
+  const mailboxes = await db
+    .insert(platformMailboxes)
+    .values([
+      { address: "hello@dive.day", label: "General" },
+      { address: "legal@dive.day", label: "Legal" },
+    ])
+    .returning({ id: platformMailboxes.id, address: platformMailboxes.address });
+  const idByAddress = new Map(mailboxes.map((row) => [row.address, row.id]));
+  const hello = idByAddress.get("hello@dive.day") ?? null;
+  const legal = idByAddress.get("legal@dive.day") ?? null;
+
+  await db.insert(inboundEmails).values([
+    {
+      mailboxId: hello,
+      providerEmailId: "demo-inbound-1",
+      fromEmail: "priya@coralcoastdivers.example",
+      fromName: "Priya Raman",
+      toEmail: "hello@dive.day",
+      subject: "Switching from DiveAdmin — can you import our divers?",
+      textBody:
+        "Hi — we run three boats out of Key Largo and we're fed up with DiveAdmin. We have about 1,800 divers and their cert cards in there. If we export a CSV, how much of that comes across? And how long does a switch usually take?\n\nThanks,\nPriya",
+      receivedAt: new Date(nowMs() - 3 * 60 * 60 * 1000),
+    },
+    {
+      mailboxId: hello,
+      providerEmailId: "demo-inbound-2",
+      fromEmail: "tom@example.com",
+      fromName: "Tom Alvarez",
+      toEmail: "hello@dive.day",
+      subject: "Manifest on a boat with no signal",
+      textBody:
+        "Does the boat manifest work with no bars? We lose signal about twenty minutes out and that's exactly when we do roll call.",
+      receivedAt: new Date(nowMs() - 26 * 60 * 60 * 1000),
+    },
+    {
+      mailboxId: legal,
+      providerEmailId: "demo-inbound-3",
+      fromEmail: "counsel@example.com",
+      fromName: "Dana Whitfield",
+      toEmail: "legal@dive.day",
+      subject: "Waiver retention terms",
+      textBody:
+        "Following up on the signed-waiver retention question — how long are signatures kept, and what does a shop get if they leave?",
+      receivedAt: new Date(nowMs() - 5 * 60 * 60 * 1000),
+    },
+    {
+      // Mail to an address no mailbox claims: stored, admin-only, never lost.
+      mailboxId: null,
+      providerEmailId: "demo-inbound-4",
+      fromEmail: "newsletter@example.com",
+      fromName: null,
+      toEmail: "hllo@dive.day",
+      subject: "Your weekly dive industry digest",
+      textBody: "This week in dive retail…",
+      receivedAt: new Date(nowMs() - 40 * 60 * 60 * 1000),
+    },
+  ]);
 }
 
 /**
@@ -2441,6 +2533,16 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   if (personIds.length > 0) {
     await db.delete(userAccounts).where(inArray(userAccounts.personId, personIds));
     await db.delete(personRoles).where(inArray(personRoles.personId, personIds));
+    // Platform mail is not shop data and outlives the shop, but it references
+    // people: drop their mailbox memberships and un-attribute anything they
+    // marked handled, or the person delete below FK-violates.
+    await db
+      .delete(platformMailboxMembers)
+      .where(inArray(platformMailboxMembers.personId, personIds));
+    await db
+      .update(inboundEmails)
+      .set({ handledByPersonId: null })
+      .where(inArray(inboundEmails.handledByPersonId, personIds));
   }
   await db.delete(people).where(eq(people.shopId, shopId));
   await db.delete(shops).where(eq(shops.id, shopId));

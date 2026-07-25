@@ -703,6 +703,23 @@ export const notificationDeliveryStatus = pgEnum("notification_delivery_status",
 ]);
 
 /**
+ * What the provider later said happened to a message we already handed over —
+ * a different question from `notification_delivery_status`, which only records
+ * whether our own send call succeeded. Reported by the Resend webhook
+ * (20260724-resend-webhook-email-events); null until an event arrives, which is
+ * the normal steady state when no webhook is configured.
+ */
+export const notificationProviderStatus = pgEnum("notification_provider_status", [
+  "sent",
+  "delivered",
+  "delivery_delayed",
+  "bounced",
+  "complained",
+  "failed",
+  "suppressed",
+]);
+
+/**
  * A current operational status, not an append-only provider log. One row per
  * booking/purpose means a newly emailed waiver link replaces its prior state.
  */
@@ -719,6 +736,11 @@ export const notificationDeliveries = pgTable(
     kind: notificationKind("kind").notNull(),
     status: notificationDeliveryStatus("status").notNull(),
     providerMessageId: text("provider_message_id"),
+    /** Provider-reported outcome; reset to null whenever a fresh send replaces the row. */
+    providerStatus: notificationProviderStatus("provider_status"),
+    providerStatusAt: timestamp("provider_status_at", { withTimezone: true }),
+    /** The provider's own explanation for a bounce or failure, shown to staff verbatim. */
+    providerDetail: text("provider_detail"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -729,6 +751,8 @@ export const notificationDeliveries = pgTable(
       table.status,
       table.attemptedAt,
     ),
+    // The webhook's only entry point: an event names the provider's message id.
+    index("notification_deliveries_provider_message_idx").on(table.providerMessageId),
   ],
 );
 
@@ -759,6 +783,95 @@ export const notificationDeliveryAttempts = pgTable(
     index("notification_delivery_attempts_booking_kind_idx").on(table.bookingId, table.kind),
     index("notification_delivery_attempts_shop_attempted_idx").on(table.shopId, table.attemptedAt),
   ],
+);
+
+/**
+ * A role address on DiveDay's own domain — `legal@dive.day`, `support@dive.day`
+ * (20260724-resend-webhook-email-events). Resend delivers every address at the
+ * domain to one webhook, so this table is what decides which of them is a real
+ * mailbox and, through its members, who may read it.
+ *
+ * Deliberately **not** tenant tables: these belong to the platform operator,
+ * not to any shop, which is why neither this nor `inbound_emails` carries a
+ * `shop_id`. They are reachable only from `/admin/**`.
+ */
+export const platformMailboxes = pgTable(
+  "platform_mailboxes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Stored lowercased; inbound routing compares a lowercased recipient to it. */
+    address: text("address").notNull().unique(),
+    /** What it's for, in the operator's words — "Legal", "Support". */
+    label: text("label").notNull(),
+    /** Retired rather than deleted, so its received mail keeps its routing. */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("platform_mailboxes_address_idx").on(table.address)],
+);
+
+/**
+ * Who may read a mailbox. Membership is the whole authorization story for
+ * `/admin/inbox`: a person sees exactly the mail sent to mailboxes they belong
+ * to, so `legal@` reaching a different human than `aaron@` needs no special
+ * case.
+ */
+export const platformMailboxMembers = pgTable(
+  "platform_mailbox_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mailboxId: uuid("mailbox_id")
+      .notNull()
+      .references(() => platformMailboxes.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("platform_mailbox_members_unique").on(table.mailboxId, table.personId),
+    index("platform_mailbox_members_person_idx").on(table.personId),
+  ],
+);
+
+/**
+ * Mail sent *to DiveDay* — anything arriving at the platform's own domain,
+ * received through Resend inbound (20260724-resend-webhook-email-events).
+ *
+ * `mailbox_id` is nullable because Resend delivers mail for *every* address at
+ * the domain, including ones no mailbox claims. Unrouted mail is still stored
+ * (dropping it would mean a typo'd address silently swallows a real message)
+ * but is visible only to a platform admin, never to a mailbox member.
+ */
+export const inboundEmails = pgTable(
+  "inbound_emails",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mailboxId: uuid("mailbox_id").references(() => platformMailboxes.id),
+    /** Resend's id for the received message; the idempotency key for a redelivered webhook. */
+    providerEmailId: text("provider_email_id").notNull().unique(),
+    fromEmail: text("from_email").notNull(),
+    /** The display name on the From header, when the sender set one. */
+    fromName: text("from_name"),
+    /** Which address at the domain it was sent to — `legal@`, `support@`, a typo. */
+    toEmail: text("to_email").notNull(),
+    subject: text("subject"),
+    /**
+     * Plain text only, deliberately. An inbound body is arbitrary
+     * attacker-controlled content, so the HTML part is discarded at ingest
+     * rather than stored and sanitized later — there is no path by which a
+     * received message can become markup on the admin screen.
+     */
+    textBody: text("text_body").notNull().default(""),
+    /** True when the sender attached files; attachment content is not stored. */
+    hasAttachments: boolean("has_attachments").notNull().default(false),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    handledByPersonId: uuid("handled_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // The inbox query: one mailbox's mail, newest first.
+  (table) => [index("inbound_emails_mailbox_received_idx").on(table.mailboxId, table.receivedAt)],
 );
 
 /**

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
@@ -7,6 +7,7 @@ import {
   notify,
   publicAppUrl,
 } from "@/lib/notifications";
+import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import {
@@ -59,6 +60,11 @@ export async function recordNotificationDelivery(
     kind: input.kind,
     status: input.delivery.status,
     providerMessageId,
+    // A fresh send starts a fresh provider story: the previous message's
+    // bounce must not be shown against the replacement we just sent.
+    providerStatus: null,
+    providerStatusAt: null,
+    providerDetail: null,
     attemptedAt,
   };
   const [record] = await db
@@ -167,7 +173,59 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
   );
 }
 
-/** Open email issues for the staff dashboard; cancelled bookings need no follow-up. */
+export type ApplyProviderEmailEventResult = "applied" | "stale" | "unknown_message";
+
+/**
+ * Files a provider-reported outcome against the message it belongs to, found
+ * by the provider's own id (20260724-resend-webhook-email-events).
+ *
+ * Two things make this deliberately forgiving. Webhook delivery is
+ * at-least-once and unordered, so an older event arriving after a newer one is
+ * normal and is dropped as `stale` rather than allowed to overwrite. And a
+ * message id we don't recognise — a waitlist invite, which keeps no delivery
+ * row, or mail sent from the Resend dashboard — is `unknown_message`, not an
+ * error: the endpoint has no business failing over an event about a message it
+ * never tracked.
+ *
+ * Not tenant-scoped by argument, because a webhook carries no tenant: the
+ * provider message id, minted by Resend per send, *is* the scope. It reaches
+ * exactly the row that recorded that send.
+ */
+export async function applyProviderEmailEvent(
+  db: AppDb,
+  input: {
+    providerMessageId: string;
+    status: ProviderEmailStatus;
+    detail: string | null;
+    occurredAt: Date;
+  },
+): Promise<ApplyProviderEmailEventResult> {
+  const [existing] = await db
+    .select({ id: notificationDeliveries.id, statusAt: notificationDeliveries.providerStatusAt })
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.providerMessageId, input.providerMessageId))
+    .limit(1);
+  if (!existing) return "unknown_message";
+  if (existing.statusAt && existing.statusAt > input.occurredAt) return "stale";
+
+  await db
+    .update(notificationDeliveries)
+    .set({
+      providerStatus: input.status,
+      providerStatusAt: input.occurredAt,
+      providerDetail: input.detail,
+    })
+    .where(eq(notificationDeliveries.id, existing.id));
+  return "applied";
+}
+
+/**
+ * Open email issues for the staff dashboard; cancelled bookings need no
+ * follow-up. An issue is either a send that never left (`failed`,
+ * `not_configured`) or a send the provider later reported went nowhere —
+ * a bounce or a spam complaint is invisible at send time and is the more
+ * common real-world failure of the two.
+ */
 export async function listNotificationDeliveryIssues(db: AppDb, shopId: string) {
   return db
     .select({
@@ -191,7 +249,10 @@ export async function listNotificationDeliveryIssues(db: AppDb, shopId: string) 
     .where(
       and(
         eq(notificationDeliveries.shopId, shopId),
-        inArray(notificationDeliveries.status, ["failed", "not_configured"]),
+        or(
+          inArray(notificationDeliveries.status, ["failed", "not_configured"]),
+          inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),
+        ),
         ne(bookings.status, "cancelled"),
       ),
     )

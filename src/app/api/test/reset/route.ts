@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { purgeMintedDemoShops, resetDemoSchedule } from "@/db/seed";
+import { purgeMintedDemoShops, resetDemoSchedule, resetPlatformMail } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 
 /**
@@ -37,5 +37,10 @@ export async function POST() {
   // Clear any disposable demo shops earlier tests minted via "Try the live
   // demo", so they don't accumulate and bloat the shared test database.
   await purgeMintedDemoShops(db);
+  // Platform mail is not shop data, so `resetDemoSchedule` leaves it alone —
+  // but a test that adds a role address or grants someone access would then
+  // change what the next test sees. Restoring it here keeps `/admin` specs
+  // order-independent like every other surface.
+  await resetPlatformMail(db);
   return NextResponse.json({ ok: true });
 }

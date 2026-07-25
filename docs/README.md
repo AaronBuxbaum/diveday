@@ -26,6 +26,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
 | [engineering/capability-telemetry-runbook.md](engineering/capability-telemetry-runbook.md) | How bearer-capability URLs (waivers/ready/recap tokens) are kept out of Analytics/Speed Insights, and how to audit/rotate an exposed one | the redaction logic changes or a capability type's revocation story changes |
+| [engineering/resend-email-runbook.md](engineering/resend-email-runbook.md) | Setting up sending, delivery-outcome webhooks, and DiveDay's own inbound addresses; who may read the `/admin` console; what to check when mail doesn't arrive | the email envelope, webhook events, or platform-access model changes |
 
 **Strategic assessments** ([product/assessments/](product/assessments/)) — dated buyer/rival analyses,
 not commitments. Their surviving recommendations belong in the roadmap; read for context.

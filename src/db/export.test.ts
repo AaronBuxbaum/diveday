@@ -86,6 +86,12 @@ const EXCLUDED_TABLES = [
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
+  // DiveDay's own mailboxes and the mail sent to them. Not shop records at
+  // all: these carry no shop_id, and a shop's export must never contain
+  // another correspondent's message (20260724-resend-webhook-email-events).
+  "platform_mailboxes",
+  "platform_mailbox_members",
+  "inbound_emails",
 ];
 
 /**

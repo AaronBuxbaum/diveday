@@ -48,6 +48,8 @@ adapters and must not introduce unique requirements.
 | Bearer-token pages (waiver signing, trip-prep "ready", recap) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
 | Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
+| DiveDay's own operator console (`/admin/**`) — inbound mail to `hello@`/`legal@` and who reads it | `src/app/admin/`; gate in `requirePlatformSession` (`src/lib/session.ts`), access in `src/db/platform-mailboxes.ts`. Platform-scoped, **never** `shop_id`-scoped |
+| Email: sending, delivery outcomes, inbound | `src/lib/notifications/` + `src/app/api/webhooks/resend/`; setup in [docs/engineering/resend-email-runbook.md](docs/engineering/resend-email-runbook.md) |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
