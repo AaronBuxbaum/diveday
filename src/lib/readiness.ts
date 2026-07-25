@@ -101,6 +101,7 @@ export type ReadinessBlockerCode =
   | "specialty_missing"
   | "specialty_pending"
   | "specialty_expired"
+  | "specialty_import_unconfirmed"
   | "nitrox_missing"
   | "nitrox_pending"
   | "under_minimum_age"
@@ -127,6 +128,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_expired: "certification",
+  specialty_import_unconfirmed: "certification",
   nitrox_missing: "certification",
   nitrox_pending: "certification",
   // "setup", not "certification": age is not a card the diver holds, and it is
@@ -264,6 +266,15 @@ function certificationBlocker(
 /**
  * A specialty is a yes/no gate: only a verified, unexpired card of that exact
  * specialty clears it. Every other state fails closed with a specific reason.
+ *
+ * An *imported* card is the one place a specialty is stricter than the level
+ * ladder (ADR 20260725-import-specialty-cards). A migrated ladder card clears
+ * its requirement on `verified` alone, because the prior system's cert record
+ * is evidence the diver is carded at all. A specialty authorizes a materially
+ * riskier dive — deep gates depth past 18 m — so a card that has only ever been
+ * a cell in a spreadsheet holds the gate until a staffer taps the one-tap
+ * confirm that stamps `reviewedAt`. Boarding is never what waits: the gate is
+ * on the specialty dive, and confirming is one tap on the diver's record.
  */
 function specialtyBlocker(
   specialtyCertifications: readonly SpecialtyCertification[],
@@ -272,14 +283,34 @@ function specialtyBlocker(
 ): ReadinessBlocker | null {
   const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
   const label = SPECIALTY_LABELS[specialty];
+  const unexpired = (card: SpecialtyCertification) =>
+    !card.expiresAt || !isCalendarDateExpired(card.expiresAt, todayLocal);
   if (
     cards.some(
       (card) =>
         card.status === "verified" &&
-        (!card.expiresAt || !isCalendarDateExpired(card.expiresAt, todayLocal)),
+        unexpired(card) &&
+        // Confirmed by a staffer, or never needed confirming (entered by hand).
+        (!card.importedAt || card.reviewedAt),
     )
   ) {
     return null;
+  }
+  // Ahead of `pending` and `missing`: this diver is one tap from cleared, and
+  // saying so is what turns a blocker into an action a staffer can take. The
+  // `verified` check keeps the two blockers from overlapping — an imported card
+  // is written `verified`, so a `pending` card is a capture awaiting review and
+  // gets that message instead. Either way the gate stays shut.
+  if (
+    cards.some(
+      (card) =>
+        card.status === "verified" && card.importedAt && !card.reviewedAt && unexpired(card),
+    )
+  ) {
+    return {
+      code: "specialty_import_unconfirmed",
+      message: `${label} specialty card came across in an import — a staffer needs to confirm it before this dive.`,
+    };
   }
   if (cards.some((card) => card.status === "pending")) {
     return {

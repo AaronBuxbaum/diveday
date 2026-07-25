@@ -49,7 +49,9 @@ export default async function ImportContactsPage({
         <p className="mt-1 max-w-2xl text-sm text-muted">
           A card already in your system was checked there, so DiveDay trusts it: imported cards land
           verified and flagged imported, ready from the first trip, with a one-tap confirm for
-          staff. Card expiry still applies, and individual medical answers are never reconstructed.
+          staff, and their refresher-due dates come across too. A specialty card waits on that
+          confirm before it clears the dive it authorizes. Individual medical answers are never
+          reconstructed.
         </p>
         <ul className="mt-4 space-y-2">
           {IMPORT_HONESTY_TABLE.map((row) => (

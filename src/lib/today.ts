@@ -264,6 +264,14 @@ export const BLOCKER_ACTIONS: Record<
     groupLabel: "Update specialties",
     target: "diver",
   },
+  // An imported specialty card is one tap from clearing its gate, so this reads
+  // as a confirmation, not a card to chase (ADR 20260725-import-specialty-cards).
+  specialty_import_unconfirmed: {
+    kind: "certification",
+    actionLabel: "Confirm specialty",
+    groupLabel: "Confirm imported specialties",
+    target: "diver",
+  },
   nitrox_missing: {
     kind: "certification",
     actionLabel: "Add nitrox card",

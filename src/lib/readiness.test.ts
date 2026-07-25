@@ -161,6 +161,37 @@ describe("calculateReadiness", () => {
     ["pending specialty card", specialtyCard({ status: "pending" }), "specialty_pending"],
     ["expired specialty card", specialtyCard({ expiresAt: "2026-07-17" }), "specialty_expired"],
     ["wrong-specialty card", specialtyCard({ specialty: "wreck" }), "specialty_missing"],
+    // A specialty authorizes a riskier dive, so a migrated card holds the gate
+    // until a staffer confirms it (ADR 20260725-import-specialty-cards) — this
+    // is the one place a specialty is stricter than a ladder card, which clears
+    // on `verified` alone.
+    [
+      "imported specialty card nobody has confirmed",
+      specialtyCard({ importedAt: new Date("2026-07-20T00:00:00Z"), reviewedAt: null }),
+      "specialty_import_unconfirmed",
+    ],
+    // A `pending` card is a staff capture awaiting review, not an import
+    // awaiting a confirm — even if it somehow also carries import provenance.
+    [
+      "imported specialty card still pending review",
+      specialtyCard({
+        status: "pending",
+        importedAt: new Date("2026-07-20T00:00:00Z"),
+        reviewedAt: null,
+      }),
+      "specialty_pending",
+    ],
+    // Expiry is the harder fact: an imported card that is also past its
+    // refresher date reports as expired, not as one tap from cleared.
+    [
+      "imported specialty card that is also expired",
+      specialtyCard({
+        importedAt: new Date("2026-07-20T00:00:00Z"),
+        reviewedAt: null,
+        expiresAt: "2026-07-17",
+      }),
+      "specialty_expired",
+    ],
   ] as const)("fails closed on a required specialty for %s", (_name, card, code) => {
     expect(
       calculateReadiness({
@@ -181,6 +212,56 @@ describe("calculateReadiness", () => {
         waiver: signedWaiver,
         certifications: [certification()],
         specialtyCertifications: [specialtyCard()],
+        now,
+        timezone: "UTC",
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("clears a required specialty once a staffer confirms the imported card", () => {
+    expect(
+      calculateReadiness({
+        requirement: deepRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        specialtyCertifications: [
+          specialtyCard({
+            importedAt: new Date("2026-07-20T00:00:00Z"),
+            reviewedAt: new Date("2026-07-21T00:00:00Z"),
+          }),
+        ],
+        now,
+        timezone: "UTC",
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("still clears on a hand-entered verified card, which never needed confirming", () => {
+    // Guards the shape of the imported check: `importedAt` null must not be
+    // read as "unconfirmed" for every card a staffer typed in themselves.
+    expect(
+      calculateReadiness({
+        requirement: deepRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        specialtyCertifications: [specialtyCard({ importedAt: null, reviewedAt: null })],
+        now,
+        timezone: "UTC",
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("does not let an unconfirmed imported specialty card gate an unrelated trip", () => {
+    // The hold is on the specialty requirement, never on boarding: a trip that
+    // asks for no specialty is unaffected by a card sitting unconfirmed.
+    expect(
+      calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        specialtyCertifications: [
+          specialtyCard({ importedAt: new Date("2026-07-20T00:00:00Z"), reviewedAt: null }),
+        ],
         now,
         timezone: "UTC",
       }),

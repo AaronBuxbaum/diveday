@@ -1,4 +1,4 @@
-import type { DiverProfile } from "./shared";
+import { type DiverProfile, needsImportConfirm } from "./shared";
 
 export function StatsSummary({ diver }: { diver: DiverProfile }) {
   const profile = diver.rentalFit;
@@ -11,11 +11,18 @@ export function StatsSummary({ diver }: { diver: DiverProfile }) {
             diver.specialtyCertifications.length +
             diver.nitroxCertifications.length}
         </p>
+        {/* An imported specialty card counts as needing attention even though
+            its status is `verified`: its gate stays shut until a staffer
+            confirms it, so a header reading "0 pending review" would say
+            all-clear while a deep dive is still blocked
+            (ADR 20260725-import-specialty-cards). */}
         <p className="text-sm text-muted">
           {diver.certifications.filter((card) => card.status === "pending").length +
-            diver.specialtyCertifications.filter((card) => card.status === "pending").length +
+            diver.specialtyCertifications.filter(
+              (card) => card.status === "pending" || needsImportConfirm(card),
+            ).length +
             diver.nitroxCertifications.filter((card) => card.status === "pending").length}{" "}
-          pending review
+          needing a look
         </p>
       </div>
       <div className="rounded-lg border border-border bg-surface p-4">

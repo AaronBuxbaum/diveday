@@ -246,7 +246,7 @@ const diveshop360: MigrationGuide = {
     "Retail history, repair tickets, and your e-commerce site aren't part of a contact import — see the scope table below. They stay in DiveShop360.",
   ],
   importerNote:
-    "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file updates the same divers instead of duplicating them.",
+    "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file adds to the same divers instead of duplicating them. A certification file usually holds one row per card, so a diver with three cards appears on three rows: each row's card lands on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card.",
   sources: [
     {
       label: "DiveShop360 FAQ — the datasets you can export",
@@ -312,7 +312,7 @@ const diveadmin: MigrationGuide = {
     "Booking and message history isn't part of a contact import — see the scope table below. It stays in DiveAdmin.",
   ],
   importerNote:
-    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each verified and flagged imported, with a one-tap confirm for staff; anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
+    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each verified and flagged imported, with a one-tap confirm for staff. It reads the specialties the same way — a "PADI Deep Diver" row with a card number becomes a deep specialty card — and anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
   sources: [
     {
       label: "DiveAdmin API documentation",
