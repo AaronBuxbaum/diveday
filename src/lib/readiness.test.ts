@@ -156,6 +156,64 @@ describe("calculateReadiness", () => {
     }
   });
 
+  it("raises under_minimum_age for a diver under the course's minimum on the course date (H-08)", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [certification()],
+      courseMinimumAge: 15,
+      dateOfBirth: "2012-03-01",
+      courseDate: "2026-08-15", // 14 on this date — under 15
+      now,
+      timezone: "UTC",
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
+  });
+
+  it("fails open on a missing date of birth or minimum age (H-08, option B)", () => {
+    for (const input of [
+      { courseMinimumAge: 15, dateOfBirth: undefined, courseDate: "2026-08-15" },
+      { courseMinimumAge: undefined, dateOfBirth: "2012-03-01", courseDate: "2026-08-15" },
+      { courseMinimumAge: 15, dateOfBirth: "2012-03-01", courseDate: undefined },
+    ]) {
+      const result = calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        ...input,
+        now,
+        timezone: "UTC",
+      });
+      expect(result.status).toBe("ready");
+    }
+  });
+
+  // H-22 (docs/architecture/decisions/20260725-checklist-age-disclosure.md):
+  // the diver-facing checklist only names the specific age-gate reason when
+  // no identity mismatch is also flagged, and it relies on this exact push
+  // order — identity_unconfirmed always sorting before under_minimum_age —
+  // rather than re-deriving it. `readiness-summary.test.ts` proves the
+  // *picking* logic against a hand-built blocker array; this proves the real
+  // engine actually produces that order, so a future reordering of the two
+  // `blockers.push()` calls below would fail here rather than silently
+  // flipping which line a diver sees.
+  it("always raises identity_unconfirmed before under_minimum_age when both apply", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [certification()],
+      identityUnconfirmed: true,
+      courseMinimumAge: 15,
+      dateOfBirth: "2012-03-01",
+      courseDate: "2026-08-15",
+      now,
+      timezone: "UTC",
+    });
+    expect(result.blockers[0]?.code).toBe("identity_unconfirmed");
+    expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
+  });
+
   it.each([
     ["missing specialty card", undefined, "specialty_missing"],
     ["pending specialty card", specialtyCard({ status: "pending" }), "specialty_pending"],
