@@ -43,7 +43,7 @@ export default async function SignInPage({
   const { error } = await searchParams;
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex flex-1 flex-col">
       <MarketingNav />
       <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
         <div className="rounded-lg border border-border bg-surface p-6">
