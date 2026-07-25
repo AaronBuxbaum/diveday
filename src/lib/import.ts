@@ -32,16 +32,21 @@
  *   - A nitrox card imports verified and flagged imported like any level card,
  *     and only against a real card number. Boarding clears immediately, but the
  *     actual enriched-air *fill* — the highest-consequence gate, and one no card
- *     expiry backstops — waits for the one-tap staff confirm (`reviewedAt`); an
- *     imported-but-unconfirmed card gives plain air (src/db/nitrox.ts). A card
- *     entered by hand is unaffected.
+ *     expiry backstops — waits for a staff confirm that carries an explicit card
+ *     sighting (`reviewedAt`; H-24); an imported-but-unconfirmed card gives plain
+ *     air (src/db/nitrox.ts). A card entered by hand is unaffected.
  *   - A specialty card (deep, wreck, night, drysuit) imports the same way, and
  *     is the strictest of the three (ADR 20260725-import-specialty-cards):
- *     verified and flagged, but the specialty *gate* stays shut until the
- *     one-tap confirm, because a specialty is what authorizes a materially
- *     riskier dive (deep gates depth past 18 m). One card number can only ever
- *     become one card, so a cell naming two specialties imports neither and says
- *     so rather than inventing a number for the second.
+ *     verified and flagged, but the specialty *gate* stays shut until a staffer
+ *     confirms they have seen the card, because a specialty authorizes a materially
+ *     riskier dive (deep gates depth past 18 m). An agency number identifies the
+ *     diver, not the card, so a cell naming "Deep, Wreck" becomes both cards under
+ *     that one number — `specialty_certifications` is keyed on the specialty too.
+ *   - A technical or overhead-environment rating (Advanced Nitrox, Trimix, CCR,
+ *     cave, deco procedures…) is **never** bent onto the recreational ladder. It
+ *     imports as nothing and says so: a ladder card clears its gate on `status`
+ *     alone, so reading "Advanced Nitrox" as Advanced Open Water — which the bare
+ *     `/advanced/` rule used to do — hands out a clearance nobody granted.
  *   - A card's expiry comes across when the row carries a real calendar date,
  *     including one already in the past — an expired card on file is a fact
  *     readiness must see, and the alternative is a migrated card that looks
@@ -345,13 +350,13 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Specialty cards (deep, wreck, night, drysuit)",
     scope: "included",
     detail:
-      "Imported as verified specialty cards, flagged imported — from a specialty column, or from a certification row that names one (“PADI Deep Diver”). Your diver's agency number is what carries them, the same number their level card uses, so a “Deep, Wreck” cell comes across as both cards and a certification file with one row per card brings in every card a diver holds. A specialty is what clears a riskier dive, so this one is stricter than a level card: the dive that requires it waits on the one-tap staff confirm, and everything else about the diver's day does not.",
+      "Imported as verified specialty cards, flagged imported — from a specialty column, or from a certification row that names one (“PADI Deep Diver”). Your diver's agency number is what carries them, the same number their level card uses, so a “Deep, Wreck” cell comes across as both cards and a certification file with one row per card brings in every card a diver holds. A specialty is what clears a riskier dive, so this one is stricter than a level card: the dive that requires it waits until a staffer confirms they've seen the card, and everything else about the diver's day does not.",
   },
   {
     what: "Enriched air (nitrox)",
     scope: "included",
     detail:
-      "Imported as a verified nitrox card, flagged imported, whenever the row carries a nitrox card number — so a diver can request enriched air right away. A fill is the highest-stakes gate, so an imported nitrox card gives plain air until a staffer taps the one-tap confirm; boarding never waits on it.",
+      "Imported as a verified nitrox card, flagged imported, whenever the row carries a nitrox card number — so a diver can request enriched air right away. A fill is the highest-stakes gate, so an imported nitrox card gives plain air until a staffer confirms they've seen the card or checked the number with the agency; boarding never waits on it.",
   },
   {
     what: "Signed waivers & medical clearance",
@@ -633,15 +638,55 @@ export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[
   return found;
 }
 
+/**
+ * A technical, mixed-gas, or overhead-environment rating. DiveDay's ladder is the
+ * recreational one (`certification_level`), and none of these are rungs on it —
+ * so they import as nothing, with a reason, rather than being bent onto the
+ * nearest-looking rung.
+ *
+ * This exists because `normalizeLevel`'s bare `/advanced/` rule read **TDI
+ * Advanced Nitrox** — a decompression-adjacent gas certification — as *Advanced
+ * Open Water*, and a ladder card clears its gate on `status` alone. That silently
+ * promoted a technical diver's gas ticket into a verified recreational clearance
+ * two rungs above Open Water (`dive-domain-expert` review). Anything here is
+ * declined and named in the preview, which is the honest outcome: DiveDay does
+ * not model these, so a shop that gates on one enters it by hand.
+ */
+const TECHNICAL_CERT =
+  /\btrimix\b|\bhelitrox\b|\brebreather\b|\bccr\b|\bscr\b|\bcave\b|\bcavern\b|\bmine\b|decompression|\bdeco\b|\btec\b|\btech\b|technical|extended range|mixed gas|gas blender|hypoxic|normoxic|advanced nitrox|\bsump\b|\bdpv\b/;
+
+/**
+ * Words naming a *discipline* rather than a rung. When one is present, "advanced"
+ * is qualifying that discipline (Advanced Nitrox, Advanced Sidemount, Advanced
+ * Wreck) and is not the Advanced Open Water rung. Kept separate from
+ * `TECHNICAL_CERT`: a PADI Sidemount or Advanced Photography card is perfectly
+ * recreational, it just isn't a rung either, so it falls through to the ordinary
+ * "isn't a level we gate on" note instead of being called technical.
+ */
+const DISCIPLINE_QUALIFIER =
+  /nitrox|eanx|enriched|trimix|helitrox|rebreather|\bccr\b|\bscr\b|cave|cavern|wreck|sidemount|side mount|deco|\bgas\b|\btec\b|\btech\b|technical|extended range|\bice\b|sump|\bdpv\b|scooter|photo|video|search|recovery|navigation|\bnav\b|night|dry.?suit|\bdeep\b|altitude|\bboat\b|\bdrift\b/;
+
+/** True when a cell names a technical/overhead rating DiveDay does not model. */
+export function isTechnicalCertName(raw: string | null | undefined): boolean {
+  return TECHNICAL_CERT.test((raw ?? "").trim().toLowerCase());
+}
+
 /** Map a free-text level to a ladder rung, or null when it is not a rung we gate on. */
 export function normalizeLevel(raw: string | undefined): ImportLevel | null {
   const value = (raw ?? "").trim().toLowerCase();
   if (!value) return null;
+  // Never bend a technical rating onto the recreational ladder. First, because a
+  // ladder card clears its gate on `status` alone, so a mistake here is a
+  // clearance nobody granted.
+  if (TECHNICAL_CERT.test(value)) return null;
   // Order matters: "advanced open water" contains "open water".
   if (/instructor|owsi|\bidc\b|\bmsdt\b/.test(value)) return "instructor";
   if (/divemaster|dive master|\bdm\b/.test(value)) return "divemaster";
   if (/rescue/.test(value)) return "rescue";
-  if (/advanced|\baow\b|\bowa\b/.test(value)) return "advanced_open_water";
+  // "advanced" is the AOW rung only when it isn't qualifying another discipline.
+  // "AOW" and SSI's "Advanced Adventurer" are the rung; "Advanced Nitrox" is not.
+  if (/\baow\b|\bowa\b/.test(value)) return "advanced_open_water";
+  if (/advanced/.test(value) && !DISCIPLINE_QUALIFIER.test(value)) return "advanced_open_water";
   if (/open.?water|\bow\b|\bowd\b|open water diver/.test(value)) return "open_water";
   return null;
 }
@@ -1020,7 +1065,7 @@ export function prepareContactImport(text: string): PreparedImport {
           level: "info",
           message:
             cardStatus === "verified"
-              ? `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported as verified from your records — flagged imported. A dive that requires one waits on the one-tap staff confirm.`
+              ? `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported as verified from your records — flagged imported. A dive that requires one waits until a staffer confirms they've seen the card.`
               : `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported for staff review — see the note above.`,
         });
         if (!agencyKnown) {
@@ -1052,7 +1097,15 @@ export function prepareContactImport(text: string): PreparedImport {
     }
     if (levelRaw && !levelNamesSpecialty) {
       const level = normalizeLevel(levelRaw);
-      if (!level) {
+      if (!level && isTechnicalCertName(levelRaw)) {
+        // Named separately from the generic "isn't a level" note, because this is
+        // the case a shop would otherwise assume came across: it looks like a
+        // rung ("Advanced Nitrox"), and it used to import as one.
+        issues.push({
+          level: "warning",
+          message: `Certification "${levelRaw}" is a technical or overhead-environment rating, not a rung on the recreational ladder — not imported, and never read as a nearby level. DiveDay doesn't gate on these; record it by hand if your shop does.`,
+        });
+      } else if (!level) {
         issues.push({
           level: "warning",
           message: `Certification "${levelRaw}" isn't a level we gate on — card not imported. Add it by hand if it's a real card.`,

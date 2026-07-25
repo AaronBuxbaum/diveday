@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
+import { type ReviewRefusal, reviewNoteFor } from "./readiness";
 import { bookings, nitroxCertifications, people } from "./schema";
 
 export type NewNitroxCertification = {
@@ -39,6 +40,12 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
   }
 }
 
+/**
+ * Confirming an **imported** nitrox card is what lets a fill give enriched air
+ * (`authorizesNitroxFill` below), so — like the imported specialty confirm — it
+ * requires the staffer to state that they have actually seen the card or checked
+ * it with the agency (H-24). A card this shop captured itself is unaffected.
+ */
 export async function reviewNitroxCertification(
   db: AppDb,
   input: {
@@ -46,23 +53,49 @@ export async function reviewNitroxCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    cardSighted?: boolean;
   },
-) {
+): Promise<
+  | { ok: true; certification: typeof nitroxCertifications.$inferSelect }
+  | { ok: false; reason: ReviewRefusal }
+> {
+  const [existing] = await db
+    .select({ importedAt: nitroxCertifications.importedAt })
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.id, input.certificationId),
+        eq(nitroxCertifications.shopId, input.shopId),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+  if (existing.importedAt && !input.cardSighted) {
+    return { ok: false, reason: "card_sighting_required" };
+  }
+
   const [certification] = await db
     .update(nitroxCertifications)
     .set({
       status: input.status,
-      reviewNote: input.reviewNote?.trim() || null,
+      reviewNote: reviewNoteFor(
+        input.reviewNote,
+        Boolean(existing.importedAt && input.cardSighted),
+      ),
       reviewedAt: nowDate(),
     })
     .where(
       and(
         eq(nitroxCertifications.id, input.certificationId),
         eq(nitroxCertifications.shopId, input.shopId),
+        // An archived card never comes back through a review — same rule the
+        // specialty path applies, and this one authorizes a gas fill.
+        isNull(nitroxCertifications.deletedAt),
       ),
     )
     .returning();
-  return certification ?? null;
+  return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
 }
 
 /**
