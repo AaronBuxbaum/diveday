@@ -53,18 +53,15 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
 
   await expect(
     page.getByRole("heading", {
-      name: "Built by someone who fell for diving, then saw what the shops were running on.",
+      name: "Built by divers, for divers.",
     }),
   ).toBeVisible();
 
   // The page earns trust by conceding, not by claiming: the honest-no block and
-  // the named accountable human are the load-bearing parts. The founder's own
-  // inexperience is stated rather than skated past — it's the concession the
-  // rest of the page's honesty is measured against.
+  // the named accountable human are the load-bearing parts.
   await expect(
     page.getByRole("heading", { name: "What we're not going to pretend." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "I'm new to diving." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
   await expect(page.getByText("Aaron Buxbaum, founder")).toBeVisible();
