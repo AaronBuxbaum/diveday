@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -122,19 +123,7 @@ export default async function ReportsPage({
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
   if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
-    return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader
-          eyebrow="Owner"
-          title="Reports"
-          description="How the shop is doing — bookings, revenue, fill rate, and waivers."
-        />
-        <ShopNotice tone="warning" role="status">
-          Reports include the shop's revenue, so they're limited to the owner or manager. Ask them
-          if you need this month's numbers.
-        </ShopNotice>
-      </main>
-    );
+    redirect(`/shop/${shopSlug}`);
   }
 
   const tz = shop.timezone;

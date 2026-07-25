@@ -2,7 +2,7 @@ import Link from "next/link";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { LogoMark } from "@/components/Logo";
 import { signOut } from "@/lib/auth";
-import { ShopNavLinks } from "./ShopNavLinks";
+import { type ShopNavGates, ShopNavLinks } from "./ShopNavLinks";
 import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
 
@@ -15,11 +15,14 @@ export function ShopNav({
   shopSlug,
   shopName,
   boatBoardingHref,
+  navGates,
 }: {
   shopSlug: string;
   shopName: string;
   /** Today's next departure's boarding, when the shop has a boat out today. */
   boatBoardingHref?: string;
+  /** Owner/manager surfaces (H-14) to hide from nav, shortcuts, and search for everyone else. */
+  navGates: ShopNavGates;
 }) {
   const root = `/shop/${shopSlug}`;
   return (
@@ -44,8 +47,12 @@ export function ShopNav({
         </Link>
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
-          <CommandPalette shopSlug={shopSlug} boatBoardingHref={boatBoardingHref} />
-          <KeyboardShortcuts shopSlug={shopSlug} />
+          <CommandPalette
+            shopSlug={shopSlug}
+            boatBoardingHref={boatBoardingHref}
+            canManageWaivers={navGates.waivers}
+          />
+          <KeyboardShortcuts shopSlug={shopSlug} canManageWaivers={navGates.waivers} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
@@ -56,7 +63,11 @@ export function ShopNav({
             </button>
           </form>
         </div>
-        <ShopNavLinks root={root} className="order-last w-full sm:order-2 sm:w-auto sm:flex-1" />
+        <ShopNavLinks
+          root={root}
+          gates={navGates}
+          className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"
+        />
       </div>
     </header>
   );

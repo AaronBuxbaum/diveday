@@ -8,6 +8,12 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
 import { auth } from "@/lib/auth";
+import {
+  canExportShopData,
+  canImportShopData,
+  canManageWaiverTemplates,
+  canViewShopReports,
+} from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 
 /**
@@ -94,6 +100,12 @@ export default async function ShopLayout({
           shopSlug={shopSlug}
           shopName={shop.name}
           boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
+          navGates={{
+            waivers: canManageWaiverTemplates(session.user.roles),
+            reports: canViewShopReports(session.user.roles),
+            import: canImportShopData(session.user.roles),
+            export: canExportShopData(session.user.roles),
+          }}
         />
       ) : null}
       <PreserveFormScroll />

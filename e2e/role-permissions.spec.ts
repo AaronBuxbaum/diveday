@@ -38,9 +38,10 @@ test.describe("H-14 role permissions", () => {
   }) => {
     await signInAs(page, DEV_STAFF_LOGINS.captain);
 
-    // Waiver — the legal instrument — is read-only.
+    // Waiver — the legal instrument — has no use for the daily crew, so the
+    // surface doesn't exist for them: bounced to Today, not shown read-only.
     await page.goto(`/shop/${SHOP}/waivers`);
-    await expect(page.getByText("limited to owners and managers")).toBeVisible();
+    await expect(page).toHaveURL(`/shop/${SHOP}`);
     await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
 
     // Payment settings — Stripe + rental catalog/prices — are hidden.
@@ -76,7 +77,7 @@ test.describe("H-14 role permissions", () => {
 
     // Money and the legal waiver are still owner/manager only.
     await page.goto(`/shop/${SHOP}/waivers`);
-    await expect(page.getByText("limited to owners and managers")).toBeVisible();
+    await expect(page).toHaveURL(`/shop/${SHOP}`);
     await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
 
     await page.goto(`/shop/${SHOP}/settings`);

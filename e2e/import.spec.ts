@@ -104,9 +104,10 @@ test.describe("contact import — explicit bounds (CR-016)", () => {
 
 test("import is refused for staff below owner/manager", async ({ page }) => {
   // A captain is staff everywhere else, but the importer writes the whole
-  // roster, so they're told why they can't and get no upload control.
+  // roster, so the surface doesn't exist for them — bounced to Today rather
+  // than shown a read-only/explained page.
   await signInAs(page, DEV_STAFF_LOGINS.captain);
   await page.goto("/shop/blue-mantis/settings/import");
-  await expect(page.getByText(/limited to the shop's owner or manager/)).toBeVisible();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });

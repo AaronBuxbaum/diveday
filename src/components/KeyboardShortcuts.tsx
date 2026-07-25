@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Keyboard shortcuts beyond ⌘K, made discoverable. A "g then key" sequence jumps
@@ -13,13 +14,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type NavShortcut = { key: string; label: string; suffix: string };
 
-const NAV_SHORTCUTS: NavShortcut[] = [
+const BASE_NAV_SHORTCUTS: NavShortcut[] = [
   { key: "t", label: "Today", suffix: "" },
   { key: "s", label: "Schedule", suffix: "/schedule" },
   { key: "d", label: "Divers", suffix: "/divers" },
   { key: "b", label: "Blockers", suffix: "/blockers" },
-  { key: "w", label: "Waivers", suffix: "/waivers" },
 ];
+
+const WAIVERS_SHORTCUT: NavShortcut = { key: "w", label: "Waivers", suffix: "/waivers" };
 
 /** True when focus is in a text-entry surface, where letter keys are content. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -30,12 +32,22 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-export function KeyboardShortcuts({ shopSlug }: { shopSlug: string }) {
+export function KeyboardShortcuts({
+  shopSlug,
+  canManageWaivers,
+}: {
+  shopSlug: string;
+  canManageWaivers: boolean;
+}) {
   const router = useRouter();
   const root = `/shop/${shopSlug}`;
   const [helpOpen, setHelpOpen] = useState(false);
   // Timestamp of a pending "g", so the next key completes the sequence.
   const pendingG = useRef<number | null>(null);
+  const navShortcuts = useMemo(
+    () => (canManageWaivers ? [...BASE_NAV_SHORTCUTS, WAIVERS_SHORTCUT] : BASE_NAV_SHORTCUTS),
+    [canManageWaivers],
+  );
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -58,7 +70,7 @@ export function KeyboardShortcuts({ shopSlug }: { shopSlug: string }) {
       const now = event.timeStamp;
       if (pendingG.current !== null && now - pendingG.current < 1500) {
         pendingG.current = null;
-        const target = NAV_SHORTCUTS.find((shortcut) => shortcut.key === event.key.toLowerCase());
+        const target = navShortcuts.find((shortcut) => shortcut.key === event.key.toLowerCase());
         if (target) {
           event.preventDefault();
           setHelpOpen(false);
@@ -72,7 +84,7 @@ export function KeyboardShortcuts({ shopSlug }: { shopSlug: string }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router, root]);
+  }, [router, root, navShortcuts]);
 
   const close = useCallback(() => setHelpOpen(false), []);
 
@@ -89,50 +101,57 @@ export function KeyboardShortcuts({ shopSlug }: { shopSlug: string }) {
         <kbd className="font-semibold">?</kbd>
       </button>
 
-      {helpOpen ? (
-        // biome-ignore lint/a11y/noStaticElementInteractions: presentational backdrop
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/30 px-4 pt-[12vh] backdrop-blur-sm"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) close();
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Keyboard shortcuts"
-            className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
-          >
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h2 className="text-base font-semibold">Keyboard shortcuts</h2>
-              <button
-                type="button"
-                onClick={close}
-                aria-label="Close"
-                className="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-sunken hover:text-foreground"
+      {helpOpen
+        ? createPortal(
+            // The header this button lives in has `backdrop-blur`, which makes it a
+            // containing block for `position: fixed` descendants — a portal escapes
+            // that so the backdrop covers the full viewport instead of just the
+            // header's own box.
+            // biome-ignore lint/a11y/noStaticElementInteractions: presentational backdrop
+            <div
+              className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/30 px-4 pt-[12vh] backdrop-blur-sm"
+              role="presentation"
+              onClick={(event) => {
+                if (event.target === event.currentTarget) close();
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Keyboard shortcuts"
+                className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
               >
-                ✕
-              </button>
-            </div>
-            <dl className="divide-y divide-border">
-              <ShortcutRow keys={["⌘", "K"]} label="Search divers, trips, and pages" />
-              <ShortcutRow keys={["?"]} label="Show this help" />
-              {NAV_SHORTCUTS.map((shortcut) => (
-                <ShortcutRow
-                  key={shortcut.key}
-                  keys={["G", shortcut.key.toUpperCase()]}
-                  label={`Go to ${shortcut.label}`}
-                />
-              ))}
-            </dl>
-            <p className="border-t border-border px-5 py-3 text-xs text-muted">
-              Press keys one after another for a sequence — e.g. <kbd>G</kbd> then <kbd>S</kbd> for
-              the schedule.
-            </p>
-          </div>
-        </div>
-      ) : null}
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <h2 className="text-base font-semibold">Keyboard shortcuts</h2>
+                  <button
+                    type="button"
+                    onClick={close}
+                    aria-label="Close"
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-sunken hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <dl className="divide-y divide-border">
+                  <ShortcutRow keys={["⌘", "K"]} label="Search divers, trips, and pages" />
+                  <ShortcutRow keys={["?"]} label="Show this help" />
+                  {navShortcuts.map((shortcut) => (
+                    <ShortcutRow
+                      key={shortcut.key}
+                      keys={["G", shortcut.key.toUpperCase()]}
+                      label={`Go to ${shortcut.label}`}
+                    />
+                  ))}
+                </dl>
+                <p className="border-t border-border px-5 py-3 text-xs text-muted">
+                  Press keys one after another for a sequence — e.g. <kbd>G</kbd> then <kbd>S</kbd>{" "}
+                  for the schedule.
+                </p>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
