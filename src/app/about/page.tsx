@@ -47,7 +47,7 @@ const plainTruths = [
 
 export default function AboutPage() {
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex flex-1 flex-col">
       <MarketingNav />
       <main className="flex-1">
         <section className="border-b border-border">

@@ -232,10 +232,24 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
   return envelope;
 }
 
-export async function primeOfflineManifestShell(): Promise<void> {
-  if (!("serviceWorker" in navigator))
-    throw new Error("This browser does not support offline mode");
-  const registration = await navigator.serviceWorker.register("/manifest-sw.js", { scope: "/" });
-  await navigator.serviceWorker.ready;
-  registration.active?.postMessage({ type: "CACHE_OFFLINE_MANIFEST_SHELL" });
+// The live manifest page primes this in the background on mount, and "Save
+// for offline" primes it again on click — sharing one in-flight promise keeps
+// a fast click from kicking off a second concurrent register/cache round trip.
+let primeInFlight: Promise<void> | null = null;
+
+export function primeOfflineManifestShell(): Promise<void> {
+  if (!primeInFlight) {
+    primeInFlight = (async () => {
+      if (!("serviceWorker" in navigator))
+        throw new Error("This browser does not support offline mode");
+      const registration = await navigator.serviceWorker.register("/manifest-sw.js", {
+        scope: "/",
+      });
+      await navigator.serviceWorker.ready;
+      registration.active?.postMessage({ type: "CACHE_OFFLINE_MANIFEST_SHELL" });
+    })().finally(() => {
+      primeInFlight = null;
+    });
+  }
+  return primeInFlight;
 }
