@@ -226,6 +226,15 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "readiness", scheme);
     });
 
+    // Its own test rather than another stop on the public-surfaces tour: that
+    // one already carries a dozen captures against the global 15s ceiling, and
+    // a trust page whose baseline is skipped because a long test ran out of
+    // budget is the one baseline you'd most want.
+    test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
+      await page.goto("/about");
+      await capture(page, "about", scheme);
+    });
+
     test.describe("staff", () => {
       signedInAsOwner();
 
