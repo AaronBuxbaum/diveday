@@ -78,7 +78,7 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
     // rather than silently accepted. See H-22, docs/product/human-decisions.md.
     state: "waiting",
     detail:
-      "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, give the shop a call and they’ll sort it out.",
+      "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, reach out to the shop and they’ll sort it out.",
   },
   waiver_not_sent: {
     // A waiver goes out the moment a diver joins, so this state is the rare
