@@ -1,8 +1,9 @@
 # Public marketing surfaces — what they are and how to write them
 
 DiveDay's public pages are the homepage (`/`), product page (`/product`), pricing page
-(`/pricing`), and the onboarding entry (`/onboard`); switching guides (`/switching/*`) join them as
-they ship. They are a truthful sales surface for the product that exists today.
+(`/pricing`), the about page (`/about`), and the onboarding entry (`/onboard`); switching guides
+(`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
+exists today.
 
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
@@ -55,6 +56,14 @@ chosen battlegrounds — and re-read it before changing the spine.
   the same way the price does.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
+- **Biography is a claim like any other.** `/about` names a real person and describes real history,
+  so shipped-only becomes *true-only*: no employer, credential, certification level, or origin
+  anecdote goes on the page unless the product owner has confirmed it. A session may not infer a
+  founder fact from a repo document, a commit, or a plausible-sounding draft. Statements about the
+  industry ("shops lose money on X") are claims too — either cite a documented source the way a
+  switching guide cites an incumbent, or phrase it as what the founder personally observed, which
+  needs no source but also may not be invented on his behalf. The corporate entity stays off the
+  page entirely until the entity decision closes.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
@@ -143,6 +152,7 @@ them) is a deliberate, ADR-gated decision if the mockups ever stop being enough.
 | Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`) |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the only place |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) |
+| Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx` |
 | Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` |
 | Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (framework-free data); pages in `src/app/switching/` |

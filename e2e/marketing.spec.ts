@@ -45,6 +45,44 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("button", { name: "Try the live demo first" })).toBeVisible();
 });
 
+test("the about page says who is behind DiveDay and what it won't pretend", async ({ page }) => {
+  // Reachable from the footer on any marketing page — the conventional place a
+  // buyer looks for who they're dealing with.
+  await page.goto("/");
+  await page.getByRole("contentinfo").getByRole("link", { name: "About" }).click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Built by a diver who kept watching good shops fight their software.",
+    }),
+  ).toBeVisible();
+
+  // The page earns trust by conceding, not by claiming: the honest-no block and
+  // the named accountable human are the load-bearing parts.
+  await expect(
+    page.getByRole("heading", { name: "What we're not going to pretend." }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
+  await expect(page.getByText("Aaron Buxbaum, founder")).toBeVisible();
+
+  // A trust page that didn't land on the exit would be missing the point.
+  await expect(
+    page.getByRole("heading", { name: "Who you're actually buying from." }),
+  ).toBeVisible();
+  await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
+
+  // No fabricated proof anywhere on the page a buyer reads for credibility.
+  const rendered = await page.locator("body").innerText();
+  for (const pattern of [/trusted by/i, /\d+\+? (shops|customers|divers) (use|trust)/i]) {
+    expect(rendered, `unfounded social proof matching ${pattern}`).not.toMatch(pattern);
+  }
+
+  // Demo-before-trial, same funnel order as every other marketing page.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start a trial" }).last()).toBeVisible();
+});
+
 test("migration guides walk a shop from an incumbent export into the importer", async ({
   page,
 }) => {

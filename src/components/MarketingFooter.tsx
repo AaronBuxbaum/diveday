@@ -22,6 +22,9 @@ export function MarketingFooter() {
           <Link href="/switching" className="hover:text-foreground hover:underline">
             Switch
           </Link>
+          <Link href="/about" className="hover:text-foreground hover:underline">
+            About
+          </Link>
           <Link href="/sign-in" className="hover:text-foreground hover:underline">
             Sign in
           </Link>
