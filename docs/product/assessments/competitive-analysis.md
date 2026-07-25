@@ -83,8 +83,9 @@ In rough order of how often it would kill the deal:
    eLearning/roster hooks. The honest near-term version is course rosters and student progress that
    *feel* agency-aware, plus painless
    CSV/export interop — not speculative API plumbing.
-5. **No owner reporting.** The buyer is often the owner; "how's my month" (bookings, revenue,
-   fill rate, waiver completion) has no surface. Even a modest dashboard removes a checklist zero.
+5. ~~**No owner reporting.**~~ ✅ **Closed 2026-07-23** — the "How's your month" dashboard
+   (`/shop/[shopSlug]/reports`: revenue, bookings, seat fill, waiver completion) shipped
+   ([ADR](../../architecture/decisions/20260723-owner-reporting.md)).
 6. **Trust signals are thin.** No case study, no production track record, and the safety
    differentiator (offline manifest) is field-unvalidated (V-02). In a market scarred by vendor
    deaths and acquisitions, "new + unproven + niche" is the objection; the counter is easy data
@@ -97,22 +98,21 @@ multi-location (say "not yet" honestly, as the pricing FAQ already does).
 ## Pricing posture
 
 The founding-shop price ([marketing.md](../marketing.md#pricing-boundary), set in
-`src/lib/marketing.ts` — the source of truth, early-access and still moving) has come **down** from
-the original $249 toward the specialist tier (DiveAdmin tops out at $119, Bloowatch at €119,
-DiveShop360's POS-inclusive Startup is ~$149–199) — the "meet the market" direction below. The final
-number is still an open **H-12** decision; two coherent postures remain:
+`src/lib/marketing.ts`) came **down** from the original $249 toward the specialist tier (DiveAdmin
+tops out at $119, Bloowatch at €119, DiveShop360's POS-inclusive Startup is ~$149–199) — the "meet
+the market" posture below, which is the one **H-12 closed on 2026-07-24**: **$99 flat per location /
+month**, everything included, no setup fee, no platform fee, cancel anytime with the export button,
+plus a **two-year founding-cohort price lock** and **founder-direct, same-day support**. Still open
+(not blocking the founding-cohort launch): standard post-cohort pricing, taxes/fees treatment, and
+the public contract/intake flow — see [human-decisions.md](../human-decisions.md#decision-register)
+H-12.
 
-- **Meet the market:** land ~**$79–129 flat, everything included, zero commission** — makes
-  "no add-ons" the headline against Bloowatch/TrekkSoft nickel-and-diming. The price drop is already
-  walking this way.
-- **Earn the premium:** hold higher only once the manifest is field-proven (V-02) — checkout-at-booking
-  and default-sending notifications have since shipped, so that half of the earlier bar is now met —
-  and sell it as "the safety-first operating system," with the 6%-of-volume math versus FareHarbor as
-  the anchor (a shop doing $300k/yr online pays $9–18k/yr in generic-platform fees).
-
-Either is defensible; the earlier mismatch (a premium number against table-stakes gaps) is what the
-price drop and the shipped checkout/notifications have been closing. The final number is a
-product-owner decision before any customer-facing publication (H-12).
+- **Meet the market** (chosen): land flat, everything included, zero commission — makes
+  "no add-ons" the headline against Bloowatch/TrekkSoft nickel-and-diming.
+- **Earn the premium** (not taken): hold higher once the manifest is field-proven (V-02) and sell it
+  as "the safety-first operating system," with the 6%-of-volume math versus FareHarbor as the anchor
+  (a shop doing $300k/yr online pays $9–18k/yr in generic-platform fees). V-02 is still open, so this
+  lever stays available if the meet-the-market posture needs revisiting post-launch.
 
 ## Critical vs. differentiator
 
@@ -126,14 +126,14 @@ product-owner decision before any customer-facing publication (H-12).
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
 | Rental equipment tracking | Universal | ❌ Sizes only, no inventory/service | Critical — gap |
 | Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email everywhere via one seam (confirmation, waiver, wait-list invite); scheduled 7-day/24-hour reminders add courtesy SMS. A Twilio SMS/WhatsApp seam exists but only reminders use it — no flow requests WhatsApp yet | Critical — email + reminder SMS done; WhatsApp unwired, consent/copy (H-09) open |
-| Owner reporting | Expected | ❌ | Critical-lite — gap |
+| Owner reporting | Expected | ✅ "How's your month" dashboard ([shipped 2026-07-23](../../architecture/decisions/20260723-owner-reporting.md)) | Critical-lite — done |
 | Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
 | Fail-closed readiness engine | **No one has it** | ✅ | **Differentiator #1** |
 | Offline roll call w/ reconciliation | No one has it | ✅ (field-unproven, V-02) | Differentiator — prove it |
 | No-login diver arc (book/sign/readiness) | No one has it end-to-end | ✅ | Differentiator |
 | Today/blocker daily loop | No one has it | ✅ | Differentiator |
 | Delight/UX | Open flank (EVE is the anti-model) | ✅ Visibly ahead | Differentiator |
-| Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ⚠️ Posture right; number moving toward market (H-12, see [Pricing posture](#pricing-posture)) | Differentiator once H-12 lands |
+| Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ✅ $99 flat, everything included, no platform fee (H-12 closed 2026-07-24, see [Pricing posture](#pricing-posture)) | Differentiator |
 | Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22, the CSV importer 2026-07-23, and the public migration guides (`/switching` hub + live EVE, DiveShop360, DiveAdmin, Smartwaiver pages) 2026-07-23 ([export](../../architecture/decisions/20260722-full-shop-export.md), [importer](../../architecture/decisions/20260723-contact-importer.md)); read API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, importer ✅, migration guides ✅, then read API + webhooks |
 
 ## Implications for the queue
@@ -154,7 +154,8 @@ with one material re-ranking from the buyer's chair:
    reminders via an idempotent cron endpoint (both off until their env is set). Remaining is policy,
    not mechanism: the H-09 consent/copy/sender ownership decision.
 3. Field-validate the manifest (V-02) before marketing leans on safety.
-4. Decide the pricing posture (owner decision) before publishing beyond the trial surface.
+4. ✅ **Pricing posture decided (H-12, 2026-07-24)** — $99 flat per location/month, published on the
+   pricing and home pages; see [Pricing posture](#pricing-posture).
 5. Re-scope a *minimal* gear register (who-has-what + service-due, not POS) as the answer to the
    equipment disqualifier — an ADR-worthy reversal of the M5 removal, deliberately smaller.
 6. Keep the cut list cut: dive-site CMS/global catalog and per-agency verification plumbing add
