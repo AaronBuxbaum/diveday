@@ -10,12 +10,12 @@ import { fullShopExport } from "@/lib/marketing";
 export const metadata: Metadata = {
   title: "Who we are — DiveDay",
   description:
-    "DiveDay is built by one diver who kept watching good shops run the day on a whiteboard and a clipboard. Who you're buying from, what we won't pretend, and how you leave.",
+    "DiveDay is built by a software engineer who got certified in 2024, got obsessed, and started building after a shop owner showed him what the day really costs. Who you're buying from, what we won't pretend, and how you leave.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "Who we are — DiveDay",
     description:
-      "One diver, one product, and a shop day that deserved better software. Who you're buying from, and what we won't pretend.",
+      "An engineer who fell for diving, then saw what the shops were running on. Who you're buying from, and what we won't pretend.",
     url: "/about",
   },
 };
@@ -28,6 +28,10 @@ export const metadata: Metadata = {
  */
 const plainTruths = [
   {
+    title: "I'm new to diving.",
+    body: "Certified in 2024, and the people running these shops have been at it for decades. I'm not here to tell anyone how to run a dive operation — I'm here to build the tool, and to listen closely to the people who do know.",
+  },
+  {
     title: "DiveDay is new.",
     body: "There is no install base to point at and no wall of logos to borrow credibility from. That is exactly why the demo is a real working shop and the export button works on your first day.",
   },
@@ -37,7 +41,7 @@ const plainTruths = [
   },
   {
     title: "It's still moving.",
-    body: "Early access means the shops using it now are the ones deciding what gets built next. That's the trade: a product that bends toward your season, and one that is still changing while you use it.",
+    body: "Early access means the shops that join first steer what gets built next, not a roadmap set months in advance in a room far from the water. That's the trade: a product that bends toward your season, and one that is still changing while you use it.",
   },
 ] as const;
 
@@ -53,12 +57,13 @@ export default function AboutPage() {
                 Who we are
               </p>
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">
-                Built by a diver who kept watching good shops fight their software.
+                Built by someone who fell for diving, then saw what the shops were running on.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-                DiveDay is made in Florida by its founder, for the shops he dives with. It is not a
-                side product of a bigger company, and there is no roadmap set in a room far away
-                from a boat.
+                DiveDay isn't a side product tucked inside a bigger company, and it isn't run by a
+                committee that has never seen a boat. One founder is accountable for every call it
+                makes — and every one of those calls gets built in direct contact with the people
+                who actually run the dive day: the front desk, the crew, the divers themselves.
               </p>
             </div>
           </div>
@@ -68,31 +73,36 @@ export default function AboutPage() {
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
             <div>
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                Why this exists
+                From the founder
               </p>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                The dive day was already running on paper.
+                Why this exists.
               </h2>
             </div>
             <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
               <p>
-                Go behind the counter at almost any dive shop and you find the same thing: a
+                This started with one dive shop owner walking me through how his day actually ran: a
                 whiteboard for tomorrow, a clipboard for the boat, a spreadsheet somebody maintains
-                by hand, and two or three apps that don't speak to each other. None of it is
-                anyone's fault. The staff are good at their jobs. The tools just never showed up.
+                by hand, and two or three apps that don't speak to each other. It was costing him
+                money, and worse, it was costing him the attention that should have been going to
+                his divers. None of that was his fault, or his staff's — they're good at their jobs.
+                The tools just never showed up.
               </p>
               <p>
-                Software exists for this industry, and most of it is dated at best and actively
-                hostile at worst — desktop-bound, slow, built for a back office rather than a wet
-                dock. So shops keep the paper, because paper at least never fights back. The cost
-                isn't dramatic. It's an hour lost every morning, a diver called twice for the same
-                card, and a crew that leaves the dock less sure than they'd like to be.
+                I'd gotten certified in 2024 and was already obsessed. I also build software for a
+                living — Google Maps, a biotech company through its IPO, and now self-driving cars —
+                so I recognized the shape of the problem right away: an entire industry running on
+                tools nobody had actually built for it. Most of what exists for dive shops is dated
+                at best and actively hostile at worst — desktop-bound, slow, built for a back office
+                rather than a wet dock. So shops keep the paper, because paper at least never fights
+                back.
               </p>
               <p>
-                DiveDay started as the stubborn belief that a dive shop deserves software as good as
-                the shop is. Not more features — better ones, on a phone, in the sun, with wet
-                hands. That is the whole bet, and it's why the product is judged on whether staff
-                actually want to open it.
+                DiveDay exists so a shop can spend its day on the parts of diving it fell in love
+                with, and not on paperwork. That means software that's genuinely a pleasure to use —
+                fast, beautiful, forgiving, workable on a phone in the sun with wet hands — built in
+                conversation with the people who actually run the boats, not around them. The only
+                test that matters is whether your crew wants to open it.
               </p>
             </div>
           </div>
@@ -146,7 +156,7 @@ export default function AboutPage() {
               bookings.
             </p>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {plainTruths.map((truth) => (
               <article
                 key={truth.title}
@@ -191,8 +201,9 @@ export default function AboutPage() {
                     Who builds it
                   </dt>
                   <dd className="mt-2 leading-7">
-                    Aaron Buxbaum, founder — a diver and a software engineer, and the person
-                    accountable for every call DiveDay makes.
+                    Aaron Buxbaum, founder — a software engineer (Google Maps, a biotech company
+                    through its IPO, self-driving cars) and an obsessive diver since 2024. The
+                    person accountable for every call DiveDay makes.
                   </dd>
                 </div>
                 <div className="p-6">
