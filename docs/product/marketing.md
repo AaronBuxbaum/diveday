@@ -69,7 +69,15 @@ chosen battlegrounds — and re-read it before changing the spine.
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
   list needs its own confirmation — **the founder's home location is explicitly not confirmed and
   must not appear on the page**; an earlier draft stated "made in Florida" without confirmation and
-  that was a real violation of this rule, corrected 2026-07-25.
+  that was a real violation of this rule, corrected 2026-07-25. **Confirmed by the product owner
+  2026-07-25:** DiveDay now has a second person contributing (legal and outreach, also a diver), so
+  `/about` may honestly speak in plural/team voice for what both share (being divers, the mission)
+  — but Aaron remains the sole owner (matches H-04) and the sole developer, so anything that is
+  specifically his — the "Who builds it" credential block, the founder-direct support line, the
+  2024 certification date — stays singular and scoped to him, not generalized to "we." The second
+  person is deliberately **not named and has no stated title**; a session may not name her, assign
+  her a title, or state her certification date, tenure, or any fact about her beyond "a second
+  person, a diver, working on legal and outreach" without new confirmation.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never

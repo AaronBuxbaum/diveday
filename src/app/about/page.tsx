@@ -10,12 +10,12 @@ import { fullShopExport } from "@/lib/marketing";
 export const metadata: Metadata = {
   title: "Who we are — DiveDay",
   description:
-    "DiveDay is built by a software engineer who got certified in 2024, got obsessed, and started building after a shop owner showed him what the day really costs. Who you're buying from, what we won't pretend, and how you leave.",
+    "DiveDay is built by a small team of people who dive, who saw what shops were actually running on and decided paperwork shouldn't be the job. Who you're buying from, what we won't pretend, and how you leave.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "Who we are — DiveDay",
     description:
-      "An engineer who fell for diving, then saw what the shops were running on. Who you're buying from, and what we won't pretend.",
+      "A small team of divers who saw what the shops were running on. Who you're buying from, and what we won't pretend.",
     url: "/about",
   },
 };
@@ -27,10 +27,6 @@ export const metadata: Metadata = {
  * than product scope — the product's own honest-no lives on /product.
  */
 const plainTruths = [
-  {
-    title: "I'm new to diving.",
-    body: "Certified in 2024, and the people running these shops have been at it for decades. I'm not here to tell anyone how to run a dive operation — I'm here to build the tool, and to listen closely to the people who do know.",
-  },
   {
     title: "DiveDay is new.",
     body: "There is no install base to point at and no wall of logos to borrow credibility from. That is exactly why the demo is a real working shop and the export button works on your first day.",
@@ -57,13 +53,12 @@ export default function AboutPage() {
                 Who we are
               </p>
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">
-                Built by someone who fell for diving, then saw what the shops were running on.
+                Built by divers, for divers.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-                DiveDay isn't a side product tucked inside a bigger company, and it isn't run by a
-                committee that has never seen a boat. One founder is accountable for every call it
-                makes — and every one of those calls gets built in direct contact with the people
-                who actually run the dive day: the front desk, the crew, the divers themselves.
+                DiveDay isn't a side product inside a bigger company, or a roadmap set by a
+                committee that's never seen a boat. It's built by a small team of divers, with one
+                founder accountable for every call it makes.
               </p>
             </div>
           </div>
@@ -89,9 +84,7 @@ export default function AboutPage() {
                 The tools just never showed up.
               </p>
               <p>
-                I'd gotten certified in 2024 and was already obsessed. I also build software for a
-                living — Google Maps, a biotech company through its IPO, and now self-driving cars —
-                so I recognized the shape of the problem right away: an entire industry running on
+                We recognized the shape of the problem right away: an entire industry running on
                 tools nobody had actually built for it. Most of what exists for dive shops is dated
                 at best and actively hostile at worst — desktop-bound, slow, built for a back office
                 rather than a wet dock. So shops keep the paper, because paper at least never fights
@@ -156,7 +149,7 @@ export default function AboutPage() {
               bookings.
             </p>
           </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
             {plainTruths.map((truth) => (
               <article
                 key={truth.title}
