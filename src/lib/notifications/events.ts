@@ -2,10 +2,11 @@ import { z } from "zod";
 import type { ResendWebhookEvent } from "./webhook";
 
 /**
- * Turns a verified Resend event into the two things this application acts on:
- * a delivery outcome for a message we sent, and an inbound reply
- * (20260724-resend-webhook-email-events). Everything else — domain, contact,
- * and suppression-list events, plus open/click tracking we deliberately do not
+ * Turns a verified Resend event into the one thing this application acts on: a
+ * delivery outcome for a message we sent
+ * (20260726-hosted-mailboxes-for-platform-mail). Everything else — inbound
+ * mail, which is a hosted mailbox's job rather than ours, domain, contact, and
+ * suppression-list events, plus open/click tracking we deliberately do not
  * record — reduces to `ignored`, so an endpoint subscribed to more events than
  * it handles still answers 200 rather than erroring.
  */
@@ -37,18 +38,6 @@ const deliveryDataSchema = z.object({
   failed: z.object({ reason: z.string().optional() }).optional(),
 });
 
-const receivedDataSchema = z.object({
-  email_id: z.string().min(1),
-  created_at: z.string().min(1).optional(),
-  from: z.string().min(1),
-  to: z.array(z.string()).default([]),
-  cc: z.array(z.string()).default([]),
-  bcc: z.array(z.string()).default([]),
-  received_for: z.array(z.string()).default([]),
-  subject: z.string().optional(),
-  attachments: z.array(z.unknown()).optional(),
-});
-
 export type ResendEmailEvent =
   | {
       kind: "delivery";
@@ -57,16 +46,6 @@ export type ResendEmailEvent =
       /** The provider's explanation for a bounce or failure, when it gave one. */
       detail: string | null;
       occurredAt: Date;
-    }
-  | {
-      kind: "received";
-      providerEmailId: string;
-      from: string;
-      /** Every address the message reached us by, for reply-token matching. */
-      recipients: string[];
-      subject: string | null;
-      hasAttachments: boolean;
-      receivedAt: Date;
     }
   | { kind: "ignored" };
 
@@ -83,7 +62,7 @@ function deliveryDetail(data: z.infer<typeof deliveryDataSchema>): string | null
   return classification || null;
 }
 
-/** Falls back to the event's own stamp, then to `receivedAt`, so a row always has a time. */
+/** Falls back to the event's own stamp, then to now, so a row always has a time. */
 function timestampFrom(candidates: readonly (string | undefined)[], fallback: Date): Date {
   for (const candidate of candidates) {
     if (!candidate) continue;
@@ -94,20 +73,6 @@ function timestampFrom(candidates: readonly (string | undefined)[], fallback: Da
 }
 
 export function parseResendEmailEvent(event: ResendWebhookEvent, now: Date): ResendEmailEvent {
-  if (event.type === "email.received") {
-    const data = receivedDataSchema.safeParse(event.data);
-    if (!data.success) return { kind: "ignored" };
-    return {
-      kind: "received",
-      providerEmailId: data.data.email_id,
-      from: data.data.from,
-      recipients: [...data.data.to, ...data.data.cc, ...data.data.received_for],
-      subject: data.data.subject?.trim() || null,
-      hasAttachments: (data.data.attachments ?? []).length > 0,
-      receivedAt: timestampFrom([data.data.created_at, event.created_at], now),
-    };
-  }
-
   const status = PROVIDER_STATUS_BY_TYPE[event.type as keyof typeof PROVIDER_STATUS_BY_TYPE];
   if (!status) return { kind: "ignored" };
   const data = deliveryDataSchema.safeParse(event.data);

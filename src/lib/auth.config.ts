@@ -16,13 +16,6 @@ export const authSecret =
   (process.env.NODE_ENV === "production" ? undefined : "diveday-dev-secret-not-for-production");
 
 const STAFF_PREFIX = "/shop";
-/**
- * DiveDay's own operator console (20260724-resend-webhook-email-events). The
- * edge can only tell that someone is signed-in staff — which platform mailboxes
- * they may read is a database question, answered by `requirePlatformSession`.
- * This is the outer layer that keeps the console off the public internet.
- */
-const PLATFORM_PREFIX = "/admin";
 
 const PUBLIC_SCHEDULE = /^\/shop\/[a-z0-9-]+\/schedule(\/.*)?$/;
 const COURSE_PAGE = /^\/shop\/([a-z0-9-]+)\/courses\/([a-z0-9-]+)\/?$/;
@@ -81,11 +74,6 @@ export const authConfig = {
         if (shopSlug) {
           return NextResponse.redirect(new URL(`/shop/${shopSlug}`, request.nextUrl));
         }
-      }
-      if (pathname.startsWith(PLATFORM_PREFIX)) {
-        if (!roles) return false; // Auth.js redirects to pages.signIn
-        if (!isStaff(roles)) return NextResponse.redirect(new URL("/", request.nextUrl));
-        return true;
       }
       if (pathname.startsWith(STAFF_PREFIX) && !isPublic) {
         if (!roles) return false; // Auth.js redirects to pages.signIn

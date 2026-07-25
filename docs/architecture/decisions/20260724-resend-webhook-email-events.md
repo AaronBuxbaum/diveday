@@ -1,7 +1,13 @@
 # 20260724-resend-webhook-email-events — Ingest Resend webhooks: delivery outcomes and DiveDay's own inbound mail
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260726-hosted-mailboxes-for-platform-mail](20260726-hosted-mailboxes-for-platform-mail.md)
 - **Date:** 2026-07-24
+
+> The delivery-outcome half of this decision still stands and is restated in the superseding ADR.
+> The inbound half — `inbound_emails`, `platform_mailboxes`, the `/admin` console — was built,
+> reviewed, and removed without ever being deployed: attachments and per-person delivery are
+> requirements it could not meet, and MX records make it mutually exclusive with the hosted
+> mailboxes that can. The code is preserved in history at commit `2a810bf`.
 
 ## Context
 

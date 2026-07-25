@@ -7,21 +7,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
-vi.mock("@/db/inbound-emails", () => ({
-  routeInboundEmail: vi.fn(),
-  recordInboundEmail: vi.fn(),
-}));
-vi.mock("@/lib/notifications/inbound", () => ({ inboundEmailFetcherFromEnvironment: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
-const { routeInboundEmail, recordInboundEmail } = await import("@/db/inbound-emails");
-const { inboundEmailFetcherFromEnvironment } = await import("@/lib/notifications/inbound");
 const { POST } = await import("./route");
 
 const secret = `whsec_${Buffer.from("resend-route-test-key").toString("base64")}`;
 const FAKE_DB = { fake: "db" };
-const UNROUTED = { mailboxId: null, toEmail: "hllo@dive.day" };
 
 function webhookRequest(
   event: Record<string, unknown>,
@@ -51,9 +43,6 @@ beforeEach(() => {
   vi.stubEnv("RESEND_WEBHOOK_SECRET", secret);
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(applyProviderEmailEvent).mockReset().mockResolvedValue("applied");
-  vi.mocked(routeInboundEmail).mockReset().mockResolvedValue(UNROUTED);
-  vi.mocked(recordInboundEmail).mockReset().mockResolvedValue({ id: "row_1", duplicate: false });
-  vi.mocked(inboundEmailFetcherFromEnvironment).mockReset().mockReturnValue(null);
 });
 
 describe("resend webhook route — signature gate", () => {
@@ -128,72 +117,5 @@ describe("resend webhook route — delivery events", () => {
     );
     expect(response.status).toBe(200);
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
-    expect(recordInboundEmail).not.toHaveBeenCalled();
-  });
-});
-
-describe("resend webhook route — inbound mail", () => {
-  const received = {
-    type: "email.received",
-    created_at: "2026-07-24T18:00:00.000Z",
-    data: {
-      email_id: "em_in_1",
-      from: "Priya Raman <priya@example.com>",
-      to: ["hello@dive.day"],
-      subject: "Switching from DiveAdmin",
-    },
-  };
-
-  it("files a message under its mailbox with the body it fetched separately", async () => {
-    vi.mocked(inboundEmailFetcherFromEnvironment).mockReturnValue({
-      fetchBody: vi.fn().mockResolvedValue({ text: "How much of our diver list comes across?" }),
-    });
-    vi.mocked(routeInboundEmail).mockResolvedValue({
-      mailboxId: "mailbox-1",
-      toEmail: "hello@dive.day",
-    });
-
-    const response = await POST(webhookRequest(received));
-
-    expect(response.status).toBe(200);
-    expect(routeInboundEmail).toHaveBeenCalledWith(FAKE_DB, ["hello@dive.day"]);
-    expect(recordInboundEmail).toHaveBeenCalledWith(
-      FAKE_DB,
-      expect.objectContaining({
-        providerEmailId: "em_in_1",
-        mailboxId: "mailbox-1",
-        toEmail: "hello@dive.day",
-        textBody: "How much of our diver list comes across?",
-        subject: "Switching from DiveAdmin",
-      }),
-    );
-  });
-
-  it("still files the message when the body fetch fails", async () => {
-    vi.mocked(inboundEmailFetcherFromEnvironment).mockReturnValue({
-      fetchBody: vi.fn().mockResolvedValue(null),
-    });
-
-    const response = await POST(webhookRequest(received));
-
-    expect(response.status).toBe(200);
-    expect(recordInboundEmail).toHaveBeenCalledWith(
-      FAKE_DB,
-      expect.objectContaining({ providerEmailId: "em_in_1", textBody: "" }),
-    );
-  });
-
-  it("files mail to an address no mailbox claims rather than dropping it", async () => {
-    vi.mocked(inboundEmailFetcherFromEnvironment).mockReturnValue({
-      fetchBody: vi.fn().mockResolvedValue({ text: "This week in dive retail…" }),
-    });
-
-    const response = await POST(webhookRequest(received));
-
-    expect(response.status).toBe(200);
-    expect(recordInboundEmail).toHaveBeenCalledWith(
-      FAKE_DB,
-      expect.objectContaining({ mailboxId: null }),
-    );
   });
 });

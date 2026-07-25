@@ -322,17 +322,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
-
-        // DiveDay's own inbox: mail written to the platform's role addresses,
-        // including a message to an address no mailbox claims.
-        await page.goto("/admin/inbox");
-        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-        await capture(page, "admin-inbox", scheme);
-
-        // And where those addresses and their readers are managed.
-        await page.goto("/admin/mailboxes");
-        await page.getByRole("heading", { level: 1, name: "Addresses" }).waitFor();
-        await capture(page, "admin-mailboxes", scheme);
       });
 
       // H-13: the roster's identity gate gets its own test so its capture never

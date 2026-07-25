@@ -177,7 +177,7 @@ export type ApplyProviderEmailEventResult = "applied" | "stale" | "unknown_messa
 
 /**
  * Files a provider-reported outcome against the message it belongs to, found
- * by the provider's own id (20260724-resend-webhook-email-events).
+ * by the provider's own id (20260726-hosted-mailboxes-for-platform-mail).
  *
  * Two things make this deliberately forgiving. Webhook delivery is
  * at-least-once and unordered, so an older event arriving after a newer one is

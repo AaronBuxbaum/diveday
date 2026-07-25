@@ -8,7 +8,6 @@ import { getDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { signIn } from "@/lib/auth";
 import { onboardSchema } from "@/lib/onboarding";
-import { isPlatformAdminEmail } from "@/lib/platform-admin";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -50,15 +49,7 @@ export async function onboardAction(formData: FormData) {
         .where(eq(userAccounts.email, ownerEmail.toLowerCase()))
         .limit(1);
 
-      // A DiveDay operator address is never claimable by self-signup. Sign-up
-      // takes an email on the caller's word — there is no verification step —
-      // and `PLATFORM_ADMIN_EMAILS` grants `/admin` to whoever holds the
-      // matching login (20260724-resend-webhook-email-events). Without this,
-      // an allowlisted address that has no account yet — the normal state of a
-      // fresh deploy — is a shop registration away from being the platform
-      // operator. Same message as a taken address, so the allowlist can't be
-      // enumerated from the response.
-      if (existingAccount || isPlatformAdminEmail(ownerEmail)) {
+      if (existingAccount) {
         onboardingError = "This email is already registered.";
         tx.rollback();
         return;

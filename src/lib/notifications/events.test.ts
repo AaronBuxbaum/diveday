@@ -81,65 +81,13 @@ describe("parseResendEmailEvent — delivery events", () => {
   });
 });
 
-describe("parseResendEmailEvent — inbound", () => {
-  const received = {
-    type: "email.received",
-    created_at: "2026-07-24T17:58:00.000Z",
-    data: {
-      email_id: "em_in_1",
-      created_at: "2026-07-24T17:57:00.000Z",
-      from: "Nora Quinn <nora@gmail.com>",
-      to: ["reply+tok@inbound.diveday.example"],
-      cc: ["crew@example.com"],
-      received_for: ["reply+tok@inbound.diveday.example"],
-      subject: "  Re: You're on the boat  ",
-    },
-  };
-
-  it("reads the sender, every recipient, and a trimmed subject", () => {
-    expect(parseResendEmailEvent(received, now)).toEqual({
-      kind: "received",
-      providerEmailId: "em_in_1",
-      from: "Nora Quinn <nora@gmail.com>",
-      recipients: [
-        "reply+tok@inbound.diveday.example",
-        "crew@example.com",
-        "reply+tok@inbound.diveday.example",
-      ],
-      subject: "Re: You're on the boat",
-      hasAttachments: false,
-      receivedAt: new Date("2026-07-24T17:57:00.000Z"),
-    });
-  });
-
-  it("flags attachments without recording their content", () => {
-    const event = parseResendEmailEvent(
-      { ...received, data: { ...received.data, attachments: [{ id: "att_1" }] } },
-      now,
-    );
-    expect(event).toMatchObject({ hasAttachments: true });
-  });
-
-  it("treats an empty subject as none", () => {
-    const event = parseResendEmailEvent(
-      { ...received, data: { ...received.data, subject: "   " } },
-      now,
-    );
-    expect(event).toMatchObject({ subject: null });
-  });
-
-  it("ignores an inbound event with no sender", () => {
-    const { from: _from, ...withoutSender } = received.data;
-    expect(parseResendEmailEvent({ ...received, data: withoutSender }, now)).toEqual({
-      kind: "ignored",
-    });
-  });
-});
-
 describe("parseResendEmailEvent — everything else", () => {
   it.each([
     ["email.opened"],
     ["email.clicked"],
+    // Inbound mail is a hosted mailbox's job, not ours. An endpoint left
+    // subscribed to it must still answer 200 rather than retry forever.
+    ["email.received"],
     ["domain.created"],
     ["contact.deleted"],
     ["suppression.added"],
