@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { cardDisplayStatus, isCardExpired, isImportedCard, needsImportConfirm } from "./shared";
+import {
+  cardDisplayStatus,
+  HELD_CARD_STATUS_LABELS,
+  heldCardDisplayStatus,
+  heldCardStatusTone,
+  isCardExpired,
+  isImportedCard,
+  needsImportConfirm,
+} from "./shared";
 
 const TODAY = "2026-07-21";
 
@@ -50,5 +58,41 @@ describe("imported card provenance and confirm nudge", () => {
     expect(needsImportConfirm({ importedAt: new Date(), reviewedAt: new Date() })).toBe(false);
     // A hand-entered card (never imported) is not a confirm-nudge case.
     expect(needsImportConfirm({ importedAt: null, reviewedAt: null })).toBe(false);
+  });
+});
+
+describe("heldCardDisplayStatus", () => {
+  const today = "2026-07-25";
+
+  it("distinguishes a card whose gate is still shut from one that clears", () => {
+    // The badge is the only thing on screen saying so. A hand-verified card reads
+    // plain "certified" and does clear; an imported, unconfirmed one holds its
+    // gate — the specialty dive, or the enriched-air fill — so it must not look
+    // identical at a busy desk (H-24).
+    const confirmed = {
+      status: "verified" as const,
+      importedAt: new Date(),
+      reviewedAt: new Date(),
+    };
+    const unconfirmed = { status: "verified" as const, importedAt: new Date(), reviewedAt: null };
+    const byHand = { status: "verified" as const, importedAt: null, reviewedAt: null };
+
+    expect(heldCardDisplayStatus(unconfirmed, today)).toBe("confirm_to_clear");
+    expect(HELD_CARD_STATUS_LABELS.confirm_to_clear).toBe("certified · confirm to clear");
+    expect(heldCardStatusTone("confirm_to_clear")).toBe("warning");
+
+    // Both of these genuinely clear, so both keep the plain certified badge.
+    expect(heldCardDisplayStatus(confirmed, today)).toBe("verified");
+    expect(heldCardDisplayStatus(byHand, today)).toBe("verified");
+    expect(heldCardStatusTone("verified")).toBe("success");
+  });
+
+  it("lets an overdue refresher outrank the confirm, since expiry is the harder fact", () => {
+    expect(
+      heldCardDisplayStatus(
+        { status: "verified", expiresAt: "2026-07-17", importedAt: new Date(), reviewedAt: null },
+        today,
+      ),
+    ).toBe("expired");
   });
 });
