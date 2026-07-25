@@ -34,10 +34,20 @@ export function StatsSummary({ diver }: { diver: DiverProfile }) {
         <p className="mt-1 text-2xl font-semibold">{profile ? "Saved" : "Needed"}</p>
         <p className="text-sm text-muted">Reusable for future bookings</p>
       </div>
+      {/* Bookings, deliberately — not dives. The imported half of this number is
+          what a prior system recorded as booked (ADR 20260725-import-prior-visits),
+          which includes rows it also recorded as cancelled; counting those as
+          dives would invent trips the diver never made. The sub-line splits the
+          number so nobody has to guess which part happened here. */}
       <div className="rounded-lg border border-border bg-surface p-4">
         <p className="text-sm text-muted">Shop history</p>
-        <p className="mt-1 text-2xl font-semibold">{diver.bookings.length}</p>
-        <p className="text-sm text-muted">booking{diver.bookings.length === 1 ? "" : "s"}</p>
+        <p className="mt-1 text-2xl font-semibold">
+          {diver.bookings.length + diver.priorVisits.length}
+        </p>
+        <p className="text-sm text-muted">
+          booking{diver.bookings.length + diver.priorVisits.length === 1 ? "" : "s"}
+          {diver.priorVisits.length > 0 ? ` · ${diver.priorVisits.length} imported` : ""}
+        </p>
       </div>
     </div>
   );

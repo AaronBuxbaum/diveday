@@ -93,6 +93,11 @@ const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
     column: "Rental sizes",
     detail: "BCD, wetsuit, boot, and fin — whatever sizes you already track become a fit profile.",
   },
+  {
+    column: "Past visits",
+    detail:
+      "Keep a booking log? A date column, plus what you called the trip and what you charged, turns each row into that diver's history here — so a regular arrives as a regular. Repeat the diver's email on each of their rows; that's how the rows find the right person. It's history, not schedule: imported visits never become trips, and a booking you'd written off as cancelled still reads cancelled.",
+  },
 ];
 
 export default function SpreadsheetSwitchPage() {

@@ -51,6 +51,13 @@
  *     including one already in the past — an expired card on file is a fact
  *     readiness must see, and the alternative is a migrated card that looks
  *     valid forever.
+ *   - A row that records a past booking becomes a **prior visit** (ADR
+ *     20260725-import-prior-visits): one inert history row per booking the old
+ *     system held, never a `trips`/`bookings` row. It needs a readable date or
+ *     it is declined — a visit with no date can't be placed on a timeline, and
+ *     no date is invented. The source's status word and money text are carried
+ *     verbatim and un-mapped, because a booking is not a dive and the amount is
+ *     display-only. Nothing here feeds a gate, capacity, or reporting.
  *
  * The published honesty table (IMPORT_HONESTY_TABLE) states the same scope in
  * the shop owner's language; keep the two in step.
@@ -72,9 +79,23 @@ import type { DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 
-export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
-export const MAX_IMPORT_ROWS = 5_000;
-export const MAX_IMPORT_COLUMNS = 40;
+/**
+ * Sized for the largest file the switching guides actually ask an owner to
+ * export. That used to be a contact list — a few thousand divers, one row each.
+ * With prior visits (ADR 20260725-import-prior-visits) it is a **bookings**
+ * export: one row per booking per diver, so a ten-year-old shop's file is an
+ * order of magnitude larger than its roster. The old 2 MB / 5,000-row ceiling
+ * rejected exactly the file the new columns exist to read.
+ *
+ * Still well under the 16 MB Server Actions body limit set in `next.config.ts`
+ * (ADR 20260723-upload-transport-limit), which remains the real transport
+ * ceiling — these are the app's own bounds, and they stay explicit rather than
+ * inheriting whatever the framework happens to allow.
+ */
+export const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
+export const MAX_IMPORT_ROWS = 20_000;
+/** A bookings export is column-heavy (per-item, per-fee, per-tax breakdowns). */
+export const MAX_IMPORT_COLUMNS = 64;
 export const MAX_IMPORT_CELL_LENGTH = 2_000;
 
 /** Certification agencies we can name; anything else lands as "other". Mirrors the pg enum. */
@@ -120,6 +141,14 @@ export const IMPORT_FIELDS = [
   "waiver_source_name",
   "waiver_document_url",
   "medical_document_url",
+  // Prior-visit columns, last on purpose: their aliases are the most generic in
+  // the file ("date", "amount", "description"), and field claiming is
+  // first-match-wins in this order, so every specific field gets its pick first.
+  "visit_date",
+  "visit_title",
+  "visit_status",
+  "visit_amount",
+  "visit_reference",
 ] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -292,6 +321,77 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "medical_scan_url",
     "medical_form_url",
   ],
+  // The bookings/orders exports the switching guides walk an owner through:
+  // FareHarbor's Bookings and Contacts reports, Rezdy's Sales/Orders report and
+  // Data export, EVE and DiveShop360 sales history, and a shop's own spreadsheet.
+  visit_date: [
+    "visit_date",
+    "trip_date",
+    "booking_date",
+    "tour_date",
+    "activity_date",
+    "departure_date",
+    "dive_date",
+    "date_of_visit",
+    "order_date",
+    "purchase_date",
+    "sale_date",
+    "start_date",
+    "date",
+  ],
+  visit_title: [
+    "visit_title",
+    "trip_name",
+    "tour_name",
+    "activity_name",
+    "product_name",
+    "item_name",
+    "booking_item",
+    "experience",
+    "trip",
+    "tour",
+    "activity",
+    "product",
+    "item",
+    "description",
+  ],
+  visit_status: [
+    "visit_status",
+    "booking_status",
+    "order_status",
+    "reservation_status",
+    "trip_status",
+    "attendance",
+    "attendance_status",
+  ],
+  visit_amount: [
+    "visit_amount",
+    "amount",
+    "amount_paid",
+    "total",
+    "total_paid",
+    "total_amount",
+    "order_total",
+    "booking_total",
+    "grand_total",
+    "price_paid",
+    "paid",
+  ],
+  visit_reference: [
+    "visit_reference",
+    "booking_id",
+    "booking_reference",
+    "booking_number",
+    "booking_no",
+    "order_id",
+    "order_number",
+    "order_no",
+    "reservation_id",
+    "confirmation_number",
+    "confirmation_code",
+    "reference",
+    "transaction_id",
+  ],
 };
 
 /**
@@ -381,9 +481,16 @@ export const IMPORT_HONESTY_TABLE: {
     detail: "Stays with your payment processor — DiveDay never imports card or payment data.",
   },
   {
-    what: "Booking, trip & service history",
+    what: "Past visits (what they booked, when)",
+    scope: "included",
+    detail:
+      "A bookings or orders export comes across one line per booking, and lands on the diver's profile as history: the date, what your old system called the trip, its own status word, and the price it recorded. Two things it deliberately is not. It is not a trip — imported history never appears on your schedule, never counts toward a boat's capacity, and never reaches a manifest. And a booking is not a dive: an export holds cancellations and no-shows too, so DiveDay shows your old system's own word for each line rather than counting them all as dives the diver made. The amounts are there to read, not to add up — they stay out of your reporting, which covers what you've run here.",
+  },
+  {
+    what: "Receipts & service history",
     scope: "stays-behind",
-    detail: "Not part of a contact import — your full-shop export carries the history.",
+    detail:
+      "Payment records stay with your processor, and gear-service history has nowhere to land — DiveDay tracks the sizes a diver takes, not individual rigs. Your full-shop export carries your DiveDay history when you want it.",
   },
 ];
 
@@ -527,6 +634,57 @@ export type PreparedWaiver = {
   medicalDocumentUrl: string | null;
 };
 
+/**
+ * One visit the diver made at the prior shop (ADR 20260725-import-prior-visits).
+ * Everything here is carried across as the file wrote it — this is a record of
+ * what another system said, not a claim DiveDay is making.
+ *
+ * `visitedOn` is the only required part: a visit with no date can't be placed on
+ * a timeline, and a history you can't order is not history. `statusLabel` and
+ * `amountLabel` are verbatim text on purpose (see `prior_visits` in
+ * src/db/schema.ts) — a booking is not a dive, and the money is display-only.
+ */
+export type PreparedVisit = {
+  /** Validated calendar date, shop-local. */
+  visitedOn: CalendarDate;
+  title: string | null;
+  /** The source's own status word, un-mapped ("Completed", "Cancelled"). */
+  statusLabel: string | null;
+  /** Raw money text, never parsed to a number. */
+  amountLabel: string | null;
+  sourceLabel: string | null;
+  sourceReference: string | null;
+  /** What a re-import keys on so the same file twice is not two histories. */
+  dedupeKey: string;
+};
+
+/**
+ * The key that makes re-importing a bookings export idempotent.
+ *
+ * The prior system's own booking/order id is the honest key when the file
+ * carries one — it is stable across re-exports and distinguishes two genuinely
+ * separate bookings made the same day. Without one there is nothing to be
+ * certain with, so the row's own content becomes the key. That deliberately
+ * collapses a diver's two identical same-day bookings (an AM and a PM two-tank
+ * booked under one name, same price, no reference) into a single visit, which
+ * is the safer of the two wrong answers: a re-import silently doubling a
+ * diver's history is a number staff would read and believe, while one merged
+ * duplicate is a visit that still happened on a day it still happened.
+ * The importer says so in the row's preview note rather than leaving an owner
+ * to discover it.
+ */
+export function priorVisitDedupeKey(visit: {
+  visitedOn: string;
+  title: string | null;
+  amountLabel: string | null;
+  sourceReference: string | null;
+}): string {
+  if (visit.sourceReference) return `ref:${visit.sourceReference.trim().toLowerCase()}`;
+  const title = (visit.title ?? "").trim().toLowerCase();
+  const amount = (visit.amountLabel ?? "").trim().toLowerCase();
+  return `row:${visit.visitedOn}|${title}|${amount}`;
+}
+
 export type PreparedRow = {
   /** 1-based row number in the file body (header is not counted). */
   rowNumber: number;
@@ -555,6 +713,13 @@ export type PreparedRow = {
     finSize: string | null;
   };
   waiver: PreparedWaiver | null;
+  /**
+   * The visit this row records at the prior shop, when it carried a readable
+   * date. A bookings export is one row per booking, so this is the field that
+   * makes a `merge` row worth writing even when it holds no new card
+   * (ADR 20260725-import-prior-visits).
+   */
+  visit: PreparedVisit | null;
   /**
    * `import` writes the person and everything on the row. `merge` is a row whose
    * email already appeared earlier in the same file: it is the *same diver*, so
@@ -590,6 +755,8 @@ export type PreparedImport = {
     withSpecialty: number;
     withNitrox: number;
     withWaiver: number;
+    /** Prior visits this file records, across importable and merge rows. */
+    withVisit: number;
   };
   /** Set when the file has no header row, or no recognizable identity column. */
   fatal: string | null;
@@ -861,6 +1028,7 @@ export function prepareContactImport(text: string): PreparedImport {
       withSpecialty: 0,
       withNitrox: 0,
       withWaiver: 0,
+      withVisit: 0,
     },
     fatal: null,
   };
@@ -1221,6 +1389,61 @@ export function prepareContactImport(text: string): PreparedImport {
       }
     }
 
+    // A visit the diver made at the prior shop (ADR 20260725-import-prior-visits).
+    // Kept only when the row carries a date we can actually read: a visit with
+    // no date can't be placed on a timeline, and inventing one — today, the
+    // import date, the middle of the file's range — would put a diver in the
+    // water on a day nobody claimed. `parseCardDate` is reused deliberately, so
+    // a shop's US-locale bookings export reads the same way its certification
+    // export does rather than growing a second date dialect.
+    let visit: PreparedVisit | null = null;
+    const visitDateRaw = clean(at(cells, "visit_date"));
+    const visitTitle = freeText(clean(at(cells, "visit_title")));
+    const visitStatus = freeText(clean(at(cells, "visit_status")));
+    const visitAmount = freeText(clean(at(cells, "visit_amount")));
+    const visitReference = freeText(clean(at(cells, "visit_reference")));
+    const namesAVisit = Boolean(
+      visitDateRaw || visitTitle || visitStatus || visitAmount || visitReference,
+    );
+    if (visitDateRaw) {
+      const parsed = parseCardDate(visitDateRaw);
+      if (!parsed) {
+        issues.push({
+          level: "warning",
+          message: `Visit date "${visitDateRaw}" isn't a date we can read — the diver imports without this visit.`,
+        });
+      } else {
+        const visitedOn = parsed.date;
+        visit = {
+          visitedOn,
+          title: visitTitle,
+          statusLabel: visitStatus,
+          amountLabel: visitAmount,
+          sourceLabel,
+          sourceReference: visitReference,
+          dedupeKey: priorVisitDedupeKey({
+            visitedOn,
+            title: visitTitle,
+            amountLabel: visitAmount,
+            sourceReference: visitReference,
+          }),
+        };
+        if (!visitReference) {
+          issues.push({
+            level: "info",
+            message:
+              "Visit imported without a booking reference — a re-import matches it on date, name, and amount, so two identical bookings on one day come in as one visit.",
+          });
+        }
+      }
+    } else if (namesAVisit) {
+      issues.push({
+        level: "warning",
+        message:
+          "This row names a past booking but carries no date — the diver imports without this visit.",
+      });
+    }
+
     let action: PreparedRow["action"] = "import";
     let mergedIntoRow: number | null = null;
     if (!fullName) {
@@ -1235,7 +1458,7 @@ export function prepareContactImport(text: string): PreparedImport {
       mergedIntoRow = seenEmails.get(email) ?? null;
       issues.push({
         level: "info",
-        message: `Same diver as row ${mergedIntoRow} (${email}) — this row's cards and waiver are added to them, contact details left as the earlier row has them.`,
+        message: `Same diver as row ${mergedIntoRow} (${email}) — this row's cards, waiver, and past visit are added to them, contact details left as the earlier row has them.`,
       });
     }
     if (action === "import" && email) seenEmails.set(email, rowNumber);
@@ -1265,6 +1488,7 @@ export function prepareContactImport(text: string): PreparedImport {
       nitrox: action === "skip" ? null : nitrox,
       sizes,
       waiver: action === "skip" ? null : waiver,
+      visit: action === "skip" ? null : visit,
       action,
       mergedIntoRow,
       issues,
@@ -1289,6 +1513,7 @@ export function prepareContactImport(text: string): PreparedImport {
       withSpecialty: written.reduce((sum, row) => sum + row.specialties.length, 0),
       withNitrox: written.filter((row) => row.nitrox).length,
       withWaiver: written.filter((row) => row.waiver).length,
+      withVisit: written.filter((row) => row.visit).length,
     },
     fatal: null,
   };

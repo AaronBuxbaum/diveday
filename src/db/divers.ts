@@ -25,6 +25,7 @@ import {
   nitroxCertifications,
   people,
   personRoles,
+  priorVisits,
   rentalFitProfiles,
   specialtyCertifications,
   trips,
@@ -441,6 +442,7 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     bookingRows,
     personOrders,
     personBookingPayments,
+    visitRows,
   ] = await Promise.all([
     db
       .select()
@@ -489,6 +491,14 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
       .orderBy(desc(trips.startsAt)),
     listOrdersForPerson(db, shopId, personId),
     listPersonBookingPayments(db, shopId, personId),
+    // History from the shop's prior system (ADR 20260725-import-prior-visits).
+    // Read here and rendered on the profile only — deliberately not joined into
+    // anything readiness, capacity, prep, or reporting consumes.
+    db
+      .select()
+      .from(priorVisits)
+      .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, personId)))
+      .orderBy(desc(priorVisits.visitedOn)),
   ]);
 
   return {
@@ -500,5 +510,6 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     bookings: bookingRows,
     orders: personOrders,
     bookingPayments: personBookingPayments,
+    priorVisits: visitRows,
   };
 }

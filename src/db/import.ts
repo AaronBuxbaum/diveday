@@ -16,7 +16,11 @@
  *   - a row claiming a prior waiver acceptance writes an immutable `completed`
  *     waiver record marked `imported`, snapshotting the shop's current
  *     template for reference only — never touched if the diver already has
- *     current signed/medical-review evidence on file.
+ *     current signed/medical-review evidence on file;
+ *   - a row recording a past booking writes one inert `prior_visits` row
+ *     (ADR 20260725-import-prior-visits) and touches no operational table —
+ *     no trip, no booking, no order, no roll call — so a migrated history can
+ *     never reach the dock, capacity, or reporting.
  * Everything is scoped by the shopId the caller reads from the session, never a
  * URL, and the whole batch commits in one transaction (document fetches happen
  * once, beforehand, outside it) so a preview and its commit describe the same
@@ -37,6 +41,7 @@ import {
   nitroxCertifications,
   people,
   personRoles,
+  priorVisits,
   rentalFitProfiles,
   specialtyCertifications,
   userAccounts,
@@ -71,6 +76,10 @@ export type ImportSummary = {
   waiversSkippedNoTemplate: number;
   /** A waiver_document_url / medical_document_url did not fetch/store and was left off the record. */
   waiverDocumentsFailed: number;
+  /** Prior-shop visits written as inert history (ADR 20260725-import-prior-visits). */
+  visitsAdded: number;
+  /** The same visit was already imported — a re-run of the same bookings export. */
+  visitsSkippedExisting: number;
   rowsSkipped: number;
 };
 
@@ -188,6 +197,8 @@ export async function commitContactImport(
     waiversSkippedExisting: 0,
     waiversSkippedNoTemplate: 0,
     waiverDocumentsFailed: 0,
+    visitsAdded: 0,
+    visitsSkippedExisting: 0,
     rowsSkipped: prepared.rows.length - preparedRows.length,
   };
   if (preparedRows.length === 0) return summary;
@@ -389,11 +400,12 @@ export async function commitContactImport(
 }
 
 /**
- * Everything a row contributes to a diver who already exists: rental sizes,
- * cards, and a claimed waiver acceptance. Shared by the row that created the
- * diver and by every later `merge` row for the same diver — which is what lets a
- * one-row-per-card certification export bring in a diver's second and third
- * cards instead of discarding them as duplicate people.
+ * Everything a row contributes to a diver who already exists: a prior visit,
+ * rental sizes, cards, and a claimed waiver acceptance. Shared by the row that
+ * created the diver and by every later `merge` row for the same diver — which is
+ * what lets a one-row-per-card certification export bring in a diver's second
+ * and third cards instead of discarding them as duplicate people, and a
+ * one-row-per-booking export bring in a regular's whole history.
  *
  * Each card insert is conflict-tolerant. The `seen*` maps close the common case
  * before the write, but a staffer entering a card by hand mid-import, or a
@@ -418,6 +430,38 @@ async function writeEvidence(
   },
 ): Promise<void> {
   const { row, personId, shopId, now, summary, template, importedByPersonId } = ctx;
+
+  if (row.visit) {
+    // Inert history, not an operational record (ADR 20260725-import-prior-visits):
+    // this writes `prior_visits` and nothing else — no trip, no booking, no
+    // order, no roll call. `onConflictDoNothing` against
+    // prior_visits_shop_person_dedupe_unique is what makes re-running the same
+    // bookings export safe; an owner re-imports as their roster grows, and
+    // doubling a diver's history is a number staff would read and believe.
+    // Conflict-tolerant rather than pre-checked for the same reason the card
+    // writes are: on real Postgres a raised unique violation aborts the whole
+    // enclosing transaction, losing the entire migration to one duplicated row.
+    const inserted = await tx
+      .insert(priorVisits)
+      .values({
+        shopId,
+        personId,
+        visitedOn: row.visit.visitedOn,
+        title: row.visit.title,
+        statusLabel: row.visit.statusLabel,
+        amountLabel: row.visit.amountLabel,
+        sourceLabel: row.visit.sourceLabel,
+        sourceReference: row.visit.sourceReference,
+        dedupeKey: row.visit.dedupeKey,
+        importedAt: now,
+      })
+      .onConflictDoNothing({
+        target: [priorVisits.shopId, priorVisits.personId, priorVisits.dedupeKey],
+      })
+      .returning({ id: priorVisits.id });
+    if (inserted.length > 0) summary.visitsAdded += 1;
+    else summary.visitsSkippedExisting += 1;
+  }
 
   if (hasSize(row)) {
     // A living preference, upserted — never versioned. Only the sizes the

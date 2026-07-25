@@ -258,9 +258,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
         await capture(page, "diver-profile-expired", scheme);
 
-        // A diver whose level card was brought in by the contact importer: it
-        // reads verified with an "imported" provenance chip and a one-tap
-        // "Confirm card" nudge (ADR 20260724-import-verified-cards).
+        // The migrated diver, and every surface that has to say so. Her level
+        // card reads verified with an "imported" provenance chip and a one-tap
+        // "Confirm card" nudge (ADR 20260724-import-verified-cards), and her
+        // shop history carries the visits that came across from the old system
+        // (ADR 20260725-import-prior-visits) — imported-marked, unlinked, with a
+        // cancelled booking struck through so it can't be read as a dive. This
+        // page is where a spreadsheet cell either looks like evidence or looks
+        // like what it is, so it is worth a baseline in both schemes.
         await page.goto("/shop/blue-mantis/divers");
         await page
           .getByRole("row")
