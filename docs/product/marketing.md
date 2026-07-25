@@ -63,7 +63,11 @@ chosen battlegrounds — and re-read it before changing the spine.
   industry ("shops lose money on X") are claims too — either cite a documented source the way a
   switching guide cites an incumbent, or phrase it as what the founder personally observed, which
   needs no source but also may not be invented on his behalf. The corporate entity stays off the
-  page entirely until the entity decision closes.
+  page entirely until the entity decision closes. **Confirmed by the product owner 2026-07-25** and
+  published on `/about`: certified in 2024; a software engineer who worked on Google Maps, helped
+  build a biotech company that went public, and works on self-driving cars; and the origin — a
+  conversation with a dive shop owner about what his systems were costing him. Anything beyond that
+  list needs its own confirmation.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
