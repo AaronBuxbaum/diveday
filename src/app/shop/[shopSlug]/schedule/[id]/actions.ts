@@ -141,6 +141,7 @@ export async function bookSpot(
     validParty.map((entry, index) => ({
       shopId: shopNow.id,
       tripId,
+      actor: "public" as const,
       fullName: entry.fullName,
       email: entry.email,
       // Only the lead booker's phone is collected, so the crew can reach the party.
@@ -148,6 +149,16 @@ export async function bookSpot(
     })),
   );
   if (!outcome.ok) {
+    // This form is anonymous (the schedule route is auth-exempt), and the
+    // submitter is only ever asked for a name and an email — never proof that
+    // either is theirs. So a refusal here must not describe *the person behind
+    // that email*, only the trip. `course_min_age` in particular would
+    // otherwise answer "is the holder of this address a child under N?" to
+    // anyone who can guess an address, and the seeded course minimums (10, 12,
+    // 15, 18) let a handful of probes bracket a real child's age. It runs
+    // before the capacity check, so probing a full trip is free and leaves no
+    // booking behind. Staff surfaces keep the specific wording — there the
+    // actor is authenticated and entitled to the diver's record.
     const code =
       outcome.reason === "trip_full"
         ? "full"
@@ -155,13 +166,9 @@ export async function bookSpot(
           ? "already"
           : outcome.reason === "course_unstaffed"
             ? "course-unavailable"
-            : outcome.reason === "course_prerequisite"
-              ? "course-prerequisite"
-              : outcome.reason === "course_ratio_full"
-                ? "course-ratio-full"
-                : outcome.reason === "course_min_age"
-                  ? "course-min-age"
-                  : "unavailable";
+            : outcome.reason === "course_ratio_full"
+              ? "course-ratio-full"
+              : "unavailable";
     return { error: ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unavailable };
   }
   const primaryBookingId = outcome.bookings[0]?.bookingId;

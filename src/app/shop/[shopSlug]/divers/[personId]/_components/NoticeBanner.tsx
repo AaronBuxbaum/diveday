@@ -85,13 +85,17 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   },
   "not-authorized-fit": {
     tone: "danger",
-    text: "Changing a diver's stated rental fit is limited to instructors, divemasters, and managers. You can still flag them for hands-on fitting at check-in.",
+    text: "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
   },
   invalid: { tone: "danger", text: "Check the details and try again." },
 };
 
 export function NoticeBanner({ notice }: { notice?: string }) {
-  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
+  // `Object.hasOwn`, not a bare lookup: `notice` is an attacker-supplied query
+  // param, and `?notice=constructor` would otherwise return a truthy inherited
+  // value and render an empty banner.
+  const banner =
+    notice && Object.hasOwn(NOTICE_MESSAGES, notice) ? NOTICE_MESSAGES[notice] : undefined;
   if (!banner) return null;
 
   return (

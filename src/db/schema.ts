@@ -1397,6 +1397,13 @@ export const rentalFitProfiles = pgTable(
     needsStaffFitAt: timestamp("needs_staff_fit_at", { withTimezone: true }),
     /** What's short ("no L BCD in stock"), in the flagging staff member's words. */
     needsStaffFitNote: text("needs_staff_fit_note"),
+    /**
+     * Who raised it. A safety flag that blanks a diver's sizes on the packing
+     * list, and carries free text about a person, should not be anonymous —
+     * the same reason roll-call events record who called them. Attribution
+     * only: authorization is checked in the action, not read from this column.
+     */
+    needsStaffFitBy: uuid("needs_staff_fit_by").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -507,6 +507,7 @@ describe("orders", () => {
     const courseSession = trips.find((trip) => trip.course?.title === "Discover Scuba Diving");
     if (!courseSession) throw new Error("demo course session missing");
     const enrolled = await createBooking(db, {
+      actor: "staff",
       shopId: shop.id,
       tripId: courseSession.id,
       fullName: "Nora Quinn",

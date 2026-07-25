@@ -6,7 +6,7 @@ import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
-import { getRentalFit } from "./rental-fit";
+import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
 import { bookings, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
@@ -38,7 +38,8 @@ export type ReadyPageData = {
   };
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
-  rentalFit: Awaited<ReturnType<typeof getRentalFit>>;
+  /** Projected: staff-only fit columns never reach the diver's browser. */
+  rentalFit: DiverRentalFit | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
 };
@@ -106,7 +107,7 @@ export async function getReadyPageData(
     },
     wantsNitrox: row.wantsNitrox,
     nitroxCardVerified: nitroxVerified.has(row.personId),
-    rentalFit,
+    rentalFit: toDiverRentalFit(rentalFit),
     canPay,
   };
 }

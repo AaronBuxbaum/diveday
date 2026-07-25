@@ -317,7 +317,11 @@ async function summarizeDivers(
     const specialty = specialtyCards.filter((card) => card.personId === person.id);
     const nitrox = nitroxCards.filter((card) => card.personId === person.id);
     return {
-      person,
+      // The roster list is a client component, so the whole row would ship to
+      // the browser — including every diver's date of birth, which nothing on
+      // that list renders and some of which belongs to minors. Drop it at the
+      // boundary rather than relying on the UI not to show it.
+      person: { ...person, dateOfBirth: null },
       certificationCount: cards.length,
       pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
       specialtyCount: specialty.length,

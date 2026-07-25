@@ -32,6 +32,25 @@ export type BookingPerson =
 export type BookingRequest = {
   shopId: string;
   tripId: string;
+  /**
+   * Who is making this booking. `"public"` is the anonymous schedule form,
+   * where the submitter supplies an email but never proves it is theirs — the
+   * same uncertainty `identityUnconfirmedAt` exists for (H-13).
+   *
+   * The minimum-age gate is skipped for `"public"` on purpose. Refusing there
+   * would answer "is the holder of this address under N?" to anyone who can
+   * guess an address, and the course minimums (10/12/15/18) let a few probes
+   * bracket a real child's age — a disclosure about a minor, to an
+   * unauthenticated caller. It is also unsound: the gate would judge the
+   * submitter by a person record they may have no relationship to. Staff
+   * bookings keep the gate; the readiness blocker catches an under-age seat
+   * whichever door it came through.
+   *
+   * Required, not optional: an omission here is a silently re-opened oracle,
+   * and there is no default that is right for both callers. Making it a type
+   * error costs three call sites once.
+   */
+  actor: "staff" | "public";
 } & BookingPerson;
 
 export type BookingOutcome =
@@ -235,7 +254,11 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     // still verified at the dock; this only catches the case the shop already
     // has the data to catch. A walk-in with no `person` row yet is likewise
     // unknown, and passes.
-    if (course.minimumAge && person?.dateOfBirth) {
+    //
+    // Staff only — see `BookingRequest.actor` for why the anonymous form must
+    // not refuse on someone else's date of birth. An under-age seat booked
+    // through the public form surfaces as a readiness blocker instead.
+    if (req.actor !== "public" && course.minimumAge && person?.dateOfBirth) {
       const courseDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
       if (checkMinimumAge(person.dateOfBirth, course.minimumAge, courseDate).status === "under") {
         return { ok: false, reason: "course_min_age" };
