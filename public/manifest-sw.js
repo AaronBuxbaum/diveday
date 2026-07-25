@@ -7,21 +7,30 @@ const OFFLINE_SHELL = "/offline-manifest";
 const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
 
 async function cacheOfflineShell() {
-  const cache = await caches.open(CACHE_NAME);
   const response = await fetch(OFFLINE_SHELL, { credentials: "same-origin" });
   if (!response.ok) throw new Error("Offline manifest shell could not be loaded");
-  await cache.put(OFFLINE_SHELL, response.clone());
-  const html = await response.text();
-  const assets = new Set();
+  const html = await response.clone().text();
+  const assetPaths = new Set();
   for (const match of html.matchAll(/(?:src|href)="([^"#?]*\/_next\/static\/[^"?#]+)"/g)) {
-    assets.add(new URL(match[1], self.location.origin).pathname);
+    assetPaths.add(new URL(match[1], self.location.origin).pathname);
   }
-  await Promise.all(
-    [...assets].map(async (asset) => {
+  // Fetch the shell and every asset it references before writing anything.
+  // This now runs automatically (not just on an explicit "Save for offline"
+  // click), so a mid-fetch failure — a deploy landing between requests, a
+  // flaky connection — must never partially overwrite an already-working
+  // offline copy with new HTML pointing at assets that were never cached.
+  const assetEntries = await Promise.all(
+    [...assetPaths].map(async (asset) => {
       const assetResponse = await fetch(asset);
-      if (assetResponse.ok) await cache.put(asset, assetResponse);
+      if (!assetResponse.ok) {
+        throw new Error(`Offline manifest asset ${asset} could not be loaded`);
+      }
+      return [asset, assetResponse];
     }),
   );
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(OFFLINE_SHELL, response);
+  await Promise.all(assetEntries.map(([asset, assetResponse]) => cache.put(asset, assetResponse)));
 }
 
 self.addEventListener("install", (event) => {
@@ -81,7 +90,13 @@ self.addEventListener("fetch", (event) => {
         fetch(event.request).catch(async () => {
           const cachedShell = await caches.match(OFFLINE_SHELL);
           if (!cachedShell) return Response.error();
-          return Response.redirect(`${OFFLINE_SHELL}?trip=${encodeURIComponent(tripId)}`, 302);
+          const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
+          redirectTarget.searchParams.set("trip", tripId);
+          // Carries the checkpoint a captain was on (e.g. "after_dive_1") so a
+          // reload mid roll call doesn't drop them back to "Before departure".
+          const checkpoint = url.searchParams.get("checkpoint");
+          if (checkpoint) redirectTarget.searchParams.set("checkpoint", checkpoint);
+          return Response.redirect(redirectTarget.href, 302);
         }),
       );
       return;

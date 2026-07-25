@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Twenty-five key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 100 screenshots per run
+ * Visual regression coverage (Argos). Twenty-six key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 104 screenshots per run
  * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 102 screenshots.
+ * via `capturePrint()`. That brings the run to 106 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -314,6 +314,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/\/manifest/);
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "manifest", scheme);
+
+        // The offline fallback a captain lands on after a failed reload with
+        // no snapshot saved — the entire safety surface in that moment, so it
+        // gets its own baseline rather than relying on the roll-call text
+        // assertion in e2e/manifest.spec.ts to catch a styling regression.
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
+        await page.goto(`/offline-manifest?trip=${tripId}`);
+        await page.getByRole("heading", { name: "Nothing saved on this phone yet" }).waitFor();
+        await capture(page, "offline-manifest-empty", scheme);
 
         // Shop settings, where staff set the rental catalog and its prices.
         await page.goto("/shop/blue-mantis/settings");
