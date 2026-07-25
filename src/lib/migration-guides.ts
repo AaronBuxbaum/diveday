@@ -174,7 +174,7 @@ const eve: MigrationGuide = {
   exportNotes: [
     "Do this while your EVE install still opens and your license is active — a working export today beats chasing it later.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you exactly how each column mapped before you commit.",
-    "Purchase and service history isn't part of this move, and that's by design — see the scope table below. It stays in your EVE records; DiveDay starts your people clean and ready.",
+    "If EVE will give you a sales or booking report as well, take it — a file with one row per booking brings your regulars' visit history across, so a fifteen-year customer doesn't arrive looking brand new. Register receipts and repair tickets stay in EVE; see the scope table below.",
   ],
   sources: [
     {
@@ -243,7 +243,7 @@ const diveshop360: MigrationGuide = {
   exportNotes: [
     "Manual CSV, dataset by dataset, is a limit of DiveShop360 — no API, no bulk export, no webhooks — not of DiveDay. Doing it yourself from the admin is the whole path.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you exactly how each column mapped before you commit.",
-    "Retail history, repair tickets, and your e-commerce site aren't part of a contact import — see the scope table below. They stay in DiveShop360.",
+    "If you can also export a booking or sales report, bring it — one row per booking becomes your divers' visit history here. Retail receipts, repair tickets, and your e-commerce site stay in DiveShop360; see the scope table below.",
   ],
   importerNote:
     "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file adds to the same divers instead of duplicating them. A certification file usually holds one row per card, so a diver with three cards appears on three rows: each row's card lands on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card.",
@@ -309,7 +309,7 @@ const diveadmin: MigrationGuide = {
   exportNotes: [
     "DiveAdmin's API ingests data; it doesn't hand your records back in bulk. The CSV export (or the Google Drive backup) is the route out, not the API.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names DiveAdmin and every other system use, and shows you exactly how each column mapped before you commit.",
-    "Booking and message history isn't part of a contact import — see the scope table below. It stays in DiveAdmin.",
+    "Export your bookings as well as your customers if DiveAdmin offers both — a file with one row per booking carries your divers' visit history across. Message history stays in DiveAdmin; see the scope table below.",
   ],
   importerNote:
     'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each verified and flagged imported, with a one-tap confirm for staff. It reads the specialties the same way — a "PADI Deep Diver" row with a card number becomes a deep specialty card — and anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
@@ -487,9 +487,10 @@ const fareharbor: MigrationGuide = {
     'The Contacts report is date-scoped, not a one-click "everything" export — set the range as wide as FareHarbor allows so seasonal and lapsed customers come along.',
     "Your column headings don't have to match anything. DiveDay recognizes the common names FareHarbor and every other system use, and shows you exactly how each column mapped before you commit.",
     "Certification cards and rental sizes aren't in a FareHarbor export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
+    "What FareHarbor does hold is bookings, and those come across: run the Bookings report over the same wide date range and your regulars arrive with their visit history rather than as new names.",
   ],
   importerNote:
-    "A FareHarbor export is mostly contact data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the Contacts file; DiveDay matches divers by email, so a later re-import updates the same people instead of duplicating them.",
+    "A FareHarbor export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the Contacts file, then the Bookings file: DiveDay matches divers by email, so the second file adds each booking to the same diver's history instead of duplicating them, and re-running either one later updates rather than doubles.",
   sources: [
     {
       label: "FareHarbor — booking software for tours & activities",
@@ -614,9 +615,10 @@ const rezdy: MigrationGuide = {
     "Rezdy doesn't lock your data in — no setup fee, no contract, self-serve CSV export and an operator API. Confirm the exact menu path against Rezdy's own help centre, since labels shift between updates.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names Rezdy and every other system use, and shows you exactly how each column mapped before you commit.",
     "Certification cards and rental sizes aren't in a Rezdy export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
+    "What Rezdy does hold is bookings, and those come across: the Orders report's one-row-per-booking shape is exactly what carries your regulars' visit history over with them.",
   ],
   importerNote:
-    "A Rezdy export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the customer or Orders file; DiveDay matches divers by email, so a later re-import updates the same people instead of duplicating them.",
+    "A Rezdy export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). The Orders file is the one to bring: DiveDay matches divers by email, so its repeated rows for one customer become that diver's visit history rather than duplicate people, and re-running it later updates instead of doubling.",
   sources: [
     {
       label: "Rezdy — booking software for tours & activities",

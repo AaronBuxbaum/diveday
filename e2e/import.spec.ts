@@ -194,6 +194,80 @@ test.describe("contact import — specialty cards", () => {
   });
 });
 
+/**
+ * Imported prior visits (ADR 20260725-import-prior-visits). The file is the
+ * shape a booking platform actually exports — one row per booking, the same
+ * customer repeated — and the flow proves the two things that make this safe to
+ * ship: the history lands on the diver's profile marked as imported, and a
+ * second run of the same file does not double it.
+ */
+const BOOKINGS_CSV = [
+  "Customer Name,Email,Booking Date,Tour Name,Booking Status,Total,Booking ID",
+  "Regular Rosa,regular.rosa@example.com,2024-06-12,Two-tank Molasses Reef,Completed,$165.00,FH-9001",
+  "Regular Rosa,regular.rosa@example.com,2025-01-20,Night dive Benwood,Cancelled,$95.00,FH-9002",
+  "Regular Rosa,regular.rosa@example.com,2025-08-03,Drift the Wall,Completed,$180.00,FH-9003",
+].join("\n");
+
+test.describe("contact import — prior visits", () => {
+  signedInAsOwner();
+
+  test("a bookings export becomes one diver with their visit history, and re-importing it doesn't double that history", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import");
+    // The honesty table says past visits come across, and says what they aren't.
+    await expect(page.getByText("Past visits (what they booked, when)")).toBeVisible();
+    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+
+    await page.setInputFiles('input[type="file"]', {
+      name: "bookings.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(BOOKINGS_CSV, "utf-8"),
+    });
+
+    // Three booking rows, one diver: the preview says so before anything is written.
+    await expect(page.getByText(/3 rows record a past booking/)).toBeVisible();
+    await expect(page.getByText(/never become trips on your schedule/)).toBeVisible();
+    await page.getByRole("button", { name: /Import 1 contact/ }).click();
+    await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
+    await expect(page.getByText(/3 past visits added to divers' shop history/)).toBeVisible();
+
+    // On the diver's record the history reads as history: the old system's own
+    // words, marked imported, and never a link to a trip that doesn't exist here.
+    await page.goto("/shop/blue-mantis/divers?q=regular.rosa@example.com");
+    await page.getByRole("link", { name: /Regular Rosa/ }).click();
+    const history = page.locator("section").filter({ has: page.getByText("Shop history") });
+    await expect(history.getByText(/3 visits came across from your previous system/)).toBeVisible();
+    await expect(history.getByText(/booking records, not dive records/)).toBeVisible();
+    await expect(history.getByText("Two-tank Molasses Reef")).toBeVisible();
+    await expect(history.getByText("$165.00")).toBeVisible();
+    // The cancelled booking is shown as cancelled, not quietly counted as a dive.
+    await expect(history.getByText("Cancelled")).toBeVisible();
+    await expect(history.getByRole("link", { name: "Drift the Wall" })).toHaveCount(0);
+
+    // Re-running the same export is the normal thing an owner does as their
+    // roster grows — it must update, never double.
+    await page.goto("/shop/blue-mantis/settings/import");
+    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+    await page.setInputFiles('input[type="file"]', {
+      name: "bookings.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(BOOKINGS_CSV, "utf-8"),
+    });
+    await page.getByRole("button", { name: /Import 1 contact/ }).click();
+    await expect(page.getByText(/were already imported and were left as they are/)).toBeVisible();
+
+    await page.goto("/shop/blue-mantis/divers?q=regular.rosa@example.com");
+    await page.getByRole("link", { name: /Regular Rosa/ }).click();
+    await expect(
+      page
+        .locator("section")
+        .filter({ has: page.getByText("Shop history") })
+        .getByText(/3 visits came across/),
+    ).toBeVisible();
+  });
+});
+
 test.describe("contact import — explicit bounds (CR-016)", () => {
   signedInAsOwner();
 
@@ -202,10 +276,11 @@ test.describe("contact import — explicit bounds (CR-016)", () => {
   }) => {
     await page.goto("/shop/blue-mantis/settings/import");
     await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
-    // MAX_IMPORT_COLUMNS is 40 in src/lib/import.ts — 42 headers trips the
-    // limit without needing a slow multi-megabyte fixture.
-    const headers = ["full_name", ...Array.from({ length: 41 }, (_, i) => `col${i}`)].join(",");
-    const oversizedCsv = `${headers}\nAda,${"x,".repeat(41)}x`;
+    // MAX_IMPORT_COLUMNS is 64 in src/lib/import.ts (raised for the column-heavy
+    // bookings exports prior visits read) — 66 headers trips the limit without
+    // needing a slow multi-megabyte fixture.
+    const headers = ["full_name", ...Array.from({ length: 65 }, (_, i) => `col${i}`)].join(",");
+    const oversizedCsv = `${headers}\nAda,${"x,".repeat(65)}x`;
 
     await page.setInputFiles('input[type="file"]', {
       name: "too-wide.csv",

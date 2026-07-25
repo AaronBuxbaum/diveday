@@ -14,6 +14,7 @@ import {
   normalizeLevel,
   parseCsv,
   prepareContactImport,
+  priorVisitDedupeKey,
 } from "./import";
 
 describe("parseCsv (RFC-4180)", () => {
@@ -578,6 +579,132 @@ describe("prepareContactImport — safety rules", () => {
   });
 });
 
+describe("prepareContactImport — prior visits", () => {
+  const bookingsExport = [
+    "customer_name,email,booking_date,tour_name,booking_status,total,booking_id",
+    "Hana Kobayashi,hana@example.com,2024-05-11,Two-tank Molasses Reef,Completed,$165.00,CCD-1",
+    "Hana Kobayashi,hana@example.com,2025-02-02,Night dive Benwood,Cancelled,$95.00,CCD-2",
+    "Sam Reed,sam@example.com,2025-06-30,Discover Scuba,Completed,$120.00,CCD-3",
+  ].join("\n");
+
+  it("reads a one-row-per-booking export as people plus their visits", () => {
+    const prepared = prepareContactImport(bookingsExport);
+    // Two people; Hana's second booking is a merge row, not a duplicate person.
+    expect(prepared.totals.importable).toBe(2);
+    expect(prepared.totals.merged).toBe(1);
+    expect(prepared.totals.withVisit).toBe(3);
+    expect(prepared.rows[1].action).toBe("merge");
+    expect(prepared.rows[1].visit?.title).toBe("Night dive Benwood");
+  });
+
+  it("carries the source's status word and money text verbatim", () => {
+    const [first] = prepareContactImport(bookingsExport).rows;
+    expect(first.visit).toMatchObject({
+      visitedOn: "2024-05-11",
+      title: "Two-tank Molasses Reef",
+      statusLabel: "Completed",
+      amountLabel: "$165.00",
+      sourceReference: "CCD-1",
+    });
+  });
+
+  it("keeps a cancelled booking rather than dropping it", () => {
+    // The row is history either way; hiding it would misstate what the old
+    // system held, and counting it as a dive would invent one. It comes in
+    // carrying the word "Cancelled" and the profile renders that.
+    const cancelled = prepareContactImport(bookingsExport).rows[1];
+    expect(cancelled.visit?.statusLabel).toBe("Cancelled");
+  });
+
+  it("reads the date formats a real export writes, not just ISO", () => {
+    const csv = [
+      "full_name,email,trip_date,trip_name",
+      "US Locale,us@example.com,05/04/2024,Reef",
+      "Day First,day@example.com,25/12/2024,Reef",
+      "Written Out,out@example.com,4-May-2024,Reef",
+    ].join("\n");
+    const rows = prepareContactImport(csv).rows;
+    expect(rows[0].visit?.visitedOn).toBe("2024-05-04");
+    expect(rows[1].visit?.visitedOn).toBe("2024-12-25");
+    expect(rows[2].visit?.visitedOn).toBe("2024-05-04");
+  });
+
+  it("declines a visit it cannot date rather than inventing one", () => {
+    const csv = [
+      "full_name,email,visit_date,trip_name",
+      "No Date,nodate@example.com,sometime last summer,Reef",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.visit).toBeNull();
+    // The diver still imports — one unreadable date is not a reason to drop a person.
+    expect(row.action).toBe("import");
+    expect(row.issues.some((issue) => /isn't a date we can read/.test(issue.message))).toBe(true);
+  });
+
+  it("says so when a row names a booking but carries no date column at all", () => {
+    const csv = ["full_name,email,tour_name,total", "No Date,nd@example.com,Reef,$100"].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.visit).toBeNull();
+    expect(row.issues.some((issue) => /no date/.test(issue.message))).toBe(true);
+  });
+
+  it("never builds a visit from a skipped row", () => {
+    const csv = [
+      "full_name,email,visit_date,tour_name",
+      ",noname@example.com,2024-05-11,Reef",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.action).toBe("skip");
+    expect(row.visit).toBeNull();
+  });
+
+  it("lets specific columns win their headers over the generic visit aliases", () => {
+    // "status" belongs to certification_status and "date signed" to the waiver,
+    // even though the visit field lists generic aliases of its own.
+    const csv = [
+      "full_name,email,certification_number,status,date_signed,waiver_accepted,visit_date",
+      "Both,both@example.com,PADI-1,verified,2024-02-02,yes,2024-05-11",
+    ].join("\n");
+    const prepared = prepareContactImport(csv);
+    const fields = Object.fromEntries(prepared.mapping.map((m) => [m.header, m.field]));
+    expect(fields.status).toBe("certification_status");
+    expect(fields.date_signed).toBe("waiver_signed_at");
+    expect(fields.visit_date).toBe("visit_date");
+  });
+});
+
+describe("priorVisitDedupeKey", () => {
+  const visit = {
+    visitedOn: "2024-05-11",
+    title: "Two-tank",
+    amountLabel: "$165.00",
+    sourceReference: null as string | null,
+  };
+
+  it("keys on the source's booking reference when there is one", () => {
+    expect(priorVisitDedupeKey({ ...visit, sourceReference: "CCD-1" })).toBe("ref:ccd-1");
+    // Case and padding in the old system's id must not mint a second visit.
+    expect(priorVisitDedupeKey({ ...visit, sourceReference: " ccd-1 " })).toBe("ref:ccd-1");
+  });
+
+  it("keys on the row's own content when the export carries no reference", () => {
+    expect(priorVisitDedupeKey(visit)).toBe("row:2024-05-11|two-tank|$165.00");
+  });
+
+  it("separates two same-day bookings that differ in what they were", () => {
+    const morning = priorVisitDedupeKey({ ...visit, title: "Two-tank AM" });
+    const afternoon = priorVisitDedupeKey({ ...visit, title: "Two-tank PM" });
+    expect(morning).not.toBe(afternoon);
+  });
+
+  it("collapses two indistinguishable same-day rows, as documented", () => {
+    // The accepted trade-off: with no reference there is nothing to tell a real
+    // duplicate booking from the same file imported twice, and silently doubling
+    // a diver's history is the worse of the two errors.
+    expect(priorVisitDedupeKey(visit)).toBe(priorVisitDedupeKey({ ...visit }));
+  });
+});
+
 describe("IMPORT_HONESTY_TABLE", () => {
   it("uses only the two calm scope buckets — no alarm-red partial/never chips", () => {
     for (const row of IMPORT_HONESTY_TABLE) {
@@ -585,13 +712,25 @@ describe("IMPORT_HONESTY_TABLE", () => {
     }
   });
 
-  it("keeps payment and booking history behind, with an honest reason", () => {
+  it("keeps payment and service history behind, with an honest reason", () => {
     const behind = IMPORT_HONESTY_TABLE.filter((row) => row.scope === "stays-behind").map(
       (r) => r.what,
     );
     expect(behind).toEqual(
-      expect.arrayContaining(["Card on file / payment", "Booking, trip & service history"]),
+      expect.arrayContaining(["Card on file / payment", "Receipts & service history"]),
     );
+  });
+
+  // The row that replaced "Booking, trip & service history" must not read as a
+  // promise that a diver's dive history came across: an orders export holds
+  // cancellations, and the whole safety of this feature is that a booking record
+  // never gets counted as a dive (ADR 20260725-import-prior-visits).
+  it("states past visits as booking records that never become trips", () => {
+    const visits = IMPORT_HONESTY_TABLE.find((r) => r.what.startsWith("Past visits"));
+    expect(visits?.scope).toBe("included");
+    expect(visits?.detail).toMatch(/not a dive/i);
+    expect(visits?.detail).toMatch(/never appears on your schedule/i);
+    expect(visits?.detail).toMatch(/capacity/i);
   });
 
   it("states waiver/medical acceptance as trusted and marked imported", () => {
