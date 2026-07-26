@@ -1,4 +1,19 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
@@ -861,6 +876,39 @@ export async function upcomingTripsWithCounts(
     .orderBy(asc(trips.startsAt));
 
   return rows.map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
+}
+
+/**
+ * Trip ids relevant to the offline-manifest auto-save window (see ADR
+ * 20260726-shopwide-offline-manifest-priming): every scheduled trip that
+ * hasn't ended yet and starts at or before `until`. Deliberately not
+ * `startsAt >= now` like upcomingTripsWithCounts — a trip already underway
+ * (departed, not yet ended) still needs its after-dive-checkpoint copy
+ * auto-saved, which is exactly the scenario this feature exists to cover; a
+ * lower-only bound would keep excluding it until someone opened its live
+ * manifest by hand. Bounded by `until` in the query itself (not filtered
+ * after fetching every future trip) since this is polled every five minutes
+ * from every open staff tab.
+ */
+export async function listTripIdsInOfflineManifestWindow(
+  db: AppDb,
+  shopId: string,
+  now: Date,
+  until: Date,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.endsAt, now),
+        lte(trips.startsAt, until),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  return rows.map((row) => row.id);
 }
 
 export const SCHEDULE_PAGE_SIZE = 50;

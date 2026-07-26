@@ -36,6 +36,13 @@ ends (`OFFLINE_MANIFEST_MAX_RETENTION_MS` / `OFFLINE_MANIFEST_POST_TRIP_RETENTIO
 shorter window was drafted and considered but the product owner chose to keep the original 7-day leg
 rather than compress it. Expiry is now the only way a copy goes away; there is no button.
 
+> Amended by [20260726-shopwide-offline-manifest-priming](20260726-shopwide-offline-manifest-priming.md):
+> expiry is no longer the *only* way. A device that authenticates as a different shop now purges the
+> previous shop's records outright (never a record still holding an unsynced roll-call event — that
+> stays until it resolves or expires normally). That purge is a distinct, narrowly-scoped exception for
+> a cross-tenant device handoff, not a reopening of per-shop delete; nothing here about a *single* shop's
+> own records changes.
+
 Removing the delete button changes the failure surface, so two gaps a `dive-domain-expert` review
 raised are closed in this same change, not deferred:
 
@@ -50,6 +57,11 @@ raised are closed in this same change, not deferred:
   offline, never confirmed reaching the server). `loadOfflineManifest` now keeps an expired record alive
   — serving it as stale rather than reporting it missing — as long as it still holds a pending event,
   and only deletes once every event is resolved (applied or rejected).
+
+> Extended by [20260726-shopwide-offline-manifest-priming](20260726-shopwide-offline-manifest-priming.md):
+> the same automatic save now runs for every trip in a 48-hour rolling window from the shop layout, not
+> only the one trip whose live manifest is open. Nothing here — the snapshot shape, retention, or the
+> single-trip page's own auto-save — changes.
 
 Refreshing today is still polling (interval + focus + reconnect), not push. A later revisit could move
 the "is the live manifest newer" signal to a push channel (SSE from a lightweight endpoint, or a

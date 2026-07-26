@@ -58,20 +58,38 @@ async function openDatabase(): Promise<IDBDatabase> {
   return requestResult(request);
 }
 
-async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
-  const read = db.transaction(KEY_STORE, "readonly");
-  const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
-  await transactionDone(read);
-  if (existing instanceof CryptoKey) return existing;
+/**
+ * Guards the whole read-or-generate-and-write sequence below against two
+ * concurrent first-ever callers (e.g. OfflineManifestAutoSave saving several
+ * trips at once on a device with no key yet, see
+ * ADR 20260726-shopwide-offline-manifest-priming). Without this, both could
+ * read "no key yet," each generate and encrypt with its *own* key, and only
+ * the last write survives in the key store — leaving every earlier record
+ * permanently undecryptable under the one key that remains. A separate lock
+ * name from withManifestLock's per-trip locks, so this never nests inside
+ * one of those (no deadlock risk) and simply serializes key creation itself.
+ */
+function withKeyLock<T>(fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks) return fn();
+  return navigator.locks.request("diveday-offline-manifest-key", fn);
+}
 
-  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
-  const write = db.transaction(KEY_STORE, "readwrite");
-  write.objectStore(KEY_STORE).put(key, KEY_ID);
-  await transactionDone(write);
-  return key;
+async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
+  return withKeyLock(async () => {
+    const read = db.transaction(KEY_STORE, "readonly");
+    const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
+    await transactionDone(read);
+    if (existing instanceof CryptoKey) return existing;
+
+    const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+      "encrypt",
+      "decrypt",
+    ]);
+    const write = db.transaction(KEY_STORE, "readwrite");
+    write.objectStore(KEY_STORE).put(key, KEY_ID);
+    await transactionDone(write);
+    return key;
+  });
 }
 
 function additionalData(tripId: string): ArrayBuffer {
@@ -163,6 +181,103 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
   } finally {
     db.close();
   }
+}
+
+/**
+ * Every saved trip on this device, for the offline shell's list view (see
+ * ADR 20260726-shopwide-offline-manifest-priming). Reuses loadOfflineManifest
+ * per trip rather than a bespoke bulk-decrypt path so the same expiry/
+ * pending-event rules (keep an expired record alive only while it still
+ * holds an unsynced roll-call event) apply exactly once, in one place,
+ * instead of being re-implemented here and risking drift.
+ *
+ * Ordered upcoming-or-active trips first (soonest departure on top — "the
+ * next boat leaving"), then past trips still within their post-trip
+ * retention window behind them: a plain ascending sort by start time alone
+ * would put an old, already-departed trip ahead of tomorrow's departure
+ * once the board has run for more than a few days, which is the opposite of
+ * what this list is for.
+ */
+export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
+  const db = await openDatabase();
+  let tripIds: string[];
+  try {
+    const transaction = db.transaction(MANIFEST_STORE, "readonly");
+    tripIds = (await requestResult(
+      transaction.objectStore(MANIFEST_STORE).getAllKeys(),
+    )) as string[];
+    await transactionDone(transaction);
+  } finally {
+    db.close();
+  }
+  const envelopes = await Promise.all(
+    tripIds.map((tripId) => loadOfflineManifest(tripId).catch(() => null)),
+  );
+  const now = nowDate();
+  const byStartsAt = (a: OfflineManifestEnvelope, b: OfflineManifestEnvelope) =>
+    (a.snapshot.manifests[0]?.trip.startsAt ?? "").localeCompare(
+      b.snapshot.manifests[0]?.trip.startsAt ?? "",
+    );
+  const saved = envelopes.filter(
+    (envelope): envelope is OfflineManifestEnvelope => envelope !== null,
+  );
+  const isPast = (envelope: OfflineManifestEnvelope) => {
+    const endsAt = envelope.snapshot.manifests[0]?.trip.endsAt;
+    return !!endsAt && new Date(endsAt) < now;
+  };
+  return [
+    ...saved.filter((envelope) => !isPast(envelope)).sort(byStartsAt),
+    ...saved.filter(isPast).sort(byStartsAt),
+  ];
+}
+
+/**
+ * Deletes every device record belonging to a shop other than the one the
+ * caller is currently signed into. This IndexedDB store has never been
+ * shop-scoped — it's keyed purely by tripId, per browser origin, not per
+ * shop — so a device shared across shops (a freelance captain, a resold or
+ * reassigned boat tablet) could otherwise accumulate another shop's roster
+ * indefinitely. Call this with the server-verified shop slug from
+ * GET /api/offline-manifests/upcoming (never a client-supplied value) any
+ * time that endpoint is reached, so the moment a different shop's staff
+ * authenticates on this device, the previous shop's cached manifests stop
+ * being readable — see ADR 20260726-shopwide-offline-manifest-priming.
+ *
+ * Never deletes a record still holding an unsynced (`pending`) roll-call
+ * event: that event cannot be reconciled under a *different* shop's session
+ * (the server would look it up against the wrong tenant and reject or
+ * misattribute it), so deleting it here would destroy the only copy of that
+ * evidence for good. It's left in place — visible until the original shop's
+ * own session next runs a purge pass and finds it resolved, or it clears via
+ * the ordinary expiry-once-no-pending-events rule above — the same
+ * least-bad tradeoff `loadOfflineManifest` already makes for the single-shop
+ * expiry case, applied here too.
+ *
+ * The pending check and the delete both run under this trip's
+ * `withManifestLock`, re-reading the record once the lock is held rather than
+ * trusting the snapshot `listOfflineManifests` returned before it — otherwise
+ * a concurrent `appendOfflineRollCall` (a second tab still has that foreign
+ * shop's offline roll-call view open) could record a new pending event
+ * between that read and this delete, and this would erase it anyway despite
+ * the filter above having correctly seen "no pending events" a moment
+ * earlier. Every other mutator in this module already goes through the same
+ * lock for exactly this read-then-write race; this one hadn't.
+ */
+export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
+  const saved = await listOfflineManifests();
+  const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
+  await Promise.all(
+    candidates.map((envelope) => {
+      const tripId = envelope.snapshot.manifests[0]?.trip.id;
+      if (!tripId) return Promise.resolve();
+      return withManifestLock(tripId, async () => {
+        const current = await loadOfflineManifest(tripId);
+        if (!current) return;
+        if (current.events.some((event) => event.syncStatus === "pending")) return;
+        await deleteOfflineManifest(tripId);
+      });
+    }),
+  );
 }
 
 export async function saveOfflineManifest(

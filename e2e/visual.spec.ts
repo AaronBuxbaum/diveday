@@ -363,6 +363,16 @@ for (const scheme of ["light", "dark"] as const) {
         // The manifest visit just above auto-saves a device copy, so clear it
         // first to reproduce the truly-empty state (e.g. storage eviction).
         const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
+
+        // The offline shell's list view — every trip currently saved on this
+        // device, reachable at dive.day root as well as `/offline-manifest`
+        // directly (see ADR 20260726-shopwide-offline-manifest-priming). The
+        // manifest visit above already auto-saved this trip, so capture the
+        // populated list before the IndexedDB clear below.
+        await page.goto("/offline-manifest");
+        await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
+        await capture(page, "offline-manifest-list", scheme);
+
         await page.evaluate(
           () =>
             new Promise<void>((resolve, reject) => {
