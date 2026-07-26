@@ -167,6 +167,147 @@ describe("notify", () => {
     await expect(notify(booking, provider)).resolves.toEqual({ status: "not_configured" });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it("sends a welcome email keyed by the account, once ever", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "resend-welcome-id" }), { status: 200 }),
+      );
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(
+      notify(
+        {
+          kind: "welcome",
+          userAccountId: "00000000-0000-4000-8000-000000000020",
+          shopId: "00000000-0000-4000-8000-000000000010",
+          to: "owner@example.com",
+          ownerName: "Pat Diver",
+          shopName: "Blue Mantis",
+          signInUrl: "https://diveday.example/sign-in",
+        },
+        provider,
+      ),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-welcome-id" });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Idempotency-Key": "welcome/00000000-0000-4000-8000-000000000020",
+        }),
+      }),
+    );
+  });
+
+  it("keys email verification by the token row's id, not the raw token", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-verify-id" }), { status: 200 }));
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(
+      notify(
+        {
+          kind: "email_verification",
+          userAccountId: "00000000-0000-4000-8000-000000000020",
+          tokenId: "00000000-0000-4000-8000-000000000030",
+          shopId: "00000000-0000-4000-8000-000000000010",
+          to: "owner@example.com",
+          ownerName: "Pat Diver",
+          verifyUrl: "https://diveday.example/verify/raw-token-should-not-appear",
+          expiresAt: new Date("2026-07-29T12:00:00.000Z"),
+          timezone: "America/New_York",
+        },
+        provider,
+      ),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-verify-id" });
+
+    const headers = fetchImpl.mock.calls[0]?.[1]?.headers;
+    expect(headers["Idempotency-Key"]).toBe(
+      "email-verification/00000000-0000-4000-8000-000000000030",
+    );
+    expect(headers["Idempotency-Key"]).not.toContain("raw-token-should-not-appear");
+  });
+
+  it("keys a password-reset request by the token row's id", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-reset-id" }), { status: 200 }));
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(
+      notify(
+        {
+          kind: "password_reset_request",
+          userAccountId: "00000000-0000-4000-8000-000000000020",
+          tokenId: "00000000-0000-4000-8000-000000000031",
+          shopId: "00000000-0000-4000-8000-000000000010",
+          to: "owner@example.com",
+          ownerName: "Pat Diver",
+          resetUrl: "https://diveday.example/reset-password/raw-token-should-not-appear",
+          expiresAt: new Date("2026-07-26T13:00:00.000Z"),
+          timezone: "America/New_York",
+        },
+        provider,
+      ),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-reset-id" });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Idempotency-Key": "password-reset-request/00000000-0000-4000-8000-000000000031",
+        }),
+      }),
+    );
+  });
+
+  it("keys a password-changed notice by its own timestamp so a second reset is a fresh send", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "resend-changed-id" }), { status: 200 }),
+      );
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(
+      notify(
+        {
+          kind: "password_changed",
+          userAccountId: "00000000-0000-4000-8000-000000000020",
+          shopId: "00000000-0000-4000-8000-000000000010",
+          to: "owner@example.com",
+          ownerName: "Pat Diver",
+          changedAt: new Date("2026-07-26T13:00:00.000Z"),
+        },
+        provider,
+      ),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-changed-id" });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Idempotency-Key":
+            "password-changed/00000000-0000-4000-8000-000000000020/2026-07-26T13:00:00.000Z",
+        }),
+      }),
+    );
+  });
 });
 
 describe("waitlistInviteEmail", () => {

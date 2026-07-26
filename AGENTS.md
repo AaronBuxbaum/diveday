@@ -45,7 +45,8 @@ adapters and must not introduce unique requirements.
 | You need | Go to |
 | --- | --- |
 | Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
-| Bearer-token pages (waiver signing, trip-prep "ready", recap) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
+| Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
+| Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`, `src/app/verify/[token]`, `src/app/reset-password/[token]`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; account rows in `src/db/user-accounts.ts` |
 | Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | Email: sending and delivery outcomes | `src/lib/notifications/` + `src/app/api/webhooks/resend/`; setup in [docs/engineering/resend-email-runbook.md](docs/engineering/resend-email-runbook.md). Mail *to* DiveDay is hosted mailboxes, not code |
@@ -124,9 +125,11 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->

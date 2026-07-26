@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { bookingConfirmationEmail, tripRecapEmail, tripReminderEmail } from "./email";
+import {
+  bookingConfirmationEmail,
+  passwordChangedEmail,
+  passwordResetEmail,
+  tripRecapEmail,
+  tripReminderEmail,
+  verifyAccountEmail,
+  welcomeEmail,
+} from "./email";
 
 const base = {
   diverName: "Pat Diver",
@@ -110,5 +118,78 @@ describe("tripRecapEmail", () => {
     const email = tripRecapEmail(recapBase);
     expect(email.text).toContain("Thanks for diving Two-Tank Reef");
     expect(email.text).not.toContain("You dived .");
+  });
+});
+
+describe("welcomeEmail", () => {
+  it("names the shop and links to sign-in", () => {
+    const email = welcomeEmail({
+      ownerName: "Pat Diver",
+      shopName: "Blue Mantis",
+      signInUrl: "https://diveday.example/sign-in",
+    });
+    expect(email.subject).toContain("Blue Mantis");
+    expect(email.text).toContain("https://diveday.example/sign-in");
+    expect(email.html).toContain('href="https://diveday.example/sign-in"');
+  });
+});
+
+describe("verifyAccountEmail", () => {
+  const base = {
+    ownerName: "Pat Diver",
+    verifyUrl: "https://diveday.example/verify/abc.def",
+    expiresAt: new Date("2026-08-04T13:00:00.000Z"),
+    timezone: "America/New_York",
+  };
+
+  it("links the confirmation and names when it expires", () => {
+    const email = verifyAccountEmail(base);
+    expect(email.text).toContain("https://diveday.example/verify/abc.def");
+    expect(email.html).toContain('href="https://diveday.example/verify/abc.def"');
+    expect(email.text).toContain("This link expires");
+  });
+
+  it("reassures a visitor who never signed up that they can ignore it", () => {
+    const email = verifyAccountEmail(base);
+    expect(email.text).toContain("you can ignore this");
+  });
+});
+
+describe("passwordResetEmail", () => {
+  const base = {
+    ownerName: "Pat Diver",
+    resetUrl: "https://diveday.example/reset-password/abc.def",
+    expiresAt: new Date("2026-08-01T14:00:00.000Z"),
+    timezone: "America/New_York",
+  };
+
+  it("links the reset and notes it works once", () => {
+    const email = passwordResetEmail(base);
+    expect(email.text).toContain("https://diveday.example/reset-password/abc.def");
+    expect(email.html).toContain('href="https://diveday.example/reset-password/abc.def"');
+    expect(email.text).toContain("works once");
+  });
+
+  it("reassures someone who didn't request it that nothing changed", () => {
+    const email = passwordResetEmail(base);
+    expect(email.text).toContain("your password hasn't changed");
+  });
+});
+
+describe("passwordChangedEmail", () => {
+  it("points a compromised recipient at requesting a new reset, not signing in — the old password no longer works for them", () => {
+    const email = passwordChangedEmail({
+      ownerName: "Pat Diver",
+      forgotPasswordUrl: "https://diveday.example/forgot-password",
+    });
+    expect(email.text).toContain("https://diveday.example/forgot-password");
+    expect(email.html).toContain('href="https://diveday.example/forgot-password"');
+    expect(email.text).not.toContain("sign in and set a new password");
+  });
+
+  it("still reads well without a link when APP_HOST is unset", () => {
+    const email = passwordChangedEmail({ ownerName: "Pat Diver" });
+    expect(email.text).not.toContain("http");
+    expect(email.text).toContain("request a new password");
   });
 });

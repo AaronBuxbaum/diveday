@@ -14,6 +14,14 @@ describe("redactCapabilityUrl", () => {
     expect(redactCapabilityUrl("/recap/abc123.def456")).toBe("/recap/[token]");
   });
 
+  it("redacts a verify-email token path", () => {
+    expect(redactCapabilityUrl("/verify/abc123.def456")).toBe("/verify/[token]");
+  });
+
+  it("redacts a password-reset token path", () => {
+    expect(redactCapabilityUrl("/reset-password/abc123.def456")).toBe("/reset-password/[token]");
+  });
+
   it("redacts even with query string and hash", () => {
     expect(redactCapabilityUrl("/ready/abc123.def456?photo=error#section")).toBe("/ready/[token]");
   });
