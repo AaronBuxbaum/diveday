@@ -10,6 +10,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  accountTokens,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -2463,7 +2464,22 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     // minted one for them — contact import (src/db/import.ts) and diver signup
     // both do — so this is not hypothetical; it is what made trips.spec flake
     // under the full suite. deleteDemoShopCascade already clears these; the
-    // per-reset path must too.
+    // per-reset path must too. Account tokens (email verify / password reset)
+    // reference the login row itself, one layer further down the same chain —
+    // a forgot-password request against a non-staff person's account leaves
+    // one behind, so it must go before user_accounts for the identical reason
+    // (security review finding on 20260725-account-lifecycle-emails).
+    const nonStaffAccountIds = (
+      await db
+        .select({ id: userAccounts.id })
+        .from(userAccounts)
+        .where(inArray(userAccounts.personId, nonStaffIds))
+    ).map((row) => row.id);
+    if (nonStaffAccountIds.length > 0) {
+      await db
+        .delete(accountTokens)
+        .where(inArray(accountTokens.userAccountId, nonStaffAccountIds));
+    }
     await db.delete(userAccounts).where(inArray(userAccounts.personId, nonStaffIds));
     await db.delete(people).where(inArray(people.id, nonStaffIds));
   }
@@ -2544,6 +2560,20 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
 
   if (personIds.length > 0) {
+    // Account tokens reference user_accounts, one layer further down the same
+    // chain the comment above already walks — a demo owner who ever requested
+    // a reset link leaves one behind, and it must go before user_accounts or
+    // this FK-violates and strands the shop past the reaper's TTL (security
+    // review finding on 20260725-account-lifecycle-emails).
+    const demoAccountIds = (
+      await db
+        .select({ id: userAccounts.id })
+        .from(userAccounts)
+        .where(inArray(userAccounts.personId, personIds))
+    ).map((row) => row.id);
+    if (demoAccountIds.length > 0) {
+      await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, demoAccountIds));
+    }
     await db.delete(userAccounts).where(inArray(userAccounts.personId, personIds));
     await db.delete(personRoles).where(inArray(personRoles.personId, personIds));
   }

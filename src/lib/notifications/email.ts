@@ -275,6 +275,94 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   };
 }
 
+type WelcomeEmailInput = {
+  ownerName: string;
+  shopName: string;
+  signInUrl: string;
+};
+
+/**
+ * Sent once, right after `/onboard` creates the shop — no action link beyond
+ * a sign-in nudge, since onboarding already signs the owner in immediately.
+ */
+export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
+  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const shop = escapeHtml(input.shopName);
+  const url = escapeHtml(input.signInUrl);
+
+  return {
+    subject: `Welcome to DiveDay, ${input.shopName}`,
+    text: `Hi ${firstName},\n\n${input.shopName} is live on DiveDay. Add your first trip, invite a diver, and the dock is one step closer.\n\nSign in any time:\n${input.signInUrl}\n\nGlad you're here.\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${shop}</strong> is live on DiveDay. Add your first trip, invite a diver, and the dock is one step closer.</p><p><a href="${url}">Sign in any time</a>.</p><p>Glad you're here.</p>`,
+  };
+}
+
+type VerifyAccountEmailInput = {
+  ownerName: string;
+  verifyUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+export function verifyAccountEmail(input: VerifyAccountEmailInput): NotificationEmail {
+  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const url = escapeHtml(input.verifyUrl);
+
+  return {
+    subject: "Confirm your email for DiveDay",
+    text: `Hi ${firstName},\n\nConfirm this is your email address:\n${input.verifyUrl}\n\nThis link expires ${expiresAt}. If you didn't create a DiveDay account, you can ignore this.\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p><a href="${url}">Confirm this is your email address</a>.</p><p>This link expires ${escapeHtml(expiresAt)}. If you didn't create a DiveDay account, you can ignore this.</p>`,
+  };
+}
+
+type PasswordResetEmailInput = {
+  ownerName: string;
+  resetUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+export function passwordResetEmail(input: PasswordResetEmailInput): NotificationEmail {
+  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const url = escapeHtml(input.resetUrl);
+
+  return {
+    subject: "Reset your DiveDay password",
+    text: `Hi ${firstName},\n\nSomeone asked to reset the password on this DiveDay account. Choose a new one here:\n${input.resetUrl}\n\nThis link expires ${expiresAt} and works once. If this wasn't you, your password hasn't changed — you can ignore this.\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Someone asked to reset the password on this DiveDay account. <a href="${url}">Choose a new one here</a>.</p><p>This link expires ${escapeHtml(expiresAt)} and works once. If this wasn't you, your password hasn't changed — you can ignore this.</p>`,
+  };
+}
+
+type PasswordChangedEmailInput = {
+  ownerName: string;
+  /**
+   * The recovery link for someone this *wasn't* — omitted only when
+   * APP_HOST isn't configured. Never "sign in and set a new password":
+   * the whole point of this notice is that the old password no longer
+   * works for whoever didn't make this change, so the only usable recovery
+   * path is requesting a fresh reset (security review finding).
+   */
+  forgotPasswordUrl?: string;
+};
+
+export function passwordChangedEmail(input: PasswordChangedEmailInput): NotificationEmail {
+  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const recoveryText = input.forgotPasswordUrl
+    ? `If it wasn't, request a new password here right away:\n${input.forgotPasswordUrl}\n`
+    : "If it wasn't, request a new password from the sign-in page right away.\n";
+  const recoveryHtml = input.forgotPasswordUrl
+    ? `<p>If it wasn't, <a href="${escapeHtml(input.forgotPasswordUrl)}">request a new password here</a> right away.</p>`
+    : "<p>If it wasn't, request a new password from the sign-in page right away.</p>";
+
+  return {
+    subject: "Your DiveDay password was changed",
+    text: `Hi ${firstName},\n\nThe password on this DiveDay account was just changed. If that was you, there's nothing else to do.\n\n${recoveryText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>The password on this DiveDay account was just changed. If that was you, there's nothing else to do.</p>${recoveryHtml}`,
+  };
+}
+
 export function waiverRequestEmail(input: WaiverRequestEmailInput): NotificationEmail {
   const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
   const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);

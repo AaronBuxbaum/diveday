@@ -1072,12 +1072,52 @@ export const userAccounts = pgTable(
     email: text("email").notNull(),
     hashedPassword: text("hashed_password").notNull(),
     status: accountStatus("status").notNull().default("active"),
+    /**
+     * Null until the account confirms it owns its own address via
+     * `/verify/[token]` (20260725-account-lifecycle-emails). Tracked, but not
+     * yet a sign-in gate — an unverified account works exactly like a
+     * verified one today.
+     */
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("user_accounts_email_unique").on(table.email),
     uniqueIndex("user_accounts_person_unique").on(table.personId),
   ],
+);
+
+export const accountTokenPurpose = pgEnum("account_token_purpose", [
+  "email_verification",
+  "password_reset",
+]);
+
+/**
+ * A hashed, expiring, one-time bearer token proving control of a user
+ * account's own email address — confirming a freshly created account, or
+ * authorizing a password reset (20260725-account-lifecycle-emails). Shaped
+ * like `waiver_records`'/`booking_capabilities`' tokens, not
+ * `recap-links.ts`'s stateless one: a password-reset token is a bearer
+ * credential over account takeover and must be individually revocable.
+ * Issuing a fresh token for the same account+purpose supersedes any prior
+ * outstanding one, exactly like a reissued waiver link.
+ */
+export const accountTokens = pgTable(
+  "account_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userAccountId: uuid("user_account_id")
+      .notNull()
+      .references(() => userAccounts.id),
+    purpose: accountTokenPurpose("purpose").notNull(),
+    /** SHA-256 hash only — the raw bearer token is shown once when issued. */
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("account_tokens_account_purpose_idx").on(table.userAccountId, table.purpose)],
 );
 
 /**
