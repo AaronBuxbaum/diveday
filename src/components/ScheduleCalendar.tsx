@@ -25,6 +25,9 @@ export function ScheduleCalendar({
   tripsByDay,
   prevMonthKey,
   nextMonthKey,
+  /** Appended to every link this component renders — carries `embed=1` through
+   * month navigation and day taps so an embedded calendar stays embedded. */
+  embedQuery = "",
 }: {
   shopSlug: string;
   label: string;
@@ -33,6 +36,7 @@ export function ScheduleCalendar({
   tripsByDay: Map<string, CalendarTrip[]>;
   prevMonthKey: string | null;
   nextMonthKey: string | null;
+  embedQuery?: string;
 }) {
   // size-11 (44px) meets the dock-test floor (design/principles.md #2) — size-9
   // (36px) was under it on the one control every visit to this page uses.
@@ -48,7 +52,7 @@ export function ScheduleCalendar({
         <div className="flex items-center gap-2">
           {prevMonthKey ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?month=${prevMonthKey}`}
+              href={`/shop/${shopSlug}/schedule?month=${prevMonthKey}${embedQuery}`}
               aria-label="Previous month"
               className={navClass}
             >
@@ -61,7 +65,7 @@ export function ScheduleCalendar({
           )}
           {nextMonthKey ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?month=${nextMonthKey}`}
+              href={`/shop/${shopSlug}/schedule?month=${nextMonthKey}${embedQuery}`}
               aria-label="Next month"
               className={navClass}
             >
@@ -115,7 +119,7 @@ export function ScheduleCalendar({
                   {trips.map((trip) => (
                     <li key={trip.id}>
                       <Link
-                        href={`/shop/${shopSlug}/schedule/${trip.id}`}
+                        href={`/shop/${shopSlug}/schedule/${trip.id}${embedQuery}`}
                         aria-label={`${trip.time} dive${trip.full ? " (full)" : ""}`}
                         // Not a full 44px target — a day with several dives stacks these
                         // tightly, and blowing each up to 44px would balloon the month

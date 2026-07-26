@@ -39,18 +39,25 @@ export default async function TripsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; after?: string }>;
+  searchParams: Promise<{ month?: string; after?: string; embed?: string }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after } = await searchParams;
+  const { month, after, embed } = await searchParams;
+  // Embed mode is the compact, chrome-light surface a shop pastes into its own
+  // website (docs ADR 20260726-schedule-embed) — never for staff, who always
+  // arrive signed in and never via a third-party iframe.
+  const isEmbed = embed === "1";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
     notFound();
   }
   const session = await auth();
-  const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
+  // Embed mode always renders the diver-facing surface, even for a signed-in
+  // staff member previewing the page — an iframe on the shop's own website
+  // must never expose the staff board.
+  const staffView = !isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles);
 
   // The board is served in pages: the list is one keyset page, the stat tiles
   // and calendar come from bounded queries — nothing loads every trip at once,
@@ -111,26 +118,34 @@ export default async function TripsPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader
-        eyebrow="Trips"
-        title="Schedule"
-        description={
-          staffView
-            ? "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest."
-            : "Find your next day on the water, see what to expect, and reserve your spot."
-        }
-        actions={
-          staffView ? (
-            <Link
-              href={`/shop/${shopSlug}/trips/new`}
-              className={buttonClass({ className: "rounded-xl" })}
-            >
-              <span aria-hidden="true">+</span> Schedule a trip
-            </Link>
-          ) : undefined
-        }
-      />
+    <main
+      className={
+        isEmbed
+          ? "w-full flex-1 px-3 py-4"
+          : "mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+      }
+    >
+      {isEmbed ? null : (
+        <ShopPageHeader
+          eyebrow="Trips"
+          title="Schedule"
+          description={
+            staffView
+              ? "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest."
+              : "Find your next day on the water, see what to expect, and reserve your spot."
+          }
+          actions={
+            staffView ? (
+              <Link
+                href={`/shop/${shopSlug}/trips/new`}
+                className={buttonClass({ className: "rounded-xl" })}
+              >
+                <span aria-hidden="true">+</span> Schedule a trip
+              </Link>
+            ) : undefined
+          }
+        />
+      )}
       {staffView && stats ? (
         <section
           aria-label="Schedule overview"
@@ -166,6 +181,7 @@ export default async function TripsPage({
           tripsByDay={tripsByDay}
           prevMonthKey={prevMonthKey}
           nextMonthKey={nextMonthKey}
+          embedQuery={isEmbed ? "&embed=1" : ""}
         />
       ) : null}
 
@@ -203,7 +219,7 @@ export default async function TripsPage({
                   href={
                     staffView
                       ? `/shop/${shopSlug}/trips/${trip.id}`
-                      : `/shop/${shopSlug}/schedule/${trip.id}`
+                      : `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`
                   }
                   className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 sm:flex-row sm:items-center"
                 >
@@ -258,7 +274,7 @@ export default async function TripsPage({
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {nextCursor ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?after=${encodeURIComponent(nextCursor)}${month ? `&month=${month}` : ""}`}
+              href={`/shop/${shopSlug}/schedule?after=${encodeURIComponent(nextCursor)}${month ? `&month=${month}` : ""}${isEmbed ? "&embed=1" : ""}`}
               className={buttonClass({ variant: "secondary" })}
             >
               Show later departures
@@ -266,7 +282,7 @@ export default async function TripsPage({
           ) : null}
           {after ? (
             <Link
-              href={`/shop/${shopSlug}/schedule${month ? `?month=${month}` : ""}`}
+              href={`/shop/${shopSlug}/schedule${month ? `?month=${month}` : ""}${isEmbed ? `${month ? "&" : "?"}embed=1` : ""}`}
               className="text-sm font-medium text-primary hover:underline"
             >
               ← Back to the next departure

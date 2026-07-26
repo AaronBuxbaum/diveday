@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Thirty-six key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 144 screenshots per run
+ * Visual regression coverage (Argos). Thirty-eight key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 152 screenshots per run
  * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 146 screenshots.
+ * via `capturePrint()`. That brings the run to 154 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -129,6 +129,12 @@ for (const scheme of ["light", "dark"] as const) {
 
       await page.goto("/shop/blue-mantis/schedule");
       await capture(page, "schedule", scheme);
+
+      // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
+      // no ShopPageHeader chrome, tighter padding — what a shop's own website
+      // actually shows inside the iframe.
+      await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await capture(page, "schedule-embed", scheme);
 
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
@@ -401,6 +407,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+
+        // The embed snippet generator (docs ADR 20260726-schedule-embed): the
+        // copy-paste calendar/button code a shop puts on its own website.
+        await page.goto("/shop/blue-mantis/settings/embed");
+        await page.getByRole("heading", { name: "Website embed" }).waitFor();
+        await capture(page, "settings-embed", scheme);
 
         // The team surface: inviting staff and the current roster with its
         // role checkboxes and status badges (20260726-staff-invite-accounts).
