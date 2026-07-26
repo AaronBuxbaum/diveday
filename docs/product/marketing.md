@@ -94,11 +94,11 @@ chosen battlegrounds — and re-read it before changing the spine.
   without that decision. The two-year price lock and the same-day support promise are **binding
   commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
   legal/tax-review dependency (H-12); do not treat the closed *price* as clearing them.
-- **Offline claims stay precise and human**: staff explicitly save a copy to the device; nothing
-  invisibly caches, transfers between devices, or guarantees stale readiness is live. Captain's
-  words ("saved to this phone", "checked again when service returns") — the machinery
-  (encryption, reconciliation) stays in ADRs, never in copy
-  ([design/principles.md](../design/principles.md) §4).
+- **Offline claims stay precise and human**: the device keeps its own copy current automatically
+  while online, with a manual "Refresh now" for right before losing signal; it never transfers
+  between devices or guarantees stale readiness is live. Captain's words ("this phone stays
+  ready", "checked again when service returns") — the machinery (encryption, reconciliation) stays
+  in ADRs, never in copy ([design/principles.md](../design/principles.md) §4).
 - **Safety-adjacent copy** (readiness, manifests, medical, cert gating, nitrox) gets
   `dive-domain-expert` review before merge, same as safety-critical code.
 - Multi-location operation and unconfigured provider integrations are out of scope and must not be
