@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { escapeHtml } from "@/lib/html";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
-import { CopySnippetButton } from "./CopySnippetButton";
+import { SnippetField } from "./SnippetField";
 
 export const metadata: Metadata = { title: "Website embed — DiveDay" };
 
@@ -15,19 +16,17 @@ export const metadata: Metadata = { title: "Website embed — DiveDay" };
  * Only the schedule/trip pages carry the framing exception src/proxy.ts grants
  * (`isEmbeddableShopRoute`), so every snippet here targets exactly those URLs.
  */
-export default async function EmbedSettingsPage({
-  params,
-}: {
-  params: Promise<{ shopSlug: string }>;
-}) {
+export default async function EmbedSettingsPage() {
   const session = await requireStaffSession();
-  const { shopSlug } = await params;
   const db = await getDb();
+  // Built from the staff member's own authorized shop, never the route's
+  // shopSlug param — a stale or mismatched URL segment must never generate
+  // a snippet that labels one shop's name on another shop's calendar.
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect("/");
 
   const origin = publicAppUrl();
-  const scheduleUrl = origin ? `${origin}/shop/${shopSlug}/schedule?embed=1` : null;
+  const scheduleUrl = origin ? `${origin}/shop/${shop.slug}/schedule` : null;
 
   if (!scheduleUrl) {
     return (
@@ -41,7 +40,13 @@ export default async function EmbedSettingsPage({
     );
   }
 
-  const iframeSnippet = `<iframe src="${scheduleUrl}" title="${shop.name} — book a dive" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>`;
+  const embedUrl = `${scheduleUrl}?embed=1`;
+  const shopNameAttr = escapeHtml(shop.name);
+  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — book a dive" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>`;
+  // Deliberately the plain schedule URL, not the embed one: this is a link a
+  // browser navigates to directly, never a frame, so it should land on the
+  // full page — including for a shop that takes online payment, where a
+  // hosted Stripe Checkout may refuse to render inside someone else's iframe.
   const buttonSnippet = `<a href="${scheduleUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#fff;font:600 15px/1 system-ui,sans-serif;text-decoration:none;border-radius:10px">Book a dive</a>`;
 
   return (
@@ -58,17 +63,8 @@ export default async function EmbedSettingsPage({
           A full booking calendar, sized to fit wherever you place it on your page. Best for a
           dedicated "Book now" page on your site.
         </p>
-        <div className="mt-4 flex flex-col gap-2">
-          <textarea
-            readOnly
-            rows={3}
-            value={iframeSnippet}
-            onFocus={(event) => event.currentTarget.select()}
-            className="w-full rounded-lg border border-border-strong bg-surface-sunken px-3 py-2 font-mono text-xs"
-          />
-          <div>
-            <CopySnippetButton text={iframeSnippet} label="Copy embed code" />
-          </div>
+        <div className="mt-4">
+          <SnippetField label="Embed code" rows={3} snippet={iframeSnippet} />
         </div>
       </section>
 
@@ -79,17 +75,8 @@ export default async function EmbedSettingsPage({
           simplest option, and the one to use if you take online payment, since a checkout page may
           refuse to open inside another site's frame.
         </p>
-        <div className="mt-4 flex flex-col gap-2">
-          <textarea
-            readOnly
-            rows={2}
-            value={buttonSnippet}
-            onFocus={(event) => event.currentTarget.select()}
-            className="w-full rounded-lg border border-border-strong bg-surface-sunken px-3 py-2 font-mono text-xs"
-          />
-          <div>
-            <CopySnippetButton text={buttonSnippet} label="Copy button code" />
-          </div>
+        <div className="mt-4">
+          <SnippetField label="Button code" rows={2} snippet={buttonSnippet} />
         </div>
       </section>
 

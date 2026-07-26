@@ -21,9 +21,11 @@ function ErrorNotice({ message }: { message?: string }) {
 export function WaitlistConfirmation({
   firstName,
   shopSlug,
+  embed,
 }: {
   firstName: string;
   shopSlug: string;
+  embed?: boolean;
 }) {
   return (
     // A wait-list join isn't the earned win the rationed accent is for
@@ -38,7 +40,7 @@ export function WaitlistConfirmation({
         opens up.
       </p>
       <Link
-        href={`/shop/${shopSlug}/schedule`}
+        href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         Back to the schedule
@@ -47,13 +49,13 @@ export function WaitlistConfirmation({
   );
 }
 
-export function TripSailedNotice({ shopSlug }: { shopSlug: string }) {
+export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?: boolean }) {
   return (
     <section className="mt-10 rounded-lg border border-border bg-surface p-6">
       <h2 className="font-medium">This one's already sailed</h2>
       <p className="mt-1 text-sm text-muted">
         <Link
-          href={`/shop/${shopSlug}/schedule`}
+          href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
           Check the schedule
@@ -83,7 +85,7 @@ export function TripFullSection({
       <p className="mt-1 text-sm text-muted">
         All {trip.capacity} spots are taken.{" "}
         <Link
-          href={`/shop/${shopSlug}/schedule`}
+          href={`/shop/${shopSlug}/schedule${tripRef.embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
           Find another trip

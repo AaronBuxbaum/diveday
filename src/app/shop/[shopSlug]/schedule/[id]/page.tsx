@@ -151,7 +151,7 @@ export default async function TripDetailPage({
   const full = isFull(trip);
   const remaining = spotsRemaining(trip);
   const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
-  const tripRef = { shopSlug, tripId };
+  const tripRef = { shopSlug, tripId, embed: isEmbed };
 
   return (
     <main
@@ -212,9 +212,10 @@ export default async function TripDetailPage({
         <WaitlistConfirmation
           firstName={waitlistConfirmation.person.fullName.split(" ")[0]}
           shopSlug={shopSlug}
+          embed={isEmbed}
         />
       ) : inPast ? (
-        <TripSailedNotice shopSlug={shopSlug} />
+        <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
       ) : full ? (
         <TripFullSection
           shopSlug={shopSlug}
