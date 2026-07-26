@@ -151,6 +151,7 @@ export async function startBookingCheckout(
           stripeAccountId,
           stripeSessionId: session.stripeSessionId,
           checkoutUrl: session.checkoutUrl,
+          customerEmail: input.customerEmail,
           currency: "usd",
           amountPerDiverCents,
           totalCents: amountPerDiverCents * input.bookingIds.length,

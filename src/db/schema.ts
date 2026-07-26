@@ -909,6 +909,18 @@ export const bookingCheckouts = pgTable(
     stripeSessionId: text("stripe_session_id").notNull(),
     /** Stripe's hosted payment page; shown again as the recovery link while the session is open. */
     checkoutUrl: text("checkout_url"),
+    /**
+     * The email Stripe received at checkout creation (`customerEmail` on
+     * `startBookingCheckout`), stored durably here. For a party checkout this
+     * is the one submitter's address — `booking_checkout_bookings` links every
+     * covered booking with no lead/ordering marker, so re-deriving "the
+     * purchaser" from that join is unreliable; this column is the actual
+     * source of truth for who to contact about this checkout attempt
+     * (abandoned-cart recovery, docs ADR 20260726-abandoned-checkout-recovery).
+     */
+    customerEmail: text("customer_email"),
+    /** Set once a recovery email has gone out, so a re-run of the recovery scan never double-sends. */
+    abandonedRecoverySentAt: timestamp("abandoned_recovery_sent_at", { withTimezone: true }),
     currency: text("currency").notNull().default("usd"),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
