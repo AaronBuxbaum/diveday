@@ -115,6 +115,35 @@ describe("GET /api/trips/[id]/manifest-events", () => {
     expect(await readOneChunk(response)).toBe(STREAM_CLOSED);
   });
 
+  it("unsubscribes when the stream is cancelled directly, without aborting the request", async () => {
+    const { db, shop, trip } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const first = await GET(manifestEventsRequest(trip.id), {
+      params: Promise.resolve({ id: trip.id }),
+    });
+    const firstReader = first.body?.getReader();
+    if (!firstReader) throw new Error("expected a streamed body");
+    // The consumer cancels directly — request.signal is never aborted, so
+    // only a cancel() hook on the stream's underlying source catches this.
+    await firstReader.cancel();
+
+    const second = await GET(manifestEventsRequest(trip.id), {
+      params: Promise.resolve({ id: trip.id }),
+    });
+    expect(second.status).toBe(200);
+
+    await publishManifestEvent(db, shop.id, trip.id);
+    // Before the fix, the first stream's stale subscription is still
+    // registered, and enqueueing onto its already-cancelled controller
+    // throws inside the shared dispatch loop — since Sets iterate in
+    // insertion order, that stops the loop before it ever reaches this
+    // second, still-open subscriber.
+    const chunk = await readOneChunk(second);
+    expect(chunk).toContain("event: manifest-changed");
+  });
+
   it("pushes a manifest-changed event through the stream when the trip's roll call changes", async () => {
     const { db, shop, trip } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
