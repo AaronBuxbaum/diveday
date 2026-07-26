@@ -10,7 +10,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { saveRentalFit } from "@/db/rental-fit";
-import { getShopBySlug } from "@/db/shops";
+import { getShopById, getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
@@ -18,6 +18,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { shopOffersNitrox } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import { ERROR_MESSAGES } from "./_components/types";
 
@@ -375,11 +376,20 @@ export async function saveRentalFitRequest(
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  await setBookingNitrox(ctx.db, {
-    shopId: ctx.capability.shopId,
-    bookingId: ctx.capability.bookingId,
-    wantsNitrox: parsed.data.nitrox === "on",
-  });
+  // The nitrox checkbox is only in this form when the shop currently offers
+  // nitrox (RentalFitForm.tsx) — when it isn't, the field is simply absent
+  // from every submission, whatever the diver's actual request. Only write it
+  // when the checkbox could have been there at all, so an unrelated save (a
+  // note, a size) never silently clears a request recorded while the shop
+  // still offered it.
+  const shop = await getShopById(ctx.db, ctx.capability.shopId);
+  if (shop && shopOffersNitrox(shop.rentalItems)) {
+    await setBookingNitrox(ctx.db, {
+      shopId: ctx.capability.shopId,
+      bookingId: ctx.capability.bookingId,
+      wantsNitrox: parsed.data.nitrox === "on",
+    });
+  }
   const result = saved ? "fit=saved" : "error=fit";
   revalidateAndRedirect(base, `${base}?booking=${token}&${result}`);
 }

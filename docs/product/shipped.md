@@ -147,7 +147,9 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 - **Role-aware landing** — a captain/divemaster's board leads with the boat they crew; an
   instructor's opens with their sessions ([role-aware-landing](../architecture/decisions/20260721-role-aware-landing.md)).
 - **Nitrox as a per-booking request** — a verified enriched-air card is re-checked at every read; a
-  revoked card downgrades to air (`src/db/nitrox.ts`).
+  revoked card downgrades to air (`src/db/nitrox.ts`). Offered only to shops that fill nitrox at all
+  (a "Nitrox fills" entry in the rental catalog, default off — most shops don't); a shop that hasn't
+  enabled it never shows the request, its price, or the prep-list tank split.
 - **Automated marine outlook** — a 10-day Open-Meteo water-temp/sea-state fallback until the crew
   publishes its own; visibility stays crew-entered
   ([automated-marine-outlook](../architecture/decisions/20260718-automated-marine-outlook.md)).

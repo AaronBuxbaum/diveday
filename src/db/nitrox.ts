@@ -1,8 +1,9 @@
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { shopOffersNitrox } from "@/lib/rentals";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { type ReviewRefusal, reviewNoteFor } from "./readiness";
-import { bookings, nitroxCertifications, people } from "./schema";
+import { bookings, nitroxCertifications, people, shops } from "./schema";
 
 export type NewNitroxCertification = {
   shopId: string;
@@ -218,6 +219,13 @@ export type SetBookingNitroxOutcome =
  * verified card and fall back to air when it is missing), so an uncertified
  * request can never turn into a nitrox tank until a card is verified. Turning
  * the request *off* is always allowed.
+ *
+ * A request to turn it *on* is refused outright (silently downgraded to false,
+ * same shape as any other clear) when the shop's rental catalog doesn't
+ * include nitrox — most shops don't fill it at all, and the UI that would
+ * offer this checkbox is hidden for them, so this is the write-time backstop
+ * for a request that reaches here some other way (a stale form, a disabled
+ * shop that never wiped its old capability link).
  */
 export async function setBookingNitrox(
   db: AppDb,
@@ -237,8 +245,18 @@ export async function setBookingNitrox(
       .limit(1);
     if (!booking) return { ok: false, reason: "booking_unavailable" };
 
+    let wantsNitrox = input.wantsNitrox;
+    if (wantsNitrox) {
+      const [shop] = await tx
+        .select({ rentalItems: shops.rentalItems })
+        .from(shops)
+        .where(eq(shops.id, input.shopId))
+        .limit(1);
+      if (!shop || !shopOffersNitrox(shop.rentalItems)) wantsNitrox = false;
+    }
+
     let certified = true;
-    if (input.wantsNitrox) {
+    if (wantsNitrox) {
       const [card] = await tx
         .select({ id: nitroxCertifications.id })
         .from(nitroxCertifications)
@@ -253,10 +271,7 @@ export async function setBookingNitrox(
       certified = Boolean(card);
     }
 
-    await tx
-      .update(bookings)
-      .set({ wantsNitrox: input.wantsNitrox })
-      .where(eq(bookings.id, booking.id));
-    return { ok: true, wantsNitrox: input.wantsNitrox, certified };
+    await tx.update(bookings).set({ wantsNitrox }).where(eq(bookings.id, booking.id));
+    return { ok: true, wantsNitrox, certified };
   });
 }
