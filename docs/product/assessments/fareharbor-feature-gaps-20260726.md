@@ -37,9 +37,14 @@ page (`src/app/shop/[shopSlug]/schedule/[id]/page.tsx`) exist only as DiveDay-ho
 `/shop/[shopSlug]/schedule`; there is no `<script>` widget, no iframe-optimized rendering mode, no
 "Book Now" button generator, and no shop-facing config UI to produce one. `next.config.ts` sets no
 frame-related headers at all, so nothing today would technically block a raw `<iframe src="...">` —
-but that's an accident of omission, not a supported path: the page still carries the full DiveDay chrome
-(header, nav, branding) with nothing built to strip it down for embedding, and there's no snippet
-generator a shop could actually copy-paste.
+but that's an accident of omission, not a supported path. To be precise about what's actually missing:
+the anonymous-visitor page is already fairly chrome-light — the root layout (`src/app/layout.tsx`)
+renders no header/nav/footer shell of its own, and `src/app/shop/[shopSlug]/layout.tsx` mounts `ShopNav`
+only when `session?.user` exists, so a signed-out diver never sees staff nav. The real gap is narrower
+than "strip the chrome": there is no snippet/embed generator, no compact single-trip or "Book Now"
+rendering mode sized for an iframe, no shop-facing config UI to produce one, and the page still carries
+its own DiveDay page metadata/title/OG tags and `ShopPageHeader` eyebrow rather than a minimal
+embed-shaped surface a shop's site would want.
 
 **Why it matters:** most dive shops already have a website they've invested in (SEO, domain authority,
 brand) and do not want to abandon it for a directory-style booking page. FareHarbor's embed is how it
@@ -49,10 +54,11 @@ build to reproduce what FareHarbor gives out of a settings page. This is a genui
 fixable gap, not a strategic concession like the distribution network (which fareharbor-positioning.md
 already correctly concedes).
 
-**Suggested shape (not a commitment):** an iframe-friendly rendering mode for the schedule/trip pages
-(strip nav/footer via a query param or dedicated route), plus a small, dependency-free embed script the
-shop can paste — start with "Book Now" button + single-trip embed before a full calendar widget, since
-the schedule page's month calendar already exists and mostly needs a chrome-less shell.
+**Suggested shape (not a commitment):** a compact, embed-shaped rendering mode for the schedule/trip
+pages (own route or query param — own metadata, no page-level eyebrow/header, sized for an iframe), plus
+a small, dependency-free embed script the shop can paste — start with "Book Now" button + single-trip
+embed before a full calendar widget, since the schedule page's month calendar already exists and mostly
+needs a minimal shell, not chrome removal.
 
 ## 2. Other feature gaps found, verified against the running code
 
@@ -60,9 +66,9 @@ the schedule page's month calendar already exists and mostly needs a chrome-less
 | --- | --- | --- | --- |
 | Promo / discount codes | Operator-configured codes at checkout ([Discount codes](https://help.fareharbor.com/hc/en-us/articles/42957480670363-Discount-codes)) | **Absent.** No discount/promo/coupon logic in `src/lib/payments/checkout.ts` or `src/db/orders.ts`; one unrelated comment about a rental "full-set discount" in `src/lib/rentals.ts:147` | Growth-layer gap — cheap to build once checkout supports a second line-item adjustment |
 | Gift cards | Sold, redeemed, and managed from the Dashboard, usable on any activity ([Gift card overview](https://help.fareharbor.com/hc/en-us/articles/40897463478555-Gift-card-overview)) | **Absent.** Zero references anywhere in `src` | Real revenue lever (holiday/gifting season) but non-trivial: needs a stored-value ledger, not just a checkout tweak |
-| Add-ons / upsells at checkout | Combos (pick-your-own add-ons) and Packages (pre-bundled, up to 3 items booked together) directly in the book flow ([Combos](https://fareharbor.com/blog/maximize-sales-and-customer-satisfaction-introducing-fareharbor-combos/), [Packages](https://fareharbor.com/blog/how-to-turn-your-best-tour-and-activity-offerings-into-high-performing-packages/)) | **Absent as a diver self-serve flow.** `checkout.ts` builds exactly one Stripe line item per trip/course fee; rental *fit* (`src/lib/rentals.ts`) records sizes only, never a price; staff can add line items post-booking (`src/app/shop/[shopSlug]/orders/new/page.tsx`), but a diver can't add a rental/photo package while booking | Meaningful average-order-value gap; rental gear is the obvious first add-on since sizing already exists — just needs a price |
+| Add-ons / upsells at checkout | Combos (pick-your-own add-ons) and Packages (pre-bundled, up to 3 items booked together) directly in the book flow ([Combos](https://fareharbor.com/blog/maximize-sales-and-customer-satisfaction-introducing-fareharbor-combos/), [Packages](https://fareharbor.com/blog/how-to-turn-your-best-tour-and-activity-offerings-into-high-performing-packages/)) | **Absent as a diver self-serve flow, but the pricing groundwork already exists.** `checkout.ts` builds exactly one Stripe line item per trip/course fee. Rental *fit* is further along than "sizes only": `src/lib/rentals.ts` defines `RentalPricing`/`quoteRentalFit`, Settings → Rental prices persists the shop's per-item prices, and `RentalFitForm` shows the diver the resulting quote — checkout just never charges it. Staff can add line items post-booking (`src/app/shop/[shopSlug]/orders/new/page.tsx`), but a diver can't add the already-quoted rental total (or anything else) while booking | Smaller lift than it looks — the missing piece is payment integration and price/order snapshotting at checkout time, not building rental pricing from scratch |
 | Self-service reschedule/cancel | Guests can rebook or cancel their own reservation online ([Exceptional Customer Experience](https://fareharbor.com/sell/customer-experience/)) | **Absent.** `cancelBooking` (`src/db/bookings.ts:394`) is only called from staff-side `src/app/shop/[shopSlug]/trips/[id]/actions.ts`; no diver-facing cancel/reschedule route exists off `/ready/[token]` or elsewhere. The automated refund-in-window mechanism ([ADR](../../architecture/decisions/20260721-automated-cancellation-refund.md)) still requires staff to initiate the cancel | Reduces staff phone-tag load; needs care — a diver-triggered cancel still has to hit the same capacity/refund/notification paths staff cancels do, and medical/manifest state must stay consistent |
-| Abandoned-cart recovery | Automatic recovery email ~2 hours after checkout abandonment, claimed ~20% recovery rate vs. 2.4% industry average ([Abandoned Cart Recovery](https://fareharbor.com/blog/say-goodbye-to-lost-bookings-with-new-abandoned-cart-recovery-feature/)) | **Tracked but not acted on.** A `checkout_abandoned` analytics event exists (`src/lib/analytics.ts:35-36`) but nothing in `src/lib/notifications/index.ts` sends a recovery email off it | Low-effort, high-leverage — the event already fires, this is "wire an existing seam to an existing signal" |
+| Abandoned-cart recovery | Automatic recovery email ~2 hours after checkout abandonment, claimed ~20% recovery rate vs. 2.4% industry average ([Abandoned Cart Recovery](https://fareharbor.com/blog/say-goodbye-to-lost-bookings-with-new-abandoned-cart-recovery-feature/)) | **Less built than it first appears.** `checkout_abandoned` exists only as a type-level entry in `AnalyticsEvent` (`src/lib/analytics.ts:34-38`) plus a unit test — no production code actually calls `trackEvent` with it, and even if it did, the payload is just `{ isDeposit: boolean }` sent to Vercel Analytics: no durable checkout reference and no recipient the notification seam could look up. Nothing in `src/lib/notifications/index.ts` sends a recovery email | Still one of the cheaper items here, but the real scope is detecting an abandoned checkout durably (a row, not an analytics ping), deduping/scheduling the send, and resolving a recipient — not just wiring an existing signal to an existing seam |
 | Private/group charter booking | Private Events tool: proposals, contracts, deposits, and resource-blocking for buyout-style bookings ([Private Events](https://fareharbor.com/sell/private-events/)) | **Absent.** No private/exclusive/buyout concept; "charter" is used only as a synonym for a scheduled trip (`src/db/seed.ts`, `src/db/schema.ts`). Consistent with the roadmap's existing note that there is no boat/resource entity, only trip seat counts (`roadmap.md` §5) | Real dive-shop use case (buyout charters, bachelor/corporate groups) but overlaps the already-open "no boat entity" roadmap item — solve them together, not separately |
 | Reviews / ratings display | TripAdvisor widget + Review Express integration, plus FareHarbor's own post-tour review-request emails ([Top Review Platforms](https://fareharbor.com/blog/top-review-platforms-for-tour-activity-operators/)) | **Absent.** No review/rating UI or post-trip review-request email anywhere in `src/app` or `src/lib/notifications` | Trust-signal gap that compounds with the "new + unproven" objection already flagged in competitive-analysis.md — a review-request email is nearly free to add on top of the existing recap flow |
 | Multi-currency | Standard on a global booking platform | **Absent.** `orders.ts:111` hardcodes `const currency = "usd"`; schema columns default to `"usd"` throughout `schema.ts` | Non-issue for the US-first launch; only matters if/when international shops are targeted — don't build ahead of demand |
@@ -86,12 +92,17 @@ None of this is safety-critical, so nothing here should jump ahead of V-02 (fiel
 manifest) or the open portability build items. In rough order of leverage per effort, for whoever next
 grooms [roadmap.md](../roadmap.md):
 
-1. **Abandoned-cart recovery email** — the cheapest item on this list; the tracking event already
-   exists, only the send-side is missing.
+1. **Abandoned-cart recovery email** — still cheap relative to the others, but needs durable
+   abandonment detection (a row, not an analytics ping), send scheduling/dedup, and recipient
+   resolution built, not just a send wired to an existing signal.
 2. **Embeddable schedule/booking widget** — directly answers this audit's trigger; start with a
-   chrome-less single-trip embed + "Book Now" button before a full calendar widget.
-3. **Rental gear as a priced, diver-selectable add-on at checkout** — reuses the existing rental-fit
-   sizing flow, just needs a price and a second Stripe line item.
+   compact single-trip embed + "Book Now" button before a full calendar widget — the anonymous pages
+   are already close to chrome-free, so this is mostly a snippet generator and a minimal embed shell,
+   not chrome removal.
+3. **Rental gear as a priced, diver-selectable add-on at checkout** — the pricing already exists
+   (`RentalPricing`/`quoteRentalFit`, shop-configured prices, the diver-facing quote in
+   `RentalFitForm`); what's missing is charging that quote at checkout and snapshotting it on the
+   order, not building a price from scratch.
 4. **Post-trip review-request email** — rides the existing recap flow (`/recap/[token]`); compounds
    with the trust-signal objection already tracked in competitive-analysis.md.
 5. **Promo/discount codes** and **diver self-service cancel/reschedule** — both need real design work
