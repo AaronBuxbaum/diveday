@@ -74,6 +74,7 @@ export default async function CoursePage({
     course.durationText ? { label: "Duration", value: course.durationText } : null,
     course.groupSizeText ? { label: "Group size", value: course.groupSizeText } : null,
   ].filter((spec) => spec !== null);
+  const inquiryHref = shop.contactEmail ? "#get-in-touch" : null;
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -95,6 +96,7 @@ export default async function CoursePage({
         course={course}
         totalCents={courseTotalCents(course)}
         bookHref={sessions.length > 0 ? "#dates" : null}
+        inquiryHref={inquiryHref}
       />
       <CourseSpecs items={specs} />
       <CourseAdmission
@@ -110,7 +112,7 @@ export default async function CoursePage({
         sessions={sessions}
         shopSlug={shopSlug}
         timezone={shop.timezone}
-        inquiryHref={shop.contactEmail ? "#get-in-touch" : null}
+        inquiryHref={inquiryHref}
       />
       <CourseFaqs faqs={course.faqs} />
       {shop.contactEmail ? (

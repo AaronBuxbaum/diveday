@@ -101,6 +101,16 @@ function DepartureCard({
         <p className="mt-3 text-sm text-muted">
           No one&apos;s booked yet — share the trip page and they&apos;ll show up here.
         </p>
+      ) : boarded === booked ? (
+        // The manifest already celebrates this milestone ("Roll call complete
+        // ✦"); Today watches the same board without ever visiting the
+        // manifest, so it earns the same coral rise-in moment here (principle
+        // 3) instead of readiness copy that's gone stale the moment the boat
+        // is actually full.
+        <p className="rise-in mt-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold">
+          <span aria-hidden="true">✦ </span>
+          Everyone&apos;s aboard.
+        </p>
       ) : (
         <p className="mt-3 text-sm font-semibold text-success">
           <span aria-hidden="true">✓ </span>

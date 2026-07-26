@@ -146,7 +146,7 @@ export default async function TripDetailPage({
       <FlashParams params={["error", "pay"]} />
       <Link
         href={`/shop/${shopSlug}/schedule`}
-        className="text-sm font-medium text-primary hover:underline"
+        className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
       >
         ← All trips
       </Link>
