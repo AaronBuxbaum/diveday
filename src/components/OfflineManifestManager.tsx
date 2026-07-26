@@ -16,9 +16,10 @@ import {
   offlineManifestFreshness,
 } from "@/lib/offline-manifests";
 
-// Polling, not push — see ADR 20260726 for why this stays a five-minute
-// interval (plus reconnect/visibility triggers) rather than a WebSocket/SSE
-// channel for now.
+// Fallback only — see ADR 20260726-manifest-push-refresh. The SSE
+// subscription below is the primary trigger; this interval (plus
+// reconnect/visibility triggers) is what still runs when SSE never connects
+// or a boat's signal drops, which push alone can never cover.
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 export function OfflineManifestManager({ payload }: { payload: OfflineManifestPayload }) {
@@ -244,6 +245,25 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);
+    };
+  }, [tripId, refresh]);
+
+  // Primary trigger — see ADR 20260726-manifest-push-refresh. `EventSource`
+  // reconnects on its own when the stream drops (a Vercel duration cutoff, a
+  // network blip); this effect doesn't need its own retry logic. When the
+  // stream never connects at all (e.g. blocked by a captive portal), the
+  // interval/reconnect/visibility effect above is what still keeps this
+  // device current.
+  useEffect(() => {
+    if (!tripId || typeof EventSource === "undefined") return;
+    const source = new EventSource(`/api/trips/${tripId}/manifest-events`);
+    const onManifestChanged = () => {
+      if (navigator.onLine) refresh({ manual: false });
+    };
+    source.addEventListener("manifest-changed", onManifestChanged);
+    return () => {
+      source.removeEventListener("manifest-changed", onManifestChanged);
+      source.close();
     };
   }, [tripId, refresh]);
 
