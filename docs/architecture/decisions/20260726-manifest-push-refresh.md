@@ -38,7 +38,13 @@ alongside its existing interval:
   a client that disconnects while `auth()`/`getDb()`/the trip lookup were still awaiting can abort the
   signal before the stream's `start()` callback ever runs, and a listener registered after the fact
   never sees an abort that already fired; without the check that leaks the subscription and heartbeat
-  interval for the rest of the warm process's life.
+  interval for the rest of the warm process's life. The stream also defines a `cancel()` hook, not just
+  the `start()`-registered abort listener — a consumer can cancel the response body directly (a test
+  harness's `reader.cancel()`, or a downstream adapter) without `request.signal` itself ever aborting,
+  and without `cancel()` that leaves the subscription registered; the next notification then throws
+  enqueuing onto the now-cancelled controller, which (since the shared dispatch loop isn't
+  per-subscriber isolated) can stop delivery to every other subscriber sharing that process, not just
+  this one.
 - **Fan-out — one shared LISTEN client per warm process, not one per viewer:** `src/db/manifest-events.ts`
   lazily opens a single dedicated `pg.Client` per process and issues `LISTEN manifest_events`; every SSE
   request in that process subscribes to the same in-memory dispatcher, filtering by `{shopId, tripId}`.
@@ -66,6 +72,14 @@ alongside its existing interval:
   real LISTEN/NOTIFY involved. This is what the test suite exercises; the Postgres LISTEN/NOTIFY wiring
   itself has no automated test (see Consequences) and needs a manual check against a real Neon branch
   before this ships.
+- **Client-side reconcile is serialized, not just triggered:** a device reconciling a backlog of offline
+  events publishes one signal per event (`recordRollCall` fires once per write), and that same device is
+  normally subscribed to its own trip's stream — so applying N queued events can trigger N pushes back to
+  itself while its own sync request is still in flight (`syncOfflineManifest` only resolves the pending
+  IndexedDB records once its own response lands). `OfflineManifestManager`'s `reconcile` uses the same
+  in-flight/queued-follow-up pattern `save` already does, so a burst of triggers collapses into the
+  current sync plus at most one more pass, never N overlapping `syncOfflineManifest` calls resubmitting
+  the same batch.
 - **The five-minute interval and reconnect/visibility triggers in `OfflineManifestManager` are
   unchanged** — they become the fallback path (SSE unavailable, blocked by a captive portal, or this
   process's LISTEN client is mid-reconnect) rather than the primary one. This is deliberate, not a

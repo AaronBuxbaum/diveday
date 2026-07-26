@@ -58,7 +58,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   // payload actually lands as a prop (see the payload effect).
   const manualRefreshPending = useRef(false);
 
-  const reconcile = useCallback(async () => {
+  const runReconcileOnce = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
     const pendingBefore = lastPendingCount.current;
     const rejectedBefore = lastRejectedCount.current;
@@ -92,6 +92,41 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       );
     }
   }, [router, tripId]);
+
+  // A reconciling device applying a backlog of offline events publishes one
+  // push signal per event (recordRollCall), and this same device is normally
+  // subscribed to its own trip's stream — so a genuine multi-event
+  // reconnect can otherwise trigger a burst of concurrent syncOfflineManifest
+  // calls, each resubmitting the same still-pending batch before the first
+  // one's response has even landed (syncOfflineManifest only resolves the
+  // pending IndexedDB records once its own response arrives). Serializing
+  // through the same in-flight/queued pattern `save` already uses below
+  // turns that burst into at most one more pass after the current one
+  // finishes, instead of N overlapping requests.
+  const reconcileInFlight = useRef<Promise<void> | null>(null);
+  const reconcileQueued = useRef(false);
+
+  const reconcile = useCallback(async () => {
+    if (!tripId || !navigator.onLine) return;
+    if (reconcileInFlight.current) {
+      reconcileQueued.current = true;
+      return reconcileInFlight.current;
+    }
+    const run = (async () => {
+      let again = true;
+      while (again) {
+        await runReconcileOnce();
+        again = reconcileQueued.current;
+        reconcileQueued.current = false;
+      }
+    })();
+    reconcileInFlight.current = run;
+    try {
+      await run;
+    } finally {
+      reconcileInFlight.current = null;
+    }
+  }, [tripId, runReconcileOnce]);
 
   // A follow-up request that arrives while a save is already writing gets
   // coalesced here instead of dropped — otherwise a save already in flight
