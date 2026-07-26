@@ -8,6 +8,7 @@ import {
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
+  purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
@@ -58,6 +59,25 @@ const earlierPayload: OfflineManifestPayload = {
         title: "Wreck & Reef — Duane",
         startsAt: "2026-07-30T09:00:00.000Z",
         endsAt: "2026-07-30T12:30:00.000Z",
+      },
+    },
+  ],
+};
+
+// A trip saved by a *different* shop on the same device/browser — the
+// cross-tenant scenario purgeOfflineManifestsExceptShop exists to close (see
+// ADR 20260726-shopwide-offline-manifest-priming).
+const otherShopPayload: OfflineManifestPayload = {
+  shop: { slug: "reef-runners", name: "Reef Runners", timezone: "America/New_York" },
+  manifests: [
+    {
+      ...payload.manifests[0],
+      trip: {
+        ...payload.manifests[0].trip,
+        id: "44444444-4444-4444-4444-444444444444",
+        title: "Morning Two-Tank",
+        startsAt: "2026-08-02T13:00:00.000Z",
+        endsAt: "2026-08-02T16:30:00.000Z",
       },
     },
   ],
@@ -228,6 +248,30 @@ describe("listOfflineManifests", () => {
 
   it("returns an empty list when nothing has been saved on this device", async () => {
     expect(await listOfflineManifests()).toEqual([]);
+  });
+});
+
+describe("purgeOfflineManifestsExceptShop", () => {
+  it("deletes every device record whose shop doesn't match, keeping the caller's own shop intact", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(otherShopPayload);
+
+    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+
+    const remaining = await listOfflineManifests();
+    expect(remaining.map((envelope) => envelope.snapshot.shop.slug)).toEqual([payload.shop.slug]);
+    expect(await loadOfflineManifest(otherShopPayload.manifests[0].trip.id)).toBeNull();
+    expect(await loadOfflineManifest(payload.manifests[0].trip.id)).not.toBeNull();
+  });
+
+  it("is a no-op when every saved record already belongs to the given shop", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+
+    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+
+    const remaining = await listOfflineManifests();
+    expect(remaining).toHaveLength(2);
   });
 });
 

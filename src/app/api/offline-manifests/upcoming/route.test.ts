@@ -2,6 +2,8 @@ import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { createTrip } from "@/db/trips";
+import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -82,6 +84,33 @@ describe("GET /api/offline-manifests/upcoming", () => {
     expect(titles).not.toContain("Wreck Trip — Spiegel Grove");
   });
 
+  it("includes a trip already underway, not just ones yet to depart", async () => {
+    // The exact scenario the window exists to cover: a trip mid-charter
+    // (departed, not yet ended) still needs its after-dive-checkpoint copy
+    // auto-saved — startsAt < now must not exclude it, only endsAt < now
+    // should (see listTripIdsInOfflineManifestWindow).
+    const { db, shop } = await seededContext();
+    const now = nowDate();
+    const active = await createTrip(db, {
+      shopId: shop.id,
+      title: "Mid-Charter Two-Tank",
+      startsAt: new Date(now.getTime() - 60 * 60 * 1000),
+      endsAt: new Date(now.getTime() + 60 * 60 * 1000),
+      capacity: 6,
+    });
+    if (!active) throw new Error("failed to seed the active trip fixture");
+
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const response = await GET();
+    const body = (await response.json()) as {
+      payloads: Array<{ manifests: Array<{ trip: { title: string } }> }>;
+    };
+    const titles = body.payloads.map((payload) => payload.manifests[0]?.trip.title);
+    expect(titles).toContain("Mid-Charter Two-Tank");
+  });
+
   it("never returns another shop's trips", async () => {
     const { db, shop } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
@@ -94,5 +123,21 @@ describe("GET /api/offline-manifests/upcoming", () => {
     for (const payload of body.payloads) {
       expect(payload.shop.slug).toBe("blue-mantis");
     }
+  });
+
+  it("always returns the caller's own shop identity, even with zero trips in the window", async () => {
+    // The client's cross-tenant purge (purgeOfflineManifestsExceptShop, see
+    // ADR 20260726-shopwide-offline-manifest-priming) depends on this being
+    // present on every response, not only ones carrying trips — otherwise a
+    // shop with nothing sailing in the next 48 hours would never learn "you
+    // are signed in as this shop" and stale records from a previous shop on
+    // this device would never get purged.
+    const { db, shop } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const response = await GET();
+    const body = (await response.json()) as { shop: { slug: string } };
+    expect(body.shop.slug).toBe("blue-mantis");
   });
 });

@@ -58,20 +58,38 @@ async function openDatabase(): Promise<IDBDatabase> {
   return requestResult(request);
 }
 
-async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
-  const read = db.transaction(KEY_STORE, "readonly");
-  const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
-  await transactionDone(read);
-  if (existing instanceof CryptoKey) return existing;
+/**
+ * Guards the whole read-or-generate-and-write sequence below against two
+ * concurrent first-ever callers (e.g. OfflineManifestAutoSave saving several
+ * trips at once on a device with no key yet, see
+ * ADR 20260726-shopwide-offline-manifest-priming). Without this, both could
+ * read "no key yet," each generate and encrypt with its *own* key, and only
+ * the last write survives in the key store — leaving every earlier record
+ * permanently undecryptable under the one key that remains. A separate lock
+ * name from withManifestLock's per-trip locks, so this never nests inside
+ * one of those (no deadlock risk) and simply serializes key creation itself.
+ */
+function withKeyLock<T>(fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks) return fn();
+  return navigator.locks.request("diveday-offline-manifest-key", fn);
+}
 
-  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
-  const write = db.transaction(KEY_STORE, "readwrite");
-  write.objectStore(KEY_STORE).put(key, KEY_ID);
-  await transactionDone(write);
-  return key;
+async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
+  return withKeyLock(async () => {
+    const read = db.transaction(KEY_STORE, "readonly");
+    const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
+    await transactionDone(read);
+    if (existing instanceof CryptoKey) return existing;
+
+    const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+      "encrypt",
+      "decrypt",
+    ]);
+    const write = db.transaction(KEY_STORE, "readwrite");
+    write.objectStore(KEY_STORE).put(key, KEY_ID);
+    await transactionDone(write);
+    return key;
+  });
 }
 
 function additionalData(tripId: string): ArrayBuffer {
@@ -195,6 +213,27 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
         b.snapshot.manifests[0]?.trip.startsAt ?? "",
       ),
     );
+}
+
+/**
+ * Deletes every device record belonging to a shop other than the one the
+ * caller is currently signed into. This IndexedDB store has never been
+ * shop-scoped — it's keyed purely by tripId, per browser origin, not per
+ * shop — so a device shared across shops (a freelance captain, a resold or
+ * reassigned boat tablet) could otherwise accumulate another shop's roster
+ * indefinitely. Call this with the server-verified shop slug from
+ * GET /api/offline-manifests/upcoming (never a client-supplied value) any
+ * time that endpoint is reached, so the moment a different shop's staff
+ * authenticates on this device, the previous shop's cached manifests stop
+ * being readable — see ADR 20260726-shopwide-offline-manifest-priming.
+ */
+export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
+  const saved = await listOfflineManifests();
+  await Promise.all(
+    saved
+      .filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug)
+      .map((envelope) => deleteOfflineManifest(envelope.snapshot.manifests[0]?.trip.id ?? "")),
+  );
 }
 
 export async function saveOfflineManifest(
