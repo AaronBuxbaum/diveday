@@ -34,6 +34,11 @@ alongside its existing interval:
   one shop's stream can never observe another shop's trip. A 25-second `: ping` comment keeps
   intermediate proxies/load balancers from timing out an idle stream; the client's native `EventSource`
   reconnects on its own if the stream still closes (a Vercel `maxDuration` cutoff, a dropped connection).
+  The route checks `request.signal.aborted` before registering its abort listener, not only after —
+  a client that disconnects while `auth()`/`getDb()`/the trip lookup were still awaiting can abort the
+  signal before the stream's `start()` callback ever runs, and a listener registered after the fact
+  never sees an abort that already fired; without the check that leaks the subscription and heartbeat
+  interval for the rest of the warm process's life.
 - **Fan-out — one shared LISTEN client per warm process, not one per viewer:** `src/db/manifest-events.ts`
   lazily opens a single dedicated `pg.Client` per process and issues `LISTEN manifest_events`; every SSE
   request in that process subscribes to the same in-memory dispatcher, filtering by `{shopId, tripId}`.

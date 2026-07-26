@@ -45,6 +45,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           // Already closed by the client disconnecting first — fine.
         }
       };
+      // The client can disconnect while auth()/getDb()/the trip lookup above
+      // were still awaiting, aborting request.signal before this callback
+      // ever runs — an abort listener registered after the fact never
+      // replays it, which would otherwise leak this subscription and
+      // heartbeat interval for the rest of the warm process's life.
+      if (request.signal.aborted) {
+        stop();
+        return;
+      }
       request.signal.addEventListener("abort", stop);
     },
   });
