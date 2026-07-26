@@ -63,13 +63,21 @@ function envelope(
     expiresAt?: string;
     events?: OfflineManifestEnvelope["events"];
     shopSlug?: string;
+    shopName?: string;
   } = {},
 ): OfflineManifestEnvelope {
   const base = payload(tripId, title);
   return {
     snapshot: {
       ...base,
-      shop: opts.shopSlug ? { ...base.shop, slug: opts.shopSlug } : base.shop,
+      shop:
+        opts.shopSlug || opts.shopName
+          ? {
+              ...base.shop,
+              slug: opts.shopSlug ?? base.shop.slug,
+              name: opts.shopName ?? base.shop.name,
+            }
+          : base.shop,
       version: 3,
       snapshotId: `snap-${tripId}`,
       savedAt: opts.savedAt ?? new Date(FROZEN_MS).toISOString(),
@@ -104,7 +112,7 @@ afterEach(() => {
 });
 
 describe("OfflineManifestView — list mode (no ?trip=)", () => {
-  it("lists every saved trip with its diver count and freshness pill", async () => {
+  it("lists every saved trip with its shop, diver count, and freshness pill", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([
       envelope("trip-1", "Two-Tank Reef — Molasses & French", {
         savedAt: new Date(FROZEN_MS).toISOString(),
@@ -116,6 +124,12 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(await screen.findByText("Two-Tank Reef — Molasses & French")).toBeInTheDocument();
     expect(screen.getByText(/2 divers/)).toBeInTheDocument();
     expect(screen.getByText("Fresh copy")).toBeInTheDocument();
+    // Always shown, not only when a foreign shop's record is also present —
+    // this view has no reliable way to know "the current shop" while
+    // genuinely offline, so the boundary has to be visible unconditionally
+    // rather than only when the code happens to be able to tell the two
+    // apart (see the cross-shop test below for why this matters).
+    expect(screen.getByText(/Blue Mantis Divers/)).toBeInTheDocument();
   });
 
   it("labels a record kept alive only for a pending event as expired, not as an ordinary stale copy", async () => {
@@ -190,6 +204,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     // 20260726-shopwide-offline-manifest-priming.
     const foreignShopEnvelope = envelope("trip-a", "Shop A's Trip", {
       shopSlug: "reef-runners",
+      shopName: "Reef Runners",
       events: [
         {
           clientEventId: "evt-1",
@@ -212,6 +227,11 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     await screen.findByText("Shop A's Trip");
+    // A preserved foreign-shop record must never render indistinguishably
+    // from the device's own shop's trips — this view can't reliably know
+    // "the current shop" while genuinely offline, so the shop name is always
+    // shown rather than only when a mismatch happens to be detectable.
+    expect(screen.getByText(/Reef Runners/)).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(syncOfflineManifest).not.toHaveBeenCalled();
   });

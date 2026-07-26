@@ -112,6 +112,23 @@ describe("OfflineManifestAutoSave", () => {
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
 
+  it("still primes the shell when the upcoming-manifests fetch itself fails", async () => {
+    // Priming is cheap, data-free, and unrelated to the board fetch — a
+    // device that's never primed before must still get a cached shell (and
+    // so a root-path offline fallback) even on a round where the fetch has a
+    // bad moment, rather than only priming on rounds the fetch happens to
+    // succeed.
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(fetch).mockRejectedValue(new Error("network error"));
+
+    render(<OfflineManifestAutoSave />);
+
+    await waitFor(() => expect(primeOfflineManifestShell).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+
   it("never fetches while offline", async () => {
     setOnline(false);
     render(<OfflineManifestAutoSave />);
