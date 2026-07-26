@@ -45,7 +45,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // success state; it becomes an explicit staff follow-up item.
   await page.getByRole("radio", { name: "Yes" }).first().check();
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByRole("heading", { name: "Waiver received" })).toBeVisible();
+  // The completed state's EarnedMoment is this page's only heading — assert
+  // the level explicitly so a regression back to <h2> (no <h1> on the page at
+  // all) fails here instead of silently passing a level-agnostic query.
+  await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).toBeVisible();
   await expect(page.getByText(/will privately review one of your answers/)).toBeVisible();
   // The done screen sends the diver onward to their readiness page, not a dead
   // end back to the shop home.

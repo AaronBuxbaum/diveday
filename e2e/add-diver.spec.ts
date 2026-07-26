@@ -144,8 +144,16 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
     await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
   }
 
-  // Tick both divers and send the waiver to the whole selection at once.
-  await page.getByRole("checkbox", { name: "Select Bulk Bea to send a waiver" }).check();
+  // The checkbox's real hit area is the label wrapping it, not just the 16px
+  // input — .check() below clicks the input directly regardless of markup,
+  // so it can't catch a wrapper that fails to forward taps (the exact bug a
+  // <span> in place of a <label> would reintroduce). Click near a corner of
+  // the label's 44px box, well outside the centered input, to prove the tap
+  // target itself — not just the input — toggles the checkbox.
+  const beaCheckbox = page.getByRole("checkbox", { name: "Select Bulk Bea to send a waiver" });
+  await beaCheckbox.locator("xpath=..").click({ position: { x: 4, y: 4 } });
+  await expect(beaCheckbox).toBeChecked();
+
   await page.getByRole("checkbox", { name: "Select Bulk Cal to send a waiver" }).check();
   await page.getByRole("button", { name: "Send waivers to selected" }).click();
 
