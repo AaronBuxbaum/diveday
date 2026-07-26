@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendDueCheckoutRecoveries } from "@/db/checkout-recovery";
 import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { sendDueRecaps } from "@/db/recap";
@@ -41,6 +42,14 @@ export const runtime = "nodejs";
  * 20260724-per-visitor-demo-shops): "Try the live demo" mints a fresh seeded
  * shop per visitor, and this daily pass deletes the expired ones so the database
  * doesn't grow without bound. The canonical blue-mantis demo is never reaped.
+ *
+ * And it sends abandoned-checkout recovery emails (ADR
+ * 20260726-abandoned-checkout-recovery): on this daily cadence a recovery
+ * fires at least `RECOVERY_DELAY_HOURS` after abandonment, same-day or the
+ * next tick depending on cron alignment — looser than the ~2-hour timing a
+ * finer-grained scheduler could offer, but never duplicated (dedup is a
+ * durable row) and never sent for a session that already paid or expired
+ * (each candidate is reconciled against Stripe first).
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -51,10 +60,11 @@ export async function GET(request: Request) {
   const db = await getDb();
   const reminders = await sendDueReminders(db);
   const recaps = await sendDueRecaps(db);
+  const checkoutRecoveries = await sendDueCheckoutRecoveries(db);
   const mediaDeletions = await retryPendingMediaDeletions(db);
   // Clear disposable demo shops past their TTL so per-visitor minting doesn't
   // grow the database without bound (ADR 20260724-per-visitor-demo-shops).
   const maxAgeMs = demoShopMaxAgeMs();
   const demoShops = await reapExpiredDemoShops(db, maxAgeMs ? { maxAgeMs } : {});
-  return NextResponse.json({ reminders, recaps, mediaDeletions, demoShops });
+  return NextResponse.json({ reminders, recaps, checkoutRecoveries, mediaDeletions, demoShops });
 }
