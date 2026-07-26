@@ -33,7 +33,9 @@ const { requireStaffSession } = await import("@/lib/session");
 const { canPersonManagePaymentSettings } = await import("@/db/authz");
 const { getDb } = await import("@/db/client");
 const { getShopById } = await import("@/db/shops");
-const { upsertShopStripeAccount } = await import("@/db/stripe-accounts");
+const { upsertShopStripeAccount, setShopStripeAccountStatus } = await import(
+  "@/db/stripe-accounts"
+);
 const { connectProviderFromEnvironment } = await import("@/lib/payments/connect");
 const { GET } = await import("./route");
 
@@ -78,5 +80,42 @@ describe("stripe connect callback authorization", () => {
     await GET(request("nonce_1"));
 
     expect(canPersonManagePaymentSettings).toHaveBeenCalledWith(FAKE_DB, "shop_1", "person_1");
+  });
+
+  it("links the account when the staff member is still authorized", async () => {
+    vi.mocked(canPersonManagePaymentSettings).mockResolvedValue(true);
+    vi.mocked(getShopById).mockResolvedValue({ isDemo: false } as never);
+    vi.mocked(connectProviderFromEnvironment).mockReturnValue({
+      authorizeUrl: vi.fn(),
+      exchangeCode: vi.fn().mockResolvedValue({ status: "connected", stripeAccountId: "acct_1" }),
+      retrieveAccountStatus: vi.fn().mockResolvedValue({
+        status: "ok",
+        account: { chargesEnabled: true, payoutsEnabled: true, detailsSubmitted: true },
+      }),
+      deauthorize: vi.fn(),
+    } as never);
+
+    const response = await GET(request("nonce_1"));
+
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.searchParams.get("notice")).toBe("connected");
+    expect(upsertShopStripeAccount).toHaveBeenCalledWith(FAKE_DB, "shop_1", "acct_1");
+    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_1", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+  });
+
+  it("still refuses to link a live account to the demo shop even when authorized", async () => {
+    vi.mocked(canPersonManagePaymentSettings).mockResolvedValue(true);
+    vi.mocked(getShopById).mockResolvedValue({ isDemo: true } as never);
+
+    const response = await GET(request("nonce_1"));
+
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.searchParams.get("notice")).toBe("connect_failed");
+    expect(connectProviderFromEnvironment).not.toHaveBeenCalled();
+    expect(upsertShopStripeAccount).not.toHaveBeenCalled();
   });
 });
