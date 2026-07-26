@@ -117,6 +117,39 @@ purge and finds it resolved, or it clears via the ordinary retention rule — th
 already accepts for a single shop's own expired-but-pending records, extended here across the tenant
 boundary rather than overridden by it.
 
+Three follow-up correctness fixes on top of that first pass, all from continued review:
+
+- **The pending check and the delete now run under the same trip lock**, re-reading the record once the
+  lock is held instead of trusting the list snapshot read before it. Without that, a second tab still
+  holding the previous shop's offline roll-call view open could record a new pending event (via
+  `appendOfflineRollCall`, which does take the lock) in the gap between "list says no pending events" and
+  "delete this record" — the purge would then erase evidence recorded a moment after it checked. Every
+  other mutator in this module already goes through this lock for exactly this class of race; the purge
+  hadn't.
+- **Shell priming no longer gates the purge.** `primeOfflineManifestShell()` and the purge used to run in
+  the same unguarded sequence, so a priming failure (a full Cache Storage quota, for one) threw before the
+  fetch/purge ever ran — leaving a device that just switched shops still holding the previous shop's
+  roster on every retry until priming happened to succeed. Priming is now independently best-effort and
+  never blocks the purge, which is the actual security-relevant step.
+- **The offline shell's own reconciliation only ever syncs a trip belonging to whichever shop the browser
+  is currently authenticated as.** The preserved-pending-event exception above has a failure mode of its
+  own: the list view's reconcile pass used to sync *every* pending trip regardless of shop, so a
+  preserved foreign-shop event would get submitted under whatever shop is currently signed in, rejected
+  for a tenant mismatch rather than a genuine domain refusal, and then look "resolved" to the very next
+  purge pass — which would delete it anyway, just one step removed. The reconcile pass now learns the
+  current shop from the same server-verified endpoint the auto-save uses and skips any trip that doesn't
+  match; if that identity can't be determined (offline, no session, a failed request), it reconciles
+  nothing rather than guess.
+
+**The freshness pill re-derives on a timer, not only at mount.** Freshness is computed inline from the
+wall clock at render time, so nothing previously re-rendered this component as real time passed with the
+page just sitting open — a captain who left the tab open past the 15-minute or 4-hour threshold would
+keep seeing a freshness pill computed at whatever instant the page happened to last render, "Fresh copy"
+included. A one-minute re-render tick (well under either threshold's own granularity) now forces the
+computation to re-run against the current time. The single-trip live-manifest view (`OfflineManifestManager`)
+has its own five-minute auto-refresh loop that incidentally re-renders it too, so this gap was specific to
+the list view added here, not a pre-existing problem being fixed in passing.
+
 **The list orders upcoming trips ahead of retained past ones, not by raw departure time alone.** A trip
 kept past its own end date by the 7-day post-trip retention window (20260718) has an earlier `startsAt`
 than anything still ahead of it, so a plain ascending sort would put an old, already-departed trip at

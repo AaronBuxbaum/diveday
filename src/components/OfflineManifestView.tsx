@@ -60,6 +60,18 @@ export function OfflineManifestView() {
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
+  // Freshness (current/aging/stale) is computed inline at render time from
+  // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
+  // this component as the wall clock crosses the 15-minute or 4-hour
+  // threshold on its own — a captain who leaves this page open would
+  // otherwise see "Fresh copy" read as current indefinitely. This forces a
+  // re-render every minute, well under either threshold's own granularity,
+  // purely to re-run that computation against the current time.
+  const [, forceFreshnessRecompute] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => forceFreshnessRecompute((tick) => tick + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const reconcile = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
@@ -95,8 +107,34 @@ export function OfflineManifestView() {
       envelope.events.some((event) => event.syncStatus === "pending"),
     );
     if (withPending.length === 0) return;
+    // Only ever sync a trip belonging to whichever shop this browser is
+    // actually authenticated as right now. This view has no session context
+    // of its own (it's designed to work fully offline/unauthenticated), so a
+    // preserved foreign-shop pending event — kept alive specifically because
+    // it can't be reconciled under the wrong tenant, see
+    // purgeOfflineManifestsExceptShop — would otherwise get submitted under
+    // whatever shop *is* currently signed in, rejected for a tenant mismatch
+    // rather than a genuine domain refusal, and then look "resolved" to the
+    // very next purge pass, which would delete it outright. Learn the
+    // server-verified current shop the same way the auto-save does; if that
+    // can't be determined (offline, signed out, request failure), reconcile
+    // nothing rather than guess.
+    let currentShopSlug: string;
+    try {
+      const response = await fetch("/api/offline-manifests/upcoming", {
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      currentShopSlug = ((await response.json()) as { shop: { slug: string } }).shop.slug;
+    } catch {
+      return;
+    }
+    const reconcilable = withPending.filter(
+      (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
+    );
+    if (reconcilable.length === 0) return;
     const results = await Promise.all(
-      withPending.map((envelope) => {
+      reconcilable.map((envelope) => {
         const id = envelope.snapshot.manifests[0]?.trip.id;
         return id ? syncOfflineManifest(id).catch(() => null) : Promise.resolve(null);
       }),
