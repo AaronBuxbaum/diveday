@@ -16,9 +16,10 @@ import {
   offlineManifestFreshness,
 } from "@/lib/offline-manifests";
 
-// Polling, not push — see ADR 20260726 for why this stays a five-minute
-// interval (plus reconnect/visibility triggers) rather than a WebSocket/SSE
-// channel for now.
+// Fallback only — see ADR 20260726-manifest-push-refresh. The SSE
+// subscription below is the primary trigger; this interval (plus
+// reconnect/visibility triggers) is what still runs when SSE never connects
+// or a boat's signal drops, which push alone can never cover.
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 export function OfflineManifestManager({ payload }: { payload: OfflineManifestPayload }) {
@@ -57,7 +58,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   // payload actually lands as a prop (see the payload effect).
   const manualRefreshPending = useRef(false);
 
-  const reconcile = useCallback(async () => {
+  const runReconcileOnce = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
     const pendingBefore = lastPendingCount.current;
     const rejectedBefore = lastRejectedCount.current;
@@ -91,6 +92,41 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       );
     }
   }, [router, tripId]);
+
+  // A reconciling device applying a backlog of offline events publishes one
+  // push signal per event (recordRollCall), and this same device is normally
+  // subscribed to its own trip's stream — so a genuine multi-event
+  // reconnect can otherwise trigger a burst of concurrent syncOfflineManifest
+  // calls, each resubmitting the same still-pending batch before the first
+  // one's response has even landed (syncOfflineManifest only resolves the
+  // pending IndexedDB records once its own response arrives). Serializing
+  // through the same in-flight/queued pattern `save` already uses below
+  // turns that burst into at most one more pass after the current one
+  // finishes, instead of N overlapping requests.
+  const reconcileInFlight = useRef<Promise<void> | null>(null);
+  const reconcileQueued = useRef(false);
+
+  const reconcile = useCallback(async () => {
+    if (!tripId || !navigator.onLine) return;
+    if (reconcileInFlight.current) {
+      reconcileQueued.current = true;
+      return reconcileInFlight.current;
+    }
+    const run = (async () => {
+      let again = true;
+      while (again) {
+        await runReconcileOnce();
+        again = reconcileQueued.current;
+        reconcileQueued.current = false;
+      }
+    })();
+    reconcileInFlight.current = run;
+    try {
+      await run;
+    } finally {
+      reconcileInFlight.current = null;
+    }
+  }, [tripId, runReconcileOnce]);
 
   // A follow-up request that arrives while a save is already writing gets
   // coalesced here instead of dropped — otherwise a save already in flight
@@ -244,6 +280,25 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);
+    };
+  }, [tripId, refresh]);
+
+  // Primary trigger — see ADR 20260726-manifest-push-refresh. `EventSource`
+  // reconnects on its own when the stream drops (a Vercel duration cutoff, a
+  // network blip); this effect doesn't need its own retry logic. When the
+  // stream never connects at all (e.g. blocked by a captive portal), the
+  // interval/reconnect/visibility effect above is what still keeps this
+  // device current.
+  useEffect(() => {
+    if (!tripId || typeof EventSource === "undefined") return;
+    const source = new EventSource(`/api/trips/${tripId}/manifest-events`);
+    const onManifestChanged = () => {
+      if (navigator.onLine) refresh({ manual: false });
+    };
+    source.addEventListener("manifest-changed", onManifestChanged);
+    return () => {
+      source.removeEventListener("manifest-changed", onManifestChanged);
+      source.close();
     };
   }, [tripId, refresh]);
 

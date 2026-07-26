@@ -12,6 +12,7 @@ import {
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
 import type { AppDb } from "./client";
+import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
@@ -213,7 +214,7 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
-  return db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
+  const outcome = await db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
     const occurredAt = input.occurredAt ?? nowDate();
@@ -321,6 +322,13 @@ export async function recordRollCall(
     if (!event) throw new Error("recordRollCall: insert returned no row");
     return { ok: true, eventId: event.id };
   });
+  // A duplicate offline-sync replay changed nothing, so it raises no signal —
+  // every genuine write does, live or offline-applied alike (both funnel
+  // through this one function; see ADR 20260726-manifest-push-refresh).
+  if (outcome.ok && !outcome.duplicate) {
+    await publishManifestEvent(db, input.shopId, input.tripId);
+  }
+  return outcome;
 }
 
 /**
@@ -358,5 +366,9 @@ export async function updateLatestRollCallNote(
     .update(rollCallEvents)
     .set({ note: input.note.trim() || null })
     .where(eq(rollCallEvents.id, latest.id));
+  // The note is part of the roll-call record staff read off the offline
+  // copy (src/lib/offline-manifests.ts), so an edit here is exactly the kind
+  // of change the push signal exists for, same as recordRollCall above.
+  await publishManifestEvent(db, input.shopId, input.tripId);
   return true;
 }

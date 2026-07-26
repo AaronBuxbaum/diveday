@@ -1,0 +1,138 @@
+// @vitest-environment jsdom
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  loadOfflineManifest,
+  primeOfflineManifestShell,
+  saveOfflineManifest,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
+import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import { OfflineManifestManager } from "./OfflineManifestManager";
+
+// A stable object, not a fresh one per call — real Next.js useRouter()
+// returns the same router reference across renders; a fresh object per call
+// would make every callback depending on `router` change identity on every
+// render, spuriously re-running effects that depend on it (like the mount
+// effect below, which lists `reconcile` — and transitively `router` — as a
+// dependency).
+const mockRouter = { refresh: vi.fn() };
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
+vi.mock("@/lib/offline-manifest-store", () => ({
+  loadOfflineManifest: vi.fn(),
+  primeOfflineManifestShell: vi.fn(),
+  saveOfflineManifest: vi.fn(),
+  syncOfflineManifest: vi.fn(),
+}));
+
+const TRIP_ID = "11111111-1111-1111-1111-111111111111";
+
+const payload: OfflineManifestPayload = {
+  shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
+  manifests: [
+    {
+      trip: {
+        id: TRIP_ID,
+        title: "Two-Tank Reef — Molasses & French",
+        startsAt: "2026-08-01T13:00:00.000Z",
+        endsAt: "2026-08-01T16:30:00.000Z",
+        plannedDives: 2,
+      },
+      checkpoint: "departure",
+      crew: [{ fullName: "Sal Moretti", roles: ["captain"] }],
+      divers: [
+        {
+          bookingId: "22222222-2222-2222-2222-222222222222",
+          fullName: "Nora Quinn",
+          email: null,
+          emergencyContactName: "Sam Quinn",
+          emergencyContactPhone: "+1-305-555-0100",
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+          nitroxRequested: false,
+          rollCall: undefined,
+        },
+      ],
+      summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 1 },
+    },
+  ],
+};
+
+function envelope(events: OfflineManifestEnvelope["events"] = []): OfflineManifestEnvelope {
+  return {
+    snapshot: {
+      ...payload,
+      version: 3,
+      snapshotId: "snapshot-1",
+      savedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 1_000_000).toISOString(),
+    },
+    events,
+  };
+}
+
+function setOnline(online: boolean) {
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: online });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  setOnline(true);
+});
+
+describe("OfflineManifestManager", () => {
+  it("coalesces overlapping reconcile triggers into one serialized follow-up instead of firing them concurrently", async () => {
+    setOnline(true);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(envelope());
+    // Mount's own save+reconcile settles immediately.
+    vi.mocked(syncOfflineManifest).mockResolvedValueOnce(envelope());
+
+    render(<OfflineManifestManager payload={payload} />);
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
+
+    // From here on, every call hangs until resolved by hand — standing in
+    // for the sync route still processing a backlog of offline events (each
+    // one publishing its own push signal back to this same device).
+    const first = deferred<OfflineManifestEnvelope>();
+    vi.mocked(syncOfflineManifest).mockReturnValueOnce(first.promise);
+
+    // A burst of three rapid reconcile triggers (what a run of "manifest
+    // changed" pushes looks like from this component's point of view — the
+    // `online` event is the easiest one to fire directly in a DOM test, but
+    // it funnels through the exact same `refresh` -> `reconcile` path an SSE
+    // message would).
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("online"));
+
+    await Promise.resolve();
+    await Promise.resolve();
+    // Only one new call should have started; the other two triggers must
+    // coalesce into a single queued follow-up, not each open their own
+    // concurrent sync request against the same still-pending batch.
+    expect(syncOfflineManifest).toHaveBeenCalledTimes(2);
+
+    const second = deferred<OfflineManifestEnvelope>();
+    vi.mocked(syncOfflineManifest).mockReturnValueOnce(second.promise);
+    first.resolve(envelope());
+
+    // The queued follow-up now runs — exactly one more call, not two.
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(3));
+
+    second.resolve(envelope());
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(syncOfflineManifest).toHaveBeenCalledTimes(3);
+  });
+});
