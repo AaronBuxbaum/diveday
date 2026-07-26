@@ -602,6 +602,21 @@ export default async function PaymentsSettingsPage({
         </>
       ) : null}
 
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Website embed</h2>
+        <p className="mt-1 text-sm text-muted">
+          Copy-paste snippets that put your live booking calendar on your own website.
+        </p>
+        <div className="mt-4">
+          <Link
+            href={`/shop/${shopSlug}/settings/embed`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            Get embed code
+          </Link>
+        </div>
+      </section>
+
       {canImport || canExport ? (
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
           <h2 className="font-medium">Data</h2>

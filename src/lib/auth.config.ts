@@ -37,6 +37,17 @@ export function isPublicShopRoute(pathname: string): boolean {
   return Boolean(course && !RESERVED_COURSE_SEGMENTS.has(course[2]));
 }
 
+/**
+ * The one surface meant to be framed by a shop's own external website (the
+ * booking-widget embed). Deliberately the schedule/trip pages only, not every
+ * public shop route — everything else, including this same shop's staff and
+ * sign-in pages, keeps the site's default deny (src/proxy.ts) so a third-party
+ * page can never frame them for a clickjacking attempt.
+ */
+export function isEmbeddableShopRoute(pathname: string): boolean {
+  return PUBLIC_SCHEDULE.test(pathname);
+}
+
 export const authConfig = {
   secret: authSecret,
   session: { strategy: "jwt" },
