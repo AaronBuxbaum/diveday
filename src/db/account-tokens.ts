@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, exists, gt, isNull, sql } from "drizzle-orm";
 import {
   type AccountTokenPurpose,
   createAccountToken,
@@ -7,7 +7,7 @@ import {
 } from "@/lib/account-tokens";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
-import { accountTokens } from "./schema";
+import { accountTokens, userAccounts } from "./schema";
 
 export type IssuedAccountToken = { token: string; tokenId: string; expiresAt: Date };
 
@@ -79,9 +79,11 @@ export async function checkAccountToken(
 
 /**
  * Atomically claims a token for one-time use: the `WHERE` re-checks every
- * validity condition at the moment of the update, so two concurrent submits
- * of the same link can never both succeed. The sole gate a mutating action
- * may rely on.
+ * validity condition — including that the account is still active, not just
+ * that it was active when the token was requested — at the moment of the
+ * update, so two concurrent submits of the same link can never both succeed,
+ * and a disabled account's outstanding tokens stop working immediately. The
+ * sole gate a mutating action may rely on.
  */
 export async function consumeAccountToken(
   db: AppDb,
@@ -98,6 +100,17 @@ export async function consumeAccountToken(
         isNull(accountTokens.usedAt),
         isNull(accountTokens.supersededAt),
         gt(accountTokens.expiresAt, now),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(userAccounts)
+            .where(
+              and(
+                eq(userAccounts.id, accountTokens.userAccountId),
+                eq(userAccounts.status, "active"),
+              ),
+            ),
+        ),
       ),
     )
     .returning({ userAccountId: accountTokens.userAccountId });

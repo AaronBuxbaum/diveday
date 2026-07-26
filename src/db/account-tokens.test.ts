@@ -124,4 +124,19 @@ describe("account tokens (in-memory PGlite)", () => {
     const issued = await issueAccountToken(db, { userAccountId, purpose: "email_verification" });
     expect(issued.token).not.toContain(userAccountId);
   });
+
+  it("a disabled account's outstanding token stops consuming immediately, even though it was valid when issued (security review finding)", async () => {
+    const { db } = await seededShopContext();
+    const userAccountId = await seededAccountId(db);
+    const issued = await issueAccountToken(db, { userAccountId, purpose: "password_reset" });
+
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.id, userAccountId));
+
+    expect(
+      await consumeAccountToken(db, { token: issued.token, purpose: "password_reset" }),
+    ).toBeNull();
+  });
 });
