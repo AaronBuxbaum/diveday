@@ -48,12 +48,12 @@ test("an owner invites a new instructor, who accepts the invite and lands signed
 
   // The link is one-time: revisiting it now reads as invalid.
   await page.goto(`/invite/${token}`);
-  await expect(page.getByRole("heading", { name: "This invite isn't valid" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This invite isn’t available" })).toBeVisible();
 });
 
 test("a tampered invite token reveals nothing", async ({ page }) => {
   await page.goto("/invite/not-a-real-token");
-  await expect(page.getByRole("heading", { name: "This invite isn't valid" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This invite isn’t available" })).toBeVisible();
 });
 
 test("a captain (not owner/manager) is redirected away from team settings", async ({ page }) => {

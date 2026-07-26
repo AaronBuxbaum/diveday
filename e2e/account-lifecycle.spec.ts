@@ -48,7 +48,7 @@ test("a valid email-verification link confirms the account through the real page
   // as invalid rather than re-showing the confirm form.
   await page.goto(`/verify/${token}`);
   await expect(
-    page.getByRole("heading", { name: "This confirmation link isn't valid" }),
+    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
   ).toBeVisible();
 });
 
@@ -75,7 +75,9 @@ test("a valid password-reset link sets a new password and signs the owner in", a
 
   // The link is one-time: revisiting it now reads as invalid.
   await page.goto(`/reset-password/${token}`);
-  await expect(page.getByRole("heading", { name: "This reset link isn't valid" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "This reset link isn’t available" }),
+  ).toBeVisible();
 });
 
 test("forgot-password gives the same generic response whether or not the email is registered", async ({
@@ -97,7 +99,7 @@ test("forgot-password gives the same generic response whether or not the email i
 test("a tampered email-verification token reveals nothing", async ({ page }) => {
   await page.goto("/verify/not-a-real-token");
   await expect(
-    page.getByRole("heading", { name: "This confirmation link isn't valid" }),
+    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
   ).toBeVisible();
 });
 
@@ -105,7 +107,9 @@ test("a tampered password-reset token reveals nothing and points back to sign-in
   page,
 }) => {
   await page.goto("/reset-password/not-a-real-token");
-  await expect(page.getByRole("heading", { name: "This reset link isn't valid" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "This reset link isn’t available" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Back to sign in" }).click();
   await expect(page).toHaveURL(/\/sign-in/);
 });
