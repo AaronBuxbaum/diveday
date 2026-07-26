@@ -20,20 +20,26 @@ const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
 export type ShopNavGates = {
   waivers: boolean;
   reports: boolean;
-  import: boolean;
-  export: boolean;
   team: boolean;
 };
 
+/**
+ * Two rows in one dropdown: day-to-day reference surfaces, then a divider,
+ * then shop administration. Import/export are one level further down still —
+ * they're rare, owner/manager-only errands, so they live as links inside
+ * Settings itself (src/app/shop/[shopSlug]/settings/SettingsPage.tsx) rather
+ * than earning their own top-level "More" row.
+ */
 const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
   { label: "Dive sites", suffix: "/dive-sites" },
   { label: "Courses", suffix: "/courses" },
   { label: "Waivers", suffix: "/waivers", gate: "waivers" },
   { label: "Reports", suffix: "/reports", gate: "reports" },
+];
+
+const moreAdminLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
   { label: "Settings", suffix: "/settings" },
   { label: "Team", suffix: "/settings/team", gate: "team" },
-  { label: "Import contacts", suffix: "/settings/import", gate: "import" },
-  { label: "Data export", suffix: "/settings/export", gate: "export" },
 ];
 
 function isCurrent(pathname: string, href: string, root: string) {
@@ -56,7 +62,8 @@ export function ShopNavLinks({
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const visibleMoreLinks = moreLinks.filter((link) => !link.gate || gates[link.gate]);
-  const moreIsActive = visibleMoreLinks.some((link) =>
+  const visibleMoreAdminLinks = moreAdminLinks.filter((link) => !link.gate || gates[link.gate]);
+  const moreIsActive = [...visibleMoreLinks, ...visibleMoreAdminLinks].some((link) =>
     isCurrent(pathname, `${root}${link.suffix}`, root),
   );
   const closeMore = () => {
@@ -109,6 +116,25 @@ export function ShopNavLinks({
         {/* One column, one link per row — a two-column grid wrapped short labels onto two lines. */}
         <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-2xl border border-border bg-surface p-2 shadow-xl">
           {visibleMoreLinks.map(({ label, suffix }) => {
+            const href = `${root}${suffix}`;
+            const active = isCurrent(pathname, href, root);
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={closeMore}
+                className={`${navClass(active)} whitespace-nowrap`}
+                aria-current={active ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            );
+          })}
+          {/* Shop administration, set off from the day-to-day links above. */}
+          {visibleMoreAdminLinks.length > 0 ? (
+            <div className="my-1 border-t border-border" />
+          ) : null}
+          {visibleMoreAdminLinks.map(({ label, suffix }) => {
             const href = `${root}${suffix}`;
             const active = isCurrent(pathname, href, root);
             return (
