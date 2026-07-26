@@ -27,8 +27,9 @@ Delight is this product's differentiator — this review is where that stops bei
 5. Count the controls in each section at rest (principle 8 — fewer controls, one obvious action).
    Per independent section — not summed across the whole view, a settings page with five
    unrelated sections can have five primaries — more than one `buttonClass()` call that is
-   primary-weight (no explicit `variant`, or an explicit `variant: "primary"`) is a finding:
-   demote the extras to `secondary`/`ghost`/`link`/`danger`, merge buttons that are really one
+   primary-weight (no explicit `variant`, an explicit `variant: "primary"`, or `variant:
+   "danger-solid"` — a solid destructive action still claims the section's one primary slot) is a
+   finding: demote the extras to `secondary`/`ghost`/`link`/`danger`, merge buttons that are really one
    action with a default, or move a rare action behind disclosure. See
    [forms-and-controls.md § Action rows](../../../docs/design/forms-and-controls.md#action-rows-one-primary-not-many).
 6. Grep the changed files for token violations:

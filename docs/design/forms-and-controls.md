@@ -80,9 +80,10 @@ strip a destructive action's danger styling just to satisfy "one primary."
 <button className={buttonClass()}>Save & send</button>
 <button className={buttonClass()}>Save & archive</button>
 
-// After: one primary with a good default, the rest are follow-up affordances
+// After: one primary with a good default, the others demoted — not deleted
 <button className={buttonClass()}>Save & send</button>
 <button className={buttonClass({ variant: "ghost", size: "sm" })}>Save without sending</button>
+<button className={buttonClass({ variant: "link", size: "sm" })}>Archive instead</button>
 
 // A destructive action alongside a normal one keeps its warning color, demoted in weight, not
 // stripped of it
