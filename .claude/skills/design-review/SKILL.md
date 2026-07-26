@@ -24,10 +24,13 @@ Delight is this product's differentiator — this review is where that stops bei
    baseline, and every button-shaped thing has its label centered in its target. Both come free
    from `<Field>`/`<FieldGrid>` and `buttonClass()`; a surface that fails one is usually a surface
    that hand-rolled the classes.
-5. Count the controls in each section at rest (principle 8 — fewer controls, one obvious action).
-   Per independent section — not summed across the whole view, a settings page with five
-   unrelated sections can have five primaries — more than one `buttonClass()` call that is
-   primary-weight (no explicit `variant`, an explicit `variant: "primary"`, or `variant:
+5. Count the controls that actually render together in a given state (principle 8 — fewer
+   controls, one obvious action) — from the screenshot or the rendered branch, not a source-level
+   grep of `buttonClass()` call sites: mutually exclusive branches (a ternary showing one button
+   or the other depending on state) don't stack into two, and a single call site mapped over a
+   list can render many. Per independent section — not summed across the whole view, a settings
+   page with five unrelated sections can have five primaries — more than one rendered
+   primary-weight control (no explicit `variant`, an explicit `variant: "primary"`, or `variant:
    "danger-solid"` — a solid destructive action still claims the section's one primary slot) is a
    finding: demote the extras to `secondary`/`ghost`/`link`/`danger`, merge buttons that are really one
    action with a default, or move a rare action behind disclosure. See
