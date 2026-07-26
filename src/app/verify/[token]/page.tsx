@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { checkAccountToken } from "@/db/account-tokens";
+import { checkAccountToken, wasAccountTokenConsumed } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { confirmEmailVerification } from "./actions";
 
@@ -39,17 +39,27 @@ export default async function VerifyAccountPage({
   await connection();
   const { token } = await params;
   const { confirmed } = await searchParams;
+  const db = await getDb();
 
+  // Never trust the query param alone — it's caller-controlled, so a garbage
+  // token with a forged `?confirmed=1` must still read as failed rather than
+  // as a false success (security review finding). Only a token this exact
+  // request actually consumed earns the success notice.
   if (confirmed === "1") {
-    return (
-      <>
-        <FlashParams params={["confirmed"]} />
-        <Notice title="Email confirmed" text="Thanks — your email is confirmed. You're all set." />
-      </>
-    );
+    const consumed = await wasAccountTokenConsumed(db, { token, purpose: "email_verification" });
+    if (consumed) {
+      return (
+        <>
+          <FlashParams params={["confirmed"]} />
+          <Notice
+            title="Email confirmed"
+            text="Thanks — your email is confirmed. You're all set."
+          />
+        </>
+      );
+    }
   }
 
-  const db = await getDb();
   const check = await checkAccountToken(db, { token, purpose: "email_verification" });
   if (!check) {
     return (

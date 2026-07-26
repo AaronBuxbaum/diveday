@@ -9,7 +9,7 @@ import { getDb } from "@/db/client";
 import { getAccountContact, setAccountPassword } from "@/db/user-accounts";
 import { signIn } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { notify } from "@/lib/notifications";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/onboarding";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -28,10 +28,12 @@ const resetSchema = z
   });
 
 /**
- * Consumes the token, sets the new password, notifies the account of the
- * change, then signs the owner straight in — the same "reset and land in
- * the shop" flow onboarding already uses, rather than bouncing back to
- * /sign-in to re-enter what was just typed.
+ * Consumes the token and sets the new password atomically — a failure
+ * between the two must not burn a one-time link while leaving the password
+ * unchanged (security review finding) — then notifies the account of the
+ * change and signs the owner straight in: the same "reset and land in the
+ * shop" flow onboarding already uses, rather than bouncing back to /sign-in
+ * to re-enter what was just typed.
  */
 export async function submitPasswordReset(token: string, formData: FormData) {
   const base = `/reset-password/${token}`;
@@ -48,21 +50,29 @@ export async function submitPasswordReset(token: string, formData: FormData) {
   }
 
   const db = await getDb();
-  const claimed = await consumeAccountToken(db, { token, purpose: "password_reset" });
+  // Hashed before the transaction opens — bcrypt's cost factor is deliberately
+  // slow, and there's no reason to hold the transaction (and its row locks)
+  // open for it.
+  const hashedPassword = await hash(parsed.data.password, 10);
+  const claimed = await db.transaction(async (tx) => {
+    const claim = await consumeAccountToken(tx, { token, purpose: "password_reset" });
+    if (!claim) return null;
+    await setAccountPassword(tx, claim.userAccountId, hashedPassword);
+    return claim;
+  });
   if (!claimed) redirect(base);
 
   const account = await getAccountContact(db, claimed.userAccountId);
   if (!account) redirect(base);
 
-  const hashedPassword = await hash(parsed.data.password, 10);
-  await setAccountPassword(db, claimed.userAccountId, hashedPassword);
-
+  const origin = publicAppUrl();
   await notify({
     kind: "password_changed",
     userAccountId: claimed.userAccountId,
     shopId: account.shopId,
     to: account.email,
     ownerName: account.ownerName,
+    forgotPasswordUrl: origin ? new URL("/forgot-password", `${origin}/`).toString() : undefined,
     changedAt: nowDate(),
   }).catch(() => ({ status: "failed" as const }));
 

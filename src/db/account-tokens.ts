@@ -1,4 +1,4 @@
-import { and, eq, exists, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, exists, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   type AccountTokenPurpose,
   createAccountToken,
@@ -22,6 +22,19 @@ export async function issueAccountToken(
 ): Promise<IssuedAccountToken> {
   const now = input.now ?? nowDate();
   return db.transaction(async (tx) => {
+    // Locks the account row before superseding-then-inserting — under READ
+    // COMMITTED, two concurrent issuances (a double-click, a refreshed
+    // forgot-password submit) could otherwise both read zero outstanding
+    // tokens and both insert, leaving two live at once and violating the
+    // "a fresh token supersedes the prior one" invariant (security review
+    // finding). Matches saveWaiverTemplate's shop-row lock exactly. PGlite is
+    // single-connection so tests can't exhibit the race — the lock is for
+    // production Postgres.
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, input.userAccountId))
+      .for("update");
     await tx
       .update(accountTokens)
       .set({ supersededAt: now })
@@ -78,15 +91,45 @@ export async function checkAccountToken(
 }
 
 /**
+ * Whether this exact token was genuinely consumed (`consumeAccountToken`
+ * succeeded for it) — never whether it merely exists. The one thing a page is
+ * allowed to render a "success" state from after a redirect, instead of
+ * trusting a caller-controlled query parameter on its own: a garbage token
+ * with a forged `?confirmed=1` must still read as failed (security review
+ * finding on 20260725-account-lifecycle-emails).
+ */
+export async function wasAccountTokenConsumed(
+  db: DbExecutor,
+  input: { token: string; purpose: AccountTokenPurpose },
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: accountTokens.id })
+    .from(accountTokens)
+    .where(
+      and(
+        eq(accountTokens.tokenHash, hashAccountToken(input.token)),
+        eq(accountTokens.purpose, input.purpose),
+        isNotNull(accountTokens.usedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/**
  * Atomically claims a token for one-time use: the `WHERE` re-checks every
  * validity condition — including that the account is still active, not just
  * that it was active when the token was requested — at the moment of the
  * update, so two concurrent submits of the same link can never both succeed,
  * and a disabled account's outstanding tokens stop working immediately. The
- * sole gate a mutating action may rely on.
+ * sole gate a mutating action may rely on. Accepts a transaction so the
+ * caller can claim the token and perform its protected mutation (marking an
+ * account verified, setting a new password) atomically — a failure between
+ * the two must not burn a one-time link for nothing (security review
+ * finding).
  */
 export async function consumeAccountToken(
-  db: AppDb,
+  db: DbExecutor,
   input: { token: string; purpose: AccountTokenPurpose; now?: Date },
 ): Promise<{ userAccountId: string } | null> {
   const now = input.now ?? nowDate();
