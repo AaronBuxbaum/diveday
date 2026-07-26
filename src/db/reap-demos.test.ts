@@ -3,8 +3,17 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
+import { issueAccountToken } from "./account-tokens";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
-import { bookings, globalDiveSites, people, personRoles, shops, userAccounts } from "./schema";
+import {
+  accountTokens,
+  bookings,
+  globalDiveSites,
+  people,
+  personRoles,
+  shops,
+  userAccounts,
+} from "./schema";
 import { createDemoShop, deleteDemoShopCascade, reapExpiredDemoShops } from "./seed";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -119,6 +128,31 @@ describe("deleteDemoShopCascade", () => {
     // The canonical demo and the shared global dive-site catalog are untouched.
     expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
     expect((await db.select().from(globalDiveSites)).length).toBe(globalsBefore);
+  });
+
+  it("deletes an owner's outstanding account token instead of FK-violating (security review finding)", async () => {
+    const db = await seededTestDb();
+    const { slug, ownerEmail } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [ownerAccount] = await db
+      .select()
+      .from(userAccounts)
+      .where(eq(userAccounts.email, ownerEmail))
+      .limit(1);
+    if (!ownerAccount) throw new Error("test setup: demo owner account missing");
+    await issueAccountToken(db, { userAccountId: ownerAccount.id, purpose: "password_reset" });
+
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (
+        await db
+          .select()
+          .from(accountTokens)
+          .where(eq(accountTokens.userAccountId, ownerAccount.id))
+      ).length,
+    ).toBe(0);
   });
 });
 

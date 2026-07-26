@@ -177,9 +177,19 @@ describe("passwordResetEmail", () => {
 });
 
 describe("passwordChangedEmail", () => {
-  it("carries no link — the notice is the whole point", () => {
+  it("points a compromised recipient at requesting a new reset, not signing in — the old password no longer works for them", () => {
+    const email = passwordChangedEmail({
+      ownerName: "Pat Diver",
+      forgotPasswordUrl: "https://diveday.example/forgot-password",
+    });
+    expect(email.text).toContain("https://diveday.example/forgot-password");
+    expect(email.html).toContain('href="https://diveday.example/forgot-password"');
+    expect(email.text).not.toContain("sign in and set a new password");
+  });
+
+  it("still reads well without a link when APP_HOST is unset", () => {
     const email = passwordChangedEmail({ ownerName: "Pat Diver" });
     expect(email.text).not.toContain("http");
-    expect(email.text).toContain("sign in and set a new password");
+    expect(email.text).toContain("request a new password");
   });
 });

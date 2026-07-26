@@ -156,6 +156,7 @@ const passwordChangedSchema = z.object({
   shopId: z.uuid(),
   to: emailAddressSchema,
   ownerName: z.string().trim().min(1).max(120),
+  forgotPasswordUrl: z.url().max(2_000).optional(),
   /** Distinguishes each change as its own send — a second reset is a fresh event, not a duplicate. */
   changedAt: z.date(),
 });

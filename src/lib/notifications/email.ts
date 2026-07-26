@@ -337,16 +337,29 @@ export function passwordResetEmail(input: PasswordResetEmailInput): Notification
 
 type PasswordChangedEmailInput = {
   ownerName: string;
+  /**
+   * The recovery link for someone this *wasn't* — omitted only when
+   * APP_HOST isn't configured. Never "sign in and set a new password":
+   * the whole point of this notice is that the old password no longer
+   * works for whoever didn't make this change, so the only usable recovery
+   * path is requesting a fresh reset (security review finding).
+   */
+  forgotPasswordUrl?: string;
 };
 
-/** Informational only — no link, no action. The signal itself is the point. */
 export function passwordChangedEmail(input: PasswordChangedEmailInput): NotificationEmail {
   const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const recoveryText = input.forgotPasswordUrl
+    ? `If it wasn't, request a new password here right away:\n${input.forgotPasswordUrl}\n`
+    : "If it wasn't, request a new password from the sign-in page right away.\n";
+  const recoveryHtml = input.forgotPasswordUrl
+    ? `<p>If it wasn't, <a href="${escapeHtml(input.forgotPasswordUrl)}">request a new password here</a> right away.</p>`
+    : "<p>If it wasn't, request a new password from the sign-in page right away.</p>";
 
   return {
     subject: "Your DiveDay password was changed",
-    text: `Hi ${firstName},\n\nThe password on this DiveDay account was just changed. If that was you, there's nothing else to do.\n\nIf it wasn't, sign in and set a new password right away.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>The password on this DiveDay account was just changed. If that was you, there's nothing else to do.</p><p>If it wasn't, sign in and set a new password right away.</p>`,
+    text: `Hi ${firstName},\n\nThe password on this DiveDay account was just changed. If that was you, there's nothing else to do.\n\n${recoveryText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>The password on this DiveDay account was just changed. If that was you, there's nothing else to do.</p>${recoveryHtml}`,
   };
 }
 

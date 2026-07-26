@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { AppDb, DbExecutor } from "./client";
+import type { DbExecutor } from "./client";
 import { people, shops, userAccounts } from "./schema";
 
 export type AccountContact = {
@@ -59,8 +59,9 @@ export async function findActiveAccountByEmail(
   return row ?? null;
 }
 
+/** Accepts a transaction so a caller can pair this with the token claim that authorized it (see consumeAccountToken). */
 export async function markEmailVerified(
-  db: AppDb,
+  db: DbExecutor,
   userAccountId: string,
   now: Date = nowDate(),
 ): Promise<void> {
@@ -70,8 +71,9 @@ export async function markEmailVerified(
     .where(eq(userAccounts.id, userAccountId));
 }
 
+/** Accepts a transaction so a caller can pair this with the token claim that authorized it (see consumeAccountToken). */
 export async function setAccountPassword(
-  db: AppDb,
+  db: DbExecutor,
   userAccountId: string,
   hashedPassword: string,
 ): Promise<void> {
