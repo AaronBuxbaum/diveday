@@ -92,6 +92,14 @@ for (const scheme of ["light", "dark"] as const) {
       browser,
       ownerStorageState,
     }) => {
+      // 19 navigate+capture surfaces (38 screenshots) plus a real send-waiver
+      // action and a real booking, all in one test — comfortably past the
+      // suite's 15s default, which is sized for a single real flow, not a
+      // full site tour. Without this override the run was flaky: whichever
+      // capture landed on a slow font-load or cold render blew the shared
+      // budget for every capture after it, and the failing step moved
+      // between runs.
+      test.setTimeout(60_000);
       await page.goto("/");
       await capture(page, "landing", scheme);
 
@@ -251,6 +259,10 @@ for (const scheme of ["light", "dark"] as const) {
       signedInAsOwner();
 
       test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
+        // 15 navigate+capture surfaces (30 screenshots) in one test — same
+        // reasoning as the public-surfaces override above: the suite's 15s
+        // default is sized for a single real flow, not a full site tour.
+        test.setTimeout(60_000);
         await page.goto("/shop/blue-mantis");
         await capture(page, "today", scheme);
 
