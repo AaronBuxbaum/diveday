@@ -703,6 +703,23 @@ export const notificationDeliveryStatus = pgEnum("notification_delivery_status",
 ]);
 
 /**
+ * What the provider later said happened to a message we already handed over —
+ * a different question from `notification_delivery_status`, which only records
+ * whether our own send call succeeded. Reported by the Resend webhook
+ * (20260726-hosted-mailboxes-for-platform-mail); null until an event arrives, which is
+ * the normal steady state when no webhook is configured.
+ */
+export const notificationProviderStatus = pgEnum("notification_provider_status", [
+  "sent",
+  "delivered",
+  "delivery_delayed",
+  "bounced",
+  "complained",
+  "failed",
+  "suppressed",
+]);
+
+/**
  * A current operational status, not an append-only provider log. One row per
  * booking/purpose means a newly emailed waiver link replaces its prior state.
  */
@@ -719,6 +736,11 @@ export const notificationDeliveries = pgTable(
     kind: notificationKind("kind").notNull(),
     status: notificationDeliveryStatus("status").notNull(),
     providerMessageId: text("provider_message_id"),
+    /** Provider-reported outcome; reset to null whenever a fresh send replaces the row. */
+    providerStatus: notificationProviderStatus("provider_status"),
+    providerStatusAt: timestamp("provider_status_at", { withTimezone: true }),
+    /** The provider's own explanation for a bounce or failure, shown to staff verbatim. */
+    providerDetail: text("provider_detail"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -729,6 +751,8 @@ export const notificationDeliveries = pgTable(
       table.status,
       table.attemptedAt,
     ),
+    // The webhook's only entry point: an event names the provider's message id.
+    index("notification_deliveries_provider_message_idx").on(table.providerMessageId),
   ],
 );
 
