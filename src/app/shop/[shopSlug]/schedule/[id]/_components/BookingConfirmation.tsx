@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EarnedMoment } from "@/components/EarnedMoment";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -111,15 +112,21 @@ export function BookingConfirmation({
   const nextStep = nextDiverStep(checklist);
 
   return (
-    <section className="rise-in mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
-      <h2 className="text-xl font-semibold text-balance">
-        You're on the boat, {confirmed.person.fullName.split(" ")[0]}! 🤿
-      </h2>
-      <p className="mt-2 text-muted">
-        {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
-        {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock{" "}
-        {shop.dockCallMinutes} minutes early and we'll take it from there.
-      </p>
+    <>
+      {/* Same shared component /ready and /recap use for their earned moment
+          — this page hand-rolled its own accent box before, which is how its
+          radius (rounded-lg) and missing eyebrow drifted from theirs
+          (design/principles.md #3). */}
+      <EarnedMoment
+        className="mt-10"
+        title={`You're on the boat, ${confirmed.person.fullName.split(" ")[0]}! 🤿`}
+      >
+        <p>
+          {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
+          {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock{" "}
+          {shop.dockCallMinutes} minutes early and we'll take it from there.
+        </p>
+      </EarnedMoment>
 
       <PaymentSection payment={payment} payCancelled={payCancelled} payRef={fitRef} />
 
@@ -163,10 +170,10 @@ export function BookingConfirmation({
       />
       <Link
         href={`/shop/${shopSlug}/schedule`}
-        className="mt-3 inline-block py-2 text-base font-medium text-primary hover:underline"
+        className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         Back to the schedule
       </Link>
-    </section>
+    </>
   );
 }

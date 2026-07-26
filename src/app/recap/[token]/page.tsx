@@ -220,7 +220,10 @@ export default async function DiveRecapPage({
               id="recap-photo"
               name="photo"
               required
-              className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+              // file:py-3 (not py-2) so the "Choose file" pseudo-button clears the
+              // 44px dock-test floor — this is a mobile, post-dive, add-your-shots
+              // flow where the tap target matters (design/principles.md #2).
+              className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-3 file:text-sm file:font-medium file:text-primary-foreground"
             />
             <input
               type="text"
