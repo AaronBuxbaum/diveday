@@ -174,9 +174,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@bluemantis.example",
       contactPhone: "+1 305 555 0142",
-      // Rents the core kit plus both add-ons, and prices them: a full set is
-      // cheaper than the pieces, each piece has its own price, and nitrox is a
-      // per-dive surcharge. Divers see these when they set their rental fit.
+      // Rents the core kit plus both add-ons and fills nitrox, and prices them:
+      // a full set is cheaper than the pieces, each piece has its own price, and
+      // nitrox is a per-dive surcharge. Divers see these when they set their
+      // rental fit. Most real shops leave nitrox unticked (default off) — the
+      // demo shop opts in so the flow has something to demonstrate.
       rentalItems: [
         "bcd",
         "regulator",
@@ -185,6 +187,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         "weights",
         "dive_computer",
         "gopro",
+        "nitrox",
       ],
       rentalPricing: {
         setCents: 4500,
@@ -303,6 +306,7 @@ export async function createDemoShop(
         "weights",
         "dive_computer",
         "gopro",
+        "nitrox",
       ],
       rentalPricing: {
         setCents: 4500,

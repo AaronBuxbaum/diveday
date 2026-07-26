@@ -11,6 +11,7 @@ import {
   offeredRentableItems,
   quoteRentalFit,
   type RentalPricing,
+  shopOffersNitrox,
 } from "@/lib/rentals";
 import type { RentalFit } from "./types";
 
@@ -45,6 +46,7 @@ export function RentalFitForm({
 }) {
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
+  const nitroxOffered = shopOffersNitrox(rentalItems);
   const showPricing = hasAnyRentalPricing(pricing);
   const [rentedKinds, setRentedKinds] = useState(
     () =>
@@ -56,11 +58,12 @@ export function RentalFitForm({
   );
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
   // Follow the controls, rather than the saved profile, so the estimate is
-  // useful before a diver commits their changes.
+  // useful before a diver commits their changes. A shop that doesn't fill
+  // nitrox never contributes it to the estimate, whatever a stale request flag says.
   const quote = quoteRentalFit(pricing, {
     rentedKinds: [...rentedKinds],
     offeredKinds: [...offers],
-    wantsNitrox: nitroxRequested,
+    wantsNitrox: nitroxOffered && nitroxRequested,
     plannedDives,
   });
   // Describe the set as exactly the core items this shop offers, so the copy can
@@ -146,41 +149,44 @@ export function RentalFitForm({
           </fieldset>
         ) : null}
 
-        <fieldset>
-          <legend className="text-sm font-medium">Enriched air (nitrox)</legend>
-          <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
-            <input
-              name="nitrox"
-              type="checkbox"
-              checked={nitroxRequested}
-              onChange={(event) => setNitroxRequested(event.target.checked)}
-              className="size-4 accent-primary"
-            />
-            <span className="flex-1">
-              Reserve nitrox-compatible tanks for me —{" "}
-              {showPricing && pricing.nitroxCents !== null
-                ? `${formatMoneyCents(pricing.nitroxCents)} per dive`
-                : "charged per dive"}
-            </span>
-          </label>
-          {nitroxCardVerified ? (
-            <p className="mt-2 text-sm text-muted">
-              The crew will set aside nitrox-compatible tanks. You’ll analyze your own tanks and
-              sign for the mix at the fill station, as always.
-            </p>
-          ) : nitroxRequested ? (
-            <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-              {wantsNitrox ? "Your enriched-air request is on file. " : ""}
-              We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send the
-              shop a photo of your card or get in touch and they’ll add it. Until then, the crew
-              will plan standard air tanks.
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-muted">
-              A verified nitrox card is needed before the crew can reserve nitrox-compatible tanks.
-            </p>
-          )}
-        </fieldset>
+        {nitroxOffered ? (
+          <fieldset>
+            <legend className="text-sm font-medium">Enriched air (nitrox)</legend>
+            <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
+              <input
+                name="nitrox"
+                type="checkbox"
+                checked={nitroxRequested}
+                onChange={(event) => setNitroxRequested(event.target.checked)}
+                className="size-4 accent-primary"
+              />
+              <span className="flex-1">
+                Reserve nitrox-compatible tanks for me —{" "}
+                {showPricing && pricing.nitroxCents !== null
+                  ? `${formatMoneyCents(pricing.nitroxCents)} per dive`
+                  : "charged per dive"}
+              </span>
+            </label>
+            {nitroxCardVerified ? (
+              <p className="mt-2 text-sm text-muted">
+                The crew will set aside nitrox-compatible tanks. You’ll analyze your own tanks and
+                sign for the mix at the fill station, as always.
+              </p>
+            ) : nitroxRequested ? (
+              <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                {wantsNitrox ? "Your enriched-air request is on file. " : ""}
+                We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send
+                the shop a photo of your card or get in touch and they’ll add it. Until then, the
+                crew will plan standard air tanks.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-muted">
+                A verified nitrox card is needed before the crew can reserve nitrox-compatible
+                tanks.
+              </p>
+            )}
+          </fieldset>
+        ) : null}
 
         {offers.has("bcd") || offers.has("wetsuit") || offers.has("mask_fins") ? (
           <FieldGrid columns={2}>

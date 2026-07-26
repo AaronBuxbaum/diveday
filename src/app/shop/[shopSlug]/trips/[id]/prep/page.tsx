@@ -8,6 +8,7 @@ import { getShopById } from "@/db/shops";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { shopOffersNitrox } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -49,6 +50,15 @@ export default async function TripPrepPage({
     )
     .map((entry) => entry.person.fullName);
   const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives, divingCrew });
+  // A shop that has never offered nitrox can never have live nitrox data here
+  // (setBookingNitrox fails closed), so this is purely cosmetic for that
+  // common case — but a shop that *disabled* nitrox after a diver requested
+  // it (with or without a verified card) must not have this trip's already-
+  // real tank split or blocker silently disappear out from under the crew.
+  const showNitrox =
+    shopOffersNitrox(shop.rentalItems) ||
+    checklist.tanks.nitrox > 0 ||
+    checklist.nitroxBlockers.length > 0;
 
   return (
     <>
@@ -84,7 +94,7 @@ export default async function TripPrepPage({
             <h2 id="tanks-heading" className="text-lg font-semibold">
               Tanks
             </h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <div className="rounded-lg border border-border bg-surface p-4">
                 <p className="text-sm text-muted">Total</p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.total}</p>
@@ -93,10 +103,14 @@ export default async function TripPrepPage({
                 <p className="text-sm text-muted">Air</p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.air}</p>
               </div>
-              <div className="rounded-lg border border-border bg-surface p-4">
-                <p className="text-sm text-muted">Nitrox</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.nitrox}</p>
-              </div>
+              {showNitrox ? (
+                <div className="rounded-lg border border-border bg-surface p-4">
+                  <p className="text-sm text-muted">Nitrox</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums">
+                    {checklist.tanks.nitrox}
+                  </p>
+                </div>
+              ) : null}
             </div>
             <p className="mt-2 text-sm text-muted">
               {checklist.crewCount > 0
@@ -107,7 +121,7 @@ export default async function TripPrepPage({
             </p>
           </section>
 
-          {checklist.nitroxBlockers.length > 0 ? (
+          {showNitrox && checklist.nitroxBlockers.length > 0 ? (
             <section
               aria-labelledby="nitrox-blocked-heading"
               className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4"
