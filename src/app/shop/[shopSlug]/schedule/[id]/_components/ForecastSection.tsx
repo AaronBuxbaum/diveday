@@ -55,9 +55,11 @@ export function ForecastSection({
         </p>
       ) : automatedForecast ? (
         <div className="mt-4">
+          {/* Open-Meteo's data license requires attribution, so this stays named
+              rather than genericized (reverted after review — see PR #206). */}
           <p className="text-base text-muted">
-            Planning outlook from an automated weather service — the crew confirms conditions and
-            makes the final call at the dock.
+            Planning outlook from Open-Meteo — the crew confirms conditions and makes the final call
+            at the dock.
           </p>
           <p className="mt-2 text-xs text-muted">
             Underwater visibility comes from the crew.{" "}
