@@ -110,6 +110,22 @@ async function readStoredRecord(
   return record;
 }
 
+/**
+ * Serializes a read-modify-write cycle against this trip's record across
+ * tabs/windows (the live manifest's automatic save, the offline viewer's
+ * roll-call append, and sync reconciliation can all be open at once). A plain
+ * IndexedDB transaction doesn't cover this: each of those operations reads
+ * the current record, decides what to write, and writes it back in *separate*
+ * transactions, so one can read stale data, do its work, and overwrite what
+ * another wrote in between — silently discarding a roll-call event the other
+ * tab just recorded. Never called reentrantly (nothing under a lock calls back
+ * into it for the same tripId), so this can't deadlock against itself.
+ */
+function withManifestLock<T>(tripId: string, fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks) return fn();
+  return navigator.locks.request(`diveday-offline-manifest:${tripId}`, fn);
+}
+
 export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const db = await openDatabase();
   try {
@@ -153,29 +169,31 @@ export async function saveOfflineManifest(
 ): Promise<OfflineManifestEnvelope> {
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
-  // A corrupt or undecryptable existing record (storage corruption, a stale
-  // key, a version/AAD mismatch) must not abort the save — there's no delete
-  // button anymore, so failing here would brick this device's offline copy
-  // for good instead of just losing that record's own queued events.
-  const existing = await loadOfflineManifest(trip.id).catch(() => null);
-  const savedAt = nowDate();
-  const envelope: OfflineManifestEnvelope = {
-    snapshot: {
-      ...payload,
-      version: OFFLINE_MANIFEST_RECORD_VERSION,
-      snapshotId: crypto.randomUUID(),
-      savedAt: savedAt.toISOString(),
-      expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
-    },
-    events: existing?.events ?? [],
-  };
-  const db = await openDatabase();
-  try {
-    await persistEnvelope(db, envelope);
-  } finally {
-    db.close();
-  }
-  return envelope;
+  return withManifestLock(trip.id, async () => {
+    // A corrupt or undecryptable existing record (storage corruption, a stale
+    // key, a version/AAD mismatch) must not abort the save — there's no delete
+    // button anymore, so failing here would brick this device's offline copy
+    // for good instead of just losing that record's own queued events.
+    const existing = await loadOfflineManifest(trip.id).catch(() => null);
+    const savedAt = nowDate();
+    const envelope: OfflineManifestEnvelope = {
+      snapshot: {
+        ...payload,
+        version: OFFLINE_MANIFEST_RECORD_VERSION,
+        snapshotId: crypto.randomUUID(),
+        savedAt: savedAt.toISOString(),
+        expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
+      },
+      events: existing?.events ?? [],
+    };
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope);
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
 }
 
 export async function deleteOfflineManifest(
@@ -196,27 +214,29 @@ export async function appendOfflineRollCall(
   tripId: string,
   input: Pick<OfflineRollCallEvent, "bookingId" | "checkpoint" | "status" | "note">,
 ): Promise<OfflineManifestEnvelope> {
-  const envelope = await loadOfflineManifest(tripId);
-  if (!envelope) throw new Error("Saved manifest is unavailable or expired");
-  if (!canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status)) {
-    throw new Error("This saved readiness record does not allow boarding");
-  }
-  envelope.events.push({
-    ...input,
-    clientEventId: crypto.randomUUID(),
-    snapshotId: envelope.snapshot.snapshotId,
-    snapshotSavedAt: envelope.snapshot.savedAt,
-    tripId,
-    occurredAt: nowDate().toISOString(),
-    syncStatus: "pending",
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope) throw new Error("Saved manifest is unavailable or expired");
+    if (!canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status)) {
+      throw new Error("This saved readiness record does not allow boarding");
+    }
+    envelope.events.push({
+      ...input,
+      clientEventId: crypto.randomUUID(),
+      snapshotId: envelope.snapshot.snapshotId,
+      snapshotSavedAt: envelope.snapshot.savedAt,
+      tripId,
+      occurredAt: nowDate().toISOString(),
+      syncStatus: "pending",
+    });
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope);
+    } finally {
+      db.close();
+    }
+    return envelope;
   });
-  const db = await openDatabase();
-  try {
-    await persistEnvelope(db, envelope);
-  } finally {
-    db.close();
-  }
-  return envelope;
 }
 
 export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
@@ -235,22 +255,30 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     );
   const body = (await response.json()) as { results: OfflineSyncResult[] };
   const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
-  envelope.events = envelope.events.map((event) => {
-    const result = byId.get(event.clientEventId);
-    if (!result) return event;
-    return {
-      ...event,
-      syncStatus: result.status === "rejected" ? "rejected" : "applied",
-      rejectionReason: result.reason,
-    };
+  // Re-read and merge under the lock instead of writing back the envelope
+  // read before the network round-trip: a concurrent appendOfflineRollCall
+  // (this tab or another) could have recorded a new pending event while the
+  // request was in flight, and writing the pre-fetch snapshot would discard it.
+  return withManifestLock(tripId, async () => {
+    const current = await loadOfflineManifest(tripId);
+    if (!current) return null;
+    current.events = current.events.map((event) => {
+      const result = byId.get(event.clientEventId);
+      if (!result) return event;
+      return {
+        ...event,
+        syncStatus: result.status === "rejected" ? "rejected" : "applied",
+        rejectionReason: result.reason,
+      };
+    });
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, current);
+    } finally {
+      db.close();
+    }
+    return current;
   });
-  const db = await openDatabase();
-  try {
-    await persistEnvelope(db, envelope);
-  } finally {
-    db.close();
-  }
-  return envelope;
 }
 
 // The live manifest page primes this in the background on mount, and "Save
