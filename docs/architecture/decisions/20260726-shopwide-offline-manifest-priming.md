@@ -140,6 +140,27 @@ Three follow-up correctness fixes on top of that first pass, all from continued 
   current shop from the same server-verified endpoint the auto-save uses and skips any trip that doesn't
   match; if that identity can't be determined (offline, no session, a failed request), it reconciles
   nothing rather than guess.
+- **Shell priming is now fully independent of the board fetch, not just decoupled from the purge.**
+  Priming used to run only after a successful fetch of the trip window; a transient failure of that fetch
+  (a network blip, a cold serverless start) skipped priming for the whole round, so a device that had
+  never primed before could go an entire trigger cycle — mount, interval, reconnect — with no cached
+  shell and so no root-path offline fallback, purely because an unrelated request had a bad moment.
+  Priming now fires unconditionally at the start of every round, never gated on the fetch, the purge, or
+  the save step succeeding.
+
+**A preserved foreign-shop record always shows its own shop's name, not just its trip and time.** The
+pending-event exception above means a record that legitimately belongs to a *different* shop can sit in
+this device's list for as long as it stays unresolved. Before this fix, that record rendered with no shop
+label at all — title, date, diver count, freshness pill, identical in every visible way to the current
+shop's own trips — and opening it showed that other shop's full roster (names, emergency contacts,
+readiness blockers) with nothing marking the boundary. The natural fix — compare each record's shop
+against "the currently authenticated shop" and only label the mismatches — doesn't hold up: this view is
+designed to work fully offline, and there is no reliable way to know "the current shop" without a network
+round-trip, which is exactly the state this surface exists to work without. Every list row now shows its
+shop's name unconditionally instead, native and foreign alike — simpler than conditional labeling, correct
+in every connectivity state, and it closes the gap a `dive-domain-expert` review raised: a shared or
+reassigned device could otherwise let one shop's staff silently browse another shop's medical-adjacent
+roster with zero visual cue that it wasn't theirs.
 
 **The freshness pill re-derives on a timer, not only at mount.** Freshness is computed inline from the
 wall clock at render time, so nothing previously re-rendered this component as real time passed with the

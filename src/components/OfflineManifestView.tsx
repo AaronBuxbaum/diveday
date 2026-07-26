@@ -264,6 +264,7 @@ export function OfflineManifestView() {
                     <div>
                       <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
                       <p className="mt-0.5 text-sm text-muted">
+                        {saved.snapshot.shop.name} ·{" "}
                         {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
                         {tripManifest.summary.totalDivers}{" "}
                         {tripManifest.summary.totalDivers === 1 ? "diver" : "divers"}

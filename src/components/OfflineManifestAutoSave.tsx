@@ -35,6 +35,17 @@ export function OfflineManifestAutoSave() {
     if (!navigator.onLine) return Promise.resolve();
     if (inFlight.current) return inFlight.current;
     const task = (async () => {
+      // Fully independent of the fetch/purge/save sequence below — it's
+      // cheap, data-free, and caches a static shell that has nothing to do
+      // with any particular shop's board. It must still run even if the
+      // upcoming-manifests fetch itself fails or returns non-OK (a transient
+      // network blip, a cold Lambda), or a device that's never primed before
+      // would have no cached shell — and so no root-path offline fallback —
+      // for that entire round, purely because an unrelated fetch had a bad
+      // moment. primeOfflineManifestShell() already dedupes overlapping
+      // callers internally, so firing it here without awaiting is safe even
+      // if a concurrent trigger's own round is also priming.
+      void primeOfflineManifestShell().catch(() => {});
       try {
         const response = await fetch("/api/offline-manifests/upcoming", {
           credentials: "same-origin",
@@ -55,13 +66,6 @@ export function OfflineManifestAutoSave() {
         // below) and let the next trigger retry the purge first, rather than
         // fail open on a cross-tenant boundary.
         await purgeOfflineManifestsExceptShop(body.shop.slug);
-        // Shell priming is unrelated to the purge above (it only caches the
-        // data-free offline shell/static assets for later offline access) and
-        // must never gate it — a Cache Storage failure here used to throw
-        // into the outer catch *before* the fetch/purge ran at all, letting a
-        // device that just signed into a new shop keep the previous shop's
-        // roster readable on every retry until priming happened to succeed.
-        await primeOfflineManifestShell().catch(() => {});
         await Promise.all(
           body.payloads.map((payload) => saveOfflineManifest(payload).catch(() => {})),
         );
