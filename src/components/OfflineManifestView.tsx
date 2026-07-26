@@ -12,11 +12,11 @@ import {
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
-  deleteOfflineManifest,
   loadOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
+  isOfflineManifestExpired,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
   offlineManifestFreshness,
@@ -128,8 +128,8 @@ export function OfflineManifestView() {
           {message}
         </p>
         <p className="mt-2 text-muted">
-          While you still have signal, open the trip&apos;s live manifest and tap “Save now” — then
-          roll call works all the way out to the site.
+          While you still have signal, open the trip&apos;s live manifest — it keeps this
+          device&apos;s copy current on its own, so roll call works all the way out to the site.
         </p>
       </main>
     );
@@ -143,6 +143,10 @@ export function OfflineManifestView() {
   // head count — a diver aboard is recorded present whatever the saved paperwork
   // said. The server re-checks the same way, so an offline board still syncs.
   const isDeparture = checkpoint === "departure";
+  // Kept readable past its retention window only so an unsynced event isn't
+  // silently lost (see loadOfflineManifest) — the H-05 stop rule still treats
+  // it as not a boarding source, so no new roll call can be recorded here.
+  const expired = isOfflineManifestExpired(envelope.snapshot);
   const freshness = offlineManifestFreshness(new Date(envelope.snapshot.savedAt));
   const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
   const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
@@ -154,6 +158,10 @@ export function OfflineManifestView() {
   const rollCallComplete = manifest.summary.totalDivers > 0 && awaiting === 0;
 
   async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
+    if (expired) {
+      setMessage("This saved copy has expired — open the live manifest to record roll call.");
+      return;
+    }
     setBusyBooking(bookingId);
     try {
       const next = await appendOfflineRollCall(tripId, {
@@ -174,12 +182,6 @@ export function OfflineManifestView() {
     } finally {
       setBusyBooking(null);
     }
-  }
-
-  async function remove() {
-    await deleteOfflineManifest(tripId);
-    setEnvelope(null);
-    setMessage("Offline copy deleted from this device.");
   }
 
   const dateTime = new Intl.DateTimeFormat("en-US", {
@@ -222,10 +224,17 @@ export function OfflineManifestView() {
             </span>
           </div>
         </div>
-        <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
-          {FRESHNESS_COPY[freshness]}. Boarding goes by readiness as it stood when this copy was
-          saved — DiveDay checks everything again once you&apos;re back in service.
-        </p>
+        {expired ? (
+          <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6 font-semibold text-danger">
+            This saved copy has expired and is not a boarding source. Any change still waiting to
+            send below will keep trying, but new roll call must be recorded on the live manifest.
+          </p>
+        ) : (
+          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
+            {FRESHNESS_COPY[freshness]}. Boarding goes by readiness as it stood when this copy was
+            saved — DiveDay checks everything again once you&apos;re back in service.
+          </p>
+        )}
         <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
           {message}
         </p>
@@ -389,38 +398,46 @@ export function OfflineManifestView() {
                     </details>
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                    {ready || !isDeparture ? (
-                      <button
-                        type="button"
-                        disabled={busyBooking === diver.bookingId}
-                        onClick={() =>
-                          record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
-                        }
-                        aria-busy={busyBooking === diver.bookingId}
-                        className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                      >
-                        {busyBooking === diver.bookingId
-                          ? "Saving…"
-                          : state?.state === "boarded"
-                            ? "Boarded ✓"
-                            : "Mark boarded"}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      disabled={busyBooking === diver.bookingId}
-                      onClick={() =>
-                        record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
-                      }
-                      aria-busy={busyBooking === diver.bookingId}
-                      className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                    >
-                      {busyBooking === diver.bookingId
-                        ? "Saving…"
-                        : state?.state === "not_boarded"
-                          ? "Not boarded ✓"
-                          : "Mark not boarded"}
-                    </button>
+                    {expired ? (
+                      <p className="text-sm font-semibold text-danger">
+                        Expired — record on the live manifest
+                      </p>
+                    ) : (
+                      <>
+                        {ready || !isDeparture ? (
+                          <button
+                            type="button"
+                            disabled={busyBooking === diver.bookingId}
+                            onClick={() =>
+                              record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
+                            }
+                            aria-busy={busyBooking === diver.bookingId}
+                            className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          >
+                            {busyBooking === diver.bookingId
+                              ? "Saving…"
+                              : state?.state === "boarded"
+                                ? "Boarded ✓"
+                                : "Mark boarded"}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={busyBooking === diver.bookingId}
+                          onClick={() =>
+                            record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
+                          }
+                          aria-busy={busyBooking === diver.bookingId}
+                          className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                        >
+                          {busyBooking === diver.bookingId
+                            ? "Saving…"
+                            : state?.state === "not_boarded"
+                              ? "Not boarded ✓"
+                              : "Mark not boarded"}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </li>
@@ -436,13 +453,6 @@ export function OfflineManifestView() {
         >
           Open live manifest
         </a>
-        <button
-          type="button"
-          onClick={remove}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger/10"
-        >
-          Delete device copy
-        </button>
       </footer>
     </main>
   );

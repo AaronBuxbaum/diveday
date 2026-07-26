@@ -65,7 +65,18 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "CACHE_OFFLINE_MANIFEST_SHELL") {
-    event.waitUntil(cacheOfflineShell());
+    // Reply on the caller's port instead of firing and forgetting: the client
+    // treats a save as safe to announce as "ready" only once the shell (and
+    // every asset it references) is actually confirmed cached, not merely
+    // requested — an already-active worker can still fail this (storage
+    // quota, a dropped fetch) and the caller needs to know.
+    const port = event.ports[0];
+    event.waitUntil(
+      cacheOfflineShell().then(
+        () => port?.postMessage({ ok: true }),
+        (error) => port?.postMessage({ ok: false, error: error?.message ?? String(error) }),
+      ),
+    );
   }
 });
 

@@ -325,6 +325,10 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.waitForURL(/\/manifest/);
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+        // The offline safety copy now saves itself in the background on
+        // mount; wait for that to settle (the offline-roll-call link only
+        // renders once saved) so the capture isn't racing that async write.
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
         await capture(page, "manifest", scheme);
 
         // The morning packing list — tanks, then rental kit. Blue Mantis fills
@@ -344,7 +348,18 @@ for (const scheme of ["light", "dark"] as const) {
         // no snapshot saved — the entire safety surface in that moment, so it
         // gets its own baseline rather than relying on the roll-call text
         // assertion in e2e/manifest.spec.ts to catch a styling regression.
+        // The manifest visit just above auto-saves a device copy, so clear it
+        // first to reproduce the truly-empty state (e.g. storage eviction).
         const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve, reject) => {
+              const request = indexedDB.deleteDatabase("diveday-offline-manifests");
+              request.onsuccess = () => resolve();
+              request.onerror = () =>
+                reject(request.error ?? new Error("failed to clear IndexedDB"));
+            }),
+        );
         await page.goto(`/offline-manifest?trip=${tripId}`);
         await page.getByRole("heading", { name: "Nothing saved on this phone yet" }).waitFor();
         await capture(page, "offline-manifest-empty", scheme);
