@@ -33,7 +33,9 @@ Delight is this product's differentiator — this review is where that stops bei
    primary-weight control (no explicit `variant`, an explicit `variant: "primary"`, or `variant:
    "danger-solid"` — a solid destructive action still claims the section's one primary slot) is a
    finding: demote the extras to `secondary`/`ghost`/`link`/`danger`, merge buttons that are really one
-   action with a default, or move a rare action behind disclosure. See
+   action with a default, or move a rare action behind disclosure. Separately — a single primary is
+   necessary but not sufficient — more than two or three controls of any weight competing for
+   attention in one section is also a finding on its own; the fix is the same set of moves. See
    [forms-and-controls.md § Action rows](../../../docs/design/forms-and-controls.md#action-rows-one-primary-not-many).
 6. Grep the changed files for token violations:
    ```bash

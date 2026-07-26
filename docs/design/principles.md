@@ -91,10 +91,12 @@ slows the common path to guard against a mistake that undo already handles calml
 Every screen should tell the user what to do next without making them choose among equals. A row
 of same-weight buttons is the user doing triage work that the design should have done for them.
 
-- **One primary per view.** At most one `buttonClass()` call without an explicit `variant`
-  (or with `variant: "primary"`) per screen or section — everything else competing for the same
-  moment is `secondary`, `ghost`, or `link` weight, not a second primary. If two actions feel
-  equally important, one of them isn't as important as it feels; demote it.
+- **One primary per view.** At most one primary-weight control rendered at a time (no explicit
+  `variant`, an explicit `variant: "primary"`, or `variant: "danger-solid"`) per screen or
+  section — count what's actually on screen together, not `buttonClass()` call sites: mutually
+  exclusive branches don't stack, a call inside a loop can render many. Everything else competing
+  for the same moment is `secondary`, `ghost`, `link`, or `danger` weight, not a second primary.
+  If two actions feel equally important, one of them isn't as important as it feels; demote it.
 - **Merge before you stack.** Three buttons that do variations on one action ("Approve",
   "Approve & note", "Approve & notify") are usually one button with good defaults — approving
   always notifies, and a note is a follow-up affordance, not a fork in the primary flow. Before
