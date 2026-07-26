@@ -85,6 +85,7 @@ has a signal.
 Shops get a real welcome/verify/reset loop instead of "email support." Verification is tracked
 but not enforced — a shop can run indefinitely unverified today; revisit if abuse or support load
 ever makes that untenable, at which point the migration is a single `NOT NULL`-style gate in
-`verifyCredentials` plus a resend-link affordance, not a schema change. There's no staff-invite
-flow yet (only the owner account `/onboard` creates) — `account_tokens`' `purpose` enum can grow
-an `invite` value later without a new table.
+`verifyCredentials` plus a resend-link affordance, not a schema change. The staff-invite flow this
+consequence once deferred is now built exactly as anticipated — `account_tokens.purpose` grew the
+`invite` value with no new table — see
+[20260726-staff-invite-accounts](20260726-staff-invite-accounts.md).

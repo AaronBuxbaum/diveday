@@ -3,12 +3,13 @@ import { createHash, randomBytes } from "node:crypto";
 /**
  * Bearer tokens proving control of a user account's own address — one shape
  * for confirming a freshly created account, another (shorter-lived) for
- * authorizing a password reset (20260725-account-lifecycle-emails). Hashed
+ * authorizing a password reset (20260725-account-lifecycle-emails), and a
+ * third for accepting a staff invite (20260726-staff-invite-accounts). Hashed
  * and expiring like `waiver_records`, not stateless like `recap-links.ts`: a
- * password-reset token is a credential over account takeover and must be
- * individually revocable.
+ * password-reset (or invite-acceptance) token is a credential over account
+ * takeover and must be individually revocable.
  */
-export type AccountTokenPurpose = "email_verification" | "password_reset";
+export type AccountTokenPurpose = "email_verification" | "password_reset" | "invite";
 
 /** Low stakes — only confirms the address works, so a generous window. */
 export const EMAIL_VERIFICATION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
@@ -16,8 +17,17 @@ export const EMAIL_VERIFICATION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 /** A live credential over account takeover, so kept short — industry norm. */
 export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
+/**
+ * A new hire may not open their inbox the day they're invited, so this is
+ * more generous than email verification, but still a hard expiry rather than
+ * a link that works forever.
+ */
+export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 export function ttlForAccountTokenPurpose(purpose: AccountTokenPurpose): number {
-  return purpose === "email_verification" ? EMAIL_VERIFICATION_TTL_MS : PASSWORD_RESET_TTL_MS;
+  if (purpose === "email_verification") return EMAIL_VERIFICATION_TTL_MS;
+  if (purpose === "invite") return INVITE_TTL_MS;
+  return PASSWORD_RESET_TTL_MS;
 }
 
 export function createAccountToken(): string {
@@ -34,4 +44,8 @@ export function verifyAccountLinkPath(token: string): string {
 
 export function resetPasswordLinkPath(token: string): string {
   return `/reset-password/${token}`;
+}
+
+export function inviteLinkPath(token: string): string {
+  return `/invite/${token}`;
 }

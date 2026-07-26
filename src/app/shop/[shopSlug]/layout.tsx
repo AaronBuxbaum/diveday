@@ -11,6 +11,7 @@ import { auth } from "@/lib/auth";
 import {
   canExportShopData,
   canImportShopData,
+  canManageStaffAccounts,
   canManageWaiverTemplates,
   canViewShopReports,
 } from "@/lib/authz";
@@ -105,6 +106,7 @@ export default async function ShopLayout({
             reports: canViewShopReports(session.user.roles),
             import: canImportShopData(session.user.roles),
             export: canExportShopData(session.user.roles),
+            team: canManageStaffAccounts(session.user.roles),
           }}
         />
       ) : null}

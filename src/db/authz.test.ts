@@ -6,6 +6,7 @@ import {
   canPersonConfigureTrips,
   canPersonDeleteDiver,
   canPersonManagePaymentSettings,
+  canPersonManageStaffAccounts,
   canPersonManageWaiverTemplates,
   canPersonOverrideGearRequest,
   canPersonRefund,
@@ -81,6 +82,7 @@ describe("H-14 owner/manager surfaces", () => {
       canPersonRefund,
       canPersonManageWaiverTemplates,
       canPersonDeleteDiver,
+      canPersonManageStaffAccounts,
     ]) {
       expect(await gate(db, shop.id, owner)).toBe(true);
       expect(await gate(db, shop.id, manager)).toBe(true);

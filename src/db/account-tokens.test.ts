@@ -139,4 +139,18 @@ describe("account tokens (in-memory PGlite)", () => {
       await consumeAccountToken(db, { token: issued.token, purpose: "password_reset" }),
     ).toBeNull();
   });
+
+  it("an invited account (not yet active) can still consume its own invite token — only disabled blocks consumption (20260726-staff-invite-accounts)", async () => {
+    const { db } = await seededShopContext();
+    const userAccountId = await seededAccountId(db);
+    await db
+      .update(userAccounts)
+      .set({ status: "invited" })
+      .where(eq(userAccounts.id, userAccountId));
+    const issued = await issueAccountToken(db, { userAccountId, purpose: "invite" });
+
+    expect(await consumeAccountToken(db, { token: issued.token, purpose: "invite" })).toEqual({
+      userAccountId,
+    });
+  });
 });
