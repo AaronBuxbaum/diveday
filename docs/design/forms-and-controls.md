@@ -63,6 +63,30 @@ variant is wrong — add one.
 center its own content: give it `flex items-center` or `inline-flex items-center`. A height floor
 without centering is the bug.
 
+## Action rows: one primary, not many
+
+Principle 8 ([principles.md](principles.md)) says a screen gets one obvious next action. In code
+that means one `buttonClass()` call per section without an explicit `variant` (the default is
+`primary`) — everything else in the same row is `secondary`, `ghost`, or `link`.
+
+```tsx
+// Before: three equal-weight buttons, the user has to triage
+<button className={buttonClass()}>Save</button>
+<button className={buttonClass()}>Save & send</button>
+<button className={buttonClass()}>Save & archive</button>
+
+// After: one primary with a good default, the rest are follow-up affordances
+<button className={buttonClass()}>Save & send</button>
+<button className={buttonClass({ variant: "ghost", size: "sm" })}>Save without sending</button>
+```
+
+Reach for demotion (`secondary`/`ghost`/`link`) first — variant alone often turns three
+equal-weight buttons into one obvious action and two quiet ones. Reach for a merge (fold two
+button labels into one action with a default) when the buttons are really the same action with a
+variant nobody needed to choose up front. A rare or advanced action that can't merge or demote
+without disappearing entirely belongs behind disclosure (a "More" affordance, a details expander)
+rather than sitting inline at primary weight.
+
 ## Menus
 
 Dropdown panels are one column, one item per row, `whitespace-nowrap`. A multi-column menu wraps

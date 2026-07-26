@@ -20,9 +20,14 @@ Evaluate, in order of severity:
    variants (grep the components).
 4. **Calm violations** — visual noise, cramped spacing, border overuse, accent (coral) spent on
    routine elements.
-5. **Voice violations** — lawyer/robot copy, "Submit" buttons, empty states that don't teach,
+5. **Control-count violations** (principle 8) — a row of same-weight buttons where one should be
+   primary and the rest demoted (`secondary`/`ghost`/`link`); buttons that are really one action
+   with a default, stacked instead of merged; a rare or advanced control sitting at equal weight
+   to the common path instead of behind disclosure. Count the controls a user has to triage in
+   each section at rest — more than two or three competing for attention is a finding.
+6. **Voice violations** — lawyer/robot copy, "Submit" buttons, empty states that don't teach,
    errors that don't help.
-6. **Missed moments** — a completed action that deserved a small moment of joy and didn't get
+7. **Missed moments** — a completed action that deserved a small moment of joy and didn't get
    one. Flag at most one per review; delight stays rationed.
 
 Report findings ordered by severity: principle violated, where (screenshot name or file:line),
