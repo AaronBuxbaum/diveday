@@ -36,8 +36,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   // leaving the copy here would be an invitation to wire them back up.
   "course-ratio-full":
     "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
-  fit: "We couldn’t save that rental fit. Please check the details and try again.",
-  pay: "We couldn’t open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
+  fit: "We couldn't save that rental fit. Please check the details and try again.",
+  pay: "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
 };
 
 /** What the confirmation's payment panel shows; null hides the panel entirely. */

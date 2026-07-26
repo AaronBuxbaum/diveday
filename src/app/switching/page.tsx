@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
 export const metadata: Metadata = {
-  title: "Switching to DiveDay — migration guides",
+  title: "Switching guides — DiveDay",
   description:
     "On a spreadsheet, or leaving EVE, DiveShop360, DiveAdmin, or Smartwaiver? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
 };

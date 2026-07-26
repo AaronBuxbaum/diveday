@@ -16,13 +16,13 @@ const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }
   none: { tone: "danger", text: "Pick a photo first, then add it." },
   limit: {
     tone: "danger",
-    text: `That's the most photos one recap holds (${MAX_RECAP_PHOTOS_PER_BOOKING}).`,
+    text: `That’s the most photos one recap holds (${MAX_RECAP_PHOTOS_PER_BOOKING}).`,
   },
   unconfigured: {
     tone: "danger",
-    text: "Photo uploads aren't set up for this shop yet — no worries, tag them when you post.",
+    text: "Photo uploads aren’t set up for this shop yet — no worries, tag them when you post.",
   },
-  error: { tone: "danger", text: "That photo didn't upload — try a JPEG or PNG under 5 MB." },
+  error: { tone: "danger", text: "That photo didn’t upload — try a JPEG or PNG under 5 MB." },
 };
 
 export const metadata: Metadata = {
@@ -206,7 +206,7 @@ export default async function DiveRecapPage({
 
         {atPhotoLimit ? (
           <p className="mt-4 text-sm text-muted">
-            You've added the most photos one recap holds. Nice haul!
+            You’ve added the most photos one recap holds. Nice haul!
           </p>
         ) : (
           <form

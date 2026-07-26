@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
@@ -24,12 +25,27 @@ export async function GET(request: Request) {
   const expectedState = cookieStore.get(STRIPE_CONNECT_STATE_COOKIE)?.value;
   cookieStore.delete(STRIPE_CONNECT_STATE_COOKIE);
 
+  const dbForShop = await getDb();
+
+  // Re-check against live roles, not just the session that started the OAuth
+  // round trip (H-14, ADR 20260724-role-authorization): the state cookie is
+  // valid for up to ten minutes, long enough for the initiator to be
+  // demoted or disabled before Stripe redirects back.
+  const canPayments = await canPersonManagePaymentSettings(
+    dbForShop,
+    session.user.shopId,
+    session.user.personId,
+  );
+  if (!canPayments) {
+    settingsUrl.searchParams.set("notice", "not_authorized");
+    return NextResponse.redirect(settingsUrl);
+  }
+
   // The demo shop must never hold a live Stripe account: its seeded orders are
   // fabricated and its order controls are disabled shop-wide, so a real
   // connection would let it manage genuine money it can't reconcile. Refuse to
   // link one — createOrder then stays "not connected", and every order on a demo
   // shop remains demo (src/db/orders.ts, orders/[id]/page.tsx).
-  const dbForShop = await getDb();
   const shop = await getShopById(dbForShop, session.user.shopId);
   if (shop?.isDemo) {
     settingsUrl.searchParams.set("notice", "connect_failed");

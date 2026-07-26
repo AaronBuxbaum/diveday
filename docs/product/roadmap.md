@@ -64,15 +64,6 @@ Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** â€
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it.
 
-### 6. Staff role authority boundaries (H-14, decided â€” not yet built)
-
-Every staff role currently reaches nearly every staff surface. The product owner decided 2026-07-24
-that payment settings, refunds, waiver templates, diver deletion, and trip configuration need real
-role boundaries ([human-decisions.md](human-decisions.md#decision-register) H-14). Not designed or
-built yet: the actual role/permission matrix (which role(s) may reach each surface), enforcement in
-`src/lib/authz.ts` and the relevant server actions, and an ADR recording the chosen matrix. Requires
-`security-reviewer` and `dive-domain-expert` review before merge per AGENTS.md's hard rules.
-
 ## Delight backlog
 
 Cross-cutting quality to fold into slices as they're touched, not defer to a final "polish" pass.

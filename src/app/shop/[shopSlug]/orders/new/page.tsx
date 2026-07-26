@@ -214,7 +214,7 @@ export default async function NewOrderPage({
               type="text"
               name="description"
               maxLength={200}
-              placeholder="e.g. Two-tank reef charter + rental set"
+              placeholder="e.g. Two-tank reef trip + rental set"
               className={controlClass}
             />
           </Field>

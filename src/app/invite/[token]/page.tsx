@@ -51,7 +51,7 @@ export default async function InvitePage({
   if (!check) {
     return (
       <Notice
-        title="This invite isn't valid"
+        title="This invite isn’t available"
         text="It may have expired, already been used, or been revoked. Ask whoever invited you to send a fresh one."
       />
     );
