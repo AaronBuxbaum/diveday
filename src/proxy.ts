@@ -17,24 +17,24 @@ const authMiddleware = NextAuth(authConfig).auth as unknown as (
  * Stamp the `x-middleware-request-*` / `x-middleware-override-headers` pair
  * onto `res` — the wire protocol `NextResponse.next({request:{headers}})`
  * itself compiles down to (see node_modules/next/dist/server/web/
- * spec-extension/response.js `handleMiddlewareField`). Applying it directly,
- * rather than only via that constructor option, means it lands regardless of
- * *which* response object ends up returned: `authMiddleware` sometimes
- * constructs its own (e.g. to refresh a session cookie) even when the
- * request is simply allowed through, and that response's own request-header
- * overrides — if it set any — must not be clobbered, only added to.
+ * spec-extension/response.js `handleMiddlewareField`). Next's dev router
+ * (server/lib/router-utils/resolve-routes.js) treats `x-middleware-override-
+ * headers` as the *complete* set of request headers that survive — every
+ * header on the original request that isn't named in that list gets deleted
+ * before the request continues. So the list must always be seeded from the
+ * full original request headers (here, `req`), never built up from scratch
+ * with only the one header this function means to add/change — that
+ * previously dropped `cookie` (and everything else) off every request that
+ * passed through this proxy, signing every visitor back out on their very
+ * next navigation.
  */
-function overrideRequestHeader(res: Response, name: string, value: string): void {
-  res.headers.set(`x-middleware-request-${name}`, value);
-  const existing = res.headers.get("x-middleware-override-headers");
-  const keys = new Set(
-    (existing ?? "")
-      .split(",")
-      .map((key) => key.trim())
-      .filter(Boolean),
-  );
-  keys.add(name);
-  res.headers.set("x-middleware-override-headers", [...keys].join(","));
+function overrideRequestHeader(req: NextRequest, res: Response, name: string, value: string): void {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set(name, value);
+  for (const [key, headerValue] of requestHeaders) {
+    res.headers.set(`x-middleware-request-${key}`, headerValue);
+  }
+  res.headers.set("x-middleware-override-headers", [...requestHeaders.keys()].join(","));
 }
 
 export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | undefined> {
@@ -50,7 +50,9 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
   // even on an allowed request), so `?? NextResponse.next()` is not a
   // reliable signal for "which object do I attach headers to" — always
   // attach to whatever came back, falling back to a plain pass-through only
-  // when nothing did.
+  // when nothing did. overrideRequestHeader always rebuilds the override
+  // list from the original request, so it's safe regardless of which Response
+  // this ends up being.
   const res = (await authMiddleware(req, ctx)) ?? NextResponse.next();
   const setCookies = res.headers.getSetCookie?.() ?? [];
   if (setCookies.length > 0) {
@@ -65,7 +67,7 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
   // way it learns "this render is going into someone else's iframe." Always
   // overridden, on the request as it continues, never left at whatever a
   // client happened to send: a spoofed value must never survive.
-  overrideRequestHeader(res, EMBED_REQUEST_HEADER, isEmbedRequest ? "1" : "");
+  overrideRequestHeader(req, res, EMBED_REQUEST_HEADER, isEmbedRequest ? "1" : "");
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can
   // embed its booking calendar on its own website (docs ADR 20260726-schedule-embed).
