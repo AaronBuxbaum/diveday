@@ -13,6 +13,7 @@ import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { shopOffersNitrox } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 
 /**
@@ -122,11 +123,19 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  await setBookingNitrox(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    wantsNitrox: parsed.data.nitrox === "on",
-  });
+  // The nitrox checkbox is only in this form when the shop currently offers
+  // nitrox (RentalFitForm.tsx) — when it isn't, the field is simply absent
+  // from every submission, whatever the diver's actual request. Only write it
+  // when the checkbox could have been there at all, so an unrelated save
+  // (a note, a size) never silently clears a request recorded while the shop
+  // still offered it.
+  if (shopOffersNitrox(ctx.data.shop.rentalItems)) {
+    await setBookingNitrox(ctx.db, {
+      shopId: ctx.data.shop.id,
+      bookingId: ctx.bookingId,
+      wantsNitrox: parsed.data.nitrox === "on",
+    });
+  }
   const result = saved ? "saved=fit" : "error=fit";
   revalidateAndRedirect(base(token), `${base(token)}?${result}`);
 }

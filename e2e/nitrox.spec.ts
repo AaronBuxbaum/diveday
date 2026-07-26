@@ -56,6 +56,80 @@ test.describe("staff", () => {
     // Nothing on this page claims to know what is in a cylinder.
     await expect(page.getByText("DiveDay logs no gas analysis")).toBeVisible();
   });
+
+  test("resaving the rental-fit form after the shop disables nitrox doesn't clear an existing request", async ({
+    page,
+    browser,
+    workerBaseURL,
+  }) => {
+    // Two actors (diver + staff), a settings round trip each way, and a prep-
+    // list read — comfortably past the suite's 15s default in exchange for
+    // covering a real data-loss regression end to end; the try/finally below
+    // must reach its cleanup so a slow run never leaves the shared demo
+    // shop's nitrox catalog off for whatever test runs next in this worker.
+    test.setTimeout(30_000);
+    // The diver's half of this test runs signed out — a fresh context so the
+    // owner session on `page` (used to toggle settings below) never bleeds
+    // into it, the same reason the settings-toggle test above uses its own
+    // onboarded shop rather than this one.
+    const anonContext = await browser.newContext({
+      baseURL: workerBaseURL,
+      storageState: { cookies: [], origins: [] },
+    });
+    const anon = await anonContext.newPage();
+    await anon.goto("/shop/blue-mantis/schedule");
+    await anon
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+      .getByRole("link")
+      .click();
+    await anon.getByLabel("Name").fill("Priya Sharma");
+    await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
+    await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await expect(anon.getByRole("heading", { name: /You're on the boat, Priya/ })).toBeVisible();
+
+    await anon.locator('input[name="nitrox"]').check();
+    await anon.getByRole("button", { name: "Save rental fit" }).click();
+    await expect(anon.locator('input[name="nitrox"]')).toBeChecked();
+    const bookingUrl = anon.url();
+    // The trip id rides along in the confirmation URL — reuse it below
+    // instead of clicking back through the schedule as staff.
+    const tripId = bookingUrl.match(/\/schedule\/([^/?]+)/)?.[1];
+    if (!tripId) throw new Error("booking confirmation URL missing a trip id");
+
+    try {
+      await page.goto("/shop/blue-mantis/settings");
+      await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
+      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+
+      // The diver comes back to add an unrelated note. The nitrox fieldset is
+      // gone (the shop doesn't fill it any more), but saving must not
+      // silently erase the request already on file for this trip.
+      await anon.goto(bookingUrl);
+      await expect(anon.locator('input[name="nitrox"]')).toHaveCount(0);
+      await anon.getByLabel("Anything else the crew should know?").fill("Bringing my own mask.");
+      await anon.getByRole("button", { name: "Save rental fit" }).click();
+      await expect(anon.getByText("Saved.")).toBeVisible();
+
+      // The request survives even with nitrox off — read it back from the
+      // prep list (visible with the catalog disabled per the live-data check
+      // above) rather than re-enabling nitrox just to look at the checkbox.
+      await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+      const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
+      await expect(tanks).toContainText("Nitrox");
+    } finally {
+      // Restore the shared demo shop's catalog — resetDemoSchedule only
+      // clears bookings/trips, never shop settings (src/db/seed.ts), so a
+      // test that disables nitrox here must turn it back on or every later
+      // test in this worker sees it missing.
+      await page.goto("/shop/blue-mantis/settings");
+      await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
+      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+    }
+    await anonContext.close();
+  });
 });
 
 // blue-mantis is the shared demo fixture every other spec in the suite reads
