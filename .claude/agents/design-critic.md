@@ -21,7 +21,8 @@ Evaluate, in order of severity:
 4. **Calm violations** — visual noise, cramped spacing, border overuse, accent (coral) spent on
    routine elements.
 5. **Control-count violations** (principle 8) — a row of same-weight buttons where one should be
-   primary and the rest demoted (`secondary`/`ghost`/`link`); buttons that are really one action
+   primary and the rest demoted (`secondary`/`ghost`/`link`, or `danger` for a non-primary
+   destructive action); buttons that are really one action
    with a default, stacked instead of merged; a rare or advanced control sitting at equal weight
    to the common path instead of behind disclosure. Count the controls a user has to triage in
    each section at rest — more than two or three competing for attention is a finding.
