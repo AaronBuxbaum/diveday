@@ -2,6 +2,7 @@
 
 import { hash } from "bcryptjs";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { consumeAccountToken } from "@/db/account-tokens";
@@ -65,16 +66,21 @@ export async function submitPasswordReset(token: string, formData: FormData) {
   const account = await getAccountContact(db, claimed.userAccountId);
   if (!account) redirect(base);
 
+  // Deferred with after(), not awaited: a slow or hanging Resend call must
+  // not risk timing out the sign-in response the owner is waiting on
+  // (security review finding).
   const origin = publicAppUrl();
-  await notify({
-    kind: "password_changed",
-    userAccountId: claimed.userAccountId,
-    shopId: account.shopId,
-    to: account.email,
-    ownerName: account.ownerName,
-    forgotPasswordUrl: origin ? new URL("/forgot-password", `${origin}/`).toString() : undefined,
-    changedAt: nowDate(),
-  }).catch(() => ({ status: "failed" as const }));
+  after(async () => {
+    await notify({
+      kind: "password_changed",
+      userAccountId: claimed.userAccountId,
+      shopId: account.shopId,
+      to: account.email,
+      ownerName: account.ownerName,
+      forgotPasswordUrl: origin ? new URL("/forgot-password", `${origin}/`).toString() : undefined,
+      changedAt: nowDate(),
+    }).catch(() => ({ status: "failed" as const }));
+  });
 
   try {
     await signIn("credentials", {
