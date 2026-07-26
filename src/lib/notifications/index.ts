@@ -2,10 +2,14 @@ import { z } from "zod";
 import {
   bookingConfirmationEmail,
   type NotificationEmail,
+  passwordChangedEmail,
+  passwordResetEmail,
   tripRecapEmail,
   tripReminderEmail,
+  verifyAccountEmail,
   waitlistInviteEmail,
   waiverRequestEmail,
+  welcomeEmail,
 } from "./email";
 
 const emailAddressSchema = z.email().max(200);
@@ -107,6 +111,55 @@ const tripRecapSchema = z.object({
   recapUrl: z.url().max(2_000),
 });
 
+// Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
+// so these are structurally excluded from TrackedNotification
+// (src/db/notifications.ts) exactly like waitlist_invite already is —
+// there's no shop-facing delivery issue to surface for an account's own
+// welcome/verify/reset mail.
+const welcomeSchema = z.object({
+  kind: z.literal("welcome"),
+  userAccountId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  signInUrl: z.url().max(2_000),
+});
+
+const emailVerificationSchema = z.object({
+  kind: z.literal("email_verification"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  verifyUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+const passwordResetRequestSchema = z.object({
+  kind: z.literal("password_reset_request"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  resetUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+const passwordChangedSchema = z.object({
+  kind: z.literal("password_changed"),
+  userAccountId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  /** Distinguishes each change as its own send — a second reset is a fresh event, not a duplicate. */
+  changedAt: z.date(),
+});
+
 export const notificationSchema = z.discriminatedUnion("kind", [
   bookingConfirmationSchema,
   waiverRequestSchema,
@@ -114,6 +167,10 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   tripReminder7dSchema,
   tripReminder24hSchema,
   tripRecapSchema,
+  welcomeSchema,
+  emailVerificationSchema,
+  passwordResetRequestSchema,
+  passwordChangedSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -152,7 +209,11 @@ function messageFor(notification: Notification): NotificationEmail {
     return tripReminderEmail({ ...notification, lead: "day" });
   }
   if (notification.kind === "trip_recap") return tripRecapEmail(notification);
-  return waiverRequestEmail(notification);
+  if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
+  if (notification.kind === "welcome") return welcomeEmail(notification);
+  if (notification.kind === "email_verification") return verifyAccountEmail(notification);
+  if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
+  return passwordChangedEmail(notification);
 }
 
 function idempotencyKeyFor(notification: Notification): string {
@@ -172,6 +233,20 @@ function idempotencyKeyFor(notification: Notification): string {
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;
+    // One welcome ever, per account.
+    case "welcome":
+      return `welcome/${notification.userAccountId}`;
+    // Keyed by the token row's own id, not the raw token, so a retried send
+    // never doubles up without the Idempotency-Key header ever carrying the
+    // bearer secret itself.
+    case "email_verification":
+      return `email-verification/${notification.tokenId}`;
+    case "password_reset_request":
+      return `password-reset-request/${notification.tokenId}`;
+    // Keyed by the change's own timestamp so a second reset's confirmation
+    // is a fresh send, not deduped against the first.
+    case "password_changed":
+      return `password-changed/${notification.userAccountId}/${notification.changedAt.toISOString()}`;
   }
 }
 

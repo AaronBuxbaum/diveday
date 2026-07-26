@@ -310,6 +310,16 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   the lean unit-test template and trial shops opt out of. Demo `orders` carry fabricated Stripe ids,
   so the order page disables Refresh/Void/Refund on a demo shop with a hover explanation.
 
+## Account lifecycle emails (delivered 2026-07-26)
+
+- **Welcome, verify-email, and password reset** — `/onboard` now sends a welcome note and a
+  verify-email link right after account creation; `/forgot-password` issues a reset link
+  (enumeration-safe — always the same generic response) and `/reset-password/[token]` sets a new
+  password, signs the owner in, and sends a `password_changed` security notice. Hashed, expiring,
+  one-time `account_tokens` (not the stateless recap-link shape); verification is tracked
+  (`user_accounts.email_verified_at`) but does not yet gate sign-in
+  ([account-lifecycle-emails](../architecture/decisions/20260725-account-lifecycle-emails.md)).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate
