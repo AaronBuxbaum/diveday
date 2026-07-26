@@ -147,8 +147,8 @@ export default async function ShopPage({
           ) : (
             <>
               <p className="mt-1 text-muted">
-                Nothing is on the books yet. Schedule a charter and it will show up here the morning
-                it sails.
+                Nothing is on the books yet. Schedule a trip and it will show up here the morning it
+                sails.
               </p>
               <Link
                 href={`/shop/${shopSlug}/trips/new`}

@@ -312,6 +312,18 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   the lean unit-test template and trial shops opt out of. Demo `orders` carry fabricated Stripe ids,
   so the order page disables Refresh/Void/Refund on a demo shop with a hover explanation.
 
+## Staff role authorization (delivered 2026-07-24)
+
+- **Real role boundaries on payment settings, refunds, waiver templates, diver deletion, and trip
+  configuration** — five predicates in `src/lib/authz.ts` (`canManagePaymentSettings`, `canRefund`,
+  `canManageWaiverTemplates`, `canDeleteDiver` → owner/manager; `canConfigureTrips` →
+  owner/manager/instructor), with live DB-checked companions in `src/db/authz.ts`
+  (`loadActiveStaffRoles` + `canPersonX`) so a demoted/disabled/deleted staff member loses the
+  surface immediately. Enforced in both layers per ADR-0006 — each surface's page hides the control
+  and its server action(s)/route re-check. Answers H-14 in
+  [human-decisions.md](human-decisions.md#decision-register).
+  See [20260724-role-authorization](../architecture/decisions/20260724-role-authorization.md).
+
 ## Account lifecycle emails (delivered 2026-07-26)
 
 - **Welcome, verify-email, and password reset** — `/onboard` now sends a welcome note and a

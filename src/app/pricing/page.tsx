@@ -143,7 +143,7 @@ export default function PricingPage() {
                 className: "mt-8 w-full",
               })}
             >
-              Start a trial shop
+              Start a trial
             </Link>
             <form action={enterDemoAction} className="mt-3">
               <input type="hidden" name="source" value="pricing" />

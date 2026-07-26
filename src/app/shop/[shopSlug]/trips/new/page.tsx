@@ -238,7 +238,7 @@ export default async function NewTripPage({
                 defaultValue={selectedCourse?.id ?? ""}
                 className={controlClass}
               >
-                <option value="">Ordinary charter / trip</option>
+                <option value="">Ordinary trip</option>
                 {courseList.map((course) => (
                   <option key={course.id} value={course.id}>
                     {course.title}

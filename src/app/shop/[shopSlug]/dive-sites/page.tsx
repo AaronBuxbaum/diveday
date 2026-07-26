@@ -40,7 +40,7 @@ export default async function DiveSitesPage({
       <ShopPageHeader
         eyebrow="Catalog"
         title="Dive-site library"
-        description="Build the briefing once, then attach it to any charter. Copy a site before tailoring a special itinerary."
+        description="Build the briefing once, then attach it to any trip. Copy a site before tailoring a special itinerary."
         actions={
           <>
             <Link
