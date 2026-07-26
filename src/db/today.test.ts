@@ -2,6 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { cancelBooking } from "./bookings";
 import { recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
@@ -111,6 +112,48 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(work.departures[0]?.boarded).toBe(1);
+  });
+
+  it("drops a cancelled booking from the boarded count, not just the booked count", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
+    const [staff] = await listStaff(db, shop.id);
+    if (!entry || !staff) throw new Error("demo fixture missing");
+
+    // Readiness gates boarding at the departure checkpoint, so this diver
+    // needs a completed waiver before recordRollCall will accept "boarded"
+    // (same setup as the "counts a boarded diver" test above).
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: entry.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: entry.booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+    });
+    const boarded = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(boarded.departures[0]?.booked).toBe(9);
+    expect(boarded.departures[0]?.boarded).toBe(1);
+
+    // A no-show pulled, or a refund, after the diver already boarded — the
+    // roll-call event row stays in the table. Without the bookings join in
+    // boardedCountsByTrip, this diver would still count as boarded even
+    // though `booked` (upcomingTripsWithCounts) already excludes them —
+    // letting the two totals coincidentally match while other divers on this
+    // trip remain genuinely unboarded.
+    await cancelBooking(db, shop.id, entry.booking.id);
+    const afterCancel = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(afterCancel.departures[0]?.booked).toBe(8);
+    expect(afterCancel.departures[0]?.boarded).toBe(0);
   });
 
   it("flags divers with no rental fit on file, and clears it once a fit is saved", async () => {
