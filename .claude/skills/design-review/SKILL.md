@@ -25,9 +25,11 @@ Delight is this product's differentiator — this review is where that stops bei
    from `<Field>`/`<FieldGrid>` and `buttonClass()`; a surface that fails one is usually a surface
    that hand-rolled the classes.
 5. Count the controls in each section at rest (principle 8 — fewer controls, one obvious action).
-   More than one `buttonClass()` call without an explicit `variant` (default is `primary`) in the
-   same view is a finding: demote the extras to `secondary`/`ghost`/`link`, merge buttons that are
-   really one action with a default, or move a rare action behind disclosure. See
+   Per independent section — not summed across the whole view, a settings page with five
+   unrelated sections can have five primaries — more than one `buttonClass()` call that is
+   primary-weight (no explicit `variant`, or an explicit `variant: "primary"`) is a finding:
+   demote the extras to `secondary`/`ghost`/`link`/`danger`, merge buttons that are really one
+   action with a default, or move a rare action behind disclosure. See
    [forms-and-controls.md § Action rows](../../../docs/design/forms-and-controls.md#action-rows-one-primary-not-many).
 6. Grep the changed files for token violations:
    ```bash
