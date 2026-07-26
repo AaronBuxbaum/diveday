@@ -1,4 +1,4 @@
-import { and, eq, exists, gt, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, exists, gt, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import {
   type AccountTokenPurpose,
   createAccountToken,
@@ -118,15 +118,17 @@ export async function wasAccountTokenConsumed(
 
 /**
  * Atomically claims a token for one-time use: the `WHERE` re-checks every
- * validity condition — including that the account is still active, not just
- * that it was active when the token was requested — at the moment of the
- * update, so two concurrent submits of the same link can never both succeed,
- * and a disabled account's outstanding tokens stop working immediately. The
- * sole gate a mutating action may rely on. Accepts a transaction so the
- * caller can claim the token and perform its protected mutation (marking an
- * account verified, setting a new password) atomically — a failure between
- * the two must not burn a one-time link for nothing (security review
- * finding).
+ * validity condition — including that the account isn't disabled, not just
+ * that it wasn't disabled when the token was requested — at the moment of
+ * the update, so two concurrent submits of the same link can never both
+ * succeed, and a disabled account's outstanding tokens stop working
+ * immediately. Deliberately "not disabled" rather than "active": an `invite`
+ * token's account starts life `invited`, not `active` (20260726-staff-
+ * invite-accounts), and still needs to be consumable. The sole gate a
+ * mutating action may rely on. Accepts a transaction so the caller can claim
+ * the token and perform its protected mutation (marking an account verified,
+ * setting a new password) atomically — a failure between the two must not
+ * burn a one-time link for nothing (security review finding).
  */
 export async function consumeAccountToken(
   db: DbExecutor,
@@ -150,7 +152,7 @@ export async function consumeAccountToken(
             .where(
               and(
                 eq(userAccounts.id, accountTokens.userAccountId),
-                eq(userAccounts.status, "active"),
+                ne(userAccounts.status, "disabled"),
               ),
             ),
         ),

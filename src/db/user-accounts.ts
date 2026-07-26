@@ -79,3 +79,23 @@ export async function setAccountPassword(
 ): Promise<void> {
   await db.update(userAccounts).set({ hashedPassword }).where(eq(userAccounts.id, userAccountId));
 }
+
+/**
+ * Accepting a staff invite: sets the invitee's own chosen password, flips the
+ * account from `invited` to `active` so it can sign in, and stamps
+ * `emailVerifiedAt` — clicking a link mailed to that address is the same
+ * email-ownership proof `email_verification` records
+ * (20260726-staff-invite-accounts). Accepts a transaction so a caller can
+ * pair this with the token claim that authorized it.
+ */
+export async function activateStaffAccount(
+  db: DbExecutor,
+  userAccountId: string,
+  hashedPassword: string,
+  now: Date = nowDate(),
+): Promise<void> {
+  await db
+    .update(userAccounts)
+    .set({ hashedPassword, status: "active", emailVerifiedAt: now })
+    .where(eq(userAccounts.id, userAccountId));
+}

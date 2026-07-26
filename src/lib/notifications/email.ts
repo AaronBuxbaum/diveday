@@ -316,6 +316,30 @@ export function verifyAccountEmail(input: VerifyAccountEmailInput): Notification
   };
 }
 
+type StaffInviteEmailInput = {
+  inviteeName: string;
+  shopName: string;
+  inviterName: string;
+  roleLabels: string[];
+  inviteUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmail {
+  const firstName = input.inviteeName.trim().split(/\s+/)[0] || "there";
+  const roles = input.roleLabels.join(", ");
+  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const shop = escapeHtml(input.shopName);
+  const url = escapeHtml(input.inviteUrl);
+
+  return {
+    subject: `${input.inviterName} invited you to ${input.shopName} on DiveDay`,
+    text: `Hi ${firstName},\n\n${input.inviterName} added you to ${input.shopName} on DiveDay as ${roles}.\n\nSet your password to get started:\n${input.inviteUrl}\n\nThis link expires ${expiresAt}. If you weren't expecting this, you can ignore it.\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${escapeHtml(input.inviterName)} added you to <strong>${shop}</strong> on DiveDay as ${escapeHtml(roles)}.</p><p><a href="${url}">Set your password to get started</a>.</p><p>This link expires ${escapeHtml(expiresAt)}. If you weren't expecting this, you can ignore it.</p>`,
+  };
+}
+
 type PasswordResetEmailInput = {
   ownerName: string;
   resetUrl: string;
