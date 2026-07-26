@@ -28,7 +28,9 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   const [busy, setBusy] = useState(false);
   // saveOfflineManifest/syncOfflineManifest overlap easily across the mount
   // effect, the reconnect listener, and the interval — this keeps them from
-  // racing each other into IndexedDB.
+  // racing each other into IndexedDB. Cross-tab/cross-view races (this page
+  // vs. the offline viewer appending a roll-call event) are handled inside
+  // the store itself (see withManifestLock in offline-manifest-store.ts).
   const inFlight = useRef<Promise<void> | null>(null);
   // Read via ref inside `save` (below) instead of closing over `payload`
   // directly, so `save`'s identity — and the timer effect that depends on
@@ -37,22 +39,33 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   // edit made on this trip.
   const payloadRef = useRef(payload);
   payloadRef.current = payload;
+  // Tracks the pending-event count as of the *last* reconcile, so a reconcile
+  // only narrates/refreshes when something actually changed this round —
+  // otherwise, once a device has ever recorded any event (even one long since
+  // applied), "events.length > 0" would stay true forever and every
+  // background reconcile would call router.refresh(), whose fresh payload
+  // re-triggers the effect below, which reconciles again: an unbounded loop.
+  const lastPendingCount = useRef(0);
+  // Set right before a manual "Refresh now" (or router.refresh() call below)
+  // whose resulting save should show the loud confirmation instead of
+  // passing silently, since the save itself only happens once the refreshed
+  // payload actually lands as a prop (see the payload effect).
+  const manualRefreshPending = useRef(false);
 
   const reconcile = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
+    const pendingBefore = lastPendingCount.current;
     try {
       const envelope = await syncOfflineManifest(tripId);
       if (envelope) {
         setSaved(envelope);
-        // Nothing to reconcile on a snapshot with no offline roll-call events
-        // yet (the common case for an auto-save with nothing recorded
-        // offline) — skip both the message and the refresh so the automatic
-        // background pass stays invisible until there's something to say.
-        if (envelope.events.length > 0) {
-          const rejected = envelope.events.filter(
-            (event) => event.syncStatus === "rejected",
-          ).length;
-          const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
+        const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
+        const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
+        lastPendingCount.current = pending;
+        // Only narrate/refresh the live page when there was something to
+        // resolve this round (pending before, or still rejected now) — a
+        // snapshot with only long-applied events stays silent forever after.
+        if (pendingBefore > 0 || rejected > 0) {
           setMessage(
             rejected > 0
               ? `${rejected} offline change${rejected === 1 ? " didn't" : "s didn't"} match the live manifest and ${rejected === 1 ? "wasn't" : "weren't"} applied — open the live manifest to sort it out.`
@@ -85,6 +98,9 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
           await primeOfflineManifestShell();
           const envelope = await saveOfflineManifest(payloadRef.current);
           setSaved(envelope);
+          lastPendingCount.current = envelope.events.filter(
+            (event) => event.syncStatus === "pending",
+          ).length;
           // Settled message either way — a silent background save still needs
           // to land on something other than the initial "Checking…" text.
           setMessage("This device has an up-to-date offline copy.");
@@ -109,11 +125,11 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   );
 
   // Saves as soon as there's a new payload to save — on first mount, and
-  // again on every subsequent server re-render (e.g. a roll-call action's
-  // revalidatePath), so a dockside edit gets captured right away instead of
-  // waiting for the next interval tick. `payload` itself isn't read in this
-  // closure (`save` reads it via `payloadRef`) but is listed deliberately —
-  // it's the signal a fresh save is worth doing.
+  // again whenever router.refresh() (below) actually lands a fresh server
+  // render, which is the only time this component has newer data than what
+  // it already wrote. `payload` itself isn't read in this closure (`save`
+  // reads it via `payloadRef`) but is listed deliberately — it's the signal
+  // a fresh save is worth doing.
   // biome-ignore lint/correctness/useExhaustiveDependencies: payload is an intentional re-run signal, see above
   useEffect(() => {
     if (!tripId) return;
@@ -122,8 +138,16 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       const envelope = await loadOfflineManifest(tripId).catch(() => null);
       if (cancelled) return;
       setSaved(envelope);
+      // Reflects reality even when the branch below can't run yet (e.g. this
+      // mount happens while offline) — otherwise reconcile()'s "did anything
+      // just resolve" check compares against a stale 0 once connectivity
+      // returns, on a device that already had pending events from before.
+      lastPendingCount.current =
+        envelope?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
       if (navigator.onLine) {
-        await save({ silent: true });
+        const manual = manualRefreshPending.current;
+        manualRefreshPending.current = false;
+        await save({ silent: !manual });
         if (cancelled) return;
         await reconcile();
       } else {
@@ -139,18 +163,42 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
     };
   }, [tripId, payload, save, reconcile]);
 
+  // Refresh the *server* data this device would save, rather than
+  // re-encrypting whatever `payload` happened to be captured at the last
+  // render — otherwise a background pass just re-timestamps stale data as a
+  // falsely "Fresh copy". The actual save runs once the refreshed payload
+  // lands as a prop, in the effect above; reconcile (flushing pending
+  // roll-call events) doesn't need fresh manifest data, so it runs directly.
+  const refresh = useCallback(
+    (opts: { manual: boolean }) => {
+      if (!navigator.onLine) {
+        // router.refresh() can't fetch anything with no network, so it would
+        // never deliver the new payload the effect above is waiting for —
+        // that'd leave a manual click's busy/disabled state stuck forever.
+        if (opts.manual) setMessage("No signal — showing the last saved copy.");
+        return;
+      }
+      if (opts.manual) {
+        manualRefreshPending.current = true;
+        setBusy(true);
+        setMessage("Saving the latest manifest to this device…");
+      }
+      router.refresh();
+      void reconcile();
+    },
+    [router, reconcile],
+  );
+
   useEffect(() => {
     if (!tripId) return;
     const onOnline = () => {
-      save({ silent: true }).then(reconcile);
+      if (navigator.onLine) refresh({ manual: false });
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && navigator.onLine) {
-        save({ silent: true }).then(reconcile);
-      }
+      if (document.visibilityState === "visible" && navigator.onLine) refresh({ manual: false });
     };
     const interval = setInterval(() => {
-      if (navigator.onLine) save({ silent: true }).then(reconcile);
+      if (navigator.onLine) refresh({ manual: false });
     }, AUTO_REFRESH_MS);
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
@@ -159,7 +207,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);
     };
-  }, [tripId, save, reconcile]);
+  }, [tripId, refresh]);
 
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
@@ -212,7 +260,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
           <button
             type="button"
             disabled={busy}
-            onClick={() => save({ silent: false }).then(reconcile)}
+            onClick={() => refresh({ manual: true })}
             className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken disabled:opacity-60"
           >
             {busy ? "Refreshing…" : "Refresh now"}
