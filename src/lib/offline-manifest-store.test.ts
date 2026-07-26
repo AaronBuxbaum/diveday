@@ -4,13 +4,18 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import {
   appendOfflineRollCall,
+  listOfflineManifests,
   loadOfflineManifest,
+  purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
 import type { OfflineManifestPayload } from "./offline-manifests";
+
+const FROZEN_MS = Date.parse(TEST_FROZEN_CLOCK);
 
 const payload: OfflineManifestPayload = {
   shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
@@ -39,6 +44,44 @@ const payload: OfflineManifestPayload = {
         },
       ],
       summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 1 },
+    },
+  ],
+};
+
+// A second, distinct trip departing earlier than `payload`'s, so the list's
+// soonest-departure-first ordering (ADR 20260726-shopwide-offline-manifest-priming)
+// has something real to sort against.
+const earlierPayload: OfflineManifestPayload = {
+  shop: payload.shop,
+  manifests: [
+    {
+      ...payload.manifests[0],
+      trip: {
+        ...payload.manifests[0].trip,
+        id: "33333333-3333-3333-3333-333333333333",
+        title: "Wreck & Reef — Duane",
+        startsAt: "2026-07-30T09:00:00.000Z",
+        endsAt: "2026-07-30T12:30:00.000Z",
+      },
+    },
+  ],
+};
+
+// A trip saved by a *different* shop on the same device/browser — the
+// cross-tenant scenario purgeOfflineManifestsExceptShop exists to close (see
+// ADR 20260726-shopwide-offline-manifest-priming).
+const otherShopPayload: OfflineManifestPayload = {
+  shop: { slug: "reef-runners", name: "Reef Runners", timezone: "America/New_York" },
+  manifests: [
+    {
+      ...payload.manifests[0],
+      trip: {
+        ...payload.manifests[0].trip,
+        id: "44444444-4444-4444-4444-444444444444",
+        title: "Morning Two-Tank",
+        startsAt: "2026-08-02T13:00:00.000Z",
+        endsAt: "2026-08-02T16:30:00.000Z",
+      },
     },
   ],
 };
@@ -165,6 +208,129 @@ describe("loadOfflineManifest", () => {
 
     const reloaded = await loadOfflineManifest(tripId);
     expect(reloaded).toBeNull();
+  });
+});
+
+describe("listOfflineManifests", () => {
+  it("returns every saved trip, soonest departure first", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([
+      earlierPayload.manifests[0].trip.id,
+      payload.manifests[0].trip.id,
+    ]);
+  });
+
+  it("omits an expired record with no unsynced pending event", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+    await patchStoredExpiresAt(payload.manifests[0].trip.id, "2020-01-01T00:00:00.000Z");
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([
+      earlierPayload.manifests[0].trip.id,
+    ]);
+  });
+
+  it("keeps an expired record with a still-pending event, same as loadOfflineManifest", async () => {
+    await saveOfflineManifest(payload);
+    const tripId = payload.manifests[0].trip.id;
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    await patchStoredExpiresAt(tripId, "2020-01-01T00:00:00.000Z");
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([tripId]);
+  });
+
+  it("returns an empty list when nothing has been saved on this device", async () => {
+    expect(await listOfflineManifests()).toEqual([]);
+  });
+
+  it("sorts a retained past trip behind every upcoming one, even though its startsAt is earlier", async () => {
+    // Ended two days ago — well within its 7-day post-trip retention window
+    // (still a legitimately retained record, not expired), but a plain
+    // ascending startsAt sort would still put it first, exactly the ordering
+    // bug this test guards against. It should trail every trip still ahead
+    // of it, not lead the list.
+    const twoDaysAgo = FROZEN_MS - 2 * 24 * 60 * 60 * 1000;
+    const pastPayload: OfflineManifestPayload = {
+      ...payload,
+      manifests: [
+        {
+          ...payload.manifests[0],
+          trip: {
+            ...payload.manifests[0].trip,
+            id: "55555555-5555-5555-5555-555555555555",
+            title: "Last Week's Reef Trip",
+            startsAt: new Date(twoDaysAgo - 3 * 60 * 60 * 1000).toISOString(),
+            endsAt: new Date(twoDaysAgo).toISOString(),
+          },
+        },
+      ],
+    };
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+    await saveOfflineManifest(pastPayload);
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([
+      earlierPayload.manifests[0].trip.id,
+      payload.manifests[0].trip.id,
+      pastPayload.manifests[0].trip.id,
+    ]);
+  });
+});
+
+describe("purgeOfflineManifestsExceptShop", () => {
+  it("deletes every device record whose shop doesn't match, keeping the caller's own shop intact", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(otherShopPayload);
+
+    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+
+    const remaining = await listOfflineManifests();
+    expect(remaining.map((envelope) => envelope.snapshot.shop.slug)).toEqual([payload.shop.slug]);
+    expect(await loadOfflineManifest(otherShopPayload.manifests[0].trip.id)).toBeNull();
+    expect(await loadOfflineManifest(payload.manifests[0].trip.id)).not.toBeNull();
+  });
+
+  it("is a no-op when every saved record already belongs to the given shop", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+
+    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+
+    const remaining = await listOfflineManifests();
+    expect(remaining).toHaveLength(2);
+  });
+
+  it("preserves another shop's record if it still holds an unsynced roll-call event", async () => {
+    // That event can't reconcile under this (different) shop's session — the
+    // server would look it up against the wrong tenant — so deleting it here
+    // would destroy the only copy of that evidence for good instead of
+    // leaving it to resolve the next time the original shop's own session
+    // runs a purge pass.
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(otherShopPayload);
+    await appendOfflineRollCall(otherShopPayload.manifests[0].trip.id, {
+      bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      note: null,
+    });
+
+    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+
+    const preserved = await loadOfflineManifest(otherShopPayload.manifests[0].trip.id);
+    expect(preserved).not.toBeNull();
+    expect(preserved?.events[0].syncStatus).toBe("pending");
   });
 });
 

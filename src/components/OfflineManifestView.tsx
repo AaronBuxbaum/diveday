@@ -12,6 +12,7 @@ import {
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
+  listOfflineManifests,
   loadOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
@@ -38,6 +39,7 @@ const FRESHNESS_PILL = {
 export function OfflineManifestView() {
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
+  const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
   // doesn't land back on "Before departure". This first pass only checks the
@@ -58,6 +60,18 @@ export function OfflineManifestView() {
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
+  // Freshness (current/aging/stale) is computed inline at render time from
+  // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
+  // this component as the wall clock crosses the 15-minute or 4-hour
+  // threshold on its own — a captain who leaves this page open would
+  // otherwise see "Fresh copy" read as current indefinitely. This forces a
+  // re-render every minute, well under either threshold's own granularity,
+  // purely to re-run that computation against the current time.
+  const [, forceFreshnessRecompute] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => forceFreshnessRecompute((tick) => tick + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const reconcile = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
@@ -81,10 +95,103 @@ export function OfflineManifestView() {
     }
   }, [tripId]);
 
+  // Reconciles every saved trip that still has a pending roll-call event, not
+  // just the one a captain happens to open next — otherwise a change recorded
+  // offline for a trip the captain never revisits individually would sit
+  // pending forever despite "every change is double-checked... once you're
+  // back in service" (see the P1 fix in ADR
+  // 20260726-shopwide-offline-manifest-priming's review follow-up).
+  const reconcileList = useCallback(async (saved: OfflineManifestEnvelope[]) => {
+    if (!navigator.onLine) return;
+    const withPending = saved.filter((envelope) =>
+      envelope.events.some((event) => event.syncStatus === "pending"),
+    );
+    if (withPending.length === 0) return;
+    // Only ever sync a trip belonging to whichever shop this browser is
+    // actually authenticated as right now. This view has no session context
+    // of its own (it's designed to work fully offline/unauthenticated), so a
+    // preserved foreign-shop pending event — kept alive specifically because
+    // it can't be reconciled under the wrong tenant, see
+    // purgeOfflineManifestsExceptShop — would otherwise get submitted under
+    // whatever shop *is* currently signed in, rejected for a tenant mismatch
+    // rather than a genuine domain refusal, and then look "resolved" to the
+    // very next purge pass, which would delete it outright. Learn the
+    // server-verified current shop the same way the auto-save does; if that
+    // can't be determined (offline, signed out, request failure), reconcile
+    // nothing rather than guess.
+    let currentShopSlug: string;
+    try {
+      const response = await fetch("/api/offline-manifests/upcoming", {
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      currentShopSlug = ((await response.json()) as { shop: { slug: string } }).shop.slug;
+    } catch {
+      return;
+    }
+    const reconcilable = withPending.filter(
+      (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
+    );
+    if (reconcilable.length === 0) return;
+    const results = await Promise.all(
+      reconcilable.map((envelope) => {
+        const id = envelope.snapshot.manifests[0]?.trip.id;
+        return id ? syncOfflineManifest(id).catch(() => null) : Promise.resolve(null);
+      }),
+    );
+    const byId = new Map(
+      results
+        .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
+        .map((envelope) => [envelope.snapshot.manifests[0]?.trip.id ?? "", envelope] as const),
+    );
+    const merged = saved.map((envelope) => {
+      const id = envelope.snapshot.manifests[0]?.trip.id;
+      return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
+    });
+    setList(merged);
+    const rejected = merged.reduce(
+      (sum, envelope) =>
+        sum + envelope.events.filter((event) => event.syncStatus === "rejected").length,
+      0,
+    );
+    const pending = merged.reduce(
+      (sum, envelope) =>
+        sum + envelope.events.filter((event) => event.syncStatus === "pending").length,
+      0,
+    );
+    if (rejected > 0) {
+      setMessage(
+        `${rejected} offline change${rejected === 1 ? " doesn't" : "s don't"} match the live manifest — open that trip to sort it out.`,
+      );
+    } else if (pending === 0) {
+      setMessage("Every offline change across these trips is caught up with the live manifest.");
+    }
+  }, []);
+
   useEffect(() => {
     if (!tripId) {
-      setMessage("No trip was selected. Open offline roll call from a live manifest first.");
-      return;
+      // No specific trip requested — this is the dive.day-root/shell landing
+      // page (see ADR 20260726-shopwide-offline-manifest-priming), so list
+      // whatever this device already has rather than asking for a trip id.
+      const refreshList = () =>
+        listOfflineManifests()
+          .then((saved) => {
+            setList(saved);
+            setMessage(
+              saved.length > 0
+                ? `${saved.length} saved ${saved.length === 1 ? "manifest" : "manifests"} on this device.`
+                : "Nothing saved on this device yet.",
+            );
+            void reconcileList(saved);
+          })
+          .catch(() =>
+            setMessage(
+              "This device couldn't open its saved manifests. Save a fresh copy while you have signal.",
+            ),
+          );
+      void refreshList();
+      window.addEventListener("online", refreshList);
+      return () => window.removeEventListener("online", refreshList);
     }
     loadOfflineManifest(tripId)
       .then((saved) => {
@@ -115,7 +222,86 @@ export function OfflineManifestView() {
       );
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
-  }, [reconcile, tripId]);
+  }, [reconcile, reconcileList, tripId]);
+
+  if (!tripId) {
+    const savedTrips = list ?? [];
+    return (
+      <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+          Offline manifests
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold">
+          {savedTrips.length > 0 ? "Saved on this device" : "Nothing saved on this device yet"}
+        </h1>
+        <p className="mt-3 text-muted" role="status" aria-live="polite">
+          {message}
+        </p>
+        {savedTrips.length > 0 ? (
+          <ul className="mt-6 divide-y divide-border rounded-xl border border-border bg-surface">
+            {savedTrips.map((saved) => {
+              const tripManifest = saved.snapshot.manifests[0];
+              if (!tripManifest) return null;
+              const savedFreshness = offlineManifestFreshness(new Date(saved.snapshot.savedAt));
+              // An expired-but-kept-alive record (see loadOfflineManifest) is
+              // not a boarding source even though it's still readable — the
+              // freshness pill alone would read identically to an ordinary
+              // "Stale copy" that's still perfectly usable, so it needs its
+              // own distinct label here (the per-trip view already says this
+              // plainly once opened).
+              const savedExpired = isOfflineManifestExpired(saved.snapshot);
+              const dateTime = new Intl.DateTimeFormat("en-US", {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: saved.snapshot.shop.timezone,
+              });
+              return (
+                <li key={tripManifest.trip.id}>
+                  <a
+                    href={`/offline-manifest?trip=${tripManifest.trip.id}`}
+                    className="flex min-h-14 flex-col gap-2 p-4 hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                  >
+                    <div>
+                      <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
+                      <p className="mt-0.5 text-sm text-muted">
+                        {saved.snapshot.shop.name} ·{" "}
+                        {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
+                        {tripManifest.summary.totalDivers}{" "}
+                        {tripManifest.summary.totalDivers === 1 ? "diver" : "divers"}
+                      </p>
+                    </div>
+                    {savedExpired ? (
+                      <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger">
+                        Expired — view only
+                      </span>
+                    ) : (
+                      <span
+                        className={
+                          savedFreshness === "current"
+                            ? "inline-flex min-h-9 items-center self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
+                            : savedFreshness === "aging"
+                              ? "inline-flex min-h-9 items-center self-start rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
+                              : "inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
+                        }
+                      >
+                        {FRESHNESS_PILL[savedFreshness]}
+                      </span>
+                    )}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-2 text-muted">
+            While you still have signal, open any shop page — DiveDay keeps this device&apos;s copy
+            of the next two days&apos; trips current on its own, so roll call works all the way out
+            to the site.
+          </p>
+        )}
+      </main>
+    );
+  }
 
   if (!envelope) {
     return (

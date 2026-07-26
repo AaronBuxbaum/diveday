@@ -124,10 +124,16 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   unless the shared readiness service clears the diver at the moment of action.
 - **Append-only boarding history**, tenant-scoped; browser print/save-PDF uses the same model.
 - **Encrypted offline snapshots** — IndexedDB with visible freshness (fresh/aging/stale), bounded
-  retention, data-free cached shell; never caches authenticated manifest HTML
+  retention, data-free cached shell; never caches authenticated manifest HTML. Saves and refreshes
+  itself automatically while a device has signal, for every trip in a rolling 48-hour window across
+  the whole shop — not only a trip whose live manifest someone opened. The offline shell lists every
+  saved trip (soonest departure first), and `dive.day`'s root path falls back to that list when
+  offline, so a captain never needs to have opened a specific trip first
   ([offline-manifest-snapshots](../architecture/decisions/20260718-offline-manifest-snapshots.md),
   [manifest-live-first](../architecture/decisions/20260718-manifest-live-first.md),
-  [msw-offline-sync-only](../architecture/decisions/20260719-msw-offline-sync-only.md)).
+  [msw-offline-sync-only](../architecture/decisions/20260719-msw-offline-sync-only.md),
+  [manifest-offline-copy-automation](../architecture/decisions/20260726-manifest-offline-copy-automation.md),
+  [shopwide-offline-manifest-priming](../architecture/decisions/20260726-shopwide-offline-manifest-priming.md)).
 - **Offline reconciliation** — device events carry idempotency/source/snapshot evidence; the server
   rechecks readiness and rejects stale device events behind newer live history.
 - **Per-dive checkpoints + briefings** — independent before-departure and after-each-dive head
