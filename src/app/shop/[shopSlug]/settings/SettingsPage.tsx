@@ -606,8 +606,8 @@ export default async function PaymentsSettingsPage({
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
           <h2 className="font-medium">Data</h2>
           <p className="mt-1 text-sm text-muted">
-            Bring contacts in from another system, or take everything back out — both are plain CSV,
-            and neither one touches the settings above.
+            Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs — neither one
+            touches the settings above.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {canImport ? (
