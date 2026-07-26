@@ -66,10 +66,13 @@ without centering is the bug.
 ## Action rows: one primary, not many
 
 Principle 8 ([principles.md](principles.md)) says a screen gets one obvious next action **per
-section** — a page with several independent sections can have several primaries, one apiece. In
-code that means one primary-weight `buttonClass()` call (no explicit `variant`, or an explicit
-`variant: "primary"`) per section — everything else in the same row demotes to `secondary`,
-`ghost`, `link`, or, for a destructive option that isn't the section's main action, `danger`.
+section** — a page with several independent sections can have several primaries, one apiece. That
+means one primary-weight control *rendered at a time* (no explicit `variant`, an explicit
+`variant: "primary"`, or `variant: "danger-solid"`) per section — count what's actually on screen
+together, not `buttonClass()` call sites: a ternary that renders one button or the other
+depending on state isn't two primaries, and a single call site mapped over a list can render many.
+Everything else in the same row demotes to `secondary`, `ghost`, `link`, or, for a destructive
+option that isn't the section's main action, `danger`.
 `danger-solid` is reserved for when the destructive action *is* the section's sole primary (e.g. a
 standalone "Refund" section) — don't use it to demote a non-primary destructive action, and don't
 strip a destructive action's danger styling just to satisfy "one primary."
