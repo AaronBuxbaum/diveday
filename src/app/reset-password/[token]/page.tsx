@@ -51,7 +51,7 @@ export default async function ResetPasswordPage({
   if (!check) {
     return (
       <Notice
-        title="This reset link isn't valid"
+        title="This reset link isn’t available"
         text="It may have expired or already been used — reset links work once, within an hour. Ask for a fresh one from the sign-in page."
       />
     );

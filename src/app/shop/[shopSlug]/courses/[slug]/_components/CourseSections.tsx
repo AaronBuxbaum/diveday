@@ -339,7 +339,7 @@ export function CourseSessions({
                     className: full ? "text-foreground" : "",
                   })}
                 >
-                  {full ? "Join the waitlist" : "Book this date"}
+                  {full ? "Join the wait list" : "Book this date"}
                 </Link>
               </li>
             );

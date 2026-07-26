@@ -123,7 +123,7 @@ export function ShopHistory({
       ) : null}
       {history.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
-          No trips yet — book them onto an open charter and it’ll show up here.
+          No trips yet — book them onto an open trip and it’ll show up here.
         </p>
       ) : (
         <>
