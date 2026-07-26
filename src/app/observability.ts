@@ -2,7 +2,17 @@
  * Bearer-capability routes whose path segment after the prefix is a
  * replayable credential, never an identifier safe to leave in telemetry.
  */
-const CAPABILITY_ROUTE_PREFIXES = ["waivers", "ready", "recap"] as const;
+const CAPABILITY_ROUTE_PREFIXES = [
+  "waivers",
+  "ready",
+  "recap",
+  // Account-lifecycle tokens (20260725-account-lifecycle-emails):
+  // /verify/[token] and /reset-password/[token]. /forgot-password carries no
+  // token in its URL (the email is a POST body field), so it needs none of
+  // this.
+  "verify",
+  "reset-password",
+] as const;
 
 /**
  * Query parameters that carry a bearer capability token directly, rather than

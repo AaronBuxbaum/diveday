@@ -88,6 +88,7 @@ const EXCLUDED_TABLES = [
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
+  "account_tokens", // bearer credentials (email verify / password reset), never exported
 ];
 
 /**

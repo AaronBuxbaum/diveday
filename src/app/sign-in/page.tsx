@@ -75,6 +75,11 @@ export default async function SignInPage({
                 />
               </Field>
             </FieldGrid>
+            <div className="flex justify-end">
+              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <SubmitButton pendingLabel="Signing in…" className={buttonClass()}>
               Sign in
             </SubmitButton>

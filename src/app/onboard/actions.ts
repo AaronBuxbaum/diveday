@@ -4,9 +4,12 @@ import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
+import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { signIn } from "@/lib/auth";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -30,6 +33,8 @@ export async function onboardAction(formData: FormData) {
 
   const db = await getDb();
   let onboardingError: string | null = null;
+  let newAccountId: string | null = null;
+  let newShopId: string | null = null;
 
   try {
     await db.transaction(async (tx) => {
@@ -73,6 +78,7 @@ export async function onboardAction(formData: FormData) {
       if (!newShop) {
         throw new Error("Failed to create shop");
       }
+      newShopId = newShop.id;
 
       // Create owner person
       const [newPerson] = await tx
@@ -100,11 +106,19 @@ export async function onboardAction(formData: FormData) {
       const hashedPassword = await hash(ownerPassword, 10);
 
       // Create user account
-      await tx.insert(userAccounts).values({
-        personId: newPerson.id,
-        email: ownerEmail.toLowerCase(),
-        hashedPassword,
-      });
+      const [newAccount] = await tx
+        .insert(userAccounts)
+        .values({
+          personId: newPerson.id,
+          email: ownerEmail.toLowerCase(),
+          hashedPassword,
+        })
+        .returning();
+
+      if (!newAccount) {
+        throw new Error("Failed to create user account");
+      }
+      newAccountId = newAccount.id;
 
       // Every new shop starts clean: just its default waiver, ready for the
       // owner's own trips and divers. No sample data — that only ever lives in
@@ -130,7 +144,42 @@ export async function onboardAction(formData: FormData) {
     );
   }
 
-  // 2. Sign in the new owner and redirect to dashboard
+  // 2. Welcome + verify-email are best-effort — no working link exists
+  // without a configured APP_HOST, and a failed send never blocks
+  // onboarding either way (20260725-account-lifecycle-emails).
+  if (newAccountId && newShopId) {
+    const origin = publicAppUrl();
+    if (origin) {
+      const issued = await issueAccountToken(db, {
+        userAccountId: newAccountId,
+        purpose: "email_verification",
+      }).catch(() => null);
+      await notify({
+        kind: "welcome",
+        userAccountId: newAccountId,
+        shopId: newShopId,
+        to: ownerEmail.toLowerCase(),
+        ownerName,
+        shopName,
+        signInUrl: new URL("/sign-in", `${origin}/`).toString(),
+      }).catch(() => ({ status: "failed" as const }));
+      if (issued) {
+        await notify({
+          kind: "email_verification",
+          userAccountId: newAccountId,
+          tokenId: issued.tokenId,
+          shopId: newShopId,
+          to: ownerEmail.toLowerCase(),
+          ownerName,
+          verifyUrl: new URL(verifyAccountLinkPath(issued.token), `${origin}/`).toString(),
+          expiresAt: issued.expiresAt,
+          timezone,
+        }).catch(() => ({ status: "failed" as const }));
+      }
+    }
+  }
+
+  // 3. Sign in the new owner and redirect to dashboard
   try {
     await signIn("credentials", {
       email: ownerEmail.toLowerCase(),
