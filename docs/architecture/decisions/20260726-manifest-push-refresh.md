@@ -41,13 +41,20 @@ alongside its existing interval:
   session, which Neon's pooled `DATABASE_URL` (PgBouncer transaction mode) cannot hold — the dedicated
   client always dials `DATABASE_URL_UNPOOLED` (falling back to `DATABASE_URL`, matching
   `vercel-build.mjs`'s existing fallback), same reasoning `20260718-vercel-neon-hosting` already applied
-  to migrations. It reconnects with exponential backoff (2s–30s) on error/close and is never torn down
-  once opened — an idle direct connection is cheap, and reconnect churn on every subscriber count hitting
-  zero is not worth avoiding it.
+  to migrations. It reconnects with exponential backoff (2s–30s) on error/close, resetting back to the
+  base delay once a reconnect's `LISTEN` actually succeeds — so a connection that drops again after a
+  long healthy run retries quickly rather than being stuck at whatever it escalated to on its way up —
+  and is never torn down once opened — an idle direct connection is cheap, and reconnect churn on every
+  subscriber count hitting zero is not worth avoiding it.
 - **Publish:** stays on the pooled `DATABASE_URL` connection — `select pg_notify('manifest_events',
   json)` is a single statement, not a session-scoped one, so PgBouncer transaction mode is fine for it.
-  Fire-and-forget from `recordRollCall`; a publish failure is swallowed and never surfaces to the caller
-  — the roll-call write already committed, and the existing poll/reconnect/visibility fallback is the
+  `recordRollCall` and `updateLatestRollCallNote` both `await` it (not fire-and-forget) — an unawaited
+  promise can be frozen mid-flight the instant a serverless function's response completes, the same
+  lifecycle problem `src/app/forgot-password/actions.ts` already solved once with `after()`. This call
+  site can't reach for `after()` the same way, since `recordRollCall` runs outside any request scope in
+  its unit tests; `publishManifestEvent` instead catches and swallows its own failure internally, so
+  awaiting it costs one extra cheap round-trip on an already-open connection and never turns a publish
+  failure into a roll-call failure — the existing poll/reconnect/visibility fallback is still the
   backstop for a push that never arrives.
 - **Dev/test:** when `DATABASE_URL` is unset (PGlite), the same module dispatches in-process via a plain
   listener set instead of touching Postgres at all — same public functions, same filtering semantics, no
@@ -58,8 +65,10 @@ alongside its existing interval:
   unchanged** — they become the fallback path (SSE unavailable, blocked by a captive portal, or this
   process's LISTEN client is mid-reconnect) rather than the primary one. This is deliberate, not a
   leftover: it is exactly the case 20260726 already reasoned through for a boat with unreliable signal.
-- **Scope:** only roll-call changes raise the signal, matching what 20260726 anticipated ("the moment
-  roll call changes elsewhere"). Other manifest-affecting writes (add/remove diver, waiver completion,
+- **Scope:** only roll-call writes raise the signal, matching what 20260726 anticipated ("the moment roll
+  call changes elsewhere") — both the boarded/not-boarded/cleared events `recordRollCall` inserts and a
+  note edited in place afterward through `updateLatestRollCallNote` (the note is part of the roll-call
+  record the offline copy shows). Other manifest-affecting writes (add/remove diver, waiver completion,
   crew changes) still reach the offline copy only via the interval/reconnect/visibility fallback, same as
   before this change. Extending the signal to those call sites is a follow-up, not bundled here.
 - **The live (online) manifest page itself is not wired to this signal.** It already re-renders on its

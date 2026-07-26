@@ -282,6 +282,46 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).toBe("Forgot fins — chasing them down");
   });
 
+  it("raises the manifest-events push signal when a note is actually saved, not on a no-op", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    let signalCount = 0;
+    const unsubscribe = subscribeManifestEvents(shop.id, reef.id, () => {
+      signalCount++;
+    });
+    try {
+      // Nothing recorded yet, so this is the no-op branch — no signal.
+      await updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "too early",
+      });
+      expect(signalCount).toBe(0);
+
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "departure",
+      });
+      expect(signalCount).toBe(1);
+
+      await updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "Forgot fins — chasing them down",
+      });
+      expect(signalCount).toBe(2);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   it("applies an offline event once and rejects a delayed event behind newer live history", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {

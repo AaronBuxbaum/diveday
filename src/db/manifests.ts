@@ -326,7 +326,7 @@ export async function recordRollCall(
   // every genuine write does, live or offline-applied alike (both funnel
   // through this one function; see ADR 20260726-manifest-push-refresh).
   if (outcome.ok && !outcome.duplicate) {
-    publishManifestEvent(db, input.shopId, input.tripId);
+    await publishManifestEvent(db, input.shopId, input.tripId);
   }
   return outcome;
 }
@@ -366,5 +366,9 @@ export async function updateLatestRollCallNote(
     .update(rollCallEvents)
     .set({ note: input.note.trim() || null })
     .where(eq(rollCallEvents.id, latest.id));
+  // The note is part of the roll-call record staff read off the offline
+  // copy (src/lib/offline-manifests.ts), so an edit here is exactly the kind
+  // of change the push signal exists for, same as recordRollCall above.
+  await publishManifestEvent(db, input.shopId, input.tripId);
   return true;
 }

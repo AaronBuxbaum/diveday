@@ -125,6 +125,24 @@ describe("connectAndListen", () => {
     expect(clients[1]?.queries).toEqual(["LISTEN manifest_events"]);
   });
 
+  it("resets the backoff to the base delay after a successful LISTEN, not the escalated one it started at", async () => {
+    const clients = [new FakeClient(), new FakeClient()];
+    let created = 0;
+    const createClient = () => asNotifyClient(clients[created++] as FakeClient);
+
+    // Simulate arriving here after several escalations (e.g. 16s) rather
+    // than fresh at the base delay.
+    await connectAndListen(16_000, createClient);
+    expect(clients[0]?.queries).toEqual(["LISTEN manifest_events"]);
+
+    clients[0]?.emit("error", new Error("connection reset"));
+    // If the backoff hadn't reset, this reconnect wouldn't fire until 32s.
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(created).toBe(2);
+    expect(clients[1]?.queries).toEqual(["LISTEN manifest_events"]);
+  });
+
   it("retries with backoff when the initial connect() rejects", async () => {
     const failing = new FakeClient();
     failing.connectError = new Error("connection refused");
