@@ -11,11 +11,19 @@ export function EarnedMoment({
   title,
   children,
   className = "",
+  as: Heading = "h2",
 }: {
   eyebrow?: string;
   title: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  /**
+   * Heading level for `title`. Defaults to h2, correct when the page has its
+   * own h1 elsewhere (as `/ready` and `/recap` do) — pass "h1" when this
+   * moment is the page's only heading, or the screen-reader outline starts at
+   * level two with no level-one heading at all.
+   */
+  as?: "h1" | "h2";
 }) {
   return (
     <section
@@ -24,9 +32,9 @@ export function EarnedMoment({
       {eyebrow ? (
         <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{eyebrow}</p>
       ) : null}
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+      <Heading className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
         {title}
-      </h2>
+      </Heading>
       {children ? <div className="mt-3 text-muted">{children}</div> : null}
     </section>
   );

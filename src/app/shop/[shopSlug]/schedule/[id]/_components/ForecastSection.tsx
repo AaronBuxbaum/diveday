@@ -55,9 +55,19 @@ export function ForecastSection({
         </p>
       ) : automatedForecast ? (
         <div className="mt-4">
+          {/* Open-Meteo's license (open-meteo.com/en/license) requires attribution
+              with a link back to them, not just the name in plain text. */}
           <p className="text-base text-muted">
-            Planning outlook from an automated weather service — the crew confirms conditions and
-            makes the final call at the dock.
+            Planning outlook from{" "}
+            <a
+              href="https://open-meteo.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Open-Meteo
+            </a>{" "}
+            — the crew confirms conditions and makes the final call at the dock.
           </p>
           <p className="mt-2 text-xs text-muted">
             Underwater visibility comes from the crew.{" "}
