@@ -69,14 +69,20 @@ export async function connectAndListen(
     createClient?.() ??
     new Client({ connectionString: withExplicitSslMode(connectionString as string) });
   let reconnecting = false;
+  // Mutable, unlike the `retryDelayMs` parameter: reset to the base delay
+  // once this attempt's LISTEN actually succeeds, so a connection that later
+  // drops after a long healthy run retries quickly again instead of
+  // inheriting whatever backoff this attempt escalated to on the way up.
+  let nextDelayMs = retryDelayMs;
   const reconnect = () => {
     if (reconnecting) return;
     reconnecting = true;
     client.removeAllListeners();
     void client.end().catch(() => undefined);
+    const delay = nextDelayMs;
     setTimeout(
-      () => void connectAndListen(Math.min(retryDelayMs * 2, RECONNECT_MAX_MS), createClient),
-      retryDelayMs,
+      () => void connectAndListen(Math.min(delay * 2, RECONNECT_MAX_MS), createClient),
+      delay,
     );
   };
   client.on("error", reconnect);
@@ -97,6 +103,7 @@ export async function connectAndListen(
   try {
     await client.connect();
     await client.query(`LISTEN ${NOTIFY_CHANNEL}`);
+    nextDelayMs = RECONNECT_BASE_MS;
   } catch {
     reconnect();
   }
@@ -121,21 +128,33 @@ export function subscribeManifestEvents(
 }
 
 /**
- * Raise "trip X's roll call changed" for every subscriber. Best-effort and
- * fire-and-forget by design (CR-008-style: never let a push failure surface
- * to a caller whose roll-call write already committed) — a publish that
- * never arrives just means subscribers fall back to their own poll.
+ * Raise "trip X's roll call changed" for every subscriber. The caller awaits
+ * this — unlike a bare unawaited promise, which a serverless runtime can
+ * freeze mid-flight the instant its response completes (the same lesson
+ * src/app/forgot-password/actions.ts already learned once, via `after()`;
+ * this call site can't reach for `after()` itself since recordRollCall runs
+ * outside a request scope in tests, so awaiting a self-swallowing promise is
+ * the version that works in both places). It never throws: a publish failure
+ * is caught and swallowed here (CR-008-style) so it never surfaces to a
+ * caller whose roll-call write already committed — a publish that never
+ * arrives just means subscribers fall back to their own poll.
  */
-export function publishManifestEvent(db: AppDb, shopId: string, tripId: string): void {
-  void publishManifestEventAsync(db, shopId, tripId).catch(() => undefined);
-}
-
-async function publishManifestEventAsync(db: AppDb, shopId: string, tripId: string): Promise<void> {
-  if (!process.env.DATABASE_URL) {
-    dispatch({ shopId, tripId });
-    return;
+export async function publishManifestEvent(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<void> {
+  try {
+    if (!process.env.DATABASE_URL) {
+      dispatch({ shopId, tripId });
+      return;
+    }
+    // A single statement, not a session-scoped command — safe over the
+    // pooled (PgBouncer transaction-mode) connection, unlike LISTEN above.
+    await db.execute(
+      sql`select pg_notify(${NOTIFY_CHANNEL}, ${JSON.stringify({ shopId, tripId })})`,
+    );
+  } catch {
+    // Best-effort by design — see docblock above.
   }
-  // A single statement, not a session-scoped command — safe over the pooled
-  // (PgBouncer transaction-mode) connection, unlike LISTEN above.
-  await db.execute(sql`select pg_notify(${NOTIFY_CHANNEL}, ${JSON.stringify({ shopId, tripId })})`);
 }

@@ -13,13 +13,11 @@ describe("manifest-events", () => {
     const received: string[] = [];
     const unsubscribe = subscribeManifestEvents("shop-a", "trip-1", () => received.push("a"));
     try {
-      publishManifestEvent(db, "shop-a", "trip-2");
-      publishManifestEvent(db, "shop-b", "trip-1");
-      await Promise.resolve();
+      await publishManifestEvent(db, "shop-a", "trip-2");
+      await publishManifestEvent(db, "shop-b", "trip-1");
       expect(received).toEqual([]);
 
-      publishManifestEvent(db, "shop-a", "trip-1");
-      await Promise.resolve();
+      await publishManifestEvent(db, "shop-a", "trip-1");
       expect(received).toEqual(["a"]);
     } finally {
       unsubscribe();
@@ -32,13 +30,11 @@ describe("manifest-events", () => {
     const unsubscribe = subscribeManifestEvents("shop-a", "trip-1", () => {
       count++;
     });
-    publishManifestEvent(db, "shop-a", "trip-1");
-    await Promise.resolve();
+    await publishManifestEvent(db, "shop-a", "trip-1");
     expect(count).toBe(1);
 
     unsubscribe();
-    publishManifestEvent(db, "shop-a", "trip-1");
-    await Promise.resolve();
+    await publishManifestEvent(db, "shop-a", "trip-1");
     expect(count).toBe(1);
   });
 
@@ -53,8 +49,7 @@ describe("manifest-events", () => {
       second++;
     });
     try {
-      publishManifestEvent(db, "shop-a", "trip-1");
-      await Promise.resolve();
+      await publishManifestEvent(db, "shop-a", "trip-1");
       expect(first).toBe(1);
       expect(second).toBe(1);
     } finally {
