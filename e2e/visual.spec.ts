@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Thirty-three key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 132 screenshots per run
+ * Visual regression coverage (Argos). Thirty-six key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 144 screenshots per run
  * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 134 screenshots.
+ * via `capturePrint()`. That brings the run to 146 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -327,6 +327,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "manifest", scheme);
 
+        // The morning packing list — tanks, then rental kit. Blue Mantis fills
+        // nitrox, so the Tanks tile grid is at its full Total/Air/Nitrox width;
+        // the collapsed single-tile layout for a shop that doesn't is its own
+        // dedicated test below (toggling the shared catalog here would leak
+        // into every capture after this one in the same test).
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Prep" })
+          .click();
+        await page.waitForURL(/\/prep/);
+        await page.getByRole("heading", { name: "Tanks" }).waitFor();
+        await capture(page, "prep", scheme);
+
         // The offline fallback a captain lands on after a failed reload with
         // no snapshot saved — the entire safety surface in that moment, so it
         // gets its own baseline rather than relying on the roll-call text
@@ -385,6 +398,42 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/\/guests/);
         await page.getByText("Identity unconfirmed").first().waitFor();
         await capture(page, "trip-guests-identity", scheme);
+      });
+
+      // A shop that doesn't fill nitrox (or a trip with no live request left
+      // on it once nitrox is off) sees Total and Air collapse into a single
+      // tile — there's nothing for a second number to distinguish. Its own
+      // test, not the sequential staff-surfaces one above, so toggling the
+      // shared demo shop's rental catalog for its duration is contained and
+      // reverted regardless of pass/fail, matching the pattern in
+      // e2e/nitrox.spec.ts.
+      test(`the prep page's tank tile collapses with nitrox off (${scheme})`, async ({ page }) => {
+        try {
+          await page.goto("/shop/blue-mantis/settings");
+          await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
+          await page.getByRole("button", { name: "Save rental catalog" }).click();
+          await page.getByText("Rental catalog saved.").waitFor();
+
+          await page.goto("/shop/blue-mantis/schedule");
+          await page
+            .locator("li")
+            .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+            .getByRole("link")
+            .click();
+          await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+          await page
+            .getByRole("navigation", { name: "Trip" })
+            .getByRole("link", { name: "Prep" })
+            .click();
+          await page.waitForURL(/\/prep/);
+          await page.getByRole("heading", { name: "Tanks" }).waitFor();
+          await capture(page, "prep-no-nitrox", scheme);
+        } finally {
+          await page.goto("/shop/blue-mantis/settings");
+          await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
+          await page.getByRole("button", { name: "Save rental catalog" }).click();
+          await page.getByText("Rental catalog saved.").waitFor();
+        }
       });
     });
   });
