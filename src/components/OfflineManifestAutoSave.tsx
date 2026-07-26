@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { primeOfflineManifestShell, saveOfflineManifest } from "@/lib/offline-manifest-store";
+import {
+  primeOfflineManifestShell,
+  purgeOfflineManifestsExceptShop,
+  saveOfflineManifest,
+} from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
 
 // Matches the single-trip auto-save cadence (OfflineManifestManager) — see
@@ -18,7 +22,11 @@ const AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000;
  * shop's rolling 48-hour window (server-side windowing lives in
  * GET /api/offline-manifests/upcoming), independent of whether staff opened
  * any particular trip's own live manifest page. Mounted once in the shop
- * layout so it runs no matter which staff page is open.
+ * layout so it runs no matter which staff page is open — including a trip's
+ * own manifest page, where OfflineManifestManager already runs its own save
+ * timer for that one trip. The two can both call saveOfflineManifest for the
+ * same trip around the same time; that's an accepted, harmless overlap
+ * (saveOfflineManifest is idempotent and cheap), not a bug to dedupe.
  */
 export function OfflineManifestAutoSave() {
   const inFlight = useRef<Promise<void> | null>(null);
@@ -33,7 +41,16 @@ export function OfflineManifestAutoSave() {
           credentials: "same-origin",
         });
         if (!response.ok) return;
-        const body = (await response.json()) as { payloads: OfflineManifestPayload[] };
+        const body = (await response.json()) as {
+          shop: { slug: string };
+          payloads: OfflineManifestPayload[];
+        };
+        // Server-verified "who am I signed in as" — never a client-supplied
+        // value — so a device that just switched shops (a shared boat tablet,
+        // a freelance captain, a reassigned device) stops holding the
+        // previous shop's cached rosters the moment this runs. See ADR
+        // 20260726-shopwide-offline-manifest-priming.
+        await purgeOfflineManifestsExceptShop(body.shop.slug).catch(() => {});
         await Promise.all(
           body.payloads.map((payload) => saveOfflineManifest(payload).catch(() => {})),
         );

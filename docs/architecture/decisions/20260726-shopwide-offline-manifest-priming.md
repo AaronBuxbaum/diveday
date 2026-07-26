@@ -22,11 +22,16 @@ has no offline safety net.
 ## Decision
 
 **A list, not just a single roster.** The offline shell (`/offline-manifest`) grows a list-first view:
-with no `?trip=` in the URL it enumerates every non-expired snapshot on this device (title, departure
-time, freshness pill, diver count), soonest-departure-first so the next boat leaving is always on top,
-each linking to its own
-`?trip=<id>` detail — the existing single-trip roll-call view, unchanged. With nothing saved yet, it
-says so plainly, same as today.
+with no `?trip=` in the URL it enumerates every snapshot on this device (title, departure time,
+freshness pill, diver count), soonest-departure-first so the next boat leaving is always on top, each
+linking to its own `?trip=<id>` detail — the existing single-trip roll-call view, unchanged. With
+nothing saved yet, it says so plainly, same as today. A record kept alive past its own retention window
+only because it still holds an unsynced roll-call event (`loadOfflineManifest`'s existing rule) is
+labeled distinctly as expired rather than showing the same freshness pill an ordinary, still-usable
+stale copy gets — the two read identically otherwise, and only one of them can still take a new roll
+call. Reconnecting on this list view reconciles every listed trip that has a pending event, not only
+whichever one a captain happens to open next, so a change recorded offline for a trip nobody revisits
+individually doesn't sit pending indefinitely.
 
 **The root path falls back to that list, not the browser's offline error.** `manifest-sw.js` gains a
 navigation handler for `/` (root only — the marketing home page, exactly the two characters typed for
@@ -42,10 +47,28 @@ page a signed-in staff member visits, not only the manifest page — and fetches
 `GET /api/offline-manifests/upcoming` (staff-session-gated, tenant-scoped to the caller's shop) on
 mount, on `online`/visibility triggers, and on the same 5-minute interval as the existing single-trip
 auto-save (20260726). That endpoint returns the serialized manifest payload for every `scheduled` trip
-departing within the next 48 hours, and the component calls the existing `saveOfflineManifest` for each
-one, unchanged in shape or encryption from the single-trip path. Priming the service worker
-(`primeOfflineManifestShell()`) also moves here, so visiting *any* shop page — not specifically a trip's
-manifest — registers the worker and caches the shell.
+that starts within the next 48 hours *or is already underway* (departed, not yet ended) — the window is
+a lower bound on `endsAt`, not `startsAt`, specifically so a trip mid-charter still gets its after-dive-
+checkpoint copy auto-saved instead of needing someone to have opened its live manifest first, and the
+upper bound is applied in the database query itself rather than filtered after fetching every future
+trip. The component calls the existing `saveOfflineManifest` for each one, unchanged in shape or
+encryption from the single-trip path. Priming the service worker (`primeOfflineManifestShell()`) also
+moves here, so visiting *any* shop page — not specifically a trip's manifest — registers the worker and
+caches the shell. Mounting itself is gated to a signed-in staff member viewing *their own* shop (several
+`/shop/[shopSlug]` pages, like the public schedule, are unauthenticated per `isPublicShopRoute`, and are
+reachable by a signed-out visitor, a diver account, or staff signed into a different shop entirely);
+without that gate the component would still mount and poll a 401 every five minutes for anyone else who
+lands on those pages, or — for staff of a different shop — save their own shop's roster in the
+background while the visible page belongs to someone else's.
+
+**A single first-ever save must not corrupt every later one.** `saveOfflineManifest` for several
+different trips can now run concurrently the first time a device has never held any snapshot at all
+(nothing existed before this to trigger more than one trip's save at once). The device's per-record
+encryption key is generated lazily on first use; without serializing that lazy generation, two
+concurrent first-time saves could each observe "no key yet," each generate and persist a *different*
+key, and leave every record but the last one permanently undecryptable under whichever key survived.
+Key generation is now guarded by its own lock (separate from the existing per-trip lock), so only the
+first caller ever generates one and every other caller reads back what it wrote.
 
 **48 hours, chosen deliberately over "all upcoming" or "today only".** All upcoming trips indefinitely
 would cache emergency-contact and medical-readiness data for departures a shop books weeks out, the
@@ -66,6 +89,25 @@ trip — not "saves while the browser or tab is fully closed." A shop where no s
 `/shop/**` page within 48 hours of a departure will not have that trip's copy refreshed, exactly as
 today's single-trip design already depends on someone having the manifest open at some point.
 
+**A device that changes shops gets its previous shop's copies purged, not just outgrown.** The
+encrypted IndexedDB store (`src/lib/offline-manifest-store.ts`) has never been shop-scoped — it is
+keyed purely by trip id, per browser origin, with no notion of which shop saved a given record. Before
+this change that was a narrow gap (reaching another shop's cached roster required already knowing its
+trip's UUID); the list view turns that into a zero-knowledge, zero-auth browse of every record on the
+device, and shop-wide auto-save means far more of a shop's board ends up cached without anyone having
+opened it. A shared or reassigned device (a freelance captain working two shops, a boat tablet resold or
+handed to a different operator) could otherwise accumulate one shop's medical/emergency-contact data
+indefinitely alongside another's. `GET /api/offline-manifests/upcoming` always returns the caller's
+server-verified shop identity (never a client-supplied value), even with zero trips in the window;
+`OfflineManifestAutoSave` uses it to call a new `purgeOfflineManifestsExceptShop(shopSlug)`, deleting
+every device record whose saved shop differs, every time the endpoint is reached. Since reaching this
+endpoint requires an authenticated session and signing in requires a network connection, the first
+online page load after a different shop's staff signs in on a device is exactly the moment the previous
+shop's leftover records stop being readable — closing the realistic device-handoff window rather than
+only slowing its growth. This does not change the pre-existing, already-accepted risk that anyone with
+unlocked access to *this shop's own* saved copies can read them (20260718's threat boundary), only who
+else's data can still be there.
+
 ## Alternatives considered
 
 - **Register the auto-save fetch from the marketing home page (`/`) instead of the shop layout** —
@@ -77,6 +119,16 @@ today's single-trip design already depends on someone having the manifest open a
   URL, a page that requires network) should see that, not be redirected into a manifest list that has
   nothing to do with what they were trying to open. Root is added as a second explicit pattern, not a
   wildcard.
+- **Require a `?shop=` slug on the offline shell instead of purging leftover records** — rejected: a
+  shop slug is not a secret (it's in every staff-facing URL), so requiring it as a display filter would
+  add friction without adding a real access boundary, and it does nothing about data already sitting in
+  IndexedDB for a shop no longer in use on this device. Purging at the point a new shop authenticates
+  removes the data itself rather than just hiding it behind a guessable parameter.
+- **Do nothing — treat this as the same "unlocked device" risk 20260718 already accepted** — rejected;
+  20260718's accepted risk was one staffer's own device holding their own shop's data, discoverable only
+  by whoever already knew a trip's UUID. Shop-wide auto-save plus an enumerable list changes both the
+  volume (a full 48-hour board instead of one clicked trip) and the discoverability (a list, not a UUID
+  guess) enough that it is a materially different exposure, not a restatement of the same one.
 - **All upcoming trips, uncapped** — rejected above; revisit only if a shop reports the 48-hour window
   missing a trip they needed offline, which would be evidence the window itself (not the uncapped
   alternative) needs widening.
@@ -95,3 +147,8 @@ retention window still ages out the same way. The new endpoint reads more of the
 any per-trip manifest fetch has before; if a shop's near-term board ever grows large enough for this to
 be a real cost, cap or paginate it then — the 48-hour window itself already bounds it in the common
 case. Revisit the window after field tests the same way 20260718 anticipated for its own thresholds.
+The device store now purges on shop mismatch (above), so a device that changes shops stops holding the
+previous shop's data as soon as the new shop's staff is online once — but a device that stays offline
+throughout a handoff, or one where the new shop's staff never opens a DiveDay page, keeps the old
+data until its own retention window lapses, same as any other accepted-storage-eviction gap in this
+design.

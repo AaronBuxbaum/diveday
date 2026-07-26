@@ -9,7 +9,12 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
 import { auth } from "@/lib/auth";
-import { canManageStaffAccounts, canManageWaiverTemplates, canViewShopReports } from "@/lib/authz";
+import {
+  canManageStaffAccounts,
+  canManageWaiverTemplates,
+  canViewShopReports,
+  isStaff,
+} from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 
 /**
@@ -92,22 +97,28 @@ export default async function ShopLayout({
         />
       ) : null}
       {session?.user && shop ? (
-        <>
-          <ShopNav
-            shopSlug={shopSlug}
-            shopName={shop.name}
-            boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
-            navGates={{
-              waivers: canManageWaiverTemplates(session.user.roles),
-              reports: canViewShopReports(session.user.roles),
-              team: canManageStaffAccounts(session.user.roles),
-            }}
-          />
-          {/* Keeps every trip in the shop's near-term board saved offline, not
-              just a trip whose live manifest someone opened — see ADR
-              20260726-shopwide-offline-manifest-priming. */}
-          <OfflineManifestAutoSave />
-        </>
+        <ShopNav
+          shopSlug={shopSlug}
+          shopName={shop.name}
+          boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
+          navGates={{
+            waivers: canManageWaiverTemplates(session.user.roles),
+            reports: canViewShopReports(session.user.roles),
+            team: canManageStaffAccounts(session.user.roles),
+          }}
+        />
+      ) : null}
+      {/* Keeps every trip in the shop's near-term board saved offline, not just
+          a trip whose live manifest someone opened — see ADR
+          20260726-shopwide-offline-manifest-priming. Gated to staff actually
+          signed into *this* routed shop: several /shop/[shopSlug] pages
+          (schedule, courses) are public per isPublicShopRoute, so a signed-out
+          visitor, a diver account, or staff of a *different* shop browsing
+          this one's public page must never mount it — the first two would
+          just poll a 401 every five minutes, and the third would silently
+          save their own shop's roster while the visible page is this one. */}
+      {session?.user && shop && isStaff(session.user.roles) && session.user.shopId === shop.id ? (
+        <OfflineManifestAutoSave />
       ) : null}
       <PreserveFormScroll />
       <div className="flex-1">{children}</div>

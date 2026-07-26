@@ -83,6 +83,53 @@ export function OfflineManifestView() {
     }
   }, [tripId]);
 
+  // Reconciles every saved trip that still has a pending roll-call event, not
+  // just the one a captain happens to open next — otherwise a change recorded
+  // offline for a trip the captain never revisits individually would sit
+  // pending forever despite "every change is double-checked... once you're
+  // back in service" (see the P1 fix in ADR
+  // 20260726-shopwide-offline-manifest-priming's review follow-up).
+  const reconcileList = useCallback(async (saved: OfflineManifestEnvelope[]) => {
+    if (!navigator.onLine) return;
+    const withPending = saved.filter((envelope) =>
+      envelope.events.some((event) => event.syncStatus === "pending"),
+    );
+    if (withPending.length === 0) return;
+    const results = await Promise.all(
+      withPending.map((envelope) => {
+        const id = envelope.snapshot.manifests[0]?.trip.id;
+        return id ? syncOfflineManifest(id).catch(() => null) : Promise.resolve(null);
+      }),
+    );
+    const byId = new Map(
+      results
+        .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
+        .map((envelope) => [envelope.snapshot.manifests[0]?.trip.id ?? "", envelope] as const),
+    );
+    const merged = saved.map((envelope) => {
+      const id = envelope.snapshot.manifests[0]?.trip.id;
+      return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
+    });
+    setList(merged);
+    const rejected = merged.reduce(
+      (sum, envelope) =>
+        sum + envelope.events.filter((event) => event.syncStatus === "rejected").length,
+      0,
+    );
+    const pending = merged.reduce(
+      (sum, envelope) =>
+        sum + envelope.events.filter((event) => event.syncStatus === "pending").length,
+      0,
+    );
+    if (rejected > 0) {
+      setMessage(
+        `${rejected} offline change${rejected === 1 ? " doesn't" : "s don't"} match the live manifest — open that trip to sort it out.`,
+      );
+    } else if (pending === 0) {
+      setMessage("Every offline change across these trips is caught up with the live manifest.");
+    }
+  }, []);
+
   useEffect(() => {
     if (!tripId) {
       // No specific trip requested — this is the dive.day-root/shell landing
@@ -97,6 +144,7 @@ export function OfflineManifestView() {
                 ? `${saved.length} saved ${saved.length === 1 ? "manifest" : "manifests"} on this device.`
                 : "Nothing saved on this device yet.",
             );
+            void reconcileList(saved);
           })
           .catch(() =>
             setMessage(
@@ -136,7 +184,7 @@ export function OfflineManifestView() {
       );
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
-  }, [reconcile, tripId]);
+  }, [reconcile, reconcileList, tripId]);
 
   if (!tripId) {
     const savedTrips = list ?? [];
@@ -146,7 +194,7 @@ export function OfflineManifestView() {
           Offline manifests
         </p>
         <h1 className="mt-3 text-3xl font-semibold">
-          {savedTrips.length > 0 ? "Saved on this device" : "Nothing saved on this phone yet"}
+          {savedTrips.length > 0 ? "Saved on this device" : "Nothing saved on this device yet"}
         </h1>
         <p className="mt-3 text-muted" role="status" aria-live="polite">
           {message}
@@ -157,6 +205,13 @@ export function OfflineManifestView() {
               const tripManifest = saved.snapshot.manifests[0];
               if (!tripManifest) return null;
               const savedFreshness = offlineManifestFreshness(new Date(saved.snapshot.savedAt));
+              // An expired-but-kept-alive record (see loadOfflineManifest) is
+              // not a boarding source even though it's still readable — the
+              // freshness pill alone would read identically to an ordinary
+              // "Stale copy" that's still perfectly usable, so it needs its
+              // own distinct label here (the per-trip view already says this
+              // plainly once opened).
+              const savedExpired = isOfflineManifestExpired(saved.snapshot);
               const dateTime = new Intl.DateTimeFormat("en-US", {
                 dateStyle: "medium",
                 timeStyle: "short",
@@ -171,20 +226,28 @@ export function OfflineManifestView() {
                     <div>
                       <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
                       <p className="mt-0.5 text-sm text-muted">
-                        {dateTime.format(new Date(tripManifest.trip.startsAt))}
+                        {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
+                        {tripManifest.summary.totalDivers}{" "}
+                        {tripManifest.summary.totalDivers === 1 ? "diver" : "divers"}
                       </p>
                     </div>
-                    <span
-                      className={
-                        savedFreshness === "current"
-                          ? "inline-flex min-h-9 items-center self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
-                          : savedFreshness === "aging"
-                            ? "inline-flex min-h-9 items-center self-start rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
-                            : "inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
-                      }
-                    >
-                      {FRESHNESS_PILL[savedFreshness]}
-                    </span>
+                    {savedExpired ? (
+                      <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger">
+                        Expired — view only
+                      </span>
+                    ) : (
+                      <span
+                        className={
+                          savedFreshness === "current"
+                            ? "inline-flex min-h-9 items-center self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
+                            : savedFreshness === "aging"
+                              ? "inline-flex min-h-9 items-center self-start rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
+                              : "inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
+                        }
+                      >
+                        {FRESHNESS_PILL[savedFreshness]}
+                      </span>
+                    )}
                   </a>
                 </li>
               );
