@@ -165,6 +165,38 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
   }
 }
 
+/**
+ * Every saved trip on this device, soonest departure first, for the offline
+ * shell's list view (see ADR 20260726-shopwide-offline-manifest-priming).
+ * Reuses loadOfflineManifest per trip rather than a bespoke bulk-decrypt path
+ * so the same expiry/pending-event rules (keep an expired record alive only
+ * while it still holds an unsynced roll-call event) apply exactly once, in
+ * one place, instead of being re-implemented here and risking drift.
+ */
+export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
+  const db = await openDatabase();
+  let tripIds: string[];
+  try {
+    const transaction = db.transaction(MANIFEST_STORE, "readonly");
+    tripIds = (await requestResult(
+      transaction.objectStore(MANIFEST_STORE).getAllKeys(),
+    )) as string[];
+    await transactionDone(transaction);
+  } finally {
+    db.close();
+  }
+  const envelopes = await Promise.all(
+    tripIds.map((tripId) => loadOfflineManifest(tripId).catch(() => null)),
+  );
+  return envelopes
+    .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
+    .sort((a, b) =>
+      (a.snapshot.manifests[0]?.trip.startsAt ?? "").localeCompare(
+        b.snapshot.manifests[0]?.trip.startsAt ?? "",
+      ),
+    );
+}
+
 export async function saveOfflineManifest(
   payload: OfflineManifestPayload,
 ): Promise<OfflineManifestEnvelope> {

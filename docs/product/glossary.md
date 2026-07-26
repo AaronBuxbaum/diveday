@@ -205,7 +205,14 @@ new domain concept, define it here in the same PR.
   deletable — it expires on its own retention schedule. In the UI its freshness tiers surface as
   **Fresh copy** (saved within 15 minutes), **Aging copy** (within 4 hours), and **Stale copy**
   (older) — the user-facing words for the current/aging/stale thresholds; "snapshot" itself never
-  appears in user copy.
+  appears in user copy. A shop's near-term board auto-saves as a set, not one trip at a time:
+  visiting any staff page saves a snapshot for every trip departing in the next 48 hours, not only
+  a trip whose own live manifest someone opened. See
+  [20260726-shopwide-offline-manifest-priming](../architecture/decisions/20260726-shopwide-offline-manifest-priming.md).
+  The offline shell (`/offline-manifest`) lists every
+  saved trip on the device (soonest departure first) when opened with no specific trip chosen, and
+  the root path (`dive.day`/`/`) falls back to that list — instead of the browser's own offline
+  error — the same way the live manifest route already falls back to its own trip's copy.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
   duplicate events are idempotent and an older device event cannot replace newer live history.

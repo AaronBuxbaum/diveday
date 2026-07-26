@@ -96,6 +96,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (event.request.mode === "navigate" && url.pathname === "/") {
+    // The root path only — never a wildcard fallback for every failed
+    // navigation (see ADR 20260726-shopwide-offline-manifest-priming). A
+    // captain typing "dive.day" with no signal lands on whatever this
+    // device already has saved instead of the browser's own offline error;
+    // online, "/" is untouched and still the marketing home page.
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cachedShell = await caches.match(OFFLINE_SHELL);
+        if (!cachedShell) return Response.error();
+        return Response.redirect(new URL(OFFLINE_SHELL, self.location.origin).href, 302);
+      }),
+    );
+    return;
+  }
+
   if (event.request.mode === "navigate") {
     const liveManifestMatch = url.pathname.match(LIVE_MANIFEST_PATTERN);
     if (liveManifestMatch) {

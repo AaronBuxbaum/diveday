@@ -266,3 +266,52 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   await page.goto(`/offline-manifest?trip=${tripId}&checkpoint=after_dive_999`);
   await expect(page.getByRole("heading", { name: "Before departure roll call" })).toBeVisible();
 });
+
+test("visiting any shop page auto-saves the near-term board without opening a manifest, and dive.day root falls back to the saved list offline", async ({
+  page,
+  context,
+}) => {
+  // The schedule page, not a trip's own manifest — the auto-save component
+  // lives in the shop layout, so it runs here too (ADR
+  // 20260726-shopwide-offline-manifest-priming).
+  await page.goto("/shop/blue-mantis/schedule");
+  await waitForShellPrimed(page);
+
+  // More than one trip gets a device copy from this single page visit — the
+  // 48-hour window, not just the one trip whose manifest someone opened.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve, reject) => {
+            const request = indexedDB.open("diveday-offline-manifests");
+            request.onsuccess = () => {
+              const db = request.result;
+              const getAllKeys = db
+                .transaction("manifests", "readonly")
+                .objectStore("manifests")
+                .getAllKeys();
+              getAllKeys.onsuccess = () => {
+                db.close();
+                resolve(getAllKeys.result.length);
+              };
+              getAllKeys.onerror = () => reject(getAllKeys.error);
+            };
+            request.onerror = () => reject(request.error);
+          }),
+      ),
+    )
+    .toBeGreaterThan(1);
+
+  await context.setOffline(true);
+  await page.goto("/");
+  // The root path's own failed navigation redirects here instead of the
+  // browser's offline error, listing every trip already saved.
+  await expect(page).toHaveURL(/\/offline-manifest$/);
+  await expect(page.getByRole("heading", { name: "Saved on this device" })).toBeVisible();
+  await expect(page.getByText("Two-Tank Reef — Molasses & French")).toBeVisible();
+  await page.getByText("Two-Tank Reef — Molasses & French").click();
+  await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
+
+  await context.setOffline(false);
+});

@@ -6,6 +6,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   appendOfflineRollCall,
+  listOfflineManifests,
   loadOfflineManifest,
   saveOfflineManifest,
   syncOfflineManifest,
@@ -39,6 +40,25 @@ const payload: OfflineManifestPayload = {
         },
       ],
       summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 1 },
+    },
+  ],
+};
+
+// A second, distinct trip departing earlier than `payload`'s, so the list's
+// soonest-departure-first ordering (ADR 20260726-shopwide-offline-manifest-priming)
+// has something real to sort against.
+const earlierPayload: OfflineManifestPayload = {
+  shop: payload.shop,
+  manifests: [
+    {
+      ...payload.manifests[0],
+      trip: {
+        ...payload.manifests[0].trip,
+        id: "33333333-3333-3333-3333-333333333333",
+        title: "Wreck & Reef — Duane",
+        startsAt: "2026-07-30T09:00:00.000Z",
+        endsAt: "2026-07-30T12:30:00.000Z",
+      },
     },
   ],
 };
@@ -165,6 +185,49 @@ describe("loadOfflineManifest", () => {
 
     const reloaded = await loadOfflineManifest(tripId);
     expect(reloaded).toBeNull();
+  });
+});
+
+describe("listOfflineManifests", () => {
+  it("returns every saved trip, soonest departure first", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([
+      earlierPayload.manifests[0].trip.id,
+      payload.manifests[0].trip.id,
+    ]);
+  });
+
+  it("omits an expired record with no unsynced pending event", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+    await patchStoredExpiresAt(payload.manifests[0].trip.id, "2020-01-01T00:00:00.000Z");
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([
+      earlierPayload.manifests[0].trip.id,
+    ]);
+  });
+
+  it("keeps an expired record with a still-pending event, same as loadOfflineManifest", async () => {
+    await saveOfflineManifest(payload);
+    const tripId = payload.manifests[0].trip.id;
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    await patchStoredExpiresAt(tripId, "2020-01-01T00:00:00.000Z");
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([tripId]);
+  });
+
+  it("returns an empty list when nothing has been saved on this device", async () => {
+    expect(await listOfflineManifests()).toEqual([]);
   });
 });
 

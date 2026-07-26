@@ -12,6 +12,7 @@ import {
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
+  listOfflineManifests,
   loadOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
@@ -38,6 +39,7 @@ const FRESHNESS_PILL = {
 export function OfflineManifestView() {
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
+  const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
   // doesn't land back on "Before departure". This first pass only checks the
@@ -83,8 +85,27 @@ export function OfflineManifestView() {
 
   useEffect(() => {
     if (!tripId) {
-      setMessage("No trip was selected. Open offline roll call from a live manifest first.");
-      return;
+      // No specific trip requested — this is the dive.day-root/shell landing
+      // page (see ADR 20260726-shopwide-offline-manifest-priming), so list
+      // whatever this device already has rather than asking for a trip id.
+      const refreshList = () =>
+        listOfflineManifests()
+          .then((saved) => {
+            setList(saved);
+            setMessage(
+              saved.length > 0
+                ? `${saved.length} saved ${saved.length === 1 ? "manifest" : "manifests"} on this device.`
+                : "Nothing saved on this device yet.",
+            );
+          })
+          .catch(() =>
+            setMessage(
+              "This device couldn't open its saved manifests. Save a fresh copy while you have signal.",
+            ),
+          );
+      void refreshList();
+      window.addEventListener("online", refreshList);
+      return () => window.removeEventListener("online", refreshList);
     }
     loadOfflineManifest(tripId)
       .then((saved) => {
@@ -116,6 +137,69 @@ export function OfflineManifestView() {
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
   }, [reconcile, tripId]);
+
+  if (!tripId) {
+    const savedTrips = list ?? [];
+    return (
+      <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+          Offline manifests
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold">
+          {savedTrips.length > 0 ? "Saved on this device" : "Nothing saved on this phone yet"}
+        </h1>
+        <p className="mt-3 text-muted" role="status" aria-live="polite">
+          {message}
+        </p>
+        {savedTrips.length > 0 ? (
+          <ul className="mt-6 divide-y divide-border rounded-xl border border-border bg-surface">
+            {savedTrips.map((saved) => {
+              const tripManifest = saved.snapshot.manifests[0];
+              if (!tripManifest) return null;
+              const savedFreshness = offlineManifestFreshness(new Date(saved.snapshot.savedAt));
+              const dateTime = new Intl.DateTimeFormat("en-US", {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: saved.snapshot.shop.timezone,
+              });
+              return (
+                <li key={tripManifest.trip.id}>
+                  <a
+                    href={`/offline-manifest?trip=${tripManifest.trip.id}`}
+                    className="flex min-h-14 flex-col gap-2 p-4 hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                  >
+                    <div>
+                      <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
+                      <p className="mt-0.5 text-sm text-muted">
+                        {dateTime.format(new Date(tripManifest.trip.startsAt))}
+                      </p>
+                    </div>
+                    <span
+                      className={
+                        savedFreshness === "current"
+                          ? "inline-flex min-h-9 items-center self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
+                          : savedFreshness === "aging"
+                            ? "inline-flex min-h-9 items-center self-start rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
+                            : "inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
+                      }
+                    >
+                      {FRESHNESS_PILL[savedFreshness]}
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-2 text-muted">
+            While you still have signal, open any shop page — DiveDay keeps this device&apos;s copy
+            of the next two days&apos; trips current on its own, so roll call works all the way out
+            to the site.
+          </p>
+        )}
+      </main>
+    );
+  }
 
   if (!envelope) {
     return (
