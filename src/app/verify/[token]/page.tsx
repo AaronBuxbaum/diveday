@@ -64,7 +64,7 @@ export default async function VerifyAccountPage({
   if (!check) {
     return (
       <Notice
-        title="This confirmation link isn't valid"
+        title="This confirmation link isn’t available"
         text="It may have expired or already been used. If you already confirmed your email, you're all set — sign in and carry on."
       />
     );

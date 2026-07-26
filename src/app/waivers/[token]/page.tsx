@@ -389,7 +389,7 @@ export default async function WaiverPage({
         <Link href="/" className="font-medium text-primary hover:underline">
           Return to the shop
         </Link>{" "}
-        and contact your dive team.
+        and contact your dive shop.
       </p>
     </main>
   );

@@ -83,8 +83,8 @@ export function RentalFitForm({
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">Rental fit</h3>
       <p className="mt-1 text-sm text-muted">
-        Tell the crew what you’d like to rent and roughly what size. We keep it on file for next
-        time, and they’ll confirm fit and weighting with you at the dock.
+        Tell the crew what you'd like to rent and roughly what size. We keep it on file for next
+        time, and they'll confirm fit and weighting with you at the dock.
       </p>
       {saved ? (
         <p
