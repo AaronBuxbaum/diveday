@@ -3,6 +3,7 @@
 import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { AuthError } from "next-auth";
 import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
@@ -146,36 +147,44 @@ export async function onboardAction(formData: FormData) {
 
   // 2. Welcome + verify-email are best-effort — no working link exists
   // without a configured APP_HOST, and a failed send never blocks
-  // onboarding either way (20260725-account-lifecycle-emails).
+  // onboarding either way (20260725-account-lifecycle-emails). Deferred with
+  // after() rather than awaited: a slow or hanging Resend call must not risk
+  // timing out the response the new owner is waiting on to reach their shop
+  // (security review finding) — a real database write and network call have
+  // no abort deadline otherwise.
   if (newAccountId && newShopId) {
     const origin = publicAppUrl();
     if (origin) {
-      const issued = await issueAccountToken(db, {
-        userAccountId: newAccountId,
-        purpose: "email_verification",
-      }).catch(() => null);
-      await notify({
-        kind: "welcome",
-        userAccountId: newAccountId,
-        shopId: newShopId,
-        to: ownerEmail.toLowerCase(),
-        ownerName,
-        shopName,
-        signInUrl: new URL("/sign-in", `${origin}/`).toString(),
-      }).catch(() => ({ status: "failed" as const }));
-      if (issued) {
+      const accountId = newAccountId;
+      const shopId = newShopId;
+      after(async () => {
+        const issued = await issueAccountToken(db, {
+          userAccountId: accountId,
+          purpose: "email_verification",
+        }).catch(() => null);
         await notify({
-          kind: "email_verification",
-          userAccountId: newAccountId,
-          tokenId: issued.tokenId,
-          shopId: newShopId,
+          kind: "welcome",
+          userAccountId: accountId,
+          shopId,
           to: ownerEmail.toLowerCase(),
           ownerName,
-          verifyUrl: new URL(verifyAccountLinkPath(issued.token), `${origin}/`).toString(),
-          expiresAt: issued.expiresAt,
-          timezone,
+          shopName,
+          signInUrl: new URL("/sign-in", `${origin}/`).toString(),
         }).catch(() => ({ status: "failed" as const }));
-      }
+        if (issued) {
+          await notify({
+            kind: "email_verification",
+            userAccountId: accountId,
+            tokenId: issued.tokenId,
+            shopId,
+            to: ownerEmail.toLowerCase(),
+            ownerName,
+            verifyUrl: new URL(verifyAccountLinkPath(issued.token), `${origin}/`).toString(),
+            expiresAt: issued.expiresAt,
+            timezone,
+          }).catch(() => ({ status: "failed" as const }));
+        }
+      });
     }
   }
 
