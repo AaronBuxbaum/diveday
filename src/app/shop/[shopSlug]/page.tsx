@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { after } from "next/server";
+import { Suspense } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
@@ -38,6 +39,41 @@ export default async function ShopPage({
   const { shopSlug } = await params;
   const { created, series, reset, email } = await searchParams;
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
+
+  return (
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <FlashParams params={["created", "series", "reset", "email"]} />
+      {/* The queue join is the one real wait on this page; a content-shaped
+          fallback keeps a cold nav from reading as a blank hang (principle 1). */}
+      <Suspense fallback={<TodaySkeleton />}>
+        <TodayBody
+          session={session}
+          shopSlug={shopSlug}
+          created={created}
+          seriesCount={seriesCount}
+          reset={reset}
+          email={email}
+        />
+      </Suspense>
+    </main>
+  );
+}
+
+async function TodayBody({
+  session,
+  shopSlug,
+  created,
+  seriesCount,
+  reset,
+  email,
+}: {
+  session: Awaited<ReturnType<typeof requireStaffSession>>;
+  shopSlug: string;
+  created?: string;
+  seriesCount: number;
+  reset?: string;
+  email?: string;
+}) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -69,9 +105,7 @@ export default async function ShopPage({
   const firstName = session.user.name?.split(" ")[0] ?? "there";
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["created", "series", "reset", "email"]} />
-
+    <>
       <ShopPageHeader
         eyebrow={formatShortDate(now, "en-US", shop.timezone)}
         title={`Good to see you, ${firstName}`}
@@ -167,6 +201,23 @@ export default async function ShopPage({
         shopName={shop.name}
         inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
       />
-    </main>
+    </>
+  );
+}
+
+/** Shaped like `TodayBody`'s header + departure board + queue rows (principle 1). */
+function TodaySkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-4 w-32 rounded bg-surface-sunken" />
+      <div className="mt-3 h-9 w-72 rounded bg-surface-sunken" />
+      <div className="mt-2 h-5 w-96 max-w-full rounded bg-surface-sunken" />
+      <div className="mt-8 h-40 rounded-2xl border border-border bg-surface" />
+      <div className="mt-8 flex flex-col gap-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-20 rounded-xl border border-border bg-surface" />
+        ))}
+      </div>
+    </div>
   );
 }

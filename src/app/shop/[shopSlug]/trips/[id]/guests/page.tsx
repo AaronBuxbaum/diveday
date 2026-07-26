@@ -117,7 +117,10 @@ export default async function TripGuestsPage({
               {cancelled ? (
                 <Badge tone="danger">Cancelled</Badge>
               ) : (
-                <Badge tone={isFull(trip) ? "neutral" : "primary"} tabularNums>
+                // A sold-out boat is a win worth noticing, not a quiet state
+                // (design/principles.md #3) — "success" stands out where
+                // "neutral" would recede.
+                <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>
                   {capacityLabel(trip)}
                 </Badge>
               )}

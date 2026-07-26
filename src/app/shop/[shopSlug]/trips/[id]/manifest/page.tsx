@@ -29,6 +29,13 @@ export const metadata: Metadata = {
   title: "Boat manifest — DiveDay",
 };
 
+// Shared structure for every roll-call button below (design/forms-and-controls.md's
+// dock target, `buttonClass({ size: "boat" })`'s min-h-14, plus the boat-mode press
+// feedback) — kept as one constant here so the four state variants below can't
+// drift out of sync with each other the way two separate call sites once did.
+const BOAT_TARGET_CLASS =
+  "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70";
+
 const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
   status: z.enum(["boarded", "not_boarded", "cleared"]),
@@ -435,11 +442,11 @@ export default async function TripManifestPage({
                         status={boarded ? "cleared" : "boarded"}
                         label={boarded ? "Boarded ✓" : "Mark boarded"}
                         pendingLabel={boarded ? "Undoing…" : "Boarding…"}
-                        className={
+                        className={`${BOAT_TARGET_CLASS} ${
                           boarded
-                            ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-success bg-success/15 px-5 text-base font-semibold text-success transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
-                            : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] hover:bg-primary-hover active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
-                        }
+                            ? "border border-success bg-success/15 text-success"
+                            : "bg-primary text-primary-foreground hover:bg-primary-hover"
+                        }`}
                       />
                     ) : null}
                     <RollCallButton
@@ -449,11 +456,11 @@ export default async function TripManifestPage({
                       label={explicitNotBoarded ? "Not boarded ✓" : "Mark not boarded"}
                       pendingLabel="Saving…"
                       formId={`not-boarded-${diver.bookingId}`}
-                      className={
+                      className={`${BOAT_TARGET_CLASS} ${
                         explicitNotBoarded
-                          ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong bg-surface-sunken px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
-                          : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border px-5 text-base font-semibold transition-[transform,opacity] hover:bg-surface-sunken active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
-                      }
+                          ? "border border-border-strong bg-surface-sunken"
+                          : "border border-border hover:bg-surface-sunken"
+                      }`}
                     />
                     {rc && !rc.implied ? (
                       <p className="text-xs text-muted">Tap the ✓ status again to undo.</p>
