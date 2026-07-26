@@ -63,6 +63,44 @@ variant is wrong — add one.
 center its own content: give it `flex items-center` or `inline-flex items-center`. A height floor
 without centering is the bug.
 
+## Action rows: one primary, not many
+
+Principle 8 ([principles.md](principles.md)) says a screen gets one obvious next action **per
+section** — a page with several independent sections can have several primaries, one apiece. That
+means one primary-weight control *rendered at a time* (no explicit `variant`, an explicit
+`variant: "primary"`, or `variant: "danger-solid"`) per section — count what's actually on screen
+together, not `buttonClass()` call sites: a ternary that renders one button or the other
+depending on state isn't two primaries, and a single call site mapped over a list can render many.
+Everything else in the same row demotes to `secondary`, `ghost`, `link`, or, for a destructive
+option that isn't the section's main action, `danger`.
+`danger-solid` is reserved for when the destructive action *is* the section's sole primary (e.g. a
+standalone "Refund" section) — don't use it to demote a non-primary destructive action, and don't
+strip a destructive action's danger styling just to satisfy "one primary."
+
+```tsx
+// Before: three equal-weight buttons, the user has to triage
+<button className={buttonClass()}>Save</button>
+<button className={buttonClass()}>Save & send</button>
+<button className={buttonClass()}>Save & archive</button>
+
+// After: one primary with a good default, the others demoted — not deleted
+<button className={buttonClass()}>Save & send</button>
+<button className={buttonClass({ variant: "ghost", size: "sm" })}>Save without sending</button>
+<button className={buttonClass({ variant: "link", size: "sm" })}>Archive instead</button>
+
+// A destructive action alongside a normal one keeps its warning color, demoted in weight, not
+// stripped of it
+<button className={buttonClass()}>Save changes</button>
+<button className={buttonClass({ variant: "danger", size: "sm" })}>Delete diver</button>
+```
+
+Reach for demotion first — variant alone often turns three equal-weight buttons into one obvious
+action and two-or-three quiet ones. Reach for a merge (fold two button labels into one action with
+a default) when the buttons are really the same action with a variant nobody needed to choose up
+front. A rare or advanced action that can't merge or demote without disappearing entirely belongs
+behind disclosure (a "More" affordance, a details expander) rather than sitting inline at primary
+weight.
+
 ## Menus
 
 Dropdown panels are one column, one item per row, `whitespace-nowrap`. A multi-column menu wraps

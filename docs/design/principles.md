@@ -86,6 +86,32 @@ reissuing a waiver link (the old link stops working, an email may go out), or re
 can't claw back money already sent). A `confirm()` on a purely reversible action is a bug: it
 slows the common path to guard against a mistake that undo already handles calmly.
 
+## 8. Fewer controls, one obvious action
+
+Every screen should tell the user what to do next without making them choose among equals. A row
+of same-weight buttons is the user doing triage work that the design should have done for them.
+
+- **One primary per view.** At most one primary-weight control rendered at a time (no explicit
+  `variant`, an explicit `variant: "primary"`, or `variant: "danger-solid"`) per screen or
+  section — count what's actually on screen together, not `buttonClass()` call sites: mutually
+  exclusive branches don't stack, a call inside a loop can render many. Everything else competing
+  for the same moment is `secondary`, `ghost`, `link`, or `danger` weight, not a second primary.
+  If two actions feel equally important, one of them isn't as important as it feels; demote it.
+- **Merge before you stack.** Three buttons that do variations on one action ("Approve",
+  "Approve & note", "Approve & notify") are usually one button with good defaults — approving
+  always notifies, and a note is a follow-up affordance, not a fork in the primary flow. Before
+  shipping a row of buttons, ask what it looks like as one button plus sensible defaults.
+- **State toggles, don't duplicate buttons.** Two buttons for opposite states ("Board" / "Remove
+  from boat") are one re-tap control that reflects current state (principle 7) — never a pair
+  that both stay visible.
+- **Collapse the rare path.** An action used by a minority of users at a minority of moments
+  (advanced filters, rare settings, "more options") sits behind progressive disclosure, not at
+  equal visual weight to the common path. The default state should be good enough that most users
+  never open it.
+- **Test it by counting.** Look at a section at rest: more than two or three controls competing
+  for attention is a finding. The fix is a merge, a demotion, or a disclosure — never a new
+  wrapper that makes three buttons look tidier.
+
 ## Tokens (the mechanics)
 
 Defined in `src/app/globals.css`, bound to Tailwind — see
@@ -106,3 +132,5 @@ sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the actio
 - [ ] Copy: verbs on buttons, teaching empty state, actionable errors
 - [ ] State never conveyed by color alone
 - [ ] Keyboard reachable, focus visible, semantic HTML
+- [ ] One primary action per view/section; the rest are demoted, merged, or disclosed — not a
+      row of same-weight buttons
