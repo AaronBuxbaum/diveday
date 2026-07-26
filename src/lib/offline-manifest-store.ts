@@ -184,12 +184,19 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
 }
 
 /**
- * Every saved trip on this device, soonest departure first, for the offline
- * shell's list view (see ADR 20260726-shopwide-offline-manifest-priming).
- * Reuses loadOfflineManifest per trip rather than a bespoke bulk-decrypt path
- * so the same expiry/pending-event rules (keep an expired record alive only
- * while it still holds an unsynced roll-call event) apply exactly once, in
- * one place, instead of being re-implemented here and risking drift.
+ * Every saved trip on this device, for the offline shell's list view (see
+ * ADR 20260726-shopwide-offline-manifest-priming). Reuses loadOfflineManifest
+ * per trip rather than a bespoke bulk-decrypt path so the same expiry/
+ * pending-event rules (keep an expired record alive only while it still
+ * holds an unsynced roll-call event) apply exactly once, in one place,
+ * instead of being re-implemented here and risking drift.
+ *
+ * Ordered upcoming-or-active trips first (soonest departure on top — "the
+ * next boat leaving"), then past trips still within their post-trip
+ * retention window behind them: a plain ascending sort by start time alone
+ * would put an old, already-departed trip ahead of tomorrow's departure
+ * once the board has run for more than a few days, which is the opposite of
+ * what this list is for.
  */
 export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
   const db = await openDatabase();
@@ -206,13 +213,22 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
   const envelopes = await Promise.all(
     tripIds.map((tripId) => loadOfflineManifest(tripId).catch(() => null)),
   );
-  return envelopes
-    .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
-    .sort((a, b) =>
-      (a.snapshot.manifests[0]?.trip.startsAt ?? "").localeCompare(
-        b.snapshot.manifests[0]?.trip.startsAt ?? "",
-      ),
+  const now = nowDate();
+  const byStartsAt = (a: OfflineManifestEnvelope, b: OfflineManifestEnvelope) =>
+    (a.snapshot.manifests[0]?.trip.startsAt ?? "").localeCompare(
+      b.snapshot.manifests[0]?.trip.startsAt ?? "",
     );
+  const saved = envelopes.filter(
+    (envelope): envelope is OfflineManifestEnvelope => envelope !== null,
+  );
+  const isPast = (envelope: OfflineManifestEnvelope) => {
+    const endsAt = envelope.snapshot.manifests[0]?.trip.endsAt;
+    return !!endsAt && new Date(endsAt) < now;
+  };
+  return [
+    ...saved.filter((envelope) => !isPast(envelope)).sort(byStartsAt),
+    ...saved.filter(isPast).sort(byStartsAt),
+  ];
 }
 
 /**
@@ -226,12 +242,26 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * time that endpoint is reached, so the moment a different shop's staff
  * authenticates on this device, the previous shop's cached manifests stop
  * being readable — see ADR 20260726-shopwide-offline-manifest-priming.
+ *
+ * Never deletes a record still holding an unsynced (`pending`) roll-call
+ * event: that event cannot be reconciled under a *different* shop's session
+ * (the server would look it up against the wrong tenant and reject or
+ * misattribute it), so deleting it here would destroy the only copy of that
+ * evidence for good. It's left in place — visible until the original shop's
+ * own session next runs a purge pass and finds it resolved, or it clears via
+ * the ordinary expiry-once-no-pending-events rule above — the same
+ * least-bad tradeoff `loadOfflineManifest` already makes for the single-shop
+ * expiry case, applied here too.
  */
 export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
   const saved = await listOfflineManifests();
   await Promise.all(
     saved
-      .filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug)
+      .filter(
+        (envelope) =>
+          envelope.snapshot.shop.slug !== currentShopSlug &&
+          !envelope.events.some((event) => event.syncStatus === "pending"),
+      )
       .map((envelope) => deleteOfflineManifest(envelope.snapshot.manifests[0]?.trip.id ?? "")),
   );
 }

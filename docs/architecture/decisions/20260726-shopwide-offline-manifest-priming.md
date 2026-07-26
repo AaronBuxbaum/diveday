@@ -106,7 +106,39 @@ online page load after a different shop's staff signs in on a device is exactly 
 shop's leftover records stop being readable — closing the realistic device-handoff window rather than
 only slowing its growth. This does not change the pre-existing, already-accepted risk that anyone with
 unlocked access to *this shop's own* saved copies can read them (20260718's threat boundary), only who
-else's data can still be there.
+else's data can still be there. The purge fails closed: if it errors, the round aborts before saving the
+new shop's trips, so a failure never leaves both shops' rosters readable side by side — the next trigger
+(interval, focus, reconnect) tries the whole round again. One deliberate exception: a record still
+holding an unsynced roll-call event is never deleted by this purge, even for a shop that no longer
+matches — that event cannot reconcile under a different shop's session (the server would check it
+against the wrong tenant and reject or misattribute it), so purging it would destroy the only copy of
+that safety evidence outright. It stays — visible until the original shop's own session next runs a
+purge and finds it resolved, or it clears via the ordinary retention rule — the same trade-off 20260718
+already accepts for a single shop's own expired-but-pending records, extended here across the tenant
+boundary rather than overridden by it.
+
+**The list orders upcoming trips ahead of retained past ones, not by raw departure time alone.** A trip
+kept past its own end date by the 7-day post-trip retention window (20260718) has an earlier `startsAt`
+than anything still ahead of it, so a plain ascending sort would put an old, already-departed trip at
+the top of the list once a shop's board has run a few operating days — the opposite of "the next boat
+leaving is always on top." `listOfflineManifests` partitions into not-yet-ended trips (sorted soonest
+first) ahead of already-ended ones (also sorted soonest-first among themselves), rather than a single
+sort across both.
+
+**Known residual gap: a cancelled trip's already-saved copy stays listed and boardable until it expires
+on its own.** The window endpoint stops returning a cancelled trip going forward (it only ever selects
+`scheduled` trips), but nothing tells the device to actively remove a copy it already saved before the
+cancellation — the client only ever upserts what a response contains, it never deletes on a trip's
+absence from one. The server-side safety net this relies on is real, not assumed: `recordRollCall`
+re-checks the trip is still `scheduled` before accepting any event, offline-sourced ones included, so a
+roll-call action recorded on-device against a since-cancelled trip's stale copy is rejected on
+reconciliation exactly like any other stale-manifest mismatch (readiness that changed, a diver removed)
+— it never silently overwrites live history. The residual cost is operational, not a safety-invariant
+break: a captain can act on a cancelled trip's copy believing it succeeded, offline, until reconnecting
+surfaces the rejection. Building an active invalidation signal (the device telling the server which
+trip ids it holds, the server telling it which are stale) is real new protocol surface deserving its own
+design, not a rider here; revisit if cancellations close enough to departure to matter in practice turn
+out to be common enough for this friction to be worth closing.
 
 ## Alternatives considered
 

@@ -49,8 +49,13 @@ export function OfflineManifestAutoSave() {
         // value — so a device that just switched shops (a shared boat tablet,
         // a freelance captain, a reassigned device) stops holding the
         // previous shop's cached rosters the moment this runs. See ADR
-        // 20260726-shopwide-offline-manifest-priming.
-        await purgeOfflineManifestsExceptShop(body.shop.slug).catch(() => {});
+        // 20260726-shopwide-offline-manifest-priming. Deliberately not
+        // caught here: if the purge itself fails, saving this shop's trips
+        // anyway would leave both shops' rosters readable side by side in
+        // the device-wide list — fail the whole round (the outer catch
+        // below) and let the next trigger retry the purge first, rather than
+        // fail open on a cross-tenant boundary.
+        await purgeOfflineManifestsExceptShop(body.shop.slug);
         await Promise.all(
           body.payloads.map((payload) => saveOfflineManifest(payload).catch(() => {})),
         );

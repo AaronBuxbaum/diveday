@@ -148,25 +148,21 @@ describe("OfflineManifestAutoSave", () => {
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
   });
 
-  it("still saves trips even when the purge itself fails", async () => {
+  it("fails closed — never saves this shop's trips when the cross-shop purge itself fails", async () => {
+    // Saving anyway would leave both shops' rosters readable side by side in
+    // the device-wide list until the next successful purge — the opposite of
+    // what the purge exists to guarantee.
     setOnline(true);
     vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
     vi.mocked(purgeOfflineManifestsExceptShop).mockRejectedValue(new Error("indexeddb error"));
-    vi.mocked(saveOfflineManifest).mockResolvedValue({
-      snapshot: {
-        ...payloadFor("trip-1"),
-        version: 3,
-        snapshotId: "s",
-        savedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 1_000_000).toISOString(),
-      },
-      events: [],
-    } as never);
     vi.mocked(fetch).mockResolvedValue(upcomingResponse([payloadFor("trip-1")]));
 
     render(<OfflineManifestAutoSave />);
 
-    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
 
   it("coalesces overlapping triggers into one in-flight request instead of firing concurrently", async () => {
