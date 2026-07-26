@@ -14,6 +14,9 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 3 as const;
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+// Unchanged at seven days post-trip (owner decision 2026-07-26, H-05): there's
+// no manual delete button (ADR 20260726), so this lazy-on-read expiry is the
+// only way a device copy goes away once it's no longer needed.
 export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
@@ -118,6 +121,20 @@ export function offlineManifestFreshness(
   if (age <= OFFLINE_MANIFEST_CURRENT_MS) return "current";
   if (age <= OFFLINE_MANIFEST_AGING_MS) return "aging";
   return "stale";
+}
+
+/**
+ * A record kept past its retention window (because it still holds an
+ * unsynced roll-call event — see loadOfflineManifest) is not the same as a
+ * current one: the H-05 stop rule treats an expired copy as not a boarding
+ * source. Callers use this to keep showing/reconciling the preserved
+ * evidence while refusing to record anything new against it.
+ */
+export function isOfflineManifestExpired(
+  snapshot: Pick<OfflineManifestSnapshot, "expiresAt">,
+  now: Date = nowDate(),
+): boolean {
+  return new Date(snapshot.expiresAt) <= now;
 }
 
 export function canRecordOfflineStatus(

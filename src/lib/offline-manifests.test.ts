@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TripManifest } from "./manifests";
 import {
   canRecordOfflineStatus,
+  isOfflineManifestExpired,
   latestOfflineRollCall,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineManifestSnapshot,
@@ -72,6 +73,14 @@ describe("offline manifest policy", () => {
     expect(offlineManifestExpiresAt(saved, new Date("2026-07-20T16:00:00.000Z"))).toEqual(
       new Date("2026-07-27T16:00:00.000Z"),
     );
+  });
+
+  it("treats a snapshot as expired only once its expiresAt has actually passed", () => {
+    const saved = snapshot();
+    expect(saved.expiresAt).toBe("2026-07-27T16:00:00.000Z");
+    expect(isOfflineManifestExpired(saved, new Date("2026-07-27T15:59:59.000Z"))).toBe(false);
+    expect(isOfflineManifestExpired(saved, new Date("2026-07-27T16:00:00.000Z"))).toBe(true);
+    expect(isOfflineManifestExpired(saved, new Date("2026-08-01T00:00:00.000Z"))).toBe(true);
   });
 
   it("never lets a snapshot board a missing or blocked diver", () => {
