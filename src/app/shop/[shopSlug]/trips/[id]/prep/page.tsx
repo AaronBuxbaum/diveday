@@ -94,23 +94,38 @@ export default async function TripPrepPage({
             <h2 id="tanks-heading" className="text-lg font-semibold">
               Tanks
             </h2>
-            <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-              <div className="rounded-lg border border-border bg-surface p-4">
-                <p className="text-sm text-muted">Total</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.total}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-surface p-4">
-                <p className="text-sm text-muted">Air</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.air}</p>
-              </div>
+            <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
               {showNitrox ? (
+                <>
+                  <div className="rounded-lg border border-border bg-surface p-4">
+                    <p className="text-sm text-muted">Total</p>
+                    <p className="mt-1 text-3xl font-semibold tabular-nums">
+                      {checklist.tanks.total}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-surface p-4">
+                    <p className="text-sm text-muted">Air</p>
+                    <p className="mt-1 text-3xl font-semibold tabular-nums">
+                      {checklist.tanks.air}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-surface p-4">
+                    <p className="text-sm text-muted">Nitrox</p>
+                    <p className="mt-1 text-3xl font-semibold tabular-nums">
+                      {checklist.tanks.nitrox}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                // Air and total are the same number with no nitrox split to draw,
+                // so there's nothing for a second tile to distinguish.
                 <div className="rounded-lg border border-border bg-surface p-4">
-                  <p className="text-sm text-muted">Nitrox</p>
+                  <p className="text-sm text-muted">Total</p>
                   <p className="mt-1 text-3xl font-semibold tabular-nums">
-                    {checklist.tanks.nitrox}
+                    {checklist.tanks.total}
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
             <p className="mt-2 text-sm text-muted">
               {checklist.crewCount > 0
