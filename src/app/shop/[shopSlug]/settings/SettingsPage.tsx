@@ -24,6 +24,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { canExportShopData, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import {
@@ -331,6 +332,8 @@ export default async function PaymentsSettingsPage({
   const connectConfigured = Boolean(
     process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CONNECT_CLIENT_ID && process.env.APP_HOST,
   );
+  const canImport = canImportShopData(session.user.roles);
+  const canExport = canExportShopData(session.user.roles);
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
 
   return (
@@ -597,6 +600,34 @@ export default async function PaymentsSettingsPage({
             )}
           </section>
         </>
+      ) : null}
+
+      {canImport || canExport ? (
+        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+          <h2 className="font-medium">Data</h2>
+          <p className="mt-1 text-sm text-muted">
+            Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs — neither one
+            touches the settings above.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {canImport ? (
+              <Link
+                href={`/shop/${shopSlug}/settings/import`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                Import contacts
+              </Link>
+            ) : null}
+            {canExport ? (
+              <Link
+                href={`/shop/${shopSlug}/settings/export`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                Data export
+              </Link>
+            ) : null}
+          </div>
+        </section>
       ) : null}
     </main>
   );

@@ -8,13 +8,7 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
 import { auth } from "@/lib/auth";
-import {
-  canExportShopData,
-  canImportShopData,
-  canManageStaffAccounts,
-  canManageWaiverTemplates,
-  canViewShopReports,
-} from "@/lib/authz";
+import { canManageStaffAccounts, canManageWaiverTemplates, canViewShopReports } from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 
 /**
@@ -104,8 +98,6 @@ export default async function ShopLayout({
           navGates={{
             waivers: canManageWaiverTemplates(session.user.roles),
             reports: canViewShopReports(session.user.roles),
-            import: canImportShopData(session.user.roles),
-            export: canExportShopData(session.user.roles),
             team: canManageStaffAccounts(session.user.roles),
           }}
         />
