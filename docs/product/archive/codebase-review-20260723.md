@@ -7,8 +7,8 @@
 > [human-owned decisions](#human-owned-decisions) below are resolved — see
 > [human-decisions.md](../human-decisions.md#decision-register) (H-14, H-15, H-16) and
 > [20260724-staff-session-and-capability-migration-policy](../../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md)
-> for H-15/H-16's reasoning. H-14 (role authority boundaries) is decided but not yet built — see
-> [roadmap.md](../roadmap.md#6-staff-role-authority-boundaries-h-14-decided--not-yet-built).
+> for H-15/H-16's reasoning. H-14 (role authority boundaries) is implemented — see
+> [shipped.md](../shipped.md#staff-role-authorization-delivered-2026-07-24).
 > Retained for the rationale behind each ticket; for current state see
 > [shipped.md](../shipped.md) and for open work see [roadmap.md](../roadmap.md).
 

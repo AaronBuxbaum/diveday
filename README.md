@@ -18,7 +18,7 @@ pnpm dev          # http://localhost:3000
 
 | Command | What |
 | --- | --- |
-| `pnpm check` | lint + typecheck + unit tests |
+| `pnpm check` | repository safeguards + lint + typecheck + unit tests |
 | `pnpm test` | unit tests (Vitest) |
 | `pnpm e2e` | end-to-end tests (Playwright) |
 | `pnpm build` | production build |
