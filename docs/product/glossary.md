@@ -346,6 +346,15 @@ new domain concept, define it here in the same PR.
 - **Waiver completion** — the share of a month's active bookings that carry a signed
   (completed, non-superseded) **waiver record**. The reporting counterpart of the per-trip roster's
   waiver gate.
+- **Staff invite** — an owner/manager adding a named person to the team
+  (`/shop/[slug]/settings/team`) with one or more staff roles. Reuses the shop's existing person
+  record by email when there is one (a diver about to start crewing keeps their one record — see
+  the Modeling notes' "a person may be simultaneously..." rule) rather than forking a duplicate.
+  Mints a `user_accounts` row in **invited** status right away — visible on the team list, but
+  unable to sign in, until the invitee follows their emailed link to `/invite/[token]` and sets
+  their own password, which flips the account to **active**. A shop may never end up with zero
+  people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
+  refused. See [20260726-staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md).
 
 ## Rental fit and prep
 

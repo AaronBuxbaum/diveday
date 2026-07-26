@@ -31,6 +31,22 @@ export function isStaff(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * Display copy for a role — the team-management UI and invite email
+ * (20260726-staff-invite-accounts). Covers every `Role` (not just
+ * `STAFF_ROLES`) so it's a plain `Record` any staff-role value can safely
+ * index, even though the team UI only ever looks up staff roles.
+ */
+export const STAFF_ROLE_LABELS: Record<Role, string> = {
+  owner: "Owner",
+  manager: "Manager",
+  instructor: "Instructor",
+  divemaster: "Divemaster",
+  captain: "Captain",
+  crew: "Crew",
+  diver: "Diver",
+};
+
+/**
  * The full-shop export hands over more than any staff surface shows — every
  * diver's contact details plus complete signed medical answers — so it is the
  * one staff feature gated past `isStaff`, to the accountable roles
@@ -78,6 +94,16 @@ function isOwnerOrManager(roles: readonly Role[] | undefined): boolean {
 
 /** Connect/disconnect Stripe, set the rental catalog and its prices. */
 export function canManagePaymentSettings(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * Invite a staff member, edit their roles, resend an invite, or
+ * disable/remove their access — the same accountability weight as payment
+ * settings and refunds: it grants logins and role authority over the rest of
+ * this list (ADR 20260726-staff-invite-accounts).
+ */
+export function canManageStaffAccounts(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
 }
 

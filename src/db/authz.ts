@@ -3,6 +3,7 @@ import {
   canConfigureTrips,
   canDeleteDiver,
   canManagePaymentSettings,
+  canManageStaffAccounts,
   canManageWaiverTemplates,
   canOverrideGearRequest,
   canRefund,
@@ -75,3 +76,7 @@ export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId
 /** Live DB-checked companion of the H-06 gear-override gate (src/lib/authz.ts). */
 export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canOverrideGearRequest);
+
+/** Live DB-checked companion of the staff-account gate (20260726-staff-invite-accounts). */
+export const canPersonManageStaffAccounts = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageStaffAccounts);

@@ -352,6 +352,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
 
+        // The team surface: inviting staff and the current roster with its
+        // role checkboxes and status badges (20260726-staff-invite-accounts).
+        await page.goto("/shop/blue-mantis/settings/team");
+        await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
+        await capture(page, "settings-team", scheme);
+
         // Owner reporting: "how's my month" over the seeded back-fill — the KPI
         // row and the per-trip breakdown that answer the buyer's revenue question.
         await page.goto("/shop/blue-mantis/reports");

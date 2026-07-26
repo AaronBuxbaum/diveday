@@ -322,6 +322,17 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   (`user_accounts.email_verified_at`) but does not yet gate sign-in
   ([account-lifecycle-emails](../architecture/decisions/20260725-account-lifecycle-emails.md)).
 
+## Staff invite accounts (delivered 2026-07-26)
+
+- **Team management at `/shop/[shopSlug]/settings/team`** — an owner/manager invites a named
+  person by email with one or more staff roles; the invitee gets an emailed link to
+  `/invite/[token]` to set their own password and land signed into the shop. Owner/manager can
+  edit anyone's roles, resend a stale invite, and disable/re-enable or remove access. Reuses the
+  `account_tokens` seam (`invite` purpose) and a new `invited` account status exactly as
+  anticipated in [account-lifecycle-emails](../architecture/decisions/20260725-account-lifecycle-emails.md).
+  A shop may never end up with zero owners — removing/disabling/demoting the last one is refused.
+  See [staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate
