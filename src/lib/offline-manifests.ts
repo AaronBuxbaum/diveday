@@ -123,6 +123,20 @@ export function offlineManifestFreshness(
   return "stale";
 }
 
+/**
+ * A record kept past its retention window (because it still holds an
+ * unsynced roll-call event — see loadOfflineManifest) is not the same as a
+ * current one: the H-05 stop rule treats an expired copy as not a boarding
+ * source. Callers use this to keep showing/reconciling the preserved
+ * evidence while refusing to record anything new against it.
+ */
+export function isOfflineManifestExpired(
+  snapshot: Pick<OfflineManifestSnapshot, "expiresAt">,
+  now: Date = nowDate(),
+): boolean {
+  return new Date(snapshot.expiresAt) <= now;
+}
+
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
