@@ -12,7 +12,6 @@ import {
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
-  deleteOfflineManifest,
   loadOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
@@ -128,8 +127,8 @@ export function OfflineManifestView() {
           {message}
         </p>
         <p className="mt-2 text-muted">
-          While you still have signal, open the trip&apos;s live manifest and tap “Save now” — then
-          roll call works all the way out to the site.
+          While you still have signal, open the trip&apos;s live manifest — it keeps this
+          device&apos;s copy current on its own, so roll call works all the way out to the site.
         </p>
       </main>
     );
@@ -174,12 +173,6 @@ export function OfflineManifestView() {
     } finally {
       setBusyBooking(null);
     }
-  }
-
-  async function remove() {
-    await deleteOfflineManifest(tripId);
-    setEnvelope(null);
-    setMessage("Offline copy deleted from this device.");
   }
 
   const dateTime = new Intl.DateTimeFormat("en-US", {
@@ -436,13 +429,6 @@ export function OfflineManifestView() {
         >
           Open live manifest
         </a>
-        <button
-          type="button"
-          onClick={remove}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger/10"
-        >
-          Delete device copy
-        </button>
       </footer>
     </main>
   );

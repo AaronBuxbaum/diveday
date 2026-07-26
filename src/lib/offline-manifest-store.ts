@@ -115,17 +115,34 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
   try {
     const record = await readStoredRecord(db, tripId);
     if (!record) return null;
-    if (new Date(record.expiresAt) <= nowDate()) {
-      await deleteOfflineManifest(tripId, db);
-      return null;
-    }
     const key = await encryptionKey(db);
-    const plaintext = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: record.iv, additionalData: additionalData(tripId) },
-      key,
-      record.ciphertext,
-    );
-    return JSON.parse(new TextDecoder().decode(plaintext)) as OfflineManifestEnvelope;
+    let envelope: OfflineManifestEnvelope;
+    try {
+      const plaintext = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: record.iv, additionalData: additionalData(tripId) },
+        key,
+        record.ciphertext,
+      );
+      envelope = JSON.parse(new TextDecoder().decode(plaintext)) as OfflineManifestEnvelope;
+    } catch (error) {
+      // Nothing recoverable from ciphertext this key can't open — if it's
+      // also past its retention window, clean it up now rather than leaving
+      // unreadable bytes behind forever with no delete button to clear them.
+      if (new Date(record.expiresAt) <= nowDate()) await deleteOfflineManifest(tripId, db);
+      throw error;
+    }
+    if (new Date(record.expiresAt) <= nowDate()) {
+      // A record still holding a roll-call event that never reached the
+      // server is the only copy of that evidence — keep serving it (as
+      // stale) rather than silently discarding it, until every event is
+      // resolved and it can expire for real on the next read.
+      const hasUnsyncedEvents = envelope.events.some((event) => event.syncStatus === "pending");
+      if (!hasUnsyncedEvents) {
+        await deleteOfflineManifest(tripId, db);
+        return null;
+      }
+    }
+    return envelope;
   } finally {
     db.close();
   }
@@ -136,7 +153,11 @@ export async function saveOfflineManifest(
 ): Promise<OfflineManifestEnvelope> {
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
-  const existing = await loadOfflineManifest(trip.id);
+  // A corrupt or undecryptable existing record (storage corruption, a stale
+  // key, a version/AAD mismatch) must not abort the save — there's no delete
+  // button anymore, so failing here would brick this device's offline copy
+  // for good instead of just losing that record's own queued events.
+  const existing = await loadOfflineManifest(trip.id).catch(() => null);
   const savedAt = nowDate();
   const envelope: OfflineManifestEnvelope = {
     snapshot: {

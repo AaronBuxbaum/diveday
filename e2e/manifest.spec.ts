@@ -4,10 +4,10 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 signedInAsOwner();
 
 // The manifest page primes the offline shell in the background — no tap
-// required. Wait for that to land before cutting the network, the same way
-// an explicit "Save now" click would. Polled from the page's main world (not
-// waitForFunction's utility world, where the worker's controller and cache
-// state can lag) so the three readiness signals are read atomically.
+// required. Wait for that to land before cutting the network. Polled from
+// the page's main world (not waitForFunction's utility world, where the
+// worker's controller and cache state can lag) so the three readiness
+// signals are read atomically.
 async function waitForShellPrimed(page: Page) {
   await expect
     .poll(() =>
@@ -101,8 +101,14 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
     .getByRole("link", { name: "Manifest" })
     .click();
 
-  await page.getByRole("button", { name: "Save now" }).click();
-  await expect(page.getByText(/Saved\. Open the offline roll call/)).toBeVisible();
+  // The device copy now saves itself automatically once the page has signal —
+  // no tap required. Wait for that to land (the offline link only appears
+  // once a snapshot exists) before opening it.
+  await expect(page.getByRole("link", { name: "Open offline roll call" })).toBeVisible();
+  // "Refresh now" stays as the one manual control, for a captain who wants a
+  // fresh snapshot immediately rather than wait on the automatic pass.
+  await page.getByRole("button", { name: "Refresh now" }).click();
+  await expect(page.getByText("This device has an up-to-date offline copy.")).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
@@ -124,7 +130,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await expect(page.getByRole("status").filter({ hasText: "caught up" })).toBeVisible();
 });
 
-test("a captain who never tapped Save now still lands on a page after a failed reload", async ({
+test("a captain who lost the saved copy to storage eviction still lands on a page after a failed reload", async ({
   page,
   context,
 }) => {
@@ -147,11 +153,23 @@ test("a captain who never tapped Save now still lands on a page after a failed r
 
   await waitForShellPrimed(page);
 
+  // The snapshot now saves itself automatically, so simulate the ADR's other
+  // named failure mode instead — browser storage eviction/clearing site data
+  // removing the record between saves.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("diveday-offline-manifests");
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error ?? new Error("failed to clear IndexedDB"));
+      }),
+  );
+
   await context.setOffline(true);
   await page.reload();
-  // No snapshot was ever saved, so the worker still redirects here rather
-  // than letting the reload fail outright — the shell says so plainly
-  // instead of fabricating a roster.
+  // No snapshot survives, so the worker still redirects here rather than
+  // letting the reload fail outright — the shell says so plainly instead of
+  // fabricating a roster.
   await expect(page).toHaveURL(/\/offline-manifest\?trip=.*checkpoint=after_dive_1/);
   await expect(page.getByText("Nothing saved on this phone yet")).toBeVisible();
 
@@ -237,8 +255,7 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Manifest" })
     .click();
-  await page.getByRole("button", { name: "Save now" }).click();
-  await expect(page.getByText(/Saved\. Open the offline roll call/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open offline roll call" })).toBeVisible();
 
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
   // "after_dive_999" matches the checkpoint shape but doesn't exist on this

@@ -26,11 +26,19 @@ offline shell instead of surfacing the browser's own offline error. With no snap
 shell just says so plainly; it never fabricates a roster. This closes the gap where a captain who
 never tapped "Save now" had no page at all to land on once signal dropped.
 
+> Superseded by [20260726-manifest-offline-copy-automation](20260726-manifest-offline-copy-automation.md):
+> the snapshot now saves and refreshes itself automatically; "Save now" no longer exists, and a captain
+> gets the offline copy without tapping anything.
+
 Every snapshot displays its saved time and one of three freshness states: current (up to 15
 minutes), aging (up to four hours), or stale. Stale snapshots remain usable because a boat may be
 offline for a full operating day, but only a diver recorded as ready in that snapshot may be marked
 boarded. Not-boarded remains available for every diver. Device copies expire at the earlier of 14
 days after saving or seven days after the trip ends, and staff can delete them immediately.
+
+> Superseded by [20260726-manifest-offline-copy-automation](20260726-manifest-offline-copy-automation.md):
+> there is no staff-delete button — expiry is the only way a copy goes away. The retention window itself
+> (14 days after saving, or 7 days after the trip ends, whichever is earlier) is unchanged.
 
 Offline roll-call changes are encrypted in the same device record and remain visibly pending until
 reconnection. Each change has a client UUID, snapshot saved time, device occurrence time, and

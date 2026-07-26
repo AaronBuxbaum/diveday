@@ -198,9 +198,11 @@ new domain concept, define it here in the same PR.
   (shown as "carried forward") until staff explicitly re-board them — a diver who left the boat is
   presumed still ashore rather than resetting to awaiting. The default is always flagged as carried,
   can never imply "present," and staff can override it at any checkpoint.
-- **Offline manifest snapshot** — an explicit, time-stamped, encrypted device copy of the complete
-  derived manifest and every checkpoint. It is safety evidence as saved, never an editable roster
-  or a claim that server-side readiness has not changed. In the UI its freshness tiers surface as
+- **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
+  manifest and every checkpoint, saved and refreshed automatically while the device has signal
+  (staff can also force an immediate "Refresh now"). It is safety evidence as saved, never an
+  editable roster or a claim that server-side readiness has not changed, and never manually
+  deletable — it expires on its own retention schedule. In the UI its freshness tiers surface as
   **Fresh copy** (saved within 15 minutes), **Aging copy** (within 4 hours), and **Stale copy**
   (older) — the user-facing words for the current/aging/stale thresholds; "snapshot" itself never
   appears in user copy.
