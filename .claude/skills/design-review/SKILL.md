@@ -24,12 +24,17 @@ Delight is this product's differentiator — this review is where that stops bei
    baseline, and every button-shaped thing has its label centered in its target. Both come free
    from `<Field>`/`<FieldGrid>` and `buttonClass()`; a surface that fails one is usually a surface
    that hand-rolled the classes.
-5. Grep the changed files for token violations:
+5. Count the controls in each section at rest (principle 8 — fewer controls, one obvious action).
+   More than one `buttonClass()` call without an explicit `variant` (default is `primary`) in the
+   same view is a finding: demote the extras to `secondary`/`ghost`/`link`, merge buttons that are
+   really one action with a default, or move a rare action behind disclosure. See
+   [forms-and-controls.md § Action rows](../../../docs/design/forms-and-controls.md#action-rows-one-primary-not-many).
+6. Grep the changed files for token violations:
    ```bash
    git diff main --unified=0 | grep -nE '#[0-9a-fA-F]{3,8}|-(red|blue|cyan|teal|zinc|gray|slate|orange|amber)-[0-9]'
    ```
    Raw hex or palette-scale classes in components are findings (ADR-0004).
-6. Grep the changed files for implementation jargon leaking into user-facing strings
+7. Grep the changed files for implementation jargon leaking into user-facing strings
    (principles §4 — "never surface the implementation"):
    ```bash
    git diff main --unified=0 -- 'src/app' 'src/components' 'src/lib' \
@@ -38,7 +43,7 @@ Delight is this product's differentiator — this review is where that stops bei
    Hits inside JSX text, string literals shown to users, or `aria-` labels are findings; hits in
    identifiers, imports, or comments are fine. The fix is the human translation ("saved on this
    phone", "DiveDay double-checks it when you're back in service"), never a vaguer claim.
-7. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
+8. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
    the screenshot paths.
 
 ## Output
