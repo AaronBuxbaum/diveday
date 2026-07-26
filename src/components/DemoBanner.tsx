@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { resetDemoAction, switchDemoRoleAction } from "@/app/actions/demo";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 
 interface DemoBannerProps {
   currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver";
@@ -120,14 +121,22 @@ export function DemoBanner({
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-all duration-200 hover:bg-surface-sunken cursor-pointer"
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "text-foreground",
+              })}
             >
               Switch role {isExpanded ? "▲" : "▼"}
             </button>
             <form action={resetDemoAction} className="shrink-0">
               <SubmitButton
                 pendingLabel="Resetting…"
-                className="min-h-9 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-surface-sunken disabled:opacity-70 cursor-pointer"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "text-foreground",
+                })}
               >
                 Reset demo data
               </SubmitButton>
@@ -136,21 +145,19 @@ export function DemoBanner({
         </div>
 
         {isMintedDemo ? (
-          <p className="mt-2 text-xs text-muted">
-            This demo is open to anyone with its link — explore freely, but don&apos;t enter real
-            customer details.
+          <div className="mt-2 space-y-1 text-xs text-muted">
+            <p>Shared demo link — don&apos;t enter real customer details.</p>
             {currentEmail && demoPassword ? (
-              <>
-                {" "}
+              <p>
                 Session expired? Sign back in at{" "}
                 <Link href="/sign-in" className="font-medium text-primary hover:underline">
                   /sign-in
                 </Link>{" "}
                 with <span className="font-mono">{currentEmail}</span> /{" "}
                 <span className="font-mono">{demoPassword}</span>.
-              </>
+              </p>
             ) : null}
-          </p>
+          </div>
         ) : null}
 
         {/* Expandable Role Switched Panel */}

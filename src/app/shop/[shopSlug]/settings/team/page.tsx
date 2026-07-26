@@ -100,38 +100,55 @@ function StaffRow({ member }: { member: StaffMember }) {
         </SubmitButton>
       </form>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {member.accountStatus === "invited" ? (
-          <form action={resendInviteAction}>
-            <input type="hidden" name="userAccountId" value={member.userAccountId} />
-            <SubmitButton
-              pendingLabel="Sending…"
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              Resend invite
-            </SubmitButton>
-          </form>
-        ) : (
-          <form action={setStaffStatusAction}>
-            <input type="hidden" name="personId" value={member.personId} />
-            <input type="hidden" name="userAccountId" value={member.userAccountId} />
-            <input
-              type="hidden"
-              name="status"
-              value={member.accountStatus === "active" ? "disabled" : "active"}
-            />
-            <SubmitButton
-              pendingLabel="Saving…"
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              {member.accountStatus === "active" ? "Disable" : "Re-enable"}
-            </SubmitButton>
-          </form>
-        )}
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          {member.accountStatus === "invited" ? (
+            <form action={resendInviteAction}>
+              <input type="hidden" name="userAccountId" value={member.userAccountId} />
+              <SubmitButton
+                pendingLabel="Sending…"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "w-full text-foreground sm:w-auto",
+                })}
+              >
+                Resend invite
+              </SubmitButton>
+            </form>
+          ) : (
+            <form action={setStaffStatusAction}>
+              <input type="hidden" name="personId" value={member.personId} />
+              <input type="hidden" name="userAccountId" value={member.userAccountId} />
+              <input
+                type="hidden"
+                name="status"
+                value={member.accountStatus === "active" ? "disabled" : "active"}
+              />
+              <SubmitButton
+                pendingLabel="Saving…"
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "w-full text-foreground sm:w-auto",
+                })}
+              >
+                {member.accountStatus === "active" ? "Disable" : "Re-enable"}
+              </SubmitButton>
+            </form>
+          )}
+        </div>
         <form action={removeStaffAction}>
           <input type="hidden" name="personId" value={member.personId} />
           <input type="hidden" name="userAccountId" value={member.userAccountId} />
-          <SubmitButton pendingLabel="Removing…" className={buttonClass({ variant: "danger" })}>
+          <SubmitButton
+            pendingLabel="Removing…"
+            className={buttonClass({
+              variant: "danger",
+              size: "sm",
+              className: "w-full sm:w-auto",
+            })}
+          >
             Remove from team
           </SubmitButton>
         </form>
