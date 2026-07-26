@@ -51,6 +51,11 @@ raised are closed in this same change, not deferred:
   — serving it as stale rather than reporting it missing — as long as it still holds a pending event,
   and only deletes once every event is resolved (applied or rejected).
 
+> Extended by [20260726-shopwide-offline-manifest-priming](20260726-shopwide-offline-manifest-priming.md):
+> the same automatic save now runs for every trip in a 48-hour rolling window from the shop layout, not
+> only the one trip whose live manifest is open. Nothing here — the snapshot shape, retention, or the
+> single-trip page's own auto-save — changes.
+
 Refreshing today is still polling (interval + focus + reconnect), not push. A later revisit could move
 the "is the live manifest newer" signal to a push channel (SSE from a lightweight endpoint, or a
 WebSocket gateway) so a device gets the update the moment roll call changes elsewhere, instead of

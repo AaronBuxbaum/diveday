@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { DemoBanner } from "@/components/DemoBanner";
+import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
@@ -91,16 +92,22 @@ export default async function ShopLayout({
         />
       ) : null}
       {session?.user && shop ? (
-        <ShopNav
-          shopSlug={shopSlug}
-          shopName={shop.name}
-          boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
-          navGates={{
-            waivers: canManageWaiverTemplates(session.user.roles),
-            reports: canViewShopReports(session.user.roles),
-            team: canManageStaffAccounts(session.user.roles),
-          }}
-        />
+        <>
+          <ShopNav
+            shopSlug={shopSlug}
+            shopName={shop.name}
+            boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
+            navGates={{
+              waivers: canManageWaiverTemplates(session.user.roles),
+              reports: canViewShopReports(session.user.roles),
+              team: canManageStaffAccounts(session.user.roles),
+            }}
+          />
+          {/* Keeps every trip in the shop's near-term board saved offline, not
+              just a trip whose live manifest someone opened — see ADR
+              20260726-shopwide-offline-manifest-priming. */}
+          <OfflineManifestAutoSave />
+        </>
       ) : null}
       <PreserveFormScroll />
       <div className="flex-1">{children}</div>

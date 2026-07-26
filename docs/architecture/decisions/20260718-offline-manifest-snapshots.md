@@ -46,6 +46,13 @@ offline source marker. The server applies changes idempotently, re-checks tenant
 trip, and current readiness, and rejects an older device event when a newer server event exists.
 Rejected events stay visible as conflicts; they never silently overwrite the live manifest.
 
+> Extended by [20260726-shopwide-offline-manifest-priming](20260726-shopwide-offline-manifest-priming.md):
+> the offline shell now lists every saved trip (not just the one last opened), the root path (`/`)
+> falls back to that list the same way the live-manifest route already falls back to its own shell, and
+> priming/saving runs for every trip in a 48-hour window from any staff page — not only a trip's own
+> live manifest. The single-trip fallback and the never-cache-an-authenticated-response boundary below
+> are unchanged.
+
 Threat/failure boundary:
 
 - encryption reduces exposure from copied browser storage, but cannot protect an unlocked device
