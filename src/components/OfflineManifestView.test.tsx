@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   listOfflineManifests,
@@ -58,11 +58,18 @@ function payload(tripId: string, title: string, totalDivers = 2): OfflineManifes
 function envelope(
   tripId: string,
   title: string,
-  opts: { savedAt?: string; expiresAt?: string; events?: OfflineManifestEnvelope["events"] } = {},
+  opts: {
+    savedAt?: string;
+    expiresAt?: string;
+    events?: OfflineManifestEnvelope["events"];
+    shopSlug?: string;
+  } = {},
 ): OfflineManifestEnvelope {
+  const base = payload(tripId, title);
   return {
     snapshot: {
-      ...payload(tripId, title),
+      ...base,
+      shop: opts.shopSlug ? { ...base.shop, slug: opts.shopSlug } : base.shop,
       version: 3,
       snapshotId: `snap-${tripId}`,
       savedAt: opts.savedAt ?? new Date(FROZEN_MS).toISOString(),
@@ -76,14 +83,24 @@ function setOnline(online: boolean) {
   Object.defineProperty(navigator, "onLine", { configurable: true, value: online });
 }
 
+function upcomingResponse(shopSlug: string) {
+  return new Response(JSON.stringify({ shop: { slug: shopSlug }, payloads: [] }), { status: 200 });
+}
+
 beforeEach(() => {
   searchParams = new URLSearchParams();
   setOnline(true);
+  // reconcileList learns "the currently authenticated shop" from this same
+  // endpoint before syncing any pending event — default to matching the
+  // fixtures' own shop ("blue-mantis") so existing reconcile tests keep
+  // working; tests for the cross-shop case override this per-call.
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(upcomingResponse("blue-mantis")));
 });
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("OfflineManifestView — list mode (no ?trip=)", () => {
@@ -165,6 +182,40 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     ).toBeInTheDocument();
   });
 
+  it("never reconciles a foreign shop's pending trip under the current session", async () => {
+    // Submitting shop A's pending event under shop B's session would get it
+    // rejected for a tenant mismatch (not a genuine domain refusal), which
+    // then makes the next purge treat it as "resolved" and delete it outright
+    // — see the cross-shop purge/reconcile follow-up in ADR
+    // 20260726-shopwide-offline-manifest-priming.
+    const foreignShopEnvelope = envelope("trip-a", "Shop A's Trip", {
+      shopSlug: "reef-runners",
+      events: [
+        {
+          clientEventId: "evt-1",
+          snapshotId: "snap-trip-a",
+          snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+          tripId: "trip-a",
+          bookingId: "booking-1",
+          checkpoint: "departure",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    });
+    vi.mocked(listOfflineManifests).mockResolvedValue([foreignShopEnvelope]);
+    // The device is currently signed in as blue-mantis, not reef-runners.
+    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Shop A's Trip");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(syncOfflineManifest).not.toHaveBeenCalled();
+  });
+
   it("does not attempt to reconcile while offline", async () => {
     setOnline(false);
     vi.mocked(listOfflineManifests).mockResolvedValue([
@@ -198,6 +249,49 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     expect(await screen.findByText("Nothing saved on this device yet")).toBeInTheDocument();
+  });
+
+  it("re-derives the freshness pill on its periodic tick instead of freezing at mount time", async () => {
+    // Freshness is computed inline from the wall clock at render time, so
+    // nothing re-renders this component as time passes on its own — capture
+    // the interval callback directly (rather than driving real/fake timers,
+    // which wouldn't move nowDate()'s frozen-clock reading anyway) and invoke
+    // it by hand once the clock has been moved past the "current" threshold,
+    // exactly what the real interval does every 60 seconds.
+    let tick: (() => void) | undefined;
+    const originalSetInterval = globalThis.setInterval;
+    vi.stubGlobal("setInterval", ((callback: () => void, ms?: number) => {
+      if (ms === 60_000) tick = callback;
+      return originalSetInterval(callback, ms);
+    }) as typeof setInterval);
+    const originalClock = process.env.DIVEDAY_CLOCK;
+
+    try {
+      vi.mocked(listOfflineManifests).mockResolvedValue([
+        envelope("trip-1", "Two-Tank Reef", {
+          savedAt: new Date(FROZEN_MS).toISOString(),
+          // Comfortably past the 20-minute mark this test moves the clock to
+          // below, so the assertion exercises the freshness *tier* boundary
+          // (current → aging) rather than tripping expiry instead.
+          expiresAt: new Date(FROZEN_MS + 24 * 60 * 60 * 1000).toISOString(),
+        }),
+      ]);
+
+      render(<OfflineManifestView />);
+      expect(await screen.findByText("Fresh copy")).toBeInTheDocument();
+
+      // 20 minutes later — past the 15-minute "current" threshold — but
+      // nothing has re-rendered yet, so the pill should still read stale info.
+      process.env.DIVEDAY_CLOCK = new Date(FROZEN_MS + 20 * 60 * 1000).toISOString();
+      expect(screen.getByText("Fresh copy")).toBeInTheDocument();
+
+      expect(tick).toBeDefined();
+      act(() => tick?.());
+
+      expect(await screen.findByText("Aging copy")).toBeInTheDocument();
+    } finally {
+      process.env.DIVEDAY_CLOCK = originalClock;
+    }
   });
 });
 

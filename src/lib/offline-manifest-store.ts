@@ -252,17 +252,31 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * the ordinary expiry-once-no-pending-events rule above — the same
  * least-bad tradeoff `loadOfflineManifest` already makes for the single-shop
  * expiry case, applied here too.
+ *
+ * The pending check and the delete both run under this trip's
+ * `withManifestLock`, re-reading the record once the lock is held rather than
+ * trusting the snapshot `listOfflineManifests` returned before it — otherwise
+ * a concurrent `appendOfflineRollCall` (a second tab still has that foreign
+ * shop's offline roll-call view open) could record a new pending event
+ * between that read and this delete, and this would erase it anyway despite
+ * the filter above having correctly seen "no pending events" a moment
+ * earlier. Every other mutator in this module already goes through the same
+ * lock for exactly this read-then-write race; this one hadn't.
  */
 export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
   const saved = await listOfflineManifests();
+  const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
   await Promise.all(
-    saved
-      .filter(
-        (envelope) =>
-          envelope.snapshot.shop.slug !== currentShopSlug &&
-          !envelope.events.some((event) => event.syncStatus === "pending"),
-      )
-      .map((envelope) => deleteOfflineManifest(envelope.snapshot.manifests[0]?.trip.id ?? "")),
+    candidates.map((envelope) => {
+      const tripId = envelope.snapshot.manifests[0]?.trip.id;
+      if (!tripId) return Promise.resolve();
+      return withManifestLock(tripId, async () => {
+        const current = await loadOfflineManifest(tripId);
+        if (!current) return;
+        if (current.events.some((event) => event.syncStatus === "pending")) return;
+        await deleteOfflineManifest(tripId);
+      });
+    }),
   );
 }
 

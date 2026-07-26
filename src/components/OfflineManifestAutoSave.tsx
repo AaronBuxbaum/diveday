@@ -36,7 +36,6 @@ export function OfflineManifestAutoSave() {
     if (inFlight.current) return inFlight.current;
     const task = (async () => {
       try {
-        await primeOfflineManifestShell();
         const response = await fetch("/api/offline-manifests/upcoming", {
           credentials: "same-origin",
         });
@@ -56,6 +55,13 @@ export function OfflineManifestAutoSave() {
         // below) and let the next trigger retry the purge first, rather than
         // fail open on a cross-tenant boundary.
         await purgeOfflineManifestsExceptShop(body.shop.slug);
+        // Shell priming is unrelated to the purge above (it only caches the
+        // data-free offline shell/static assets for later offline access) and
+        // must never gate it — a Cache Storage failure here used to throw
+        // into the outer catch *before* the fetch/purge ran at all, letting a
+        // device that just signed into a new shop keep the previous shop's
+        // roster readable on every retry until priming happened to succeed.
+        await primeOfflineManifestShell().catch(() => {});
         await Promise.all(
           body.payloads.map((payload) => saveOfflineManifest(payload).catch(() => {})),
         );
