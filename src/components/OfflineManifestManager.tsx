@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { buttonClass } from "@/components/ui/button";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -39,13 +40,17 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   // edit made on this trip.
   const payloadRef = useRef(payload);
   payloadRef.current = payload;
-  // Tracks the pending-event count as of the *last* reconcile, so a reconcile
-  // only narrates/refreshes when something actually changed this round —
-  // otherwise, once a device has ever recorded any event (even one long since
-  // applied), "events.length > 0" would stay true forever and every
-  // background reconcile would call router.refresh(), whose fresh payload
-  // re-triggers the effect below, which reconciles again: an unbounded loop.
+  // Tracks the pending/rejected counts as of the *last* reconcile, so a
+  // reconcile only narrates/refreshes when something actually changed this
+  // round. Neither pending nor rejected events are ever removed from the
+  // envelope, so "there's a pending event" or "there's a rejected event"
+  // would otherwise stay true forever after the first one — every background
+  // reconcile would then call router.refresh() unconditionally, whose fresh
+  // payload re-triggers the effect below, which reconciles again: an
+  // unbounded loop. Comparing against the last-seen counts catches only a
+  // genuine transition (something newly resolved, or newly rejected).
   const lastPendingCount = useRef(0);
+  const lastRejectedCount = useRef(0);
   // Set right before a manual "Refresh now" (or router.refresh() call below)
   // whose resulting save should show the loud confirmation instead of
   // passing silently, since the save itself only happens once the refreshed
@@ -55,6 +60,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   const reconcile = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
     const pendingBefore = lastPendingCount.current;
+    const rejectedBefore = lastRejectedCount.current;
     try {
       const envelope = await syncOfflineManifest(tripId);
       if (envelope) {
@@ -62,10 +68,11 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
         const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
         const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
         lastPendingCount.current = pending;
-        // Only narrate/refresh the live page when there was something to
-        // resolve this round (pending before, or still rejected now) — a
-        // snapshot with only long-applied events stays silent forever after.
-        if (pendingBefore > 0 || rejected > 0) {
+        lastRejectedCount.current = rejected;
+        // Only narrate/refresh the live page on a genuine transition this
+        // round (something was pending before, or a new rejection landed) —
+        // a snapshot with only long-resolved events stays silent forever.
+        if (pendingBefore > 0 || rejected > rejectedBefore) {
           setMessage(
             rejected > 0
               ? `${rejected} offline change${rejected === 1 ? " didn't" : "s didn't"} match the live manifest and ${rejected === 1 ? "wasn't" : "weren't"} applied — open the live manifest to sort it out.`
@@ -85,33 +92,62 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
     }
   }, [router, tripId]);
 
+  // A follow-up request that arrives while a save is already writing gets
+  // coalesced here instead of dropped — otherwise a save already in flight
+  // when a fresher payload lands (or a manual click arrives mid-background-
+  // save) would either persist stale data under a "fresh" timestamp, or (for
+  // a manual request) never run its own busy/message handling at all, since
+  // joining someone else's in-flight promise skips it entirely.
+  const queuedSave = useRef<{ silent: boolean } | null>(null);
+
+  const runSaveOnce = useCallback(async (opts: { silent: boolean }) => {
+    if (!opts.silent) {
+      setBusy(true);
+      setMessage("Saving the latest manifest to this device…");
+    }
+    try {
+      await primeOfflineManifestShell();
+      const envelope = await saveOfflineManifest(payloadRef.current);
+      setSaved(envelope);
+      lastPendingCount.current = envelope.events.filter(
+        (event) => event.syncStatus === "pending",
+      ).length;
+      lastRejectedCount.current = envelope.events.filter(
+        (event) => event.syncStatus === "rejected",
+      ).length;
+      // Settled message either way — a silent background save still needs
+      // to land on something other than the initial "Checking…" text.
+      setMessage("This device has an up-to-date offline copy.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "This device couldn't save the manifest. It'll try again once you have signal.",
+      );
+    } finally {
+      if (!opts.silent) setBusy(false);
+    }
+  }, []);
+
   const save = useCallback(
     async (opts: { silent: boolean }) => {
       if (!tripId) return;
-      if (inFlight.current) return inFlight.current;
+      if (inFlight.current) {
+        // Prefer a queued non-silent request over a queued silent one, so a
+        // manual click's loud feedback isn't dropped in favor of an
+        // already-queued background pass.
+        queuedSave.current =
+          queuedSave.current && !queuedSave.current.silent ? queuedSave.current : opts;
+        return inFlight.current;
+      }
       const run = (async () => {
-        if (!opts.silent) {
-          setBusy(true);
-          setMessage("Saving the latest manifest to this device…");
-        }
-        try {
-          await primeOfflineManifestShell();
-          const envelope = await saveOfflineManifest(payloadRef.current);
-          setSaved(envelope);
-          lastPendingCount.current = envelope.events.filter(
-            (event) => event.syncStatus === "pending",
-          ).length;
-          // Settled message either way — a silent background save still needs
-          // to land on something other than the initial "Checking…" text.
-          setMessage("This device has an up-to-date offline copy.");
-        } catch (error) {
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "This device couldn't save the manifest. It'll try again once you have signal.",
-          );
-        } finally {
-          if (!opts.silent) setBusy(false);
+        let current: { silent: boolean } | undefined = opts;
+        // Drains any request(s) queued while this ran, always against the
+        // freshest payloadRef at the time each one actually executes.
+        while (current) {
+          await runSaveOnce(current);
+          current = queuedSave.current ?? undefined;
+          queuedSave.current = null;
         }
       })();
       inFlight.current = run;
@@ -121,7 +157,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
         inFlight.current = null;
       }
     },
-    [tripId],
+    [tripId, runSaveOnce],
   );
 
   // Saves as soon as there's a new payload to save — on first mount, and
@@ -140,10 +176,12 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       setSaved(envelope);
       // Reflects reality even when the branch below can't run yet (e.g. this
       // mount happens while offline) — otherwise reconcile()'s "did anything
-      // just resolve" check compares against a stale 0 once connectivity
-      // returns, on a device that already had pending events from before.
+      // just resolve/newly reject" check compares against a stale 0 once
+      // connectivity returns, on a device that already had events from before.
       lastPendingCount.current =
         envelope?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
+      lastRejectedCount.current =
+        envelope?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
       if (navigator.onLine) {
         const manual = manualRefreshPending.current;
         manualRefreshPending.current = false;
@@ -261,14 +299,14 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
             type="button"
             disabled={busy}
             onClick={() => refresh({ manual: true })}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken disabled:opacity-60"
+            className={buttonClass({ variant: "secondary" })}
           >
             {busy ? "Refreshing…" : "Refresh now"}
           </button>
           {saved ? (
             <a
               href={`/offline-manifest?trip=${tripId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground hover:bg-primary-hover"
+              className={buttonClass({ variant: "primary" })}
             >
               Open offline roll call
             </a>

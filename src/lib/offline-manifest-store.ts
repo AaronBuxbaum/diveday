@@ -3,6 +3,7 @@ import { nowDate } from "./clock";
 
 import {
   canRecordOfflineStatus,
+  isOfflineManifestExpired,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
@@ -144,10 +145,10 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       // Nothing recoverable from ciphertext this key can't open — if it's
       // also past its retention window, clean it up now rather than leaving
       // unreadable bytes behind forever with no delete button to clear them.
-      if (new Date(record.expiresAt) <= nowDate()) await deleteOfflineManifest(tripId, db);
+      if (isOfflineManifestExpired(record)) await deleteOfflineManifest(tripId, db);
       throw error;
     }
-    if (new Date(record.expiresAt) <= nowDate()) {
+    if (isOfflineManifestExpired(record)) {
       // A record still holding a roll-call event that never reached the
       // server is the only copy of that evidence — keep serving it (as
       // stale) rather than silently discarding it, until every event is
@@ -217,6 +218,14 @@ export async function appendOfflineRollCall(
   return withManifestLock(tripId, async () => {
     const envelope = await loadOfflineManifest(tripId);
     if (!envelope) throw new Error("Saved manifest is unavailable or expired");
+    // A snapshot kept alive past its retention window (loadOfflineManifest
+    // preserves one that still has an unsynced event) is not a boarding
+    // source — the H-05 stop rule treats expired the same as missing. It
+    // stays readable so its pending evidence can still reconcile, but
+    // records no new roll call.
+    if (isOfflineManifestExpired(envelope.snapshot)) {
+      throw new Error("This saved copy has expired — open the live manifest to record roll call.");
+    }
     if (!canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status)) {
       throw new Error("This saved readiness record does not allow boarding");
     }
@@ -281,10 +290,13 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
   });
 }
 
-// The live manifest page primes this in the background on mount, and "Save
-// for offline" primes it again on click — sharing one in-flight promise keeps
-// a fast click from kicking off a second concurrent register/cache round trip.
+// The live manifest page primes this in the background on mount, and every
+// automatic/manual save primes it again — sharing one in-flight promise keeps
+// overlapping callers from kicking off a second concurrent register/cache
+// round trip.
 let primeInFlight: Promise<void> | null = null;
+
+const SHELL_CACHE_ACK_TIMEOUT_MS = 10_000;
 
 export function primeOfflineManifestShell(): Promise<void> {
   if (!primeInFlight) {
@@ -295,7 +307,26 @@ export function primeOfflineManifestShell(): Promise<void> {
         scope: "/",
       });
       await navigator.serviceWorker.ready;
-      registration.active?.postMessage({ type: "CACHE_OFFLINE_MANIFEST_SHELL" });
+      const active = registration.active;
+      if (!active) throw new Error("This browser does not support offline mode");
+      // Wait for the worker's own confirmation that the shell (and every
+      // asset it references) actually finished caching — an already-active
+      // worker can still fail this (storage quota, a dropped fetch), and a
+      // save must not announce "up to date" while that failed silently.
+      await new Promise<void>((resolve, reject) => {
+        const channel = new MessageChannel();
+        const timeout = setTimeout(() => {
+          channel.port1.close();
+          reject(new Error("The offline shell didn't confirm it was ready in time"));
+        }, SHELL_CACHE_ACK_TIMEOUT_MS);
+        channel.port1.onmessage = (event) => {
+          clearTimeout(timeout);
+          channel.port1.close();
+          if (event.data?.ok) resolve();
+          else reject(new Error(event.data?.error ?? "Offline shell could not be cached"));
+        };
+        active.postMessage({ type: "CACHE_OFFLINE_MANIFEST_SHELL" }, [channel.port2]);
+      });
     })().finally(() => {
       primeInFlight = null;
     });

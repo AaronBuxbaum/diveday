@@ -168,6 +168,56 @@ describe("loadOfflineManifest", () => {
   });
 });
 
+describe("appendOfflineRollCall", () => {
+  it("refuses to record a new roll call against a snapshot kept alive past its expiry", async () => {
+    // A record preserved past retention (because it still has an unsynced
+    // event) is not a boarding source — the H-05 stop rule treats expired the
+    // same as missing, even though loadOfflineManifest keeps serving it so
+    // the pending evidence can still reconcile.
+    //
+    // Patching the stored record's plaintext expiresAt (as the loadOfflineManifest
+    // tests above do) wouldn't reach this: appendOfflineRollCall checks the
+    // *embedded* snapshot.expiresAt, a separate copy inside the encrypted
+    // envelope. Record the first event against a normal, unexpired snapshot,
+    // then re-save (carrying that event forward, as saveOfflineManifest
+    // always does) against a trip whose endsAt is long past — the new
+    // snapshot's expiresAt is now genuinely in the past, exactly as real
+    // wall-clock expiry would leave it.
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    const longOverTrip: OfflineManifestPayload = {
+      ...payload,
+      manifests: [
+        {
+          ...payload.manifests[0],
+          trip: { ...payload.manifests[0].trip, endsAt: "2020-01-01T00:00:00.000Z" },
+        },
+      ],
+    };
+    await saveOfflineManifest(longOverTrip);
+
+    await expect(
+      appendOfflineRollCall(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        checkpoint: "departure",
+        status: "boarded",
+        note: null,
+      }),
+    ).rejects.toThrow(/expired/);
+
+    // The earlier pending event survives untouched — refusing a new one
+    // doesn't discard evidence already recorded.
+    const reloaded = await loadOfflineManifest(tripId);
+    expect(reloaded?.events).toHaveLength(1);
+  });
+});
+
 describe("syncOfflineManifest", () => {
   it("marks a pending event applied once the server accepts it", async () => {
     await saveOfflineManifest(payload);
