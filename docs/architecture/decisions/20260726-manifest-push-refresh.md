@@ -98,8 +98,12 @@ when Vercel keeps an instance warm across concurrent requests. This is an accept
 today's expected concurrency (a handful of staff phones per shop); if Neon's direct-connection limit
 becomes a real constraint, the escape hatch is the third-party-service alternative above, or moving
 publish/subscribe to a single dedicated long-running process (a small always-on Node service) instead of
-riding serverless instances. The Postgres LISTEN/NOTIFY path itself has no automated test — PGlite (the
-test/dev database) never exercises it, since the module deliberately falls back to an in-process
-dispatcher whenever `DATABASE_URL` is unset. Verify the Postgres path by hand against a real Neon branch
-before relying on it in production; a bug there degrades silently to "always falls back to the poll,"
-not to a crash, which is the intended failure direction but still worth knowing before merge.
+riding serverless instances. `connectAndListen`'s `pg.Client` is injectable (`NotifyClient` in
+`src/db/manifest-events.ts`) specifically so `src/db/manifest-events-listen.test.ts` can drive LISTEN
+issuance, notification filtering/parsing, and reconnect-with-backoff against a fake client — that suite
+covers the module's own logic. What it cannot cover, because no real Postgres server is involved, is the
+actual wire-level behavior: whether a real Neon connection really delivers a `NOTIFY` fired from a
+pooled session to a LISTEN-ing direct one, session/pooling quirks specific to Neon, and connection-limit
+behavior under real concurrency. Verify that by hand against a real Neon branch before relying on it in
+production; a bug there degrades silently to "always falls back to the poll," not to a crash, which is
+the intended failure direction but still worth knowing before merge.

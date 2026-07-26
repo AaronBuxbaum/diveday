@@ -44,10 +44,30 @@ function ensureListening(): void {
   void connectAndListen(RECONNECT_BASE_MS);
 }
 
-async function connectAndListen(retryDelayMs: number): Promise<void> {
+/**
+ * A real `pg.Client` restricted to the methods this module calls. Narrowed so
+ * tests can drive the LISTEN/reconnect/notification-parsing logic below with
+ * a fake in-process client instead of a real Postgres connection — the thing
+ * ADR 20260726-manifest-push-refresh flags as this module's one coverage gap.
+ */
+export type NotifyClient = Pick<Client, "connect" | "query" | "end" | "on" | "removeAllListeners">;
+
+/**
+ * Exported so tests can supply a fake `createClient` and observe LISTEN
+ * issuance, notification dispatch/filtering, and reconnect-with-backoff
+ * without a real Postgres server. Production always omits `createClient`
+ * (defaults to a real direct-connection `pg.Client`) — see the module
+ * docblock above for why it's always the direct, not pooled, connection.
+ */
+export async function connectAndListen(
+  retryDelayMs: number,
+  createClient?: () => NotifyClient,
+): Promise<void> {
   const connectionString = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
-  if (!connectionString) return;
-  const client = new Client({ connectionString: withExplicitSslMode(connectionString) });
+  if (!createClient && !connectionString) return;
+  const client =
+    createClient?.() ??
+    new Client({ connectionString: withExplicitSslMode(connectionString as string) });
   let reconnecting = false;
   const reconnect = () => {
     if (reconnecting) return;
@@ -55,7 +75,7 @@ async function connectAndListen(retryDelayMs: number): Promise<void> {
     client.removeAllListeners();
     void client.end().catch(() => undefined);
     setTimeout(
-      () => void connectAndListen(Math.min(retryDelayMs * 2, RECONNECT_MAX_MS)),
+      () => void connectAndListen(Math.min(retryDelayMs * 2, RECONNECT_MAX_MS), createClient),
       retryDelayMs,
     );
   };
