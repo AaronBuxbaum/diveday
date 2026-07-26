@@ -34,8 +34,10 @@ export function ScheduleCalendar({
   prevMonthKey: string | null;
   nextMonthKey: string | null;
 }) {
+  // size-11 (44px) meets the dock-test floor (design/principles.md #2) — size-9
+  // (36px) was under it on the one control every visit to this page uses.
   const navClass =
-    "inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground";
+    "inline-flex size-11 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground";
   return (
     <section
       aria-label="Dive schedule calendar"
@@ -115,7 +117,13 @@ export function ScheduleCalendar({
                       <Link
                         href={`/shop/${shopSlug}/schedule/${trip.id}`}
                         aria-label={`${trip.time} dive${trip.full ? " (full)" : ""}`}
-                        className={`block truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight font-medium tabular-nums transition-colors duration-200 sm:text-xs ${
+                        // Not a full 44px target — a day with several dives stacks these
+                        // tightly, and blowing each up to 44px would balloon the month
+                        // grid this component's whole point is to keep glanceable. This
+                        // is as tall as that constraint allows; the list below the
+                        // calendar (linked from every day) stays the primary, full-size
+                        // tap target for actually booking (design/principles.md #2).
+                        className={`block truncate rounded px-1.5 py-1.5 text-left text-xs leading-tight font-medium tabular-nums transition-colors duration-200 ${
                           trip.full
                             ? "bg-surface-sunken text-muted hover:bg-border"
                             : "bg-primary/10 text-primary hover:bg-primary/20"

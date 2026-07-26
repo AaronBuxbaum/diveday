@@ -175,14 +175,20 @@ export function RosterSection({
                         so it can't sit inside this row's own action forms.
                         Only sendable divers get one. */}
                     {waiverControl.action ? (
-                      <input
-                        type="checkbox"
-                        name="bookingId"
-                        value={booking.id}
-                        form="roster-bulk"
-                        aria-label={`Select ${person.fullName} to send a waiver`}
-                        className="mt-1 size-4 shrink-0"
-                      />
+                      // A bare checkbox has a ~16px hit area — too small for wet or gloved
+                      // fingers (design/principles.md #2). It can't sit inside a <label> with
+                      // the diver name below since that name is itself a navigation <Link>, so
+                      // the tap target is grown with a centered wrapper instead.
+                      <span className="flex min-h-11 min-w-11 shrink-0 items-center justify-center">
+                        <input
+                          type="checkbox"
+                          name="bookingId"
+                          value={booking.id}
+                          form="roster-bulk"
+                          aria-label={`Select ${person.fullName} to send a waiver`}
+                          className="size-4 shrink-0"
+                        />
+                      </span>
                     ) : null}
                     <div className="min-w-0">
                       <Link

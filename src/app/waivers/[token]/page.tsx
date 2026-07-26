@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -151,12 +152,14 @@ export default async function WaiverPage({
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-        <section className="rise-in rounded-lg border border-accent/40 bg-accent/10 p-7">
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            {needsReview ? "Waiver received" : "That’s the paperwork done ✓"}
-          </h1>
-          <p className="mt-3 text-base text-muted">
+        {/* Shared with /ready and /recap's earned moment — this page hand-rolled
+            its own accent box before, which is how its heading size and missing
+            eyebrow drifted from theirs (design/principles.md #3). */}
+        <EarnedMoment
+          eyebrow={shopName}
+          title={needsReview ? "Waiver received" : "That’s the paperwork done ✓"}
+        >
+          <p>
             {needsReview
               ? "Thanks — a team member will privately review one of your answers before the trip. Please don’t assume you’re cleared until they confirm."
               : "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed."}
@@ -166,7 +169,7 @@ export default async function WaiverPage({
               See what’s left before you sail
             </Link>
           ) : null}
-        </section>
+        </EarnedMoment>
       </main>
     );
   }

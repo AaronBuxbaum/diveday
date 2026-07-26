@@ -26,7 +26,10 @@ export function WaitlistConfirmation({
   shopSlug: string;
 }) {
   return (
-    <section className="rise-in mt-10 rounded-lg border border-accent/40 bg-accent/10 p-6">
+    // A wait-list join isn't the earned win the rationed accent is for
+    // (design/principles.md #3) — a seat isn't held yet, so this stays the
+    // calm everyday treatment; only a real confirmed booking gets the coral.
+    <section className="rise-in mt-10 rounded-lg border border-border bg-surface p-6">
       <h2 className="text-xl font-semibold text-balance">
         You&apos;re on the wait list, {firstName}.
       </h2>
@@ -36,7 +39,7 @@ export function WaitlistConfirmation({
       </p>
       <Link
         href={`/shop/${shopSlug}/schedule`}
-        className="mt-3 inline-block py-2 text-base font-medium text-primary hover:underline"
+        className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         Back to the schedule
       </Link>

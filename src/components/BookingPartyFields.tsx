@@ -81,7 +81,11 @@ export function BookingPartyFields({
         const emailError = fieldErrors?.[`email-${index}`];
         const suggestion = blurred[index] ? suggestEmailTypo(member.email) : null;
         return (
-          <fieldset key={slot} className="rounded-xl border border-border p-4">
+          // Keyed by a stable slot name, so raising the party size only mounts
+          // the newly-added fieldsets — `rise-in`'s entrance plays for those,
+          // not the ones already on screen, explaining what just changed
+          // instead of the page silently jumping taller (design/principles.md #5).
+          <fieldset key={slot} className="rise-in rounded-xl border border-border p-4">
             <legend className="px-1 text-sm font-semibold text-muted">
               {index === 0 ? "Your details" : `Diver ${index + 1}`}
             </legend>

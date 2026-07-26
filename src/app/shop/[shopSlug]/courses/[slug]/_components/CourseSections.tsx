@@ -22,10 +22,16 @@ export function CourseHero({
   course,
   totalCents,
   bookHref,
+  inquiryHref,
 }: {
   course: Course;
   totalCents: number | null;
   bookHref: string | null;
+  /** Anchor to "Get in touch", shown as the hero's fallback CTA when there's
+   * no open session to book yet — otherwise a diver landing here has no
+   * visible next step until they scroll past specs, admission, overview,
+   * gallery, and the schedule (design/principles.md #2). */
+  inquiryHref?: string | null;
 }) {
   const usd = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -59,6 +65,10 @@ export function CourseHero({
           {bookHref ? (
             <Link href={bookHref} className={buttonClass({ size: "cta" })}>
               See dates
+            </Link>
+          ) : inquiryHref ? (
+            <Link href={inquiryHref} className={buttonClass({ variant: "secondary", size: "cta" })}>
+              Ask about dates
             </Link>
           ) : null}
         </div>
