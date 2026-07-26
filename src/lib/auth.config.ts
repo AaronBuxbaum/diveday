@@ -48,6 +48,18 @@ export function isEmbeddableShopRoute(pathname: string): boolean {
   return PUBLIC_SCHEDULE.test(pathname);
 }
 
+/**
+ * Set on the request (never trusted from the response side) by `src/proxy.ts`
+ * when — and only when — the current request is a genuine embed request
+ * (`isEmbeddableShopRoute` route + `?embed=1`). `ShopLayout` reads it to
+ * suppress staff chrome for a signed-in staff member previewing their own
+ * embed, since a layout (unlike a page) is never handed `searchParams`
+ * directly. Every request's incoming copy of this header is explicitly
+ * overwritten in the proxy (set or deleted), so a client-supplied value can
+ * never survive to reach a reader downstream.
+ */
+export const EMBED_REQUEST_HEADER = "x-diveday-embed";
+
 export const authConfig = {
   secret: authSecret,
   session: { strategy: "jwt" },

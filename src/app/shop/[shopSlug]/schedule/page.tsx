@@ -181,7 +181,7 @@ export default async function TripsPage({
           tripsByDay={tripsByDay}
           prevMonthKey={prevMonthKey}
           nextMonthKey={nextMonthKey}
-          embedQuery={isEmbed ? "&embed=1" : ""}
+          embed={isEmbed}
         />
       ) : null}
 

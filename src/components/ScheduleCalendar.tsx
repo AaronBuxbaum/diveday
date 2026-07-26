@@ -25,9 +25,11 @@ export function ScheduleCalendar({
   tripsByDay,
   prevMonthKey,
   nextMonthKey,
-  /** Appended to every link this component renders — carries `embed=1` through
-   * month navigation and day taps so an embedded calendar stays embedded. */
-  embedQuery = "",
+  /** Carries embed mode through month navigation and day taps so an embedded
+   * calendar stays embedded — each link below decides its own `?`/`&`
+   * delimiter, since month nav already has a `?month=` query and the day
+   * links don't. */
+  embed = false,
 }: {
   shopSlug: string;
   label: string;
@@ -36,8 +38,9 @@ export function ScheduleCalendar({
   tripsByDay: Map<string, CalendarTrip[]>;
   prevMonthKey: string | null;
   nextMonthKey: string | null;
-  embedQuery?: string;
+  embed?: boolean;
 }) {
+  const embedSuffix = embed ? "&embed=1" : "";
   // size-11 (44px) meets the dock-test floor (design/principles.md #2) — size-9
   // (36px) was under it on the one control every visit to this page uses.
   const navClass =
@@ -52,7 +55,7 @@ export function ScheduleCalendar({
         <div className="flex items-center gap-2">
           {prevMonthKey ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?month=${prevMonthKey}${embedQuery}`}
+              href={`/shop/${shopSlug}/schedule?month=${prevMonthKey}${embedSuffix}`}
               aria-label="Previous month"
               className={navClass}
             >
@@ -65,7 +68,7 @@ export function ScheduleCalendar({
           )}
           {nextMonthKey ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?month=${nextMonthKey}${embedQuery}`}
+              href={`/shop/${shopSlug}/schedule?month=${nextMonthKey}${embedSuffix}`}
               aria-label="Next month"
               className={navClass}
             >
@@ -119,7 +122,7 @@ export function ScheduleCalendar({
                   {trips.map((trip) => (
                     <li key={trip.id}>
                       <Link
-                        href={`/shop/${shopSlug}/schedule/${trip.id}${embedQuery}`}
+                        href={`/shop/${shopSlug}/schedule/${trip.id}${embed ? "?embed=1" : ""}`}
                         aria-label={`${trip.time} dive${trip.full ? " (full)" : ""}`}
                         // Not a full 44px target — a day with several dives stacks these
                         // tightly, and blowing each up to 44px would balloon the month

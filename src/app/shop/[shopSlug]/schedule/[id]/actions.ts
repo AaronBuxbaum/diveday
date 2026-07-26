@@ -37,7 +37,20 @@ async function readinessEmailUrl(
 }
 
 /** Bound to each action so the public page can stay a pure renderer. */
-export type TripRef = { shopSlug: string; tripId: string };
+export type TripRef = {
+  shopSlug: string;
+  tripId: string;
+  /** True inside the embed widget (docs ADR 20260726-schedule-embed) — every
+   * redirect this file constructs carries it forward, so a book/waitlist/pay
+   * transition never drops the diver out of the compact surface and back
+   * into full page chrome. */
+  embed?: boolean;
+};
+
+/** `&embed=1` after an existing query, `?embed=1` to start one — never plain mode. */
+function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
+  return embed ? `${delimiter}embed=1` : "";
+}
 /**
  * `token` is a purpose-bound `confirm` capability (src/db/booking-capabilities.ts), never a raw
  * booking id: every action below re-verifies it and derives shop/booking/person identity from
@@ -103,7 +116,7 @@ const rentalFitSchema = z.object({
 });
 
 export async function bookSpot(
-  { shopSlug, tripId }: TripRef,
+  { shopSlug, tripId, embed }: TripRef,
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
@@ -173,7 +186,9 @@ export async function bookSpot(
     return { error: ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unavailable };
   }
   const primaryBookingId = outcome.bookings[0]?.bookingId;
-  if (!primaryBookingId) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
+  if (!primaryBookingId) {
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
+  }
   const [confirmedBooking, tripNow] = await Promise.all([
     getBookingForTrip(dbi, tripId, primaryBookingId),
     getTripWithBooked(dbi, shopNow.id, tripId),
@@ -245,6 +260,7 @@ export async function bookSpot(
         bookingIds: outcome.bookings.map((entry) => entry.bookingId),
         confirmToken: confirmCapability.token,
         customerEmail: validParty[0]?.email ?? "",
+        embed,
       })
     : null;
   if (checkoutUrl) {
@@ -253,7 +269,9 @@ export async function bookSpot(
   }
   revalidateAndRedirect(
     base,
-    confirmCapability ? `${base}?booking=${confirmCapability.token}` : base,
+    confirmCapability
+      ? `${base}?booking=${confirmCapability.token}${embedParam(embed, "&")}`
+      : `${base}${embedParam(embed, "?")}`,
   );
 }
 
@@ -267,11 +285,12 @@ async function startCheckoutUrl(
     bookingIds: string[];
     confirmToken: string;
     customerEmail: string;
+    embed?: boolean;
   },
 ): Promise<string | null> {
   const origin = publicAppUrl();
   if (!origin || !input.customerEmail) return null;
-  const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.confirmToken}`;
+  const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.confirmToken}${embedParam(input.embed, "&")}`;
   const outcome = await startBookingCheckout(dbi, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -288,7 +307,7 @@ async function startCheckoutUrl(
  * when one exists, mints a new one after an expiry, and sends the diver to it.
  */
 export async function payForBooking(
-  { shopSlug, tripId, token }: RentalFitRef,
+  { shopSlug, tripId, token, embed }: RentalFitRef,
   _formData: FormData,
 ) {
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
@@ -301,26 +320,31 @@ export async function payForBooking(
         bookingIds: [ctx.capability.bookingId],
         confirmToken: token,
         customerEmail: ctx.confirmed.person.email,
+        embed,
       })
     : null;
   if (checkoutUrl) redirect(checkoutUrl);
-  redirect(`${base}?booking=${token}&error=pay`);
+  redirect(`${base}?booking=${token}&error=pay${embedParam(embed, "&")}`);
 }
 
-export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: FormData) {
+export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {
   const ip = await clientIp();
   if (!checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin).allowed) {
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
   }
   const parsed = bookSchema.safeParse({
     fullName: formData.get("fullName-0"),
     email: formData.get("email-0"),
     phone: formData.get("phone") || undefined,
   });
-  if (!parsed.success) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid`);
+  if (!parsed.success) {
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid${embedParam(embed, "&")}`);
+  }
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
-  if (!shopNow) redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable`);
+  if (!shopNow) {
+    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
+  }
   const outcome = await joinTripWaitlist(dbi, {
     shopId: shopNow.id,
     tripId,
@@ -331,7 +355,7 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     revalidateAndRedirect(
       `/shop/${shopSlug}/schedule/${tripId}`,
-      `/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}`,
+      `/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}${embedParam(embed, "&")}`,
     );
   }
   const code =
@@ -340,7 +364,7 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
       : outcome.reason === "already_booked"
         ? "already"
         : "unavailable";
-  redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}`);
+  redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}${embedParam(embed, "&")}`);
 }
 
 /**
@@ -351,14 +375,14 @@ export async function joinWaitlist({ shopSlug, tripId }: TripRef, formData: Form
  * never becomes a nitrox tank on its own.
  */
 export async function saveRentalFitRequest(
-  { shopSlug, tripId, token }: RentalFitRef,
+  { shopSlug, tripId, token, embed }: RentalFitRef,
   formData: FormData,
 ) {
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
   const ctx = await confirmContextFor(tripId, token);
-  if (!ctx) redirect(`${base}?booking=${token}&error=fit`);
+  if (!ctx) redirect(`${base}?booking=${token}&error=fit${embedParam(embed, "&")}`);
   const parsed = rentalFitSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?booking=${token}&error=fit`);
+  if (!parsed.success) redirect(`${base}?booking=${token}&error=fit${embedParam(embed, "&")}`);
   const saved = await saveRentalFit(ctx.db, {
     shopId: ctx.capability.shopId,
     personId: ctx.confirmed.person.id,
@@ -391,5 +415,5 @@ export async function saveRentalFitRequest(
     });
   }
   const result = saved ? "fit=saved" : "error=fit";
-  revalidateAndRedirect(base, `${base}?booking=${token}&${result}`);
+  revalidateAndRedirect(base, `${base}?booking=${token}&${result}${embedParam(embed, "&")}`);
 }

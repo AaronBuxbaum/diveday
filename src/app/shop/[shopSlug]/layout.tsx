@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
@@ -9,6 +10,7 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
 import { auth } from "@/lib/auth";
+import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import {
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -30,9 +32,15 @@ export default async function ShopLayout({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
+  // Set only by src/proxy.ts on a genuine embed request — a layout is never
+  // handed searchParams directly, so this header is the one way it learns
+  // "this render is going into someone else's iframe." Forces every bit of
+  // staff chrome off, even for a signed-in staff member previewing their own
+  // embed (docs ADR 20260726-schedule-embed).
+  const isEmbed = (await headers()).get(EMBED_REQUEST_HEADER) === "1";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
-  const showBanner = shop?.isDemo ?? false;
+  const showBanner = !isEmbed && (shop?.isDemo ?? false);
 
   async function todayBoatHref(
     dbi: typeof db,
@@ -96,7 +104,7 @@ export default async function ShopLayout({
           demoPassword={DEMO_BYPASS_PASSWORD}
         />
       ) : null}
-      {session?.user && shop ? (
+      {!isEmbed && session?.user && shop ? (
         <ShopNav
           shopSlug={shopSlug}
           shopName={shop.name}
@@ -117,7 +125,11 @@ export default async function ShopLayout({
           this one's public page must never mount it — the first two would
           just poll a 401 every five minutes, and the third would silently
           save their own shop's roster while the visible page is this one. */}
-      {session?.user && shop && isStaff(session.user.roles) && session.user.shopId === shop.id ? (
+      {!isEmbed &&
+      session?.user &&
+      shop &&
+      isStaff(session.user.roles) &&
+      session.user.shopId === shop.id ? (
         <OfflineManifestAutoSave />
       ) : null}
       <PreserveFormScroll />

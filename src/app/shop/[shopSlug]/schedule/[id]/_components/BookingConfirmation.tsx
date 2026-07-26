@@ -169,7 +169,7 @@ export function BookingConfirmation({
         saved={fitSaved}
       />
       <Link
-        href={`/shop/${shopSlug}/schedule`}
+        href={`/shop/${shopSlug}/schedule${fitRef.embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         Back to the schedule
