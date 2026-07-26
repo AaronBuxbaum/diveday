@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "0847b011-d08b-4af4-8ead-f0fd856f6d2e",
+  "id": "55c18235-a6bc-47d6-86d3-2e2c25dd5df1",
   "prevIds": [
-    "80a186f4-0990-4051-af96-b8cc9f498dcf",
-    "b892c378-3ec0-4ec6-a9a1-6f0b158a39b3"
+    "b4a381df-4760-465d-a5c5-f640dc8002b1"
   ],
   "ddl": [
     {
@@ -397,6 +396,12 @@
     {
       "isRlsEnabled": false,
       "name": "person_roles",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "prior_visits",
       "entityType": "tables",
       "schema": "public"
     },
@@ -3478,6 +3483,162 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "visited_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "title",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "status_label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "amount_label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_reference",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dedupe_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "imported_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "recap_photos"
     },
     {
@@ -4412,6 +4573,32 @@
       "generated": null,
       "identity": null,
       "name": "reviewed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "imported_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "imported_from_label",
       "entityType": "columns",
       "schema": "public",
       "table": "specialty_certifications"
@@ -6711,6 +6898,76 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "visited_on",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "prior_visits_shop_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "dedupe_key",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "prior_visits_shop_person_dedupe_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "booking_id",
           "isExpression": false,
           "asc": true,
@@ -6963,6 +7220,13 @@
           "opclass": null
         },
         {
+          "value": "specialty",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
           "value": "lower(\"identifier\")",
           "isExpression": true,
           "asc": true,
@@ -6975,7 +7239,7 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "specialty_certifications_shop_agency_identifier_unique",
+      "name": "specialty_certifications_shop_agency_specialty_identifier_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "specialty_certifications"
@@ -8109,6 +8373,40 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "prior_visits_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "prior_visits_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "prior_visits"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "recap_photos_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -8895,6 +9193,16 @@
       "name": "people_pkey",
       "schema": "public",
       "table": "people",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "prior_visits_pkey",
+      "schema": "public",
+      "table": "prior_visits",
       "entityType": "pks"
     },
     {

@@ -51,12 +51,14 @@ export const shops = pgTable(
       .notNull()
       .default(["Swimsuit and towel", "Reef-safe sun protection", "Logbook"]),
     /**
-     * The gear this shop rents (RentableItemKind values, src/lib/rentals.ts). Gates
-     * which items a diver can pick in the rental-fit forms — a shop that doesn't
-     * rent GoPros never offers one. Defaults to the core kit (which now includes
-     * the dive computer); the GoPro is the one opt-in add-on. Single-sourced from
-     * DEFAULT_SHOP_RENTAL_ITEMS so the stored default can never drift from the
-     * canonical kit again.
+     * The gear and services this shop offers (ShopCatalogKind values,
+     * src/lib/rentals.ts). Gates which items a diver can pick in the rental-fit
+     * forms — a shop that doesn't rent GoPros never offers one — and, for
+     * "nitrox", whether a diver can request enriched air at all
+     * (shopOffersNitrox). Defaults to the core kit (which now includes the dive
+     * computer); the GoPro and nitrox are opt-in — most shops don't fill nitrox.
+     * Single-sourced from DEFAULT_SHOP_RENTAL_ITEMS so the stored default can
+     * never drift from the canonical kit again.
      */
     rentalItems: jsonb("rental_items")
       .$type<string[]>()

@@ -7,6 +7,8 @@ import {
   quoteRentalFit,
   RENTABLE_ITEMS,
   type RentalPricing,
+  SHOP_CATALOG_ITEMS,
+  shopOffersNitrox,
   toRentableKinds,
 } from "./rentals";
 
@@ -63,6 +65,31 @@ describe("rentable items", () => {
 
   it("offers nothing when the catalog is empty", () => {
     expect(offeredRentableItems([])).toEqual([]);
+  });
+});
+
+describe("nitrox catalog", () => {
+  it("defaults a new shop to not filling nitrox", () => {
+    expect(DEFAULT_SHOP_RENTAL_ITEMS).not.toContain("nitrox");
+  });
+
+  it("lists nitrox in the shop settings catalog but not the rental-fit gear list", () => {
+    expect(SHOP_CATALOG_ITEMS.map((item) => item.kind)).toContain("nitrox");
+    expect(RENTABLE_ITEMS.map((item) => item.kind)).not.toContain("nitrox");
+  });
+
+  it("keeps nitrox out of the rental-fit gear checklist even when a shop offers it", () => {
+    expect(offeredRentableItems(["bcd", "nitrox"]).map((item) => item.kind)).toEqual(["bcd"]);
+  });
+
+  it("round-trips nitrox through the stored catalog", () => {
+    expect(toRentableKinds(["bcd", "nitrox"])).toEqual(["bcd", "nitrox"]);
+  });
+
+  it("reports whether a shop's catalog includes nitrox", () => {
+    expect(shopOffersNitrox(["bcd", "nitrox"])).toBe(true);
+    expect(shopOffersNitrox(["bcd"])).toBe(false);
+    expect(shopOffersNitrox([])).toBe(false);
   });
 });
 

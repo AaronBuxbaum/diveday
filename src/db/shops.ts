@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { RentalPricing } from "@/lib/rentals";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
 
 export async function getShopBySlug(db: AppDb, slug: string) {
@@ -73,6 +73,33 @@ export async function setShopRentalPricing(
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
+}
+
+/**
+ * One-time correction for a shop that priced or received nitrox requests
+ * before nitrox existed as an explicit "what we rent" catalog entry: treats
+ * that prior pricing or a live per-booking request as the shop's own signal
+ * that it already offers nitrox, so shipping the catalog gate doesn't
+ * silently take away a request/price a shop was already relying on. Only
+ * touches a shop missing the catalog entry (idempotent), so it's safe to run
+ * on every cold start alongside `seedIfEmpty` (src/db/client.ts) rather than
+ * as a one-shot migration.
+ */
+export async function backfillLegacyNitroxOffering(db: DbExecutor): Promise<void> {
+  await db.execute(sql`
+    update shops
+    set rental_items = rental_items || '["nitrox"]'::jsonb
+    where not (rental_items @> '["nitrox"]'::jsonb)
+      and (
+        (rental_pricing ->> 'nitroxCents') is not null
+        or exists (
+          select 1 from bookings
+          where bookings.shop_id = shops.id
+            and bookings.wants_nitrox = true
+            and bookings.status <> 'cancelled'
+        )
+      )
+  `);
 }
 
 /**

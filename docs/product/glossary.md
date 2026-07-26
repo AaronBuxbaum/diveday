@@ -354,11 +354,15 @@ new domain concept, define it here in the same PR.
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
   for every diver but is priced on its own line, not folded into the discounted set; the **GoPro** is
   the one off-by-default add-on.
-- **Rental catalog** — the shop-level list of gear a shop actually rents (`shops.rental_items`,
-  `src/lib/rentals.ts`). It gates the rental-fit forms: a diver is only offered — and only sees size
-  fields for — gear the shop stocks, so a shop that doesn't rent GoPros never offers one. Defaults to
-  the five core items plus the dive computer (default-on); the GoPro is the opt-in add-on. Editing the
-  catalog changes what is offered going forward; it does not rewrite a fit a diver already recorded.
+- **Rental catalog** — the shop-level list of gear and services a shop actually offers
+  (`shops.rental_items`, `src/lib/rentals.ts`). It gates the rental-fit forms: a diver is only
+  offered — and only sees size fields for — gear the shop stocks, so a shop that doesn't rent
+  GoPros never offers one. It also holds one non-gear entry, `"nitrox"` (`shopOffersNitrox`):
+  whether the shop fills enriched air at all. Defaults to the five core items plus the dive
+  computer (default-on); the GoPro and nitrox are opt-in — most shops don't fill nitrox, so a shop
+  that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
+  nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
+  does not rewrite a fit a diver already recorded.
 - **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit of five hard-goods pieces (usually
   cheaper than the pieces), a **per-piece** price for any item, and a **per-dive nitrox** surcharge —
@@ -421,14 +425,17 @@ new domain concept, define it here in the same PR.
   — its fill authorization waits for a staff confirm (see **Nitrox request**), because a nitrox card
   has no expiry to backstop a bad import and a wrong fill is the highest-consequence failure
   (ADR 20260724-import-verified-cards).
-- **Nitrox request** — a per-booking ask for enriched air, billed per dive. A diver may request it
-  **without** a verified card on file: the request is recorded and flagged to the diver and the shop
-  (`certified` on the write, the Today nitrox nudge, the prep-list blocker), never silently refused —
-  so the diver is prompted to send their card and the shop knows to chase it. The request is not a
-  fill authorization: every read (prep list, manifest, Today) re-checks the card at read time
-  (`authorizesNitroxFill`) and downgrades the diver to air unless a card **authorizes the fill** —
-  `verified`, unarchived, and (if imported) confirmed here. So neither an uncertified request nor an
-  imported-but-unconfirmed card can become a nitrox tank. Clearing a request is always allowed.
+- **Nitrox request** — a per-booking ask for enriched air, billed per dive, offered only when the
+  shop's **rental catalog** includes nitrox (most shops don't fill it, so this is off by default).
+  A diver may request it **without** a verified card on file: the request is recorded and flagged
+  to the diver and the shop (`certified` on the write, the Today nitrox nudge, the prep-list
+  blocker), never silently refused — so the diver is prompted to send their card and the shop
+  knows to chase it. The request is not a fill authorization: every read (prep list, manifest,
+  Today) re-checks the card at read time (`authorizesNitroxFill`) and downgrades the diver to air
+  unless a card **authorizes the fill** — `verified`, unarchived, and (if imported) confirmed here.
+  So neither an uncertified request nor an imported-but-unconfirmed card can become a nitrox tank.
+  Clearing a request is always allowed. `setBookingNitrox` also refuses to turn a request *on* when
+  the shop's catalog doesn't offer nitrox, so a shop that never enabled it can never end up with one.
 
 ## Modeling notes
 
