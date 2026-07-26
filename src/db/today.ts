@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
@@ -123,6 +123,16 @@ async function boardedCountsByTrip(db: AppDb, shopId: string, tripIds: string[])
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
+    // A booking cancelled after boarding (a no-show pulled, a refund) keeps its
+    // roll-call event row — without this join, its stale "boarded" would still
+    // count here even though `booked` (upcomingTripsWithCounts) already excludes
+    // it, letting the two totals coincidentally match with someone still
+    // unboarded. Same guard the write path (recordRollCall) and the manifest's
+    // own roster already apply.
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),

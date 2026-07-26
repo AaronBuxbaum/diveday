@@ -156,6 +156,7 @@ export default async function WaiverPage({
             its own accent box before, which is how its heading size and missing
             eyebrow drifted from theirs (design/principles.md #3). */}
         <EarnedMoment
+          as="h1"
           eyebrow={shopName}
           title={needsReview ? "Waiver received" : "That’s the paperwork done ✓"}
         >

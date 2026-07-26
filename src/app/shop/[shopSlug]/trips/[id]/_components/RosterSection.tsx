@@ -176,10 +176,11 @@ export function RosterSection({
                         Only sendable divers get one. */}
                     {waiverControl.action ? (
                       // A bare checkbox has a ~16px hit area — too small for wet or gloved
-                      // fingers (design/principles.md #2). It can't sit inside a <label> with
-                      // the diver name below since that name is itself a navigation <Link>, so
-                      // the tap target is grown with a centered wrapper instead.
-                      <span className="flex min-h-11 min-w-11 shrink-0 items-center justify-center">
+                      // fingers (design/principles.md #2). This <label> wraps only the
+                      // checkbox itself (the diver name below is a separate, sibling
+                      // <Link>, untouched by this), so a tap anywhere in the 44px box
+                      // forwards to the input — a plain wrapper <span> would not.
+                      <label className="flex min-h-11 min-w-11 shrink-0 items-center justify-center">
                         <input
                           type="checkbox"
                           name="bookingId"
@@ -188,7 +189,7 @@ export function RosterSection({
                           aria-label={`Select ${person.fullName} to send a waiver`}
                           className="size-4 shrink-0"
                         />
-                      </span>
+                      </label>
                     ) : null}
                     <div className="min-w-0">
                       <Link
