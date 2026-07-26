@@ -130,6 +130,41 @@ test.describe("staff", () => {
     }
     await anonContext.close();
   });
+
+  test("the prep page collapses Total and Air into one tile when nitrox is off with no live request", async ({
+    page,
+  }) => {
+    try {
+      await page.goto("/shop/blue-mantis/settings");
+      await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
+      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+
+      // Two-Tank Reef never had a nitrox request seeded onto it (unlike the
+      // wreck charter above), so with the catalog off there is no live data
+      // to keep the tile alive: Total and Air are the same number with
+      // nothing left to distinguish, and the tile grid collapses to one.
+      await page.goto("/shop/blue-mantis/schedule");
+      await page
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .click();
+      await page
+        .getByRole("navigation", { name: "Trip" })
+        .getByRole("link", { name: "Prep" })
+        .click();
+      const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
+      await expect(tanks.getByText("Total", { exact: true })).toHaveCount(1);
+      await expect(tanks.getByText("Air", { exact: true })).toHaveCount(0);
+      await expect(tanks.getByText("Nitrox", { exact: true })).toHaveCount(0);
+    } finally {
+      await page.goto("/shop/blue-mantis/settings");
+      await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
+      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+    }
+  });
 });
 
 // blue-mantis is the shared demo fixture every other spec in the suite reads
