@@ -1056,7 +1056,15 @@ export const tripAssignments = pgTable(
   (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
 );
 
-export const accountStatus = pgEnum("account_status", ["active", "disabled"]);
+/**
+ * `invited`: a staff invite created this row (`inviteStaffMember`,
+ * src/db/staff-accounts.ts) but the invitee hasn't accepted yet — an unusable
+ * random password hash, no sign-in, excluded from `verifyCredentials` and
+ * `loadActiveStaffRoles` exactly like `disabled` (both already gate on
+ * `status === "active"`). Accepting the invite at `/invite/[token]` flips it
+ * to `active`. See 20260726-staff-invite-accounts.
+ */
+export const accountStatus = pgEnum("account_status", ["invited", "active", "disabled"]);
 
 /**
  * A login method attached to a person — not an identity. Roles stay on
@@ -1090,6 +1098,7 @@ export const userAccounts = pgTable(
 export const accountTokenPurpose = pgEnum("account_token_purpose", [
   "email_verification",
   "password_reset",
+  "invite",
 ]);
 
 /**

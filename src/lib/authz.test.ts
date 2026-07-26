@@ -6,6 +6,7 @@ import {
   canExportShopData,
   canImportShopData,
   canManagePaymentSettings,
+  canManageStaffAccounts,
   canManageWaiverTemplates,
   canOverrideGearRequest,
   canRefund,
@@ -39,6 +40,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canRefund", canRefund],
     ["canManageWaiverTemplates", canManageWaiverTemplates],
     ["canDeleteDiver", canDeleteDiver],
+    // 20260726-staff-invite-accounts: invite/edit-roles/disable/remove share the same gate.
+    ["canManageStaffAccounts", canManageStaffAccounts],
   ] as const;
 
   for (const [name, gate] of gates) {

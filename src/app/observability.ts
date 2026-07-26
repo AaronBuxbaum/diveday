@@ -12,6 +12,8 @@ const CAPABILITY_ROUTE_PREFIXES = [
   // this.
   "verify",
   "reset-password",
+  // Staff-invite acceptance token (20260726-staff-invite-accounts).
+  "invite",
 ] as const;
 
 /**

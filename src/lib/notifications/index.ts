@@ -4,6 +4,7 @@ import {
   type NotificationEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  staffInviteEmail,
   tripRecapEmail,
   tripReminderEmail,
   verifyAccountEmail,
@@ -150,6 +151,23 @@ const passwordResetRequestSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+// A staff invite (20260726-staff-invite-accounts): no bookingId, account-scoped
+// like welcome/email_verification/password_reset_request above.
+const staffInviteSchema = z.object({
+  kind: z.literal("staff_invite"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  inviteeName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  inviterName: z.string().trim().min(1).max(120),
+  roleLabels: z.array(z.string().trim().min(1).max(40)).min(1).max(10),
+  inviteUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const passwordChangedSchema = z.object({
   kind: z.literal("password_changed"),
   userAccountId: z.uuid(),
@@ -172,6 +190,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   emailVerificationSchema,
   passwordResetRequestSchema,
   passwordChangedSchema,
+  staffInviteSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -214,6 +233,7 @@ function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
+  if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   return passwordChangedEmail(notification);
 }
 
@@ -244,6 +264,8 @@ function idempotencyKeyFor(notification: Notification): string {
       return `email-verification/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
+    case "staff_invite":
+      return `staff-invite/${notification.tokenId}`;
     // Keyed by the change's own timestamp so a second reset's confirmation
     // is a fresh send, not deduped against the first.
     case "password_changed":

@@ -22,6 +22,7 @@ export type ShopNavGates = {
   reports: boolean;
   import: boolean;
   export: boolean;
+  team: boolean;
 };
 
 const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
@@ -30,6 +31,7 @@ const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] 
   { label: "Waivers", suffix: "/waivers", gate: "waivers" },
   { label: "Reports", suffix: "/reports", gate: "reports" },
   { label: "Settings", suffix: "/settings" },
+  { label: "Team", suffix: "/settings/team", gate: "team" },
   { label: "Import contacts", suffix: "/settings/import", gate: "import" },
   { label: "Data export", suffix: "/settings/export", gate: "export" },
 ];
