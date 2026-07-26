@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
+import { subscribeManifestEvents } from "./manifest-events";
 import { getTripManifest, recordRollCall, updateLatestRollCallNote } from "./manifests";
 import { rollCallEvents, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -281,6 +282,46 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).toBe("Forgot fins — chasing them down");
   });
 
+  it("raises the manifest-events push signal when a note is actually saved, not on a no-op", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    let signalCount = 0;
+    const unsubscribe = subscribeManifestEvents(shop.id, reef.id, () => {
+      signalCount++;
+    });
+    try {
+      // Nothing recorded yet, so this is the no-op branch — no signal.
+      await updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "too early",
+      });
+      expect(signalCount).toBe(0);
+
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "departure",
+      });
+      expect(signalCount).toBe(1);
+
+      await updateLatestRollCallNote(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        checkpoint: "departure",
+        note: "Forgot fins — chasing them down",
+      });
+      expect(signalCount).toBe(2);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   it("applies an offline event once and rejects a delayed event behind newer live history", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {
@@ -332,6 +373,57 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         occurredAt: new Date(now - 30 * 60 * 1000),
       }),
     ).resolves.toEqual({ ok: false, reason: "newer_event_exists" });
+  });
+
+  it("raises the manifest-events push signal for a genuine write but not a duplicate replay", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    let signalCount = 0;
+    const unsubscribe = subscribeManifestEvents(shop.id, reef.id, () => {
+      signalCount++;
+    });
+    try {
+      const clientEventId = "33333333-3333-4333-8333-333333333333";
+      const first = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        source: "offline",
+        clientEventId,
+        offlineSnapshotSavedAt: nowDate(),
+        occurredAt: nowDate(),
+      });
+      expect(first).toMatchObject({ ok: true });
+      expect(signalCount).toBe(1);
+
+      const duplicate = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        source: "offline",
+        clientEventId,
+        offlineSnapshotSavedAt: nowDate(),
+        occurredAt: nowDate(),
+      });
+      expect(duplicate).toMatchObject({ ok: true, duplicate: true });
+      expect(signalCount).toBe(1);
+    } finally {
+      unsubscribe();
+    }
   });
 
   it("rejects invalid checkpoints and implausible offline clocks", async () => {
