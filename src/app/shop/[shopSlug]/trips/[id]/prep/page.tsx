@@ -50,7 +50,15 @@ export default async function TripPrepPage({
     )
     .map((entry) => entry.person.fullName);
   const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives, divingCrew });
-  const nitroxOffered = shopOffersNitrox(shop.rentalItems);
+  // A shop that has never offered nitrox can never have live nitrox data here
+  // (setBookingNitrox fails closed), so this is purely cosmetic for that
+  // common case — but a shop that *disabled* nitrox after a diver requested
+  // it (with or without a verified card) must not have this trip's already-
+  // real tank split or blocker silently disappear out from under the crew.
+  const showNitrox =
+    shopOffersNitrox(shop.rentalItems) ||
+    checklist.tanks.nitrox > 0 ||
+    checklist.nitroxBlockers.length > 0;
 
   return (
     <>
@@ -86,9 +94,7 @@ export default async function TripPrepPage({
             <h2 id="tanks-heading" className="text-lg font-semibold">
               Tanks
             </h2>
-            <div
-              className={`mt-3 grid gap-3 ${nitroxOffered ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
-            >
+            <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <div className="rounded-lg border border-border bg-surface p-4">
                 <p className="text-sm text-muted">Total</p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.total}</p>
@@ -97,7 +103,7 @@ export default async function TripPrepPage({
                 <p className="text-sm text-muted">Air</p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums">{checklist.tanks.air}</p>
               </div>
-              {nitroxOffered ? (
+              {showNitrox ? (
                 <div className="rounded-lg border border-border bg-surface p-4">
                   <p className="text-sm text-muted">Nitrox</p>
                   <p className="mt-1 text-3xl font-semibold tabular-nums">
@@ -115,7 +121,7 @@ export default async function TripPrepPage({
             </p>
           </section>
 
-          {nitroxOffered && checklist.nitroxBlockers.length > 0 ? (
+          {showNitrox && checklist.nitroxBlockers.length > 0 ? (
             <section
               aria-labelledby="nitrox-blocked-heading"
               className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4"

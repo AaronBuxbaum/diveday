@@ -30,6 +30,7 @@ import {
   RENTABLE_ITEMS,
   type RentalPricing,
   SHOP_CATALOG_ITEMS,
+  shopOffersNitrox,
   toRentableKinds,
 } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
@@ -175,9 +176,11 @@ async function saveRentalPricingAction(formData: FormData) {
     revalidateAndRedirect(settings, blocked);
     return;
   }
+  const db = await getDb();
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) redirect(`${settings}?notice=rental_prices_invalid`);
   const set = parsePriceDollars(formData.get("setPrice"));
-  const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
-  let invalid = !set.ok || !nitrox.ok;
+  let invalid = !set.ok;
   const perItemCents: RentalPricing["perItemCents"] = {};
   for (const item of RENTABLE_ITEMS) {
     const parsed = parsePriceDollars(formData.get(`price_${item.name}`));
@@ -187,11 +190,21 @@ async function saveRentalPricingAction(formData: FormData) {
     }
     if (parsed.cents !== null) perItemCents[item.kind] = parsed.cents;
   }
-  if (invalid || !set.ok || !nitrox.ok) redirect(`${settings}?notice=rental_prices_invalid`);
-  await setShopRentalPricing(await getDb(), session.user.shopId, {
+  // The nitrox price field only renders when the catalog currently offers
+  // nitrox; when it doesn't, the field is absent from every submission, so
+  // reading it as "clear the price" would erase a price set while nitrox was
+  // still offered. Only interpret it when it could have been on the page.
+  let nitroxCents = shop.rentalPricing.nitroxCents;
+  if (shopOffersNitrox(shop.rentalItems)) {
+    const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
+    if (!nitrox.ok) invalid = true;
+    else nitroxCents = nitrox.cents;
+  }
+  if (invalid || !set.ok) redirect(`${settings}?notice=rental_prices_invalid`);
+  await setShopRentalPricing(db, session.user.shopId, {
     setCents: set.cents,
     perItemCents,
-    nitroxCents: nitrox.cents,
+    nitroxCents,
   });
   revalidateAndRedirect(settings, `${settings}?notice=rental_prices_saved`);
 }
