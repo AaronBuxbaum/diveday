@@ -646,14 +646,20 @@ export async function rescheduleBooking(
       // A reactivated row can also still be linked to a *pending* (never
       // completed, never refused above) Checkout from its earlier life — a
       // diver who started paying, abandoned the tab, then cancelled before
-      // it expired. That old Stripe session is still genuinely payable, at
-      // the old trip/price it was created for; if an old tab completes it
-      // after this reactivation, `markCheckoutPaidBySessionId` would see a
-      // `booked` (not cancelled) row and attribute the historical price to
-      // this new seat instead of refusing it (Codex finding). Retire any
-      // still-pending checkout linked to this booking now, in the same
-      // transaction as the reactivation, so no stale session survives to be
-      // completed against it. A no-op for a genuinely fresh booking, which
+      // it expired. Marking it `expired` here is a *local* decision only —
+      // it doesn't reach out to Stripe, so the hosted session itself stays
+      // genuinely completable there until Stripe's own (separate, longer)
+      // expiry, and an old tab really can still complete it after this point
+      // (Codex finding: this comment previously overclaimed otherwise). What
+      // actually closes the loophole is `markCheckoutPaidBySessionId`
+      // (src/db/checkouts.ts) refusing to process a completion for any
+      // checkout whose local status isn't `pending` or already `completed`
+      // — so a completion arriving for this now-`expired` row is ignored
+      // rather than
+      // attributing the old trip/price to the reactivated seat. Retiring it
+      // here is still worth doing on its own (keeps it out of future
+      // checkout-recovery batches, keeps the data honest), just not
+      // sufficient by itself. A no-op for a genuinely fresh booking, which
       // has no prior checkout to find.
       const staleCheckoutLinks = await tx
         .select({ checkoutId: bookingCheckoutBookings.checkoutId })

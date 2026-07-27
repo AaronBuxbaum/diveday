@@ -17,6 +17,7 @@ import {
   paymentOperationIntents,
   people,
   personRoles,
+  shopStripeAccounts,
   shops,
   specialtyCertifications,
   tips,
@@ -24,6 +25,7 @@ import {
   userAccounts,
 } from "./schema";
 import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 
@@ -163,6 +165,35 @@ describe("resetDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.email, "wendy@example.com")));
     expect(wendy).toHaveLength(0);
+  });
+
+  it("restores shop-level fixtures a test can mutate directly, not just schedule/booking data (Codex finding)", async () => {
+    // e2e/visual.spec.ts sets a review link via the Settings UI and connects
+    // a Stripe account via /api/test/seed-stripe-account, purely to render
+    // those surfaces for a screenshot — neither is schedule/booking data, so
+    // without this both leaked across specs in the same worker, making
+    // assertions like "the review link starts absent" order-dependent.
+    const { db, shop } = await seededShopContext();
+    await db
+      .update(shops)
+      .set({ reviewUrl: "https://g.page/r/leaked/review" })
+      .where(eq(shops.id, shop.id));
+    const account = await upsertShopStripeAccount(db, shop.id, "acct_leaked_test");
+    await setShopStripeAccountStatus(db, account.stripeAccountId, {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+
+    await resetDemoSchedule(db, shop.id);
+
+    const [resetShop] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    expect(resetShop?.reviewUrl).toBeNull();
+    const [stripeRow] = await db
+      .select()
+      .from(shopStripeAccounts)
+      .where(eq(shopStripeAccounts.shopId, shop.id));
+    expect(stripeRow).toBeUndefined();
   });
 
   it("deletes a booking's tip instead of FK-violating on the booking it references (Codex finding — resetDemoSchedule has its own child-first list, separate from deleteDemoShopCascade's)", async () => {

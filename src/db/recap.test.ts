@@ -277,6 +277,18 @@ describe("recap photos and crew shout-out", () => {
     ).toEqual({ ok: false, reason: "cancelled" });
   });
 
+  it("refuses a no-show upload the same as a cancelled one, at the locked insert-time gate (Codex finding)", async () => {
+    // A recap link can be bookmarked/reloaded from before a staff
+    // correction — a form loaded while the booking still read "booked"
+    // could otherwise still write photos into a no-show's gallery.
+    const { db, bookingId } = await recapContext();
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    expect(await addRecapPhoto(db, { bookingId, imageUrl: "https://img/x.jpg" })).toEqual({
+      ok: false,
+      reason: "cancelled",
+    });
+  });
+
   it("pre-checks eligibility read-only, matching the add gate before any upload", async () => {
     const { db, bookingId } = await recapContext();
     expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: true });
@@ -297,6 +309,16 @@ describe("recap photos and crew shout-out", () => {
       .set({ status: "cancelled" })
       .where(eq(bookings.id, cancelled.bookingId));
     expect(await canAddRecapPhoto(cancelled.db, cancelled.bookingId)).toEqual({
+      ok: false,
+      reason: "cancelled",
+    });
+
+    const noShow = await recapContext();
+    await noShow.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, noShow.bookingId));
+    expect(await canAddRecapPhoto(noShow.db, noShow.bookingId)).toEqual({
       ok: false,
       reason: "cancelled",
     });

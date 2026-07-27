@@ -176,8 +176,18 @@ trip fills, or was never actually available, between page load and submit.
   `setBookingPaymentIfNotFinal`'s own refusal to regress a final status — the diver charged while the
   booking still reads refunded. A reactivated destination row can separately still be linked to a
   *pending* (never completed) Checkout from its earlier life; `rescheduleBooking` now retires
-  (`expired`) any such session in the same transaction, so an old tab can't complete it later and
-  attribute a stale, wrong-trip price to the reactivated seat (Codex finding).
+  (`expired`) any such session in the same transaction. That local write alone doesn't reach Stripe,
+  though — the hosted session stays genuinely completable there on its own, longer clock, so an old tab
+  really can still complete it afterward (Codex finding: an earlier version of this fix, and this ADR
+  entry, overclaimed that retiring the local row was sufficient). What actually closes the loophole is
+  `markCheckoutPaidBySessionId` (`src/db/checkouts.ts`) refusing to process a completion for any
+  checkout whose local status isn't `pending` or already `completed` (a replay after a prior partial
+  run — checkout marked completed but the payment write never landed — still needs to fall through and
+  repair itself, not be refused) — so a completion arriving for the retired row is ignored rather than
+  attributing a stale, wrong-trip price to the reactivated seat. This also generalizes past
+  the reschedule case: the same local-`expired`-but-Stripe-still-payable gap existed for every terminal
+  disqualification `sendDueCheckoutRecoveries` makes (departed trip, cancelled booking/trip, settled
+  elsewhere) — this fix closes it for all of them, not just reactivation.
 - `setBookingPaymentIfNotFinal` (`src/db/payments.ts`) now re-checks the booking isn't `cancelled`
   under the same row lock that guards its write, not from an earlier unlocked read by the caller
   (Codex finding) — `markCheckoutPaidBySessionId` used to read booking status via a plain `SELECT`

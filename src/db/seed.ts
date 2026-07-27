@@ -2489,6 +2489,17 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     await db.delete(people).where(inArray(people.id, nonStaffIds));
   }
 
+  // Shop-level fixtures a test can mutate directly (not just schedule data)
+  // (Codex finding): `shops.review_url` (Settings → Review link) and a
+  // connected `shop_stripe_accounts` row (`/api/test/seed-stripe-account`)
+  // both persist across resets otherwise, since neither is schedule/booking
+  // data — leaking into whichever spec runs next in the same worker and
+  // making its assertions order-dependent (e2e/recap.spec.ts's own "review
+  // link starts absent" check, for one). The canonical seed never sets
+  // either, so restoring to that state is just deleting/nulling them.
+  await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
+  await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+
   // Re-seed at the richness the shop was minted with: the canonical demo keeps
   // its billing back-fill, a minted demo stays lean. Re-seeding history on a
   // minted demo would re-insert globally-unique waiver/Stripe ids that collide
