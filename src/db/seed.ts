@@ -2407,6 +2407,10 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  // Tips reference bookings, so they must go before them — same FK this
+  // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
+  // this reset path had its own, separate child-first list and was missed).
+  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));

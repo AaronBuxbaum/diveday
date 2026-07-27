@@ -100,11 +100,19 @@ export async function startTipCheckout(
   // shop's own Stripe dashboard is the source of truth until someone
   // reconciles it by hand, never a lost or double charge.
   return db.transaction(async (tx) => {
-    await tx
-      .select({ id: bookings.id })
+    const [locked] = await tx
+      .select({ status: bookings.status })
       .from(bookings)
       .where(eq(bookings.id, input.bookingId))
       .for("update");
+    // Re-checked under the lock, not just in the pre-transaction read above:
+    // staff can cancel or mark no_show between that read and acquiring this
+    // lock, and the stale status from before would otherwise still create a
+    // payable Stripe session for a booking that's no longer eligible (Codex
+    // finding).
+    if (!locked || locked.status === "cancelled" || locked.status === "no_show") {
+      return { ok: false, reason: "invalid_booking" };
+    }
 
     const existing = await getLatestTipForBooking(tx, row.shopId, input.bookingId);
     if (

@@ -357,6 +357,42 @@ describe("sendDueCheckoutRecoveries", () => {
     expect(row?.status).toBe("expired");
   });
 
+  it("catches a settlement that lands mid-batch, after the pre-loop snapshot but before this candidate's send (Codex finding)", async () => {
+    const { db, shop, bookingIds, checkoutId } = await pendingCheckoutContext(3);
+    const email = fakeEmail();
+    // The batch-start "already settled" snapshot runs before any Stripe
+    // lookup; simulating a counter-cash payment landing *during* this
+    // candidate's own Stripe round trip — after that snapshot was taken —
+    // is exactly the gap the fresh in-loop re-check has to close.
+    const settleMidLookup: CheckoutProvider["retrieveCheckoutSession"] = async () => {
+      await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId: bookingIds[0],
+        status: "paid",
+        amountCents: 18_000,
+        provider: null,
+        note: "Paid cash at the counter, mid-batch",
+      });
+      return stillOpen(shop.id, "cs_1");
+    };
+
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(settleMidLookup),
+    });
+
+    expect(summary.sent).toBe(0);
+    expect(summary.settled).toBe(1);
+    expect(email.sent).toHaveLength(0);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.abandonedRecoverySentAt).toBeNull();
+    expect(row?.status).toBe("expired");
+  });
+
   it("never emails a party checkout when a linked booking already settled through another channel", async () => {
     const { db, shop, bookingIds, checkoutId } = await pendingCheckoutContext(3, 2);
     // A counter cash payment (or a staff-created order, or a manual waiver)

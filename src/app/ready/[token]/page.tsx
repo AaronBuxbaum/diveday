@@ -185,7 +185,12 @@ function verifiedCancelNotice(paymentStatus: string | null | undefined): string 
 const CANCEL_PREVIEW_TEXT: Record<ReadyPageData["cancelPreview"], string> = {
   refund: " You're still inside the free-cancellation window, so what you paid comes back to you.",
   forfeit: " You're past the free-cancellation window, so what you paid won't be refunded.",
-  no_policy: "",
+  // Genuinely paid — this trip just has no stated cancellation window, so
+  // nothing is refunded automatically. Disclosing this only after the
+  // irreversible cancel action (Codex finding) would leave a paid diver
+  // finding out too late that the shop, not an automatic reversal, decides
+  // their refund.
+  no_policy: " This shop doesn't automate cancellation refunds, so nothing is refunded right away.",
   unpaid: "",
 };
 

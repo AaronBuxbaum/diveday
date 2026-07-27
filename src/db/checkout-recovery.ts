@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
 import { nowDate } from "@/lib/clock";
 import {
@@ -86,6 +86,18 @@ export type SendDueCheckoutRecoveriesOptions = {
  * — accepted for now (same cron-granularity trade the reminder cadence
  * already makes), revisit if a shop's default session expiry turns out to be
  * this tight in practice.
+ *
+ * Known gap (Codex finding, accepted for now): candidates are scanned
+ * oldest-due-first specifically so a persistently-retryable row (Stripe
+ * unreachable, no email provider configured) doesn't jump the queue ahead of
+ * genuinely new candidates — but a row that fails on *every* run still never
+ * ages out on its own, so it keeps one `BATCH_LIMIT` slot occupied
+ * indefinitely rather than the batch draining it after some number of
+ * attempts. Bounded impact (one slot of 200 per shop-wide daily run) unless
+ * many candidates are simultaneously poisoned, which reflects a real
+ * standing problem (e.g. a shop with no email provider configured at all)
+ * that's more useful to surface and fix at the source than to paper over
+ * with a retry cap here.
  */
 export async function sendDueCheckoutRecoveries(
   db: AppDb,
@@ -99,7 +111,14 @@ export async function sendDueCheckoutRecoveries(
   // Coarse SQL filter, index-backed (booking_checkouts_recovery_scan_idx) and
   // batch-limited — the exact rule is still `dueCheckoutRecovery`, applied
   // per row below as the single source of truth so this filter only needs to
-  // be a safe superset.
+  // be a safe superset. Ordered oldest-due-first (Codex finding) so that a
+  // backlog beyond BATCH_LIMIT always drains from the front: every terminal
+  // disqualification below (departed/cancelled/settled) marks its row
+  // `expired` immediately, so the only rows that can keep re-appearing here
+  // run-over-run are ones still genuinely retryable (`unreconciled`,
+  // `failed`) — this ordering makes sure those get first shot at each new
+  // batch rather than an arbitrary scan order silently starving them behind
+  // fresher candidates.
   const candidates = await db
     .select({ checkout: bookingCheckouts, trip: trips, shop: shops })
     .from(bookingCheckouts)
@@ -113,6 +132,7 @@ export async function sendDueCheckoutRecoveries(
         or(isNull(bookingCheckouts.expiresAt), gt(bookingCheckouts.expiresAt, now)),
       ),
     )
+    .orderBy(asc(bookingCheckouts.createdAt))
     .limit(BATCH_LIMIT);
 
   const summary: CheckoutRecoveryRunSummary = {
@@ -223,6 +243,29 @@ export async function sendDueCheckoutRecoveries(
     // Stripe itself confirms this session is still open and unpaid — safe to nudge.
     if (!checkout.checkoutUrl) {
       summary.unreconciled += 1;
+      continue;
+    }
+
+    // Re-checked immediately before sending, not just against the
+    // batch-start snapshot above (Codex finding): each candidate's Stripe
+    // lookup takes real wall-clock time, so a diver who settles a linked
+    // booking at the counter mid-batch — after their checkout's snapshot
+    // was taken but before its own turn in this loop — would otherwise
+    // still get a "finish paying" link for a party that's already settled.
+    const [freshlySettled] = await db
+      .select({ checkoutId: bookingCheckoutBookings.checkoutId })
+      .from(bookingCheckoutBookings)
+      .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId))
+      .where(
+        and(
+          eq(bookingCheckoutBookings.checkoutId, checkout.id),
+          ne(bookingPayments.status, "unpaid"),
+        ),
+      )
+      .limit(1);
+    if (freshlySettled) {
+      await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
+      summary.settled += 1;
       continue;
     }
 

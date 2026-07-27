@@ -679,6 +679,46 @@ describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-se
     expect(reactivated?.wantsNitrox).toBe(false);
   });
 
+  it("refuses to reactivate a destination seat carrying a stale settled payment from its earlier life (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver's earlier (now-cancelled) seat on the night trip was paid —
+    // a no-policy/forfeit cancellation deliberately leaves the payment
+    // captured, so this row still reads "paid" even though it's cancelled.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: priorNightBooking.bookingId,
+      status: "paid",
+      amountCents: 15_000,
+      provider: "stripe",
+      providerRef: "cs_test_prior",
+    });
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "destination_already_paid" });
+    // Refused before touching the source booking — the diver keeps their seat.
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("booked");
+    expect(oldRow?.tripId).toBe(open.id);
+    // The destination row was never left "booked" either — the whole
+    // transaction rolled back, so the diver's old (paid, cancelled) seat on
+    // the night trip stays exactly as it was: cancelled.
+    const [destinationRow] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, priorNightBooking.bookingId));
+    expect(destinationRow?.status).toBe("cancelled");
+  });
+
   it("refuses to reschedule a booking still flagged identity_unconfirmed (H-13, dive-domain-expert finding)", async () => {
     const { db, shop, open } = await seededContext();
     const night = await nightTrip(db, shop.id);

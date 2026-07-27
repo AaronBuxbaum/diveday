@@ -155,3 +155,18 @@ trip fills, or was never actually available, between page load and submit.
 - Reviewed by `dive-domain-expert` (manifest-mutating diver-triggered surface) and `security-reviewer`
   (new mutation surface behind an existing token) before merge, per AGENTS.md's hard rules for
   safety-critical and security-sensitive changes.
+- Known gap (Codex finding, accepted for now): the reschedule picker (`rescheduleCandidates` in
+  `src/db/ready.ts`) filters candidate trips by raw capacity only, not by the course
+  prerequisite/instructor-ratio/minimum-age gates `rescheduleBooking`'s `createBookingRecord` call
+  enforces at commit time. An ineligible trip can therefore appear as a clickable option (and could
+  crowd out an eligible one, since the list is capped) — but selecting it always fails safely, since
+  the commit-time gate independently refuses it. This is a UX rough edge, not a reachable invalid
+  state; not fixed here because it would mean keeping two independent copies of eligibility logic in
+  sync for a cosmetic gap. Revisit if this trips up divers in practice.
+- `rescheduleBooking`'s `destination_already_paid` refusal (a diver moving back onto a trip they
+  previously booked, paid, and cancelled) needed `tx.rollback()` rather than a plain early return,
+  because `createBookingRecord` had already written the destination reactivation earlier in the same
+  transaction — a bare `return` only stops further writes, it doesn't undo ones already made. Fixed
+  using the same `tx.rollback()` + outer-variable idiom `inviteStaffMember` already established
+  (docs ADR 20260726-staff-invite-accounts); caught by this function's own regression test
+  (Codex finding).
