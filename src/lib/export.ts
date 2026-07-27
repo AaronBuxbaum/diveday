@@ -49,6 +49,10 @@ export const EXPORT_FILE_NOTES = {
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified enriched-air card, checked at fill time.",
   "waitlist_entries.csv":
     "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
+  "last_minute_list.csv":
+    "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
+  "trip_last_minute_promos.csv":
+    "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
   "roll_call_events.csv":
     "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only and in checkpoint order (departure, then after each dive): within one checkpoint the newest event per booking wins, and a 'cleared' event erases that checkpoint's result. Then carry forward: an explicit 'not_boarded' fills every later checkpoint that has no explicit result of its own until an explicit 'boarded' breaks the chain — off the boat stays off the boat; a checkpoint with no result and nothing carried means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "waiver_templates.csv":

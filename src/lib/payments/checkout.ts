@@ -25,6 +25,14 @@ export type CreateCheckoutSessionRequest = {
    * second one (CR-005).
    */
   idempotencyKey: string;
+  /**
+   * A Stripe `PromotionCode` id (`promo_...`), already validated by the
+   * caller against the specific trip it was issued for (docs ADR
+   * 20260727-last-minute-fill-promos) — never a raw diver-typed code string.
+   * Mutually exclusive with `allow_promotion_codes`, which this provider never
+   * sets, precisely so a code can't be applied to an unrelated checkout.
+   */
+  promotionCode?: string;
 };
 
 export type CheckoutSessionSnapshot = {
@@ -136,6 +144,9 @@ export function stripeCheckoutProvider(
           "line_items[0][price_data][unit_amount]": String(request.unitAmountCents),
           "line_items[0][quantity]": String(request.quantity),
         });
+        if (request.promotionCode) {
+          form.set("discounts[0][promotion_code]", request.promotionCode);
+        }
         const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
           method: "POST",
           headers: {

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import type { Trip } from "./types";
@@ -150,6 +151,18 @@ export function BookSpotSection({
       <ErrorNotice message={state.error ?? errorMessage} />
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
+        {payAtBooking ? (
+          <FieldGrid columns={1} className="max-w-64">
+            <Field label="Promo code" hint="(if the shop sent you a last-minute deal)">
+              <input
+                name="promoCode"
+                autoComplete="off"
+                maxLength={40}
+                className={`${controlClass} uppercase`}
+              />
+            </Field>
+          </FieldGrid>
+        ) : null}
         <div className="mt-1">
           <SubmitButton
             pendingLabel={payAtBooking ? "Heading to payment…" : "Booking…"}

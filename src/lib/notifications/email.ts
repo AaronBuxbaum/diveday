@@ -34,6 +34,21 @@ type WaitlistInviteEmailInput = {
   bookingUrl: string;
 };
 
+type LastMinuteDealEmailInput = {
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  discountPercent: number;
+  /** The code the diver types on the booking form. */
+  code: string;
+  bookingUrl: string;
+  /** When the code stops working — pinned to the trip's own departure. */
+  expiresAt: Date;
+};
+
 type CheckoutRecoveryEmailInput = {
   shopName: string;
   tripTitle: string;
@@ -191,6 +206,28 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
     subject: `A spot opened up on ${input.tripTitle}`,
     text: `Hi ${firstName},\n\nA seat just opened on ${input.tripTitle} with ${input.shopName}, and you're next on the wait list.\n\n${date}\n${time}\n\nClaim it before it's gone:\n${input.bookingUrl}\n\nSeats go first-come, so don't wait too long. See you on the boat!\n`,
     html: `<p>Hi ${escapeHtml(firstName)},</p><p>A seat just opened on <strong>${title}</strong> with ${shop}, and you're next on the wait list.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Claim your spot</a></p><p>Seats go first-come, so don't wait too long. See you on the boat!</p>`,
+  };
+}
+
+/**
+ * A staff-sent last-minute-fill discount (docs ADR 20260727-last-minute-fill-promos).
+ * Leads with the deal, not the shop's inventory problem — a diver doesn't
+ * need to know the trip is under capacity to want a good price on a dive.
+ */
+export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): NotificationEmail {
+  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
+  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const expires = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const shop = escapeHtml(input.shopName);
+  const url = escapeHtml(input.bookingUrl);
+  const code = escapeHtml(input.code);
+
+  return {
+    subject: `${input.discountPercent}% off ${input.tripTitle} — last-minute deal`,
+    text: `Hi ${firstName},\n\n${input.shopName} just opened up ${input.discountPercent}% off ${input.tripTitle}.\n\n${date}\n${time}\n\nUse code ${input.code} at booking:\n${input.bookingUrl}\n\nThe code expires ${expires} (departure) or once seats run out, whichever comes first.\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${shop} just opened up <strong>${input.discountPercent}% off</strong> <strong>${title}</strong>.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Use code <strong>${code}</strong> at booking:</p><p><a href="${url}">Book ${title}</a></p><p>The code expires ${escapeHtml(expires)} (departure) or once seats run out, whichever comes first.</p>`,
   };
 }
 

@@ -29,6 +29,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 
 export const metadata: Metadata = {
   title: "Schedule — DiveDay",
@@ -290,6 +291,9 @@ export default async function TripsPage({
           ) : null}
         </div>
       ) : null}
+      {/* The embed widget stays compact/booking-focused (docs ADR
+          20260726-schedule-embed); this is a full-page-only surface. */}
+      {!isEmbed && !staffView ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
     </main>
   );
 }

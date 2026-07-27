@@ -24,6 +24,7 @@ import {
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
+  lastMinuteListEntries,
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
@@ -43,6 +44,7 @@ import {
   tips,
   tripAssignments,
   tripDives,
+  tripLastMinutePromos,
   tripRequirements,
   tripSeries,
   trips,
@@ -2432,6 +2434,13 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
+  // References trips (last-minute-deal blasts) and people (the last-minute
+  // list itself), so both must go before the trips/people deletes below or
+  // this FK-violates and aborts the whole reset mid-run (docs ADR
+  // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
+  // comment above already walks).
+  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
+  await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {
@@ -2553,6 +2562,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
+  // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos).
+  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
+  await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));

@@ -26,6 +26,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  lastMinuteListEntries,
   nitroxCertifications,
   orderLineItems,
   orders,
@@ -40,6 +41,7 @@ import {
   tips,
   tripAssignments,
   tripDives,
+  tripLastMinutePromos,
   tripRequirements,
   tripSeries,
   trips,
@@ -186,6 +188,18 @@ export async function loadShopExportBundleInput(
         .from(tripWaitlistEntries)
         .where(eq(tripWaitlistEntries.shopId, shopId))
         .orderBy(asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id));
+
+      const lastMinuteListRows = await tx
+        .select()
+        .from(lastMinuteListEntries)
+        .where(eq(lastMinuteListEntries.shopId, shopId))
+        .orderBy(asc(lastMinuteListEntries.createdAt), asc(lastMinuteListEntries.id));
+
+      const lastMinutePromoRows = await tx
+        .select()
+        .from(tripLastMinutePromos)
+        .where(eq(tripLastMinutePromos.shopId, shopId))
+        .orderBy(asc(tripLastMinutePromos.createdAt), asc(tripLastMinutePromos.id));
 
       const orderRows = await tx
         .select()
@@ -775,6 +789,60 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["waitlist_entries.csv"],
         },
         {
+          file: "last_minute_list.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "available_from",
+            "available_until",
+            "unsubscribed_at",
+            "created_at",
+          ],
+          rows: lastMinuteListRows.map((row) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.availableFrom,
+            row.availableUntil,
+            row.unsubscribedAt,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["last_minute_list.csv"],
+        },
+        {
+          file: "trip_last_minute_promos.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "status",
+            "discount_percent",
+            "code",
+            "expires_at",
+            "recipient_count",
+            "created_by_person_id",
+            "created_by_name",
+            "created_at",
+          ],
+          rows: lastMinutePromoRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.status,
+            row.discountPercent,
+            row.code,
+            row.expiresAt,
+            row.recipientCount,
+            row.createdByPersonId,
+            row.createdByPersonId ? personName.get(row.createdByPersonId) : null,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_last_minute_promos.csv"],
+        },
+        {
           file: "roll_call_events.csv",
           header: [
             "id",
@@ -1314,6 +1382,18 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(tripWaitlistEntries)
         .where(eq(tripWaitlistEntries.shopId, shopId)),
+    ),
+    "last_minute_list.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(lastMinuteListEntries)
+        .where(eq(lastMinuteListEntries.shopId, shopId)),
+    ),
+    "trip_last_minute_promos.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(tripLastMinutePromos)
+        .where(eq(tripLastMinutePromos.shopId, shopId)),
     ),
     "roll_call_events.csv": await countOf(
       db.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.shopId, shopId)),
