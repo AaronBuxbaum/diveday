@@ -105,6 +105,7 @@ export async function getRecapPageData(
       tripId: bookings.tripId,
       status: bookings.status,
       diverName: people.fullName,
+      diverEmail: people.email,
       shopName: shops.name,
       slug: shops.slug,
       timezone: shops.timezone,
@@ -117,7 +118,13 @@ export async function getRecapPageData(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  if (!row || row.status === "cancelled") return null;
+  // A no-show never dived — showing them "here's what you dived" content
+  // (or the tip/review asks that ride the same page) would be dishonest
+  // regardless of how they reached the link. Same fail-closed-uniformly
+  // notice as a cancelled booking gets, so a link's failure state never
+  // itself discloses which of the two happened (Codex finding: the earlier
+  // no-show fix only gated canTip/reviewUrl here, not the page itself).
+  if (!row || row.status === "cancelled" || row.status === "no_show") return null;
 
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
@@ -149,12 +156,6 @@ export async function getRecapPageData(
       ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
       : latestTip;
 
-  // A no-show never dived — no tip is owed for a crew that didn't take them
-  // out, and the review ask (implicitly "how was your dive?") doesn't apply
-  // either. Both stay gated here, the one place `getRecapPageData` already
-  // decides what this booking is allowed to show.
-  const showedUp = row.status !== "no_show";
-
   return {
     shop: {
       name: row.shopName,
@@ -162,7 +163,7 @@ export async function getRecapPageData(
       timezone: row.timezone,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
-      reviewUrl: showedUp ? row.reviewUrl : null,
+      reviewUrl: row.reviewUrl,
     },
     trip: {
       title: trip.title,
@@ -178,7 +179,11 @@ export async function getRecapPageData(
     bookingId,
     shoutout: trip.recapShoutout,
     photos,
-    canTip: showedUp && canAcceptPayments(stripeAccount),
+    // A phone-only diver (a supported case — their recap can go out by SMS
+    // instead) has nothing `startTipCheckout` can hand to Stripe as a
+    // customer email; offering the form anyway would fail on every
+    // submission (Codex finding).
+    canTip: Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
     tip: tip
       ? {
           status: tip.status,
@@ -402,6 +407,10 @@ export async function sendDueRecaps(
     .where(
       and(
         ne(bookings.status, "cancelled"),
+        // A no-show never dived — sending "here's what you dived" (and the
+        // tip/review asks that ride the same page) would be dishonest
+        // (Codex finding).
+        ne(bookings.status, "no_show"),
         eq(trips.status, "scheduled"),
         lte(trips.endsAt, now),
         gt(trips.endsAt, since),

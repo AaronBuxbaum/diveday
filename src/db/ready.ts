@@ -141,6 +141,17 @@ export async function getReadyPageData(
   // would promise a move `rescheduleBooking` then rejects as already_paid.
   if (!settled) {
     const upcoming = await upcomingTripsWithCounts(db, row.shopId, now);
+    // Known gap (Codex finding, accepted for now): this only filters by raw
+    // capacity, not by the course prerequisite / instructor-ratio / minimum-age
+    // gates `rescheduleBooking`'s own `createBookingRecord` call enforces at
+    // commit time — so a trip this diver isn't actually eligible for can
+    // appear as a clickable option (and, since the list caps at
+    // MAX_RESCHEDULE_CANDIDATES, could crowd out an eligible one). Selecting
+    // an ineligible option always fails safely (`rescheduleBooking` refuses
+    // it, nothing is ever double-booked or silently downgraded) — this is a
+    // UX rough edge, not a correctness gap. Not replicated here because doing
+    // so means keeping two independent copies of cert/ratio/age eligibility
+    // logic in sync; revisit if this trips up divers in practice.
     rescheduleCandidates = upcoming
       .filter((candidate) => candidate.id !== row.tripId && candidate.booked < candidate.capacity)
       .slice(0, MAX_RESCHEDULE_CANDIDATES)

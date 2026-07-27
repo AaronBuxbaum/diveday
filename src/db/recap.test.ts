@@ -95,7 +95,12 @@ describe("getRecapPageData", () => {
     expect(await getRecapPageData(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 
-  it("hides tipping and the review ask for a no-show — no crew took them out (Codex finding)", async () => {
+  it("returns null for a no-show — a no-show never dived, same as a cancelled booking (Codex finding)", async () => {
+    // The narrower fix (hide canTip/reviewUrl only) still let the page show
+    // "here's what you dived" content and a diver-facing recap email to
+    // someone staff marked as not having shown up. Gating the whole loader
+    // the same way a cancelled booking is gated closes that — and takes
+    // canTip/reviewUrl down with it, since there's no data at all now.
     const { db, shop, bookingId } = await recapContext();
     await upsertShopStripeAccount(db, shop.id, "acct_test");
     await setShopStripeAccountStatus(db, "acct_test", {
@@ -106,10 +111,23 @@ describe("getRecapPageData", () => {
     await setShopReviewUrl(db, shop.id, "https://g.page/r/blue-mantis/review");
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
 
+    expect(await getRecapPageData(db, bookingId)).toBeNull();
+  });
+
+  it("hides tipping for a phone-only diver — startTipCheckout has no email to hand Stripe (Codex finding)", async () => {
+    const { db, shop, bookingId } = await recapContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    await setShopStripeAccountStatus(db, "acct_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!booking) throw new Error("test setup: booking missing");
+    await db.update(people).set({ email: null }).where(eq(people.id, booking.personId));
+
     const data = await getRecapPageData(db, bookingId);
-    expect(data).not.toBeNull();
     expect(data?.canTip).toBe(false);
-    expect(data?.shop.reviewUrl).toBeNull();
   });
 });
 
@@ -361,6 +379,20 @@ describe("sendDueRecaps", () => {
     const email = fakeEmail();
     await sendDueRecaps(db, {
       now: new Date(reef.endsAt.getTime() - 60 * 60 * 1000),
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("never sends a recap to a no-show — they never dived (Codex finding)", async () => {
+    const { db, bookingId, afterTrip } = await recapContext();
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
       emailProvider: email.provider,
       smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
