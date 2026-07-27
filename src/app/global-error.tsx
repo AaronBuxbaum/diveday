@@ -1,6 +1,5 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
@@ -11,9 +10,12 @@ import "./globals.css";
  * Replaces the entire root layout when it crashes (Next convention — it must
  * define its own <html>/<body>), so it re-imports globals.css itself rather
  * than inheriting it. Reports to Sentry (docs ADR
- * 20260727-sentry-error-monitoring) — this is the one render failure
+ * 20260727-sentry-error-monitoring-q7fk2p) — this is the one render failure
  * `onRequestError` in src/instrumentation.ts doesn't already see, since it
- * happens client-side after hydration.
+ * happens client-side after hydration. Sentry is dynamically imported at the
+ * point of the crash, not statically at module scope, so the SDK never ships
+ * in this route's bundle on the golden path where nobody ever sees this page
+ * (docs/architecture/performance-budgets.md).
  */
 export default function GlobalError({
   error,
@@ -23,7 +25,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    import("@sentry/nextjs").then(({ captureException }) => captureException(error));
   }, [error]);
 
   return (
