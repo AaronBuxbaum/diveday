@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
+import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
 export function MarketingFooter() {
   return (
@@ -12,7 +13,7 @@ export function MarketingFooter() {
             dive day.
           </span>
         </p>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <Link href="/product" className="hover:text-foreground hover:underline">
             Product
           </Link>
@@ -28,6 +29,13 @@ export function MarketingFooter() {
           <Link href="/sign-in" className="hover:text-foreground hover:underline">
             Sign in
           </Link>
+          <a
+            href={`mailto:${FOUNDER_EMAIL}`}
+            className="hover:text-foreground hover:underline"
+            title="Say hello — always welcome"
+          >
+            {FOUNDER_EMAIL}
+          </a>
         </div>
       </div>
     </footer>

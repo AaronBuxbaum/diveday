@@ -12,6 +12,7 @@ import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { signIn } from "@/lib/auth";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
+import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -153,10 +154,26 @@ export async function onboardAction(formData: FormData) {
   // (security review finding) — a real database write and network call have
   // no abort deadline otherwise.
   if (newAccountId && newShopId) {
+    const accountId = newAccountId;
+    const shopId = newShopId;
+
+    // The founder alert needs no link, so it doesn't wait on APP_HOST being
+    // configured the way the owner-facing mail below does.
+    after(async () => {
+      await notify({
+        kind: "new_account_alert",
+        userAccountId: accountId,
+        shopId,
+        to: ALERT_EMAIL,
+        ownerName,
+        ownerEmail: ownerEmail.toLowerCase(),
+        shopName,
+        shopSlug,
+      }).catch(() => ({ status: "failed" as const }));
+    });
+
     const origin = publicAppUrl();
     if (origin) {
-      const accountId = newAccountId;
-      const shopId = newShopId;
       after(async () => {
         const issued = await issueAccountToken(db, {
           userAccountId: accountId,

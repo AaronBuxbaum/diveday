@@ -4,6 +4,7 @@ import {
   checkoutRecoveryEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
+  newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
   staffInviteEmail,
@@ -220,6 +221,20 @@ const staffInviteSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+// Internal signal, not account-lifecycle mail (docs ADR 20260727-operational-alerts): fires once
+// per new shop so the founder learns about signups without watching a dashboard. No bookingId,
+// structurally excluded from TrackedNotification exactly like welcome/staff_invite above.
+const newAccountAlertSchema = z.object({
+  kind: z.literal("new_account_alert"),
+  userAccountId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  ownerEmail: emailAddressSchema,
+  shopName: z.string().trim().min(1).max(120),
+  shopSlug: z.string().trim().min(1).max(120),
+});
+
 const passwordChangedSchema = z.object({
   kind: z.literal("password_changed"),
   userAccountId: z.uuid(),
@@ -245,6 +260,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   staffInviteSchema,
   checkoutRecoverySchema,
   lastMinuteDealSchema,
+  newAccountAlertSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -290,6 +306,7 @@ function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
+  if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
   return passwordChangedEmail(notification);
 }
 
@@ -338,6 +355,9 @@ function idempotencyKeyFor(notification: Notification): string {
     // the same trip is always its own send.
     case "last_minute_deal":
       return `last-minute-deal/${notification.code}/${notification.to}`;
+    // One alert per account, ever — same key shape as welcome above.
+    case "new_account_alert":
+      return `new-account-alert/${notification.userAccountId}`;
   }
 }
 
