@@ -40,6 +40,7 @@ import {
   shopStripeAccounts,
   shops,
   specialtyCertifications,
+  tips,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -2527,6 +2528,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
+  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));

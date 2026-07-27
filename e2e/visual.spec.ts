@@ -91,6 +91,7 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       browser,
       ownerStorageState,
+      request,
     }) => {
       // 19 navigate+capture surfaces (38 screenshots) plus a real send-waiver
       // action and a real booking, all in one test — comfortably past the
@@ -169,13 +170,17 @@ for (const scheme of ["light", "dark"] as const) {
       // The post-trip recap: a signed-token diver page minted for the pinned
       // demo booking (src/db/seed.ts), so the marquee word-of-mouth surface has
       // a stable baseline without an in-app link to reach it. The tip section
-      // (docs ADR 20260726-post-trip-tipping) isn't shown here: it only
-      // appears once a shop's Stripe account is connected and
-      // charges-enabled, and this fleet never connects one (no
-      // STRIPE_SECRET_KEY, no live Stripe calls) — the same reason no other
-      // capture in this suite exercises a pay-at-booking surface either.
+      // (docs ADR 20260726-post-trip-tipping) needs a connected,
+      // charges-enabled Stripe account — `canAcceptPayments` is a pure DB
+      // check, independent of whether STRIPE_SECRET_KEY is set — so
+      // /api/test/seed-stripe-account marks the demo shop connected without
+      // ever calling Stripe, purely to render the surface for this capture.
+      // The actual checkout button stays inert (no STRIPE_SECRET_KEY in this
+      // fleet), the same reason no capture here exercises a real charge.
+      await request.post("/api/test/seed-stripe-account");
       await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
       await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
+      await page.getByRole("heading", { name: "Tip your crew" }).waitFor();
       await capture(page, "recap", scheme);
 
       // The migration-guides hub: one card per incumbent a shop might be
@@ -275,6 +280,10 @@ for (const scheme of ["light", "dark"] as const) {
         .getAttribute("href");
       await page.goto(readinessHref ?? "/");
       await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
+      // This is a fresh unpaid booking, so the "Need to change your plans?"
+      // reschedule/cancel section (docs ADR 20260727-diver-self-service-cancel)
+      // renders too — no separate capture needed, it's part of this same
+      // full-page screenshot.
       await capture(page, "readiness", scheme);
     });
 

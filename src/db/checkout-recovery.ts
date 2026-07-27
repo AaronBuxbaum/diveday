@@ -68,7 +68,10 @@ export type SendDueCheckoutRecoveriesOptions = {
  * checkout row never hears about — counter cash, a staff-created order, a
  * manual waiver — all of which write `booking_payments`, not
  * `booking_checkouts`, and none of which Stripe's own session state reflects
- * either. Idempotent: dedup lives on
+ * either. All three of those disqualifications are permanent, so each is
+ * written back as `expired` the moment it's found — otherwise the disqualified
+ * rows would never leave the `pending` pool and could eventually fill every
+ * future run's `BATCH_LIMIT`, starving genuinely due checkouts. Idempotent: dedup lives on
  * `booking_checkouts.abandoned_recovery_sent_at`, set only after a confirmed
  * send, so a failed attempt (no provider configured, a transient error) is
  * retried on the next run rather than silently dropped
@@ -168,16 +171,26 @@ export async function sendDueCheckoutRecoveries(
     // sailed needs its own check; "your spot is still held" is meaningless
     // once boarding has closed.
     if (trip.startsAt <= now) {
+      // Terminal and permanent — a departed trip never un-departs. Marked
+      // `expired` (not left `pending`) so this row drops out of every future
+      // batch's SQL filter; otherwise a growing pile of departed-trip
+      // checkouts would keep re-filling BATCH_LIMIT forever, crowding out
+      // genuinely due new candidates.
+      await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
       summary.departed += 1;
       continue;
     }
 
     if (trip.status !== "scheduled" || checkoutIdsWithACancelledBooking.has(checkout.id)) {
+      // Same terminal-and-permanent reasoning as the departed case above.
+      await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
       summary.cancelled += 1;
       continue;
     }
 
     if (checkoutIdsWithASettledBooking.has(checkout.id)) {
+      // Same terminal-and-permanent reasoning as the departed case above.
+      await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
       summary.settled += 1;
       continue;
     }

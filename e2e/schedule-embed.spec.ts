@@ -20,6 +20,19 @@ test("a non-embed page still denies framing", async ({ page }) => {
   expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
 });
 
+test("a repeated embed param can't smuggle framing past what the page actually renders", async ({
+  page,
+}) => {
+  // searchParams.get() would silently take just the first "1" here while the
+  // page's own searchParams prop sees the whole repeated param as an array
+  // (never "1") and renders full chrome — the proxy must deny framing in
+  // lockstep, not grant the exception on a value the page itself refused.
+  const response = await page.goto("/shop/blue-mantis/schedule?embed=1&embed=0");
+  expect(response?.headers()["x-frame-options"]).toBe("DENY");
+  expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
+});
+
 test("embedded pages stay chrome-free even for a signed-in staff member", async ({ page }) => {
   // A shop owner might click their own embed link while signed in — the
   // iframe on their external site must never expose the staff nav, demo

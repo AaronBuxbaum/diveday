@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
+import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
@@ -17,6 +18,8 @@ import {
   setTripRecapShoutout,
 } from "./recap";
 import { bookings, notificationDeliveries, people } from "./schema";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
+import { startTipCheckout } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
 
 function fakeEmail(result: NotificationDelivery = { status: "sent", providerMessageId: "em_1" }) {
@@ -89,6 +92,109 @@ describe("getRecapPageData", () => {
   it("returns null for an unknown booking", async () => {
     const { db } = await recapContext();
     expect(await getRecapPageData(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+});
+
+function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {
+  return {
+    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
+      return {
+        status: "created",
+        stripeSessionId: "cs_recap_tip_1",
+        stripeStatus: "open",
+        paymentStatus: "unpaid",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_recap_tip_1",
+        amountTotalCents: request.unitAmountCents * request.quantity,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      };
+    },
+    async retrieveCheckoutSession() {
+      return { status: "failed" };
+    },
+    async refundCheckoutSession() {
+      return { status: "refunded", refundId: "re_test" };
+    },
+    ...overrides,
+  };
+}
+
+async function pendingTipContext() {
+  const ctx = await recapContext();
+  await upsertShopStripeAccount(ctx.db, ctx.shop.id, "acct_test");
+  await setShopStripeAccountStatus(ctx.db, "acct_test", {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+  const started = await startTipCheckout(
+    ctx.db,
+    {
+      bookingId: ctx.bookingId,
+      amountCents: 1000,
+      successUrl: "https://diveday.example/recap/tok?tip=paid",
+      cancelUrl: "https://diveday.example/recap/tok?tip=cancelled",
+    },
+    fakeCheckout(),
+  );
+  if (!started.ok) throw new Error(`tip start failed: ${started.reason}`);
+  return ctx;
+}
+
+describe("getRecapPageData tip reconciliation", () => {
+  it("never shows a tip as paid on a bare return-URL alone — only once Stripe confirms it", async () => {
+    const { db, bookingId } = await pendingTipContext();
+    // Stripe itself now confirms this session actually paid.
+    const data = await getRecapPageData(
+      db,
+      bookingId,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return {
+            status: "ok",
+            session: {
+              stripeSessionId: "cs_recap_tip_1",
+              stripeStatus: "complete",
+              paymentStatus: "paid",
+              checkoutUrl: null,
+              amountTotalCents: 1000,
+              expiresAt: null,
+            },
+          };
+        },
+      }),
+    );
+    expect(data?.tip?.status).toBe("paid");
+  });
+
+  it("expires a stale pending tip once Stripe reports the session gone, instead of offering a dead link forever", async () => {
+    const { db, bookingId } = await pendingTipContext();
+    const data = await getRecapPageData(
+      db,
+      bookingId,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return {
+            status: "ok",
+            session: {
+              stripeSessionId: "cs_recap_tip_1",
+              stripeStatus: "expired",
+              paymentStatus: "unpaid",
+              checkoutUrl: null,
+              amountTotalCents: 1000,
+              expiresAt: null,
+            },
+          };
+        },
+      }),
+    );
+    expect(data?.tip?.status).toBe("expired");
+  });
+
+  it("leaves a tip pending, checkout link intact, when Stripe can't be reached to reconcile it", async () => {
+    const { db, bookingId } = await pendingTipContext();
+    const data = await getRecapPageData(db, bookingId, fakeCheckout()); // default retrieveCheckoutSession fails
+    expect(data?.tip?.status).toBe("pending");
+    expect(data?.tip?.checkoutUrl).toBe("https://checkout.stripe.com/c/pay/cs_recap_tip_1");
   });
 });
 

@@ -259,6 +259,9 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.abandonedRecoverySentAt).toBeNull();
+    // Permanently disqualified — written back as expired so it can't keep
+    // occupying every future run's batch (see the starvation test below).
+    expect(row?.status).toBe("expired");
   });
 
   it("never emails a party checkout when one of its divers was since cancelled", async () => {
@@ -280,6 +283,7 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.abandonedRecoverySentAt).toBeNull();
+    expect(row?.status).toBe("expired");
   });
 
   it("never emails a checkout for a trip that already departed, even though it stays 'scheduled'", async () => {
@@ -309,6 +313,48 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.abandonedRecoverySentAt).toBeNull();
+    expect(row?.status).toBe("expired");
+  });
+
+  it("drops a permanently-disqualified checkout out of the scan so it can't starve future batches", async () => {
+    const { db, tripId, checkoutId } = await pendingCheckoutContext(3);
+    // Trips never leave "scheduled" on departure — only a backdated startsAt
+    // simulates a boat that already sailed.
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date(NOW.getTime() - HOUR_MS),
+        endsAt: new Date(NOW.getTime() - HOUR_MS / 2),
+      })
+      .where(eq(trips.id, tripId));
+
+    const email = fakeEmail();
+    const first = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(first.scanned).toBe(1);
+    expect(first.departed).toBe(1);
+
+    // Same clock, same candidate pool — a stuck "pending" row would be
+    // scanned again on every future tick forever, capable of filling
+    // BATCH_LIMIT with nothing-but-departed rows and starving genuinely due
+    // checkouts. Marking it terminal on first sight means the second run
+    // finds nothing left to scan at all.
+    const second = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(second.scanned).toBe(0);
+    expect(second.departed).toBe(0);
+
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.status).toBe("expired");
   });
 
   it("never emails a party checkout when a linked booking already settled through another channel", async () => {
@@ -340,5 +386,6 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.abandonedRecoverySentAt).toBeNull();
+    expect(row?.status).toBe("expired");
   });
 });

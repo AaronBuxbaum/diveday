@@ -40,9 +40,18 @@ function overrideRequestHeader(req: NextRequest, res: Response, name: string, va
 export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
   // visit to /shop/x/schedule with no ?embed=1 must stay denied. Only an
-  // actual embed request gets the exception.
+  // actual embed request gets the exception. `searchParams.get()` silently
+  // returns just the *first* value on a repeated `?embed=1&embed=0`, which
+  // would grant the framing exception here while every page's own
+  // `searchParams.embed` prop receives the same repeated param as an array
+  // (`!== "1"`, so the page renders full staff chrome) — a signed-in staff
+  // dashboard framable by whoever crafted that URL. `getAll()` and requiring
+  // exactly one value keeps this in lockstep with how the page reads it.
+  const embedParams = req.nextUrl.searchParams.getAll("embed");
   const isEmbedRequest =
-    isEmbeddableShopRoute(req.nextUrl.pathname) && req.nextUrl.searchParams.get("embed") === "1";
+    isEmbeddableShopRoute(req.nextUrl.pathname) &&
+    embedParams.length === 1 &&
+    embedParams[0] === "1";
 
   // authMiddleware only returns a Response for a redirect/deny; letting a
   // request through (the common case) can *also* return its own Response

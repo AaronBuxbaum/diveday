@@ -32,11 +32,14 @@ merchant-of-record model bookings use.
   `markTipPaidBySessionId` when that finds no matching row — cheaper than tagging every webhook event
   with which table to check, and correct because the two tables' session ids are disjoint by
   construction (each is only ever written by its own `startXCheckout`).
-- **Amount bounds, not a free-form field: $1–$500 (`MIN_TIP_CENTS`/`MAX_TIP_CENTS`).** Generous enough
-  for a real gratitude tip, bounded against a mistyped amount (a stray extra digit) or an abusive one
-  (someone probing the checkout endpoint). Enforced server-side in `startTipCheckout`, not just the
-  form's `min`/`max` — the recap page is a public token-auth surface, so the real bound lives on the
-  server.
+- **A bounded free-form field: three presets plus an "Other" amount, both clamped to $1–$500
+  (`MIN_TIP_CENTS`/`MAX_TIP_CENTS`).** The recap page offers three preset amounts (`$5`/`$10`/`$20`)
+  and a custom-amount input for anyone who wants a different number — generous enough for a real
+  gratitude tip, bounded against a mistyped amount (a stray extra digit) or an abusive one (someone
+  probing the checkout endpoint). The client keeps the two mutually exclusive (`TipAmountPicker`,
+  `src/app/recap/[token]/TipAmountPicker.tsx`), but the bound itself is enforced server-side in
+  `startTipCheckout`, not just the form's `min`/`max` — the recap page is a public token-auth surface,
+  so the real bound lives on the server regardless of which of the two fields the diver used.
 - **Shop identity is derived from the booking, never accepted from the caller.** `startTipCheckout`
   takes only a `bookingId` and looks up `shopId` from that booking's own row — the same "never trust a
   client-supplied tenant id" rule the booking-capability system already follows, since the recap

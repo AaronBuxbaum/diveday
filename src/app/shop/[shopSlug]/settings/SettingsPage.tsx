@@ -107,8 +107,18 @@ const contactSchema = z.object({
 
 const reviewUrlSchema = z.object({
   // Empty clears it — the recap flow simply skips the review ask when unset,
-  // rather than guessing a platform.
-  reviewUrl: z.union([z.literal(""), z.url().max(500)]),
+  // rather than guessing a platform. z.url() alone accepts any scheme
+  // (data:, mailto:, ftp:, even plain http:); this renders directly as a
+  // public `target="_blank"` link on the recap page, so only https is safe.
+  reviewUrl: z.union([
+    z.literal(""),
+    z
+      .url()
+      .max(500)
+      .refine((value) => value.startsWith("https://"), {
+        error: "Review link must start with https://",
+      }),
+  ]),
 });
 
 async function savePackingAction(formData: FormData) {

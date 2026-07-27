@@ -329,6 +329,19 @@ new domain concept, define it here in the same PR.
   departed-trip scan (`src/db/recap.ts`) on the same daily cron. The link is a purpose-separated signed
   booking token, distinct from the readiness link. See
   [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md).
+- **Review request** — a "Leave a review" section on the post-trip recap page, shown only when the
+  shop has set a single, optional outbound link (`shops.review_url`) in Settings — DiveDay never
+  integrates with a review platform's API, never tracks whether a diver actually left a review, and
+  never gates anything on it. Unconditional whenever a shop has one configured; no sentiment gating
+  (asking a private "how did it go?" first) to avoid review-platform ToS risk. See
+  [20260726-post-trip-review-request](../architecture/decisions/20260726-post-trip-review-request.md).
+- **Tip** — an optional, diver-initiated payment to the crew from the post-trip recap page: a full
+  100%-to-shop Stripe Checkout on the shop's own connected account, same merchant-of-record model as a
+  **booking checkout** but tracked in its own `tips` table (never the booking-payment gate). A diver
+  picks a preset ($5/$10/$20) or types a bounded custom amount ($1–$500); its own lifecycle is
+  `pending` → `paid`/`expired`, reconciled against Stripe the same way a booking checkout is — never
+  trusted from a return-URL param alone. See
+  [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
 - **SMS / WhatsApp channel** — an optional text channel for notifications, delivered through a
   fetch-based Twilio seam (`notifySms()`). A number is texted only if it is already E.164, and a
   channel with no configured sender degrades to `not_configured`, exactly like the email seam. Used
