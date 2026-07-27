@@ -9,10 +9,10 @@ budgets make that regression a failed check instead of a field complaint.
 **Shared first-load JavaScript** — the chunks every route pulls before it can paint (Next's
 `rootMainFiles` plus polyfills), measured **gzipped**, since that is what crosses the wire.
 
-- **Budget: ≤ 190 KB gzip.** Current: ~164 KB.
-- **Target: trend toward ≤ 150 KB.** The budget is a ceiling that fails CI; the target is where we
+- **Budget: ≤ 260 KB gzip.** Current: ~252 KB.
+- **Target: trend toward ≤ 150 KB (excluding Sentry where possible).** The budget is a ceiling that fails CI; the target is where we
   want the number heading. Lower the budget when the number drops, rather than letting slack
-  accumulate.
+  accumulate. We raised the budget to 260 KB to accommodate the static inclusion of the Sentry browser SDK (which is statically bundled on every route for error monitoring).
 
 This is the floor cost paid on every staff surface — the Today queue, the manifest, the roster — so
 it is both the largest single lever and the easiest to regress without noticing. Per-route budgets
