@@ -3,6 +3,7 @@ import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "@/d
 import { getDb } from "@/db/client";
 import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
+import { markTipExpiredBySessionId, markTipPaidBySessionId } from "@/db/tips";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 export const runtime = "nodejs";
@@ -60,18 +61,29 @@ export async function POST(request: Request) {
       // session before the money settles. Only Stripe saying paid clears the
       // booking payment gate (docs ADR 20260721-checkout-at-booking).
       if (session.success && session.data.payment_status === "paid") {
-        await markCheckoutPaidBySessionId(db, session.data.id);
+        // A tip and a booking checkout share the Stripe session id space but
+        // live in separate tables (docs ADR 20260726-post-trip-tipping); a
+        // session id belongs to at most one, so try the booking-payment path
+        // first and only fall back to tips when it finds nothing to mark.
+        const checkout = await markCheckoutPaidBySessionId(db, session.data.id);
+        if (!checkout) await markTipPaidBySessionId(db, session.data.id);
       }
       break;
     }
     case "checkout.session.async_payment_succeeded": {
       const session = checkoutSessionObjectSchema.safeParse(event.data.object);
-      if (session.success) await markCheckoutPaidBySessionId(db, session.data.id);
+      if (session.success) {
+        const checkout = await markCheckoutPaidBySessionId(db, session.data.id);
+        if (!checkout) await markTipPaidBySessionId(db, session.data.id);
+      }
       break;
     }
     case "checkout.session.expired": {
       const session = checkoutSessionObjectSchema.safeParse(event.data.object);
-      if (session.success) await markCheckoutExpiredBySessionId(db, session.data.id);
+      if (session.success) {
+        const checkout = await markCheckoutExpiredBySessionId(db, session.data.id);
+        if (!checkout) await markTipExpiredBySessionId(db, session.data.id);
+      }
       break;
     }
     case "account.updated": {

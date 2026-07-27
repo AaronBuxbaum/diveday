@@ -122,3 +122,17 @@ export async function setShopContact(
     .returning();
   return shop ?? null;
 }
+
+/**
+ * Where a post-trip review request sends a diver. An empty string clears it —
+ * with none set, the recap flow skips the review ask entirely rather than
+ * guessing a platform (docs ADR 20260726-post-trip-review-request).
+ */
+export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: string) {
+  const [shop] = await db
+    .update(shops)
+    .set({ reviewUrl: reviewUrl.trim() || null })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}

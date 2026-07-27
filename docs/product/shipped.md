@@ -351,6 +351,28 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   A shop may never end up with zero owners — removing/disabling/demoting the last one is refused.
   See [staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md).
 
+## Schedule embed widget (delivered 2026-07-26)
+
+- **A shop can put its live booking calendar on its own website** — `?embed=1` on the schedule/trip
+  pages renders a compact, chrome-light surface reusing the existing booking logic untouched;
+  Settings → Website embed generates a copy-paste `<iframe>` snippet and a plain `target="_blank"`
+  "Book a dive" button link. Framing is denied site-wide by default (a prior gap — nothing had ever
+  set `X-Frame-Options`) except on the two embeddable route/query combinations, enforced at the edge
+  (`src/proxy.ts`, `isEmbeddableShopRoute`). Answers the schedule/embed gap named in
+  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-schedule-embed](../architecture/decisions/20260726-schedule-embed.md).
+
+## Abandoned pay-at-booking checkout recovery (delivered 2026-07-26)
+
+- **A diver who reserves a seat but doesn't finish paying gets a nudge email** — rides the existing
+  daily reminders/recap cron (`GET /api/cron/reminders`), reconciles every candidate against Stripe
+  before sending (a delayed webhook can leave a paid session looking `pending`), and refuses to send
+  once the trip or any linked booking has been cancelled since checkout started. The purchaser's
+  email is stored durably on `booking_checkouts.customer_email` at checkout-creation time rather
+  than re-derived from the party's linked bookings. Answers the abandoned-cart gap named in
+  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-abandoned-checkout-recovery](../architecture/decisions/20260726-abandoned-checkout-recovery.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate

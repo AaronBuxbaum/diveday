@@ -17,6 +17,8 @@ import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
 import { recordNotificationDelivery } from "./notifications";
 import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } from "./schema";
+import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { getLatestTipForBooking } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
 
 /** A diver's own recap photo, as the recap page renders it. */
@@ -45,6 +47,8 @@ export type RecapPageData = {
     timezone: string;
     contactEmail: string | null;
     contactPhone: string | null;
+    /** Where a "leave us a review" link sends the diver, or null when the shop hasn't set one. */
+    reviewUrl: string | null;
   };
   trip: {
     title: string;
@@ -63,6 +67,14 @@ export type RecapPageData = {
   shoutout: string | null;
   /** The diver's own uploaded photos, newest first. */
   photos: RecapPhotoView[];
+  /** True when the shop's own Stripe account can take a tip charge right now. */
+  canTip: boolean;
+  /** The most recent tip attempt for this booking, if any — drives the tip panel's state. */
+  tip: {
+    status: "pending" | "paid" | "expired";
+    amountCents: number;
+    checkoutUrl: string | null;
+  } | null;
 };
 
 /** How many photos one booking may attach — a memory strip, not a media host. */
@@ -96,6 +108,7 @@ export async function getRecapPageData(
       timezone: shops.timezone,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
+      reviewUrl: shops.reviewUrl,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -120,7 +133,11 @@ export async function getRecapPageData(
     });
   }
 
-  const photos = await listRecapPhotosForBooking(db, bookingId);
+  const [photos, stripeAccount, latestTip] = await Promise.all([
+    listRecapPhotosForBooking(db, bookingId),
+    getShopStripeAccount(db, row.shopId),
+    getLatestTipForBooking(db, row.shopId, bookingId),
+  ]);
 
   return {
     shop: {
@@ -129,6 +146,7 @@ export async function getRecapPageData(
       timezone: row.timezone,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
+      reviewUrl: row.reviewUrl,
     },
     trip: {
       title: trip.title,
@@ -144,6 +162,14 @@ export async function getRecapPageData(
     bookingId,
     shoutout: trip.recapShoutout,
     photos,
+    canTip: canAcceptPayments(stripeAccount),
+    tip: latestTip
+      ? {
+          status: latestTip.status,
+          amountCents: latestTip.amountCents,
+          checkoutUrl: latestTip.checkoutUrl,
+        }
+      : null,
   };
 }
 
