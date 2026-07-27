@@ -46,4 +46,6 @@ uncertified diver, a nitrox request with no verified card).
 ## Report honestly
 
 State what you ran and what you observed. If anything is red or unverified, say so plainly —
-never mark work done with failing or skipped verification.
+never mark work done with failing or skipped verification. A red or flaky test doesn't get
+skipped just because it's unrelated to your change — see the `debug` skill's Ownership section
+before fixing it, so you don't duplicate a fix already in flight on another PR.

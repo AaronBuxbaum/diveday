@@ -43,7 +43,9 @@ How to build anything here. Written for AI agents; humans may follow along.
 
 - **Never skip verify.** A green `pnpm check` is the floor, not the ceiling.
 - **New runtime dependency = ADR** (or an entry in an existing one). Dev-tool bumps exempt.
-- **Don't expand scope silently.** Adjacent problems get a note in the PR, not a drive-by fix.
+- **Don't expand scope silently.** Adjacent problems get a note in the PR, not a drive-by fix —
+  except a failing or flaky test, which is never adjacent scope creep; see AGENTS.md's Hard
+  rules and the `debug` skill's Ownership section.
 - **Server actions default to inline.** A single-page mutation lives as an inline `"use server"`
   closure in that page. `src/app/actions/` is only for actions genuinely shared across pages. A large
   page that would otherwise sprawl colocates its actions and zod schemas in a sibling `actions.ts`
