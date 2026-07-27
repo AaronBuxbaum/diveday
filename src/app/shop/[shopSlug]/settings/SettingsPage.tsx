@@ -17,6 +17,7 @@ import {
   setShopPackingList,
   setShopRentalItems,
   setShopRentalPricing,
+  setShopReviewUrl,
 } from "@/db/shops";
 import {
   canAcceptPayments,
@@ -56,6 +57,11 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   contact_invalid: {
     tone: "danger",
     text: "Use a complete email address, or empty the box to take it off your public pages.",
+  },
+  review_url_saved: { tone: "success", text: "Review link saved." },
+  review_url_invalid: {
+    tone: "danger",
+    text: "Enter a full https:// link, or empty the box to stop asking for reviews.",
   },
   connected: { tone: "success", text: "Stripe account connected." },
   connect_failed: {
@@ -97,6 +103,22 @@ const contactSchema = z.object({
   // one is printed on a public page for divers to write to.
   contactEmail: z.union([z.literal(""), z.email().max(200)]),
   contactPhone: z.string().trim().max(40),
+});
+
+const reviewUrlSchema = z.object({
+  // Empty clears it — the recap flow simply skips the review ask when unset,
+  // rather than guessing a platform. z.url() alone accepts any scheme
+  // (data:, mailto:, ftp:, even plain http:); this renders directly as a
+  // public `target="_blank"` link on the recap page, so only https is safe.
+  reviewUrl: z.union([
+    z.literal(""),
+    z
+      .url()
+      .max(500)
+      .refine((value) => value.startsWith("https://"), {
+        error: "Review link must start with https://",
+      }),
+  ]),
 });
 
 async function savePackingAction(formData: FormData) {
@@ -223,6 +245,17 @@ async function saveContactAction(formData: FormData) {
   if (!parsed.success) redirect(`${settings}?notice=contact_invalid`);
   await setShopContact(await getDb(), session.user.shopId, parsed.data);
   revalidateAndRedirect(settings, `${settings}?notice=contact_saved`);
+}
+
+/** Where the post-trip recap's "leave us a review" link sends a diver. */
+async function saveReviewUrlAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const parsed = reviewUrlSchema.safeParse(Object.fromEntries(formData));
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  if (!parsed.success) redirect(`${settings}?notice=review_url_invalid`);
+  await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
+  revalidateAndRedirect(settings, `${settings}?notice=review_url_saved`);
 }
 
 async function disconnectAction() {
@@ -386,6 +419,31 @@ export default async function PaymentsSettingsPage({
           <FieldActions>
             <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
               Save contact details
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Review link</h2>
+        <p className="mt-1 text-sm text-muted">
+          Your Google Business, TripAdvisor, or Facebook review page. When set, a diver's post-trip
+          recap invites them to leave one — empty the box to stop asking.
+        </p>
+        <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
+          <Field label="Review link" hint="(optional)">
+            <input
+              name="reviewUrl"
+              type="url"
+              maxLength={500}
+              defaultValue={shop.reviewUrl ?? ""}
+              placeholder="https://g.page/r/your-shop/review"
+              className={controlClass}
+            />
+          </Field>
+          <FieldActions>
+            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
+              Save review link
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
@@ -601,6 +659,21 @@ export default async function PaymentsSettingsPage({
           </section>
         </>
       ) : null}
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Website embed</h2>
+        <p className="mt-1 text-sm text-muted">
+          Copy-paste snippets that put your live booking calendar on your own website.
+        </p>
+        <div className="mt-4">
+          <Link
+            href={`/shop/${shopSlug}/settings/embed`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            Get embed code
+          </Link>
+        </div>
+      </section>
 
       {canImport || canExport ? (
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">

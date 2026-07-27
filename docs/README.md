@@ -35,6 +35,9 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | --- | --- |
 | [assessments/competitive-analysis.md](product/assessments/competitive-analysis.md) | Buyer-perspective market comparison, critical-vs-differentiator matrix, pricing posture |
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
+| [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
+| [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
+| [assessments/fareharbor-feature-gaps-20260726.md](product/assessments/fareharbor-feature-gaps-20260726.md) | 2026-07-26 feature-level audit vs FareHarbor: the schedule/embed gap plus promo codes, gift cards, add-ons, self-service cancel, abandoned-cart recovery, reviews |
 | [assessments/marketing-review.md](product/assessments/marketing-review.md) | 2026-07-23 review of the public pages: the case for repositioning, SEO substrate gaps, and the task breakdown (M1–M8) |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for

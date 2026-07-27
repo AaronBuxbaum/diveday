@@ -1,8 +1,11 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { cancelBooking } from "./bookings";
+import { cancelBooking, createBooking } from "./bookings";
+import { setBookingPayment } from "./payments";
 import { getReadyPageData } from "./ready";
+import { bookings } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -12,6 +15,26 @@ async function seededBooking() {
   const [entry] = await getTripRoster(db, shop.id, trip.id);
   if (!entry) throw new Error("demo booking missing");
   return { db, shop, trip, booking: entry.booking, person: entry.person };
+}
+
+const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
+
+/** A fresh unpaid booking on the seeded "open" reef trip (docs ADR 20260727-diver-self-service-cancel). */
+async function unpaidBooking() {
+  const { db, shop } = await seededShopContext();
+  const trips = await upcomingTripsWithCounts(db, shop.id);
+  const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+  const fullTrip = trips.find((t) => t.title === "Wreck Trip — Spiegel Grove");
+  const night = trips.find((t) => t.title.startsWith("Night Dive"));
+  if (!open || !fullTrip || !night) throw new Error("expected seeded trips missing");
+  const booked = await createBooking(db, {
+    actor: "staff",
+    shopId: shop.id,
+    tripId: open.id,
+    ...visitor,
+  });
+  if (!booked.ok) throw new Error("setup booking failed");
+  return { db, shop, open, fullTrip, night, bookingId: booked.bookingId };
 }
 
 describe("getReadyPageData", () => {
@@ -37,5 +60,86 @@ describe("getReadyPageData", () => {
   it("returns null for a booking that does not exist", async () => {
     const { db } = await seededBooking();
     await expect(getReadyPageData(db, "00000000-0000-4000-8000-000000000099")).resolves.toBeNull();
+  });
+});
+
+describe("getReadyPageData reschedule candidates (diver self-service, docs ADR 20260727-diver-self-service-cancel)", () => {
+  it("offers another open trip but excludes the current trip and a full one", async () => {
+    const { db, open, fullTrip, night, bookingId } = await unpaidBooking();
+    const data = await getReadyPageData(db, bookingId);
+    const ids = data?.rescheduleCandidates?.map((c) => c.id) ?? [];
+    expect(ids).toContain(night.id);
+    expect(ids).not.toContain(open.id);
+    expect(ids).not.toContain(fullTrip.id);
+  });
+
+  it("hides the reschedule picker entirely once a booking has captured payment", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 15_000,
+      provider: "stripe",
+      providerRef: "cs_test_1",
+    });
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.rescheduleCandidates).toBeNull();
+  });
+
+  it("previews an unpaid cancel as owing no refund", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.cancelPreview).toBe("unpaid");
+  });
+
+  it("hides the whole change-plans section once the booking is checked in (Codex finding)", async () => {
+    // Both self-service mutations only ever succeed on a plain `booked` seat
+    // — a day-of checked_in flip means cancel/reschedule would only ever
+    // fail server-side, so the controls themselves shouldn't be shown.
+    const { db, bookingId } = await unpaidBooking();
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.canManageBooking).toBe(false);
+    expect(data?.rescheduleCandidates).toBeNull();
+  });
+
+  it("hides the whole change-plans section once the booking is a no-show (Codex finding)", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.canManageBooking).toBe(false);
+    expect(data?.rescheduleCandidates).toBeNull();
+  });
+
+  it("hides the whole change-plans section once the trip has departed (Codex finding)", async () => {
+    const { db, open, bookingId } = await unpaidBooking();
+    const afterDeparture = new Date(open.startsAt.getTime() + 60 * 60 * 1000);
+    const data = await getReadyPageData(db, bookingId, afterDeparture);
+    expect(data?.canManageBooking).toBe(false);
+    expect(data?.rescheduleCandidates).toBeNull();
+  });
+
+  it("still offers the change-plans section for a plain booked seat on a future trip", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.canManageBooking).toBe(true);
+  });
+
+  it("hides the reschedule picker for a waived booking too (Codex finding)", async () => {
+    // rescheduleBooking refuses a waived booking the same as paid/deposit-paid
+    // (staff excused the fee) — the picker must not promise a move it can't
+    // deliver.
+    const { db, shop, bookingId } = await unpaidBooking();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "waived",
+      amountCents: 0,
+      provider: null,
+      note: "Comp'd",
+    });
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.rescheduleCandidates).toBeNull();
   });
 });

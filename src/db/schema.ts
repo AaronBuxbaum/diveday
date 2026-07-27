@@ -45,6 +45,14 @@ export const shops = pgTable(
      */
     contactEmail: text("contact_email"),
     contactPhone: text("contact_phone"),
+    /**
+     * Where a post-trip review request sends a diver — a Google Business,
+     * TripAdvisor, or Facebook review page the shop pastes in. Nullable: with
+     * none set, the recap flow has nowhere to send a diver and skips the ask
+     * entirely rather than guessing a platform (docs ADR
+     * 20260726-post-trip-review-request).
+     */
+    reviewUrl: text("review_url"),
     /** Diver-facing suggestions shown on every trip; owners configure these once per shop. */
     packingList: jsonb("packing_list")
       .$type<string[]>()
@@ -909,6 +917,18 @@ export const bookingCheckouts = pgTable(
     stripeSessionId: text("stripe_session_id").notNull(),
     /** Stripe's hosted payment page; shown again as the recovery link while the session is open. */
     checkoutUrl: text("checkout_url"),
+    /**
+     * The email Stripe received at checkout creation (`customerEmail` on
+     * `startBookingCheckout`), stored durably here. For a party checkout this
+     * is the one submitter's address — `booking_checkout_bookings` links every
+     * covered booking with no lead/ordering marker, so re-deriving "the
+     * purchaser" from that join is unreliable; this column is the actual
+     * source of truth for who to contact about this checkout attempt
+     * (abandoned-cart recovery, docs ADR 20260726-abandoned-checkout-recovery).
+     */
+    customerEmail: text("customer_email"),
+    /** Set once a recovery email has gone out, so a re-run of the recovery scan never double-sends. */
+    abandonedRecoverySentAt: timestamp("abandoned_recovery_sent_at", { withTimezone: true }),
     currency: text("currency").notNull().default("usd"),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -929,6 +949,13 @@ export const bookingCheckouts = pgTable(
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
     check("booking_checkouts_amount_per_diver_nonnegative", sql`${table.amountPerDiverCents} >= 0`),
     check("booking_checkouts_total_nonnegative", sql`${table.totalCents} >= 0`),
+    // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
+    // recovered), so the daily cron doesn't force a sequential scan of the
+    // whole table's history as it grows (docs ADR
+    // 20260726-abandoned-checkout-recovery).
+    index("booking_checkouts_recovery_scan_idx")
+      .on(table.createdAt)
+      .where(sql`${table.status} = 'pending' and ${table.abandonedRecoverySentAt} is null`),
   ],
 );
 
@@ -953,6 +980,44 @@ export const bookingCheckoutBookings = pgTable(
       table.bookingId,
     ),
     index("booking_checkout_bookings_booking_idx").on(table.bookingId),
+  ],
+);
+
+/**
+ * A post-trip tip, a hosted Stripe Checkout the diver's own recap page
+ * offers. Deliberately its own small table rather than reusing
+ * `booking_checkouts`: a tip is always exactly one booking (never a party),
+ * settles no booking-payment gate, and its webhook handling must never be
+ * able to cascade into `markCheckoutPaidBySessionId`'s booking-paid logic —
+ * same shape (status/session/checkout URL lifecycle), separate concern
+ * (docs ADR 20260726-post-trip-tipping).
+ */
+export const tipStatus = pgEnum("tip_status", ["pending", "paid", "expired"]);
+
+export const tips = pgTable(
+  "tips",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    status: tipStatus("status").notNull().default("pending"),
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripeSessionId: text("stripe_session_id").notNull(),
+    checkoutUrl: text("checkout_url"),
+    currency: text("currency").notNull().default("usd"),
+    amountCents: integer("amount_cents").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("tips_stripe_session_unique").on(table.stripeSessionId),
+    index("tips_shop_booking_idx").on(table.shopId, table.bookingId),
+    check("tips_amount_positive", sql`${table.amountCents} > 0`),
   ],
 );
 
@@ -1785,6 +1850,8 @@ export type OrderLineItem = typeof orderLineItems.$inferSelect;
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
+export type Tip = typeof tips.$inferSelect;
+export type TipStatus = (typeof tipStatus.enumValues)[number];
 export type RecapPhoto = typeof recapPhotos.$inferSelect;
 export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
 export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;

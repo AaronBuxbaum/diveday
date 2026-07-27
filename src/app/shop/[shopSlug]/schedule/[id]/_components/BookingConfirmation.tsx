@@ -152,6 +152,11 @@ export function BookingConfirmation({
         <Link
           href={readinessLink ?? "#"}
           aria-disabled={readinessLink === null}
+          // /ready/[token] isn't in the embed framing allowlist (docs ADR
+          // 20260726-schedule-embed) — inside the iframe this must break out
+          // to the top-level window, or the click would swap the working
+          // embed for a frame Content-Security-Policy silently blocks.
+          target={fitRef.embed ? "_top" : undefined}
           className="mt-3 inline-block text-sm font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
         >
           Track everything on your readiness page →
@@ -169,7 +174,7 @@ export function BookingConfirmation({
         saved={fitSaved}
       />
       <Link
-        href={`/shop/${shopSlug}/schedule`}
+        href={`/shop/${shopSlug}/schedule${fitRef.embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         Back to the schedule

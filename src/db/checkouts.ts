@@ -151,6 +151,7 @@ export async function startBookingCheckout(
           stripeAccountId,
           stripeSessionId: session.stripeSessionId,
           checkoutUrl: session.checkoutUrl,
+          customerEmail: input.customerEmail,
           currency: "usd",
           amountPerDiverCents,
           totalCents: amountPerDiverCents * input.bookingIds.length,
@@ -253,6 +254,34 @@ export async function markCheckoutPaidBySessionId(
       .limit(1);
     if (!checkout) return null;
 
+    // Anything besides `pending`/`completed` (most commonly `expired`) means
+    // this checkout was already terminally disqualified locally — a departed
+    // or cancelled trip, a booking that settled elsewhere, or (Codex finding)
+    // a destination seat reactivated after this exact session was retired on
+    // reschedule (`rescheduleBooking`, src/db/bookings.ts). Our local
+    // `expired` write and Stripe's own session lifecycle are two separate
+    // clocks: Stripe's hosted session can still genuinely be completed by an
+    // old tab well after we've locally moved on, so a completion event
+    // arriving for a disqualified checkout must never resurrect it into
+    // `completed` and attribute a stale, no-longer-applicable price to
+    // whatever the booking is now. `refreshCheckoutFromStripe` already
+    // enforces this same "pending or completed only" invariant before ever
+    // asking Stripe; this brings the webhook path in line with it. Note this
+    // does NOT early-return on `completed` — a replay after a prior partial
+    // run (checkout marked completed, but the payment write below never
+    // landed) still needs to fall through and repair it below.
+    if (checkout.status !== "pending" && checkout.status !== "completed") {
+      console.error(
+        "markCheckoutPaidBySessionId: ignored a completion for a disqualified checkout",
+        {
+          shopId: checkout.shopId,
+          stripeSessionId: checkout.stripeSessionId,
+          localStatus: checkout.status,
+        },
+      );
+      return null;
+    }
+
     const updated =
       checkout.status === "completed"
         ? checkout
@@ -269,6 +298,17 @@ export async function markCheckoutPaidBySessionId(
       .select({ bookingId: bookingCheckoutBookings.bookingId })
       .from(bookingCheckoutBookings)
       .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
+    // A diver's own self-service cancel/reschedule (docs ADR
+    // 20260727-diver-self-service-cancel) can leave this exact session still
+    // open and payable in another tab; if they complete it after cancelling,
+    // the booking it was for no longer exists to be marked paid. Attributing
+    // captured money to a cancelled booking would read as "this seat is paid
+    // for" when there's no seat. That check now lives inside
+    // `setBookingPaymentIfNotFinal` itself, re-verified under the same lock
+    // that guards the write — a plain SELECT here, before that lock is
+    // acquired, would leave the same race the lock exists to close (Codex
+    // finding). (The checkout itself is still marked completed above, so a
+    // retried webhook delivery doesn't reprocess it.)
     for (const { bookingId } of linked) {
       await setBookingPaymentIfNotFinal(tx, {
         shopId: checkout.shopId,

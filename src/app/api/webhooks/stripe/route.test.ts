@@ -10,6 +10,10 @@ vi.mock("@/db/checkouts", () => ({
   markCheckoutPaidBySessionId: vi.fn(),
   markCheckoutExpiredBySessionId: vi.fn(),
 }));
+vi.mock("@/db/tips", () => ({
+  markTipPaidBySessionId: vi.fn(),
+  markTipExpiredBySessionId: vi.fn(),
+}));
 vi.mock("@/db/orders", () => ({
   markOrderPaidByInvoiceId: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
@@ -23,6 +27,7 @@ const { getDb } = await import("@/db/client");
 const { markCheckoutPaidBySessionId, markCheckoutExpiredBySessionId } = await import(
   "@/db/checkouts"
 );
+const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
 const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@/db/orders");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
@@ -53,15 +58,23 @@ function eventPayload(event: Record<string, unknown>) {
   return JSON.stringify(event);
 }
 
+const FAKE_CHECKOUT = { id: "checkout_1" };
+
 beforeEach(() => {
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", secret);
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
-  vi.mocked(markCheckoutPaidBySessionId).mockReset();
-  vi.mocked(markCheckoutExpiredBySessionId).mockReset();
+  vi.mocked(markCheckoutPaidBySessionId)
+    .mockReset()
+    .mockResolvedValue(FAKE_CHECKOUT as never);
+  vi.mocked(markCheckoutExpiredBySessionId)
+    .mockReset()
+    .mockResolvedValue(FAKE_CHECKOUT as never);
   vi.mocked(markOrderPaidByInvoiceId).mockReset();
   vi.mocked(markOrderVoidedByInvoiceId).mockReset();
   vi.mocked(setShopStripeAccountStatus).mockReset();
   vi.mocked(disconnectShopStripeAccount).mockReset();
+  vi.mocked(markTipPaidBySessionId).mockReset();
+  vi.mocked(markTipExpiredBySessionId).mockReset();
 });
 
 describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => {
@@ -147,6 +160,20 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123");
+    // A session id belongs to at most one of booking_checkouts or tips —
+    // the booking-checkout path found a match, so the tip fallback never runs.
+    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
+  });
+
+  it("checkout.session.completed falls back to marking a tip paid when no booking checkout matches the session", async () => {
+    vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
+    const response = await post({
+      id: "evt_1",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_tip_1", payment_status: "paid" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markTipPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1");
   });
 
   it("checkout.session.completed does NOT mark paid when payment_status is unpaid (async payment pending)", async () => {
@@ -167,6 +194,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123");
+    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 
   it("checkout.session.expired marks the checkout expired", async () => {
@@ -177,6 +205,18 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123");
+    expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
+  });
+
+  it("checkout.session.expired falls back to marking a tip expired when no booking checkout matches the session", async () => {
+    vi.mocked(markCheckoutExpiredBySessionId).mockResolvedValue(null);
+    const response = await post({
+      id: "evt_1",
+      type: "checkout.session.expired",
+      data: { object: { id: "cs_tip_1" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1");
   });
 
   it("account.updated sets the shop's charges/payouts/details status", async () => {

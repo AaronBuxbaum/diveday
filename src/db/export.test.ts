@@ -30,6 +30,7 @@ const EXPECTED_FILES = [
   "prior_visits.csv",
   "orders.csv",
   "order_line_items.csv",
+  "tips.csv",
   "dive_sites.csv",
   "dive_site_creatures.csv",
   "dive_site_moments.csv",
@@ -58,6 +59,7 @@ const EXPORTED_TABLES = [
   "prior_visits",
   "orders",
   "order_line_items",
+  "tips",
   "dive_sites",
   "dive_site_creatures",
   "dive_site_moments",
@@ -139,6 +141,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_customer_id",
   ],
   order_line_items: ["shop_id"],
+  tips: [
+    "shop_id",
+    "stripe_account_id", // provider linkage, useless outside this Stripe account
+    "checkout_url", // an ephemeral Stripe Checkout link, same reasoning as booking_checkouts
+  ],
   dive_sites: [
     "shop_id",
     "source_template_id", // provenance into DiveDay's catalog, not the shop's
