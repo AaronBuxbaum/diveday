@@ -57,7 +57,13 @@ export async function startTipCheckout(
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(eq(bookings.id, input.bookingId))
     .limit(1);
-  if (!row?.email || row.status === "cancelled") return { ok: false, reason: "invalid_booking" };
+  // A no-show never dived — no tip is owed for a crew that didn't take them
+  // out. Checked here too, not just at the recap page's canTip gate, so a
+  // replayed or hand-crafted request against this endpoint can't tip a
+  // no-show either.
+  if (!row?.email || row.status === "cancelled" || row.status === "no_show") {
+    return { ok: false, reason: "invalid_booking" };
+  }
   const customerEmail = row.email;
 
   const account = await getShopStripeAccount(db, row.shopId);

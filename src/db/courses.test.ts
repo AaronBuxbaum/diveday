@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { createBooking, rescheduleBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
   archiveCourse,
@@ -291,6 +291,46 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
           email: "public-probe@example.com",
         }),
       ).resolves.toMatchObject({ ok: true });
+    });
+
+    it("refuses a diver self-service reschedule onto an age-gated course they're too young for (Codex finding, docs ADR 20260727-diver-self-service-cancel)", async () => {
+      // Reschedule's destination booking is created with the token-verified
+      // diver's own personId, not a free-typed guess — so unlike an
+      // anonymous public booking, the real age gate should apply, not the
+      // fail-open readiness-blocker-only path.
+      const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const { db, shop, trip } = await ageContext(15, startsAt);
+      const tenYearsAgo = new Date(Date.now() - 10 * 365.25 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const person = await diverWithDob(
+        db,
+        shop.id,
+        tenYearsAgo,
+        "reschedule-too-young@example.com",
+      );
+
+      const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+      const openTrip = upcoming.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
+      if (!openTrip) throw new Error("expected seeded open trip missing");
+      const original = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: openTrip.id,
+        personId: person.id,
+      });
+      if (!original.ok) throw new Error("setup booking failed");
+
+      await expect(
+        rescheduleBooking(db, {
+          shopId: shop.id,
+          bookingId: original.bookingId,
+          newTripId: trip.id,
+        }),
+      ).resolves.toEqual({ ok: false, reason: "course_min_age" });
+      // The refused reschedule never touched the original seat.
+      const openRoster = await getTripWithBooked(db, shop.id, openTrip.id);
+      expect(openRoster?.booked).toBe(1);
     });
 
     it("measures age on the course date, so a birthday before it admits the diver", async () => {

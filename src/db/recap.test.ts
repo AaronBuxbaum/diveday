@@ -18,6 +18,7 @@ import {
   setTripRecapShoutout,
 } from "./recap";
 import { bookings, notificationDeliveries, people } from "./schema";
+import { setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
@@ -92,6 +93,23 @@ describe("getRecapPageData", () => {
   it("returns null for an unknown booking", async () => {
     const { db } = await recapContext();
     expect(await getRecapPageData(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+
+  it("hides tipping and the review ask for a no-show — no crew took them out (Codex finding)", async () => {
+    const { db, shop, bookingId } = await recapContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    await setShopStripeAccountStatus(db, "acct_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    await setShopReviewUrl(db, shop.id, "https://g.page/r/blue-mantis/review");
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+
+    const data = await getRecapPageData(db, bookingId);
+    expect(data).not.toBeNull();
+    expect(data?.canTip).toBe(false);
+    expect(data?.shop.reviewUrl).toBeNull();
   });
 });
 

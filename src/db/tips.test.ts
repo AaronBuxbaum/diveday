@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { tips } from "./schema";
+import { bookings, tips } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getLatestTipForBooking,
@@ -137,6 +137,13 @@ describe("startTipCheckout", () => {
       tipInput("00000000-0000-0000-0000-000000000000"),
       fakeCheckout(),
     );
+    expect(outcome).toEqual({ ok: false, reason: "invalid_booking" });
+  });
+
+  it("refuses a tip for a no-show — no crew took them out (Codex finding)", async () => {
+    const { db, bookingId } = await tipContext();
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    const outcome = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
     expect(outcome).toEqual({ ok: false, reason: "invalid_booking" });
   });
 

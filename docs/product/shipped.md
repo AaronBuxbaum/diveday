@@ -392,6 +392,19 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   tipping gap named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
   See [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
 
+## Diver self-service booking cancel/reschedule (delivered 2026-07-27)
+
+- **A diver can cancel or move their own unpaid booking from their readiness page** —
+  `/ready/[token]` gains a "Need to change your plans?" section; reschedule books the destination
+  trip *before* cancelling the source, inside one transaction, so a full or newly-unavailable
+  destination never strands the diver seatless. Offered, and re-enforced server-side, only for an
+  unpaid booking (paid/deposit-paid/waived still require staff). Cancellation reuses the same
+  automated-refund logic the staff cancellation path already uses. Reviewed by `dive-domain-expert`
+  and `security-reviewer` per AGENTS.md's hard rules for a manifest-mutating, token-authorized
+  surface. Answers the self-service reschedule/cancel gap named in
+  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260727-diver-self-service-cancel](../architecture/decisions/20260727-diver-self-service-cancel.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate
