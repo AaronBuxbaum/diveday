@@ -39,6 +39,10 @@ What to have prepared per conversation:
   to named problems with specifics; never broadcast. These threads are where the
   [competitive research](../assessments/competitive-strategy.md) mined incumbent complaints —
   the credibility only works if replies stay in that register.
+- **A drafted recruiting post for diver-focused communities** (r/divers, r/scuba) —
+  [reddit-recruiting-post.md](reddit-recruiting-post.md) — for the case where a standalone post is
+  the right move instead of replying to a named thread; check each community's self-promotion
+  rules before posting.
 
 ### Pilot shops' front-desk staff and captains (Phase 1, week 0)
 

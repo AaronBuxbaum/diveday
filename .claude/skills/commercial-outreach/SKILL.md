@@ -60,6 +60,7 @@ Everything in `marketing-page`'s claims policy applies here, plus:
 | Design-partner one-pager (the offer, in leave-behind form) | `docs/product/stakeholders/design-partner-one-pager.md` | Phase 1 recruiting conversations |
 | Case-study interview questions | `docs/product/stakeholders/case-study-interview-template.md` | Phase 1 exit criterion, Phase 2 founding-shop references |
 | Per-stakeholder prep (DEMA, dive media, Capterra) | `docs/product/stakeholders/commercial-and-industry.md` | Phase 2–3 conversations |
+| Reddit/community recruiting post (r/divers, r/scuba) | `docs/product/stakeholders/reddit-recruiting-post.md` | Phase 1 recruiting, public-community channels |
 
 A new recurring outreach need (a cold-email template for the EVE pool, a DEMA meeting-request
 note, an ad-copy draft for the switching funnel) gets its own file here, added to this table and
