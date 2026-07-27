@@ -16,8 +16,8 @@ export async function signInAsOwner(page: Page) {
  * E2E_FROZEN_CLOCK (playwright.config.ts → src/lib/clock.ts), so any date a
  * test computes for a form input, or any year it asserts against a
  * server-rendered calendar, must be relative to *that* instant — not the real
- * wall clock. Anchoring here is what keeps date-driven specs (and the Argos
- * baselines) passing identically in 2026 and in 2030.
+ * wall clock. Anchoring here is what keeps date-driven specs (and the visual
+ * regression baselines) passing identically in 2026 and in 2030.
  */
 export function e2eNow(): Date {
   return new Date(E2E_FROZEN_CLOCK);

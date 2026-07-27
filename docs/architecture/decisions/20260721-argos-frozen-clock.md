@@ -1,6 +1,6 @@
 # 20260721-argos-frozen-clock — Stabilise Argos visual regression with a frozen clock, not masking
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260727-self-managed-visual-regression
 - **Date:** 2026-07-21
 - **Supersedes:** 20260721-argos-visual-regression
 

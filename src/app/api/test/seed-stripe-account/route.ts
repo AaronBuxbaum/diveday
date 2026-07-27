@@ -9,7 +9,7 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe
  * calling Stripe. `canAcceptPayments` (and everything gated on it — pay at
  * booking, tips) is a pure DB-level check on `shop_stripe_accounts`,
  * independent of whether `STRIPE_SECRET_KEY` is set; this route exists so an
- * e2e/Argos capture can reach the "pay" and "tip your crew" surfaces without
+ * e2e visual-regression capture can reach the "pay" and "tip your crew" surfaces without
  * a real Stripe account, the same reason /api/test/seed-account-token exists
  * for token-gated pages. The actual checkout button still resolves through
  * `checkoutProviderFromEnvironment()`, which stays `disabledCheckoutProvider`
