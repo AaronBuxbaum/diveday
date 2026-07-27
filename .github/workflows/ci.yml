@@ -25,6 +25,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # `checks`' `pnpm build` and `e2e`'s `pnpm e2e:build` both run a full
+      # `next build` of the same source (their env vars differ only in
+      # runtime DB wiring, not compiled output), so both jobs share one cache
+      # key: whichever job's build lands in Actions cache first speeds up the
+      # other job's next run.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
       # The full pre-commit gate: repo safeguards (architecture, clock, ADR,
       # doc links) + lint + typecheck + unit tests — the same bar agents run
       # locally. Running the pieces individually here silently skipped the
@@ -53,6 +64,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Shared with `checks`' cache — see the comment there.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: pnpm e2e
         env:
           # Uploads visual snapshots to Argos when configured; absent (forks,
