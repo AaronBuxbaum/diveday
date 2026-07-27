@@ -27,19 +27,11 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  // For all available options, see:
-  // https://github.com/getsentry/sentry-javascript/blob/master/packages/nextjs/src/config/types.ts
-  org: "diveday",
-  project: "diveday",
-
-  // Only print logs in CI/build:
-  silent: !process.env.CI,
-
   // Forwards recovery and profiling data
   widenClientFileUpload: true,
 
   // Tunnel Sentry requests through this route to circumvent ad blockers
-  tunnelRoute: "/monitoring-tunnel",
+  // tunnelRoute: "/monitoring-tunnel",
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   webpack: {
