@@ -58,7 +58,7 @@ export async function ensureTestDbTemplate(): Promise<void> {
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
   // The unit-test fixture is the lean demo — no trailing-quarter back-fill. That
-  // history is for the demo experience and the e2e/Argos fleet; unit tests are
+  // history is for the demo experience and the e2e/visual-regression fleet; unit tests are
   // calibrated to the small, controlled dataset and build their own history when
   // they need it (src/db/reporting.test.ts).
   await seedDemo(db, { history: false });

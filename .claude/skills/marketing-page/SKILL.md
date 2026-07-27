@@ -62,9 +62,9 @@ things, `<Field>`/`<FieldGrid>` for forms.
    deliberately when copy changes; a red marketing spec on a copy change is the test working.
 3. Screenshot every touched route and **look at the PNGs**, light + dark, desktop + phone:
    `node scripts/screenshot.mjs / /product /pricing`
-4. Run the `design-review` skill for anything beyond a copy tweak; new sections or pages get an
-   Argos snapshot in `e2e/visual.spec.ts` (see `e2e-and-argos`).
+4. Run the `design-review` skill for anything beyond a copy tweak; new sections or pages get a
+   visual snapshot in `e2e/visual.spec.ts` (see `e2e-and-visual`).
 5. If claims, positioning, or page inventory changed: update `docs/product/marketing.md` in the
    same PR.
-6. After push: schedule the Argos check-in and run `argos-triage` — marketing pages are visual
-   surfaces; their diffs need decisions like any other.
+6. After push: watch for `e2e/visual.spec.ts` failures and run `visual-triage` — marketing pages
+   are visual surfaces; their diffs need decisions like any other.

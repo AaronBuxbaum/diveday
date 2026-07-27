@@ -1,31 +1,33 @@
-import { argosScreenshot } from "@argos-ci/playwright";
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Thirty-eight key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 152 screenshots per run
- * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
+ * Visual regression coverage. Thirty-nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 156 screenshots per run (see
+ * ADR 20260727-self-managed-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
- * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 154 screenshots.
+ * one black-and-white palette — so each is captured once, at a US-Letter width,
+ * via `capturePrint()`. That brings the run to 158 screenshots.
  *
- * Both viewports come from one `argosScreenshot` call via its `viewports`
- * option: Argos resizes the page, captures each, and suffixes the name with
- * ` vw-<width>`, so `landing-light` becomes `landing-light vw-390` and
- * `landing-light vw-1280`. The widths match scripts/screenshot.mjs — phone 390,
- * desktop 1280 — so the design-review PNGs and the regression baselines share
- * one definition of "phone" and "desktop".
+ * Baselines are Playwright's own `toHaveScreenshot()` PNGs, committed to the
+ * repo under `e2e/visual.spec.ts-snapshots/`. `capture()` loops over both
+ * viewports itself, resizing the page for each and restoring the base
+ * viewport afterward, so `landing-light` becomes `landing-light-vw-390.png`
+ * and `landing-light-vw-1280.png`. The widths match scripts/screenshot.mjs —
+ * phone 390, desktop 1280 — so the design-review PNGs and the regression
+ * baselines share one definition of "phone" and "desktop".
  *
- * Screenshots are always captured; the Argos reporter in playwright.config.ts
- * only uploads when ARGOS_TOKEN is present, so the suite stays green (and
- * local runs stay offline) without an Argos account.
+ * A pixel mismatch fails the test outright — there is no separate hosted
+ * review step, so approving an intentional change means regenerating the
+ * baseline and committing it as its own, clearly-labeled commit (see the
+ * `visual-triage` skill), never folding it silently into the code change that
+ * caused it.
  *
  * Stability: these are captured full-page with nothing masked, so a
  * regression anywhere — including in a time or a date — is caught. That is
@@ -42,9 +44,9 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * `capture` also waits on `document.fonts.ready` before every screenshot.
  * The Geist fonts (next/font/google) load asynchronously; without this wait,
  * a capture can land on either side of the fallback→webfont swap and render
- * the same text with different sub-pixel antialiasing, which Argos reports
- * as a false diff (this is what produced the "flaky" schedule/today/divers
- * diffs on builds with no real change).
+ * the same text with different sub-pixel antialiasing, which reads as a false
+ * diff (this is what produced the "flaky" schedule/today/divers diffs on
+ * builds with no real change).
  */
 
 // Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
@@ -57,10 +59,17 @@ const VIEWPORTS = [
 
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
   await page.evaluate(() => document.fonts.ready);
-  await argosScreenshot(page, `${name}-${scheme}`, {
-    fullPage: true,
-    viewports: [...VIEWPORTS],
-  });
+  const baseViewport = page.viewportSize();
+  for (const viewport of VIEWPORTS) {
+    await page.setViewportSize(viewport);
+    await expect(page).toHaveScreenshot(`${name}-${scheme}-vw-${viewport.width}.png`, {
+      fullPage: true,
+    });
+  }
+  // capture() runs mid-flow (navigation and clicks continue after it), so
+  // restore the base viewport the test was using before resizing for each
+  // capture above — matching what the old Argos `viewports` option did.
+  if (baseViewport) await page.setViewportSize(baseViewport);
 }
 
 /**
@@ -77,7 +86,7 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
 async function capturePrint(page: Page, name: string) {
   await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ media: "print" });
-  await argosScreenshot(page, `${name}-print`, { fullPage: true });
+  await expect(page).toHaveScreenshot(`${name}-print.png`, { fullPage: true });
   await page.emulateMedia({ media: "screen" });
 }
 

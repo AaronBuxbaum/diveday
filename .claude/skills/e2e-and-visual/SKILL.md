@@ -1,16 +1,16 @@
 ---
-name: e2e-and-argos
-description: Write and maintain end-to-end (Playwright) and visual-regression (Argos) tests that stay stable and complete. Use when adding or changing a user-facing flow or surface, when a visual baseline diffs on nothing but time, or when deciding what needs an e2e spec or an Argos snapshot.
+name: e2e-and-visual
+description: Write and maintain end-to-end (Playwright) and visual-regression (Playwright screenshot) tests that stay stable and complete. Use when adding or changing a user-facing flow or surface, when a visual baseline diffs on nothing but time, or when deciding what needs an e2e spec or a visual snapshot.
 ---
 
-# E2E flows and Argos snapshots
+# E2E flows and visual snapshots
 
 Two standing obligations, one stability model.
 
 ## Coverage — what must be tested
 
 When you add or change a user-facing **flow**, it gets an e2e spec in `e2e/`. When you add or
-change an important **surface**, it gets an Argos snapshot in `e2e/visual.spec.ts`. "Especially
+change an important **surface**, it gets a visual snapshot in `e2e/visual.spec.ts`. "Especially
 for new features" is not a hedge — a feature without both is not done.
 
 - **Important flow** = something a real user does that can break silently: booking, waiver
@@ -19,8 +19,10 @@ for new features" is not a hedge — a feature without both is not done.
   unsigned waiver, expired card). Bug fix → a failing regression spec first.
 - **Important surface** = a page or state staff or divers actually look at, where a layout,
   contrast, or token regression would be felt. New surface → add a `capture(page, "<name>",
-  scheme)` call in `e2e/visual.spec.ts` (it runs light + dark × phone + desktop automatically).
-  Reuse the seeded Blue Mantis data; navigate to the surface the way a user reaches it.
+  scheme)` call in `e2e/visual.spec.ts` (it runs light + dark × phone + desktop automatically, via
+  Playwright's own `toHaveScreenshot()` against a baseline PNG committed under
+  `e2e/visual.spec.ts-snapshots/`). Reuse the seeded Blue Mantis data; navigate to the surface the
+  way a user reaches it.
 
 If you're unsure whether something qualifies, it does. Under-covering safety-critical surfaces
 (manifests, roll call, cert/medical gating) is never acceptable — those also get a
@@ -29,7 +31,7 @@ If you're unsure whether something qualifies, it does. Under-covering safety-cri
 ## Stability — why the baselines don't drift
 
 The demo seed is clock-anchored (one trip always sails *today*, cert expiries are relative) and
-many surfaces render relative time. Against a live clock every Argos baseline diffs on nothing
+many surfaces render relative time. Against a live clock every visual baseline diffs on nothing
 but time. The fix is a **frozen clock**, not masking:
 
 - The **server** clock is pinned by `DIVEDAY_CLOCK` (`playwright.config.ts`), read through
@@ -41,9 +43,9 @@ but time. The fix is a **frozen clock**, not masking:
 - `E2E_FROZEN_CLOCK` in `e2e/servers.ts` is the single source of that instant.
 
 Because both clocks are frozen, screenshots are **captured full-page with nothing masked** — a
-regression in a time or date is a regression Argos should catch. Do not reintroduce masks; masking
-hides the pixels a real regression moves and never stabilised the layout shifts (a reordered queue,
-a trip crossing from upcoming to sailed) a moving clock actually causes.
+regression in a time or date is a regression the suite should catch. Do not reintroduce masks;
+masking hides the pixels a real regression moves and never stabilised the layout shifts (a
+reordered queue, a trip crossing from upcoming to sailed) a moving clock actually causes.
 
 ### Rules that keep it stable
 
@@ -76,7 +78,9 @@ moves. If something else moves, that's the nondeterminism to fix.
 
 ## When you're done
 
-- New/changed flow has an e2e spec (happy + failure path); new/changed surface has an Argos
+- New/changed flow has an e2e spec (happy + failure path); new/changed surface has a visual
   snapshot in `visual.spec.ts`.
 - `pnpm check` green (includes `check:clock`); `pnpm e2e` green.
-- Intentional visual changes are called out in the PR so the reviewer approves the Argos diff.
+- Intentional visual changes are called out in the PR, with the regenerated baseline committed as
+  its own labeled commit (see the `visual-triage` skill) so the reviewer can see exactly what
+  changed via GitHub's image-diff viewer.

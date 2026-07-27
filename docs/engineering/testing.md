@@ -8,7 +8,7 @@
 | Component | Vitest + Testing Library | colocated | interactive components behave (role-based queries) |
 | Fetch boundary | Vitest + MSW | colocated, e.g. `offline-manifest-store.test.ts` | client code that calls a real `/api/*` route — narrow, see [ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md) |
 | E2E | Playwright | `e2e/*.spec.ts` | critical user flows survive integration |
-| Visual | Playwright + Argos | `e2e/visual.spec.ts` | key surfaces (light + dark × phone + desktop) still look right — see [ADR 20260721](../architecture/decisions/20260721-argos-visual-regression.md) |
+| Visual | Playwright `toHaveScreenshot()` | `e2e/visual.spec.ts` | key surfaces (light + dark × phone + desktop) still look right — see [ADR 20260727](../architecture/decisions/20260727-self-managed-visual-regression.md) |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
 mutating through inline `"use server"` closures — not a client fetching JSON. That's exactly the
@@ -84,10 +84,10 @@ the full suite locally with identical pass counts across repeated runs.
   at light/dark × phone/desktop (4 screenshots per surface — count the `capture()` calls for the
   current total). Nothing is masked: the server clock is pinned by `DIVEDAY_CLOCK` and the browser
   clock by the fixture init script, so clock-derived text is pixel-stable and a regression in a
-  date is a regression Argos catches (see the `e2e-and-argos` skill — masking is prohibited).
-  Uploads happen only when `ARGOS_TOKEN` is set; without it the spec still runs and CI is
-  unaffected. Adding a surface costs 4 screenshots per CI run — do the quota math before widening
-  the matrix.
+  date is a regression the suite catches (see the `e2e-and-visual` skill — masking is prohibited).
+  Baselines are PNGs committed to the repo under `e2e/visual.spec.ts-snapshots/` — no external
+  service or token. Adding a surface costs 4 screenshots per CI run and ~4 baseline files
+  committed to the repo.
 
 ## Adding a test
 

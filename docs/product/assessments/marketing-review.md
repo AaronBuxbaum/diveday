@@ -27,7 +27,7 @@ shops"). They have to win the only three ways available to an unproven vendor:
   is the single best trust device we own. Demo-first, trial-second is the correct CTA order.
 - **The craft.** Calm layout, deterministic light/dark mockups, dock-test targets, a distinct
   briefing voice. The pages *look* like the delight bet. Design is not the problem.
-- **Tests.** `e2e/marketing.spec.ts` + Argos snapshots mean marketing regressions are caught like
+- **Tests.** `e2e/marketing.spec.ts` + visual snapshots mean marketing regressions are caught like
   product regressions. Extend this; don't lose it.
 
 ## What is broken, in order of cost
@@ -128,7 +128,7 @@ pages, best sales pages, and proof of the portability story.
 ## Task breakdown
 
 Sized S/M; sequence within each move is the listed order. Every task ends with the
-`marketing-page` skill's verification loop (e2e + screenshots + design-review; Argos triage after
+`marketing-page` skill's verification loop (e2e + screenshots + design-review; visual triage after
 push). Copy touching safety claims (readiness, manifest, medical) gets `dive-domain-expert` review.
 
 | # | Task | Size | Notes |

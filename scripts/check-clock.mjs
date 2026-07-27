@@ -8,8 +8,8 @@ import process from "node:process";
  *
  * Why this is a guarded invariant, not a style nit: the demo seed is
  * clock-anchored and dozens of surfaces render relative time, so a direct call
- * to the live wall clock in src/lib or src/db is exactly what makes Argos
- * visual baselines drift every run (a departure's slot advances, the Today
+ * to the live wall clock in src/lib or src/db is exactly what makes visual
+ * baselines drift every run (a departure's slot advances, the Today
  * queue reorders, a date rolls at midnight). The clock module is the single
  * seam the e2e fleet freezes (DIVEDAY_CLOCK); anything that bypasses it can't
  * be frozen, so the freeze silently develops holes. In production the module

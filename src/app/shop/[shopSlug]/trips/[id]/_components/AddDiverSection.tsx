@@ -48,7 +48,7 @@ export function AddDiverSection({
 
           {/* Server-fed search, same shape as the diver roster: a GET reload
               carries `diverq` and the section re-renders with matches. No client
-              state, so the picker stays pixel-stable for Argos. */}
+              state, so the picker stays pixel-stable for visual regression. */}
           <form method="get" className="mt-4 flex flex-wrap items-end gap-2">
             <Field label="Find a returning diver" className="min-w-0 flex-1">
               <input

@@ -8,8 +8,8 @@
  * relative time. Against a live wall clock those surfaces move every run —
  * the Today queue reorders as a trip crosses from upcoming to sailed, a
  * departure's rounded slot advances every half hour, dates roll at midnight —
- * which makes visual-regression baselines (Argos) diff on nothing but the
- * clock. Masking the moving text never fixed the layout shifts underneath it.
+ * which makes visual-regression baselines diff on nothing but the clock.
+ * Masking the moving text never fixed the layout shifts underneath it.
  * A single frozen instant, shared by the seed and every render, makes the
  * whole surface pixel-identical on every run.
  *

@@ -39,8 +39,8 @@ export const test = base.extend<
   // test after a `signedInAsOwner` (storageState) context, where registering it
   // in a beforeEach raced the initial navigation and let one test through on the
   // real clock. With the server render, the clock-anchored seed, and the browser
-  // all on one instant, relative-time UI is stable for Argos and browser-stamped
-  // events (offline roll-call sync, signatures) never look "future" to the
+  // all on one instant, relative-time UI is stable for visual regression and
+  // browser-stamped events (offline roll-call sync, signatures) never look "future" to the
   // server's frozen clock and get rejected as stale.
   //
   // Only argless `new Date()` / `Date.now()` are pinned; parsing (`new

@@ -364,8 +364,8 @@ new domain concept, define it here in the same PR.
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
   daily reaper clears minted demos after 7 days. The canonical `isDemo` shop (Blue Mantis) is
-  bootstrapped in every environment as the fixture the e2e/Argos fleet tests against, and is never
-  reaped. Onboarding a **trial** at `/onboard` creates a real shop that is *not* demo mode and is
+  bootstrapped in every environment as the fixture the e2e/visual-regression fleet tests against,
+  and is never reaped. Onboarding a **trial** at `/onboard` creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
