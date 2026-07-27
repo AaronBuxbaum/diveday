@@ -170,3 +170,37 @@ trip fills, or was never actually available, between page load and submit.
   using the same `tx.rollback()` + outer-variable idiom `inviteStaffMember` already established
   (docs ADR 20260726-staff-invite-accounts); caught by this function's own regression test
   (Codex finding).
+- The `destination_already_paid` refusal also has to cover a `refunded` destination payment, not just
+  `paid`/`deposit_paid`/`waived` (Codex finding): `refunded` is a `FINAL_PAYMENT_STATUSES` entry, so a
+  real payment on a reactivated seat left in that state would be silently swallowed by
+  `setBookingPaymentIfNotFinal`'s own refusal to regress a final status — the diver charged while the
+  booking still reads refunded. A reactivated destination row can separately still be linked to a
+  *pending* (never completed) Checkout from its earlier life; `rescheduleBooking` now retires
+  (`expired`) any such session in the same transaction, so an old tab can't complete it later and
+  attribute a stale, wrong-trip price to the reactivated seat (Codex finding).
+- `setBookingPaymentIfNotFinal` (`src/db/payments.ts`) now re-checks the booking isn't `cancelled`
+  under the same row lock that guards its write, not from an earlier unlocked read by the caller
+  (Codex finding) — `markCheckoutPaidBySessionId` used to read booking status via a plain `SELECT`
+  before that lock was acquired, leaving a window where a concurrent self-cancellation could commit in
+  between and the webhook would still write a phantom "paid" onto the now-cancelled seat.
+- `sendDueCheckoutRecoveries`'s in-loop freshness re-check (added for the settlement race, round 4)
+  now also re-reads trip and linked-booking cancellation state immediately before sending, not just
+  payment settlement (Codex finding) — staff cancelling mid-batch, after this checkout's batch-start
+  snapshot but before its own turn in the loop, is the same class of staleness as a mid-batch
+  settlement.
+- The reschedule confirmation email now sets a `confirmedAt` timestamp that becomes part of its
+  provider idempotency key (`src/lib/notifications/index.ts`), instead of reusing the plain
+  per-booking key every "booking_confirmation" send shares (Codex finding). Without it, a reschedule
+  reactivating a booking id that already had an earlier confirmation sent could fall inside the
+  provider's own idempotency window and have that earlier response replayed — the diver's new,
+  correct readiness link silently dropped in favor of the old, now-dead one.
+- `cancelMyBookingAction` now catches a `refundBookingOnCancellation` failure instead of letting it
+  propagate (Codex finding): the cancellation itself already committed and the token is already
+  revoked by that point, so a refund-step failure must redirect to the same confirmation as a
+  successful refund, not surface as an error page with no way for the diver to tell the (already
+  irreversible) cancellation succeeded.
+- The "Need to change your plans?" section is now gated on `canManageBooking` — a plain `booked` seat
+  on a trip that hasn't started (`src/db/ready.ts`) — not shown unconditionally (Codex finding). A
+  `checked_in`/`no_show` booking or a departed trip always fails `rescheduleBooking`/
+  `selfCancelBooking` server-side (`not_cancellable`/`trip_departed`), so a diver who hasn't opened
+  the page since boarding no longer sees change/cancel controls that can only ever fail.

@@ -73,6 +73,15 @@ export type ReadyPageData = {
    * (docs ADR 20260727-diver-self-service-cancel).
    */
   rescheduleCandidates: RescheduleCandidate[] | null;
+  /**
+   * Whether the booking is still in a state either self-service mutation can
+   * actually act on — a plain `booked` seat on a trip that hasn't started.
+   * False for `checked_in`/`no_show` or a departed trip, where cancel/
+   * reschedule would only ever fail server-side; the page uses this to hide
+   * the "change your plans" controls entirely rather than show a button that
+   * can't work (Codex finding).
+   */
+  canManageBooking: boolean;
 };
 
 export async function getReadyPageData(
@@ -89,6 +98,7 @@ export async function getReadyPageData(
       tripId: bookings.tripId,
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
+      status: bookings.status,
       slug: shops.slug,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
@@ -133,13 +143,24 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
+  // Both self-service mutations (`selfCancelBooking`, `rescheduleBooking`)
+  // only ever succeed on a plain `booked` seat on a trip that hasn't started
+  // — a day-of `checked_in`/`no_show` flip, or a departed trip, makes both
+  // reject with `not_cancellable`/`trip_departed`. Gating the controls
+  // themselves on the same condition (Codex finding) means a diver who
+  // hasn't touched this page since boarding never sees a "cancel"/"move"
+  // button that can only ever fail — the payment-settled gate above answers
+  // "would this be allowed to work," this answers "does a seat to change
+  // still exist."
+  const canManageBooking = row.status === "booked" && trip.startsAt > now;
+
   let rescheduleCandidates: RescheduleCandidate[] | null = null;
   // `settled`, not `captured`: rescheduleBooking also refuses a waived
   // booking (docs ADR 20260727-diver-self-service-cancel) — staff excused
   // the fee, and a fresh destination booking has no payment row to carry
   // that decision forward. Showing the picker for a waived booking anyway
   // would promise a move `rescheduleBooking` then rejects as already_paid.
-  if (!settled) {
+  if (!settled && canManageBooking) {
     const upcoming = await upcomingTripsWithCounts(db, row.shopId, now);
     // Known gap (Codex finding, accepted for now): this only filters by raw
     // capacity, not by the course prerequisite / instructor-ratio / minimum-age
@@ -187,5 +208,6 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     rescheduleCandidates,
+    canManageBooking,
   };
 }

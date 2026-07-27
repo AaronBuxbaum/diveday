@@ -247,11 +247,38 @@ export async function sendDueCheckoutRecoveries(
     }
 
     // Re-checked immediately before sending, not just against the
-    // batch-start snapshot above (Codex finding): each candidate's Stripe
-    // lookup takes real wall-clock time, so a diver who settles a linked
-    // booking at the counter mid-batch — after their checkout's snapshot
-    // was taken but before its own turn in this loop — would otherwise
-    // still get a "finish paying" link for a party that's already settled.
+    // batch-start snapshots above (Codex finding): each candidate's Stripe
+    // lookup takes real wall-clock time, so staff cancelling the trip or a
+    // linked booking, or a diver settling one at the counter, mid-batch —
+    // after this checkout's snapshot was taken but before its own turn in
+    // this loop — would otherwise still get a "your spot is held"/"finish
+    // paying" link for a party that's already cancelled or settled. Trip
+    // status specifically (not `startsAt`, which is immutable) needs its own
+    // fresh read: the batch-start `trip` here is the same stale snapshot the
+    // settlement check below no longer relies on.
+    const [freshTrip] = await db
+      .select({ status: trips.status })
+      .from(trips)
+      .where(eq(trips.id, trip.id))
+      .limit(1);
+    if (freshTrip?.status !== "scheduled") {
+      await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
+      summary.cancelled += 1;
+      continue;
+    }
+    const [freshlyCancelled] = await db
+      .select({ checkoutId: bookingCheckoutBookings.checkoutId })
+      .from(bookingCheckoutBookings)
+      .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
+      .where(
+        and(eq(bookingCheckoutBookings.checkoutId, checkout.id), eq(bookings.status, "cancelled")),
+      )
+      .limit(1);
+    if (freshlyCancelled) {
+      await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
+      summary.cancelled += 1;
+      continue;
+    }
     const [freshlySettled] = await db
       .select({ checkoutId: bookingCheckoutBookings.checkoutId })
       .from(bookingCheckoutBookings)

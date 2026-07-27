@@ -29,6 +29,16 @@ const bookingConfirmationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  /**
+   * Set only by a caller sending a *second* confirmation for the same
+   * `bookingId` — a reschedule reactivating a previously-cancelled row, or a
+   * staff-triggered resend — so its idempotency key differs from the
+   * original. Omitted, the key is stable per booking (the normal one-send
+   * case); present, it's this specific send's own timestamp, so a genuine
+   * new confirmation can't be swallowed by the provider replaying its cached
+   * response to the first one (Codex finding).
+   */
+  confirmedAt: z.date().optional(),
 });
 
 const waiverRequestSchema = z.object({
@@ -263,7 +273,9 @@ function messageFor(notification: Notification): NotificationEmail {
 function idempotencyKeyFor(notification: Notification): string {
   switch (notification.kind) {
     case "booking_confirmation":
-      return `booking-confirmation/${notification.bookingId}`;
+      return notification.confirmedAt
+        ? `booking-confirmation/${notification.bookingId}/${notification.confirmedAt.toISOString()}`
+        : `booking-confirmation/${notification.bookingId}`;
     case "waiver_request":
       return `waiver-request/${notification.waiverRecordId}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { cancelBooking } from "./bookings";
 import { getBookingPayment, setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
@@ -182,5 +183,30 @@ describe("setBookingPaymentIfNotFinal", () => {
     );
     expect(result?.status).toBe("waived");
     expect((await getBookingPayment(db, shop.id, entry.booking.id))?.status).toBe("waived");
+  });
+
+  // A provider-webhook reconciliation write (checkout/order payment cascade)
+  // must never attribute money to a seat that's already been released — the
+  // status check has to run under the same lock that guards the write, not
+  // via an earlier unlocked read by the caller, otherwise a self-cancellation
+  // racing in between could still leave a phantom "paid" record on a
+  // cancelled booking (Codex finding). PGlite is single-connection so this is
+  // the sequential regression check (see the comment above), not a
+  // reproduction of the actual race.
+  it("refuses to pay a cancelled booking, even with no prior payment row", async () => {
+    const { db, shop, entry } = await paymentContext();
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
+    await cancelBooking(db, shop.id, entry.booking.id);
+
+    const result = await db.transaction((tx) =>
+      setBookingPaymentIfNotFinal(tx, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+        status: "paid",
+        providerRef: "cs_after_cancel",
+      }),
+    );
+    expect(result).toBeNull();
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import { saveRentalFit } from "@/db/rental-fit";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -201,10 +202,23 @@ export async function cancelMyBookingAction(token: string) {
   // the booking's own current payment status (Codex finding) — an edited or
   // replayed query string can't be used to claim a refund that didn't
   // happen, or hide one that did.
-  await refundBookingOnCancellation(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-  });
+  //
+  // Caught, not left to throw (Codex finding): the cancellation above already
+  // committed and this token is already revoked, so a refund failure (a
+  // transient DB error, say) must never turn an already-successful
+  // cancellation into an error response — the diver would see a generic
+  // failure with no way to tell the destructive action actually went
+  // through, since refreshing the dead link only shows the unavailable
+  // notice. Staff can still see and fix a missed refund from the booking's
+  // payment record; the diver just needs the confirmation either way.
+  try {
+    await refundBookingOnCancellation(ctx.db, {
+      shopId: ctx.data.shop.id,
+      bookingId: ctx.bookingId,
+    });
+  } catch {
+    console.error("Self-cancel refund could not be processed", { bookingId: ctx.bookingId });
+  }
   redirect(`${base(token)}?cancelled=1`);
 }
 
@@ -278,6 +292,15 @@ export async function rescheduleMyBookingAction(token: string, formData: FormDat
           endsAt: newTrip.endsAt,
           timezone: ctx.data.detail.shop.timezone,
           readinessUrl: new URL(readinessLinkPath(capability.token), `${origin}/`).toString(),
+          // `result.newBookingId` can be a *reactivated* row (the diver had,
+          // and cancelled, a seat on this trip before) that already has an
+          // earlier "booking_confirmation" send on record under the plain
+          // per-booking key. Without this, a reschedule landing inside the
+          // provider's own idempotency window would replay that earlier
+          // response — the old, now-dead readiness link — instead of
+          // delivering this one, and closing the tab would leave the diver
+          // with only revoked links (Codex finding).
+          confirmedAt: nowDate(),
         });
       }
     } catch {

@@ -267,31 +267,21 @@ export async function markCheckoutPaidBySessionId(
     if (!updated) return null;
 
     const linked = await tx
-      .select({
-        bookingId: bookingCheckoutBookings.bookingId,
-        bookingStatus: bookings.status,
-      })
+      .select({ bookingId: bookingCheckoutBookings.bookingId })
       .from(bookingCheckoutBookings)
-      .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
       .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
-    for (const { bookingId, bookingStatus } of linked) {
-      // A diver's own self-service cancel/reschedule (docs ADR
-      // 20260727-diver-self-service-cancel) can leave this exact session
-      // still open and payable in another tab; if they complete it after
-      // cancelling, the booking it was for no longer exists to be marked
-      // paid. Attributing captured money to a cancelled booking would read
-      // as "this seat is paid for" when there's no seat — surface it for
-      // staff reconciliation instead of writing a phantom payment record.
-      // (The checkout itself is still marked completed above, so a retried
-      // webhook delivery doesn't reprocess it.)
-      if (bookingStatus === "cancelled") {
-        console.error("markCheckoutPaidBySessionId: payment captured for a cancelled booking", {
-          shopId: checkout.shopId,
-          bookingId,
-          stripeSessionId: checkout.stripeSessionId,
-        });
-        continue;
-      }
+    // A diver's own self-service cancel/reschedule (docs ADR
+    // 20260727-diver-self-service-cancel) can leave this exact session still
+    // open and payable in another tab; if they complete it after cancelling,
+    // the booking it was for no longer exists to be marked paid. Attributing
+    // captured money to a cancelled booking would read as "this seat is paid
+    // for" when there's no seat. That check now lives inside
+    // `setBookingPaymentIfNotFinal` itself, re-verified under the same lock
+    // that guards the write — a plain SELECT here, before that lock is
+    // acquired, would leave the same race the lock exists to close (Codex
+    // finding). (The checkout itself is still marked completed above, so a
+    // retried webhook delivery doesn't reprocess it.)
+    for (const { bookingId } of linked) {
       await setBookingPaymentIfNotFinal(tx, {
         shopId: checkout.shopId,
         bookingId,

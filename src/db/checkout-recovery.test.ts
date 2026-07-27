@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
-import { createBookingParty } from "./bookings";
+import { cancelBooking, createBookingParty } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";
 import { startBookingCheckout } from "./checkouts";
 import { setBookingPayment } from "./payments";
@@ -384,6 +384,35 @@ describe("sendDueCheckoutRecoveries", () => {
 
     expect(summary.sent).toBe(0);
     expect(summary.settled).toBe(1);
+    expect(email.sent).toHaveLength(0);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.abandonedRecoverySentAt).toBeNull();
+    expect(row?.status).toBe("expired");
+  });
+
+  it("catches a cancellation that lands mid-batch, after the pre-loop snapshot but before this candidate's send (Codex finding)", async () => {
+    const { db, shop, bookingIds, checkoutId } = await pendingCheckoutContext(3);
+    const email = fakeEmail();
+    // Same gap as the settlement race above, but for staff cancelling the
+    // linked booking mid-Stripe-lookup instead of settling it — the
+    // batch-start "already cancelled" snapshot can't see a cancellation that
+    // happens after it was taken.
+    const cancelMidLookup: CheckoutProvider["retrieveCheckoutSession"] = async () => {
+      await cancelBooking(db, shop.id, bookingIds[0]);
+      return stillOpen(shop.id, "cs_1");
+    };
+
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(cancelMidLookup),
+    });
+
+    expect(summary.sent).toBe(0);
+    expect(summary.cancelled).toBe(1);
     expect(email.sent).toHaveLength(0);
     const [row] = await db
       .select()

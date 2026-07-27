@@ -22,16 +22,19 @@ async function withBookingPaymentLock<T>(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
-  fn: (tx: AppTransaction) => Promise<T | null>,
+  fn: (
+    tx: AppTransaction,
+    booking: { status: (typeof bookings.$inferSelect)["status"] },
+  ) => Promise<T | null>,
 ): Promise<T | null> {
   return db.transaction(async (tx) => {
     const [booking] = await tx
-      .select({ id: bookings.id })
+      .select({ id: bookings.id, status: bookings.status })
       .from(bookings)
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .for("update");
     if (!booking) return null;
-    return fn(tx);
+    return fn(tx, booking);
   });
 }
 
@@ -110,7 +113,25 @@ const FINAL_PAYMENT_STATUSES: ReadonlySet<PaymentStatus> = new Set(["refunded", 
  * territory (reconciliation for indeterminate/orphaned payment operations).
  */
 export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: SetPaymentInput) {
-  return withBookingPaymentLock(db, input.shopId, input.bookingId, async (tx) => {
+  return withBookingPaymentLock(db, input.shopId, input.bookingId, async (tx, booking) => {
+    // Re-checked under the same lock that guards the write below, not from
+    // an earlier unlocked read by the caller (Codex finding): a caller like
+    // `markCheckoutPaidBySessionId` reads booking status via a plain SELECT
+    // before this lock is acquired, so a self-cancellation racing in between
+    // that read and this lock would otherwise still let a provider-webhook
+    // reconciliation write a phantom "paid" onto a seat that's already been
+    // released. Scoped to `setBookingPaymentIfNotFinal` only (provider-webhook
+    // reconciliation) — `setBookingPayment` still trusts the caller, since a
+    // staff refund/waive write against a booking they just cancelled is the
+    // normal, legitimate flow.
+    if (booking.status === "cancelled") {
+      console.error("setBookingPaymentIfNotFinal: refused to pay a cancelled booking", {
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        attemptedStatus: input.status,
+      });
+      return null;
+    }
     if (!FINAL_PAYMENT_STATUSES.has(input.status)) {
       const [current] = await tx
         .select()
