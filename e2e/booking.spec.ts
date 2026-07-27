@@ -130,6 +130,8 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .click();
   await expect(page.getByRole("heading", { name: "This boat's full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
+  // The waitlist form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Join the wait list" }).click();
@@ -181,6 +183,8 @@ test("a shared-inbox booking under a different name is held for staff identity c
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
     .getByRole("link")
     .click();
+  // The booking form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
@@ -189,6 +193,7 @@ test("a shared-inbox booking under a different name is held for staff identity c
   // A different name on the same inbox books trip B — reuses Nora's record.
   await page.goto("/shop/blue-mantis/schedule");
   await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
@@ -225,6 +230,8 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
     .getByRole("link")
     .click();
+  // The booking form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Casey Ford");
   await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
