@@ -99,7 +99,7 @@ baseline PNGs committed to the repo:
   158). Plain git handles this comfortably for the foreseeable future; Git LFS remains the next
   lever if that changes.
 - First run after this change re-establishes every baseline from a capture made in this session's
-  Linux sandbox, not CI's own `mcr.microsoft.com/playwright:v1.61.1-noble` container. The two
+  Linux sandbox, not CI's own `mcr.microsoft.com/playwright:v1.62.0-noble` container. The two
   should render near-identically (same OS family, same Playwright version), but a first CI run
   showing a handful of subtle antialiasing diffs — not real regressions — would not be surprising;
   triage and re-commit those baselines from CI's own capture if so, the same way any other baseline

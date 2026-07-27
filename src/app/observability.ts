@@ -69,3 +69,36 @@ export function redactCapabilityUrl(rawUrl: string): string {
   }
   return redactedQuery ? `${url.pathname}${url.search}` : rawUrl;
 }
+
+import type * as Sentry from "@sentry/nextjs";
+
+/** Same redaction applied to Sentry breadcrumbs (navigation, fetch, xhr). */
+export function redactBreadcrumb(breadcrumb: Sentry.Breadcrumb): Sentry.Breadcrumb {
+  const data = breadcrumb.data;
+  if (!data) return breadcrumb;
+  if (breadcrumb.category === "navigation") {
+    if (typeof data.from === "string") data.from = redactCapabilityUrl(data.from);
+    if (typeof data.to === "string") data.to = redactCapabilityUrl(data.to);
+  }
+  if (
+    (breadcrumb.category === "xhr" || breadcrumb.category === "fetch") &&
+    typeof data.url === "string"
+  ) {
+    data.url = redactCapabilityUrl(data.url);
+  }
+  return breadcrumb;
+}
+
+/** Same redaction applied to Sentry event URLs and referrer header. */
+export function redactEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+  if (event.request?.url) {
+    event.request.url = redactCapabilityUrl(event.request.url);
+  }
+  const headers = event.request?.headers;
+  if (headers) {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === "referer") headers[key] = redactCapabilityUrl(headers[key]);
+    }
+  }
+  return event;
+}

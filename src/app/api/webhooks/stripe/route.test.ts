@@ -62,6 +62,7 @@ const FAKE_CHECKOUT = { id: "checkout_1" };
 
 beforeEach(() => {
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", secret);
+  vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "");
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(markCheckoutPaidBySessionId)
     .mockReset()
@@ -80,6 +81,7 @@ beforeEach(() => {
 describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => {
   it("returns 503 when no webhook secret is configured", async () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "");
     const payload = eventPayload({ id: "evt_1", type: "invoice.paid", data: { object: {} } });
     const response = await POST(
       webhookRequest(payload, signedHeader(payload, Math.floor(nowMs() / 1000))),
@@ -112,6 +114,48 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const response = await POST(webhookRequest(payload, "t=1,v1=deadbeef"));
     expect(response.status).toBe(400);
     expect(disconnectShopStripeAccount).not.toHaveBeenCalled();
+  });
+
+  it("verifies and accepts requests signed by the test webhook secret when configured", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
+    const payload = eventPayload({
+      id: "evt_1",
+      type: "invoice.paid",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
+    const response = await POST(webhookRequest(payload, header));
+    expect(response.status).toBe(200);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500);
+  });
+
+  it("tries test webhook secret if live webhook secret fails, and succeeds if test secret matches", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_live_mode");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
+    const payload = eventPayload({
+      id: "evt_1",
+      type: "invoice.paid",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
+    const response = await POST(webhookRequest(payload, header));
+    expect(response.status).toBe(200);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500);
+  });
+
+  it("fails with 400 when both are configured but signature matches neither", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_live_mode");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
+    const payload = eventPayload({
+      id: "evt_1",
+      type: "invoice.paid",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_wrong");
+    const response = await POST(webhookRequest(payload, header));
+    expect(response.status).toBe(400);
+    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
   });
 });
 

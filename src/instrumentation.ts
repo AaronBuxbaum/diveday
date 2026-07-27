@@ -1,4 +1,5 @@
-import { initSentry, onRequestError as sentryOnRequestError } from "@/app/observability-sentry";
+import * as Sentry from "@sentry/nextjs";
+import { redactBreadcrumb, redactEvent } from "@/app/observability";
 import { checkPublicHost } from "@/lib/notifications";
 
 /**
@@ -16,8 +17,17 @@ export function register() {
     throw new Error(`Invalid APP_HOST configuration: ${result.reason}`);
   }
 
-  initSentry();
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      tracesSampleRate: 0,
+      beforeSend: redactEvent,
+      beforeBreadcrumb: redactBreadcrumb,
+      enableLogs: true,
+    });
+  }
 }
 
-/** Server-side errors (docs ADR 20260727-sentry-error-monitoring) — a no-op until `NEXT_PUBLIC_SENTRY_DSN` is set. */
-export const onRequestError = sentryOnRequestError;
+/** Server-side errors (docs ADR 20260727-sentry-error-monitoring) */
+export const onRequestError = Sentry.captureRequestError;

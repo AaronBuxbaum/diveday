@@ -32,19 +32,10 @@ mail — independent of `APP_HOST` being configured, since it carries no link. I
 [20260726-hosted-mailboxes-for-platform-mail](20260726-hosted-mailboxes-for-platform-mail.md)).
 Zero new dependency, zero new cost.
 
-**Runtime errors go to Sentry, on its free tier, wired by hand rather than through the full
-`@sentry/nextjs` wizard setup.** The wizard's deepest value — automatic source-map upload, the
-Webpack/Turbopack build plugin, session replay, request tracing — comes from wrapping
-`next.config.ts` in `withSentryConfig` and touching the build pipeline. This app runs a Next.js
-*preview* major (16.3.0-preview.x; see the framework warning in `AGENTS.md`), so a build-time
-plugin is exactly the kind of integration most likely to break silently on a version the SDK wasn't
-tested against. Manual init carries none of that risk: it's the same `Sentry.init()` call Next's
-own `instrumentation.js`/`instrumentation-client.js` docs show, using only the SDK's runtime API,
-no build-config changes.
+**Runtime errors go to Sentry, on its free tier, integrated with `withSentryConfig` in `next.config.ts` for source map uploads.** The SDK initializes client-side via a static import in `src/instrumentation-client.ts` and server-side in `src/instrumentation.ts`. Since Sentry is bundled on every route, a dynamic import is not needed for client initialization. We avoid build-time issues by wrapping the config with `withSentryConfig`, allowing Sentry to upload source maps automatically for production builds using the `SENTRY_AUTH_TOKEN` environment variable.
 
-- `src/app/observability-sentry.ts` centralizes `initSentry()` (env-gated on `NEXT_PUBLIC_SENTRY_DSN`
-  — a DSN is not secret, so one var covers both server and browser) and the capability-URL
-  redaction, and is imported by both entry points below.
+
+- `src/app/observability.ts` centralizes the capability-URL redaction hooks, imported by both entry points below.
 - `src/instrumentation.ts` (`register()`) calls it server-side and exports `onRequestError` as
   `Sentry.captureRequestError` — the SDK's purpose-built adapter for Next's
   `Instrumentation.onRequestError` hook, covering Server Components, Route Handlers, and Server
@@ -93,8 +84,7 @@ no build-config changes.
   documented in `docs/engineering/monitoring-runbook.md`. Until `NEXT_PUBLIC_SENTRY_DSN` is set,
   every Sentry call is a no-client no-op — same "degrades to not configured" shape as every other
   optional integration in this app.
-- No source maps means Sentry stack traces on a production build show minified frames until a
-  source-map step is added deliberately (its own future decision, gated on Next 16 stabilizing).
+- Source maps are automatically uploaded on production builds because `withSentryConfig` is integrated in `next.config.ts`.
 - `edge` runtime code (`src/proxy.ts`) is not instrumented — `onRequestError` fires for Server
   Components/Route Handlers/Server Actions on the Node runtime this app actually runs on, but a
   throw inside the Auth.js edge middleware itself is not captured. Acceptable for now: that file is

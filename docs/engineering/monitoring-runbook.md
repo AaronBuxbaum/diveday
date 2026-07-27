@@ -27,10 +27,8 @@ notification. The only new piece is the recipient:
 
 ## Error monitoring (Sentry)
 
-Wired by hand (`src/app/observability-sentry.ts`, `src/instrumentation.ts`,
-`src/instrumentation-client.ts`, `src/app/global-error.tsx`) rather than through Sentry's
-`@sentry/nextjs` wizard — see the ADR for why. That means no source-map upload and no performance/
-replay quota usage; it captures errors and nothing else.
+Wired with `withSentryConfig` in `next.config.ts` and runtime files (`src/app/observability.ts`, `src/instrumentation.ts`, `src/instrumentation-client.ts`, `src/app/global-error.tsx`). This handles automatic source-map uploads on production builds when `SENTRY_AUTH_TOKEN` is present. It does not use performance or replay features; it captures errors and nothing else.
+
 
 1. **Create a free Sentry account and project** at [sentry.io](https://sentry.io) — platform
    "Next.js". The free Developer plan covers 5,000 errors/month, which is generous for a young
@@ -58,7 +56,7 @@ replay quota usage; it captures errors and nothing else.
 
 Waiver/readiness/recap/verify/reset-password links carry a bearer token in the URL itself. Sentry
 must never receive one unredacted, same rule as Analytics/Speed Insights
-(`docs/engineering/capability-telemetry-runbook.md`). `observability-sentry.ts`'s `beforeSend` and
+(`docs/engineering/capability-telemetry-runbook.md`). `observability.ts`'s `beforeSend` and
 `beforeBreadcrumb` hooks reuse the same `redactCapabilityUrl` those SDKs use, applied to the
 event's request URL/referrer and to navigation/xhr/fetch breadcrumbs. If a new capability route or
 query parameter is ever added, update `CAPABILITY_ROUTE_PREFIXES`/`CAPABILITY_QUERY_PARAMS` in
