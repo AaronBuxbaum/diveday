@@ -1,16 +1,28 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
+import { joinLastMinuteList } from "./last-minute-list";
 import { recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
 import { saveRentalFit } from "./rental-fit";
 import { nitroxCertifications, people, tripWaitlistEntries } from "./schema";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
+import { sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
+
+function fakePromotions(): PromotionProvider {
+  return {
+    async createTripPromotion(): Promise<CreateTripPromotionResult> {
+      return { status: "created", stripeCouponId: "coupon_1", stripePromotionCodeId: "promo_1" };
+    },
+  };
+}
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
@@ -275,6 +287,48 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(row?.invite?.personEmail).toBe("marina@example.com");
     expect(row?.invite?.tripId).toBe(reef.id);
     expect(row?.invite?.bookingPath).toBe(`/shop/${shop.slug}/schedule/${reef.id}`);
+  });
+
+  it("nudges an under-capacity trip departing soon that has never had a last-minute deal sent", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
+    expect(row?.kind).toBe("last_minute_fill");
+    expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
+  });
+
+  it("stops nudging once a last-minute deal has actually been sent for that trip", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+
+    await upsertShopStripeAccount(db, shop.id, "acct_today_test");
+    await setShopStripeAccountStatus(db, "acct_today_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+    });
+    const sent = await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: shop.slug, tripId: reef.id, discountPercent: 25 },
+      fakePromotions(),
+    );
+    expect(sent.ok).toBe(true);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(
+      work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`),
+    ).toBeUndefined();
   });
 
   it("raises a nitrox request whose card stopped being verified", async () => {

@@ -42,6 +42,7 @@ export type TodayActionKind =
   | "nitrox_gate"
   | "instructor_missing"
   | "waitlist_seat"
+  | "last_minute_fill"
   | "email_delivery"
   | "emergency_contact";
 
@@ -65,8 +66,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   payment: 9,
   email_delivery: 10,
   waitlist_seat: 11,
+  // A revenue opportunity, not anything blocking or dock-settleable — ranks
+  // with the other purely-commercial rows.
+  last_minute_fill: 12,
   // Dock-settleable and never a boarding blocker, so it rides at the bottom.
-  emergency_contact: 12,
+  emergency_contact: 13,
 };
 
 /**
@@ -87,6 +91,7 @@ export const ACTION_KIND_META = {
   payment: { label: "Payment", tone: "neutral" },
   email_delivery: { label: "Email", tone: "neutral" },
   waitlist_seat: { label: "Wait list", tone: "neutral" },
+  last_minute_fill: { label: "Fill seats", tone: "neutral" },
   emergency_contact: { label: "Contact", tone: "neutral" },
 } as const satisfies Record<
   TodayActionKind,

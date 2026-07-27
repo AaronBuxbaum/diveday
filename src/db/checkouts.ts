@@ -23,6 +23,13 @@ export type StartCheckoutInput = {
   customerEmail: string;
   successUrl: string;
   cancelUrl: string;
+  /**
+   * A Stripe `PromotionCode` id, already resolved and trip-scope-checked by
+   * the caller (`getActiveTripPromoByCode`, src/db/trip-promos.ts) — never a
+   * raw diver-typed code. Only ever passed on a fresh checkout attempt, not a
+   * reuse (docs ADR 20260727-last-minute-fill-promos).
+   */
+  promotionCode?: string;
 };
 
 export type StartCheckoutOutcome =
@@ -123,6 +130,7 @@ export async function startBookingCheckout(
       customerEmail: input.customerEmail,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
+      promotionCode: input.promotionCode,
       // Deterministic per-attempt key: a retry of this same intent (a lost
       // response, a redeployed process) converges on the one session Stripe
       // already created instead of minting a second one (CR-005).

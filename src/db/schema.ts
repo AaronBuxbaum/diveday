@@ -650,6 +650,86 @@ export const tripWaitlistEntries = pgTable(
 );
 
 /**
+ * A diver opted in, shop-wide, to hear about last-minute deals — deliberately
+ * separate from `tripWaitlistEntries` (per-trip interest in a *full* charter).
+ * `availableFrom`/`availableUntil` are the date range the diver said they're
+ * around; either side null means no bound on that side. See docs ADR
+ * 20260727-last-minute-fill-promos.
+ */
+export const lastMinuteListEntries = pgTable(
+  "last_minute_list_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    availableFrom: date("available_from", { mode: "string" }),
+    availableUntil: date("available_until", { mode: "string" }),
+    /** Null while active; set once the diver unsubscribes, so a blast never emails them again. */
+    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("last_minute_list_entries_shop_person_unique").on(table.shopId, table.personId),
+    index("last_minute_list_entries_shop_active_idx")
+      .on(table.shopId)
+      .where(sql`${table.unsubscribedAt} is null`),
+    check(
+      "last_minute_list_entries_range",
+      sql`${table.availableFrom} is null or ${table.availableUntil} is null or ${table.availableFrom} <= ${table.availableUntil}`,
+    ),
+  ],
+);
+
+export const tripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [
+  "pending",
+  "sent",
+  "failed",
+]);
+
+/**
+ * One staff-triggered last-minute-deal blast on one trip: the Stripe coupon +
+ * promotion code it minted, and how many last-minute-list divers it went to.
+ * The row is inserted `pending` before either Stripe call so a crash mid-send
+ * leaves durable evidence to reconcile, mirroring `startBookingCheckout`'s
+ * insert-before-external-call shape (docs ADR 20260727-last-minute-fill-promos).
+ * Multiple rows per trip are expected — staff may re-send at a steeper
+ * discount as departure nears.
+ */
+export const tripLastMinutePromos = pgTable(
+  "trip_last_minute_promos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    status: tripLastMinutePromoStatus("status").notNull().default("pending"),
+    discountPercent: integer("discount_percent").notNull(),
+    /** The human-typed code, e.g. "SAVE50-A1B2C3" — unique per shop's Stripe account. */
+    code: text("code").notNull(),
+    stripeCouponId: text("stripe_coupon_id"),
+    stripePromotionCodeId: text("stripe_promotion_code_id"),
+    /** Pinned to the trip's departure at creation; a later reschedule does not move it. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** How many last-minute-list entries the blast email actually went to. */
+    recipientCount: integer("recipient_count").notNull().default(0),
+    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_last_minute_promos_trip_created_idx").on(table.tripId, table.createdAt),
+    uniqueIndex("trip_last_minute_promos_shop_code_unique").on(table.shopId, table.code),
+    check("trip_last_minute_promos_discount_range", sql`${table.discountPercent} between 5 and 90`),
+  ],
+);
+
+/**
  * A booking's current payment state. deposit_paid, paid, and waived clear the
  * "ready to board" payment gate; unpaid and refunded do not (readiness.ts).
  */
@@ -1829,6 +1909,8 @@ export type TripDive = typeof tripDives.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type TripWaitlistEntry = typeof tripWaitlistEntries.$inferSelect;
+export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
+export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
 export type BookingPayment = typeof bookingPayments.$inferSelect;

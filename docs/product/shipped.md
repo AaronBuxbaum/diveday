@@ -405,6 +405,20 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
   See [20260727-diver-self-service-cancel](../architecture/decisions/20260727-diver-self-service-cancel.md).
 
+## Last-minute fill promos (delivered 2026-07-27)
+
+- **Shop-wide last-minute list + Stripe-backed discount codes** — divers opt in from the public
+  schedule page (name, email, an optional date range they're around), separate from the existing
+  per-trip **wait list**. Staff on a trip's Guests page see how many matching divers there are and
+  can send a time-boxed discount: a real Stripe `Coupon` + `PromotionCode` on the shop's connected
+  account, expiring at departure and capped at the trip's open-seat count, emailed to every match.
+  The diver redeems it by typing the code on the booking form; it's validated against that exact
+  trip before being handed to Stripe Checkout, so a code can't discount an unrelated booking. A
+  **Today** work-queue card (`last_minute_fill`) nudges staff toward any under-capacity trip
+  departing within 3 days that has never had a deal sent, and stops once one actually sends — not
+  merely attempted. Answers the "every empty seat is money lost" gap. See
+  [20260727-last-minute-fill-promos](../architecture/decisions/20260727-last-minute-fill-promos.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate
