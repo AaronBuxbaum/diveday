@@ -34,7 +34,21 @@ const accountObjectSchema = z.object({
 export async function POST(request: Request) {
   const payload = await request.text();
   const signature = request.headers.get("stripe-signature");
-  const verification = verifyStripeWebhook(payload, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  let verification = verifyStripeWebhook(payload, signature, process.env.STRIPE_WEBHOOK_SECRET);
+
+  if (
+    (verification.status === "not_configured" || verification.status === "invalid_signature") &&
+    process.env.STRIPE_TEST_WEBHOOK_SECRET
+  ) {
+    const testVerification = verifyStripeWebhook(
+      payload,
+      signature,
+      process.env.STRIPE_TEST_WEBHOOK_SECRET,
+    );
+    if (testVerification.status === "verified" || verification.status === "not_configured") {
+      verification = testVerification;
+    }
+  }
 
   if (verification.status === "not_configured") return new Response(null, { status: 503 });
   if (verification.status !== "verified") return new Response(null, { status: 400 });

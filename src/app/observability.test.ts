@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { redactCapabilityUrl } from "./observability";
+import { redactBreadcrumb, redactCapabilityUrl, redactEvent } from "./observability";
 
 describe("redactCapabilityUrl", () => {
   it("redacts a waiver token path", () => {
@@ -95,5 +95,55 @@ describe("redactCapabilityUrl", () => {
     expect(redactCapabilityUrl("/shop/blue-hole/schedule/trip-123")).toBe(
       "/shop/blue-hole/schedule/trip-123",
     );
+  });
+});
+
+describe("redactEvent", () => {
+  it("redacts a capability token in the request URL", () => {
+    const event = redactEvent({
+      type: undefined,
+      request: { url: "https://app.example/waivers/abc123.def456" },
+    });
+    expect(event.request?.url).toBe("/waivers/[token]");
+  });
+
+  it("redacts a capability token in the referer header", () => {
+    const event = redactEvent({
+      type: undefined,
+      request: { headers: { Referer: "https://app.example/ready/abc123.def456" } },
+    });
+    expect(event.request?.headers?.Referer).toBe("/ready/[token]");
+  });
+
+  it("leaves an event with no request untouched", () => {
+    expect(redactEvent({ type: undefined })).toEqual({ type: undefined });
+  });
+});
+
+describe("redactBreadcrumb", () => {
+  it("redacts navigation from/to URLs", () => {
+    const breadcrumb = redactBreadcrumb({
+      category: "navigation",
+      data: { from: "/recap/abc123.def456", to: "/shop/blue-hole/schedule" },
+    });
+    expect(breadcrumb.data?.from).toBe("/recap/[token]");
+    expect(breadcrumb.data?.to).toBe("/shop/blue-hole/schedule");
+  });
+
+  it("redacts an xhr/fetch breadcrumb URL", () => {
+    const breadcrumb = redactBreadcrumb({
+      category: "fetch",
+      data: { url: "/verify/abc123.def456" },
+    });
+    expect(breadcrumb.data?.url).toBe("/verify/[token]");
+  });
+
+  it("leaves an unrelated breadcrumb untouched", () => {
+    const breadcrumb = redactBreadcrumb({ category: "console", data: { message: "hi" } });
+    expect(breadcrumb.data?.message).toBe("hi");
+  });
+
+  it("leaves a breadcrumb with no data untouched", () => {
+    expect(redactBreadcrumb({ category: "navigation" })).toEqual({ category: "navigation" });
   });
 });

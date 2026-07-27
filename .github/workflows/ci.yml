@@ -91,7 +91,7 @@ jobs:
     # ~/.cache/ms-playwright restores Chromium, but every fresh runner still
     # spends minutes reinstalling the non-cacheable OS dependencies.
     container:
-      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.0-noble
       options: --user 1001
     timeout-minutes: 20
     steps:
