@@ -8,6 +8,9 @@ name: Update visual baselines
 # full-page screenshot layout. See the `visual-triage` skill.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - claude/argos-cost-reduction-self-managed-ijwkeb
 
 jobs:
   update-baselines:
