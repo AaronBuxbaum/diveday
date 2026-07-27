@@ -50,6 +50,8 @@ test.describe("refunds", () => {
 
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // The booking form is controlled, so wait for hydration before typing.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();

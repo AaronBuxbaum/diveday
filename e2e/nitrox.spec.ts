@@ -83,6 +83,8 @@ test.describe("staff", () => {
       .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
       .getByRole("link")
       .click();
+    // The booking form is controlled, so wait for hydration before typing.
+    await expect(anon.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await anon.getByLabel("Name").fill("Priya Sharma");
     await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
@@ -207,6 +209,8 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
     .getByRole("link")
     .click();
+  // The booking form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   // Unique email for this spec's own diver; the e2eNow() suffix keeps every
   // test-side timestamp anchored to the frozen clock (helpers.ts). Isolation

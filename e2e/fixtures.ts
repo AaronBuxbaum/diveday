@@ -57,6 +57,18 @@ export const test = base.extend<
           prop === "now" ? () => fixed : Reflect.get(target, prop, receiver),
       });
     }, E2E_FROZEN_CLOCK);
+    // The trip detail page embeds a live Google Maps iframe (DiveSiteMap.tsx).
+    // DIVEDAY_DISABLE_EXTERNAL_HTTP keeps the *server* from waiting on a
+    // third-party forecast, but that flag can't reach this request — it's the
+    // browser loading the iframe directly, not our server code. Left
+    // unblocked, an environment with restricted outbound egress can make this
+    // request hang for several seconds before failing, which a plain
+    // `page.goto` (default `waitUntil: "load"`) then waits out in full,
+    // risking the suite's tight per-test timeout on any page a dive site map
+    // appears on. Aborting it immediately keeps every test's network
+    // footprint inside this worker's own server, matching the same
+    // no-third-party-dependency principle.
+    await context.route("https://maps.google.com/**", (route) => route.abort());
     await use(context);
   },
 
