@@ -351,6 +351,27 @@ export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
   };
 }
 
+type NewAccountAlertEmailInput = {
+  ownerName: string;
+  ownerEmail: string;
+  shopName: string;
+  shopSlug: string;
+};
+
+/** Internal — lands in the founder's alert inbox, not a diver's or shop's. */
+export function newAccountAlertEmail(input: NewAccountAlertEmailInput): NotificationEmail {
+  const owner = escapeHtml(input.ownerName);
+  const email = escapeHtml(input.ownerEmail);
+  const shop = escapeHtml(input.shopName);
+  const slug = escapeHtml(input.shopSlug);
+
+  return {
+    subject: `New shop: ${input.shopName}`,
+    text: `${input.ownerName} (${input.ownerEmail}) just created "${input.shopName}" (/shop/${input.shopSlug}).\n`,
+    html: `<p><strong>${owner}</strong> (${email}) just created <strong>${shop}</strong> (<code>/shop/${slug}</code>).</p>`,
+  };
+}
+
 type VerifyAccountEmailInput = {
   ownerName: string;
   verifyUrl: string;
