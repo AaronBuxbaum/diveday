@@ -11,6 +11,8 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
     .getByRole("link")
     .click();
+  // The booking form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Rin Tanaka");
   // Frozen-clock suffix (not Date.now()) so the shared demo People list the visual
   // suite screenshots stays pixel-stable across runs.

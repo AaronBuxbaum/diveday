@@ -8,6 +8,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByRole("link", { name: /Discover Scuba — Pool & Reef/ }).click();
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
 
+  // The booking form is controlled, so wait for hydration before typing.
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
@@ -164,6 +166,8 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "Book this date" }).last().click();
     await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
 
+    // The booking form is controlled, so wait for hydration before typing.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     const diver = `Ravi ${e2eNow().getTime()}`;
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
@@ -226,6 +230,8 @@ test.describe("staff", () => {
 
     // The 9th diver hits the ratio, not capacity.
     await page.goto(tripUrl.replace("/trips/", "/schedule/"));
+    // The booking form is controlled, so wait for hydration before typing.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
