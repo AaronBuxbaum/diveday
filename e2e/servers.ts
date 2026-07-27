@@ -42,7 +42,7 @@ export const e2eWorkerIndexes: number[] = Array.from({ length: E2E_WORKER_COUNT 
 /**
  * The instant the whole e2e fleet pretends "now" is. The demo seed is
  * clock-anchored and dozens of surfaces render relative time, so against a live
- * clock every visual baseline (Argos) diffs on nothing but the passage of
+ * clock every visual baseline diffs on nothing but the passage of
  * time — a departure's rounded slot advances, the Today queue reorders as a
  * trip sails, dates roll at midnight. Freezing a single instant, shared by the
  * server (`DIVEDAY_CLOCK`, read by src/lib/clock.ts) and the browser
@@ -55,6 +55,6 @@ export const e2eWorkerIndexes: number[] = Array.from({ length: E2E_WORKER_COUNT 
  *
  * Overridable via DIVEDAY_CLOCK for a one-off run at a different instant (e.g.
  * to reproduce a time-of-day-specific layout), but the committed default is
- * what CI and the Argos baselines pin to.
+ * what CI and the visual baselines pin to.
  */
 export const E2E_FROZEN_CLOCK = process.env.DIVEDAY_CLOCK || "2026-07-21T13:30:00.000Z";
