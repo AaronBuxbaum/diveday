@@ -18,6 +18,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { upcomingTripsWithCounts } from "./trips";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -384,6 +385,7 @@ export async function getTodayWork(
     waitlisted,
     staffedTrips,
     deliveryIssues,
+    neverSentLastMinuteDeal,
   ] = await Promise.all([
     boardedCountsByTrip(
       db,
@@ -404,6 +406,11 @@ export async function getTodayWork(
       inWindow.filter((trip) => trip.course).map((trip) => trip.id),
     ),
     listNotificationDeliveryIssues(db, shopId),
+    tripIdsNeverSentLastMinuteDeal(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+    ),
   ]);
 
   const actions: TodayAction[] = [];
@@ -488,9 +495,33 @@ export async function getTodayWork(
       });
     }
 
+    // A trip within 3 days that's under capacity and has never had a
+    // last-minute deal sent is lost revenue staff can still act on. One-shot
+    // per trip: once any blast has gone out, Today stops nudging even if
+    // seats are still open — a shop that's already tried isn't nagged, but
+    // can always resend from the trip page itself (docs ADR
+    // 20260727-last-minute-fill-promos).
+    const openSeats = Math.max(0, trip.capacity - trip.booked);
+    if (
+      openSeats > 0 &&
+      urgencyFor(trip.startsAt, now) !== "later" &&
+      neverSentLastMinuteDeal.has(trip.id)
+    ) {
+      actions.push({
+        id: `last-minute-fill:${trip.id}`,
+        kind: "last_minute_fill",
+        urgency: urgencyFor(trip.startsAt, now),
+        subject: trip.title,
+        context: when,
+        detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} open with no last-minute deal sent yet.`,
+        actionLabel: "Open trip",
+        href: `${tripHref}/guests#last-minute-deal`,
+        dueAt: trip.startsAt,
+      });
+    }
+
     const front = waitlisted.get(trip.id);
     const waiting = front?.count ?? 0;
-    const openSeats = Math.max(0, trip.capacity - trip.booked);
     if (front && waiting > 0 && openSeats > 0) {
       actions.push({
         id: `waitlist:${trip.id}`,

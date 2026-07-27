@@ -23,6 +23,8 @@ const EXPECTED_FILES = [
   "trip_assignments.csv",
   "bookings.csv",
   "waitlist_entries.csv",
+  "last_minute_list.csv",
+  "trip_last_minute_promos.csv",
   "roll_call_events.csv",
   "waiver_templates.csv",
   "waiver_records.csv",
@@ -52,6 +54,8 @@ const EXPORTED_TABLES = [
   "trip_assignments",
   "bookings",
   "trip_waitlist_entries",
+  "last_minute_list_entries",
+  "trip_last_minute_promos",
   "roll_call_events",
   "waiver_templates",
   "waiver_records",
@@ -116,6 +120,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "identity_unconfirmed_at", // H-13 review state, not a shop record
   ],
   trip_waitlist_entries: ["shop_id"],
+  last_minute_list_entries: ["shop_id"],
+  trip_last_minute_promos: [
+    "shop_id",
+    "stripe_coupon_id", // provider linkage, useless outside this Stripe account
+    "stripe_promotion_code_id",
+  ],
   roll_call_events: ["shop_id"],
   waiver_templates: ["shop_id"],
   waiver_records: [

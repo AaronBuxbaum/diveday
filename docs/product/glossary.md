@@ -109,6 +109,19 @@ new domain concept, define it here in the same PR.
   [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md).
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
+- **Last-minute list** — a shop-wide (not per-trip) opt-in of divers who want to hear about
+  last-minute deals, each with an optional date range they said they're around. Distinct from the
+  **wait list**: the wait list is per-trip interest in a charter that's already *full*; the
+  last-minute list is a general "I'm around, tell me if something opens at a discount" signal used
+  to fill a trip that is *under* capacity. See
+  [20260727-last-minute-fill-promos](../architecture/decisions/20260727-last-minute-fill-promos.md).
+- **Last-minute deal** — a staff-sent, time-boxed discount on one under-capacity trip: a real Stripe
+  `Coupon` + `PromotionCode` created on the shop's connected account (percent off, expiring at the
+  trip's departure, capped at the trip's open-seat count), emailed to every last-minute-list entry
+  whose date range covers the trip. The diver redeems it by typing the code on the booking form; it
+  is validated against that specific trip before being handed to Stripe Checkout, so a code issued
+  for one trip cannot discount a different one. See
+  [20260727-last-minute-fill-promos](../architecture/decisions/20260727-last-minute-fill-promos.md).
 - **Dock call time** — how many minutes before departure a shop asks divers to arrive, for gear
   setup, cert checks, and the briefing (`shops.dock_call_minutes`, default 30). Configurable per
   shop in settings because real muster times vary; it drives the arrival copy on booking

@@ -7,17 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
+import { listLastMinuteList } from "@/db/last-minute-list";
 import { getTripRequirements, listTripReadiness } from "@/db/readiness";
 import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
+import { listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { requireStaffSession } from "@/lib/session";
-import { capacityLabel, isFull } from "@/lib/trips";
+import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
+import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
+import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { RecapPhotoGallery } from "../_components/RecapPhotoGallery";
 import { RosterSection } from "../_components/RosterSection";
 import { TripNoticeBanner } from "../_components/TripNoticeBanner";
@@ -34,6 +39,7 @@ import {
   markPaymentAction,
   markWaiverInPersonAction,
   removeBookingAction,
+  sendLastMinuteDealAction,
   undoRemoveBookingAction,
 } from "../actions";
 
@@ -52,11 +58,17 @@ export default async function TripGuestsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; bid?: string; waiver?: string; diverq?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    bid?: string;
+    waiver?: string;
+    diverq?: string;
+    count?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, waiver, diverq } = await searchParams;
+  const { notice, bid, waiver, diverq, count } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
@@ -69,16 +81,29 @@ export default async function TripGuestsPage({
     isFull(trip) || diverQuery === ""
       ? []
       : await listBookableDivers(db, shop.id, tripId, { query: diverQuery });
-  const [roster, requirement, readinessRows, prepDivers, waitlist, recapPhotos] = await Promise.all(
-    [
-      getTripRoster(db, shop.id, tripId),
-      getTripRequirements(db, shop.id, tripId),
-      listTripReadiness(db, shop.id, tripId),
-      listTripPrepDivers(db, shop.id, tripId),
-      getTripWaitlist(db, shop.id, tripId),
-      listRecapPhotosForTrip(db, shop.id, tripId),
-    ],
-  );
+  const [
+    roster,
+    requirement,
+    readinessRows,
+    prepDivers,
+    waitlist,
+    recapPhotos,
+    lastMinuteList,
+    lastMinutePromos,
+  ] = await Promise.all([
+    getTripRoster(db, shop.id, tripId),
+    getTripRequirements(db, shop.id, tripId),
+    listTripReadiness(db, shop.id, tripId),
+    listTripPrepDivers(db, shop.id, tripId),
+    getTripWaitlist(db, shop.id, tripId),
+    listRecapPhotosForTrip(db, shop.id, tripId),
+    listLastMinuteList(db, shop.id),
+    listTripLastMinutePromos(db, shop.id, tripId),
+  ]);
+  const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
+  const lastMinuteEligibleCount = lastMinuteList.filter(({ entry }) =>
+    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
+  ).length;
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
   // whose money is already gone (dive-domain review).
@@ -140,6 +165,7 @@ export default async function TripGuestsPage({
 
       <TripNoticeBanner
         notice={notice}
+        count={count}
         undoBookingId={undoBookingId}
         undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
       />
@@ -197,6 +223,15 @@ export default async function TripGuestsPage({
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
         confirmIdentityAction={confirmDiverIdentityAction.bind(null, shopSlug, tripId)}
+      />
+
+      <LastMinuteDealSection
+        eligibleCount={lastMinuteEligibleCount}
+        openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+        cancelled={cancelled}
+        promos={lastMinutePromos}
+        timezone={shop.timezone}
+        sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
       />
 
       <RecapPhotoGallery

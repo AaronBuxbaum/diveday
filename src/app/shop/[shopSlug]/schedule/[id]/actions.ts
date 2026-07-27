@@ -11,6 +11,7 @@ import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getShopById, getShopBySlug } from "@/db/shops";
+import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
@@ -252,6 +253,15 @@ export async function bookSpot(
   // no configured origin, Stripe down — degrades to the ordinary
   // book-now-pay-later confirmation, never to a lost booking.
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  // An invalid/expired/wrong-trip code is never a booking error — it just
+  // doesn't discount. Stripe's own hosted checkout page shows the diver the
+  // real price before they pay, so a code that silently failed to apply is
+  // never hidden from them at the point money actually moves.
+  const promoCodeInput = String(formData.get("promoCode") ?? "").trim();
+  const promo = promoCodeInput
+    ? await getActiveTripPromoByCode(dbi, { shopId: shopNow.id, tripId, code: promoCodeInput })
+    : null;
+
   const checkoutUrl = confirmCapability
     ? await startCheckoutUrl(dbi, {
         shopId: shopNow.id,
@@ -261,6 +271,7 @@ export async function bookSpot(
         confirmToken: confirmCapability.token,
         customerEmail: validParty[0]?.email ?? "",
         embed,
+        promotionCode: promo?.stripePromotionCodeId ?? undefined,
       })
     : null;
   if (checkoutUrl) {
@@ -286,6 +297,7 @@ async function startCheckoutUrl(
     confirmToken: string;
     customerEmail: string;
     embed?: boolean;
+    promotionCode?: string;
   },
 ): Promise<string | null> {
   const origin = publicAppUrl();
@@ -298,6 +310,7 @@ async function startCheckoutUrl(
     customerEmail: input.customerEmail,
     successUrl: returnBase,
     cancelUrl: `${returnBase}&pay=cancelled`,
+    promotionCode: input.promotionCode,
   }).catch(() => null);
   return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
 }
