@@ -274,7 +274,16 @@ export default async function DiverReadinessPage({
   );
 
   if (detail.cancelled) {
-    return cancelledNotice(cancelled, detail.trip.title, detail.shop.name);
+    // Reached when the capability check above succeeded but the booking was
+    // cancelled in the gap before this fresh read (a tight race, not the
+    // normal self-cancel redirect — that one is revoked and handled by the
+    // branch above). `cancelled` here is still just the raw, untrusted query
+    // string; deriving the notice from it directly would reopen exactly the
+    // spoofable-notice gap already closed above (Codex finding) — a crafted
+    // `?cancelled=refunded` could claim a refund that hasn't happened. Same
+    // fix: read the booking's own current payment status fresh.
+    const payment = await getBookingPayment(db, data.shop.id, bookingId);
+    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name);
   }
 
   const items = buildDiverChecklist(detail.requirement, detail.readiness);

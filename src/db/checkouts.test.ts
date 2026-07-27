@@ -358,6 +358,34 @@ describe("checkout completion", () => {
     expect(payment).toBeNull();
   });
 
+  it("ignores a completion for a checkout already marked expired locally (Codex finding)", async () => {
+    // Marking a checkout `expired` locally (a departed/cancelled trip, a
+    // booking settled elsewhere, or a reactivated-booking reschedule
+    // retiring its earlier abandoned session) doesn't reach Stripe — the
+    // hosted session can still genuinely be completed there afterward, on
+    // its own longer clock. A completion arriving for a non-pending
+    // checkout must be ignored, not resurrect it into "completed" and
+    // attribute a stale price to whatever the booking is now.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, [bookingIds[0]]),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    await markCheckoutExpiredBySessionId(db, start.checkout.stripeSessionId);
+
+    const result = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    expect(result).toBeNull();
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, start.checkout.id));
+    expect(row?.status).toBe("expired");
+    expect(row?.completedAt).toBeNull();
+    expect(await getBookingPayment(db, shop.id, bookingIds[0])).toBeNull();
+  });
+
   it("is idempotent: a second completion changes nothing", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const start = await startBookingCheckout(

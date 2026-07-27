@@ -254,6 +254,34 @@ export async function markCheckoutPaidBySessionId(
       .limit(1);
     if (!checkout) return null;
 
+    // Anything besides `pending`/`completed` (most commonly `expired`) means
+    // this checkout was already terminally disqualified locally — a departed
+    // or cancelled trip, a booking that settled elsewhere, or (Codex finding)
+    // a destination seat reactivated after this exact session was retired on
+    // reschedule (`rescheduleBooking`, src/db/bookings.ts). Our local
+    // `expired` write and Stripe's own session lifecycle are two separate
+    // clocks: Stripe's hosted session can still genuinely be completed by an
+    // old tab well after we've locally moved on, so a completion event
+    // arriving for a disqualified checkout must never resurrect it into
+    // `completed` and attribute a stale, no-longer-applicable price to
+    // whatever the booking is now. `refreshCheckoutFromStripe` already
+    // enforces this same "pending or completed only" invariant before ever
+    // asking Stripe; this brings the webhook path in line with it. Note this
+    // does NOT early-return on `completed` — a replay after a prior partial
+    // run (checkout marked completed, but the payment write below never
+    // landed) still needs to fall through and repair it below.
+    if (checkout.status !== "pending" && checkout.status !== "completed") {
+      console.error(
+        "markCheckoutPaidBySessionId: ignored a completion for a disqualified checkout",
+        {
+          shopId: checkout.shopId,
+          stripeSessionId: checkout.stripeSessionId,
+          localStatus: checkout.status,
+        },
+      );
+      return null;
+    }
+
     const updated =
       checkout.status === "completed"
         ? checkout

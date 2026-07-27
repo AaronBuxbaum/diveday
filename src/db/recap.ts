@@ -217,6 +217,17 @@ export type RecapPhotoEligibility =
  * *before* writing bytes to blob storage, so a cancelled booking or one already
  * at its cap is rejected without an orphaned upload (a shared recap link is a
  * write capability — this bounds the expensive side effect, not just the row).
+ *
+ * `no_show` is refused the same way as `cancelled` (Codex finding), reported
+ * under the same `"cancelled"` reason rather than a distinguishable one — a
+ * no-show never dived either, and `getRecapPageData` already treats the two
+ * identically (returns `null` for both) for the same fail-closed-uniformly
+ * reason the rest of this token surface follows: a link's failure state must
+ * never disclose *why* a booking is unreachable. Matters independently of
+ * that page-level gate because a recap link can be bookmarked/reloaded from
+ * before a staff correction — a form loaded while the booking still read
+ * `booked` could otherwise still write photos into a no-show's gallery after
+ * the fact.
  */
 export async function canAddRecapPhoto(
   db: AppDb,
@@ -228,7 +239,9 @@ export async function canAddRecapPhoto(
     .where(eq(bookings.id, bookingId))
     .limit(1);
   if (!booking) return { ok: false, reason: "not_found" };
-  if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+  if (booking.status === "cancelled" || booking.status === "no_show") {
+    return { ok: false, reason: "cancelled" };
+  }
   const [{ count: existing } = { count: 0 }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(recapPhotos)
@@ -266,7 +279,11 @@ export async function addRecapPhoto(
       .limit(1)
       .for("update");
     if (!booking) return { ok: false, reason: "not_found" };
-    if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+    // Same no_show/cancelled treatment as canAddRecapPhoto above (Codex
+    // finding) — the locked, insert-time check, not just the pre-storage one.
+    if (booking.status === "cancelled" || booking.status === "no_show") {
+      return { ok: false, reason: "cancelled" };
+    }
 
     const [{ count: existing } = { count: 0 }] = await tx
       .select({ count: sql<number>`count(*)::int` })
