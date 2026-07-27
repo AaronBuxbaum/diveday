@@ -2456,46 +2456,58 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
 
-  // Everyone who isn't staff — seeded customers plus booking-flow walk-ups.
+  // Everyone except the four staff seeded once at shop creation (seedDemo's
+  // and createDemoShop's own `staffDefs`, by full name since canonical and
+  // minted shops give them different emails) — seeded customers, booking-flow
+  // walk-ups, and any staff invited or promoted mid-test. Checking `STAFF_ROLES`
+  // alone isn't enough: e2e/staff-invite.spec.ts invites and accepts a new
+  // instructor, which makes them a real staff-role person indistinguishable
+  // from the seeded four by role — so without the name check, that invited
+  // person became permanently "stable" and leaked into every later spec
+  // sharing this worker (a "Priya Nair" row on the settings/team screenshot
+  // whose invite email embeds the wall-clock millisecond it was created,
+  // never matching twice — Argos build 229's flakiest screenshot, stability
+  // 0.07).
+  const STABLE_STAFF_NAMES = new Set(["Dana Reyes", "Marcus Webb", "Keiko Tanaka", "Sal Moretti"]);
   const staffRows = await db
-    .select({ personId: personRoles.personId })
+    .select({ personId: personRoles.personId, fullName: people.fullName })
     .from(personRoles)
     .innerJoin(people, eq(people.id, personRoles.personId))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])));
-  const staffIds = new Set(staffRows.map((r) => r.personId));
+  const stableStaffIds = new Set(
+    staffRows.filter((r) => STABLE_STAFF_NAMES.has(r.fullName)).map((r) => r.personId),
+  );
 
   const shopPeople = await db
     .select({ id: people.id })
     .from(people)
     .where(eq(people.shopId, shopId));
-  const nonStaffIds = shopPeople.map((p) => p.id).filter((id) => !staffIds.has(id));
-  if (nonStaffIds.length > 0) {
-    await db.delete(personRoles).where(inArray(personRoles.personId, nonStaffIds));
+  const purgeIds = shopPeople.map((p) => p.id).filter((id) => !stableStaffIds.has(id));
+  if (purgeIds.length > 0) {
+    await db.delete(personRoles).where(inArray(personRoles.personId, purgeIds));
     // Login rows reference people (user_accounts.person_id), so they must go
     // before the people they belong to or the delete below FK-violates (23503),
     // aborts the whole reset mid-run, and leaks the churned schedule into the
-    // next spec's fixture. A non-staff person carries a login whenever a flow
-    // minted one for them — contact import (src/db/import.ts) and diver signup
-    // both do — so this is not hypothetical; it is what made trips.spec flake
-    // under the full suite. deleteDemoShopCascade already clears these; the
-    // per-reset path must too. Account tokens (email verify / password reset)
-    // reference the login row itself, one layer further down the same chain —
-    // a forgot-password request against a non-staff person's account leaves
-    // one behind, so it must go before user_accounts for the identical reason
-    // (security review finding on 20260725-account-lifecycle-emails).
-    const nonStaffAccountIds = (
+    // next spec's fixture. A purged person carries a login whenever a flow
+    // minted one for them — contact import (src/db/import.ts), diver signup,
+    // and staff invite/accept all do — so this is not hypothetical; it is what
+    // made trips.spec flake under the full suite. deleteDemoShopCascade already
+    // clears these; the per-reset path must too. Account tokens (email verify /
+    // password reset) reference the login row itself, one layer further down
+    // the same chain — a forgot-password request against a purged person's
+    // account leaves one behind, so it must go before user_accounts for the
+    // identical reason (security review finding on 20260725-account-lifecycle-emails).
+    const purgeAccountIds = (
       await db
         .select({ id: userAccounts.id })
         .from(userAccounts)
-        .where(inArray(userAccounts.personId, nonStaffIds))
+        .where(inArray(userAccounts.personId, purgeIds))
     ).map((row) => row.id);
-    if (nonStaffAccountIds.length > 0) {
-      await db
-        .delete(accountTokens)
-        .where(inArray(accountTokens.userAccountId, nonStaffAccountIds));
+    if (purgeAccountIds.length > 0) {
+      await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
     }
-    await db.delete(userAccounts).where(inArray(userAccounts.personId, nonStaffIds));
-    await db.delete(people).where(inArray(people.id, nonStaffIds));
+    await db.delete(userAccounts).where(inArray(userAccounts.personId, purgeIds));
+    await db.delete(people).where(inArray(people.id, purgeIds));
   }
 
   // Shop-level fixtures a test can mutate directly (not just schedule data)
