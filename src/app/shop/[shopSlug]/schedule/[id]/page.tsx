@@ -77,7 +77,10 @@ export default async function TripDetailPage({
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
   const session = await auth();
-  if (session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
+  // The staff-management redirect only makes sense outside embed mode — that
+  // destination isn't in the framing allowlist, so sending an embedded staff
+  // preview there would swap a working iframe for a blocked one.
+  if (!isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
     redirect(`/shop/${shopSlug}/trips/${tripId}`);
   }
   const [trip, tripDives] = await Promise.all([
