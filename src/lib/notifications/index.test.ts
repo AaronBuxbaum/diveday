@@ -71,6 +71,32 @@ describe("notify", () => {
     });
   });
 
+  it("keys a reschedule confirmation's idempotency by confirmedAt, not just bookingId (Codex finding)", async () => {
+    // A reschedule can reactivate the same bookingId a much earlier
+    // confirmation already used — without `confirmedAt` distinguishing the
+    // two sends, the provider's own idempotency window would replay the
+    // first (stale) response instead of delivering this one.
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }));
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await notify({ ...booking, confirmedAt: new Date("2026-08-02T09:00:00.000Z") }, provider);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Idempotency-Key":
+            "booking-confirmation/00000000-0000-4000-8000-000000000001/2026-08-02T09:00:00.000Z",
+        }),
+      }),
+    );
+  });
+
   it("fails closed when Resend rejects a delivery without exposing provider details", async () => {
     const provider = resendNotificationProvider(
       { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },

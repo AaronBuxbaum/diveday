@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
+import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
@@ -17,6 +18,9 @@ import {
   setTripRecapShoutout,
 } from "./recap";
 import { bookings, notificationDeliveries, people } from "./schema";
+import { setShopReviewUrl } from "./shops";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
+import { startTipCheckout } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
 
 function fakeEmail(result: NotificationDelivery = { status: "sent", providerMessageId: "em_1" }) {
@@ -90,6 +94,144 @@ describe("getRecapPageData", () => {
     const { db } = await recapContext();
     expect(await getRecapPageData(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
+
+  it("returns null for a no-show — a no-show never dived, same as a cancelled booking (Codex finding)", async () => {
+    // The narrower fix (hide canTip/reviewUrl only) still let the page show
+    // "here's what you dived" content and a diver-facing recap email to
+    // someone staff marked as not having shown up. Gating the whole loader
+    // the same way a cancelled booking is gated closes that — and takes
+    // canTip/reviewUrl down with it, since there's no data at all now.
+    const { db, shop, bookingId } = await recapContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    await setShopStripeAccountStatus(db, "acct_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    await setShopReviewUrl(db, shop.id, "https://g.page/r/blue-mantis/review");
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+
+    expect(await getRecapPageData(db, bookingId)).toBeNull();
+  });
+
+  it("hides tipping for a phone-only diver — startTipCheckout has no email to hand Stripe (Codex finding)", async () => {
+    const { db, shop, bookingId } = await recapContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    await setShopStripeAccountStatus(db, "acct_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!booking) throw new Error("test setup: booking missing");
+    await db.update(people).set({ email: null }).where(eq(people.id, booking.personId));
+
+    const data = await getRecapPageData(db, bookingId);
+    expect(data?.canTip).toBe(false);
+  });
+});
+
+function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {
+  return {
+    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
+      return {
+        status: "created",
+        stripeSessionId: "cs_recap_tip_1",
+        stripeStatus: "open",
+        paymentStatus: "unpaid",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_recap_tip_1",
+        amountTotalCents: request.unitAmountCents * request.quantity,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      };
+    },
+    async retrieveCheckoutSession() {
+      return { status: "failed" };
+    },
+    async refundCheckoutSession() {
+      return { status: "refunded", refundId: "re_test" };
+    },
+    ...overrides,
+  };
+}
+
+async function pendingTipContext() {
+  const ctx = await recapContext();
+  await upsertShopStripeAccount(ctx.db, ctx.shop.id, "acct_test");
+  await setShopStripeAccountStatus(ctx.db, "acct_test", {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+  const started = await startTipCheckout(
+    ctx.db,
+    {
+      bookingId: ctx.bookingId,
+      amountCents: 1000,
+      successUrl: "https://diveday.example/recap/tok?tip=paid",
+      cancelUrl: "https://diveday.example/recap/tok?tip=cancelled",
+    },
+    fakeCheckout(),
+  );
+  if (!started.ok) throw new Error(`tip start failed: ${started.reason}`);
+  return ctx;
+}
+
+describe("getRecapPageData tip reconciliation", () => {
+  it("never shows a tip as paid on a bare return-URL alone — only once Stripe confirms it", async () => {
+    const { db, bookingId } = await pendingTipContext();
+    // Stripe itself now confirms this session actually paid.
+    const data = await getRecapPageData(
+      db,
+      bookingId,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return {
+            status: "ok",
+            session: {
+              stripeSessionId: "cs_recap_tip_1",
+              stripeStatus: "complete",
+              paymentStatus: "paid",
+              checkoutUrl: null,
+              amountTotalCents: 1000,
+              expiresAt: null,
+            },
+          };
+        },
+      }),
+    );
+    expect(data?.tip?.status).toBe("paid");
+  });
+
+  it("expires a stale pending tip once Stripe reports the session gone, instead of offering a dead link forever", async () => {
+    const { db, bookingId } = await pendingTipContext();
+    const data = await getRecapPageData(
+      db,
+      bookingId,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return {
+            status: "ok",
+            session: {
+              stripeSessionId: "cs_recap_tip_1",
+              stripeStatus: "expired",
+              paymentStatus: "unpaid",
+              checkoutUrl: null,
+              amountTotalCents: 1000,
+              expiresAt: null,
+            },
+          };
+        },
+      }),
+    );
+    expect(data?.tip?.status).toBe("expired");
+  });
+
+  it("leaves a tip pending, checkout link intact, when Stripe can't be reached to reconcile it", async () => {
+    const { db, bookingId } = await pendingTipContext();
+    const data = await getRecapPageData(db, bookingId, fakeCheckout()); // default retrieveCheckoutSession fails
+    expect(data?.tip?.status).toBe("pending");
+    expect(data?.tip?.checkoutUrl).toBe("https://checkout.stripe.com/c/pay/cs_recap_tip_1");
+  });
 });
 
 describe("recap photos and crew shout-out", () => {
@@ -135,6 +277,18 @@ describe("recap photos and crew shout-out", () => {
     ).toEqual({ ok: false, reason: "cancelled" });
   });
 
+  it("refuses a no-show upload the same as a cancelled one, at the locked insert-time gate (Codex finding)", async () => {
+    // A recap link can be bookmarked/reloaded from before a staff
+    // correction — a form loaded while the booking still read "booked"
+    // could otherwise still write photos into a no-show's gallery.
+    const { db, bookingId } = await recapContext();
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    expect(await addRecapPhoto(db, { bookingId, imageUrl: "https://img/x.jpg" })).toEqual({
+      ok: false,
+      reason: "cancelled",
+    });
+  });
+
   it("pre-checks eligibility read-only, matching the add gate before any upload", async () => {
     const { db, bookingId } = await recapContext();
     expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: true });
@@ -155,6 +309,16 @@ describe("recap photos and crew shout-out", () => {
       .set({ status: "cancelled" })
       .where(eq(bookings.id, cancelled.bookingId));
     expect(await canAddRecapPhoto(cancelled.db, cancelled.bookingId)).toEqual({
+      ok: false,
+      reason: "cancelled",
+    });
+
+    const noShow = await recapContext();
+    await noShow.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, noShow.bookingId));
+    expect(await canAddRecapPhoto(noShow.db, noShow.bookingId)).toEqual({
       ok: false,
       reason: "cancelled",
     });
@@ -237,6 +401,20 @@ describe("sendDueRecaps", () => {
     const email = fakeEmail();
     await sendDueRecaps(db, {
       now: new Date(reef.endsAt.getTime() - 60 * 60 * 1000),
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("never sends a recap to a no-show — they never dived (Codex finding)", async () => {
+    const { db, bookingId, afterTrip } = await recapContext();
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
       emailProvider: email.provider,
       smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,

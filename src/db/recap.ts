@@ -13,10 +13,13 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
 import { recordNotificationDelivery } from "./notifications";
 import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } from "./schema";
+import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
 
 /** A diver's own recap photo, as the recap page renders it. */
@@ -45,6 +48,8 @@ export type RecapPageData = {
     timezone: string;
     contactEmail: string | null;
     contactPhone: string | null;
+    /** Where a "leave us a review" link sends the diver, or null when the shop hasn't set one. */
+    reviewUrl: string | null;
   };
   trip: {
     title: string;
@@ -63,6 +68,14 @@ export type RecapPageData = {
   shoutout: string | null;
   /** The diver's own uploaded photos, newest first. */
   photos: RecapPhotoView[];
+  /** True when the shop's own Stripe account can take a tip charge right now. */
+  canTip: boolean;
+  /** The most recent tip attempt for this booking, if any — drives the tip panel's state. */
+  tip: {
+    status: "pending" | "paid" | "expired";
+    amountCents: number;
+    checkoutUrl: string | null;
+  } | null;
 };
 
 /** How many photos one booking may attach — a memory strip, not a media host. */
@@ -84,6 +97,7 @@ export const MAX_RECAP_CAPTION_LENGTH = 140;
 export async function getRecapPageData(
   db: AppDb,
   bookingId: string,
+  checkoutProvider?: CheckoutProvider,
 ): Promise<RecapPageData | null> {
   const [row] = await db
     .select({
@@ -91,18 +105,26 @@ export async function getRecapPageData(
       tripId: bookings.tripId,
       status: bookings.status,
       diverName: people.fullName,
+      diverEmail: people.email,
       shopName: shops.name,
       slug: shops.slug,
       timezone: shops.timezone,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
+      reviewUrl: shops.reviewUrl,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  if (!row || row.status === "cancelled") return null;
+  // A no-show never dived — showing them "here's what you dived" content
+  // (or the tip/review asks that ride the same page) would be dishonest
+  // regardless of how they reached the link. Same fail-closed-uniformly
+  // notice as a cancelled booking gets, so a link's failure state never
+  // itself discloses which of the two happened (Codex finding: the earlier
+  // no-show fix only gated canTip/reviewUrl here, not the page itself).
+  if (!row || row.status === "cancelled" || row.status === "no_show") return null;
 
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
@@ -120,7 +142,19 @@ export async function getRecapPageData(
     });
   }
 
-  const photos = await listRecapPhotosForBooking(db, bookingId);
+  const [photos, stripeAccount, latestTip] = await Promise.all([
+    listRecapPhotosForBooking(db, bookingId),
+    getShopStripeAccount(db, row.shopId),
+    getLatestTipForBooking(db, row.shopId, bookingId),
+  ]);
+  // A still-pending tip's local status is a lead, not proof — a delayed or
+  // missed webhook must never leave the page offering a dead Checkout link,
+  // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
+  // itself hasn't said so.
+  const tip =
+    latestTip?.status === "pending"
+      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
+      : latestTip;
 
   return {
     shop: {
@@ -129,6 +163,7 @@ export async function getRecapPageData(
       timezone: row.timezone,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
+      reviewUrl: row.reviewUrl,
     },
     trip: {
       title: trip.title,
@@ -144,6 +179,18 @@ export async function getRecapPageData(
     bookingId,
     shoutout: trip.recapShoutout,
     photos,
+    // A phone-only diver (a supported case — their recap can go out by SMS
+    // instead) has nothing `startTipCheckout` can hand to Stripe as a
+    // customer email; offering the form anyway would fail on every
+    // submission (Codex finding).
+    canTip: Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
+    tip: tip
+      ? {
+          status: tip.status,
+          amountCents: tip.amountCents,
+          checkoutUrl: tip.checkoutUrl,
+        }
+      : null,
   };
 }
 
@@ -170,6 +217,17 @@ export type RecapPhotoEligibility =
  * *before* writing bytes to blob storage, so a cancelled booking or one already
  * at its cap is rejected without an orphaned upload (a shared recap link is a
  * write capability — this bounds the expensive side effect, not just the row).
+ *
+ * `no_show` is refused the same way as `cancelled` (Codex finding), reported
+ * under the same `"cancelled"` reason rather than a distinguishable one — a
+ * no-show never dived either, and `getRecapPageData` already treats the two
+ * identically (returns `null` for both) for the same fail-closed-uniformly
+ * reason the rest of this token surface follows: a link's failure state must
+ * never disclose *why* a booking is unreachable. Matters independently of
+ * that page-level gate because a recap link can be bookmarked/reloaded from
+ * before a staff correction — a form loaded while the booking still read
+ * `booked` could otherwise still write photos into a no-show's gallery after
+ * the fact.
  */
 export async function canAddRecapPhoto(
   db: AppDb,
@@ -181,7 +239,9 @@ export async function canAddRecapPhoto(
     .where(eq(bookings.id, bookingId))
     .limit(1);
   if (!booking) return { ok: false, reason: "not_found" };
-  if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+  if (booking.status === "cancelled" || booking.status === "no_show") {
+    return { ok: false, reason: "cancelled" };
+  }
   const [{ count: existing } = { count: 0 }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(recapPhotos)
@@ -219,7 +279,11 @@ export async function addRecapPhoto(
       .limit(1)
       .for("update");
     if (!booking) return { ok: false, reason: "not_found" };
-    if (booking.status === "cancelled") return { ok: false, reason: "cancelled" };
+    // Same no_show/cancelled treatment as canAddRecapPhoto above (Codex
+    // finding) — the locked, insert-time check, not just the pre-storage one.
+    if (booking.status === "cancelled" || booking.status === "no_show") {
+      return { ok: false, reason: "cancelled" };
+    }
 
     const [{ count: existing } = { count: 0 }] = await tx
       .select({ count: sql<number>`count(*)::int` })
@@ -360,6 +424,10 @@ export async function sendDueRecaps(
     .where(
       and(
         ne(bookings.status, "cancelled"),
+        // A no-show never dived — sending "here's what you dived" (and the
+        // tip/review asks that ride the same page) would be dishonest
+        // (Codex finding).
+        ne(bookings.status, "no_show"),
         eq(trips.status, "scheduled"),
         lte(trips.endsAt, now),
         gt(trips.endsAt, since),

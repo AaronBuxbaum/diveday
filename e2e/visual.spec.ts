@@ -5,8 +5,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage (Argos). Thirty-six key surfaces × light/dark,
- * each captured at a phone and a desktop viewport — 144 screenshots per run
+ * Visual regression coverage (Argos). Thirty-eight key surfaces × light/dark,
+ * each captured at a phone and a desktop viewport — 152 screenshots per run
  * (see ADR 20260721-argos-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-on-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 146 screenshots.
+ * via `capturePrint()`. That brings the run to 154 screenshots.
  *
  * Both viewports come from one `argosScreenshot` call via its `viewports`
  * option: Argos resizes the page, captures each, and suffixes the name with
@@ -91,6 +91,7 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       browser,
       ownerStorageState,
+      request,
     }) => {
       // 19 navigate+capture surfaces (38 screenshots) plus a real send-waiver
       // action and a real booking, all in one test — comfortably past the
@@ -130,6 +131,18 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/shop/blue-mantis/schedule");
       await capture(page, "schedule", scheme);
 
+      // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
+      // no ShopPageHeader chrome, tighter padding — what a shop's own website
+      // actually shows inside the iframe.
+      await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await capture(page, "schedule-embed", scheme);
+
+      // Back to the standalone (non-embed) schedule before the trip-detail
+      // capture below — its links now carry embed=1 forward when the
+      // schedule itself was loaded in embed mode, and the "site-briefing"
+      // baseline is the standalone trip page, not the compact embed variant.
+      await page.goto("/shop/blue-mantis/schedule");
+
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
       await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
@@ -139,11 +152,35 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/shop/blue-mantis/courses/open-water-diver");
       await capture(page, "course-page", scheme);
 
+      // Set a review link on a disposable staff context (same CR-019 pattern
+      // as the waiver/booking setup below) so the recap capture shows the
+      // "Leave a review" section — a new surface from docs ADR
+      // 20260726-post-trip-review-request — without signing the public
+      // `page` itself in.
+      const reviewSettingsContext = await browser.newContext({ storageState: ownerStorageState });
+      const reviewSettingsPage = await reviewSettingsContext.newPage();
+      await reviewSettingsPage.goto("/shop/blue-mantis/settings");
+      await reviewSettingsPage
+        .getByLabel("Review link")
+        .fill("https://g.page/r/blue-mantis/review");
+      await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
+      await reviewSettingsPage.getByText("Review link saved.").waitFor();
+      await reviewSettingsContext.close();
+
       // The post-trip recap: a signed-token diver page minted for the pinned
       // demo booking (src/db/seed.ts), so the marquee word-of-mouth surface has
-      // a stable baseline without an in-app link to reach it.
+      // a stable baseline without an in-app link to reach it. The tip section
+      // (docs ADR 20260726-post-trip-tipping) needs a connected,
+      // charges-enabled Stripe account — `canAcceptPayments` is a pure DB
+      // check, independent of whether STRIPE_SECRET_KEY is set — so
+      // /api/test/seed-stripe-account marks the demo shop connected without
+      // ever calling Stripe, purely to render the surface for this capture.
+      // The actual checkout button stays inert (no STRIPE_SECRET_KEY in this
+      // fleet), the same reason no capture here exercises a real charge.
+      await request.post("/api/test/seed-stripe-account");
       await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
       await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
+      await page.getByRole("heading", { name: "Tip your crew" }).waitFor();
       await capture(page, "recap", scheme);
 
       // The migration-guides hub: one card per incumbent a shop might be
@@ -243,6 +280,10 @@ for (const scheme of ["light", "dark"] as const) {
         .getAttribute("href");
       await page.goto(readinessHref ?? "/");
       await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
+      // This is a fresh unpaid booking, so the "Need to change your plans?"
+      // reschedule/cancel section (docs ADR 20260727-diver-self-service-cancel)
+      // renders too — no separate capture needed, it's part of this same
+      // full-page screenshot.
       await capture(page, "readiness", scheme);
     });
 
@@ -401,6 +442,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+
+        // The embed settings page (docs ADR 20260726-schedule-embed). This
+        // fleet runs `next start` against a loopback origin with no APP_HOST,
+        // and publicAppUrl() refuses a loopback origin in production
+        // (src/lib/notifications/index.ts checkPublicHost) — so this baseline
+        // is necessarily the "hosting isn't configured" state, not the
+        // SnippetField/generated-snippet state a real deploy shows. Still a
+        // real, reachable page worth a regression baseline; just not the
+        // whole surface.
+        await page.goto("/shop/blue-mantis/settings/embed");
+        await page.getByRole("heading", { name: "Website embed" }).waitFor();
+        await capture(page, "settings-embed", scheme);
 
         // The team surface: inviting staff and the current roster with its
         // role checkboxes and status badges (20260726-staff-invite-accounts).

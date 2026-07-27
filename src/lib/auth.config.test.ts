@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublicShopRoute } from "./auth.config";
+import { isEmbeddableShopRoute, isPublicShopRoute } from "./auth.config";
 
 /**
  * This matcher is the whole boundary between a shop's marketing pages and its
@@ -34,6 +34,30 @@ describe("isPublicShopRoute", () => {
       "/shop/blue-mantis/waivers",
     ]) {
       expect(isPublicShopRoute(path)).toBe(false);
+    }
+  });
+});
+
+/**
+ * The framing allowlist is deliberately narrower than the public-route
+ * allowlist — courses are public but never framed, because only the schedule
+ * embed is a supported widget surface (docs ADR 20260726-schedule-embed).
+ */
+describe("isEmbeddableShopRoute", () => {
+  it("allows the schedule and trip pages a shop would embed", () => {
+    expect(isEmbeddableShopRoute("/shop/blue-mantis/schedule")).toBe(true);
+    expect(isEmbeddableShopRoute("/shop/blue-mantis/schedule/abc-123")).toBe(true);
+  });
+
+  it("refuses everything else, including other public routes", () => {
+    for (const path of [
+      "/shop/blue-mantis",
+      "/shop/blue-mantis/courses/open-water-diver",
+      "/shop/blue-mantis/settings",
+      "/shop/blue-mantis/trips/abc-123",
+      "/sign-in",
+    ]) {
+      expect(isEmbeddableShopRoute(path)).toBe(false);
     }
   });
 });

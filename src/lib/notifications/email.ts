@@ -1,17 +1,5 @@
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => {
-    const entities: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    };
-    return entities[character] ?? character;
-  });
-}
+import { escapeHtml } from "@/lib/html";
 
 type BookingConfirmationEmailInput = {
   diverName: string;
@@ -44,6 +32,16 @@ type WaitlistInviteEmailInput = {
   timezone: string;
   /** The public trip page where the freed seat can be claimed. */
   bookingUrl: string;
+};
+
+type CheckoutRecoveryEmailInput = {
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  /** Stripe's hosted checkout page for this exact session — resumes, doesn't restart. */
+  checkoutUrl: string;
 };
 
 /**
@@ -193,6 +191,25 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
     subject: `A spot opened up on ${input.tripTitle}`,
     text: `Hi ${firstName},\n\nA seat just opened on ${input.tripTitle} with ${input.shopName}, and you're next on the wait list.\n\n${date}\n${time}\n\nClaim it before it's gone:\n${input.bookingUrl}\n\nSeats go first-come, so don't wait too long. See you on the boat!\n`,
     html: `<p>Hi ${escapeHtml(firstName)},</p><p>A seat just opened on <strong>${title}</strong> with ${shop}, and you're next on the wait list.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Claim your spot</a></p><p>Seats go first-come, so don't wait too long. See you on the boat!</p>`,
+  };
+}
+
+/**
+ * The seat is held regardless of payment (docs ADR 20260721-checkout-at-booking)
+ * — this is a nudge to finish paying, not a "you're about to lose your spot"
+ * threat, since that would be false.
+ */
+export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): NotificationEmail {
+  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const shop = escapeHtml(input.shopName);
+  const url = escapeHtml(input.checkoutUrl);
+
+  return {
+    subject: `Finish booking ${input.tripTitle}?`,
+    text: `Hi,\n\nYour spot on ${input.tripTitle} with ${input.shopName} is still held — you just haven't finished paying.\n\n${date}\n${time}\n\nPick up right where you left off:\n${input.checkoutUrl}\n`,
+    html: `<p>Hi,</p><p>Your spot on <strong>${title}</strong> with ${shop} is still held — you just haven't finished paying.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Finish paying</a></p>`,
   };
 }
 

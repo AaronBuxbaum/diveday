@@ -7,9 +7,13 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import {
+  resolveRevokedBookingCapability,
+  verifyBookingCapability,
+} from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import { getReadyPageData } from "@/db/ready";
+import { getBookingPayment } from "@/db/payments";
+import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -19,7 +23,9 @@ import {
   nextDiverStep,
 } from "@/lib/readiness-summary";
 import {
+  cancelMyBookingAction,
   payFromReady,
+  rescheduleMyBookingAction,
   saveEmergencyContactFromReady,
   saveFitFromReady,
   signWaiverFromReady,
@@ -138,21 +144,106 @@ const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; te
     text: "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
   },
   "pay-cancelled": { tone: "neutral", text: "Payment cancelled — your seat is still held." },
+  "error-cancel": {
+    tone: "danger",
+    text: "We couldn’t cancel this online — contact the shop directly.",
+  },
+  "saved-rescheduled": {
+    tone: "success",
+    text: "You’re moved! This is your new trip — the old one’s released.",
+  },
+  "error-reschedule": {
+    tone: "danger",
+    text: "That trip couldn’t hold you — maybe it just filled up. Try another, or contact the shop.",
+  },
 };
+
+/**
+ * What to tell the diver about their own refund, right after they cancel —
+ * derived from the booking's own current payment status, not from anything
+ * the client sent back. `?cancelled=1` on the URL is only a trigger to look;
+ * it carries no claim of its own, so an edited or replayed query string
+ * can't be used to assert a refund that didn't happen, or hide one that did
+ * (Codex finding). This collapses several distinct non-refund outcomes
+ * (past the free-cancellation window, no stated window, a failed/manual
+ * Stripe reversal) into one honest "still paid, shop handles it" message,
+ * since none of those specific reasons survive as durable state to verify
+ * against — only whether the payment row currently reads `refunded` or
+ * still `paid`/`deposit_paid` does.
+ */
+function verifiedCancelNotice(paymentStatus: string | null | undefined): string {
+  if (paymentStatus === "refunded") {
+    return "You paid for this trip, so a refund has been issued back to your card.";
+  }
+  if (paymentStatus === "paid" || paymentStatus === "deposit_paid") {
+    return "You paid for this trip. This shop handles cancellation refunds directly — reach out to them about it.";
+  }
+  return "";
+}
+
+/** What cancelling right now would mean for money already paid — shown before the diver commits. */
+const CANCEL_PREVIEW_TEXT: Record<ReadyPageData["cancelPreview"], string> = {
+  refund: " You're still inside the free-cancellation window, so what you paid comes back to you.",
+  forfeit: " You're past the free-cancellation window, so what you paid won't be refunded.",
+  // Genuinely paid — this trip just has no stated cancellation window, so
+  // nothing is refunded automatically. Disclosing this only after the
+  // irreversible cancel action (Codex finding) would leave a paid diver
+  // finding out too late that the shop, not an automatic reversal, decides
+  // their refund.
+  no_policy: " This shop doesn't automate cancellation refunds, so nothing is refunded right away.",
+  unpaid: "",
+};
+
+/** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
+function cancelledNotice(
+  paymentStatus: string | null | undefined,
+  tripTitle: string,
+  shopName: string,
+) {
+  const refundText = verifiedCancelNotice(paymentStatus);
+  return (
+    <Notice
+      title="This booking was cancelled"
+      text={
+        refundText ||
+        `Your seat on ${tripTitle} is no longer held. If that’s a surprise, get in touch with ${shopName}.`
+      }
+    />
+  );
+}
 
 export default async function DiverReadinessPage({
   params,
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ saved?: string; error?: string; pay?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; pay?: string; cancelled?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, pay } = await searchParams;
+  const { saved, error, pay, cancelled } = await searchParams;
   const db = await getDb();
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
+    // A diver's own cancel action revokes this exact token as part of
+    // cancelling, then redirects back to it with `?cancelled=1` — so the
+    // normal verified-capability path above can never show the refund
+    // notice for a self-cancel. Resolve the token with the revocation check
+    // relaxed (never the cancelled-booking or shop-scoping checks) so that
+    // one redirect still lands on an honest confirmation instead of the
+    // generic "isn't available" notice. `cancelled` is only the trigger to
+    // look — the refund copy itself comes from the booking's own current
+    // payment row, fetched fresh here, never from the query string.
+    if (cancelled) {
+      const resolved = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
+      if (resolved) {
+        const data = await getReadyPageData(db, resolved.bookingId);
+        if (data?.detail.cancelled) {
+          const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
+          return cancelledNotice(payment?.status, data.detail.trip.title, data.detail.shop.name);
+        }
+      }
+    }
     return (
       <Notice
         title="This readiness link isn’t available"
@@ -183,12 +274,16 @@ export default async function DiverReadinessPage({
   );
 
   if (detail.cancelled) {
-    return (
-      <Notice
-        title="This booking was cancelled"
-        text={`Your seat on ${detail.trip.title} is no longer held. If that’s a surprise, get in touch with ${detail.shop.name}.`}
-      />
-    );
+    // Reached when the capability check above succeeded but the booking was
+    // cancelled in the gap before this fresh read (a tight race, not the
+    // normal self-cancel redirect — that one is revoked and handled by the
+    // branch above). `cancelled` here is still just the raw, untrusted query
+    // string; deriving the notice from it directly would reopen exactly the
+    // spoofable-notice gap already closed above (Codex finding) — a crafted
+    // `?cancelled=refunded` could claim a refund that hasn't happened. Same
+    // fix: read the booking's own current payment status fresh.
+    const payment = await getBookingPayment(db, data.shop.id, bookingId);
+    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name);
   }
 
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
@@ -324,6 +419,80 @@ export default async function DiverReadinessPage({
           saved={saved === "fit"}
         />
       </section>
+
+      {data.canManageBooking ? (
+        <section
+          className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+          aria-labelledby="change-plans-heading"
+        >
+          <h2
+            id="change-plans-heading"
+            className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
+          >
+            Need to change your plans?
+          </h2>
+
+          {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-base text-muted">
+                Pick a different trip and we’ll move you — your current spot only releases once the
+                new one’s confirmed, so you’re never left without one.
+              </p>
+              <form
+                action={rescheduleMyBookingAction.bind(null, token)}
+                className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
+              >
+                <label htmlFor="newTripId" className="sr-only">
+                  Pick a trip
+                </label>
+                <select id="newTripId" name="newTripId" required className={controlClass}>
+                  <option value="">Choose a trip…</option>
+                  {data.rescheduleCandidates.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.title} —{" "}
+                      {formatShortDate(candidate.startsAt, "en-US", detail.shop.timezone)} ·{" "}
+                      {formatTimeRangeTz(
+                        candidate.startsAt,
+                        candidate.endsAt,
+                        "en-US",
+                        detail.shop.timezone,
+                      )}{" "}
+                      · {candidate.spotsLeft} left
+                    </option>
+                  ))}
+                </select>
+                <SubmitButton
+                  pendingLabel="Moving…"
+                  confirmMessage="Move your booking to this trip? Your current spot releases as soon as the new one holds."
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  Move my booking
+                </SubmitButton>
+              </form>
+            </div>
+          ) : null}
+
+          <div
+            className={
+              data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
+            }
+          >
+            <p className="text-base text-muted">
+              Cancelling frees your seat right away.
+              {CANCEL_PREVIEW_TEXT[data.cancelPreview]}
+            </p>
+            <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+              <SubmitButton
+                pendingLabel="Cancelling…"
+                confirmMessage={`Cancel your spot on ${detail.trip.title}? This can’t be undone.`}
+                className={buttonClass({ variant: "danger", size: "sm" })}
+              >
+                Cancel my spot
+              </SubmitButton>
+            </form>
+          </div>
+        </section>
+      ) : null}
 
       <p className="mt-8 text-center text-sm text-muted">
         Questions? Reach out to {detail.shop.name}

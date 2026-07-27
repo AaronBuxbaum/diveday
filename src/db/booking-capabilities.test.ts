@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import {
   issueBookingCapability,
+  resolveRevokedBookingCapability,
   revokeBookingCapabilities,
   verifyBookingCapability,
 } from "./booking-capabilities";
@@ -286,5 +287,76 @@ describe("booking capabilities (in-memory PGlite)", () => {
     expect(
       await verifyBookingCapability(db, { token: second?.token ?? "", purpose: "readiness" }),
     ).not.toBeNull();
+  });
+});
+
+describe("resolveRevokedBookingCapability (self-cancel confirmation, docs ADR 20260727-diver-self-service-cancel)", () => {
+  it("still resolves a token that cancelling the booking just revoked", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    await cancelBooking(db, shop.id, bookingId);
+    // The strict check is already dead for this exact case — cancelling
+    // revoked the very token being redirected back to.
+    expect(
+      await verifyBookingCapability(db, { token: issued?.token ?? "", purpose: "readiness" }),
+    ).toBeNull();
+    expect(
+      await resolveRevokedBookingCapability(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+      }),
+    ).toEqual({ bookingId });
+  });
+
+  it("rejects an unknown/garbage token, same as the strict check", async () => {
+    const { db } = await seededContext();
+    expect(
+      await resolveRevokedBookingCapability(db, {
+        token: "not-a-real-token",
+        purpose: "readiness",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects a token past its natural expiry — relaxing revocation isn't relaxing expiry", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const now = nowDate();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      now,
+    });
+    const past = new Date(now.getTime() + CAPABILITY_MAX_TTL_MS + 1);
+    expect(
+      await resolveRevokedBookingCapability(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+        now: past,
+      }),
+    ).toBeNull();
+  });
+
+  it("still enforces purpose scoping", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "confirm",
+    });
+    await cancelBooking(db, shop.id, bookingId);
+    expect(
+      await resolveRevokedBookingCapability(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+      }),
+    ).toBeNull();
   });
 });

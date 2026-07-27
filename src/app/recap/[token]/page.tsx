@@ -3,13 +3,15 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
-import { uploadRecapPhotoAction } from "./actions";
+import { startTipAction, uploadRecapPhotoAction } from "./actions";
+import { TipAmountPicker } from "./TipAmountPicker";
 
 const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
   added: { tone: "success", text: "Added to your recap — thanks for sharing!" },
@@ -24,6 +26,14 @@ const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }
   },
   error: { tone: "danger", text: "That photo didn’t upload — try a JPEG or PNG under 5 MB." },
 };
+
+const TIP_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
+  cancelled: { tone: "danger", text: "No worries — the tip wasn’t charged." },
+  invalid: { tone: "danger", text: "Enter a tip amount between $1 and $500." },
+  error: { tone: "danger", text: "That didn’t go through — try again in a moment." },
+};
+
+const TIP_PRESETS_USD = [5, 10, 20];
 
 export const metadata: Metadata = {
   title: "Your dive recap — DiveDay",
@@ -78,11 +88,11 @@ export default async function DiveRecapPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ photo?: string }>;
+  searchParams: Promise<{ photo?: string; tip?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { photo } = await searchParams;
+  const { photo, tip: tipParam } = await searchParams;
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
     return (
@@ -101,8 +111,17 @@ export default async function DiveRecapPage({
     );
   }
 
-  const { shop, trip, diverName, sites, shoutout, photos } = data;
+  const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
+  // A shop can disconnect Stripe (or lose chargesEnabled) after a tip was
+  // already started or paid; canTip alone would then hide the diver's own
+  // paid confirmation or an already-open checkout link along with the
+  // "start a new tip" form. Show the section whenever there's a durable tip
+  // to report, using canTip only to gate a *new* attempt (Codex finding).
+  const hasReportableTip =
+    tip?.status === "paid" || (tip?.status === "pending" && Boolean(tip.checkoutUrl));
+  const showTipSection = canTip || hasReportableTip;
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
+  const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
   const when = formatShortDate(trip.startsAt, "en-US", shop.timezone);
@@ -134,6 +153,74 @@ export default async function DiveRecapPage({
           We hope the water treated you well.
         </p>
       </EarnedMoment>
+
+      {shop.reviewUrl ? (
+        <section className="mt-8 rounded-xl bg-surface-sunken p-5">
+          <h2 className="text-lg font-semibold">Enjoyed your dive?</h2>
+          <p className="mt-1 text-base text-muted">
+            A quick review helps other divers find {shop.name} — and means the world to the crew
+            that took you out today.
+          </p>
+          <a
+            href={shop.reviewUrl}
+            target="_blank"
+            rel="noopener"
+            className={buttonClass({ size: "cta", className: "mt-4" })}
+          >
+            Leave a review
+          </a>
+        </section>
+      ) : null}
+
+      {showTipSection ? (
+        <section className="mt-8 rounded-xl border border-border bg-surface p-5">
+          <h2 className="text-lg font-semibold">Tip your crew</h2>
+          {tipNotice ? (
+            <p
+              role={tipNotice.tone === "danger" ? "alert" : "status"}
+              className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+                tipNotice.tone === "danger"
+                  ? "border-danger/30 bg-danger/10 text-danger"
+                  : "border-primary/30 bg-primary/10 text-primary"
+              }`}
+            >
+              {tipNotice.text}
+            </p>
+          ) : null}
+          {tip?.status === "paid" ? (
+            <p className="mt-1 text-base text-muted">
+              Thanks — your tip goes straight to {shop.name}. They&apos;ll make sure the crew hears
+              about it.
+            </p>
+          ) : tip?.status === "pending" && tip.checkoutUrl ? (
+            <>
+              <p className="mt-1 text-base text-muted">
+                100% goes to {shop.name} — nothing held back, no account needed.
+              </p>
+              <a href={tip.checkoutUrl} className={buttonClass({ size: "cta", className: "mt-4" })}>
+                Finish your ${(tip.amountCents / 100).toFixed(0)} tip
+              </a>
+            </>
+          ) : canTip ? (
+            <>
+              <p className="mt-1 text-base text-muted">
+                100% goes to {shop.name} — nothing held back, no account needed.
+              </p>
+              <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
+                <TipAmountPicker presets={TIP_PRESETS_USD} defaultPreset={TIP_PRESETS_USD[1]} />
+                <div>
+                  <SubmitButton
+                    pendingLabel="Heading to payment…"
+                    className={buttonClass({ size: "cta" })}
+                  >
+                    Leave a tip
+                  </SubmitButton>
+                </div>
+              </form>
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       {shoutout ? (
         <section className="mt-8 rounded-xl border border-primary/25 bg-primary/5 p-5">

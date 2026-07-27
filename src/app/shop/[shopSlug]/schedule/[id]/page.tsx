@@ -56,16 +56,31 @@ export default async function TripDetailPage({
     error?: string;
     fit?: string;
     pay?: string;
+    embed?: string;
   }>;
 }) {
   await connection();
   const { shopSlug, id: tripId } = await params;
-  const { booking: bookingToken, waitlist: waitlistId, error, fit, pay } = await searchParams;
+  const {
+    booking: bookingToken,
+    waitlist: waitlistId,
+    error,
+    fit,
+    pay,
+    embed,
+  } = await searchParams;
+  // Embed mode is the compact surface a shop frames on its own website
+  // (docs ADR 20260726-schedule-embed) — no "All trips" chrome pointing back
+  // to a schedule the embedding page may never have shown at all.
+  const isEmbed = embed === "1";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
   const session = await auth();
-  if (session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
+  // The staff-management redirect only makes sense outside embed mode — that
+  // destination isn't in the framing allowlist, so sending an embedded staff
+  // preview there would swap a working iframe for a blocked one.
+  if (!isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
     redirect(`/shop/${shopSlug}/trips/${tripId}`);
   }
   const [trip, tripDives] = await Promise.all([
@@ -139,17 +154,21 @@ export default async function TripDetailPage({
   const full = isFull(trip);
   const remaining = spotsRemaining(trip);
   const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
-  const tripRef = { shopSlug, tripId };
+  const tripRef = { shopSlug, tripId, embed: isEmbed };
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+    <main
+      className={isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"}
+    >
       <FlashParams params={["error", "pay"]} />
-      <Link
-        href={`/shop/${shopSlug}/schedule`}
-        className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-      >
-        ← All trips
-      </Link>
+      {isEmbed ? null : (
+        <Link
+          href={`/shop/${shopSlug}/schedule`}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        >
+          ← All trips
+        </Link>
+      )}
 
       <TripHeader shop={shop} trip={trip} />
       {!confirmed && !inPast && !full ? (
@@ -196,9 +215,10 @@ export default async function TripDetailPage({
         <WaitlistConfirmation
           firstName={waitlistConfirmation.person.fullName.split(" ")[0]}
           shopSlug={shopSlug}
+          embed={isEmbed}
         />
       ) : inPast ? (
-        <TripSailedNotice shopSlug={shopSlug} />
+        <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
       ) : full ? (
         <TripFullSection
           shopSlug={shopSlug}

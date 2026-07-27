@@ -37,6 +37,29 @@ export function isPublicShopRoute(pathname: string): boolean {
   return Boolean(course && !RESERVED_COURSE_SEGMENTS.has(course[2]));
 }
 
+/**
+ * The one surface meant to be framed by a shop's own external website (the
+ * booking-widget embed). Deliberately the schedule/trip pages only, not every
+ * public shop route — everything else, including this same shop's staff and
+ * sign-in pages, keeps the site's default deny (src/proxy.ts) so a third-party
+ * page can never frame them for a clickjacking attempt.
+ */
+export function isEmbeddableShopRoute(pathname: string): boolean {
+  return PUBLIC_SCHEDULE.test(pathname);
+}
+
+/**
+ * Set on the request (never trusted from the response side) by `src/proxy.ts`
+ * when — and only when — the current request is a genuine embed request
+ * (`isEmbeddableShopRoute` route + `?embed=1`). `ShopLayout` reads it to
+ * suppress staff chrome for a signed-in staff member previewing their own
+ * embed, since a layout (unlike a page) is never handed `searchParams`
+ * directly. Every request's incoming copy of this header is explicitly
+ * overwritten in the proxy (set or deleted), so a client-supplied value can
+ * never survive to reach a reader downstream.
+ */
+export const EMBED_REQUEST_HEADER = "x-diveday-embed";
+
 export const authConfig = {
   secret: authSecret,
   session: { strategy: "jwt" },

@@ -8,11 +8,14 @@ import {
   confirmBookingIdentity,
   createBooking,
   createBookingParty,
+  rescheduleBooking,
   restoreBooking,
+  selfCancelBooking,
 } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
-import { bookings, people, personRoles } from "./schema";
+import { setBookingPayment } from "./payments";
+import { bookingCheckoutBookings, bookingCheckouts, bookings, people, personRoles } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
@@ -402,5 +405,447 @@ describe("createBooking identity safeguard (H-13)", () => {
     });
     if (!outcome.ok) throw new Error("existing-diver booking failed");
     expect(await identityFlag(db, outcome.bookingId)).toBeNull();
+  });
+});
+
+describe("selfCancelBooking (diver self-service, docs ADR 20260727-diver-self-service-cancel)", () => {
+  it("cancels a plain booked seat", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    expect(await selfCancelBooking(db, { shopId: shop.id, bookingId: booked.bookingId })).toEqual({
+      ok: true,
+    });
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("cancelled");
+  });
+
+  it("refuses a booking that's already cancelled", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    expect(await selfCancelBooking(db, { shopId: shop.id, bookingId: booked.bookingId })).toEqual({
+      ok: false,
+      reason: "already_cancelled",
+    });
+  });
+
+  it("refuses a day-of state a diver should never flip back through a pre-trip link", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await db
+      .update(bookings)
+      .set({ status: "checked_in" })
+      .where(eq(bookings.id, booked.bookingId));
+
+    expect(await selfCancelBooking(db, { shopId: shop.id, bookingId: booked.bookingId })).toEqual({
+      ok: false,
+      reason: "not_cancellable",
+    });
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("checked_in");
+  });
+
+  it("refuses to cancel a seat on a trip that's already departed", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await selfCancelBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      now: new Date(open.startsAt.getTime() + 60 * 60 * 1000), // an hour after departure
+    });
+    expect(result).toEqual({ ok: false, reason: "trip_departed" });
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("booked");
+  });
+
+  it("scopes to the shop and reports an unknown booking as not found", async () => {
+    const { db, shop } = await seededContext();
+    expect(
+      await selfCancelBooking(db, {
+        shopId: shop.id,
+        bookingId: "00000000-0000-4000-8000-000000000000",
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-service-cancel)", () => {
+  async function nightTrip(db: AppDb, shopId: string) {
+    const upcoming = await upcomingTripsWithCounts(db, shopId);
+    const night = upcoming.find((t) => t.title.startsWith("Night Dive"));
+    if (!night) throw new Error("night trip missing");
+    return night;
+  }
+
+  it("moves an unpaid booking to a different trip, atomically", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("cancelled");
+    const [newRow] = await db.select().from(bookings).where(eq(bookings.id, result.newBookingId));
+    expect(newRow?.status).toBe("booked");
+    expect(newRow?.tripId).toBe(night.id);
+    expect(newRow?.personId).toBe(oldRow?.personId);
+
+    const nightRoster = await getTripRoster(db, shop.id, night.id);
+    expect(nightRoster.map((r) => r.person.fullName)).toContain(visitor.fullName);
+    const openRoster = await getTripRoster(db, shop.id, open.id);
+    expect(openRoster.map((r) => r.person.fullName)).not.toContain(visitor.fullName);
+  });
+
+  it("never touches the old booking when the destination trip is full — the diver keeps their seat", async () => {
+    const { db, shop, open, fullTrip } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: fullTrip.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "trip_full" });
+
+    // The exact property a diver needs: rejected on the new trip, still
+    // holding the old one — never neither.
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("booked");
+    expect(oldRow?.tripId).toBe(open.id);
+    const openRoster = await getTripRoster(db, shop.id, open.id);
+    expect(openRoster.map((r) => r.person.fullName)).toContain(visitor.fullName);
+  });
+
+  it("refuses to reschedule a booking that already captured payment", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      status: "paid",
+      amountCents: 15_000,
+      provider: "stripe",
+      providerRef: "cs_test_1",
+    });
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "already_paid" });
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("booked");
+    expect(oldRow?.tripId).toBe(open.id);
+  });
+
+  it("refuses to reschedule a waived booking — staff excused the fee, not just deferred it (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      status: "waived",
+      amountCents: 0,
+      provider: null,
+      note: "Comp'd for a rebooking mixup",
+    });
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "already_paid" });
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("booked");
+    expect(oldRow?.tripId).toBe(open.id);
+  });
+
+  it("refuses to reschedule onto the same trip", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    expect(
+      await rescheduleBooking(db, {
+        shopId: shop.id,
+        bookingId: booked.bookingId,
+        newTripId: open.id,
+      }),
+    ).toEqual({ ok: false, reason: "same_trip" });
+  });
+
+  it("refuses to reschedule an already-cancelled booking", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    expect(
+      await rescheduleBooking(db, {
+        shopId: shop.id,
+        bookingId: booked.bookingId,
+        newTripId: night.id,
+      }),
+    ).toEqual({ ok: false, reason: "already_cancelled" });
+  });
+
+  it("refuses to reschedule a seat on a trip that's already departed", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+      now: new Date(open.startsAt.getTime() + 60 * 60 * 1000),
+    });
+    expect(result).toEqual({ ok: false, reason: "trip_departed" });
+  });
+
+  it("reactivates a previously-cancelled seat on the destination trip instead of double-booking it", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver already had (and cancelled) a seat on the night trip once.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    // Reused the same row `createBookingRecord` already reactivates on a
+    // cancelled-then-rebooked seat, rather than inserting a duplicate.
+    expect(result.newBookingId).toBe(priorNightBooking.bookingId);
+  });
+
+  it("clears a stale nitrox request on a reactivated destination seat (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver's earlier (now-cancelled) seat on the night trip wanted
+    // nitrox — that row is about to be reactivated by the reschedule below.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await db
+      .update(bookings)
+      .set({ wantsNitrox: true })
+      .where(eq(bookings.id, priorNightBooking.bookingId));
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    // The booking actually being moved never asked for nitrox.
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    const [reactivated] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, result.newBookingId));
+    expect(reactivated?.wantsNitrox).toBe(false);
+  });
+
+  it("refuses to reactivate a destination seat carrying a stale settled payment from its earlier life (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver's earlier (now-cancelled) seat on the night trip was paid —
+    // a no-policy/forfeit cancellation deliberately leaves the payment
+    // captured, so this row still reads "paid" even though it's cancelled.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: priorNightBooking.bookingId,
+      status: "paid",
+      amountCents: 15_000,
+      provider: "stripe",
+      providerRef: "cs_test_prior",
+    });
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "destination_already_paid" });
+    // Refused before touching the source booking — the diver keeps their seat.
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("booked");
+    expect(oldRow?.tripId).toBe(open.id);
+    // The destination row was never left "booked" either — the whole
+    // transaction rolled back, so the diver's old (paid, cancelled) seat on
+    // the night trip stays exactly as it was: cancelled.
+    const [destinationRow] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, priorNightBooking.bookingId));
+    expect(destinationRow?.status).toBe("cancelled");
+  });
+
+  it("refuses to reactivate a destination seat carrying a refunded payment from its earlier life (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // `refunded` is a FINAL_PAYMENT_STATUSES entry, same as `paid`/`waived` —
+    // omitting it from the destination-payment gate would let this
+    // reactivation through, and a later real payment on the reactivated seat
+    // would then be silently swallowed by setBookingPaymentIfNotFinal's
+    // refusal to regress a final status, leaving the diver charged while the
+    // booking still reads "refunded".
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: priorNightBooking.bookingId,
+      status: "refunded",
+      amountCents: 15_000,
+      provider: "stripe",
+      providerRef: "cs_test_prior_refunded",
+    });
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "destination_already_paid" });
+  });
+
+  it("retires a stale pending checkout linked to a reactivated destination seat (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver started paying for their earlier seat on the night trip,
+    // abandoned the tab before completing it, then cancelled — the checkout
+    // session itself is still genuinely payable at Stripe, at that seat's
+    // old price. Reactivating the same booking row onto a *different* diver's
+    // move must not leave that old session able to attribute money to it.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    const [staleCheckout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: night.id,
+        status: "pending",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_test_stale",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test_stale",
+        amountPerDiverCents: 15_000,
+        totalCents: 15_000,
+      })
+      .returning();
+    if (!staleCheckout) throw new Error("setup checkout insert failed");
+    await db.insert(bookingCheckoutBookings).values({
+      shopId: shop.id,
+      checkoutId: staleCheckout.id,
+      bookingId: priorNightBooking.bookingId,
+    });
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.newBookingId).toBe(priorNightBooking.bookingId);
+
+    const [checkoutRow] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, staleCheckout.id));
+    expect(checkoutRow?.status).toBe("expired");
+  });
+
+  it("refuses to reschedule a booking still flagged identity_unconfirmed (H-13, dive-domain-expert finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const third = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (t) => t.title === "Two-Tank Reef — Benwood & Elbow",
+    );
+    if (!third) throw new Error("third trip missing");
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    // A different human on the same shared inbox books a second seat on a
+    // different trip — reused person, mismatched name, so the identity flag
+    // is set on this booking.
+    const shared = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "Ben Quinn",
+      email: visitor.email,
+    });
+    if (!shared.ok) throw new Error("shared-inbox booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: shared.bookingId,
+      newTripId: third.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "identity_unconfirmed" });
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
+    expect(row?.status).toBe("booked");
+    expect(row?.tripId).toBe(night.id);
+  });
+
+  it("carries a nitrox request forward onto the new booking instead of silently resetting it", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await db.update(bookings).set({ wantsNitrox: true }).where(eq(bookings.id, booked.bookingId));
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    const [newRow] = await db.select().from(bookings).where(eq(bookings.id, result.newBookingId));
+    expect(newRow?.wantsNitrox).toBe(true);
   });
 });

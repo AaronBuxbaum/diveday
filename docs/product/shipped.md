@@ -351,6 +351,60 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   A shop may never end up with zero owners — removing/disabling/demoting the last one is refused.
   See [staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md).
 
+## Schedule embed widget (delivered 2026-07-26)
+
+- **A shop can put its live booking calendar on its own website** — `?embed=1` on the schedule/trip
+  pages renders a compact, chrome-light surface reusing the existing booking logic untouched;
+  Settings → Website embed generates a copy-paste `<iframe>` snippet and a plain `target="_blank"`
+  "Book a dive" button link. Framing is denied site-wide by default (a prior gap — nothing had ever
+  set `X-Frame-Options`) except on the two embeddable route/query combinations, enforced at the edge
+  (`src/proxy.ts`, `isEmbeddableShopRoute`). Answers the schedule/embed gap named in
+  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-schedule-embed](../architecture/decisions/20260726-schedule-embed.md).
+
+## Abandoned pay-at-booking checkout recovery (delivered 2026-07-26)
+
+- **A diver who reserves a seat but doesn't finish paying gets a nudge email** — rides the existing
+  daily reminders/recap cron (`GET /api/cron/reminders`), reconciles every candidate against Stripe
+  before sending (a delayed webhook can leave a paid session looking `pending`), and refuses to send
+  once the trip or any linked booking has been cancelled since checkout started. The purchaser's
+  email is stored durably on `booking_checkouts.customer_email` at checkout-creation time rather
+  than re-derived from the party's linked bookings. Answers the abandoned-cart gap named in
+  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-abandoned-checkout-recovery](../architecture/decisions/20260726-abandoned-checkout-recovery.md).
+
+## Post-trip review request (delivered 2026-07-26)
+
+- **A "Leave a review" section on the recap page** — one optional shop-level `shops.review_url` set
+  once in Settings; the recap page renders a plain `target="_blank"` link to it when configured,
+  nothing otherwise. No review-platform API integration, no click tracking, no sentiment gating (ToS
+  risk). Rides the existing recap delivery rather than its own send. Answers the review-request gap
+  named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-post-trip-review-request](../architecture/decisions/20260726-post-trip-review-request.md).
+
+## Post-trip crew tipping (delivered 2026-07-26)
+
+- **A diver can tip the crew from the recap page** — a full 100%-to-shop Stripe Checkout on the
+  shop's own connected account, same merchant-of-record model as a booking checkout but tracked in a
+  dedicated `tips` table so its simpler lifecycle never threads through the booking-payment gate.
+  Three presets ($5/$10/$20) or a bounded custom amount ($1–$500), enforced server-side regardless of
+  which the diver used. Inert until a shop both connects Stripe and has `chargesEnabled`. Answers the
+  tipping gap named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
+
+## Diver self-service booking cancel/reschedule (delivered 2026-07-27)
+
+- **A diver can cancel or move their own unpaid booking from their readiness page** —
+  `/ready/[token]` gains a "Need to change your plans?" section; reschedule books the destination
+  trip *before* cancelling the source, inside one transaction, so a full or newly-unavailable
+  destination never strands the diver seatless. Offered, and re-enforced server-side, only for an
+  unpaid booking (paid/deposit-paid/waived still require staff). Cancellation reuses the same
+  automated-refund logic the staff cancellation path already uses. Reviewed by `dive-domain-expert`
+  and `security-reviewer` per AGENTS.md's hard rules for a manifest-mutating, token-authorized
+  surface. Answers the self-service reschedule/cancel gap named in
+  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260727-diver-self-service-cancel](../architecture/decisions/20260727-diver-self-service-cancel.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate

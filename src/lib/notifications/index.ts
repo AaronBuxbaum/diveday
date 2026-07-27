@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   bookingConfirmationEmail,
+  checkoutRecoveryEmail,
   type NotificationEmail,
   passwordChangedEmail,
   passwordResetEmail,
@@ -28,6 +29,16 @@ const bookingConfirmationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  /**
+   * Set only by a caller sending a *second* confirmation for the same
+   * `bookingId` — a reschedule reactivating a previously-cancelled row, or a
+   * staff-triggered resend — so its idempotency key differs from the
+   * original. Omitted, the key is stable per booking (the normal one-send
+   * case); present, it's this specific send's own timestamp, so a genuine
+   * new confirmation can't be swallowed by the provider replaying its cached
+   * response to the first one (Codex finding).
+   */
+  confirmedAt: z.date().optional(),
 });
 
 const waiverRequestSchema = z.object({
@@ -58,6 +69,26 @@ const waitlistInviteSchema = z.object({
   bookingUrl: z.url().max(2_000),
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
+});
+
+// A pay-at-booking checkout the diver never finished (docs ADR
+// 20260726-abandoned-checkout-recovery). No bookingId: a party checkout
+// covers several bookings with no reliable "lead" booking to key on
+// (booking_checkout_bookings carries no ordering/lead marker), so this is
+// scoped to the checkout itself and, like welcome/staff_invite above,
+// structurally excluded from TrackedNotification — dedup lives on
+// booking_checkouts.abandonedRecoverySentAt instead of a per-booking row.
+const checkoutRecoverySchema = z.object({
+  kind: z.literal("checkout_recovery"),
+  checkoutId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  checkoutUrl: z.url().max(2_000),
 });
 
 const tripReminderFields = {
@@ -191,6 +222,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   passwordResetRequestSchema,
   passwordChangedSchema,
   staffInviteSchema,
+  checkoutRecoverySchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -234,13 +266,16 @@ function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
+  if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   return passwordChangedEmail(notification);
 }
 
 function idempotencyKeyFor(notification: Notification): string {
   switch (notification.kind) {
     case "booking_confirmation":
-      return `booking-confirmation/${notification.bookingId}`;
+      return notification.confirmedAt
+        ? `booking-confirmation/${notification.bookingId}/${notification.confirmedAt.toISOString()}`
+        : `booking-confirmation/${notification.bookingId}`;
     case "waiver_request":
       return `waiver-request/${notification.waiverRecordId}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
@@ -270,6 +305,11 @@ function idempotencyKeyFor(notification: Notification): string {
     // is a fresh send, not deduped against the first.
     case "password_changed":
       return `password-changed/${notification.userAccountId}/${notification.changedAt.toISOString()}`;
+    // One recovery send per checkout attempt — the row-level
+    // abandonedRecoverySentAt gate is the real dedup; this only protects a
+    // single call from double-hitting Resend.
+    case "checkout_recovery":
+      return `checkout-recovery/${notification.checkoutId}`;
   }
 }
 

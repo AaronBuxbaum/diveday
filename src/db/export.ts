@@ -37,6 +37,7 @@ import {
   rollCallEvents,
   shops,
   specialtyCertifications,
+  tips,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -240,6 +241,12 @@ export async function loadShopExportBundleInput(
         .orderBy(asc(bookings.createdAt), asc(bookings.id));
       const bookingPerson = new Map(bookingRows.map((row) => [row.id, row.personId]));
 
+      const tipRows = await tx
+        .select()
+        .from(tips)
+        .where(eq(tips.shopId, shopId))
+        .orderBy(asc(tips.createdAt), asc(tips.id));
+
       const paymentRows = await tx
         .select()
         .from(bookingPayments)
@@ -345,6 +352,7 @@ export async function loadShopExportBundleInput(
             "contact_email",
             "contact_phone",
             "dock_call_minutes",
+            "review_url",
             "packing_list",
             "rental_items",
             "rental_pricing",
@@ -359,6 +367,7 @@ export async function loadShopExportBundleInput(
               shop.contactEmail,
               shop.contactPhone,
               shop.dockCallMinutes,
+              shop.reviewUrl,
               JSON.stringify(shop.packingList),
               JSON.stringify(shop.rentalItems),
               JSON.stringify(shop.rentalPricing),
@@ -1029,6 +1038,39 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["order_line_items.csv"],
         },
         {
+          file: "tips.csv",
+          header: [
+            "id",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "status",
+            "currency",
+            "amount_cents",
+            "stripe_session_id",
+            "expires_at",
+            "completed_at",
+            "created_at",
+          ],
+          rows: tipRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId) ?? null;
+            return [
+              row.id,
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.status,
+              row.currency,
+              row.amountCents,
+              row.stripeSessionId,
+              row.expiresAt,
+              row.completedAt,
+              row.createdAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["tips.csv"],
+        },
+        {
           file: "dive_sites.csv",
           header: [
             "id",
@@ -1294,6 +1336,7 @@ export async function loadShopExportCounts(
     "order_line_items.csv": await countOf(
       db.select({ n: count() }).from(orderLineItems).where(eq(orderLineItems.shopId, shopId)),
     ),
+    "tips.csv": await countOf(db.select({ n: count() }).from(tips).where(eq(tips.shopId, shopId))),
     "dive_sites.csv": await countOf(
       db.select({ n: count() }).from(diveSites).where(eq(diveSites.shopId, shopId)),
     ),

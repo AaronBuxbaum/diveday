@@ -12,6 +12,7 @@ import {
   people,
   personRoles,
   shops,
+  tips,
   userAccounts,
 } from "./schema";
 import { createDemoShop, deleteDemoShopCascade, reapExpiredDemoShops } from "./seed";
@@ -128,6 +129,27 @@ describe("deleteDemoShopCascade", () => {
     // The canonical demo and the shared global dive-site catalog are untouched.
     expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
     expect((await db.select().from(globalDiveSites)).length).toBe(globalsBefore);
+  });
+
+  it("deletes a booking's tip instead of FK-violating on the booking it references", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
+    if (!booking) throw new Error("test setup: demo shop has no bookings");
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      stripeAccountId: "acct_demo",
+      stripeSessionId: `cs_demo_${booking.id}`,
+      amountCents: 1000,
+    });
+
+    // No FK violation here is the real assertion — tips must go before bookings.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBe(0);
   });
 
   it("deletes an owner's outstanding account token instead of FK-violating (security review finding)", async () => {

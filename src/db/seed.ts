@@ -40,6 +40,7 @@ import {
   shopStripeAccounts,
   shops,
   specialtyCertifications,
+  tips,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -2406,6 +2407,10 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  // Tips reference bookings, so they must go before them — same FK this
+  // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
+  // this reset path had its own, separate child-first list and was missed).
+  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
@@ -2484,6 +2489,17 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
     await db.delete(people).where(inArray(people.id, nonStaffIds));
   }
 
+  // Shop-level fixtures a test can mutate directly (not just schedule data)
+  // (Codex finding): `shops.review_url` (Settings → Review link) and a
+  // connected `shop_stripe_accounts` row (`/api/test/seed-stripe-account`)
+  // both persist across resets otherwise, since neither is schedule/booking
+  // data — leaking into whichever spec runs next in the same worker and
+  // making its assertions order-dependent (e2e/recap.spec.ts's own "review
+  // link starts absent" check, for one). The canonical seed never sets
+  // either, so restoring to that state is just deleting/nulling them.
+  await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
+  await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+
   // Re-seed at the richness the shop was minted with: the canonical demo keeps
   // its billing back-fill, a minted demo stays lean. Re-seeding history on a
   // minted demo would re-insert globally-unique waiver/Stripe ids that collide
@@ -2527,6 +2543,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
+  await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
