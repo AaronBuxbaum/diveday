@@ -77,3 +77,14 @@ merchant-of-record model bookings use.
   payments.
 - No crew-level attribution or payout splitting exists; a shop that wants to divide tips among crew
   members does so outside DiveDay, same as they would with a cash tip jar today.
+- **Known gap (Codex finding, accepted for now):** `startTipCheckout`'s row-locked transaction wraps
+  the payment-operation intent's start/resolve *and* the Stripe call in one commit, unlike
+  `startBookingCheckout`'s durable-intent-before-Stripe-call ordering — a crash between Stripe
+  succeeding and the transaction committing leaves no local trail of that session. Fixing this
+  properly needs the same lock-free claim mechanism `startBookingCheckout` uses
+  (`claimBookingsForCheckout`), which this ADR already rejected reusing directly for tips (a shared
+  claim column would cross-block two independent money flows); it would need its own dedicated claim
+  column — a schema change against a money-handling path, not a quick patch. Bounded blast radius:
+  DiveDay never holds the money, so an orphaned session means the shop's own Stripe dashboard is the
+  reconciliation source of truth, never a lost or double charge. Revisit if this surface's volume ever
+  makes that manual reconciliation actually painful.

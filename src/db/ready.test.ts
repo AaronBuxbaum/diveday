@@ -90,4 +90,21 @@ describe("getReadyPageData reschedule candidates (diver self-service, docs ADR 2
     const data = await getReadyPageData(db, bookingId);
     expect(data?.cancelPreview).toBe("unpaid");
   });
+
+  it("hides the reschedule picker for a waived booking too (Codex finding)", async () => {
+    // rescheduleBooking refuses a waived booking the same as paid/deposit-paid
+    // (staff excused the fee) — the picker must not promise a move it can't
+    // deliver.
+    const { db, shop, bookingId } = await unpaidBooking();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "waived",
+      amountCents: 0,
+      provider: null,
+      note: "Comp'd",
+    });
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.rescheduleCandidates).toBeNull();
+  });
 });

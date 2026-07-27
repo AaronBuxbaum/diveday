@@ -67,9 +67,10 @@ export type ReadyPageData = {
   cancelPreview: "refund" | "forfeit" | "no_policy" | "unpaid";
   /**
    * Other upcoming trips this booking could move to, or null when the
-   * booking has a captured payment — rescheduling a paid booking needs
-   * staff-mediated money movement this slice doesn't automate, so the
-   * picker doesn't offer it at all (docs ADR 20260727-diver-self-service-cancel).
+   * booking has settled payment (paid, deposit-paid, or waived) —
+   * rescheduling any of those needs staff-mediated money/policy handling
+   * this slice doesn't automate, so the picker doesn't offer it at all
+   * (docs ADR 20260727-diver-self-service-cancel).
    */
   rescheduleCandidates: RescheduleCandidate[] | null;
 };
@@ -133,7 +134,12 @@ export async function getReadyPageData(
       : "no_policy";
 
   let rescheduleCandidates: RescheduleCandidate[] | null = null;
-  if (!captured) {
+  // `settled`, not `captured`: rescheduleBooking also refuses a waived
+  // booking (docs ADR 20260727-diver-self-service-cancel) — staff excused
+  // the fee, and a fresh destination booking has no payment row to carry
+  // that decision forward. Showing the picker for a waived booking anyway
+  // would promise a move `rescheduleBooking` then rejects as already_paid.
+  if (!settled) {
     const upcoming = await upcomingTripsWithCounts(db, row.shopId, now);
     rescheduleCandidates = upcoming
       .filter((candidate) => candidate.id !== row.tripId && candidate.booked < candidate.capacity)

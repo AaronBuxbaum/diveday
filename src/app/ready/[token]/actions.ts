@@ -7,10 +7,13 @@ import { rescheduleBooking, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
+import { sendAndRecordNotification } from "@/db/notifications";
 import { getReadyPageData } from "@/db/ready";
-import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
+import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -168,29 +171,6 @@ export async function payFromReady(token: string) {
   redirect(url);
 }
 
-/** Diver-facing notice code for a refund outcome — mirrors `refundNotice` on the staff roster. */
-function cancelRefundNotice(refund: CancellationRefundOutcome): string {
-  switch (refund.status) {
-    case "refunded":
-      return "cancelled-refunded";
-    case "forfeit":
-      return "cancelled-forfeit";
-    case "failed":
-    case "manual":
-      return "cancelled-refund-manual";
-    case "no_policy":
-      // Genuinely paid — refundBookingOnCancellation only reaches no_policy
-      // after confirming captured payment — but the trip states no
-      // cancellation window, so automation stayed out of it and nothing was
-      // refunded. This is not the same as "nothing was owed" (unpaid): the
-      // diver needs to know the shop, not Stripe, decides this one.
-      return "cancelled-no-policy";
-    default:
-      // unpaid: nothing was owed.
-      return "cancelled";
-  }
-}
-
 /**
  * Cancel the diver's own booking. Rate-limited harder than the rest of this
  * file (docs ADR 20260727-diver-self-service-cancel) — this is irreversible
@@ -215,11 +195,17 @@ export async function cancelMyBookingAction(token: string) {
   });
   if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
 
-  const refund = await refundBookingOnCancellation(ctx.db, {
+  // The refund outcome itself is never trusted back from the client for the
+  // notice: `?cancelled=1` here is only a trigger telling the page to look,
+  // not the source of truth. The page re-derives what actually happened from
+  // the booking's own current payment status (Codex finding) — an edited or
+  // replayed query string can't be used to claim a refund that didn't
+  // happen, or hide one that did.
+  await refundBookingOnCancellation(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
   });
-  redirect(`${base(token)}?cancelled=${cancelRefundNotice(refund)}`);
+  redirect(`${base(token)}?cancelled=1`);
 }
 
 /**
@@ -233,7 +219,11 @@ export async function cancelMyBookingAction(token: string) {
  * The old token dies with the old booking (capabilities are revoked on
  * cancel), so a successful reschedule mints a fresh readiness link for the
  * new booking and sends the diver straight there — there is no way to hand
- * back an existing token for a booking id that changed.
+ * back an existing token for a booking id that changed. Also emails that
+ * link the same way a fresh booking's confirmation does (Codex finding):
+ * the redirect is the only copy of it that exists once the diver closes
+ * this tab, since every link in the original confirmation email died with
+ * the source booking.
  */
 export async function rescheduleMyBookingAction(token: string, formData: FormData) {
   const ip = await clientIp();
@@ -264,5 +254,38 @@ export async function rescheduleMyBookingAction(token: string, formData: FormDat
   // fails — the diver just won't have a bookmark to it. A shop can still
   // find them on the new trip's roster.
   if (!capability) redirect(base(token));
+
+  // The redirect below is the only copy of this link that exists the moment
+  // the diver closes this tab — every readiness link from the original
+  // confirmation email died with the source booking it belonged to. Deliver
+  // a durable copy the same way a fresh booking does (Codex finding),
+  // best-effort: the reschedule already committed, so a delivery failure
+  // here must never turn it into an error page.
+  if (ctx.data.person.email) {
+    try {
+      const origin = publicAppUrl();
+      const newTrip = await getTripWithBooked(ctx.db, ctx.data.shop.id, parsedTripId.data);
+      if (origin && newTrip) {
+        await sendAndRecordNotification(ctx.db, {
+          kind: "booking_confirmation",
+          bookingId: result.newBookingId,
+          shopId: ctx.data.shop.id,
+          to: ctx.data.person.email,
+          diverName: ctx.data.detail.person.fullName,
+          shopName: ctx.data.detail.shop.name,
+          tripTitle: newTrip.title,
+          startsAt: newTrip.startsAt,
+          endsAt: newTrip.endsAt,
+          timezone: ctx.data.detail.shop.timezone,
+          readinessUrl: new URL(readinessLinkPath(capability.token), `${origin}/`).toString(),
+        });
+      }
+    } catch {
+      console.error("Reschedule confirmation notification could not be sent", {
+        bookingId: result.newBookingId,
+      });
+    }
+  }
+
   redirect(`${base(capability.token)}?saved=rescheduled`);
 }

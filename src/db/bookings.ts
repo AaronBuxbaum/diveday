@@ -600,12 +600,16 @@ export async function rescheduleBooking(
     });
     if (!outcome.ok) return outcome;
 
-    if (row.wantsNitrox) {
-      await tx
-        .update(bookings)
-        .set({ wantsNitrox: true })
-        .where(eq(bookings.id, outcome.bookingId));
-    }
+    // Unconditional, not just when true: `createBookingRecord` can reactivate
+    // a previously-cancelled row on the destination trip (a diver who once
+    // booked, cancelled, and is now moving back onto it), and that stale row
+    // may still carry `wantsNitrox: true` from its earlier life. Only writing
+    // the true case would leave that stale request in place even though the
+    // source booking being moved doesn't want nitrox (Codex finding).
+    await tx
+      .update(bookings)
+      .set({ wantsNitrox: row.wantsNitrox })
+      .where(eq(bookings.id, outcome.bookingId));
 
     const [cancelled] = await tx
       .update(bookings)

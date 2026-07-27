@@ -12,6 +12,7 @@ import {
   verifyBookingCapability,
 } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
+import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -157,18 +158,28 @@ const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; te
   },
 };
 
-/** What to tell the diver about their own refund, right after they cancel. */
-const CANCEL_NOTICES: Record<string, string> = {
-  "cancelled-refunded":
-    "You paid for this trip, so a refund is already on its way back to your card.",
-  "cancelled-forfeit":
-    "This was past the free-cancellation window, so no refund was issued for this trip.",
-  "cancelled-refund-manual":
-    "You paid for this trip. The shop needs to issue that refund directly — reach out if you don't hear from them soon.",
-  "cancelled-no-policy":
-    "You paid for this trip, and this shop handles cancellation refunds directly rather than automatically — reach out to them about it.",
-  cancelled: "",
-};
+/**
+ * What to tell the diver about their own refund, right after they cancel —
+ * derived from the booking's own current payment status, not from anything
+ * the client sent back. `?cancelled=1` on the URL is only a trigger to look;
+ * it carries no claim of its own, so an edited or replayed query string
+ * can't be used to assert a refund that didn't happen, or hide one that did
+ * (Codex finding). This collapses several distinct non-refund outcomes
+ * (past the free-cancellation window, no stated window, a failed/manual
+ * Stripe reversal) into one honest "still paid, shop handles it" message,
+ * since none of those specific reasons survive as durable state to verify
+ * against — only whether the payment row currently reads `refunded` or
+ * still `paid`/`deposit_paid` does.
+ */
+function verifiedCancelNotice(paymentStatus: string | null | undefined): string {
+  if (paymentStatus === "refunded") {
+    return "You paid for this trip, so a refund has been issued back to your card.";
+  }
+  if (paymentStatus === "paid" || paymentStatus === "deposit_paid") {
+    return "You paid for this trip. This shop handles cancellation refunds directly — reach out to them about it.";
+  }
+  return "";
+}
 
 /** What cancelling right now would mean for money already paid — shown before the diver commits. */
 const CANCEL_PREVIEW_TEXT: Record<ReadyPageData["cancelPreview"], string> = {
@@ -178,9 +189,13 @@ const CANCEL_PREVIEW_TEXT: Record<ReadyPageData["cancelPreview"], string> = {
   unpaid: "",
 };
 
-/** The "This booking was cancelled" notice, keyed by the refund outcome the cancel action already computed. */
-function cancelledNotice(cancelled: string | undefined, tripTitle: string, shopName: string) {
-  const refundText = cancelled ? CANCEL_NOTICES[cancelled] : undefined;
+/** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
+function cancelledNotice(
+  paymentStatus: string | null | undefined,
+  tripTitle: string,
+  shopName: string,
+) {
+  const refundText = verifiedCancelNotice(paymentStatus);
   return (
     <Notice
       title="This booking was cancelled"
@@ -206,17 +221,22 @@ export default async function DiverReadinessPage({
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
     // A diver's own cancel action revokes this exact token as part of
-    // cancelling, then redirects back to it with `?cancelled=...` — so the
+    // cancelling, then redirects back to it with `?cancelled=1` — so the
     // normal verified-capability path above can never show the refund
     // notice for a self-cancel. Resolve the token with the revocation check
     // relaxed (never the cancelled-booking or shop-scoping checks) so that
     // one redirect still lands on an honest confirmation instead of the
-    // generic "isn't available" notice.
+    // generic "isn't available" notice. `cancelled` is only the trigger to
+    // look — the refund copy itself comes from the booking's own current
+    // payment row, fetched fresh here, never from the query string.
     if (cancelled) {
       const resolved = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
-      const data = resolved ? await getReadyPageData(db, resolved.bookingId) : null;
-      if (data?.detail.cancelled) {
-        return cancelledNotice(cancelled, data.detail.trip.title, data.detail.shop.name);
+      if (resolved) {
+        const data = await getReadyPageData(db, resolved.bookingId);
+        if (data?.detail.cancelled) {
+          const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
+          return cancelledNotice(payment?.status, data.detail.trip.title, data.detail.shop.name);
+        }
       }
     }
     return (

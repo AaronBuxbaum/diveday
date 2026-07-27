@@ -81,6 +81,24 @@ export async function startTipCheckout(
   // low-frequency, non-contentious write like a tip (unlike the
   // higher-volume booking-checkout path, which uses a lock-free claim
   // column instead — see `claimBookingsForCheckout`).
+  //
+  // Known trade-off (Codex finding): because the whole thing — reuse check,
+  // Stripe call, and the payment-operation intent's start/resolve — shares
+  // this one transaction, a crash between the Stripe call succeeding and
+  // this transaction committing rolls the intent row back along with
+  // everything else, leaving no local trail of a session that may exist at
+  // Stripe. `startBookingCheckout` avoids this by committing its intent
+  // *before* calling Stripe and using a lock-free claim column instead of a
+  // held row lock (see `claimBookingsForCheckout`) — reusing that same
+  // column for tips was considered and rejected (this session, same ADR)
+  // to avoid cross-blocking two independent money flows on one shared
+  // per-booking claim slot. Doing this correctly for tips needs the same
+  // kind of dedicated claim mechanism, which is a schema change against a
+  // money-handling path — out of scope to rush here. The blast radius is
+  // bounded: DiveDay never holds the money (docs ADR
+  // 20260726-post-trip-tipping), so an orphaned session only means the
+  // shop's own Stripe dashboard is the source of truth until someone
+  // reconciles it by hand, never a lost or double charge.
   return db.transaction(async (tx) => {
     await tx
       .select({ id: bookings.id })
