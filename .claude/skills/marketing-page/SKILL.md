@@ -17,6 +17,9 @@ the same PR.
    in the live demo — never roadmap marketing).
 3. If the change is positioning-level (hero, section order, new page), read
    `docs/product/assessments/marketing-review.md` for the current case and task list (M1–M8).
+4. If the task is a new or edited `/switching/*` guide, use the **switching-pages** skill instead
+   — it layers the incumbent-specific procedure (guide shapes, `IMPORT_HONESTY_TABLE`, coexist
+   framing) on top of this one.
 
 ## Where to edit
 
@@ -64,7 +67,10 @@ things, `<Field>`/`<FieldGrid>` for forms.
    `node scripts/screenshot.mjs / /product /pricing`
 4. Run the `design-review` skill for anything beyond a copy tweak; new sections or pages get a
    visual snapshot in `e2e/visual.spec.ts` (see `e2e-and-visual`).
-5. If claims, positioning, or page inventory changed: update `docs/product/marketing.md` in the
+5. Launch the `conversion-reviewer` agent for anything beyond a copy tweak — CTA clarity, funnel
+   logic, and objection-handling are easy to lose while satisfying the claims policy; it reviews
+   for persuasion the way `design-critic` reviews for delight.
+6. If claims, positioning, or page inventory changed: update `docs/product/marketing.md` in the
    same PR.
-6. After push: watch for `e2e/visual.spec.ts` failures and run `visual-triage` — marketing pages
+7. After push: watch for `e2e/visual.spec.ts` failures and run `visual-triage` — marketing pages
    are visual surfaces; their diffs need decisions like any other.

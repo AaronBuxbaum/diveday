@@ -295,8 +295,9 @@ serves it.
 4. Close H-12 at $99/location/month with the two-year founding lock and the founder-direct
    support promise; close H-13 with the "is this you?" safeguard or a written acceptance.
 5. Run V-01 and the V-04 rehearsal on the demo shop; script the V-02 boat day.
-6. Draft the design-partner one-pager (the offer above) and open conversations with five shops
-   across the three profiles; get one boat day scheduled — it doubles as V-02.
+6. Draft the [design-partner one-pager](stakeholders/design-partner-one-pager.md) (the offer
+   above) and open conversations with five shops across the three profiles; get one boat day
+   scheduled — it doubles as V-02.
 7. Decide DEMA posture (meetings vs. booth) and join DEMA.
 
 ## Review cadence
