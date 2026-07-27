@@ -7,6 +7,7 @@ import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import {
   bookings,
@@ -403,6 +404,214 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
   // own audit trail honest and stops relying solely on that join.
   await revokeBookingCapabilities(db, { shopId, bookingId });
   return booking;
+}
+
+export type SelfCancelResult =
+  | { ok: true }
+  | {
+      ok: false;
+      /** already_cancelled / not_cancellable / trip_departed are distinct so a
+       * caller can pick honest copy, but they must never be distinguished in
+       * a *response* to the diver — same fail-closed-uniformly rule as
+       * verifyBookingCapability (a booking-state oracle is still a leak). */
+      reason: "not_found" | "already_cancelled" | "not_cancellable" | "trip_departed";
+    };
+
+/**
+ * Cancel a diver's own booking from their readiness link. Thin, deliberately
+ * stricter wrapper around `cancelBooking` for a self-service caller — the
+ * staff roster path trusts a human looking at a row and can flip any status
+ * straight to cancelled, but a diver acting through a bearer token gets its
+ * own pre-checks `cancelBooking` itself doesn't enforce:
+ *
+ * - Only a plain `booked` seat is self-cancellable — not one already
+ *   `cancelled`, and not `checked_in`/`no_show`, which are day-of states a
+ *   diver clicking a pre-trip link should never be able to flip back.
+ * - The trip must not have already started; cancelling a seat on a boat
+ *   that's already left has no honest meaning (mirrors the same
+ *   already-departed check the checkout-recovery scan makes, docs ADR
+ *   20260726-abandoned-checkout-recovery).
+ *
+ * Refunding is the caller's job, same as the staff path (docs H-07): this
+ * only frees the seat, so a refund failure can never block the cancellation.
+ */
+export async function selfCancelBooking(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<SelfCancelResult> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx) => {
+    // Locks the row for the rest of this transaction — closes the gap a bare
+    // read-then-write would leave open for a concurrent roll-call action to
+    // flip this same seat to checked_in/no_show between the check below and
+    // the write, which the unconditional update this replaced could then
+    // blindly stomp back to cancelled (security review finding on this ADR).
+    const [row] = await tx
+      .select({ status: bookings.status, tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!row) return { ok: false, reason: "not_found" };
+    if (row.status === "cancelled") return { ok: false, reason: "already_cancelled" };
+    if (row.status !== "booked") return { ok: false, reason: "not_cancellable" };
+
+    const [trip] = await tx
+      .select({ startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.id, row.tripId))
+      .limit(1);
+    if (trip && trip.startsAt <= now) return { ok: false, reason: "trip_departed" };
+
+    const [cancelled] = await tx
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.status, "booked"),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (!cancelled) return { ok: false, reason: "not_cancellable" };
+    // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
+    await revokeBookingCapabilities(tx as unknown as AppDb, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+    });
+    return { ok: true };
+  });
+}
+
+export type RescheduleResult =
+  | { ok: true; newBookingId: string }
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "already_cancelled"
+        | "not_cancellable"
+        | "trip_departed"
+        | "already_paid"
+        | "same_trip"
+        | "identity_unconfirmed"
+        | Exclude<BookingOutcome, { ok: true }>["reason"];
+    };
+
+/**
+ * Move a diver's own booking to a different trip, atomically: the new seat
+ * is booked *before* the old one is freed, in one transaction, so a diver
+ * can never end up holding neither (the failure mode a cancel-then-rebook
+ * flow risks — the destination trip could fill, or stop qualifying, in the
+ * gap between the two steps). If the new trip can't take them — full,
+ * unstaffed, wrong prerequisites, already departed — the old booking is
+ * left exactly as it was; nothing is lost on a rejected reschedule.
+ *
+ * Scoped to a booking with no captured payment. A paid booking's money has
+ * to move with it (a full or partial refund, a possible new charge if the
+ * destination trip prices differently), which is a staff-mediated decision
+ * this slice doesn't automate — a paid diver cancels (auto-refunded inside
+ * the shop's stated window, same as today) and books the new trip fresh
+ * (docs ADR 20260727-diver-self-service-cancel).
+ *
+ * Reuses `createBookingRecord` for the destination trip — the same
+ * capacity/course/ratio gates a fresh public booking gets, keyed to the
+ * same person already on the booking being moved (never re-typed, so there
+ * is no email/identity ambiguity to resolve).
+ *
+ * Refuses a booking still flagged `identity_unconfirmed` (H-13): that flag
+ * is a deliberate, staff-only-clearable readiness blocker for a public
+ * booking whose submitted name didn't match the email's existing person
+ * record, and `createBookingRecord`'s known-`personId` path (the one this
+ * function always uses) never sets it on the new booking — silently
+ * dropping a flag only a human was supposed to be able to clear. Carries
+ * `wantsNitrox` forward onto the new booking for the same reason a diver's
+ * gas request shouldn't silently reset just because they moved trips.
+ */
+export async function rescheduleBooking(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; newTripId: string; now?: Date },
+): Promise<RescheduleResult> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx) => {
+    // Locks the row for the rest of this transaction. Without this, two
+    // concurrent reschedules of the same booking to two *different* trips
+    // could both read status="booked" before either writes, both book their
+    // own (uncontended) destination trip, and both then unconditionally
+    // cancel the same source booking — leaving the diver double-booked on
+    // two trips off one original seat (security review finding on this ADR).
+    // Holding this lock through the whole transaction serializes that: the
+    // second caller blocks here until the first commits, then sees the row
+    // already cancelled and refuses cleanly.
+    const [row] = await tx
+      .select({
+        status: bookings.status,
+        tripId: bookings.tripId,
+        personId: bookings.personId,
+        wantsNitrox: bookings.wantsNitrox,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!row) return { ok: false, reason: "not_found" };
+    if (row.status === "cancelled") return { ok: false, reason: "already_cancelled" };
+    if (row.status !== "booked") return { ok: false, reason: "not_cancellable" };
+    if (row.tripId === input.newTripId) return { ok: false, reason: "same_trip" };
+    if (row.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
+
+    const [oldTrip] = await tx
+      .select({ startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.id, row.tripId))
+      .limit(1);
+    if (oldTrip && oldTrip.startsAt <= now) return { ok: false, reason: "trip_departed" };
+
+    const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
+    if (payment?.status === "paid" || payment?.status === "deposit_paid") {
+      return { ok: false, reason: "already_paid" };
+    }
+
+    // Book the destination first. Every capacity/course/ratio gate a fresh
+    // public booking gets applies identically here, inside the same
+    // transaction — a full or newly-unstaffed trip fails this and returns
+    // without ever touching the old booking.
+    const outcome = await createBookingRecord(tx as unknown as AppDb, {
+      shopId: input.shopId,
+      tripId: input.newTripId,
+      personId: row.personId,
+      actor: "public",
+    });
+    if (!outcome.ok) return outcome;
+
+    if (row.wantsNitrox) {
+      await tx
+        .update(bookings)
+        .set({ wantsNitrox: true })
+        .where(eq(bookings.id, outcome.bookingId));
+    }
+
+    const [cancelled] = await tx
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.status, "booked"),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (!cancelled) return { ok: false, reason: "not_cancellable" };
+    await revokeBookingCapabilities(tx as unknown as AppDb, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+    });
+
+    return { ok: true, newBookingId: outcome.bookingId };
+  });
 }
 
 /**

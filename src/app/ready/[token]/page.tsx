@@ -7,9 +7,12 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import {
+  resolveRevokedBookingCapability,
+  verifyBookingCapability,
+} from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import { getReadyPageData } from "@/db/ready";
+import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -19,7 +22,9 @@ import {
   nextDiverStep,
 } from "@/lib/readiness-summary";
 import {
+  cancelMyBookingAction,
   payFromReady,
+  rescheduleMyBookingAction,
   saveEmergencyContactFromReady,
   saveFitFromReady,
   signWaiverFromReady,
@@ -138,21 +143,80 @@ const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; te
     text: "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
   },
   "pay-cancelled": { tone: "neutral", text: "Payment cancelled — your seat is still held." },
+  "error-cancel": {
+    tone: "danger",
+    text: "We couldn’t cancel this online — contact the shop directly.",
+  },
+  "saved-rescheduled": {
+    tone: "success",
+    text: "You’re moved! This is your new trip — the old one’s released.",
+  },
+  "error-reschedule": {
+    tone: "danger",
+    text: "That trip couldn’t hold you — maybe it just filled up. Try another, or contact the shop.",
+  },
 };
+
+/** What to tell the diver about their own refund, right after they cancel. */
+const CANCEL_NOTICES: Record<string, string> = {
+  "cancelled-refunded":
+    "You paid for this trip, so a refund is already on its way back to your card.",
+  "cancelled-forfeit":
+    "This was past the free-cancellation window, so no refund was issued for this trip.",
+  "cancelled-refund-manual":
+    "You paid for this trip. The shop needs to issue that refund directly — reach out if you don't hear from them soon.",
+  cancelled: "",
+};
+
+/** What cancelling right now would mean for money already paid — shown before the diver commits. */
+const CANCEL_PREVIEW_TEXT: Record<ReadyPageData["cancelPreview"], string> = {
+  refund: " You're still inside the free-cancellation window, so what you paid comes back to you.",
+  forfeit: " You're past the free-cancellation window, so what you paid won't be refunded.",
+  no_policy: "",
+  unpaid: "",
+};
+
+/** The "This booking was cancelled" notice, keyed by the refund outcome the cancel action already computed. */
+function cancelledNotice(cancelled: string | undefined, tripTitle: string, shopName: string) {
+  const refundText = cancelled ? CANCEL_NOTICES[cancelled] : undefined;
+  return (
+    <Notice
+      title="This booking was cancelled"
+      text={
+        refundText ||
+        `Your seat on ${tripTitle} is no longer held. If that’s a surprise, get in touch with ${shopName}.`
+      }
+    />
+  );
+}
 
 export default async function DiverReadinessPage({
   params,
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ saved?: string; error?: string; pay?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; pay?: string; cancelled?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, pay } = await searchParams;
+  const { saved, error, pay, cancelled } = await searchParams;
   const db = await getDb();
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
+    // A diver's own cancel action revokes this exact token as part of
+    // cancelling, then redirects back to it with `?cancelled=...` — so the
+    // normal verified-capability path above can never show the refund
+    // notice for a self-cancel. Resolve the token with the revocation check
+    // relaxed (never the cancelled-booking or shop-scoping checks) so that
+    // one redirect still lands on an honest confirmation instead of the
+    // generic "isn't available" notice.
+    if (cancelled) {
+      const resolved = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
+      const data = resolved ? await getReadyPageData(db, resolved.bookingId) : null;
+      if (data?.detail.cancelled) {
+        return cancelledNotice(cancelled, data.detail.trip.title, data.detail.shop.name);
+      }
+    }
     return (
       <Notice
         title="This readiness link isn’t available"
@@ -183,12 +247,7 @@ export default async function DiverReadinessPage({
   );
 
   if (detail.cancelled) {
-    return (
-      <Notice
-        title="This booking was cancelled"
-        text={`Your seat on ${detail.trip.title} is no longer held. If that’s a surprise, get in touch with ${detail.shop.name}.`}
-      />
-    );
+    return cancelledNotice(cancelled, detail.trip.title, detail.shop.name);
   }
 
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
@@ -323,6 +382,77 @@ export default async function DiverReadinessPage({
           plannedDives={data.trip.plannedDives}
           saved={saved === "fit"}
         />
+      </section>
+
+      <section
+        className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+        aria-labelledby="change-plans-heading"
+      >
+        <h2
+          id="change-plans-heading"
+          className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
+        >
+          Need to change your plans?
+        </h2>
+
+        {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
+          <div className="mt-3">
+            <p className="text-base text-muted">
+              Pick a different trip and we’ll move you — your current spot only releases once the
+              new one’s confirmed, so you’re never left without one.
+            </p>
+            <form
+              action={rescheduleMyBookingAction.bind(null, token)}
+              className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
+            >
+              <label htmlFor="newTripId" className="sr-only">
+                Pick a trip
+              </label>
+              <select id="newTripId" name="newTripId" required className={controlClass}>
+                <option value="">Choose a trip…</option>
+                {data.rescheduleCandidates.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {formatShortDate(candidate.startsAt, "en-US", detail.shop.timezone)} ·{" "}
+                    {formatTimeRangeTz(
+                      candidate.startsAt,
+                      candidate.endsAt,
+                      "en-US",
+                      detail.shop.timezone,
+                    )}{" "}
+                    · {candidate.spotsLeft} left
+                  </option>
+                ))}
+              </select>
+              <SubmitButton
+                pendingLabel="Moving…"
+                confirmMessage="Move your booking to this trip? Your current spot releases as soon as the new one holds."
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                Move my booking
+              </SubmitButton>
+            </form>
+          </div>
+        ) : null}
+
+        <div
+          className={
+            data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
+          }
+        >
+          <p className="text-base text-muted">
+            Cancelling frees your seat right away.
+            {CANCEL_PREVIEW_TEXT[data.cancelPreview]}
+          </p>
+          <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+            <SubmitButton
+              pendingLabel="Cancelling…"
+              confirmMessage={`Cancel your spot on ${detail.trip.title}? This can’t be undone.`}
+              className={buttonClass({ variant: "danger", size: "sm" })}
+            >
+              Cancel my spot
+            </SubmitButton>
+          </form>
+        </div>
       </section>
 
       <p className="mt-8 text-center text-sm text-muted">

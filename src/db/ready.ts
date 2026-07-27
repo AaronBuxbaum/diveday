@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { withinCancellationWindow } from "@/lib/deposits";
 import { publicAppUrl } from "@/lib/notifications";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
@@ -9,7 +11,19 @@ import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readin
 import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
 import { bookings, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked } from "./trips";
+import { getTripWithBooked, upcomingTripsWithCounts } from "./trips";
+
+/** One alternative trip a diver could reschedule this booking into. */
+export type RescheduleCandidate = {
+  id: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  spotsLeft: number;
+};
+
+/** How many upcoming trips the reschedule picker offers — plenty to browse without loading the whole calendar. */
+const MAX_RESCHEDULE_CANDIDATES = 8;
 
 /**
  * Everything the transactional `/ready` page needs, gathered from the same
@@ -42,11 +56,28 @@ export type ReadyPageData = {
   rentalFit: DiverRentalFit | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /**
+   * What cancelling right now would do to any payment already captured —
+   * shown before the diver commits, mirroring `refundBookingOnCancellation`'s
+   * decision without moving any money. Never trust this for the actual
+   * refund: the cancel action re-derives it server-side at the moment of
+   * cancellation, since "now" and payment state can both move between page
+   * load and submit.
+   */
+  cancelPreview: "refund" | "forfeit" | "no_policy" | "unpaid";
+  /**
+   * Other upcoming trips this booking could move to, or null when the
+   * booking has a captured payment — rescheduling a paid booking needs
+   * staff-mediated money movement this slice doesn't automate, so the
+   * picker doesn't offer it at all (docs ADR 20260727-diver-self-service-cancel).
+   */
+  rescheduleCandidates: RescheduleCandidate[] | null;
 };
 
 export async function getReadyPageData(
   db: AppDb,
   bookingId: string,
+  now: Date = nowDate(),
 ): Promise<ReadyPageData | null> {
   const detail = await getBookingReadinessDetail(db, bookingId);
   if (!detail) return null;
@@ -78,15 +109,43 @@ export async function getReadyPageData(
 
   const [rentalFit, payment, stripeAccount, nitroxVerified] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
-    getBookingPaymentPaid(db, row.shopId, bookingId),
+    getBookingPayment(db, row.shopId, bookingId),
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
   ]);
+  const settled =
+    payment?.status === "paid" ||
+    payment?.status === "deposit_paid" ||
+    payment?.status === "waived";
 
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const canPay = Boolean(
-    perDiverPriceCents && !payment && canAcceptPayments(stripeAccount) && publicAppUrl(),
+    perDiverPriceCents && !settled && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
+
+  const captured = payment?.status === "paid" || payment?.status === "deposit_paid";
+  const cancelPreview: ReadyPageData["cancelPreview"] = !captured
+    ? "unpaid"
+    : trip.cancellationWindowHours
+      ? withinCancellationWindow(trip, now)
+        ? "refund"
+        : "forfeit"
+      : "no_policy";
+
+  let rescheduleCandidates: RescheduleCandidate[] | null = null;
+  if (!captured) {
+    const upcoming = await upcomingTripsWithCounts(db, row.shopId, now);
+    rescheduleCandidates = upcoming
+      .filter((candidate) => candidate.id !== row.tripId && candidate.booked < candidate.capacity)
+      .slice(0, MAX_RESCHEDULE_CANDIDATES)
+      .map((candidate) => ({
+        id: candidate.id,
+        title: candidate.title,
+        startsAt: candidate.startsAt,
+        endsAt: candidate.endsAt,
+        spotsLeft: candidate.capacity - candidate.booked,
+      }));
+  }
 
   return {
     detail,
@@ -109,13 +168,7 @@ export async function getReadyPageData(
     nitroxCardVerified: nitroxVerified.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
     canPay,
+    cancelPreview,
+    rescheduleCandidates,
   };
-}
-
-/** True when this booking is already settled, so no "Pay" action is offered. */
-async function getBookingPaymentPaid(db: AppDb, shopId: string, bookingId: string) {
-  const settled = await getBookingPayment(db, shopId, bookingId);
-  return (
-    settled?.status === "paid" || settled?.status === "deposit_paid" || settled?.status === "waived"
-  );
 }
