@@ -570,19 +570,33 @@ export async function rescheduleBooking(
     if (oldTrip && oldTrip.startsAt <= now) return { ok: false, reason: "trip_departed" };
 
     const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
-    if (payment?.status === "paid" || payment?.status === "deposit_paid") {
+    // waived is a settled state exactly like paid/deposit_paid — staff decided
+    // this diver owes nothing, and rescheduling into a fresh, unpaid booking
+    // would silently drop that decision and offer them a card checkout for a
+    // trip whose fee was already waived on the seat they're leaving.
+    if (
+      payment?.status === "paid" ||
+      payment?.status === "deposit_paid" ||
+      payment?.status === "waived"
+    ) {
       return { ok: false, reason: "already_paid" };
     }
 
     // Book the destination first. Every capacity/course/ratio gate a fresh
     // public booking gets applies identically here, inside the same
     // transaction — a full or newly-unstaffed trip fails this and returns
-    // without ever touching the old booking.
+    // without ever touching the old booking. `actor: "staff"` is deliberate,
+    // not a mismatch with the public-facing surface this runs behind: that
+    // gate exists to stop an anonymous form from judging a submitter by a
+    // person record they may have no relationship to, but `row.personId` here
+    // is the token-verified diver's own identity, not a free-typed guess —
+    // so the real minimum-age check applies, same as any staff-entered
+    // booking.
     const outcome = await createBookingRecord(tx as unknown as AppDb, {
       shopId: input.shopId,
       tripId: input.newTripId,
       personId: row.personId,
-      actor: "public",
+      actor: "staff",
     });
     if (!outcome.ok) return outcome;
 

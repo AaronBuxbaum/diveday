@@ -149,6 +149,12 @@ export async function getRecapPageData(
       ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
       : latestTip;
 
+  // A no-show never dived — no tip is owed for a crew that didn't take them
+  // out, and the review ask (implicitly "how was your dive?") doesn't apply
+  // either. Both stay gated here, the one place `getRecapPageData` already
+  // decides what this booking is allowed to show.
+  const showedUp = row.status !== "no_show";
+
   return {
     shop: {
       name: row.shopName,
@@ -156,7 +162,7 @@ export async function getRecapPageData(
       timezone: row.timezone,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
-      reviewUrl: row.reviewUrl,
+      reviewUrl: showedUp ? row.reviewUrl : null,
     },
     trip: {
       title: trip.title,
@@ -172,7 +178,7 @@ export async function getRecapPageData(
     bookingId,
     shoutout: trip.recapShoutout,
     photos,
-    canTip: canAcceptPayments(stripeAccount),
+    canTip: showedUp && canAcceptPayments(stripeAccount),
     tip: tip
       ? {
           status: tip.status,

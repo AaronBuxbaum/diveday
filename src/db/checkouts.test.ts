@@ -9,7 +9,7 @@ import type {
   CreateCheckoutSessionResult,
 } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
-import { createBookingParty } from "./bookings";
+import { cancelBooking, createBookingParty } from "./bookings";
 import {
   getLatestCheckoutForBooking,
   markCheckoutExpiredBySessionId,
@@ -334,6 +334,28 @@ describe("checkout completion", () => {
       expect(payment?.provider).toBe("stripe");
       expect(payment?.providerRef).toBe(start.checkout.stripeSessionId);
     }
+  });
+
+  it("never marks a cancelled booking paid from a checkout completed after the cancel (security review finding)", async () => {
+    // A diver can cancel/reschedule their own booking (docs ADR
+    // 20260727-diver-self-service-cancel) while a Stripe Checkout for that
+    // same booking is still open in another tab; completing it afterward
+    // must not attribute the payment to a booking that no longer exists.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, [bookingIds[0]]),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    await cancelBooking(db, shop.id, bookingIds[0]);
+
+    const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    // The checkout itself still completes — a retried webhook delivery must
+    // not reprocess it — but the cancelled booking is never marked paid.
+    expect(completed?.status).toBe("completed");
+    const payment = await getBookingPayment(db, shop.id, bookingIds[0]);
+    expect(payment).toBeNull();
   });
 
   it("is idempotent: a second completion changes nothing", async () => {

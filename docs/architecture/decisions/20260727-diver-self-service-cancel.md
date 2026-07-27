@@ -34,10 +34,13 @@ trip fills, or was never actually available, between page load and submit.
   diver is never left holding neither seat. This was an explicit design correction mid-build: an
   earlier draft cancelled the old booking first and sent the diver back to browse, which is exactly
   the strandable sequence this decision rejects.
-- **Reschedule is offered only for an unpaid booking.** A paid or deposit-paid booking's reschedule
-  picker doesn't render at all (`ReadyPageData.rescheduleCandidates` is `null` whenever a payment is
-  captured), and `rescheduleBooking` re-enforces the same rule server-side — moving captured money to
-  a new trip is a staff-mediated operation this slice doesn't attempt to automate. An unpaid booking
+- **Reschedule is offered only for an unpaid booking — and `waived` counts as settled too (Codex
+  finding).** A paid, deposit-paid, or waived booking's reschedule picker doesn't render at all
+  (`ReadyPageData.rescheduleCandidates` is `null` whenever a payment is settled), and
+  `rescheduleBooking` re-enforces the same rule server-side. Moving captured money to a new trip is a
+  staff-mediated operation this slice doesn't attempt to automate; a waived booking is the same kind
+  of staff decision — rescheduling it into a fresh, unpaid booking would silently drop that decision
+  and offer the diver a card checkout for a fee staff already excused. An unpaid, non-waived booking
   has nothing to move, so the diver-driven path is safe to leave self-service.
 - **Cancel and refund stay two independent steps, same as the staff cancellation path (H-07).**
   `cancelMyBookingAction` calls `selfCancelBooking` to free the seat first, then
@@ -96,6 +99,35 @@ trip fills, or was never actually available, between page load and submit.
   would silently reset to plain air on the new trip with no on-screen indication it happened.
   `rescheduleBooking` copies it onto the destination booking inside the same transaction — a request,
   not a grant, so this doesn't bypass the separate verified-card check nitrox fills already require.
+- **Reschedule books the destination as `actor: "staff"`, not `"public"` (Codex finding).**
+  `createBookingRecord`'s minimum-age gate is deliberately skipped for `actor: "public"` — that
+  exception exists so the anonymous booking form can't be used as an age-guessing oracle against a
+  person record the submitter may have no relationship to (`BookingRequest.actor`'s own docs). That
+  rationale doesn't apply to a reschedule: `row.personId` is the token-verified diver's own identity,
+  not a free-typed guess, so passing `"staff"` here applies the real commit-time age check instead of
+  relying solely on the fail-open readiness blocker to catch it after the fact.
+- **The reschedule picker names the destination trip, not just its date/time (Codex finding).** Two
+  trips can share a departure slot (concurrent boats, a course running alongside open trips); a
+  date/time-only option label made them indistinguishable, risking a diver confirming onto the wrong
+  trip's manifest. Each `<option>` now leads with `candidate.title`.
+- **A no-policy cancellation gets its own honest notice, not the generic "cancelled" one (Codex
+  finding).** `refundBookingOnCancellation` only returns `no_policy` after confirming the booking was
+  genuinely captured — the trip simply states no cancellation window, so automation stays out and
+  nothing gets refunded. Folding that into the same notice as `unpaid` ("nothing was owed") would tell
+  a diver who *did* pay that their cancellation was free. `cancelRefundNotice` now maps it to its own
+  `cancelled-no-policy` copy: paid, no automated refund, the shop handles it directly.
+- **A checkout completed after its booking is already cancelled never marks that booking paid (Codex
+  finding, echoing an independent `security-reviewer` finding on this same surface).** A diver can
+  leave a Stripe Checkout open in one tab (e.g. from `payFromReady`) and cancel or reschedule the same
+  booking in another; the session stays payable, and completing it later would otherwise let
+  `markCheckoutPaidBySessionId` attribute captured money to a booking that no longer exists. The
+  webhook handler now checks each linked booking's current status before writing a payment record: a
+  `cancelled` booking is skipped (logged for staff reconciliation) while the checkout itself still
+  completes, so a retried webhook delivery doesn't reprocess it. This doesn't prevent the diver from
+  completing the stale session (Stripe still takes the card, and this codebase has no seam to actively
+  expire a live Checkout Session server-side) — it prevents the app from lying about which booking that
+  money belongs to. A rescheduled-away checkout is caught the same way; the destination booking simply
+  stays unpaid, exactly as `payFromReady` would require them to pay fresh for the new trip.
 
 ## Alternatives considered
 

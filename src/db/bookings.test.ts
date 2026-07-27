@@ -557,6 +557,31 @@ describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-se
     expect(oldRow?.tripId).toBe(open.id);
   });
 
+  it("refuses to reschedule a waived booking — staff excused the fee, not just deferred it (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      status: "waived",
+      amountCents: 0,
+      provider: null,
+      note: "Comp'd for a rebooking mixup",
+    });
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "already_paid" });
+    const [oldRow] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(oldRow?.status).toBe("booked");
+    expect(oldRow?.tripId).toBe(open.id);
+  });
+
   it("refuses to reschedule onto the same trip", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);

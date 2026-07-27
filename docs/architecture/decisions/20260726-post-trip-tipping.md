@@ -47,6 +47,13 @@ merchant-of-record model bookings use.
 - **Rate-limited per booking, like the recap photo upload.** `tipStart` (`src/lib/rate-limit.ts`) caps
   attempts per booking — a public, token-auth endpoint that creates real Stripe Checkout sessions needs
   its own abuse control, independent of the shop's own rate limits.
+- **A `no_show` booking can't tip, and doesn't see the review ask either (Codex finding).** The recap
+  link goes out to every non-cancelled booking, `no_show` included — but a no-show never dived, so no
+  tip is owed for a crew that didn't take them out, and "how was your dive?" doesn't apply. Both
+  `canTip` and `shop.reviewUrl` are gated on booking status in `getRecapPageData` (`src/db/recap.ts`),
+  the one place that already decides what a recap link is allowed to show; `startTipCheckout` also
+  refuses a `no_show` booking directly, the same defense-in-depth the `cancelled` check already gets,
+  so a hand-crafted or replayed request against the endpoint can't tip one either.
 
 ## Alternatives considered
 

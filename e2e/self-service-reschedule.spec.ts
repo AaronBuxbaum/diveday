@@ -43,25 +43,34 @@ test.describe("staff-prepared trips", () => {
     await expect(page).toHaveURL(/\/ready\//);
 
     // The reschedule section offers other upcoming trips (the seeded demo
-    // schedule already has several — the option label is a date/time, not a
-    // title, since MAX_RESCHEDULE_CANDIDATES=8 draws from the whole board,
-    // not just what this test created). Picking one and confirming must move
+    // schedule already has several — MAX_RESCHEDULE_CANDIDATES=8 draws from
+    // the whole board, not just what this test created). Each option names
+    // its trip so two same-time departures can't be confused (a real gap a
+    // date/time-only label would have). Picking one and confirming must move
     // the booking without ever leaving the diver seatless; verify by matching
-    // the destination page's own date/time line back to what was selected,
-    // rather than assuming which trip sorts first.
+    // the destination page's own title and date/time back to what was
+    // selected, rather than assuming which trip sorts first.
     await expect(page.getByRole("heading", { name: "Need to change your plans?" })).toBeVisible();
     const select = page.locator("#newTripId");
     const options = select.locator("option");
     await expect(options).not.toHaveCount(1); // more than just the placeholder
     await select.selectOption({ index: 1 });
     const selectedLabel = (await options.nth(1).innerText()).trim();
-    const expectedWhen = selectedLabel.replace(/\s*·\s*\d+\s*left$/, "");
+    // Split on the LAST " — " before the date, not the first: several seeded
+    // trip titles contain their own " — " (e.g. "Two-Tank Reef — Christ of
+    // the Abyss"), so a naive first-split misparses the title. The date
+    // always starts with a three-letter weekday abbreviation, which greedy
+    // backtracking uses to find the real title/date boundary.
+    const match = selectedLabel.match(/^(.+) — ([A-Za-z]{3}, .+) · \d+ left$/);
+    if (!match) throw new Error(`unexpected option label format: ${selectedLabel}`);
+    const [, expectedTitle, expectedWhen] = match;
 
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Move my booking" }).click();
 
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("status").filter({ hasText: "You’re moved!" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: expectedTitle, exact: true })).toBeVisible();
     await expect(page.getByText(expectedWhen)).toBeVisible();
   });
 

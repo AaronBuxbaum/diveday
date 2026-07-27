@@ -165,6 +165,8 @@ const CANCEL_NOTICES: Record<string, string> = {
     "This was past the free-cancellation window, so no refund was issued for this trip.",
   "cancelled-refund-manual":
     "You paid for this trip. The shop needs to issue that refund directly — reach out if you don't hear from them soon.",
+  "cancelled-no-policy":
+    "You paid for this trip, and this shop handles cancellation refunds directly rather than automatically — reach out to them about it.",
   cancelled: "",
 };
 
@@ -412,6 +414,7 @@ export default async function DiverReadinessPage({
                 <option value="">Choose a trip…</option>
                 {data.rescheduleCandidates.map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
+                    {candidate.title} —{" "}
                     {formatShortDate(candidate.startsAt, "en-US", detail.shop.timezone)} ·{" "}
                     {formatTimeRangeTz(
                       candidate.startsAt,

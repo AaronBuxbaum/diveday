@@ -178,8 +178,15 @@ function cancelRefundNotice(refund: CancellationRefundOutcome): string {
     case "failed":
     case "manual":
       return "cancelled-refund-manual";
+    case "no_policy":
+      // Genuinely paid — refundBookingOnCancellation only reaches no_policy
+      // after confirming captured payment — but the trip states no
+      // cancellation window, so automation stayed out of it and nothing was
+      // refunded. This is not the same as "nothing was owed" (unpaid): the
+      // diver needs to know the shop, not Stripe, decides this one.
+      return "cancelled-no-policy";
     default:
-      // no_policy or unpaid: nothing was owed.
+      // unpaid: nothing was owed.
       return "cancelled";
   }
 }

@@ -72,7 +72,7 @@ needs a minimal shell, not chrome removal.
 | Promo / discount codes | Operator-configured codes at checkout ([Discount codes](https://help.fareharbor.com/hc/en-us/articles/42957480670363-Discount-codes)) | **Absent, and there's no durable model to hang it on.** No discount/promo/coupon logic in `src/lib/payments/checkout.ts` or `src/db/orders.ts`, and the schema has nowhere to define a shop's codes, validity windows, eligibility, or usage limits — nor do checkout/order rows snapshot an applied code or redemption for later cancellation/refund auditing (one unrelated comment about a rental "full-set discount" in `src/lib/rentals.ts:147`) | Not just "a second line-item adjustment" — a real promotion model (codes, limits, redemption history) has to exist before the server can even validate a submitted code |
 | Gift cards | Sold, redeemed, and managed from the Dashboard, usable on any activity ([Gift card overview](https://help.fareharbor.com/hc/en-us/articles/40897463478555-Gift-card-overview)) | **Absent.** Zero references anywhere in `src` | Real revenue lever (holiday/gifting season) but non-trivial: needs a stored-value ledger, not just a checkout tweak |
 | Add-ons / upsells at checkout | Combos (pick-your-own add-ons) and Packages (pre-bundled, up to 3 items booked together) directly in the book flow ([Combos](https://fareharbor.com/blog/maximize-sales-and-customer-satisfaction-introducing-fareharbor-combos/), [Packages](https://fareharbor.com/blog/how-to-turn-your-best-tour-and-activity-offerings-into-high-performing-packages/)) | **Absent as a diver self-serve flow, and the booking order makes it harder than "just charge the existing quote."** `checkout.ts` builds exactly one Stripe line item per trip/course fee. Rental *fit* pricing is real (`RentalPricing`/`quoteRentalFit` in `src/lib/rentals.ts`, shop-configured prices, the diver-facing quote in `RentalFitForm`) — but in the public flow, `bookSpot` sends the diver straight to Stripe *before* `RentalFitForm` ever renders (it's on the post-booking confirmation page), so no rental selection or quote exists yet when the first checkout session is created. Staff can add line items post-booking (`src/app/shop/[shopSlug]/orders/new/page.tsx`), but a diver can't add anything while booking | The pricing math is shipped, but charging it needs either moving rental selection ahead of the first checkout or a separate post-booking payment flow — not just snapshotting an existing quote onto the first session |
-| Self-service reschedule/cancel | Guests can rebook or cancel their own reservation online ([Exceptional Customer Experience](https://fareharbor.com/sell/customer-experience/)) | **Absent.** `cancelBooking` (`src/db/bookings.ts:394`) is only called from staff-side `src/app/shop/[shopSlug]/trips/[id]/actions.ts`; no diver-facing cancel/reschedule route exists off `/ready/[token]` or elsewhere. The automated refund-in-window mechanism ([ADR](../../architecture/decisions/20260721-automated-cancellation-refund.md)) still requires staff to initiate the cancel | **Safety-critical, not just growth-layer** — this is a diver-triggered mutation of manifest/roster state, and AGENTS.md's hard rules put manifest and medical-flag consistency in the same bucket as roll call and cert gating: boring code, failure-path/adversarial tests, and a `dive-domain-expert` review (plus `security-reviewer` for the new diver-triggered mutation surface itself), not a routine growth-layer add |
+| Self-service reschedule/cancel | Guests can rebook or cancel their own reservation online ([Exceptional Customer Experience](https://fareharbor.com/sell/customer-experience/)) | ✅ **Shipped 2026-07-27** — `/ready/[token]` now offers a diver-facing cancel/reschedule for an unpaid booking; reschedule is atomic book-then-cancel so the diver is never left seatless, and cancel reuses the existing automated-refund logic. Reviewed by `dive-domain-expert` and `security-reviewer` per the safety-critical/security-sensitive note this row originally flagged | Done — see [shipped.md](../shipped.md#diver-self-service-booking-cancelreschedule-delivered-2026-07-27) and [20260727-diver-self-service-cancel](../../architecture/decisions/20260727-diver-self-service-cancel.md); a paid/deposit-paid/waived booking still requires staff to reschedule |
 | Abandoned-cart recovery | Automatic recovery email ~2 hours after checkout abandonment, claimed ~20% recovery rate vs. 2.4% industry average ([Abandoned Cart Recovery](https://fareharbor.com/blog/say-goodbye-to-lost-bookings-with-new-abandoned-cart-recovery-feature/)) | ✅ **Shipped 2026-07-26**, same PR — [20260726-abandoned-checkout-recovery](../../architecture/decisions/20260726-abandoned-checkout-recovery.md). `customerEmail` is now stored durably on `booking_checkouts` at creation time (sidesteps the party-purchaser ambiguity below), every candidate is reconciled directly against Stripe before sending, and a cancelled trip or linked booking is excluded | Done — the reconciliation and recipient-resolution gaps this row originally flagged are exactly what the shipped version closes; residual limitation is cron-granularity timing (see the ADR's consequences), not correctness |
 | Private/group charter booking | Private Events tool: proposals, contracts, deposits, and resource-blocking for buyout-style bookings ([Private Events](https://fareharbor.com/sell/private-events/)) | **Party booking already exists; the private/buyout workflow is the actual gap.** The public form already books a party of up to six atomically (`createBookingParty`) with one shared checkout (`startBookingCheckout`, `src/app/shop/[shopSlug]/schedule/[id]/actions.ts:115-151`, `src/db/checkouts.test.ts:129-148`) — so "group booking" is shipped. What FareHarbor's Private Events adds and DiveDay doesn't have is the buyout-a-whole-trip proposal/contract/resource-blocking workflow; "charter" elsewhere in the code is just a synonym for a scheduled trip (`src/db/seed.ts`, `src/db/schema.ts`), consistent with the roadmap's existing note that there is no boat/resource entity (`roadmap.md` §5) | Real dive-shop use case (buyout charters, bachelor/corporate groups), but scope it as the buyout workflow on top of shipped party booking, not a rebuild — and it overlaps the already-open "no boat entity" roadmap item, so solve them together |
 | Reviews / ratings display | TripAdvisor widget + Review Express integration, plus FareHarbor's own post-tour review-request emails ([Top Review Platforms](https://fareharbor.com/blog/top-review-platforms-for-tour-activity-operators/)) | ⚠️ **Partially shipped 2026-07-26.** The recap page (`/recap/[token]`) now shows a "Leave a review" CTA when the shop has set `shops.review_url` (Settings → Review link), asked right after the trip's earned-moment hero. Not shipped: a duplicate ask inside `tripRecapEmail` itself (the recap link it already sends is the funnel), and any internal rating/testimonial display — FareHarbor's TripAdvisor widget embed is not reproduced | Destination-and-ask mechanism done; an internal ratings display (or embedding TripAdvisor/Google's own widget) remains open if a shop asks for it |
@@ -96,12 +96,11 @@ needs a minimal shell, not chrome removal.
 ## Implications for the queue
 
 Most of this is growth-layer, not safety-critical, so it shouldn't jump ahead of V-02 (field-validate
-the offline manifest) or the open portability build items — **with one exception**: self-service
-cancel/reschedule mutates manifest and payment/refund state through a new diver-triggered surface, which
-AGENTS.md's hard rules place in the same safety-critical bucket as roll call and cert gating
-(`dive-domain-expert` review, plus `security-reviewer` for the new mutation surface itself) — sequence
-and review it accordingly, not as routine growth work. In rough order of leverage per effort otherwise,
-for whoever next grooms [roadmap.md](../roadmap.md):
+the offline manifest) or the open portability build items. Self-service cancel/reschedule was the one
+exception — it mutates manifest and payment/refund state through a new diver-triggered surface, which
+AGENTS.md's hard rules place in the same safety-critical bucket as roll call and cert gating — and it
+has since shipped with the required `dive-domain-expert`/`security-reviewer` reviews (see below). In
+rough order of leverage per effort otherwise, for whoever next grooms [roadmap.md](../roadmap.md):
 
 1. **Rental gear as a priced, diver-selectable add-on at checkout** — the pricing already exists
    (`RentalPricing`/`quoteRentalFit`, shop-configured prices, the diver-facing quote in
@@ -109,21 +108,21 @@ for whoever next grooms [roadmap.md](../roadmap.md):
    order, not building a price from scratch.
 2. **Promo/discount codes** need real design work (discount-stacking rules), so it's sequenced after
    the above.
-3. **Diver self-service cancel/reschedule** — see the safety-critical note above; sequence with its
-   required reviews in mind, not purely by "growth leverage."
-4. **Gift cards** and **the private/buyout charter workflow** — real revenue levers, but each is
+3. **Gift cards** and **the private/buyout charter workflow** — real revenue levers, but each is
    closer to a new subsystem (stored-value ledger; resource/boat modeling + proposal/contract flow on
    top of the party booking that already ships) than a slice on top of what exists. Private charters
    should be designed together with the already-open "no boat entity" roadmap item (§5), not as a
    separate effort.
-5. **Multi-currency** and **SEO structured data on booking pages** — leave multi-currency until
+4. **Multi-currency** and **SEO structured data on booking pages** — leave multi-currency until
    international demand is real; structured data is cheap but should wait now that the schedule embed
    has settled which URL is canonical.
 
 Already shipped, in the same PR this audit landed in: **abandoned-cart recovery email**, the
-**embeddable schedule/booking widget** (this audit's own trigger), and **post-trip review-request
-email** (bundled with **post-trip tipping**, an addition outside this audit's original findings) — see
+**embeddable schedule/booking widget** (this audit's own trigger), **post-trip review-request
+email** (bundled with **post-trip tipping**, an addition outside this audit's original findings), and
+**diver self-service cancel/reschedule** — see
 [shipped.md](../shipped.md#schedule-embed-widget-delivered-2026-07-26),
-[shipped.md](../shipped.md#post-trip-review-request-delivered-2026-07-26), and
-[shipped.md](../shipped.md#post-trip-crew-tipping-delivered-2026-07-26) for what shipped and the
-linked ADRs for what each decided.
+[shipped.md](../shipped.md#post-trip-review-request-delivered-2026-07-26),
+[shipped.md](../shipped.md#post-trip-crew-tipping-delivered-2026-07-26), and
+[shipped.md](../shipped.md#diver-self-service-booking-cancelreschedule-delivered-2026-07-27) for what
+shipped and the linked ADRs for what each decided.
