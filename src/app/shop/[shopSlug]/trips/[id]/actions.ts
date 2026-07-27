@@ -18,6 +18,7 @@ import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { getShopById } from "@/db/shops";
+import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -37,6 +38,7 @@ import {
   issueWaiversForBookings,
 } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
+import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
@@ -481,6 +483,41 @@ export async function inviteWaitlistAction(
   // whether it was sent from the roster or straight from Today (WP-9 → §7).
   revalidatePath(`/shop/${shopSlug}`);
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
+}
+
+/**
+ * Sends a staff-picked discount blast to every last-minute-list diver whose
+ * date range covers this trip (docs ADR 20260727-last-minute-fill-promos).
+ * A plain form action, not a one-tap control like the wait-list invite — the
+ * discount percent is a real commercial choice, not a re-runnable nudge.
+ */
+export async function sendLastMinuteDealAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = guestsPath(shopSlug, tripId);
+  const anchor = "#last-minute-deal";
+  const s = await requireStaffSession();
+  const discountPercent = Number(formData.get("discountPercent"));
+  if (!isValidLastMinuteDiscountPercent(discountPercent)) {
+    redirect(`${back}?notice=last-minute-invalid-discount${anchor}`);
+  }
+  const outcome = await sendLastMinuteDealBlast(await getDb(), {
+    shopId: s.user.shopId,
+    shopSlug,
+    tripId,
+    discountPercent,
+    createdByPersonId: s.user.personId,
+  });
+  if (outcome.ok) {
+    // Today's nudge disappears once any blast has been sent, so refresh it
+    // alongside the trip page it was sent from.
+    revalidatePath(back);
+    revalidatePath(`/shop/${shopSlug}`);
+    redirect(`${back}?notice=last-minute-sent&count=${outcome.recipientCount}${anchor}`);
+  }
+  redirect(`${back}?notice=last-minute-${outcome.reason.replaceAll("_", "-")}${anchor}`);
 }
 
 /**

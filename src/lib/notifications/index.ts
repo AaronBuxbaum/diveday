@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   bookingConfirmationEmail,
   checkoutRecoveryEmail,
+  lastMinuteDealEmail,
   type NotificationEmail,
   passwordChangedEmail,
   passwordResetEmail,
@@ -69,6 +70,26 @@ const waitlistInviteSchema = z.object({
   bookingUrl: z.url().max(2_000),
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
+});
+
+// A staff-triggered last-minute-fill blast (docs ADR
+// 20260727-last-minute-fill-promos): no bookingId — it goes to a
+// last-minute-list entry, not a booking — so like waitlist_invite/
+// checkout_recovery this is structurally excluded from TrackedNotification.
+const lastMinuteDealSchema = z.object({
+  kind: z.literal("last_minute_deal"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  discountPercent: z.number().int().min(1).max(100),
+  code: z.string().trim().min(1).max(40),
+  bookingUrl: z.url().max(2_000),
+  expiresAt: z.date(),
 });
 
 // A pay-at-booking checkout the diver never finished (docs ADR
@@ -223,6 +244,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   passwordChangedSchema,
   staffInviteSchema,
   checkoutRecoverySchema,
+  lastMinuteDealSchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -267,6 +289,7 @@ function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
+  if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   return passwordChangedEmail(notification);
 }
 
@@ -310,6 +333,11 @@ function idempotencyKeyFor(notification: Notification): string {
     // single call from double-hitting Resend.
     case "checkout_recovery":
       return `checkout-recovery/${notification.checkoutId}`;
+    // Keyed by the code (unique per blast) and recipient, so a retry of one
+    // send never doubles that diver's email while a fresh blast (new code) on
+    // the same trip is always its own send.
+    case "last_minute_deal":
+      return `last-minute-deal/${notification.code}/${notification.to}`;
   }
 }
 

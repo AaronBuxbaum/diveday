@@ -66,6 +66,40 @@ describe("stripe checkout provider", () => {
     expect(form.get("cancel_url")).toBe(request.cancelUrl);
   });
 
+  it("applies a promotion code as a Checkout discount when one is validated", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      ok({
+        id: "cs_1",
+        status: "open",
+        payment_status: "unpaid",
+        url: "https://checkout.stripe.com/c/pay/cs_1",
+        amount_total: 18_000,
+        expires_at: 1_790_000_000,
+      }),
+    );
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.createCheckoutSession({ ...request, promotionCode: "promo_123" });
+    const form = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(form.get("discounts[0][promotion_code]")).toBe("promo_123");
+  });
+
+  it("omits the discounts param when no promotion code is given", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      ok({
+        id: "cs_1",
+        status: "open",
+        payment_status: "unpaid",
+        url: "https://checkout.stripe.com/c/pay/cs_1",
+        amount_total: 18_000,
+        expires_at: 1_790_000_000,
+      }),
+    );
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.createCheckoutSession(request);
+    const form = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(form.has("discounts[0][promotion_code]")).toBe(false);
+  });
+
   it("fails when Stripe rejects the create", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);

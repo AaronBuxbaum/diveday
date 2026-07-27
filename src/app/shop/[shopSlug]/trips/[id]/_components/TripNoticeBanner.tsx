@@ -140,6 +140,37 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
         ? "That capacity is below how many divers are already booked on this trip — cancel bookings first, or set a higher capacity."
         : `That capacity is below the ${count} diver${count === 1 ? "" : "s"} already booked on this trip — cancel bookings first, or set a higher capacity.`,
   },
+  "last-minute-sent": {
+    tone: "success",
+    text: (count) =>
+      count === undefined
+        ? "Last-minute deal sent."
+        : `Last-minute deal sent to ${count} diver${count === 1 ? "" : "s"}.`,
+  },
+  "last-minute-invalid-discount": {
+    tone: "danger",
+    text: "Pick a discount between 5% and 90%.",
+  },
+  "last-minute-trip-unavailable": {
+    tone: "danger",
+    text: "This trip isn't open for a last-minute deal — it's past, cancelled, or already departed.",
+  },
+  "last-minute-trip-full": {
+    tone: "danger",
+    text: "This trip is already full — there's nothing to fill.",
+  },
+  "last-minute-not-connected": {
+    tone: "danger",
+    text: "Connect Stripe in Settings before sending a last-minute deal — the discount code needs a connected account to exist on.",
+  },
+  "last-minute-no-recipients": {
+    tone: "danger",
+    text: "No one on the last-minute list is around for this trip's date yet.",
+  },
+  "last-minute-stripe-failed": {
+    tone: "danger",
+    text: "Stripe couldn't create the discount code. Try again in a moment.",
+  },
   "planned-dives-below-history": {
     tone: "danger",
     text: (count) =>
