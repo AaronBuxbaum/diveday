@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - claude/argos-cost-reduction-self-managed-ijwkeb
+      - claude/contact-story-monitoring-t1uaz2
 
 jobs:
   update-baselines:
