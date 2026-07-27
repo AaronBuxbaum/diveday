@@ -122,6 +122,43 @@ export async function verifyBookingCapability(
 }
 
 /**
+ * Resolves a bearer token to its booking even if the capability has since
+ * been revoked — used only to render a post-cancellation confirmation
+ * (never to authorize a read or a write): the moment a diver cancels their
+ * own booking, `cancelBooking` revokes every outstanding capability for it
+ * (including the very token the cancel action is about to redirect back to
+ * with a `?cancelled=...` refund notice), so `verifyBookingCapability` alone
+ * can never show that notice — it always reads as "this link isn't
+ * available" instead, silently dropping the refund information the diver
+ * most needs right after cancelling.
+ *
+ * Safe to relax only the revocation/cancelled-booking checks here: the token
+ * hash must still genuinely match a real, correctly-scoped, unexpired
+ * capability row for the right purpose — the same guessing-resistance bar as
+ * `verifyBookingCapability` — so this can't be used to fabricate a
+ * cancellation notice for a booking the bearer never had a real link to.
+ */
+export async function resolveRevokedBookingCapability(
+  db: DbExecutor,
+  input: { token: string; purpose: CapabilityPurpose; now?: Date },
+): Promise<{ bookingId: string } | null> {
+  const now = input.now ?? nowDate();
+  const tokenHash = hashCapabilityToken(input.token);
+  const [row] = await db
+    .select({ bookingId: bookingCapabilities.bookingId })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.tokenHash, tokenHash),
+        eq(bookingCapabilities.purpose, input.purpose),
+        gt(bookingCapabilities.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * Explicit revocation: invalidates every outstanding, unexpired capability
  * for a booking (optionally scoped to one purpose) immediately, ahead of
  * their natural expiry. Used on cancellation; also the seam a future

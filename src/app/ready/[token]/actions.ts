@@ -2,11 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { rescheduleBooking, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { getReadyPageData } from "@/db/ready";
+import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema } from "@/lib/contact";
@@ -164,4 +166,96 @@ export async function payFromReady(token: string) {
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
   redirect(url);
+}
+
+/** Diver-facing notice code for a refund outcome — mirrors `refundNotice` on the staff roster. */
+function cancelRefundNotice(refund: CancellationRefundOutcome): string {
+  switch (refund.status) {
+    case "refunded":
+      return "cancelled-refunded";
+    case "forfeit":
+      return "cancelled-forfeit";
+    case "failed":
+    case "manual":
+      return "cancelled-refund-manual";
+    default:
+      // no_policy or unpaid: nothing was owed.
+      return "cancelled";
+  }
+}
+
+/**
+ * Cancel the diver's own booking. Rate-limited harder than the rest of this
+ * file (docs ADR 20260727-diver-self-service-cancel) — this is irreversible
+ * and, when paid, moves money. Cancellation and refund stay the two
+ * independent steps the staff path uses (docs H-07): the seat is freed by
+ * `selfCancelBooking` first, and a refund failure afterward never re-opens
+ * it or blocks the cancellation the diver already sees.
+ */
+export async function cancelMyBookingAction(token: string) {
+  const ip = await clientIp();
+  if (
+    !checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel).allowed
+  ) {
+    redirect(base(token));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx) redirect(base(token));
+
+  const cancelled = await selfCancelBooking(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+  });
+  if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
+
+  const refund = await refundBookingOnCancellation(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+  });
+  redirect(`${base(token)}?cancelled=${cancelRefundNotice(refund)}`);
+}
+
+/**
+ * Move the diver's own booking to a different trip. Atomic (docs ADR
+ * 20260727-diver-self-service-cancel): the destination is booked before the
+ * old seat is freed, so a full or newly-unavailable trip leaves the original
+ * booking untouched rather than stranding the diver with neither. Only
+ * offered for an unpaid booking — `rescheduleBooking` re-enforces that
+ * itself, this is not the only guard.
+ *
+ * The old token dies with the old booking (capabilities are revoked on
+ * cancel), so a successful reschedule mints a fresh readiness link for the
+ * new booking and sends the diver straight there — there is no way to hand
+ * back an existing token for a booking id that changed.
+ */
+export async function rescheduleMyBookingAction(token: string, formData: FormData) {
+  const ip = await clientIp();
+  if (
+    !checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel).allowed
+  ) {
+    redirect(base(token));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx) redirect(base(token));
+
+  const parsedTripId = z.uuid().safeParse(formData.get("newTripId"));
+  if (!parsedTripId.success) redirect(`${base(token)}?error=reschedule`);
+
+  const result = await rescheduleBooking(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    newTripId: parsedTripId.data,
+  });
+  if (!result.ok) redirect(`${base(token)}?error=reschedule`);
+
+  const capability = await issueBookingCapability(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: result.newBookingId,
+    purpose: "readiness",
+  });
+  // The reschedule already committed even if minting this new link somehow
+  // fails — the diver just won't have a bookmark to it. A shop can still
+  // find them on the new trip's roster.
+  if (!capability) redirect(base(token));
+  redirect(`${base(capability.token)}?saved=rescheduled`);
 }
