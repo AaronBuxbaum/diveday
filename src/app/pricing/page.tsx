@@ -7,6 +7,7 @@ import { FeatureGroupsGrid } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
+import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
 export const metadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
@@ -69,7 +70,7 @@ const faq = [
   {
     question: "What about multiple locations?",
     answer:
-      "Each DiveDay workspace runs one shop today. If you operate more than one location, talk to us — we'd rather build that with you than pretend it's already here.",
+      "Each DiveDay workspace runs one shop today. If you operate more than one location, email aaron@dive.day — we'd rather build that with you than pretend it's already here.",
   },
 ] as const;
 
@@ -195,6 +196,18 @@ export default function PricingPage() {
                 <p className="mt-2 leading-7 text-muted">{item.answer}</p>
               </article>
             ))}
+          </div>
+          <div className="mt-10 flex flex-col items-center gap-4 text-center">
+            <p className="max-w-xl text-lg leading-8 text-muted">
+              Still have a question a FAQ can't answer? Founding shops get a founder-direct line —
+              use it, always welcome.
+            </p>
+            <a
+              href={`mailto:${FOUNDER_EMAIL}`}
+              className={buttonClass({ className: "cursor-pointer" })}
+            >
+              Email {FOUNDER_EMAIL}
+            </a>
           </div>
         </section>
       </main>

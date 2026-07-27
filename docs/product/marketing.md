@@ -53,7 +53,11 @@ chosen battlegrounds — and re-read it before changing the spine.
   `SwitchingConcierge` block, routed to the `switch@dive.day` inbox. Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
   capability, and never promise a turnaround time. A new service claim needs product-owner sign-off
-  the same way the price does.
+  the same way the price does. **Also authorized (2026-07-27):** a general founder-direct contact
+  line, routed to the `aaron@dive.day` inbox — the same promise the "You can reach the founder"
+  section on `/about` already made in prose, now with a real `mailto:` CTA. It appears on `/about`,
+  the marketing footer, `/pricing`, and the signed-in shop settings page, always framed as a person
+  who wants to hear from you, never a support ticket queue.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
@@ -64,8 +68,8 @@ chosen battlegrounds — and re-read it before changing the spine.
   switching guide cites an incumbent, or phrase it as what the founder personally observed, which
   needs no source but also may not be invented on his behalf. The corporate entity stays off the
   page entirely until the entity decision closes. **Confirmed by the product owner 2026-07-25** and
-  published on `/about`: certified in 2024; a software engineer who worked on Google Maps, helped
-  build a biotech company that went public, and works on self-driving cars; and the origin — a
+  published on `/about`: a software engineer who worked on Google Maps, helped build a biotech
+  company that went public, and works on self-driving cars; and the origin — a
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
   list needs its own confirmation — **the founder's home location is explicitly not confirmed and
   must not appear on the page**; an earlier draft stated "made in Florida" without confirmation and
@@ -73,11 +77,13 @@ chosen battlegrounds — and re-read it before changing the spine.
   2026-07-25:** DiveDay now has a second person contributing (legal and outreach, also a diver), so
   `/about` may honestly speak in plural/team voice for what both share (being divers, the mission)
   — but Aaron remains the sole owner (matches H-04) and the sole developer, so anything that is
-  specifically his — the "Who builds it" credential block, the founder-direct support line, the
-  2024 certification date — stays singular and scoped to him, not generalized to "we." The second
-  person is deliberately **not named and has no stated title**; a session may not name her, assign
-  her a title, or state her certification date, tenure, or any fact about her beyond "a second
-  person, a diver, working on legal and outreach" without new confirmation.
+  specifically his — the "Who builds it" credential block, the founder-direct support line — stays
+  singular and scoped to him, not generalized to "we." The second person is deliberately **not
+  named and has no stated title**; a session may not name her, assign her a title, or state her
+  certification date, tenure, or any fact about her beyond "a second person, a diver, working on
+  legal and outreach" without new confirmation. **Confirmed by the product owner 2026-07-27:** the
+  page no longer states a certification year for Aaron — do not reintroduce one without fresh
+  confirmation.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
