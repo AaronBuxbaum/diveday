@@ -6,6 +6,7 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { fullShopExport } from "@/lib/marketing";
+import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
 export const metadata: Metadata = {
   title: "Who we are — DiveDay",
@@ -76,26 +77,25 @@ export default function AboutPage() {
             </div>
             <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
               <p>
-                This started with one dive shop owner walking me through how his day actually ran: a
-                whiteboard for tomorrow, a clipboard for the boat, a spreadsheet somebody maintains
-                by hand, and two or three apps that don't speak to each other. It was costing him
-                money, and worse, it was costing him the attention that should have been going to
-                his divers. None of that was his fault, or his staff's — they're good at their jobs.
-                The tools just never showed up.
+                A dive shop owner walked me through an ordinary day: a whiteboard for tomorrow's
+                boat, a clipboard for the manifest, a spreadsheet someone updates by hand, and a
+                couple of apps that don't talk to each other. He was paying for all of it twice —
+                once for the software, again in the hours it pulled away from his divers. None of
+                that was on him or his crew; they run a tight operation. The tools just never showed
+                up for this industry.
               </p>
               <p>
-                We recognized the shape of the problem right away: an entire industry running on
-                tools nobody had actually built for it. Most of what exists for dive shops is dated
-                at best and actively hostile at worst — desktop-bound, slow, built for a back office
-                rather than a wet dock. So shops keep the paper, because paper at least never fights
-                back.
+                That's the pattern once you look for it: an entire industry running on software
+                nobody actually built for it. What exists is dated at best and hostile at worst —
+                built for a back office, not a wet dock. So shops keep the whiteboard and the
+                clipboard, because paper never crashes, never logs you out, and never makes you tap
+                through five screens with wet hands.
               </p>
               <p>
-                DiveDay exists so a shop can spend its day on the parts of diving it fell in love
-                with, and not on paperwork. That means software that's genuinely a pleasure to use —
-                fast, beautiful, forgiving, workable on a phone in the sun with wet hands — built in
-                conversation with the people who actually run the boats, not around them. The only
-                test that matters is whether your crew wants to open it.
+                DiveDay exists to close that gap: software fast enough, clear enough, and forgiving
+                enough that a crew reaches for it without being told to — built by watching how a
+                boat day actually runs, not around a spec written far from the water. If your team
+                wouldn't open it on a busy morning, it hasn't done its job.
               </p>
             </div>
           </div>
@@ -121,6 +121,12 @@ export default function AboutPage() {
                 more, so the pricing page has nothing to hide behind.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={`mailto:${FOUNDER_EMAIL}`}
+                  className={buttonClass({ className: "cursor-pointer" })}
+                >
+                  Email {FOUNDER_EMAIL}
+                </a>
                 <Link
                   href="/pricing"
                   className={buttonClass({
@@ -195,8 +201,8 @@ export default function AboutPage() {
                   </dt>
                   <dd className="mt-2 leading-7">
                     Aaron Buxbaum, founder — a software engineer (Google Maps, a biotech company
-                    through its IPO, self-driving cars) and an obsessive diver since 2024. The
-                    person accountable for every call DiveDay makes.
+                    through its IPO, self-driving cars) and an obsessive diver. The person
+                    accountable for every call DiveDay makes.
                   </dd>
                 </div>
                 <div className="p-6">

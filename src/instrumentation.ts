@@ -1,3 +1,4 @@
+import { initSentry, onRequestError as sentryOnRequestError } from "@/app/observability-sentry";
 import { checkPublicHost } from "@/lib/notifications";
 
 /**
@@ -14,4 +15,9 @@ export function register() {
   if (result.status === "invalid") {
     throw new Error(`Invalid APP_HOST configuration: ${result.reason}`);
   }
+
+  initSentry();
 }
+
+/** Server-side errors (docs ADR 20260727-sentry-error-monitoring) — a no-op until `NEXT_PUBLIC_SENTRY_DSN` is set. */
+export const onRequestError = sentryOnRequestError;

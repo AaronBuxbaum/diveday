@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingConfirmationEmail,
+  newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
   tripRecapEmail,
@@ -131,6 +132,32 @@ describe("welcomeEmail", () => {
     expect(email.subject).toContain("Blue Mantis");
     expect(email.text).toContain("https://diveday.example/sign-in");
     expect(email.html).toContain('href="https://diveday.example/sign-in"');
+  });
+});
+
+describe("newAccountAlertEmail", () => {
+  it("names the owner, their email, and the new shop", () => {
+    const email = newAccountAlertEmail({
+      ownerName: "Pat Diver",
+      ownerEmail: "pat@example.com",
+      shopName: "Blue Mantis",
+      shopSlug: "blue-mantis",
+    });
+    expect(email.subject).toContain("Blue Mantis");
+    expect(email.text).toContain("Pat Diver");
+    expect(email.text).toContain("pat@example.com");
+    expect(email.text).toContain("/shop/blue-mantis");
+    expect(email.html).toContain("Blue Mantis");
+  });
+
+  it("escapes HTML in shop and owner names", () => {
+    const email = newAccountAlertEmail({
+      ownerName: '<script>alert("x")</script>',
+      ownerEmail: "pat@example.com",
+      shopName: "Blue Mantis",
+      shopSlug: "blue-mantis",
+    });
+    expect(email.html).not.toContain("<script>");
   });
 });
 

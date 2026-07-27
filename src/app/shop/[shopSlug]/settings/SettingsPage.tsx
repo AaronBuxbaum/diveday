@@ -28,6 +28,7 @@ import {
 import { canExportShopData, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
+import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 import {
   RENTABLE_ITEMS,
   type RentalPricing,
@@ -702,6 +703,22 @@ export default async function PaymentsSettingsPage({
           </div>
         </section>
       ) : null}
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Talk to the founder</h2>
+        <p className="mt-1 text-sm text-muted">
+          A bad morning at the counter, a feature you're missing, a bug — write in any time. It
+          reaches Aaron directly, not a ticket queue, and reaching out is always welcome.
+        </p>
+        <div className="mt-4">
+          <a
+            href={`mailto:${FOUNDER_EMAIL}`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            Email {FOUNDER_EMAIL}
+          </a>
+        </div>
+      </section>
     </main>
   );
 }
