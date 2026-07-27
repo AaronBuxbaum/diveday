@@ -649,6 +649,36 @@ describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-se
     expect(result.newBookingId).toBe(priorNightBooking.bookingId);
   });
 
+  it("clears a stale nitrox request on a reactivated destination seat (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver's earlier (now-cancelled) seat on the night trip wanted
+    // nitrox — that row is about to be reactivated by the reschedule below.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await db
+      .update(bookings)
+      .set({ wantsNitrox: true })
+      .where(eq(bookings.id, priorNightBooking.bookingId));
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    // The booking actually being moved never asked for nitrox.
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    const [reactivated] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, result.newBookingId));
+    expect(reactivated?.wantsNitrox).toBe(false);
+  });
+
   it("refuses to reschedule a booking still flagged identity_unconfirmed (H-13, dive-domain-expert finding)", async () => {
     const { db, shop, open } = await seededContext();
     const night = await nightTrip(db, shop.id);

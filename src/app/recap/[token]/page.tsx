@@ -112,6 +112,14 @@ export default async function DiveRecapPage({
   }
 
   const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
+  // A shop can disconnect Stripe (or lose chargesEnabled) after a tip was
+  // already started or paid; canTip alone would then hide the diver's own
+  // paid confirmation or an already-open checkout link along with the
+  // "start a new tip" form. Show the section whenever there's a durable tip
+  // to report, using canTip only to gate a *new* attempt (Codex finding).
+  const hasReportableTip =
+    tip?.status === "paid" || (tip?.status === "pending" && Boolean(tip.checkoutUrl));
+  const showTipSection = canTip || hasReportableTip;
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
@@ -164,7 +172,7 @@ export default async function DiveRecapPage({
         </section>
       ) : null}
 
-      {canTip ? (
+      {showTipSection ? (
         <section className="mt-8 rounded-xl border border-border bg-surface p-5">
           <h2 className="text-lg font-semibold">Tip your crew</h2>
           {tipNotice ? (
@@ -184,36 +192,33 @@ export default async function DiveRecapPage({
               Thanks — your tip goes straight to {shop.name}. They&apos;ll make sure the crew hears
               about it.
             </p>
-          ) : (
+          ) : tip?.status === "pending" && tip.checkoutUrl ? (
             <>
               <p className="mt-1 text-base text-muted">
                 100% goes to {shop.name} — nothing held back, no account needed.
               </p>
-              {tip?.status === "pending" && tip.checkoutUrl ? (
-                <a
-                  href={tip.checkoutUrl}
-                  className={buttonClass({ size: "cta", className: "mt-4" })}
-                >
-                  Finish your ${(tip.amountCents / 100).toFixed(0)} tip
-                </a>
-              ) : (
-                <form
-                  action={startTipAction.bind(null, token)}
-                  className="mt-4 flex flex-col gap-3"
-                >
-                  <TipAmountPicker presets={TIP_PRESETS_USD} defaultPreset={TIP_PRESETS_USD[1]} />
-                  <div>
-                    <SubmitButton
-                      pendingLabel="Heading to payment…"
-                      className={buttonClass({ size: "cta" })}
-                    >
-                      Leave a tip
-                    </SubmitButton>
-                  </div>
-                </form>
-              )}
+              <a href={tip.checkoutUrl} className={buttonClass({ size: "cta", className: "mt-4" })}>
+                Finish your ${(tip.amountCents / 100).toFixed(0)} tip
+              </a>
             </>
-          )}
+          ) : canTip ? (
+            <>
+              <p className="mt-1 text-base text-muted">
+                100% goes to {shop.name} — nothing held back, no account needed.
+              </p>
+              <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
+                <TipAmountPicker presets={TIP_PRESETS_USD} defaultPreset={TIP_PRESETS_USD[1]} />
+                <div>
+                  <SubmitButton
+                    pendingLabel="Heading to payment…"
+                    className={buttonClass({ size: "cta" })}
+                  >
+                    Leave a tip
+                  </SubmitButton>
+                </div>
+              </form>
+            </>
+          ) : null}
         </section>
       ) : null}
 
