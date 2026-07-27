@@ -44,6 +44,12 @@ the shortest seeded future departure.
 Vitest defaults to the `node` environment. A test that exercises browser APIs (DOM rendering,
 IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock on line 1.
 
+`vitest.config.ts` sets `pool: "threads"` (Vitest 4 otherwise defaults to `forks`, one child process
+per test file): reusing one process across files skips Node's startup and the module-graph re-import
+(Next, Drizzle, PGlite's WASM) that every fresh fork repays, without weakening per-file isolation —
+`isolate` still gives each file its own module registry regardless of pool. Measured ~13% faster on
+the full suite locally with identical pass counts across repeated runs.
+
 ## Conventions
 
 - **Test behavior, not implementation.** Query the DOM by role/label, assert outcomes; don't
