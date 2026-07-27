@@ -411,77 +411,79 @@ export default async function DiverReadinessPage({
         />
       </section>
 
-      <section
-        className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
-        aria-labelledby="change-plans-heading"
-      >
-        <h2
-          id="change-plans-heading"
-          className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
+      {data.canManageBooking ? (
+        <section
+          className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+          aria-labelledby="change-plans-heading"
         >
-          Need to change your plans?
-        </h2>
+          <h2
+            id="change-plans-heading"
+            className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
+          >
+            Need to change your plans?
+          </h2>
 
-        {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
-          <div className="mt-3">
-            <p className="text-base text-muted">
-              Pick a different trip and we’ll move you — your current spot only releases once the
-              new one’s confirmed, so you’re never left without one.
-            </p>
-            <form
-              action={rescheduleMyBookingAction.bind(null, token)}
-              className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
-            >
-              <label htmlFor="newTripId" className="sr-only">
-                Pick a trip
-              </label>
-              <select id="newTripId" name="newTripId" required className={controlClass}>
-                <option value="">Choose a trip…</option>
-                {data.rescheduleCandidates.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.title} —{" "}
-                    {formatShortDate(candidate.startsAt, "en-US", detail.shop.timezone)} ·{" "}
-                    {formatTimeRangeTz(
-                      candidate.startsAt,
-                      candidate.endsAt,
-                      "en-US",
-                      detail.shop.timezone,
-                    )}{" "}
-                    · {candidate.spotsLeft} left
-                  </option>
-                ))}
-              </select>
-              <SubmitButton
-                pendingLabel="Moving…"
-                confirmMessage="Move your booking to this trip? Your current spot releases as soon as the new one holds."
-                className={buttonClass({ variant: "secondary", size: "sm" })}
+          {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-base text-muted">
+                Pick a different trip and we’ll move you — your current spot only releases once the
+                new one’s confirmed, so you’re never left without one.
+              </p>
+              <form
+                action={rescheduleMyBookingAction.bind(null, token)}
+                className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
               >
-                Move my booking
+                <label htmlFor="newTripId" className="sr-only">
+                  Pick a trip
+                </label>
+                <select id="newTripId" name="newTripId" required className={controlClass}>
+                  <option value="">Choose a trip…</option>
+                  {data.rescheduleCandidates.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.title} —{" "}
+                      {formatShortDate(candidate.startsAt, "en-US", detail.shop.timezone)} ·{" "}
+                      {formatTimeRangeTz(
+                        candidate.startsAt,
+                        candidate.endsAt,
+                        "en-US",
+                        detail.shop.timezone,
+                      )}{" "}
+                      · {candidate.spotsLeft} left
+                    </option>
+                  ))}
+                </select>
+                <SubmitButton
+                  pendingLabel="Moving…"
+                  confirmMessage="Move your booking to this trip? Your current spot releases as soon as the new one holds."
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  Move my booking
+                </SubmitButton>
+              </form>
+            </div>
+          ) : null}
+
+          <div
+            className={
+              data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
+            }
+          >
+            <p className="text-base text-muted">
+              Cancelling frees your seat right away.
+              {CANCEL_PREVIEW_TEXT[data.cancelPreview]}
+            </p>
+            <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+              <SubmitButton
+                pendingLabel="Cancelling…"
+                confirmMessage={`Cancel your spot on ${detail.trip.title}? This can’t be undone.`}
+                className={buttonClass({ variant: "danger", size: "sm" })}
+              >
+                Cancel my spot
               </SubmitButton>
             </form>
           </div>
-        ) : null}
-
-        <div
-          className={
-            data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
-          }
-        >
-          <p className="text-base text-muted">
-            Cancelling frees your seat right away.
-            {CANCEL_PREVIEW_TEXT[data.cancelPreview]}
-          </p>
-          <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
-            <SubmitButton
-              pendingLabel="Cancelling…"
-              confirmMessage={`Cancel your spot on ${detail.trip.title}? This can’t be undone.`}
-              className={buttonClass({ variant: "danger", size: "sm" })}
-            >
-              Cancel my spot
-            </SubmitButton>
-          </form>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <p className="mt-8 text-center text-sm text-muted">
         Questions? Reach out to {detail.shop.name}

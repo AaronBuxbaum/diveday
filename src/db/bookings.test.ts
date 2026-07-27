@@ -15,7 +15,7 @@ import {
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { setBookingPayment } from "./payments";
-import { bookings, people, personRoles } from "./schema";
+import { bookingCheckoutBookings, bookingCheckouts, bookings, people, personRoles } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
@@ -717,6 +717,86 @@ describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-se
       .from(bookings)
       .where(eq(bookings.id, priorNightBooking.bookingId));
     expect(destinationRow?.status).toBe("cancelled");
+  });
+
+  it("refuses to reactivate a destination seat carrying a refunded payment from its earlier life (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // `refunded` is a FINAL_PAYMENT_STATUSES entry, same as `paid`/`waived` —
+    // omitting it from the destination-payment gate would let this
+    // reactivation through, and a later real payment on the reactivated seat
+    // would then be silently swallowed by setBookingPaymentIfNotFinal's
+    // refusal to regress a final status, leaving the diver charged while the
+    // booking still reads "refunded".
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: priorNightBooking.bookingId,
+      status: "refunded",
+      amountCents: 15_000,
+      provider: "stripe",
+      providerRef: "cs_test_prior_refunded",
+    });
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "destination_already_paid" });
+  });
+
+  it("retires a stale pending checkout linked to a reactivated destination seat (Codex finding)", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    // The diver started paying for their earlier seat on the night trip,
+    // abandoned the tab before completing it, then cancelled — the checkout
+    // session itself is still genuinely payable at Stripe, at that seat's
+    // old price. Reactivating the same booking row onto a *different* diver's
+    // move must not leave that old session able to attribute money to it.
+    const priorNightBooking = await bookVisitor(db, shop.id, night.id);
+    if (!priorNightBooking.ok) throw new Error("setup booking failed");
+    const [staleCheckout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: night.id,
+        status: "pending",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_test_stale",
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test_stale",
+        amountPerDiverCents: 15_000,
+        totalCents: 15_000,
+      })
+      .returning();
+    if (!staleCheckout) throw new Error("setup checkout insert failed");
+    await db.insert(bookingCheckoutBookings).values({
+      shopId: shop.id,
+      checkoutId: staleCheckout.id,
+      bookingId: priorNightBooking.bookingId,
+    });
+    await cancelBooking(db, shop.id, priorNightBooking.bookingId);
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+
+    const result = await rescheduleBooking(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      newTripId: night.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.newBookingId).toBe(priorNightBooking.bookingId);
+
+    const [checkoutRow] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, staleCheckout.id));
+    expect(checkoutRow?.status).toBe("expired");
   });
 
   it("refuses to reschedule a booking still flagged identity_unconfirmed (H-13, dive-domain-expert finding)", async () => {

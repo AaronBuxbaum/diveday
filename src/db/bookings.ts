@@ -10,6 +10,8 @@ import type { AppDb } from "./client";
 import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookings,
   certifications,
   courses,
@@ -616,21 +618,63 @@ export async function rescheduleBooking(
       // destination trip (the diver had, and cancelled, a seat there before) —
       // and reactivation only ever touches `status`/`conditionsBriefedAt`/
       // `identityUnconfirmedAt`, never `booking_payments`. That row's payment
-      // can therefore still read paid/deposit_paid/waived from its earlier
-      // life (a no-policy or forfeit cancellation deliberately leaves a
-      // payment captured), which has nothing to do with this move — the
-      // diver hasn't paid anything for it. Refuse rather than silently
-      // treating a stale settlement as covering the new seat, or clearing a
-      // real payment record programmatically (Codex finding); staff can
-      // reconcile the specific history if the diver contacts them.
+      // can therefore still read paid/deposit_paid/waived/refunded from its
+      // earlier life (a no-policy or forfeit cancellation deliberately leaves
+      // a payment captured; a within-window cancellation leaves it refunded),
+      // which has nothing to do with this move — the diver hasn't paid
+      // anything for it. `refunded` matters here too, not just the settled
+      // statuses (Codex finding): it's a FINAL_PAYMENT_STATUSES entry, so if
+      // this were allowed through and the diver paid again for the
+      // reactivated seat, `setBookingPaymentIfNotFinal` would refuse to
+      // overwrite the stale "refunded" record — the diver would be charged
+      // while the booking still reads refunded and could even be offered
+      // payment again. Refuse rather than silently treating a stale
+      // settlement as covering the new seat, or clearing a real payment
+      // record programmatically; staff can reconcile the specific history if
+      // the diver contacts them.
       const destinationPayment = await getBookingPayment(tx, input.shopId, outcome.bookingId);
       if (
         destinationPayment?.status === "paid" ||
         destinationPayment?.status === "deposit_paid" ||
-        destinationPayment?.status === "waived"
+        destinationPayment?.status === "waived" ||
+        destinationPayment?.status === "refunded"
       ) {
         refusal = { ok: false, reason: "destination_already_paid" };
         tx.rollback();
+      }
+
+      // A reactivated row can also still be linked to a *pending* (never
+      // completed, never refused above) Checkout from its earlier life — a
+      // diver who started paying, abandoned the tab, then cancelled before
+      // it expired. That old Stripe session is still genuinely payable, at
+      // the old trip/price it was created for; if an old tab completes it
+      // after this reactivation, `markCheckoutPaidBySessionId` would see a
+      // `booked` (not cancelled) row and attribute the historical price to
+      // this new seat instead of refusing it (Codex finding). Retire any
+      // still-pending checkout linked to this booking now, in the same
+      // transaction as the reactivation, so no stale session survives to be
+      // completed against it. A no-op for a genuinely fresh booking, which
+      // has no prior checkout to find.
+      const staleCheckoutLinks = await tx
+        .select({ checkoutId: bookingCheckoutBookings.checkoutId })
+        .from(bookingCheckoutBookings)
+        .innerJoin(bookingCheckouts, eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId))
+        .where(
+          and(
+            eq(bookingCheckoutBookings.bookingId, outcome.bookingId),
+            eq(bookingCheckouts.status, "pending"),
+          ),
+        );
+      if (staleCheckoutLinks.length > 0) {
+        await tx
+          .update(bookingCheckouts)
+          .set({ status: "expired" })
+          .where(
+            inArray(
+              bookingCheckouts.id,
+              staleCheckoutLinks.map((l) => l.checkoutId),
+            ),
+          );
       }
 
       // Unconditional, not just when true: `createBookingRecord` can reactivate
