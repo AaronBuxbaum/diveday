@@ -70,7 +70,7 @@ adapters and must not introduce unique requirements.
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
 in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**,
-**design-review**, **schema-change**, **debug**, **e2e-and-argos**, **argos-triage**, **adr**,
+**design-review**, **schema-change**, **debug**, **e2e-and-visual**, **visual-triage**, **adr**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
 Other providers
 should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical
@@ -100,10 +100,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave
   it red for someone else. See **Parallel work** first: check for an in-flight fix on the same
   test before starting your own, so two sessions don't race to patch it.
-- **A pushed PR is not done until its Argos build is triaged.** CI uploads the visual build
-  ~10–15 min after push; on UI changes the `argos` check goes red ("waiting for your decision")
-  until reviewed. Schedule a check-in and run the **argos-triage** skill — approve what your diff
-  explains, comment on what it doesn't. Never end the session leaving that check silently red.
+- **A pushed PR is not done until its visual failures are triaged.** A UI change that shifts
+  pixels fails `e2e/visual.spec.ts` on the same `e2e` CI job as everything else — there's no
+  separate build or check to wait on. Run the **visual-triage** skill on any red visual assertion:
+  commit the regenerated baseline (as its own labeled commit) for what your diff explains, leave
+  it failing with a comment for what it doesn't. Never end the session leaving that failure
+  unexplained.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings
@@ -122,14 +124,15 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
   bug fixes begin with a failing regression test. Every important **flow** a user runs (booking,
   waivers, cert/nitrox gating, manifest/roll call, refunds, scheduling, sign-in) gets an `e2e/`
-  spec, and every important **surface** they look at gets an Argos snapshot in `e2e/visual.spec.ts`
-  — especially when introducing a feature. See the **e2e-and-argos** skill; if unsure whether
+  spec, and every important **surface** they look at gets a visual snapshot in `e2e/visual.spec.ts`
+  — especially when introducing a feature. See the **e2e-and-visual** skill; if unsure whether
   something qualifies, it does.
 - **Read time through the clock.** `src/lib` and `src/db` never call `new Date()` / `Date.now()`
   directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render
-  stay pixel-stable for Argos; in production the clock is the native call, unchanged. `pnpm
-  check:clock` enforces it. Never stabilise a visual test by masking moving text — freeze the clock.
+  stay pixel-stable for visual regression; in production the clock is the native call, unchanged.
+  `pnpm check:clock` enforces it. Never stabilise a visual test by masking moving text — freeze the
+  clock.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->

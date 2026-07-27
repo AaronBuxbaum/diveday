@@ -24,9 +24,9 @@ How to build anything here. Written for AI agents; humans may follow along.
    (`adr` skill); new domain term → glossary.
 6. **Ship** — commit (imperative subject, body says why), push, keep the PR draft until CI is
    green and the checklist below passes.
-7. **Triage the Argos build** — CI uploads a visual build ~10–15 minutes after push; on any UI
-   change it sits at "waiting for your decision" (red `argos` check) until reviewed. Schedule a
-   check-in for when it lands and run the `argos-triage` skill: approve what your diff explains,
+7. **Triage any visual failure** — a UI change that shifts pixels fails `e2e/visual.spec.ts` on
+   the same `e2e` CI job as everything else. Watch for that failure and run the `visual-triage`
+   skill: commit the regenerated baseline (its own labeled commit) for what your diff explains,
    comment on what it doesn't. Don't end the session's responsibility at "pushed".
 
 ## Definition of done
@@ -36,8 +36,8 @@ How to build anything here. Written for AI agents; humans may follow along.
 - [ ] UI seen in browser, light + dark; design checklist passes for user-facing changes
 - [ ] Docs/ADR/glossary updated in the same PR
 - [ ] No leftover debug code, no `biome-ignore` without a reason string
-- [ ] Argos build for the pushed head triaged (`argos-triage` skill) — approved, or diffs
-      commented for the human; the `argos` check is not left silently red
+- [ ] Any `e2e/visual.spec.ts` failure on the pushed head triaged (`visual-triage` skill) —
+      baseline regenerated and committed separately, or left red with a comment for the human
 
 ## Rules
 

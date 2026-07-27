@@ -7,12 +7,49 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # Never cancel main: its e2e job uploads the auto-approved Argos baseline
-  # that every PR build diffs against — cancelling it leaves PRs diffing
-  # against a stale baseline.
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: Detect baseline-only push
+    runs-on: ubuntu-latest
+    outputs:
+      visual_baselines_only: ${{ steps.filter.outputs.visual_baselines_only }}
+    steps:
+      # Approving a visual diff (see the `visual-triage` skill) means committing
+      # a regenerated baseline PNG — that commit retriggers CI same as any other
+      # push. When that push touches *only* committed baselines under
+      # e2e/visual.spec.ts-snapshots/, the e2e job below narrows to just
+      # e2e/visual.spec.ts instead of the full suite, since nothing else could
+      # have changed behavior. Falls back to "false" (run everything) whenever
+      # the before/after comparison isn't trustworthy — no `before` (first push
+      # of a branch), or a `before` the API can't compare against (e.g. a
+      # force-push origin no longer has). Uses the GitHub compare API instead of
+      # a local `git diff`, so this job needs no checkout at all — a local diff
+      # would need `fetch-depth: 0` (full history), which is the one thing in
+      # this workflow that would actually get slower as committed baselines pile
+      # up over time; the API call doesn't care how much history exists.
+      - id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          ZERO="0000000000000000000000000000000000000000"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "$ZERO" ]; then
+            echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(gh api "repos/${{ github.repository }}/compare/$BEFORE...$AFTER" --jq '.files[].filename' 2>/dev/null) || {
+            echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          if [ -n "$CHANGED" ] && ! echo "$CHANGED" | grep -qv '^e2e/visual\.spec\.ts-snapshots/'; then
+            echo "visual_baselines_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
+          fi
+
   checks:
     name: Safeguards, lint, typecheck, test, build
     runs-on: ubuntu-latest
@@ -48,6 +85,7 @@ jobs:
 
   e2e:
     name: End-to-end
+    needs: detect-changes
     runs-on: ubuntu-latest
     # Keep the browser executable and its Linux libraries together. Caching only
     # ~/.cache/ms-playwright restores Chromium, but every fresh runner still
@@ -71,11 +109,15 @@ jobs:
           key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
-      - run: pnpm e2e
-        env:
-          # Uploads visual snapshots to Argos when configured; absent (forks,
-          # pre-signup) the Argos reporter is a no-op and the suite still runs.
-          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
+      - run: pnpm e2e:build
+      - name: Run Playwright suite
+        run: |
+          if [ "${{ needs.detect-changes.outputs.visual_baselines_only }}" = "true" ]; then
+            echo "Push only touches committed visual baselines — running just e2e/visual.spec.ts."
+            pnpm exec playwright test e2e/visual.spec.ts
+          else
+            pnpm exec playwright test
+          fi
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

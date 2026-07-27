@@ -18,8 +18,8 @@ flow) permanently mixes seeded people with customer data, with no reset control 
 Second, a latent correctness bug: `seedShopWithDemoData` inserts the canonical Blue Mantis staff
 emails (`marcus@/keiko@/sal@bluemantis.example`), and `user_accounts.email` is **globally** unique —
 so seeding a second shop with sample data collides (`23505`) against the always-seeded demo tenant.
-Fake data and a real tenant were conflated; they should never share a shop. The e2e/Argos fleet
-depends on one stable canonical demo (`blue-mantis`) reached via `DEV_STAFF_LOGINS` and
+Fake data and a real tenant were conflated; they should never share a shop. The e2e/visual-regression
+fleet depends on one stable canonical demo (`blue-mantis`) reached via `DEV_STAFF_LOGINS` and
 `/api/test/reset`, which must be preserved.
 
 ## Decision

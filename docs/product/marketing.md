@@ -213,7 +213,7 @@ at the dock, the blocker queue, the no-login diver arc.
   that invalidates it. If code and copy disagree, one of them is the bug.
 - **Verification is the product bar**: `pnpm check` green; `pnpm e2e -- marketing.spec.ts`;
   screenshots of every touched page in light + dark, desktop + phone, actually looked at
-  (design-review skill); Argos triage after push (argos-triage skill).
+  (design-review skill); visual triage after push (visual-triage skill).
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a
   failing marketing spec on a copy change is the test doing its job.
 - **Re-check positioning** (this doc's spine + the assessments) when: a rival ships a response

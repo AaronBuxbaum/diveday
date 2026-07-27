@@ -463,7 +463,7 @@ export async function seedDemoSchedule(
         // A couple of dates on file so the H-08 minimum-age gate has something
         // to demo; most divers deliberately have none, which is the fail-open
         // case every existing shop starts from. Anchored to the seeded clock so
-        // the rendered age never drifts across Argos runs.
+        // the rendered age never drifts across visual-regression runs.
         dateOfBirth: i < 2 ? dateAt(-365 * (28 + i * 5)) : null,
       })),
     )
@@ -1717,8 +1717,8 @@ export async function seedDemoSchedule(
  *
  * Everything is derived deterministically from a booking counter (never a live
  * clock or randomness) so the frozen-clock e2e fleet renders identical history
- * on every run, and so the report totals are stable enough for an Argos
- * baseline. It touches only the past: today's board, its roster, and its exactly
+ * on every run, and so the report totals are stable enough for a visual-
+ * regression baseline. It touches only the past: today's board, its roster, and its exactly
  * asserted readiness counts are untouched.
  */
 async function seedHistory(
@@ -2466,8 +2466,8 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   // person became permanently "stable" and leaked into every later spec
   // sharing this worker (a "Priya Nair" row on the settings/team screenshot
   // whose invite email embeds the wall-clock millisecond it was created,
-  // never matching twice — Argos build 229's flakiest screenshot, stability
-  // 0.07).
+  // never matching twice — this was the flakiest screenshot in the visual
+  // suite, stability 0.07).
   const STABLE_STAFF_NAMES = new Set(["Dana Reyes", "Marcus Webb", "Keiko Tanaka", "Sal Moretti"]);
   const staffRows = await db
     .select({ personId: personRoles.personId, fullName: people.fullName })

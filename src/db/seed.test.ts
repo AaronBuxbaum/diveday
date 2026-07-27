@@ -34,7 +34,8 @@ describe("seeded imported-card states", () => {
   // The two states H-23/H-24 exist for are only visible on a diver who holds an
   // imported, unconfirmed card — and until this seed row existed, no seeded diver
   // did, so the amber "certified · confirm to clear" badge and the
-  // attest-you've-seen-it confirm had no Argos baseline and no fixture. This test
+  // attest-you've-seen-it confirm had no visual-regression baseline and no
+  // fixture. This test
   // is the guard on the *shape* those baselines depend on: if someone drops or
   // confirms these rows, the visual coverage silently stops covering anything.
   it("holds an imported, unconfirmed specialty and nitrox card for one diver", async () => {
@@ -197,7 +198,7 @@ describe("resetDemoSchedule", () => {
     expect(stripeRow).toBeUndefined();
   });
 
-  it("purges a staff member invited mid-test, not just non-staff churn (Argos build 229's flakiest screenshot: settings/team leaking a test-invited instructor whose email embeds Date.now())", async () => {
+  it("purges a staff member invited mid-test, not just non-staff churn (was the flakiest screenshot in the visual suite: settings/team leaking a test-invited instructor whose email embeds Date.now())", async () => {
     const { db, shop } = await seededShopContext();
     const before = await listStaff(db, shop.id);
 

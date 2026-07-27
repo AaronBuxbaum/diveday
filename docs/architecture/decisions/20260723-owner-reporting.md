@@ -42,8 +42,8 @@ paid date") makes a single dashboard incoherent — the numbers stop describing 
   month, last month, and the one before, with the bookings, `booking_payments`, signed
   `waiver_records`, and paid `orders` those trips left behind. It is derived deterministically from a
   booking counter (never a live clock or randomness) so the frozen-clock e2e fleet renders identical
-  history every run and the report totals are Argos-stable. It is scoped to the past, so today's
-  board and its exactly-asserted readiness counts are untouched.
+  history every run and the report totals are visual-regression-stable. It is scoped to the past,
+  so today's board and its exactly-asserted readiness counts are untouched.
 - **The history is demo-only, and gated out of two paths.** The unit-test template
   (`src/test/db-template.ts`) and the trial-shop seeder (`seedShopWithDemoData`) pass
   `{ history: false }`: unit tests are calibrated to the small controlled dataset (and build their
