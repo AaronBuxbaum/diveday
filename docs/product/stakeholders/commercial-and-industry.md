@@ -22,7 +22,7 @@ The three profiles and the channel list are specified in
 [rollout.md](../rollout.md#who-to-recruit--three-deliberate-profiles) — don't re-derive them.
 What to have prepared per conversation:
 
-- **The one-pager** stating [the offer](../rollout.md#the-offer-write-it-down-say-it-the-same-way-every-time)
+- **The [one-pager](design-partner-one-pager.md)** stating [the offer](../rollout.md#the-offer-write-it-down-say-it-the-same-way-every-time)
   in the rollout's exact terms: free through the pilot, founder-run concierge migration (they
   send exports; we never log into their incumbent system — the
   [portability-wedge legal guardrail](../assessments/competitive-strategy.md#the-portability-wedge)),
@@ -68,9 +68,9 @@ natural follow-up; Scubanomics gets the business-of-diving economics angle), and
 Prepared: the Capterra listing claimed *before* asking anyone for a review (first product in
 this niche with five real reviews wins the comparison page — see
 [rollout Phase 2](../rollout.md#phase-2--founding-shops-oct-2026--dema)), a one-link review ask,
-the case-study interview template (their numbers, their words, sign-off on named quotes —
-consent lives in the pilot agreement), and the shop-to-shop referral offer (a free month both
-sides).
+the [case-study interview template](case-study-interview-template.md) (their numbers, their
+words, sign-off on named quotes — consent lives in the pilot agreement), and the shop-to-shop
+referral offer (a free month both sides).
 
 ## Open decisions this playbook feeds
 

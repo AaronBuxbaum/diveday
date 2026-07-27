@@ -22,12 +22,14 @@ under the same sync duties (docs/README.md).
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |
+| `commercial-outreach` | Drafting go-to-market collateral for a stakeholder conversation — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material referenced by `docs/product/rollout.md` and `docs/product/stakeholders/commercial-and-industry.md` |
 
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`
 (dive-industry correctness — required for safety-critical surfaces), `security-reviewer` (tenant
 isolation, authz, data exposure — required for auth/allowlist/token/PII/export changes),
-`conversion-reviewer` (persuasion/conversion quality on marketing and sales pages — recommended
-after drafting or editing a marketing page or switching guide).
+`conversion-reviewer` (persuasion/conversion quality on marketing pages and private sales
+collateral — recommended after drafting or editing a marketing page, switching guide, or
+`commercial-outreach` artifact).
 
 ## Maintenance
 
