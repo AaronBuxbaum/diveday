@@ -1,0 +1,44 @@
+name: Update visual baselines
+
+# One-off, manually dispatched: regenerates e2e/visual.spec.ts-snapshots/ inside
+# the exact container CI's e2e job uses, then commits and pushes the result
+# back to the branch that dispatched it. Exists because a local sandbox can
+# match Playwright's Chromium build but not necessarily the same OS font
+# packages as mcr.microsoft.com/playwright's image, and font metrics affect
+# full-page screenshot layout. See the `visual-triage` skill.
+on:
+  workflow_dispatch:
+
+jobs:
+  update-baselines:
+    name: Regenerate baselines
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm e2e:build
+      - run: pnpm exec playwright test e2e/visual.spec.ts --update-snapshots --reporter=line
+        continue-on-error: true
+      - name: Commit and push regenerated baselines
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add e2e/visual.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No baseline changes."
+            exit 0
+          fi
+          git commit -m "Regenerate visual baselines inside CI's own container"
+          git push origin HEAD:${{ github.ref_name }}
