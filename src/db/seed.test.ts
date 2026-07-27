@@ -25,6 +25,7 @@ import {
   userAccounts,
 } from "./schema";
 import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
+import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
@@ -194,6 +195,31 @@ describe("resetDemoSchedule", () => {
       .from(shopStripeAccounts)
       .where(eq(shopStripeAccounts.shopId, shop.id));
     expect(stripeRow).toBeUndefined();
+  });
+
+  it("purges a staff member invited mid-test, not just non-staff churn (Argos build 229's flakiest screenshot: settings/team leaking a test-invited instructor whose email embeds Date.now())", async () => {
+    const { db, shop } = await seededShopContext();
+    const before = await listStaff(db, shop.id);
+
+    const invite = await inviteStaffMember(db, {
+      shopId: shop.id,
+      fullName: "Priya Nair",
+      email: `new-instructor-${Date.now()}@example.com`,
+      roles: ["instructor"],
+    });
+    expect(invite.ok).toBe(true);
+
+    await resetDemoSchedule(db, shop.id);
+
+    const after = await listStaff(db, shop.id);
+    expect(after.map((s) => s.person.fullName).sort()).toEqual(
+      before.map((s) => s.person.fullName).sort(),
+    );
+    const leaked = await db
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Priya Nair")));
+    expect(leaked).toHaveLength(0);
   });
 
   it("deletes a booking's tip instead of FK-violating on the booking it references (Codex finding — resetDemoSchedule has its own child-first list, separate from deleteDemoShopCascade's)", async () => {
