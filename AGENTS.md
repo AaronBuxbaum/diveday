@@ -87,11 +87,19 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - Do not use branch-local reservation ledgers: other pending branches cannot see them.
 - Split work by vertical slice or non-overlapping paths. Trial-merge the target branch before calling
   work complete.
+- Before fixing a failing or flaky test, search open PRs for one that already touches the same
+  spec or test name. Two sessions independently patching the same broken test race each other and
+  produce conflicting fixes. If one is already in flight, coordinate in that PR's thread instead
+  of pushing a second, competing fix.
 
 ## Hard rules
 
 - **Verify before commit** — `pnpm check` green minimum; e2e when flows changed; *look at* UI
   you changed (screenshots, light + dark). Never report unverified work as done.
+- **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it
+  before calling the work done — never skip it, widen a timeout to paper over a flake, or leave
+  it red for someone else. See **Parallel work** first: check for an in-flight fix on the same
+  test before starting your own, so two sessions don't race to patch it.
 - **A pushed PR is not done until its Argos build is triaged.** CI uploads the visual build
   ~10–15 min after push; on UI changes the `argos` check goes red ("waiting for your decision")
   until reviewed. Schedule a check-in and run the **argos-triage** skill — approve what your diff
