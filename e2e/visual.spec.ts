@@ -136,6 +136,12 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/shop/blue-mantis/schedule?embed=1");
       await capture(page, "schedule-embed", scheme);
 
+      // Back to the standalone (non-embed) schedule before the trip-detail
+      // capture below — its links now carry embed=1 forward when the
+      // schedule itself was loaded in embed mode, and the "site-briefing"
+      // baseline is the standalone trip page, not the compact embed variant.
+      await page.goto("/shop/blue-mantis/schedule");
+
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
       await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
@@ -145,9 +151,29 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/shop/blue-mantis/courses/open-water-diver");
       await capture(page, "course-page", scheme);
 
+      // Set a review link on a disposable staff context (same CR-019 pattern
+      // as the waiver/booking setup below) so the recap capture shows the
+      // "Leave a review" section — a new surface from docs ADR
+      // 20260726-post-trip-review-request — without signing the public
+      // `page` itself in.
+      const reviewSettingsContext = await browser.newContext({ storageState: ownerStorageState });
+      const reviewSettingsPage = await reviewSettingsContext.newPage();
+      await reviewSettingsPage.goto("/shop/blue-mantis/settings");
+      await reviewSettingsPage
+        .getByLabel("Review link")
+        .fill("https://g.page/r/blue-mantis/review");
+      await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
+      await reviewSettingsPage.getByText("Review link saved.").waitFor();
+      await reviewSettingsContext.close();
+
       // The post-trip recap: a signed-token diver page minted for the pinned
       // demo booking (src/db/seed.ts), so the marquee word-of-mouth surface has
-      // a stable baseline without an in-app link to reach it.
+      // a stable baseline without an in-app link to reach it. The tip section
+      // (docs ADR 20260726-post-trip-tipping) isn't shown here: it only
+      // appears once a shop's Stripe account is connected and
+      // charges-enabled, and this fleet never connects one (no
+      // STRIPE_SECRET_KEY, no live Stripe calls) — the same reason no other
+      // capture in this suite exercises a pay-at-booking surface either.
       await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
       await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
       await capture(page, "recap", scheme);
@@ -408,8 +434,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
 
-        // The embed snippet generator (docs ADR 20260726-schedule-embed): the
-        // copy-paste calendar/button code a shop puts on its own website.
+        // The embed settings page (docs ADR 20260726-schedule-embed). This
+        // fleet runs `next start` against a loopback origin with no APP_HOST,
+        // and publicAppUrl() refuses a loopback origin in production
+        // (src/lib/notifications/index.ts checkPublicHost) — so this baseline
+        // is necessarily the "hosting isn't configured" state, not the
+        // SnippetField/generated-snippet state a real deploy shows. Still a
+        // real, reachable page worth a regression baseline; just not the
+        // whole surface.
         await page.goto("/shop/blue-mantis/settings/embed");
         await page.getByRole("heading", { name: "Website embed" }).waitFor();
         await capture(page, "settings-embed", scheme);

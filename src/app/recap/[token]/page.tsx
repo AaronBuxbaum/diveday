@@ -3,13 +3,14 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
-import { uploadRecapPhotoAction } from "./actions";
+import { startTipAction, uploadRecapPhotoAction } from "./actions";
 
 const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
   added: { tone: "success", text: "Added to your recap — thanks for sharing!" },
@@ -24,6 +25,14 @@ const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }
   },
   error: { tone: "danger", text: "That photo didn’t upload — try a JPEG or PNG under 5 MB." },
 };
+
+const TIP_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
+  cancelled: { tone: "danger", text: "No worries — the tip wasn’t charged." },
+  invalid: { tone: "danger", text: "Enter a tip amount between $1 and $500." },
+  error: { tone: "danger", text: "That didn’t go through — try again in a moment." },
+};
+
+const TIP_PRESETS_USD = [5, 10, 20];
 
 export const metadata: Metadata = {
   title: "Your dive recap — DiveDay",
@@ -78,11 +87,11 @@ export default async function DiveRecapPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ photo?: string }>;
+  searchParams: Promise<{ photo?: string; tip?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { photo } = await searchParams;
+  const { photo, tip: tipParam } = await searchParams;
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
     return (
@@ -101,8 +110,10 @@ export default async function DiveRecapPage({
     );
   }
 
-  const { shop, trip, diverName, sites, shoutout, photos } = data;
+  const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
+  const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
+  const justTipped = tipParam === "paid";
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
   const when = formatShortDate(trip.startsAt, "en-US", shop.timezone);
@@ -134,6 +145,106 @@ export default async function DiveRecapPage({
           We hope the water treated you well.
         </p>
       </EarnedMoment>
+
+      {shop.reviewUrl ? (
+        <section className="mt-8 rounded-xl bg-surface-sunken p-5">
+          <h2 className="text-lg font-semibold">Enjoyed your dive?</h2>
+          <p className="mt-1 text-base text-muted">
+            A quick review helps other divers find {shop.name} — and means the world to the crew
+            that took you out today.
+          </p>
+          <a
+            href={shop.reviewUrl}
+            target="_blank"
+            rel="noopener"
+            className={buttonClass({ size: "cta", className: "mt-4" })}
+          >
+            Leave a review
+          </a>
+        </section>
+      ) : null}
+
+      {canTip ? (
+        <section className="mt-8 rounded-xl border border-border bg-surface p-5">
+          <h2 className="text-lg font-semibold">Tip your crew</h2>
+          {tipNotice ? (
+            <p
+              role={tipNotice.tone === "danger" ? "alert" : "status"}
+              className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+                tipNotice.tone === "danger"
+                  ? "border-danger/30 bg-danger/10 text-danger"
+                  : "border-primary/30 bg-primary/10 text-primary"
+              }`}
+            >
+              {tipNotice.text}
+            </p>
+          ) : null}
+          {justTipped || tip?.status === "paid" ? (
+            <p className="mt-1 text-base text-muted">
+              Thanks — your tip goes straight to {shop.name}. They&apos;ll make sure the crew hears
+              about it.
+            </p>
+          ) : (
+            <>
+              <p className="mt-1 text-base text-muted">
+                100% goes to {shop.name} — nothing held back, no account needed.
+              </p>
+              {tip?.status === "pending" && tip.checkoutUrl ? (
+                <a
+                  href={tip.checkoutUrl}
+                  className={buttonClass({ size: "cta", className: "mt-4" })}
+                >
+                  Finish your ${(tip.amountCents / 100).toFixed(0)} tip
+                </a>
+              ) : (
+                <form
+                  action={startTipAction.bind(null, token)}
+                  className="mt-4 flex flex-col gap-3"
+                >
+                  <fieldset className="flex flex-wrap items-center gap-2">
+                    <legend className="sr-only">Tip amount</legend>
+                    {TIP_PRESETS_USD.map((usd) => (
+                      <label
+                        key={usd}
+                        className="flex min-h-11 cursor-pointer items-center rounded-lg border border-border px-4 text-sm font-medium has-checked:border-primary has-checked:bg-primary/10 has-checked:text-primary"
+                      >
+                        <input
+                          type="radio"
+                          name="amount"
+                          value={usd}
+                          defaultChecked={usd === TIP_PRESETS_USD[1]}
+                          className="sr-only"
+                        />
+                        ${usd}
+                      </label>
+                    ))}
+                    <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm">
+                      <span className="text-muted">$</span>
+                      <input
+                        type="number"
+                        name="customAmount"
+                        min={1}
+                        max={500}
+                        step={1}
+                        placeholder="Other"
+                        className="w-16 bg-transparent text-sm focus:outline-none"
+                      />
+                    </label>
+                  </fieldset>
+                  <div>
+                    <SubmitButton
+                      pendingLabel="Heading to payment…"
+                      className={buttonClass({ size: "cta" })}
+                    >
+                      Leave a tip
+                    </SubmitButton>
+                  </div>
+                </form>
+              )}
+            </>
+          )}
+        </section>
+      ) : null}
 
       {shoutout ? (
         <section className="mt-8 rounded-xl border border-primary/25 bg-primary/5 p-5">
