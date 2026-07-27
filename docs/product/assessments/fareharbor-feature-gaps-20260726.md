@@ -123,5 +123,7 @@ for whoever next grooms [roadmap.md](../roadmap.md):
 Already shipped, in the same PR this audit landed in: **abandoned-cart recovery email**, the
 **embeddable schedule/booking widget** (this audit's own trigger), and **post-trip review-request
 email** (bundled with **post-trip tipping**, an addition outside this audit's original findings) — see
-[shipped.md](../shipped.md#schedule-embed-widget-delivered-2026-07-26) for what shipped and the linked
-ADRs for what each decided.
+[shipped.md](../shipped.md#schedule-embed-widget-delivered-2026-07-26),
+[shipped.md](../shipped.md#post-trip-review-request-delivered-2026-07-26), and
+[shipped.md](../shipped.md#post-trip-crew-tipping-delivered-2026-07-26) for what shipped and the
+linked ADRs for what each decided.

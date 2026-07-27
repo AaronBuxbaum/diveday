@@ -139,6 +139,34 @@ describe("startTipCheckout", () => {
     );
     expect(outcome).toEqual({ ok: false, reason: "invalid_booking" });
   });
+
+  it("reuses a still-open pending tip instead of minting a second Stripe session", async () => {
+    const { db, bookingId } = await tipContext();
+    const provider = fakeCheckout();
+    const first = await startTipCheckout(db, tipInput(bookingId), provider);
+    if (!first.ok) throw new Error("expected ok");
+
+    const second = await startTipCheckout(db, tipInput(bookingId, 2000), provider);
+    expect(second).toEqual(first); // same session handed back, no second one created
+
+    const rows = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    expect(rows).toHaveLength(1); // never two pending sessions for one booking
+  });
+
+  it("does not reuse a tip that already expired", async () => {
+    const { db, bookingId } = await tipContext();
+    const provider = fakeCheckout();
+    const first = await startTipCheckout(db, tipInput(bookingId), provider);
+    if (!first.ok) throw new Error("expected ok");
+    const [firstRow] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!firstRow) throw new Error("first tip row missing");
+    await markTipExpiredBySessionId(db, firstRow.stripeSessionId);
+
+    const second = await startTipCheckout(db, tipInput(bookingId, 2000), provider);
+    expect(second).not.toEqual(first);
+    const rows = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    expect(rows).toHaveLength(2);
+  });
 });
 
 describe("getLatestTipForBooking", () => {
@@ -147,6 +175,12 @@ describe("getLatestTipForBooking", () => {
     const provider = fakeCheckout();
     const first = await startTipCheckout(db, tipInput(bookingId, 500), provider);
     if (!first.ok) throw new Error("expected ok");
+    // A still-pending tip is reused, not duplicated (the concurrent-double-
+    // charge fix) — expire the first attempt so the second is a genuinely
+    // new one, to exercise "most recent" across two real rows.
+    const [firstRow] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!firstRow) throw new Error("first tip row missing");
+    await markTipExpiredBySessionId(db, firstRow.stripeSessionId);
     const second = await startTipCheckout(db, tipInput(bookingId, 1500), provider);
     if (!second.ok) throw new Error("expected ok");
 

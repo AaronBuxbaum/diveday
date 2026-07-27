@@ -13,12 +13,13 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
 import { recordNotificationDelivery } from "./notifications";
 import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getLatestTipForBooking } from "./tips";
+import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
 
 /** A diver's own recap photo, as the recap page renders it. */
@@ -96,6 +97,7 @@ export const MAX_RECAP_CAPTION_LENGTH = 140;
 export async function getRecapPageData(
   db: AppDb,
   bookingId: string,
+  checkoutProvider?: CheckoutProvider,
 ): Promise<RecapPageData | null> {
   const [row] = await db
     .select({
@@ -138,6 +140,14 @@ export async function getRecapPageData(
     getShopStripeAccount(db, row.shopId),
     getLatestTipForBooking(db, row.shopId, bookingId),
   ]);
+  // A still-pending tip's local status is a lead, not proof — a delayed or
+  // missed webhook must never leave the page offering a dead Checkout link,
+  // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
+  // itself hasn't said so.
+  const tip =
+    latestTip?.status === "pending"
+      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
+      : latestTip;
 
   return {
     shop: {
@@ -163,11 +173,11 @@ export async function getRecapPageData(
     shoutout: trip.recapShoutout,
     photos,
     canTip: canAcceptPayments(stripeAccount),
-    tip: latestTip
+    tip: tip
       ? {
-          status: latestTip.status,
-          amountCents: latestTip.amountCents,
-          checkoutUrl: latestTip.checkoutUrl,
+          status: tip.status,
+          amountCents: tip.amountCents,
+          checkoutUrl: tip.checkoutUrl,
         }
       : null,
   };

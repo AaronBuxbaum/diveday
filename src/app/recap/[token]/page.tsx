@@ -11,6 +11,7 @@ import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { startTipAction, uploadRecapPhotoAction } from "./actions";
+import { TipAmountPicker } from "./TipAmountPicker";
 
 const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
   added: { tone: "success", text: "Added to your recap — thanks for sharing!" },
@@ -113,7 +114,6 @@ export default async function DiveRecapPage({
   const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
-  const justTipped = tipParam === "paid";
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
   const when = formatShortDate(trip.startsAt, "en-US", shop.timezone);
@@ -179,7 +179,7 @@ export default async function DiveRecapPage({
               {tipNotice.text}
             </p>
           ) : null}
-          {justTipped || tip?.status === "paid" ? (
+          {tip?.status === "paid" ? (
             <p className="mt-1 text-base text-muted">
               Thanks — your tip goes straight to {shop.name}. They&apos;ll make sure the crew hears
               about it.
@@ -201,36 +201,7 @@ export default async function DiveRecapPage({
                   action={startTipAction.bind(null, token)}
                   className="mt-4 flex flex-col gap-3"
                 >
-                  <fieldset className="flex flex-wrap items-center gap-2">
-                    <legend className="sr-only">Tip amount</legend>
-                    {TIP_PRESETS_USD.map((usd) => (
-                      <label
-                        key={usd}
-                        className="flex min-h-11 cursor-pointer items-center rounded-lg border border-border px-4 text-sm font-medium has-checked:border-primary has-checked:bg-primary/10 has-checked:text-primary"
-                      >
-                        <input
-                          type="radio"
-                          name="amount"
-                          value={usd}
-                          defaultChecked={usd === TIP_PRESETS_USD[1]}
-                          className="sr-only"
-                        />
-                        ${usd}
-                      </label>
-                    ))}
-                    <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm">
-                      <span className="text-muted">$</span>
-                      <input
-                        type="number"
-                        name="customAmount"
-                        min={1}
-                        max={500}
-                        step={1}
-                        placeholder="Other"
-                        className="w-16 bg-transparent text-sm focus:outline-none"
-                      />
-                    </label>
-                  </fieldset>
+                  <TipAmountPicker presets={TIP_PRESETS_USD} defaultPreset={TIP_PRESETS_USD[1]} />
                   <div>
                     <SubmitButton
                       pendingLabel="Heading to payment…"

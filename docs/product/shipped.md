@@ -373,6 +373,25 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
   See [20260726-abandoned-checkout-recovery](../architecture/decisions/20260726-abandoned-checkout-recovery.md).
 
+## Post-trip review request (delivered 2026-07-26)
+
+- **A "Leave a review" section on the recap page** — one optional shop-level `shops.review_url` set
+  once in Settings; the recap page renders a plain `target="_blank"` link to it when configured,
+  nothing otherwise. No review-platform API integration, no click tracking, no sentiment gating (ToS
+  risk). Rides the existing recap delivery rather than its own send. Answers the review-request gap
+  named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-post-trip-review-request](../architecture/decisions/20260726-post-trip-review-request.md).
+
+## Post-trip crew tipping (delivered 2026-07-26)
+
+- **A diver can tip the crew from the recap page** — a full 100%-to-shop Stripe Checkout on the
+  shop's own connected account, same merchant-of-record model as a booking checkout but tracked in a
+  dedicated `tips` table so its simpler lifecycle never threads through the booking-payment gate.
+  Three presets ($5/$10/$20) or a bounded custom amount ($1–$500), enforced server-side regardless of
+  which the diver used. Inert until a shop both connects Stripe and has `chargesEnabled`. Answers the
+  tipping gap named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  See [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate

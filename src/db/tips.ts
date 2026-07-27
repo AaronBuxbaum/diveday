@@ -58,55 +58,88 @@ export async function startTipCheckout(
     .where(eq(bookings.id, input.bookingId))
     .limit(1);
   if (!row?.email || row.status === "cancelled") return { ok: false, reason: "invalid_booking" };
+  const customerEmail = row.email;
 
   const account = await getShopStripeAccount(db, row.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
 
-  const intent = await startPaymentOperation(db, {
-    shopId: row.shopId,
-    kind: "checkout_session",
-    bookingId: input.bookingId,
-  });
+  // Locks the always-existing bookings row for the rest of this call — same
+  // technique src/db/payments.ts uses for payment writes (a booking's first
+  // tip has no tips row yet, and `SELECT ... FOR UPDATE` on a row that
+  // doesn't exist takes no lock at all). Without serializing here, two
+  // near-simultaneous submits (a double click, two open tabs) can each see
+  // no pending tip yet and each mint their own Stripe session; if both are
+  // later paid, the diver is charged twice for one tip. The lock is held
+  // across the Stripe call below, which is an accepted cost for a
+  // low-frequency, non-contentious write like a tip (unlike the
+  // higher-volume booking-checkout path, which uses a lock-free claim
+  // column instead — see `claimBookingsForCheckout`).
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, input.bookingId))
+      .for("update");
 
-  const session = await checkout.createCheckoutSession({
-    stripeAccountId,
-    currency: "usd",
-    description: "Tip for the crew",
-    unitAmountCents: input.amountCents,
-    quantity: 1,
-    customerEmail: row.email,
-    successUrl: input.successUrl,
-    cancelUrl: input.cancelUrl,
-    idempotencyKey: idempotencyKeyFor(intent.id),
-  });
-  if (session.status !== "created") {
-    await resolvePaymentOperation(db, intent.id, {
-      status: "failed",
-      errorMessage: session.status,
-    });
-    return { ok: false, reason: "checkout_unavailable" };
-  }
-  await recordPaymentOperationStripeObject(db, intent.id, session.stripeSessionId);
+    const existing = await getLatestTipForBooking(tx, row.shopId, input.bookingId);
+    if (
+      existing?.status === "pending" &&
+      existing.checkoutUrl &&
+      (!existing.expiresAt || existing.expiresAt > nowDate())
+    ) {
+      return { ok: true, checkoutUrl: existing.checkoutUrl };
+    }
 
-  const [created] = await db
-    .insert(tips)
-    .values({
+    const intent = await startPaymentOperation(tx as unknown as AppDb, {
       shopId: row.shopId,
+      kind: "checkout_session",
       bookingId: input.bookingId,
+    });
+
+    const session = await checkout.createCheckoutSession({
       stripeAccountId,
-      stripeSessionId: session.stripeSessionId,
-      checkoutUrl: session.checkoutUrl,
       currency: "usd",
-      amountCents: input.amountCents,
-      expiresAt: session.expiresAt,
-    })
-    .returning();
-  await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
-  if (!created?.checkoutUrl) {
-    return { ok: false, reason: "checkout_unavailable" };
-  }
-  return { ok: true, checkoutUrl: created.checkoutUrl };
+      description: "Tip for the crew",
+      unitAmountCents: input.amountCents,
+      quantity: 1,
+      customerEmail,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+      idempotencyKey: idempotencyKeyFor(intent.id),
+    });
+    if (session.status !== "created") {
+      await resolvePaymentOperation(tx as unknown as AppDb, intent.id, {
+        status: "failed",
+        errorMessage: session.status,
+      });
+      return { ok: false, reason: "checkout_unavailable" };
+    }
+    await recordPaymentOperationStripeObject(
+      tx as unknown as AppDb,
+      intent.id,
+      session.stripeSessionId,
+    );
+
+    const [created] = await tx
+      .insert(tips)
+      .values({
+        shopId: row.shopId,
+        bookingId: input.bookingId,
+        stripeAccountId,
+        stripeSessionId: session.stripeSessionId,
+        checkoutUrl: session.checkoutUrl,
+        currency: "usd",
+        amountCents: input.amountCents,
+        expiresAt: session.expiresAt,
+      })
+      .returning();
+    await resolvePaymentOperation(tx as unknown as AppDb, intent.id, { status: "succeeded" });
+    if (!created?.checkoutUrl) {
+      return { ok: false, reason: "checkout_unavailable" };
+    }
+    return { ok: true, checkoutUrl: created.checkoutUrl };
+  });
 }
 
 /** The most recent tip for this booking, or null — drives the recap page's tip panel. */
@@ -161,4 +194,39 @@ export async function markTipExpiredBySessionId(
     .where(and(eq(tips.stripeSessionId, stripeSessionId), eq(tips.status, "pending")))
     .returning();
   return updated ?? null;
+}
+
+/**
+ * Ask Stripe directly whether a still-`pending` tip actually settled or
+ * expired — the webhook-less fallback the booking-checkout confirmation
+ * page already leans on (`refreshCheckoutFromStripe`), for the same reason:
+ * a delayed/missed webhook must never leave the recap page showing a dead
+ * Checkout link forever, or (worse) a `?tip=paid` return-URL trusted as
+ * proof of payment on its own. A non-pending tip, or a Stripe lookup that
+ * itself fails, is returned unchanged — the caller only cares whether the
+ * *local* row moved.
+ */
+export async function refreshTipFromStripe(
+  db: AppDb,
+  shopId: string,
+  tipId: string,
+  checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
+): Promise<Tip | null> {
+  const [row] = await db
+    .select()
+    .from(tips)
+    .where(and(eq(tips.id, tipId), eq(tips.shopId, shopId)))
+    .limit(1);
+  if (!row) return null;
+  if (row.status !== "pending") return row;
+
+  const result = await checkout.retrieveCheckoutSession(row.stripeAccountId, row.stripeSessionId);
+  if (result.status !== "ok") return row;
+  if (result.session.paymentStatus === "paid") {
+    return markTipPaidBySessionId(db, row.stripeSessionId);
+  }
+  if (result.session.stripeStatus === "expired") {
+    return markTipExpiredBySessionId(db, row.stripeSessionId);
+  }
+  return row;
 }
