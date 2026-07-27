@@ -104,7 +104,9 @@ test.describe("staff-prepared trips", () => {
     // specific booking was cancelled" beyond the one redirect that already
     // told the diver so.
     await page.goto(readyUrl);
-    await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /readiness link isn.t available/ }),
+    ).toBeVisible();
   });
 });
 
