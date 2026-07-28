@@ -426,6 +426,16 @@ summary {
   display: inline !important;
 }
 
+/* Glare mode active indicator badge */
+.glare-mode-indicator {
+  /* biome-ignore lint/complexity/noImportantStyles: hidden by default indicator needs !important to override any utilities */
+  display: none !important;
+}
+.glare-mode .glare-mode-indicator {
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to force display the indicator */
+  display: inline-flex !important;
+}
+
 @media (prefers-color-scheme: dark) {
   .glare-mode {
     --background: #000000;

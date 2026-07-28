@@ -163,8 +163,11 @@ export default async function TripManifestPage({
             <span className="font-semibold text-foreground">Before departure</span>, then run roll
             call again after each dive.
           </p>
-          <p className="mt-3 print:hidden">
+          <p className="mt-3 flex flex-wrap gap-2 print:hidden">
             <Badge tone="primary">Live manifest · save an offline copy below</Badge>
+            <span className="glare-mode-indicator rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground ring-1 ring-inset ring-foreground/20">
+              Glare mode active ☀
+            </span>
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
@@ -346,7 +349,11 @@ export default async function TripManifestPage({
                 ? "rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground"
                 : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted";
             return (
-              <li key={diver.bookingId} id={`roll-call-${diver.bookingId}`} className={rowClass}>
+              <li
+                key={diver.bookingId}
+                id={`roll-call-${diver.bookingId}`}
+                className={`${rowClass} transition-brand`}
+              >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">

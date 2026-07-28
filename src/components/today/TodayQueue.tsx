@@ -121,7 +121,7 @@ export function TodayQueue({
         </h2>
         <p className="mx-auto mt-1 max-w-md text-muted">
           Every diver booked in the next week has their waiver, cards, and payment in order.{" "}
-          {getSeasonalBriefing(nowDate())}
+          {getSeasonalBriefing(nowDate(), shopName)}
         </p>
       </section>
     );

@@ -25,7 +25,10 @@ function setup(action: RollCallAction) {
 }
 
 describe("RollCallButton", () => {
-  it("rolls back with the worded reason when the server refuses, keeping the label", async () => {
+  it("rolls back with the worded reason and vibrates with warning pattern when the server refuses, keeping the label", async () => {
+    const vibrateMock = vi.fn();
+    vi.stubGlobal("navigator", { vibrate: vibrateMock });
+
     const action = mockAction({ ok: false, reason: "not_ready" });
     setup(action);
 
@@ -39,6 +42,10 @@ describe("RollCallButton", () => {
     const formData = action.mock.calls[0]?.[1];
     expect(formData?.get("bookingId")).toBe("00000000-0000-4000-8000-000000000001");
     expect(formData?.get("status")).toBe("boarded");
+
+    expect(vibrateMock).toHaveBeenCalledWith([40, 40, 40]);
+
+    vi.unstubAllGlobals();
   });
 
   it("shows no rollback message and triggers haptic vibration when the board succeeds", async () => {

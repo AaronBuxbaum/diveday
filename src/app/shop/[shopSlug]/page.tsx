@@ -15,7 +15,7 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
+import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { inviteWaitlistAction } from "./trips/[id]/actions";
 
 export const metadata: Metadata = {
@@ -108,7 +108,7 @@ async function TodayBody({
     <>
       <ShopPageHeader
         eyebrow={formatShortDate(now, "en-US", shop.timezone)}
-        title={`Good to see you, ${firstName}`}
+        title={getTimeOfDayGreeting(now, shop.timezone, firstName)}
         meta={
           <p className="max-w-2xl text-lg text-muted">
             {summarizeDay(

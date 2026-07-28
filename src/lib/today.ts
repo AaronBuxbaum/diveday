@@ -1,5 +1,6 @@
 import type { Role } from "./authz";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+import { utcToWallTime } from "./zoned";
 
 /**
  * The Today page is a work queue, not a dashboard. Everything on it is either
@@ -532,21 +533,42 @@ export function leadWithCrewed<T extends { tripId: string }>(
  * Returns a warm, authentic seasonal briefing message based on the month of the date.
  * Keep it rationed like --accent, reading like a briefing, not filler.
  */
-export function getSeasonalBriefing(date: Date): string {
+export function getSeasonalBriefing(date: Date, shopName?: string): string {
   const month = date.getMonth(); // 0-indexed (0 = Jan, 11 = Dec)
+  const localSuffix = shopName ? ` at ${shopName}` : "";
 
   if (month >= 5 && month <= 7) {
     // Summer (June, July, August)
-    return "Enjoy the surface interval — grab some shade, drink some water, and we'll see you on the next boat.";
+    return `Enjoy the surface interval — grab some shade${localSuffix}, drink some water, and we'll see you on the next boat.`;
   }
   if (month >= 8 && month <= 10) {
     // Autumn (September, October, November)
-    return "Enjoy the surface interval — grab a warm towel, check the breeze, and we'll see you on the next boat.";
+    return `Enjoy the surface interval — grab a warm towel${localSuffix}, check the breeze, and we'll see you on the next boat.`;
   }
   if (month === 11 || month === 0 || month === 1) {
     // Winter (December, January, February)
-    return "Enjoy the surface interval — warm up with a dry coat, and we'll see you on the next boat.";
+    return `Enjoy the surface interval — warm up with a dry coat${localSuffix}, and we'll see you on the next boat.`;
   }
   // Spring (March, April, May)
-  return "Enjoy the surface interval — catch some sun, check your gear, and we'll see you on the next boat.";
+  return `Enjoy the surface interval — catch some sun${localSuffix}, check your gear, and we'll see you on the next boat.`;
+}
+
+/**
+ * Returns a warm, time-of-day aware briefing greeting using the shop's local timezone.
+ * Reads like a dive briefing copy rather than cutesy filler.
+ */
+export function getTimeOfDayGreeting(date: Date, timezone: string, firstName: string): string {
+  const wall = utcToWallTime(date, timezone);
+  const hour = wall.hour;
+
+  if (hour >= 5 && hour < 12) {
+    return `Good morning, ${firstName} ☕`;
+  }
+  if (hour >= 12 && hour < 17) {
+    return `Good afternoon, ${firstName} ☀️`;
+  }
+  if (hour >= 17 && hour < 22) {
+    return `Good evening, ${firstName} 🌙`;
+  }
+  return `Good night, ${firstName} 🌌`;
 }
