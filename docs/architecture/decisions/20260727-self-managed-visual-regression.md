@@ -30,13 +30,17 @@ baseline PNGs committed to the repo:
   directly, looping over both viewports itself (Playwright has no built-in multi-viewport option
   the way Argos did) and restoring the base viewport afterward. Naming is unchanged in spirit:
   `landing-light-vw-390.png` where Argos produced `landing-light vw-390`.
-- Baselines land at `e2e/visual.spec.ts-snapshots/<name>-chromium-linux.png` (Playwright's default
-  convention) and are committed to git — no external service, account, or token. Measured size at
+- Baselines land under `e2e/visual.spec.ts-snapshots/` with the platform-specific Playwright
+  filename for the macOS-hosted CI environment and are committed to git — no external service,
+  account, or token. Baselines must be generated against the same macOS rendering environment as
+  CI; changing the rendering platform can require a coordinated baseline refresh. Measured size at
   158 screenshots: ~61 MB. Plain git handles this fine; Git LFS is a lever to pull later if growth
   outpaces that, not something needed on day one.
-- **No separate review step exists — a pixel mismatch fails the test outright**, on the same `e2e`
-  CI job as every other assertion. Approving an intentional change means regenerating the baseline
-  and committing the new PNG **as its own commit, separate from the code change that caused it**.
+- **No separate review step exists — a pixel mismatch fails the test outright**, in the dedicated
+  serialized visual CI job that owns the capture. The surrounding end-to-end coverage is sharded
+  independently for faster feedback. Approving an intentional change means regenerating the
+  baseline and committing the new PNG **as its own commit, separate from the code change that
+  caused it**.
   This is the load-bearing replacement for what Argos's separate hosted approval enforced ("agents
   cannot silently update a baseline in the same commit that regressed it," per the original ADR) —
   losing that hosted separation without replacing it with a process rule would have reopened
@@ -48,14 +52,11 @@ baseline PNGs committed to the repo:
   Playwright regenerates the same `expected`/`actual`/`diff` PNGs CI just produced, because the
   baseline it diffs against is the same committed file in the same repo. `e2e-and-argos` is
   renamed `e2e-and-visual` with the same content, minus Argos-specific API language.
-- CI (`.github/workflows/ci.yml`) drops `ARGOS_TOKEN` entirely. A new `detect-changes` job diffs
-  `github.event.before..HEAD`; when a push touches *only* files under
-  `e2e/visual.spec.ts-snapshots/` (i.e., a baseline-approval commit with no code change), the `e2e`
-  job runs just `e2e/visual.spec.ts` instead of the full suite, since nothing else could have
-  changed behavior. It falls back to running everything whenever that comparison isn't trustworthy
-  (first push on a branch, force-push, or any other case where `before` isn't a known ancestor).
-  The `checks` job is untouched — it's already fast on a `.next/cache` hit and skipping repo
-  safeguards on "trust me, it's just PNGs" is the wrong place to cut a corner.
+- CI (`.github/workflows/ci.yml`) drops `ARGOS_TOKEN` entirely. Visual regression runs in a
+  dedicated macOS-hosted job while non-visual end-to-end coverage runs in parallel shards. A
+  pixel failure remains attached to the visual job that produced it. Baseline-only changes may
+  narrow the affected visual work, but the existing safeguards remain in force and no shard
+  should be treated as a substitute for repository checks.
 - `.claude/settings.json`'s `mcp__Argos__*` tool allowlist is removed along with the dependency.
 
 ## Alternatives considered
@@ -82,8 +83,8 @@ baseline PNGs committed to the repo:
 ## Consequences
 
 - **No recurring cost.** GitHub Actions minutes for the marginal CI rerun a baseline-approval
-  commit triggers are the only added spend, and the `detect-changes` narrowing keeps that rerun to
-  just the visual spec rather than the full suite plus `checks`.
+  commit triggers are the only added spend; the dedicated visual job keeps that rerun scoped to
+  visual work while non-visual end-to-end coverage remains independently sharded.
 - **Approving a diff now means pushing a commit, not clicking a button.** There's no "approve
   without touching the branch" motion the way Argos's hosted UI allowed; every approval retriggers
   CI. Mitigated by generating the new baseline from the already-produced `actual.png` (no wasted
@@ -98,12 +99,10 @@ baseline PNGs committed to the repo:
   adds roughly the size of the surfaces it actually changed (typically a handful of files, not all
   158). Plain git handles this comfortably for the foreseeable future; Git LFS remains the next
   lever if that changes.
-- First run after this change re-establishes every baseline from a capture made in this session's
-  Linux sandbox, not CI's own `mcr.microsoft.com/playwright:v1.62.0-noble` container. The two
-  should render near-identically (same OS family, same Playwright version), but a first CI run
-  showing a handful of subtle antialiasing diffs — not real regressions — would not be surprising;
-  triage and re-commit those baselines from CI's own capture if so, the same way any other baseline
-  update happens.
+- Baseline establishment and refresh must use the macOS-hosted CI rendering platform. A platform
+  change can produce broad antialiasing or font-rendering diffs without a product regression, so
+  those changes require deliberate triage and a separate baseline commit rather than being folded
+  into the code change.
 - `20260721-argos-frozen-clock`'s decision (freeze the clock on both sides, never mask) is
   unchanged by this ADR and is marked superseded only because this record is now the head of the
   lineage — the clock-freezing mechanism itself carries forward exactly as documented there.

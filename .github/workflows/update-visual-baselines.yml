@@ -1,7 +1,7 @@
 name: Update visual baselines
 
-# One-off: regenerates e2e/visual.spec.ts-snapshots/ inside the exact
-# container CI's e2e job uses, running the FULL suite (matching how the
+# One-off: regenerates e2e/visual.spec.ts-snapshots/ on a macOS hosted runner,
+# running the FULL suite (matching how the
 # real e2e job invokes Playwright) rather than e2e/visual.spec.ts in
 # isolation — some visual captures are sensitive to full-suite composition
 # (shared demo-shop state, font-load timing under load), so an isolated
@@ -15,12 +15,9 @@ on:
 jobs:
   update-baselines:
     name: Regenerate baselines against the full suite
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     permissions:
       contents: write
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.0-noble
-      options: --user 1001
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -29,6 +26,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
       - run: pnpm e2e:build
       - run: pnpm exec playwright test --update-snapshots --reporter=line
         continue-on-error: true
@@ -41,5 +39,5 @@ jobs:
             echo "No baseline changes."
             exit 0
           fi
-          git commit -m "Regenerate visual baselines against the full suite in CI's own container"
+          git commit -m "Regenerate visual baselines against the full suite on macOS"
           git push origin HEAD:${{ github.ref_name }}
