@@ -27,7 +27,7 @@ export function EarnedMoment({
 }) {
   return (
     <section
-      className={`rise-in rounded-2xl border border-accent/40 bg-accent/10 p-6 sm:p-7 ${className}`.trim()}
+      className={`relative overflow-hidden rise-in rounded-2xl border border-accent/40 bg-accent/10 p-6 sm:p-7 ${className}`.trim()}
     >
       {eyebrow ? (
         <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{eyebrow}</p>
@@ -36,6 +36,69 @@ export function EarnedMoment({
         {title}
       </Heading>
       {children ? <div className="mt-3 text-muted">{children}</div> : null}
+      {/* Waiver Signature Coral Bubbles */}
+      <div className="bubble-container" aria-hidden="true">
+        <span
+          className="coral-bubble animate-bubble"
+          style={{
+            left: "10%",
+            width: "12px",
+            height: "12px",
+            animationDelay: "0s",
+            animationDuration: "3s",
+          }}
+        />
+        <span
+          className="coral-bubble animate-bubble"
+          style={{
+            left: "25%",
+            width: "8px",
+            height: "8px",
+            animationDelay: "0.5s",
+            animationDuration: "2.5s",
+          }}
+        />
+        <span
+          className="coral-bubble animate-bubble"
+          style={{
+            left: "45%",
+            width: "16px",
+            height: "16px",
+            animationDelay: "1.2s",
+            animationDuration: "3.5s",
+          }}
+        />
+        <span
+          className="coral-bubble animate-bubble"
+          style={{
+            left: "60%",
+            width: "10px",
+            height: "10px",
+            animationDelay: "0.2s",
+            animationDuration: "2.8s",
+          }}
+        />
+        <span
+          className="coral-bubble animate-bubble"
+          style={{
+            left: "75%",
+            width: "14px",
+            height: "14px",
+            animationDelay: "1.8s",
+            animationDuration: "3.2s",
+          }}
+        />
+        <span
+          className="coral-bubble animate-bubble"
+          style={{
+            left: "90%",
+            width: "7px",
+            height: "7px",
+            animationDelay: "0.8s",
+            animationDuration: "2.2s",
+          }}
+        />
+      </div>
     </section>
   );
 }

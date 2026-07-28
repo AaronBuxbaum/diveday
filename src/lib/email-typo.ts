@@ -30,7 +30,7 @@ const COMMON_DOMAINS = [
  * Optimal string alignment distance (Levenshtein plus adjacent transposition),
  * so a swapped pair like `gmial` reads as one mistake, not two.
  */
-function editDistance(a: string, b: string): number {
+export function editDistance(a: string, b: string): number {
   const rows = a.length + 1;
   const cols = b.length + 1;
   const d: number[][] = Array.from({ length: rows }, () => new Array(cols).fill(0));

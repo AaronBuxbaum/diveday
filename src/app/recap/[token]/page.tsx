@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
+import { RecapMap } from "@/components/RecapMap";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -234,7 +235,8 @@ export default async function DiveRecapPage({
       {sites.length ? (
         <section className="mt-8">
           <h2 className="text-lg font-semibold">Where you dived</h2>
-          <ul className="mt-3 space-y-3">
+          <RecapMap sites={sites} />
+          <ul className="mt-4 space-y-3">
             {sites.map((site) => (
               <SiteCard key={site.name} site={site} />
             ))}

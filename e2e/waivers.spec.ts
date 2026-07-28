@@ -54,6 +54,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // end back to the shop home.
   await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
 
+  // Assert scheduled dive site cards are rendered (delight feature)
+  await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
+
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);

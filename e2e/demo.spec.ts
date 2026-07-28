@@ -7,7 +7,9 @@ test("landing demo CTA drops a visitor into the staff shop, and reset restores t
   await page.getByRole("button", { name: "Try the live demo" }).first().click();
 
   await expect(page).toHaveURL(/\/shop/);
-  await expect(page.getByRole("heading", { name: "Good to see you, Dana" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
+  ).toBeVisible();
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 
@@ -19,7 +21,9 @@ test("landing demo CTA drops a visitor into the staff shop, and reset restores t
   // Reset confirms with a notice and the session survives it.
   await page.getByRole("button", { name: "Reset demo data" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Demo data reset" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Good to see you, Dana" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
+  ).toBeVisible();
 });
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {
