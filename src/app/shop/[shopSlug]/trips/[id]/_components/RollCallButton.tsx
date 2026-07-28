@@ -50,10 +50,14 @@ export function RollCallButton({
   const [result, formAction, isPending] = useActionState(action, null);
 
   useEffect(() => {
-    if (result?.ok) {
+    if (result) {
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         try {
-          navigator.vibrate(10);
+          if (result.ok) {
+            navigator.vibrate(10);
+          } else {
+            navigator.vibrate([40, 40, 40]);
+          }
         } catch {
           // Ignore vibration exceptions (e.g. from security policies)
         }

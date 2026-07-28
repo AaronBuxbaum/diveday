@@ -4,6 +4,7 @@ import {
   collapseDiverActions,
   diverBlockerAction,
   getSeasonalBriefing,
+  getTimeOfDayGreeting,
   groupActions,
   leadWithCrewed,
   primaryBlocker,
@@ -379,5 +380,33 @@ describe("getSeasonalBriefing", () => {
 
   it("returns spring briefing for March, April, May", () => {
     expect(getSeasonalBriefing(new Date("2026-04-15"))).toContain("catch some sun");
+  });
+
+  it("interpolates shopName when provided", () => {
+    expect(getSeasonalBriefing(new Date("2026-07-15"), "Blue Mantis Divers")).toContain(
+      "grab some shade at Blue Mantis Divers",
+    );
+  });
+});
+
+describe("getTimeOfDayGreeting", () => {
+  it("returns morning greeting for 8 AM local time", () => {
+    const date = new Date("2026-11-15T13:00:00Z"); // 13:00 UTC -> 8:00 AM America/New_York
+    expect(getTimeOfDayGreeting(date, "America/New_York", "Sal")).toBe("Good morning, Sal ☕");
+  });
+
+  it("returns afternoon greeting for 2 PM local time", () => {
+    const date = new Date("2026-11-15T19:00:00Z"); // 19:00 UTC -> 2:00 PM America/New_York
+    expect(getTimeOfDayGreeting(date, "America/New_York", "Dana")).toBe("Good afternoon, Dana ☀️");
+  });
+
+  it("returns evening greeting for 7 PM local time", () => {
+    const date = new Date("2026-11-15T24:00:00Z"); // 00:00 UTC next day -> 7:00 PM America/New_York
+    expect(getTimeOfDayGreeting(date, "America/New_York", "Keiko")).toBe("Good evening, Keiko 🌙");
+  });
+
+  it("returns night greeting for 11 PM local time", () => {
+    const dateNight = new Date("2026-11-16T04:00:00Z"); // 04:00 UTC -> 11:00 PM America/New_York
+    expect(getTimeOfDayGreeting(dateNight, "America/New_York", "Dana")).toBe("Good night, Dana 🌌");
   });
 });
