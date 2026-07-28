@@ -733,3 +733,20 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   });
   revalidateAndRedirect(back, `${back}?notice=${saved ? "requirements" : "invalid"}`);
 }
+
+export async function updateTripCrewAction(
+  shopSlug: string,
+  tripId: string,
+  crewIds: string[],
+): Promise<{ ok: boolean }> {
+  const s = await requireStaffSession();
+  const db = await getDb();
+  const success = await setTripCrew(db, s.user.shopId, tripId, crewIds);
+  if (success) {
+    revalidatePath(`/shop/${shopSlug}`);
+    revalidatePath(`/shop/${shopSlug}/trips/${tripId}`);
+    revalidatePath(`/shop/${shopSlug}/trips/${tripId}/manifest`);
+    return { ok: true };
+  }
+  return { ok: false };
+}

@@ -132,9 +132,40 @@ export function RollCallNote({
 
   return (
     <div className="mt-2">
-      <label htmlFor={`roll-call-note-${bookingId}`} className="text-sm font-semibold">
-        Optional note
-      </label>
+      <div className="flex items-center justify-between">
+        <label htmlFor={`roll-call-note-${bookingId}`} className="text-sm font-semibold">
+          Optional note
+        </label>
+        {canAutoSave && (
+          <div className="flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
+            <span
+              className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
+                status === "saving"
+                  ? "bg-warning animate-pulse"
+                  : status === "saved"
+                    ? "bg-success"
+                    : status === "queued"
+                      ? "bg-info animate-pulse"
+                      : status === "error"
+                        ? "bg-danger"
+                        : "bg-border-strong"
+              }`}
+              aria-hidden="true"
+            />
+            <span>
+              {status === "saving"
+                ? "Saving…"
+                : status === "saved"
+                  ? "Saved"
+                  : status === "queued"
+                    ? "Queued offline"
+                    : status === "error"
+                      ? "Sync error"
+                      : ""}
+            </span>
+          </div>
+        )}
+      </div>
       <input
         ref={inputRef}
         id={`roll-call-note-${bookingId}`}

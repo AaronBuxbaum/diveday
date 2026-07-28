@@ -466,3 +466,83 @@ summary {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Waiver Signature Coral Bubbles */
+@keyframes coral-bubble-rise {
+  0% {
+    transform: translateY(100%) scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-150px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.bubble-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.coral-bubble {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(244, 63, 94, 0.3) 70%,
+    rgba(244, 63, 94, 0.6) 100%
+  );
+  border: 1px solid rgba(244, 63, 94, 0.5);
+  opacity: 0;
+}
+
+.animate-bubble {
+  animation-name: coral-bubble-rise;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Card Expansion Scale Hint */
+.card-scale-hint {
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s ease;
+}
+.card-scale-hint:hover {
+  transform: scale(1.005);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Fluid Progress Wave Fill */
+@keyframes progress-wave-move {
+  0% {
+    background-position-x: 0px;
+  }
+  100% {
+    background-position-x: 60px;
+  }
+}
+.progress-wave-fill {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind bg classes */
+  background-color: var(--primary) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind bg classes */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,42.4V0Z' fill='%23ffffff' opacity='.25'/%3E%3C/svg%3E") !important;
+  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind bg classes */
+  background-size: 60px 100% !important;
+  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind animation classes */
+  animation: progress-wave-move 1.5s infinite linear !important;
+}

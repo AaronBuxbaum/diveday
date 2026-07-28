@@ -187,10 +187,13 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     : "";
 
   const dock = dockCallPhrase(input.dockCallMinutes);
+  const reminderText = `\n\nPre-Trip Checklist Reminder:\n· Reef-safe sunscreen\n· Hair ties & dry bag\n· Your physical certification cards\n· Water bottle & towel\n`;
+  const reminderHtml = `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f3f4f6; border-radius: 8px;"><strong>Pre-Trip Checklist Reminder:</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;"><li>Reef-safe sunscreen</li><li>Hair ties &amp; dry bag</li><li>Your physical certification cards</li><li>Water bottle &amp; towel</li></ul></div>`;
+
   return {
     subject: `You're on the boat — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early. ${input.shopName} will take it from there.${readyText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early. ${shop} will take it from there.</p>${readyHtml}`,
+    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early. ${input.shopName} will take it from there.${readyText}${reminderText}`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early. ${shop} will take it from there.</p>${readyHtml}${reminderHtml}`,
   };
 }
 

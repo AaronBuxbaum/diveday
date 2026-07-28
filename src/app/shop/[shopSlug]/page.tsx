@@ -16,7 +16,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
-import { inviteWaitlistAction } from "./trips/[id]/actions";
+import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
 
 export const metadata: Metadata = {
   title: "Today — DiveDay",
@@ -90,7 +90,7 @@ async function TodayBody({
     now,
     lens ? session.user.personId : undefined,
   );
-  const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
+  const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
   const crewedSet = new Set(crewedTripIds);
   const departures = lens === "boat" ? leadWithCrewed(work.departures, crewedSet) : work.departures;
   // Blocker frequency, after the response so it never delays the queue: how many
@@ -156,6 +156,8 @@ async function TodayBody({
         shopSlug={shopSlug}
         timeZone={shop.timezone}
         crewedTripIds={crewedTripIds}
+        availableStaff={availableStaff}
+        updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
       />
 
       {departures.length === 0 ? (
@@ -212,7 +214,25 @@ function TodaySkeleton() {
       <div className="h-4 w-32 rounded bg-surface-sunken" />
       <div className="mt-3 h-9 w-72 rounded bg-surface-sunken" />
       <div className="mt-2 h-5 w-96 max-w-full rounded bg-surface-sunken" />
-      <div className="mt-8 h-40 rounded-2xl border border-border bg-surface" />
+
+      <div className="mt-8 rounded-2xl border border-border bg-surface p-5">
+        <div className="flex items-center justify-between">
+          <div className="h-5 w-40 rounded bg-surface-sunken" />
+          <div className="h-5 w-24 rounded bg-surface-sunken" />
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2.5">
+          {["s1", "s2", "s3", "s4", "s5", "s6"].map((id) => (
+            <div key={`active-${id}`} className="h-8 w-8 rounded-full bg-surface-sunken" />
+          ))}
+          {["e1", "e2", "e3", "e4", "e5", "e6"].map((id) => (
+            <div
+              key={`empty-${id}`}
+              className="h-8 w-8 rounded-full border-2 border-dashed border-border-strong bg-transparent"
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="mt-8 flex flex-col gap-3">
         {[0, 1, 2].map((i) => (
           <div key={i} className="h-20 rounded-xl border border-border bg-surface" />

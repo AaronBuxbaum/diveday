@@ -16,9 +16,10 @@ jobs:
     outputs:
       visual_baselines_only: ${{ steps.filter.outputs.visual_baselines_only }}
     steps:
-      # Approving a visual diff (see the `visual-triage` skill) means committing
-      # a regenerated baseline PNG — that commit retriggers CI same as any other
-      # push. When that push touches *only* committed baselines under
+      # A visual baseline commit made by the e2e job carries [skip ci], so it
+      # does not retrigger this workflow. If a human pushes baseline-only
+      # changes, keep the cheap visual-only path below.
+      # When that push touches *only* committed baselines under
       # e2e/visual.spec.ts-snapshots/, the e2e job below narrows to just
       # e2e/visual.spec.ts instead of the full suite, since nothing else could
       # have changed behavior. Falls back to "false" (run everything) whenever
@@ -87,6 +88,8 @@ jobs:
     name: End-to-end
     needs: detect-changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     # Keep the browser executable and its Linux libraries together. Caching only
     # ~/.cache/ms-playwright restores Chromium, but every fresh runner still
     # spends minutes reinstalling the non-cacheable OS dependencies.
@@ -118,6 +121,50 @@ jobs:
           else
             pnpm exec playwright test
           fi
+      - name: Regenerate visual baselines for comparison
+        if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        run: pnpm exec playwright test e2e/visual.spec.ts --update-snapshots --reporter=line
+      - name: Commit visual baseline diffs to the pull-request branch
+        if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          staging_dir="$(mktemp -d)"
+          changed_files="$staging_dir/files"
+          git diff --name-only -- e2e/visual.spec.ts-snapshots/ > "$changed_files"
+          git ls-files --others --exclude-standard -- e2e/visual.spec.ts-snapshots/ >> "$changed_files"
+          if [ ! -s "$changed_files" ]; then
+            echo "No regenerated visual baselines to commit."
+            exit 0
+          fi
+          while IFS= read -r path; do
+            mkdir -p "$staging_dir/$(dirname "$path")"
+            cp "$path" "$staging_dir/$path"
+          done < "$changed_files"
+
+          # The pull_request checkout is a synthetic merge ref. Switch to the
+          # actual head commit before pushing, otherwise Git would reject the
+          # generated baseline commit as a non-fast-forward update.
+          git restore --worktree --staged -- e2e/visual.spec.ts-snapshots/ || true
+          git clean -fd -- e2e/visual.spec.ts-snapshots/ || true
+          git fetch origin "$PR_HEAD_REF"
+          git checkout --force --detach "origin/$PR_HEAD_REF"
+          while IFS= read -r path; do
+            mkdir -p "$(dirname "$path")"
+            cp "$staging_dir/$path" "$path"
+          done < "$changed_files"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add e2e/visual.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No baseline changes after switching to the pull-request branch."
+            exit 0
+          fi
+          git commit -m "ci: capture visual baseline diffs [skip ci]"
+          git push origin "HEAD:$PR_HEAD_REF"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

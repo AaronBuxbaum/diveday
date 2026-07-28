@@ -293,7 +293,7 @@ export function buildDivePrepChecklist(input: {
       });
     }
     for (const item of rentedItems(diver.fit)) {
-      const key = `${item.kind}:${item.fitAtCheckIn ? " fit" : (item.size?.toLowerCase() ?? "")}`;
+      const key = `${item.kind}:${item.fitAtCheckIn ? "\u0000fit" : (item.size?.toLowerCase() ?? "")}`;
       const line = grouped.get(key);
       if (line) {
         line.count += 1;

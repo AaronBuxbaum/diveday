@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect } from "react";
 
 /**
@@ -11,10 +12,7 @@ export type RollCallResult = { ok: true } | { ok: false; reason: "not_ready" | "
 
 export type RollCallAction = (prev: RollCallResult, formData: FormData) => Promise<RollCallResult>;
 
-const REFUSAL: Record<"not_ready" | "error", string> = {
-  not_ready: "Still blocked — clear the listed requirement before boarding.",
-  error: "That didn’t save. Try again.",
-};
+const ERROR_REFUSAL = "That didn’t save. Recheck your connection or tap again.";
 
 /**
  * A boarding control with an instant *pending* state. Tapping shows "Boarding…"
@@ -34,6 +32,7 @@ export function RollCallButton({
   pendingLabel,
   className,
   formId,
+  guestsHref,
 }: {
   action: RollCallAction;
   bookingId: string;
@@ -46,6 +45,8 @@ export function RollCallButton({
    * to auto-save to yet) can ride this submit via its `form=` attribute.
    */
   formId?: string;
+  /** The actual staff control for resolving a readiness refusal. */
+  guestsHref?: string;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
 
@@ -75,7 +76,18 @@ export function RollCallButton({
       </form>
       {result && !result.ok ? (
         <p role="alert" className="mt-1 text-sm font-medium text-danger sm:basis-full">
-          {REFUSAL[result.reason]}
+          {result.reason === "not_ready" ? (
+            guestsHref ? (
+              <>
+                Diver is still blocked.{" "}
+                <Link href={guestsHref}>Open Guests to resolve the blocker</Link>, then try again.
+              </>
+            ) : (
+              "Diver is still blocked. Open Guests to resolve the blocker, then try again."
+            )
+          ) : (
+            ERROR_REFUSAL
+          )}
         </p>
       ) : null}
     </>
