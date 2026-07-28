@@ -31,7 +31,7 @@ export default withSentryConfig(nextConfig, {
   widenClientFileUpload: true,
 
   // Tunnel Sentry requests through this route to circumvent ad blockers
-  // tunnelRoute: "/monitoring-tunnel",
+  tunnelRoute: "/tunnel",
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   webpack: {
