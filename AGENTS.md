@@ -102,11 +102,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   it red for someone else. See **Parallel work** first: check for an in-flight fix on the same
   test before starting your own, so two sessions don't race to patch it.
 - **A pushed PR is not done until its visual failures are triaged.** A UI change that shifts
-  pixels fails `e2e/visual.spec.ts` on the same `e2e` CI job as everything else — there's no
-  separate build or check to wait on. Run the **visual-triage** skill on any red visual assertion:
-  commit the regenerated baseline (as its own labeled commit) for what your diff explains, leave
-  it failing with a comment for what it doesn't. Never end the session leaving that failure
-  unexplained.
+  pixels fails `e2e/visual.spec.ts` on one of the macOS-hosted, parallelized/sharded CI jobs —
+  there's no separate approval step to wait on. Run the **visual-triage** skill on any red visual
+  assertion: commit the regenerated baseline (as its own labeled commit) for what your diff
+  explains, leave it failing with a comment for what it doesn't. Keep committed baselines aligned
+  with the macOS rendering platform and treat a platform-wide refresh as a separate change. Never
+  end the session leaving that failure unexplained.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings
