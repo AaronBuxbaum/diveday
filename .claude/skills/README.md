@@ -15,6 +15,7 @@ under the same sync duties (docs/README.md).
 | `new-feature` | Implementing any feature end to end — the full loop from docs to shipped slice |
 | `verify` | Before every commit; whenever asked to confirm something works |
 | `design-review` | After building or changing any user-facing surface |
+| `brand-voice` | Creating or reviewing brand, voice, visual, merch, vendor, or promotional collateral |
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
 | `e2e-and-visual` | Adding/changing a user-facing flow or surface; a visual baseline diffing on time; deciding what needs an e2e spec or a visual snapshot |

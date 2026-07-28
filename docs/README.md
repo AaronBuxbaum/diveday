@@ -22,6 +22,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |
+| [design/brand.md](design/brand.md) | DiveDay's current brand identity: name, mark, colors, fonts, concepts, voice, and merch guidance | the approved identity, visual system, voice, or merch direction changes |
 | [design/forms-and-controls.md](design/forms-and-controls.md) | Field alignment and touch-target primitives, and the checks that enforce them | you build a form, a button, or a menu |
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
