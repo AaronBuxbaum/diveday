@@ -12,24 +12,17 @@ concurrency:
 jobs:
   detect-changes:
     name: Detect baseline-only push
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     outputs:
       visual_baselines_only: ${{ steps.filter.outputs.visual_baselines_only }}
     steps:
-      # A visual baseline commit made by the e2e job carries [skip ci], so it
+      # A visual baseline commit made by the visual job carries [skip ci], so it
       # does not retrigger this workflow. If a human pushes baseline-only
       # changes, keep the cheap visual-only path below.
       # When that push touches *only* committed baselines under
-      # e2e/visual.spec.ts-snapshots/, the e2e job below narrows to just
-      # e2e/visual.spec.ts instead of the full suite, since nothing else could
-      # have changed behavior. Falls back to "false" (run everything) whenever
-      # the before/after comparison isn't trustworthy — no `before` (first push
-      # of a branch), or a `before` the API can't compare against (e.g. a
-      # force-push origin no longer has). Uses the GitHub compare API instead of
-      # a local `git diff`, so this job needs no checkout at all — a local diff
-      # would need `fetch-depth: 0` (full history), which is the one thing in
-      # this workflow that would actually get slower as committed baselines pile
-      # up over time; the API call doesn't care how much history exists.
+      # e2e/visual.spec.ts-snapshots/, the Playwright matrix below is skipped
+      # and the serialized visual job runs just the visual spec. Falls back to
+      # "false" whenever the comparison is not trustworthy.
       - id: filter
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,9 +44,9 @@ jobs:
             echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
           fi
 
-  checks:
-    name: Safeguards, lint, typecheck, test, build
-    runs-on: ubuntu-latest
+  repo-safeguards:
+    name: Repository safeguards
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -63,39 +56,53 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # `checks`' `pnpm build` and `e2e`'s `pnpm e2e:build` both run a full
-      # `next build` of the same source (their env vars differ only in
-      # runtime DB wiring, not compiled output), so both jobs share one cache
-      # key: whichever job's build lands in Actions cache first speeds up the
-      # other job's next run.
-      - uses: actions/cache@v4
-        with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
-      # The full pre-commit gate: repo safeguards (architecture, clock, ADR,
-      # doc links) + lint + typecheck + unit tests — the same bar agents run
-      # locally. Running the pieces individually here silently skipped the
-      # safeguards for every PR.
-      - run: pnpm check
-      - run: pnpm build
-      # Guards the shared first-load JS every staff page pays, so a phone at the
-      # dock on weak Wi-Fi never silently gets slower (docs/architecture/performance-budgets.md).
-      - run: pnpm perf:budget
+      - run: pnpm check:repo
 
-  e2e:
-    name: End-to-end
-    needs: detect-changes
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    # Keep the browser executable and its Linux libraries together. Caching only
-    # ~/.cache/ms-playwright restores Chromium, but every fresh runner still
-    # spends minutes reinstalling the non-cacheable OS dependencies.
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.0-noble
-      options: --user 1001
+  lint:
+    name: Lint
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  unit-tests:
+    name: Unit tests
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test -- --reporter=dot
+
+  build-and-perf:
+    name: Build and performance budget
+    runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -105,22 +112,116 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Shared with `checks`' cache — see the comment there.
       - uses: actions/cache@v4
         with:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+      - run: pnpm build
+      # perf:budget reads the build manifest produced immediately above.
+      - run: pnpm perf:budget
+
+  playwright-build:
+    name: Playwright build
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: pnpm e2e:build
-      - name: Run Playwright suite
+      - uses: actions/upload-artifact@v7
+        with:
+          name: playwright-next-build
+          path: .next/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  playwright:
+    name: Playwright shard ${{ matrix.shard }}/4
+    needs: [detect-changes, playwright-build]
+    if: needs.detect-changes.outputs.visual_baselines_only != 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v7
+        with:
+          name: playwright-next-build
+          path: .next
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install chromium
+      - name: Run non-visual Playwright tests
         run: |
-          if [ "${{ needs.detect-changes.outputs.visual_baselines_only }}" = "true" ]; then
-            echo "Push only touches committed visual baselines — running just e2e/visual.spec.ts."
-            pnpm exec playwright test e2e/visual.spec.ts
-          else
-            pnpm exec playwright test
-          fi
+          spec_files=()
+          for spec in e2e/*.spec.ts; do
+            if [ "$spec" != "e2e/visual.spec.ts" ]; then
+              spec_files+=("$spec")
+            fi
+          done
+          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.shard }}
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  visual:
+    name: Visual regression (serialized)
+    needs: [detect-changes, playwright-build]
+    if: needs.detect-changes.result == 'success' && needs.playwright-build.result == 'success'
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v7
+        with:
+          name: playwright-next-build
+          path: .next
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install chromium
+      - name: Run visual Playwright suite
+        run: pnpm exec playwright test e2e/visual.spec.ts
+      # Only this job can update or commit baselines. The regular shards exclude
+      # visual.spec.ts, so no two jobs can write the same snapshot directory.
       - name: Regenerate visual baselines for comparison
         id: regenerate_visuals
         if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
@@ -173,6 +274,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: visual-playwright-report
           path: playwright-report/
+          if-no-files-found: ignore
           retention-days: 7
