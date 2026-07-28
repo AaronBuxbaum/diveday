@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 /**
  * The result a roll-call server action returns instead of redirecting, so the
@@ -48,6 +48,18 @@ export function RollCallButton({
   formId?: string;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
+
+  useEffect(() => {
+    if (result?.ok) {
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try {
+          navigator.vibrate(10);
+        } catch {
+          // Ignore vibration exceptions (e.g. from security policies)
+        }
+      }
+    }
+  }, [result]);
   return (
     <>
       <form action={formAction} id={formId}>

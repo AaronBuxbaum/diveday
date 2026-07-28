@@ -3,6 +3,7 @@ import type { ReadinessBlocker } from "./readiness";
 import {
   collapseDiverActions,
   diverBlockerAction,
+  getSeasonalBriefing,
   groupActions,
   leadWithCrewed,
   primaryBlocker,
@@ -360,5 +361,23 @@ describe("leadWithCrewed", () => {
       "b",
     ]);
     expect(leadWithCrewed(departures, new Set()).map((d) => d.tripId)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("getSeasonalBriefing", () => {
+  it("returns summer briefing for June, July, August", () => {
+    expect(getSeasonalBriefing(new Date("2026-07-15"))).toContain("grab some shade");
+  });
+
+  it("returns autumn briefing for September, October, November", () => {
+    expect(getSeasonalBriefing(new Date("2026-10-15"))).toContain("grab a warm towel");
+  });
+
+  it("returns winter briefing for December, January, February", () => {
+    expect(getSeasonalBriefing(new Date("2026-01-15"))).toContain("warm up with a dry coat");
+  });
+
+  it("returns spring briefing for March, April, May", () => {
+    expect(getSeasonalBriefing(new Date("2026-04-15"))).toContain("catch some sun");
   });
 });

@@ -41,7 +41,10 @@ describe("RollCallButton", () => {
     expect(formData?.get("status")).toBe("boarded");
   });
 
-  it("shows no rollback message when the board succeeds", async () => {
+  it("shows no rollback message and triggers haptic vibration when the board succeeds", async () => {
+    const vibrateMock = vi.fn();
+    vi.stubGlobal("navigator", { vibrate: vibrateMock });
+
     const action = mockAction({ ok: true });
     setup(action);
 
@@ -50,5 +53,8 @@ describe("RollCallButton", () => {
     await screen.findByRole("button", { name: "Board" });
 
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(vibrateMock).toHaveBeenCalledWith(10);
+
+    vi.unstubAllGlobals();
   });
 });

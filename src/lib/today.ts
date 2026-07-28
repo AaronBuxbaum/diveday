@@ -527,3 +527,26 @@ export function leadWithCrewed<T extends { tripId: string }>(
     ...departures.filter((departure) => !crewedTripIds.has(departure.tripId)),
   ];
 }
+
+/**
+ * Returns a warm, authentic seasonal briefing message based on the month of the date.
+ * Keep it rationed like --accent, reading like a briefing, not filler.
+ */
+export function getSeasonalBriefing(date: Date): string {
+  const month = date.getMonth(); // 0-indexed (0 = Jan, 11 = Dec)
+
+  if (month >= 5 && month <= 7) {
+    // Summer (June, July, August)
+    return "Enjoy the surface interval — grab some shade, drink some water, and we'll see you on the next boat.";
+  }
+  if (month >= 8 && month <= 10) {
+    // Autumn (September, October, November)
+    return "Enjoy the surface interval — grab a warm towel, check the breeze, and we'll see you on the next boat.";
+  }
+  if (month === 11 || month === 0 || month === 1) {
+    // Winter (December, January, February)
+    return "Enjoy the surface interval — warm up with a dry coat, and we'll see you on the next boat.";
+  }
+  // Spring (March, April, May)
+  return "Enjoy the surface interval — catch some sun, check your gear, and we'll see you on the next boat.";
+}

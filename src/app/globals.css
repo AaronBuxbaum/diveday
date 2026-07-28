@@ -298,6 +298,152 @@ summary {
   animation: rise-in 200ms var(--ease-out-soft) both;
 }
 
+/*
+ * Motion language as brand (principles.md: motion has a job, 150-250ms, ease-out, transform/opacity)
+ * Reusable animation keyframes and standard classes.
+ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 150ms var(--ease-out-soft) both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 250ms var(--ease-out-soft) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 200ms var(--ease-out-soft) both;
+}
+
+/* Reusable class for standard UI transitions (opacity, transform, background-color, border-color, etc.) */
+.transition-brand {
+  transition-property:
+    color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow,
+    transform, filter, backdrop-filter;
+  transition-timing-function: var(--ease-out-soft);
+  transition-duration: 200ms;
+}
+
+/*
+ * Glare Mode: AAA contrast, ≥16px text, ≥44px targets everywhere.
+ * Enabled automatically in direct sun/glare.
+ */
+.glare-mode {
+  /* Enforce AAA contrast colors on both schemes */
+  --foreground: #000000;
+  --muted: #1f2937;
+  --border: #4b5563;
+  --border-strong: #000000;
+  --primary: #075985;
+  --primary-hover: #0369a1;
+  --primary-foreground: #ffffff;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-sunken: #f3f4f6;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
+  font-size: 16px !important;
+}
+
+/* Force smaller Tailwind font utilities to be at least 1rem (16px) */
+.glare-mode .text-xs,
+.glare-mode .text-sm,
+.glare-mode [class*="text-xs"],
+.glare-mode [class*="text-sm"] {
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
+  font-size: 1rem !important; /* 16px */
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
+  line-height: 1.5rem !important;
+}
+
+/* Force all interactive targets (buttons, inputs, select, links) to be at least 44px high & wide if applicable */
+.glare-mode button,
+.glare-mode select,
+.glare-mode textarea,
+.glare-mode input:not([type="hidden"]),
+.glare-mode summary,
+.glare-mode [role="button"] {
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-height */
+  min-height: 44px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-width */
+  min-width: 44px !important;
+}
+
+/* Standalone navigation links / controls in lists or bars should satisfy the 44px targets too */
+.glare-mode a {
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-height */
+  min-height: 44px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce touch target min-width */
+  min-width: 44px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce layout display */
+  display: inline-flex !important;
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
+  align-items: center !important;
+  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
+  justify-content: center !important;
+}
+
+/* If a link is inline, don't force displays that disrupt sentence flow */
+.glare-mode p a,
+.glare-mode span a,
+.glare-mode .inline a {
+  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore normal height flow */
+  min-height: auto !important;
+  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore normal width flow */
+  min-width: auto !important;
+  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to restore text wrapping */
+  display: inline !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .glare-mode {
+    --background: #000000;
+    --surface: #0c0c0c;
+    --surface-sunken: #171717;
+    --border: #888888;
+    --border-strong: #ffffff;
+    --foreground: #ffffff;
+    --muted: #e5e5e5;
+    --primary: #38dbf3;
+    --primary-hover: #7fe9f9;
+    --primary-foreground: #000000;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

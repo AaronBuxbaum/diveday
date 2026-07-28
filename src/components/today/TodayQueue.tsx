@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { WaitlistInvite } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { buttonClass } from "@/components/ui/button";
-import { ACTION_KIND_META, groupActions, type TodayAction } from "@/lib/today";
+import { nowDate } from "@/lib/clock";
+import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import { ResendConfirmationControl } from "./ResendConfirmationControl";
 import { WaiverSendControl } from "./WaiverSendControl";
 
@@ -119,8 +120,8 @@ export function TodayQueue({
           Nothing is waiting on you
         </h2>
         <p className="mx-auto mt-1 max-w-md text-muted">
-          Every diver booked in the next week has their waiver, cards, and payment in order. Enjoy
-          the surface interval.
+          Every diver booked in the next week has their waiver, cards, and payment in order.{" "}
+          {getSeasonalBriefing(nowDate())}
         </p>
       </section>
     );

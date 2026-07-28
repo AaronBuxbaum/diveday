@@ -9,7 +9,7 @@ than one angle. Read the lens that matches what you're trying to decide.
 
 | # | Document | Lens | Use when you're deciding… |
 | --- | --- | --- | --- |
-| 1 | [delight-and-experience.md](delight-and-experience.md) | The winning bet: joy, speed, feel | how to make staff *want* to open the app |
+| 1 | [delight-and-experience.md](../archive/delight-and-experience.md) | The winning bet: joy, speed, feel | how to make staff *want* to open the app |
 | 2 | [safety-and-trust.md](safety-and-trust.md) | Manifests, roll call, cert/medical gating, offline | how to be the product a captain trusts with lives |
 | 3 | [staff-operations-efficiency.md](staff-operations-efficiency.md) | Coordination work removed, throughput, ops | how to give a busy front desk its day back |
 | 4 | [diver-experience-and-growth.md](diver-experience-and-growth.md) | The customer funnel, self-service, retention | how a diver books, returns, and brings a buddy |

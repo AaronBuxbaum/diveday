@@ -7,6 +7,7 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
@@ -135,6 +136,7 @@ export default async function TripManifestPage({
 
   return (
     <div className="boat-mode">
+      <AmbientGlareDetector />
       <a
         href="#roll-call-list"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
