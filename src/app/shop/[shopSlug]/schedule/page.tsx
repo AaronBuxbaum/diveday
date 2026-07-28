@@ -222,7 +222,7 @@ export default async function TripsPage({
                       ? `/shop/${shopSlug}/trips/${trip.id}`
                       : `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`
                   }
-                  className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 sm:flex-row sm:items-center"
+                  className="group card-scale-hint flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:border-primary/40 sm:flex-row sm:items-center"
                 >
                   <div className="shrink-0 sm:w-32">
                     <p className="font-medium">

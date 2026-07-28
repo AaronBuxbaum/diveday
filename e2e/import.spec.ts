@@ -79,7 +79,7 @@ test.describe("contact import", () => {
     const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
     await levelCard.getByRole("button", { name: "Confirm card" }).click();
     await expect(levelCard.getByRole("button", { name: "Confirm card" })).toHaveCount(0);
-    await expect(levelCard.getByText("imported", { exact: false }).first()).toBeVisible();
+    await expect(levelCard.getByText(/^imported(?: ·|$)/i)).toBeVisible();
   });
 });
 

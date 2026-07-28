@@ -25,7 +25,9 @@ test("an instructor's Today leads with their sessions and student readiness", as
 
 test("an owner keeps the whole-shop Today, no lens", async ({ page }) => {
   await signInAs(page, DEV_STAFF_LOGINS.owner);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Good to see you");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /Good (morning|afternoon|evening|night), Dana/,
+  );
   await expect(page.getByRole("heading", { name: "Your sessions" })).toHaveCount(0);
   await expect(page.getByText("You’re crewing")).toHaveCount(0);
 });

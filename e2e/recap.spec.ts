@@ -19,6 +19,9 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
 
+  // Assert stylized recap map is rendered (delight feature)
+  await expect(page.getByLabel("Stylized recap navigation map of your dive sites")).toBeVisible();
+
   const photoInput = page.locator('input[name="photo"]');
   await photoInput.setInputFiles({
     name: "recap.jpg",

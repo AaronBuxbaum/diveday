@@ -38,7 +38,7 @@ function ActionRow({
   inviteAction: TodayInviteAction;
 }) {
   return (
-    <li className="rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
+    <li className="card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

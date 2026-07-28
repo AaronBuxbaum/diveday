@@ -19,7 +19,7 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
-import { upcomingTripsWithCounts } from "./trips";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -74,6 +74,7 @@ export type DepartureSummary = {
   blocked: number;
   boarded: number;
   courseTitle: string | null;
+  crew: { id: string; fullName: string; roles: string[] }[];
 };
 
 export type CrewedSessionSummary = {
@@ -99,6 +100,7 @@ export type TodayWork = {
    */
   crewedTripIds: string[];
   crewedSessions: CrewedSessionSummary[];
+  availableStaff: { id: string; fullName: string; roles: string[] }[];
 };
 
 function shopDay(date: Date, timeZone: string): string {
@@ -413,6 +415,43 @@ export async function getTodayWork(
     ),
   ]);
 
+  const rawStaff = await listStaff(db, shopId);
+  const availableStaff = rawStaff.map((s) => ({
+    id: s.person.id,
+    fullName: s.person.fullName,
+    roles: s.roles,
+  }));
+
+  const tripIds = todayTrips.map((t) => t.id);
+  const assignments =
+    tripIds.length > 0
+      ? await db
+          .select({
+            tripId: tripAssignments.tripId,
+            personId: people.id,
+            fullName: people.fullName,
+            role: personRoles.role,
+          })
+          .from(tripAssignments)
+          .innerJoin(people, eq(people.id, tripAssignments.personId))
+          .innerJoin(personRoles, eq(personRoles.personId, people.id))
+          .where(inArray(tripAssignments.tripId, tripIds))
+      : [];
+
+  const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();
+  for (const row of assignments) {
+    const list = crewByTrip.get(row.tripId) ?? [];
+    let entry = list.find((c) => c.id === row.personId);
+    if (!entry) {
+      entry = { id: row.personId, fullName: row.fullName, roles: [] };
+      list.push(entry);
+    }
+    if (!entry.roles.includes(row.role)) {
+      entry.roles.push(row.role);
+    }
+    crewByTrip.set(row.tripId, list);
+  }
+
   const actions: TodayAction[] = [];
 
   for (const trip of inWindow) {
@@ -589,6 +628,7 @@ export async function getTodayWork(
       blocked: rows.filter((row) => row.readiness.status === "blocked").length,
       boarded: boarded.get(trip.id) ?? 0,
       courseTitle: trip.course?.title ?? null,
+      crew: crewByTrip.get(trip.id) ?? [],
     };
   });
 
@@ -630,8 +670,9 @@ export async function getTodayWork(
   return {
     departures,
     actions,
-    nextDeparture: next ? { tripId: next.id, title: next.title, startsAt: next.startsAt } : null,
+    nextDeparture: next ? { title: next.title, startsAt: next.startsAt, tripId: next.id } : null,
     crewedTripIds,
     crewedSessions,
+    availableStaff,
   };
 }
