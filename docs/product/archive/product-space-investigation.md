@@ -104,7 +104,7 @@ departure):
 7. **The cheap delight wins are unspent:** per-pillar earned moments, confirmations that state *what's
    next*, forgiving inputs (email-typo/autocomplete), undo-over-confirm, an empty-state/microcopy
    pass, per-role landing + saved views. These are mostly S-effort over existing data and are the
-   literal definition of "staff want to open it." ([delight](../brainstorm/delight-and-experience.md).)
+   literal definition of "staff want to open it." ([delight](delight-and-experience.md).)
 8. **DAN / dive-insurance field** — glossary calls it "worth a field"; not captured. Small gap, real.
 
 ## What we're adding that isn't solving a problem (the cut list)

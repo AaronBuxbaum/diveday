@@ -41,15 +41,15 @@ to do it on a wet phone in glare.
 - [x] **Undo over confirm.** (Shipped) Reversible staff actions (cancel booking, remove certification, remove from manifest) get a 5-second undo toast instead of a modal. Fewer dialogs, safer flow.
 - [x] **Forgiving inputs.** (Shipped) Name autocomplete from prior divers, email typo detection (`gmial.com` → suggest `gmail.com`), phone/date masks, "same as last trip" rental size defaults.
 - [x] **Empty states that teach.** (Shipped) Every list's zero-state names the first action in briefing voice ("No trips yet — schedule your first charter").
-- **Haptics on key moments** (mobile web where supported): a single soft tap on roll-call confirm. *(S, manifests)*
-- **Sound, optional and off by default** — a short surface-break chime on trip close-out for shops that want it. *(S, cross-cutting — park unless requested.)*
+- [x] **Haptics on key moments** (Shipped) (mobile web where supported): a single soft tap on roll-call confirm. *(S, manifests)*
+- [x] **Sound, optional and off by default** (Parked) — a short surface-break chime on trip close-out for shops that want it. *(S, cross-cutting — parked: decided not to do)*
 
 ### D. The "wet phone at the dock" flagship
 
 The dock test is our most defensible differentiator because it's a *whole-product* commitment, not a
 feature. Ideas that make it visceral:
 
-- **Glare mode** — a high-contrast, larger-type variant that a captain toggles (or that auto-suggests at high ambient brightness where the sensor is available). AAA contrast, ≥16 px text, ≥44 px targets everywhere it's on. *(M, manifests/cross-cutting, big bet)*
+- [x] **Glare mode** (Shipped) — a high-contrast, larger-type variant that a captain toggles (or that auto-suggests at high ambient brightness where the sensor is available). AAA contrast, ≥16 px text, ≥44 px targets everywhere it's on. *(M, manifests/cross-cutting, big bet)*
 - [x] **One-handed roll call.** (Shipped) Big targets down one side of the screen, reachable with a thumb; no precision gestures; works with a dripping finger.
 - [x] **Sunlight-safe palette check.** (Shipped) A design-review gate that verifies the roll-call and manifest surfaces hit AAA and target sizes automatically.
 
@@ -60,14 +60,14 @@ competitor does it.
 
 - [x] **A copy pass per surface.** (Shipped) Reviewed against principle #4 — verbs on buttons, actionable errors, teaching empty states, no jargon divers don't use.
 - [x] **Context-aware reassurance.** (Shipped) Where we ask for something sensitive (medical answers, cert number), a one-line plain-language *why*.
-- **Seasonal/local warmth without kitsch** — e.g. surface-interval microcopy that reads like a briefing, not filler. Keep it rationed like `--accent`.
+- [x] **Seasonal/local warmth without kitsch** (Shipped) — e.g. surface-interval microcopy that reads like a briefing, not filler. Keep it rationed like `--accent`.
 
 ---
 
 ## Bigger bets on feel
 
 - [x] **A staff "home" that feels like a cockpit, not a dashboard.** (Shipped) Today's trips, who's not ready, what needs a human — glanceable, calm, and the same shape every morning so muscle memory forms.
-- **Motion language as brand.** A small, consistent set of transitions (150–250 ms, ease-out, transform/opacity) so the app *moves* like one product. Codify in the design system, enforce in review. *(M, cross-cutting.)*
+- [x] **Motion language as brand.** (Shipped) A small, consistent set of transitions (150–250 ms, ease-out, transform/opacity) so the app *moves* like one product. Codify in the design system, enforce in review. *(M, cross-cutting.)*
 - [x] **Delight regression tests.** (Shipped) Visual regression + interaction snapshots on the earned moments so polish doesn't rot as agents iterate. Delight you can't measure, you lose.
 - [x] **Personality in demo data.** (Shipped) The seed tells a believable shop's story (a returning diver, a sold-out wreck trip, a diver blocked on a medical referral) so every screenshot sells the product.
 
