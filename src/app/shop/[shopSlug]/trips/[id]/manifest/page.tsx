@@ -565,7 +565,7 @@ export default async function TripManifestPage({
       />
 
       <WaterLocker />
-      <MilestoneHaptics total={manifest.summary.totalDivers} awaiting={manifest.summary.awaiting} />
+      <MilestoneHaptics total={manifest.summary.totalDivers} boarded={manifest.summary.boarded} />
     </div>
   );
 }

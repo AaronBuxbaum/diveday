@@ -40,6 +40,28 @@ describe("RecapMap", () => {
     expect(screen.getByText(/The Dock/)).toBeInTheDocument();
   });
 
+  it("keeps a single site and the dock inside the plotted map", () => {
+    render(
+      <RecapMap
+        sites={[
+          {
+            name: "Solo Reef",
+            locationName: "Key Largo",
+            marineLife: "Turtles",
+            forecastLatitude: 25.12,
+            forecastLongitude: -80.38,
+          },
+        ]}
+      />,
+    );
+
+    const route = screen
+      .getByLabelText(/stylized recap navigation map/i)
+      .querySelector("path[d^='M']");
+    expect(route).not.toBeNull();
+    expect(route?.getAttribute("d")).not.toMatch(/-\d/);
+  });
+
   it("omits the map when coordinates are missing", () => {
     const sites = [
       {

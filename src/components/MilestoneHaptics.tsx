@@ -2,11 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-export function MilestoneHaptics({ total, awaiting }: { total: number; awaiting: number }) {
+export function MilestoneHaptics({ total, boarded }: { total: number; boarded: number }) {
   const isInitial = useRef(true);
   const prevPct = useRef(0);
 
-  const boarded = total - awaiting;
   const pct = total > 0 ? Math.round((boarded / total) * 100) : 0;
 
   useEffect(() => {

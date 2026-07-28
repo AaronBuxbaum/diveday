@@ -33,6 +33,11 @@ describe("DigitalCardFlip", () => {
 
     const img = screen.getByRole("img", { name: /uploaded certification card/i });
     expect(img).toBeInTheDocument();
+    expect(img).toHaveClass("object-contain");
+    expect(screen.getByRole("link", { name: /open full-size card photo/i })).toHaveAttribute(
+      "href",
+      "https://example.com/card.jpg",
+    );
     expect(img).toHaveAttribute("src", "https://example.com/card.jpg");
   });
 

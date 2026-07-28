@@ -7,6 +7,7 @@ import { bookings, people, rollCallEvents, shops, tripRequirements } from "./sch
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
+  changeTripCrew,
   createTrip,
   createTripSeries,
   extendTripSeries,
@@ -637,6 +638,34 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     // Replacing with a smaller set actually removes the dropped assignment.
     expect(await setTripCrew(db, shop.id, trip.id, [first.person.id])).toBe(true);
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([first.person.id]);
+  });
+  it("changes one crew member without replacing other assignments", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("expected a seeded trip");
+    const staff = await listStaff(db, shop.id);
+    const [first, second] = staff;
+    if (!first || !second) throw new Error("expected two seeded staff");
+
+    expect(await setTripCrew(db, shop.id, trip.id, [first.person.id])).toBe(true);
+    expect(
+      await changeTripCrew(db, shop.id, trip.id, {
+        personId: second.person.id,
+        operation: "assign",
+      }),
+    ).toBe(true);
+    expect(new Set(await getTripCrewIds(db, shop.id, trip.id))).toEqual(
+      new Set([first.person.id, second.person.id]),
+    );
+
+    expect(
+      await changeTripCrew(db, shop.id, trip.id, {
+        personId: first.person.id,
+        operation: "unassign",
+      }),
+    ).toBe(true);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([second.person.id]);
   });
 
   it("refuses to write or read crew for a trip id that isn't this shop's", async () => {

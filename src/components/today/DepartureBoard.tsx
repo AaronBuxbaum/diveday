@@ -48,7 +48,10 @@ function DepartureCard({
   timeZone: string;
   crewed?: boolean;
   availableStaff: { id: string; fullName: string; roles: string[] }[];
-  updateCrewAction: (tripId: string, crewIds: string[]) => Promise<{ ok: boolean }>;
+  updateCrewAction: (
+    tripId: string,
+    change: { personId: string; operation: "assign" | "unassign" },
+  ) => Promise<{ ok: boolean }>;
 }) {
   const { blocked, ready, boarded, booked, capacity } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
@@ -66,10 +69,10 @@ function DepartureCard({
     setLocalCrew(updated);
 
     try {
-      const res = await updateCrewAction(
-        departure.tripId,
-        updated.map((c) => c.id),
-      );
+      const res = await updateCrewAction(departure.tripId, {
+        personId: staffId,
+        operation: "assign",
+      });
       if (!res.ok) {
         setLocalCrew(departure.crew || []);
       }
@@ -83,10 +86,10 @@ function DepartureCard({
     setLocalCrew(updated);
 
     try {
-      const res = await updateCrewAction(
-        departure.tripId,
-        updated.map((c) => c.id),
-      );
+      const res = await updateCrewAction(departure.tripId, {
+        personId: staffId,
+        operation: "unassign",
+      });
       if (!res.ok) {
         setLocalCrew(departure.crew || []);
       }
@@ -254,7 +257,10 @@ export function DepartureBoard({
   /** Trips the signed-in staffer crews — badged so their boat reads first. */
   crewedTripIds?: readonly string[];
   availableStaff: { id: string; fullName: string; roles: string[] }[];
-  updateCrewAction: (tripId: string, crewIds: string[]) => Promise<{ ok: boolean }>;
+  updateCrewAction: (
+    tripId: string,
+    change: { personId: string; operation: "assign" | "unassign" },
+  ) => Promise<{ ok: boolean }>;
 }) {
   if (departures.length === 0) return null;
   const crewed = new Set(crewedTripIds ?? []);

@@ -74,7 +74,10 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
 
     expect(screen.getByRole("button", { name: /unassign sal moretti/i })).toBeInTheDocument();
-    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", ["staff-1", "staff-2"]);
+    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", {
+      personId: "staff-2",
+      operation: "assign",
+    });
   });
 
   it("offers a keyboard-accessible assignment control", async () => {
@@ -97,7 +100,10 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
 
     expect(screen.getByText("Sal Moretti")).toBeInTheDocument();
-    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", ["staff-1", "staff-2"]);
+    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", {
+      personId: "staff-2",
+      operation: "assign",
+    });
   });
 
   it("rolls back crew assignment when updateCrewAction fails", async () => {
@@ -176,6 +182,9 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
 
     expect(screen.queryByRole("button", { name: /unassign keiko tanaka/i })).toBeNull();
-    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", []);
+    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", {
+      personId: "staff-1",
+      operation: "unassign",
+    });
   });
 });
