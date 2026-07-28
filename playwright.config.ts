@@ -32,6 +32,7 @@ process.env.AUTH_SECRET ??= "diveday-e2e-secret";
 //     production runtime (see src/app/api/test/reset/route.ts).
 const serverEnv = {
   ...process.env,
+  APP_HOST: "",
   DATABASE_URL: "",
   DATABASE_URL_UNPOOLED: "",
   PGLITE_DATA_DIR: "memory",

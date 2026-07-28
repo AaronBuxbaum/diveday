@@ -49,3 +49,4 @@ channel for divers who read a text but not email. This ADR adds the texting seam
 - No new runtime dependency enters the repo; the seam is fully exercised in tests with a fake fetch.
 - Multi-channel *delivery observability* is intentionally partial (one tracked row per reminder);
   the follow-up to row per channel is recorded above rather than pretended complete.
+- **Environment checks bypass `TWILIO_*` for now.** Since Twilio is not yet configured, `scripts/check-env.mjs` temporarily ignores missing environment variables starting with `TWILIO_` to prevent local environment checks from blocking development. This exception must be removed once Twilio is configured.

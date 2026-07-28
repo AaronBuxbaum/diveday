@@ -88,7 +88,7 @@ it down) for each of:
   identity (e.g. `bookings@…`), and write the two-paragraph consent/copy policy H-09 asks for
   (transactional-only today; reminders are courtesy; no marketing sends without explicit opt-in).
 - **Twilio:** register the SMS sender (US A2P 10DLC registration takes days-to-weeks — start
-  early), and name the `CRON_SECRET`/`TWILIO_*` owner.
+  early), and name the `CRON_SECRET`/`TWILIO_*` owner. Note: when Twilio is configured, remove the `TWILIO_` prefix bypass in `scripts/check-env.mjs`.
 
 ### 0.3 Field validation (V-01, V-02, V-04 rehearsal)
 

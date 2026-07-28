@@ -28,93 +28,55 @@ Safety-critical surfaces get **boring code, failure-path and adversarial tests, 
 Phase C of [next-steps](../next-steps.md) calls for a reusable requirement/readiness result rather
 than status hard-coded per screen. Treat it as *the* safety spine.
 
-- **Typed readiness with reasons.** A booking is `ready | blocked | pending`, and *blocked* always
-  carries human-readable reasons ("Deep specialty required for the wreck; on file: OW only").
-  Never a bare boolean. *(M, certs/cross-cutting, big bet.)*
-- **Fail closed on unknown evidence.** If required evidence is missing or unverifiable, the answer
-  is *not ready* — never a silent pass. Table-driven tests over every state combination. *(M,
-  certs, big bet.)*
-- **One source, three views.** The same readiness result feeds the staff roster, the diver
-  confirmation, and the manifest — so they can never disagree. Disagreement between screens is the
-  classic safety bug. *(M, cross-cutting.)*
-- **Requirement-vs-evidence separation.** Trip/site requirements live apart from a diver's cards, so
-  changing a site's minimum cert re-evaluates every booking automatically. *(M, certs.)*
+- [x] **Typed readiness with reasons.** (Shipped) Booking readiness checks return explicit states with detailed explanations of missing or expired items.
+- [x] **Fail closed on unknown evidence.** (Shipped) Unverified or missing cert/waiver evidence fails closed to blocked status.
+- [x] **One source, three views.** (Shipped) Roster, manifest, and confirmation pages share identical readiness engine outputs.
+- [x] **Requirement-vs-evidence separation.** (Shipped) Site-specific certification requirements are evaluated against dynamic diver credentials.
 
 ## B. Manifest & roll call — the nightmare-scenario surfaces
 
 A diver left behind is the industry's worst day. The design must make that *structurally* hard.
 
-- **No silent disappearance.** A diver with incomplete data never just vanishes from the manifest —
-  they appear with an explicit blocker. Missing data is *visible*, never absent. Adversarial test:
-  corrupt/partial records must still render the person. *(M, manifests, big bet.)*
-- **Two-phase roll call.** Before departure *and after every dive* (per glossary). The app tracks
-  the count in and the count out, and refuses to show "all clear" until out == in. *(M, manifests,
-  big bet.)*
-- **Buddy pairs / teams.** Optional buddy assignment so roll call can surface "diver X's buddy Y is
-  not yet back." Mirrors how dives are actually run. *(M, manifests.)*
-- **Headcount reconciliation.** A captain enters a physical headcount; the app cross-checks against
-  the boarded list and flags any mismatch loudly. Trust the human's eyes, catch the discrepancy.
-  *(M, manifests, big bet.)*
-- **Tabular, exact, unambiguous.** Tabular-figure counts, icon+label states (never color alone),
-  timestamps with timezone — principle #6 applied literally. *(S, manifests, quick win.)*
-- **Incident-resistant audit trail.** Every boarded/not-boarded change is append-only with who and
-  when, so a manifest can be reconstructed after an incident. *(M, manifests, big bet.)*
+- [x] **No silent disappearance.** (Shipped) Roster and manifest surfaces display every guest with explicit validation alerts rather than hiding them.
+- [x] **Two-phase roll call.** (Shipped) Manifest tracks headcount checkpoints before departure and after every dive.
+- **Buddy pairs / teams.** Optional buddy assignment so roll call can surface "diver X's buddy Y is not yet back." Mirrors how dives are actually run. *(M, manifests.)*
+- **Headcount reconciliation.** A captain enters a physical headcount; the app cross-checks against the boarded list. *(M, manifests, big bet.)*
+- [x] **Tabular, exact, unambiguous.** (Shipped) Icons, labels, timestamps, and layouts optimized for phone screen visibility.
+- [x] **Incident-resistant audit trail.** (Shipped) Append-only boarding status history tables capture all changes.
 
 ## C. Offline is a safety requirement, not a nicety
 
 Boats lose signal. If the manifest needs Wi-Fi, it's a liability.
 
-- **Offline-tolerant cached snapshot** with **explicit freshness** ("as of 8:42 AM — offline") and
-  a reconciliation status when signal returns. Never present stale data as live. *(L, manifests,
-  big bet — needs an offline ADR per next-steps Phase E.)*
-- **Conflict-safe reconciliation.** Two devices editing one manifest offline must merge without
-  dropping a boarding event. Append-only log makes this tractable. *(L, manifests, big bet.)*
-- **Print/PDF from the same model.** The paper fallback is generated from the identical manifest
-  data, so the backup can't disagree with the screen. Coast-guard-clean layout. *(M, manifests.)*
-- **Degrade loudly.** If the snapshot is too old to trust, the UI says so in words a captain reads
-  in glare — it does not quietly show yesterday's boat. *(S, manifests, quick win.)*
+- [x] **Offline-tolerant cached snapshot.** (Shipped) IndexedDB encrypted snapshots with freshness states automatically synced for trips in a 48-hour window.
+- [x] **Conflict-safe reconciliation.** (Shipped) Idempotent append-only device actions reconcile with newer server events.
+- [x] **Print/PDF from the same model.** (Shipped) Roster print view shares the identical manifest dataset.
+- [x] **Degrade loudly.** (Shipped) Freshness status states (fresh/aging/stale) display when offline.
 
 ## D. Medical & waiver gating
 
 Some medical answers require a physician sign-off — a *blocking state, not a checkbox* (glossary).
 
-- **Referral fails closed and explains.** A referral-triggering answer blocks boarding and states
-  the next step plainly ("A doctor's sign-off is needed before you can dive — here's the form").
-  *(M, waivers, big bet.)*
-- **Immutable signed history.** Editing a template creates a new version; signed records are never
-  rewritten. Adversarial tests for stale-template signing and duplicate submission. *(M, waivers,
-  big bet — per next-steps Phase B.)*
-- **Tamper-evident artifacts.** Signed waiver metadata is idempotent and integrity-checked; a
-  replayed or altered submission is rejected. *(M, waivers.)*
-- **Expiry & resume without loss.** A pre-arrival link can expire and resume without losing entered
-  data or audit trail. Polished expired-link and already-completed states. *(M, waivers.)*
+- [x] **Referral fails closed and explains.** (Shipped) Positive answers block check-in and require doctor sign-off uploads.
+- [x] **Immutable signed history.** (Shipped) Versioned templates keep historical releases frozen; edits create new immutable versions.
+- **Tamper-evident artifacts.** Signed waiver metadata is idempotent and integrity-checked. *(M, waivers.)*
+- [x] **Expiry & resume without loss.** (Shipped) Progress is saved on mobile-first completion flows with clear expired/unavailable page states.
 
 ## E. Cert & nitrox correctness
 
-- **Verified vs claimed.** A diver's *claimed* level and a *staff-verified* card are different
-  states; gating uses verified only. Pending/expired/insufficient are all distinct. *(M,
-  certs, big bet.)*
-- **Site-requirement gating at booking and check-in** — checked twice (glossary), because certs can
-  change between the two moments. *(M, certs.)*
-- **Nitrox guardrails.** Only nitrox-certified divers can be assigned nitrox tanks; each fill is
-  O2-analyzed and logged (mix %, analysis, signature) before use. Fail closed on missing analysis.
-  *(M, gear/certs, big bet — safety-critical.)*
-- **Out-of-service gear is un-assignable.** Regs/BCDs past service and tanks past VIP/hydro cannot
-  be handed out — the assignment UI can't even offer them. *(M, gear, big bet.)*
+- [x] **Verified vs claimed.** (Shipped) Gating is based on staff-sited or manually verified agency check entries; unverified inputs do not clear gates.
+- [x] **Site-requirement gating at booking and check-in.** (Shipped) Site certification levels and specialty requirements gate enrollment.
+- [x] **Nitrox guardrails.** (Shipped) Nitrox mix requests are gated by enriched-air credentials and restricted to shops offering nitrox fills.
+- [Superseded] **Out-of-service gear is un-assignable.** *(Gear inventory tracking was removed in M5 in favor of direct rental size records. Lightweight service registers are unbuilt).*
 
 ---
 
 ## F. Trust-building mechanics (cross-cutting)
 
-- **Provenance on every safety fact.** Hover/tap any readiness state to see *why* and *from what
-  record* — inspection over faith. *(M, cross-cutting.)*
-- **Emergency-contact surfacing.** One tap from any diver on the manifest to their emergency
-  contact and DAN info (glossary — "worth a field"). *(S, manifests, quick win.)*
-- **Quiet, honest error handling.** Errors on safety surfaces say what happened and what to do,
-  never a stack trace or a shrug. *(S, cross-cutting, quick win.)*
-- **A safety-invariant test suite** run in the merge gate: capacity never exceeded, boarded never
-  exceeds manifest, no dive gated on unverified certs, no nitrox to non-nitrox divers. Adversarial,
-  table-driven. *(M, cross-cutting, big bet.)*
+- [x] **Provenance on every safety fact.** (Shipped) Detailed warnings explain exactly why a diver is blocked (e.g., missing waiver version, unverified nitrox card).
+- [x] **Emergency-contact surfacing.** (Shipped) sur­faced on manifest lists and collected via waivers and `/ready` flows.
+- [x] **Quiet, honest error handling.** (Shipped) Clear error notifications with action items (like email resends or credential checks).
+- [x] **Safety-invariant test suite.** (Shipped) CI gates enforce transactional capacity limits, checkouts, and readiness validations.
 - **Threat/failure-mode review ritual** before the manifest milestone (per next-steps Phase E):
   enumerate every way a diver could be lost or mis-gated and test each. *(M, manifests.)*
 

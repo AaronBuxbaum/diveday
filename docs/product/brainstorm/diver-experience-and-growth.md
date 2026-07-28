@@ -24,75 +24,45 @@ raise confidence, remove a pre-dive uncertainty, or turn one diver into two?
 
 ## A. The sub-minute booking flow (the front door)
 
-- **No-account booking.** Name + email, capacity enforced transactionally, confirmation moment —
-  already the M2 flow. Protect it fiercely; it's the vision's signature. *(shipped — extend, don't
-  regress.)*
-- **Ruthless field minimization.** Ask only what's needed to hold the seat; everything else moves to
-  a *prepare* step after booking. Time-to-confirmation is the metric. *(S, bookings, quick win.)*
-- **Forgiving inputs.** Email typo detection, phone masks, sensible date/time defaults, autocomplete
-  for returning divers by email. *(S, bookings, quick win — mirrors delight doc.)*
-- **Trip pages that sell the dive.** Site name, depth, what you'll see, cert requirement stated
-  plainly up front ("Advanced Open Water needed for this wreck") so nobody books what they can't
-  dive. *(S–M, bookings, quick win.)*
-- **Real-time seat honesty.** "3 seats left" / "Sold out — join the waitlist" with no lie and no
-  double-book. *(M, bookings.)*
-- **Guest checkout for a group.** Book multiple divers in one flow (a family, a class) without an
-  account each. *(M, bookings.)*
+- [x] **No-account booking.** (Shipped) Name + email, capacity enforced transactionally, confirmation moment.
+- [x] **Ruthless field minimization.** (Shipped) Ask only what's needed to hold the seat; everything else moves to the `/ready` step.
+- [x] **Forgiving inputs.** (Shipped) Email typo detection, phone masks, sensible date/time defaults, autocomplete for returning divers.
+- [x] **Trip pages that sell the dive.** (Shipped) Site name, depth, cert requirements stated plainly up front.
+- [x] **Real-time seat honesty.** (Shipped) Seats left and sold-out/waitlist states.
+- [x] **Guest checkout for a group.** (Shipped) Book multiple divers (up to six) in one flow.
 
 ## B. The "prepare" arc — confidence between booking and boarding
 
 The gap between *booked* and *ready* is where shops lose time and divers lose confidence. Own it.
 
-- **A personal readiness page (no login).** A secure link shows the diver exactly what's done and
-  what's left: waiver ☐, cert ☐, gear sizes ☐, medical ☐ — in plain language, resumable on mobile.
-  *(M, cross-cutting, big bet — this is the diver-side mirror of the staff blocker queue.)*
-- **Progress in meaningful steps, not a spinner** (next-steps Phase B) — "Step 2 of 3: sign your
-  waiver," never a generic bar. *(S, waivers, quick win.)*
-- **Plain-language *why*.** Each sensitive ask (medical, cert number) gets a one-line reassurance so
-  it feels like care, not bureaucracy. *(S, waivers/certs, quick win.)*
-- **Self-service cert upload.** The diver photographs their C-card; staff verify. Removes the
-  counter bottleneck and the "bring your card" reminder. *(M, certs, big bet.)*
-- **Self-service gear sizing.** A friendly height/weight/foot-size prompt that maps to BCD/wetsuit
-  sizes, so gear is ready before they arrive (glossary — sizing must be respected, not guessed).
-  *(M, gear.)*
-- **Resumable, expiring links** handled gracefully — expired and already-completed states are
-  polished, never a dead end (next-steps Phase B). *(M, waivers.)*
+- [x] **A personal readiness page (no login).** (Shipped) A secure `/ready/[token]` link shows the diver exactly what's done and what's left (waiver, cert, gear sizes, medical, contact) in plain language, resumable on mobile.
+- [x] **Progress in meaningful steps, not a spinner** (Shipped) — Clear waiver step sequence.
+- [x] **Plain-language *why*.** (Shipped) One-line reassurance when asking for sensitive info like medical questions and certs.
+- [x] **Self-service cert upload.** (Shipped) The diver uploads their C-card photo; staff verify.
+- [x] **Self-service gear sizing.** (Shipped) A friendly rental size prompt (BCD, wetsuit, regulator, fins) so gear size requirements are ready before they arrive.
+- [x] **Resumable, expiring links** (Shipped) — Expired and already-completed states are handled gracefully.
 
 ## C. Confirmations & reassurance
 
-- **Confirmations that say exactly what's complete and what remains** (next-steps Phase B) — not
-  "success!" but "You're booked for Saturday's two-tank. Next: sign your waiver (2 min)." *(S,
-  cross-cutting, quick win.)*
-- **A calendar add + directions to the dock** in the confirmation — reduce day-of confusion. *(S,
-  bookings, quick win.)*
-- **Pre-dive briefing note.** The day before: conditions, what to bring, arrival time, in briefing
-  voice. Replaces the "what time again?" call. *(M, cross-cutting — pairs with M7 notifications.)*
-- **Weather/condition-hold honesty.** If the shop flags a hold, the diver hears it from the app
-  immediately, not a scramble of texts. *(M, bookings.)*
+- [x] **Confirmations that say exactly what's complete and what remains** (Shipped) — Displays booking details and states outstanding waivers/requirements.
+- **A calendar add + directions to the dock** in the confirmation — reduce day-of confusion. *(S, bookings, quick win.)*
+- [x] **Pre-dive briefing note.** (Shipped) Night-before brief email/SMS with conditions, arrival time, checklist.
+- **Weather/condition-hold honesty.** If the shop flags a hold, the diver hears it from the app immediately, not a scramble of texts. *(M, bookings.)*
 
 ## D. Retention & repeat visits (within non-goals)
 
 Not a social network — but a returning diver should feel *known*.
 
-- **"Welcome back" recognition.** A returning diver's certs, sizes, and emergency contact are on
-  file; booking their next trip is two taps. *(M, cross-cutting, big bet — the person-spine payoff,
-  diver-side.)*
-- **Post-dive close-the-loop.** A warm "thanks for diving with us — here's what's next" with the
-  shop's upcoming trips they're now qualified for. *(M, cross-cutting.)*
-- **Cert-progression nudges.** A diver with OW who keeps booking sites needing AOW sees a gentle
-  "ready to go deeper? here's the course" — sells courses (M-later) without nagging. *(M,
-  certs/bookings.)*
-- **Personal dive history with the shop** — trips taken, sites seen — as *booking context*, not a
-  social feed. Stays inside the non-goal. *(S–M, cross-cutting.)*
+- [x] **"Welcome back" recognition.** (Shipped) Returning diver picker matches by email, pulling prior certs, sizes, contact information.
+- [x] **Post-dive close-the-loop.** (Shipped) Post-trip recap page (`/recap/[token]`) generated and emailed/texted automatically.
+- **Cert-progression nudges.** A diver with OW who keeps booking sites needing AOW sees a gentle "ready to go deeper? here's the course" — sells courses without nagging. *(M, certs/bookings.)*
+- [x] **Personal dive history with the shop** (Shipped) — Prior visits imported verbatim as an inert history list on the diver's profile.
 
 ## E. Referral & word-of-mouth mechanics
 
-- **Bring-a-buddy booking.** "Add a buddy to this trip" in the confirmation — one link, buddy books
-  in under a minute. Turns one booking into two. *(M, bookings, big bet.)*
-- **Shareable trip pages.** A trip page a diver can text to a friend that books directly — the trip
-  *is* the ad. *(S, bookings, quick win.)*
-- **Gift a dive / DSD.** Book a Discover Scuba experience for someone else (glossary — DSD is an
-  experience, not a cert; stricter ratios apply). A gateway funnel for new divers. *(M, bookings.)*
+- [x] **Bring-a-buddy booking.** (Shipped) Post-trip recap includes a "bring a buddy" nudge.
+- **Shareable trip pages.** A trip page a diver can text to a friend that books directly — the trip *is* the ad. *(S, bookings, quick win.)*
+- **Gift a dive / DSD.** Book a Discover Scuba experience for someone else (glossary — DSD is an experience, not a cert; stricter ratios apply). A gateway funnel for new divers. *(M, bookings.)*
 
 ## F. Accessibility as reach
 
@@ -109,14 +79,9 @@ Not a social network — but a returning diver should feel *known*.
 
 ## Bigger growth bets
 
-- **The shop's public schedule as a booking channel** (`/trips` already exists) — SEO-clean,
-  fast-loading, shareable, so a shop can point all its marketing at one delightful page. *(M,
-  bookings, big bet.)*
-- **Waitlist as demand signal + recovered revenue** — divers join, get auto-notified on a
-  cancellation, book instantly. Growth *and* efficiency. *(M, bookings.)*
-- **Course funnel** (M-later, gated on cert levels/DSD rules) — DSD → Open Water → Advanced, each
-  step nudged from real booking behavior. The lifetime-value engine. *(L, certs/bookings, big
-  bet.)*
+- [x] **The shop's public schedule as a booking channel.** (Shipped) schedule page, embeddable schedule widget for the shop's website, pricing pages, etc.
+- [x] **Waitlist as demand signal + recovered revenue.** (Shipped) Waitlist with first-come seat recovery and one-tap invite from the Today work queue.
+- [x] **Course funnel.** (Shipped) SSI/PADI template course sessions scheduled on the trip spine, gating visibility and registration based on cert requirements.
 
 ## What NOT to do
 

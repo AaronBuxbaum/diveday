@@ -27,74 +27,44 @@ safety. AI *suggests*; the safety spine *decides*.
 
 ## A. The data-model spine (make it reach further)
 
-- **Person as a single spine, roles not types.** A person is simultaneously customer, student,
-  staff (glossary). Every feature reads/writes one person record. This is the precondition for
-  "welcome back," blocker queues, and cross-feature intelligence. *(M, cross-cutting, big bet —
-  foundational.)*
-- **Everything hangs off the trip/session spine.** The manifest is a *view* of checked-in bookings +
-  staff, not separate data entry (glossary). Certs, gear, waivers all reference the same booking.
-  Resist any feature that forks the spine. *(architectural invariant — enforce in review.)*
-- **A generic requirement/evidence/readiness core** (next-steps Phase C) reused by certs, medical,
-  gear service, payment. One tested engine, many surfaces. *(M, cross-cutting, big bet.)*
-- **Multi-tenant to the core.** `shop_id` everywhere already; design every new table for it so
-  multi-shop (M7+) is a config, not a rewrite. *(architectural invariant.)*
-- **Temporal correctness.** Local-time trip entry, timezone-aware storage (`src/lib/zoned.ts`
-  exists) — every date the diver or captain sees is unambiguous. *(S–M, cross-cutting.)*
+- [x] **Person as a single spine, roles not types.** (Shipped) Single person record with multiple roles.
+- [x] **Everything hangs off the trip/session spine.** (Shipped) The manifest is a view of checked-in bookings + crew.
+- [x] **A generic requirement/evidence/readiness core.** (Shipped) Fail-closed readiness checks for waivers, certs, nitrox, payments.
+- [x] **Multi-tenant to the core.** (Shipped) `shop_id` is present on all relevant schema tables.
+- [x] **Temporal correctness.** (Shipped) Timezone-aware date and time helpers.
 
 ## B. Reporting & business intelligence
 
 Owners watch the calendar and the money (vision). Give them answers, not exports.
 
-- **Owner dashboard.** Bookings trend, capacity utilization, no-show rate, revenue by trip type,
-  gear utilization — glanceable, not a BI tool. *(M, cross-cutting, big bet — M7+.)*
-- **Utilization insights.** Which trips sell out, which sites underperform, which gear sits idle,
-  which instructors are over/under-booked. Turns the connected data into decisions. *(M,
-  cross-cutting.)*
-- **Readiness analytics** (the measures in next-steps) — waiver completion rate before arrival,
-  % of departures fully ready before the day, median blocker-resolution time. Proves the product
-  works. *(M, cross-cutting.)*
-- **Cohort & retention view** — repeat-diver rate, course-funnel conversion (within the non-goal:
-  serves the shop's growth, not a social graph). *(M, cross-cutting.)*
-- **Exportable, print-clean reports** for accountants and coast-guard records. *(S–M,
-  cross-cutting.)*
+- [x] **Owner dashboard.** (Shipped) Monthly reporting dashboard with revenue, bookings, seat fill, and waiver completion status.
+- [x] **Utilization insights.** (Shipped) Real-time capacity utilization and per-trip seat-fill metrics.
+- [x] **Readiness analytics.** (Shipped) Pre-departure waiver completion metrics on the owner dashboard.
+- **Cohort & retention view** — repeat-diver rate, course-funnel conversion. *(M, cross-cutting.)*
+- [x] **Exportable, print-clean reports.** (Shipped) Full-shop ZIP data export settings, clean browser manifest print layouts.
 
 ## C. Automation & intelligence (AI where it earns trust)
 
 AI suggests; humans and the safety spine decide. Never fail open.
 
-- **Smart gear assignment.** Constraint solver proposes a valid gear set per diver (size, service
-  state, availability, nitrox eligibility) with clear alternatives; staff confirm (next-steps Phase
-  D). *(M, gear, big bet.)*
-- **Cert-card OCR.** Photograph a C-card → extract agency, level, number, date for staff to verify.
-  Removes hand-entry; verification stays human (fail closed on low confidence). *(M, certs, big
-  bet.)*
-- **Anomaly & blocker prediction.** "This Saturday trip has 4 divers still missing waivers 48h out
-  — nudge them now." Proactive, not reactive. *(M, cross-cutting.)*
-- **Demand/waitlist intelligence.** Suggest adding a boat or a second trip when demand + waitlist
-  cross a threshold. *(M, bookings.)*
-- **Natural-language ops assistant (staff-only).** "Who's not ready for tomorrow's wreck trip?" /
-  "Move Dana to Sunday." Reads the connected model, proposes actions, never executes a safety change
-  without confirmation. *(L, cross-cutting, big bet.)*
-- **Copy assistance in briefing voice** — draft confirmations, reminders, condition-hold notices
-  that staff edit. *(S–M, cross-cutting.)*
+- [Superseded] **Smart gear assignment.** *(Gear inventory assignment was removed in M5 in favor of direct rental sizes tracking. Replaced in requirements by a lightweight who-has-what register).*
+- **Cert-card OCR.** Photograph a C-card → extract agency, level, number, date for staff to verify. *(M, certs, big bet.)*
+- [x] **Anomaly & blocker prediction.** (Shipped) Today work queue flags missing waivers/certs, unverified nitrox, freed waitlist seats, etc.
+- **Demand/waitlist intelligence.** Suggest adding a boat or a second trip when demand + waitlist cross a threshold. *(M, bookings.)*
+- **Natural-language ops assistant (staff-only).** "Who's not ready for tomorrow's wreck trip?" *(L, cross-cutting, big bet.)*
+- [x] **Copy assistance in briefing voice.** (Shipped) Night-before briefing and post-trip recap automation.
 
 **AI guardrails (hard):** every AI output on a safety surface is a *suggestion* a human confirms;
 low-confidence extraction fails closed; no AI decides gating, boarding, or medical clearance.
 
 ## D. Integrations & interoperability
 
-- **Payments/deposits** (M7) — deposit at booking, balance at check-in; reduces no-shows. Needs an
-  ADR for the processor. *(L, bookings, big bet.)*
-- **Notifications channel** (M7) — email/SMS for confirmations, reminders, condition holds, waitlist
-  hits. One channel abstraction, many triggers. *(M, cross-cutting.)*
-- **Calendar sync** — trips to staff calendars, bookings to diver calendars (.ics already cheap on
-  the diver side). *(S–M, cross-cutting.)*
-- **Agency card verification** — where agencies expose it, verify a C-card against the agency
-  directly (glossary — we *track* certs, don't *issue* them; verification ≠ issuance, stays in
-  bounds). *(L, certs — park until an agency API is real.)*
-- **DAN / dive-insurance field** capture (glossary — "worth a field, not a feature"). *(S, certs,
-  quick win.)*
-- **Accounting export** — clean data out for the shop's books; not a POS. *(S–M, cross-cutting.)*
+- [x] **Payments/deposits.** (Shipped) Stripe Connect, checkouts, refund capabilities, deposit options.
+- [x] **Notifications channel.** (Shipped) Unified notify helper for Resend email and Twilio SMS.
+- **Calendar sync** — trips to staff calendars, bookings to diver calendars (.ics already cheap on the diver side). *(S–M, cross-cutting.)*
+- [Superseded] **Agency card verification.** *(Agency-verification API seam was removed as speculative in M4. Staff look up agency verification manually and confirm card sightings).*
+- [x] **DAN / dive-insurance field.** (Shipped) Surfaced on the diver profile.
+- [x] **Accounting export.** (Shipped) Settings → Data export generates documented CSV files.
 
 **Every new runtime dependency or external service → an ADR** (hard rule). Integrations are where
 that rule earns its keep.
@@ -104,37 +74,20 @@ that rule earns its keep.
 This is the fourth north-star outcome and the least visible moat: the repo makes the *correct*
 implementation path easier than the expedient wrong one (next-steps).
 
-- **Task packets everywhere.** Extend `pnpm task:context -- <area>` to every area (bookings,
-  waivers, certs, gear, manifests, design, database, auth) so a fresh agent gets bounded paths,
-  invariants, tests, and "do-not-read" lists without scanning the repo. *(M, tooling, big bet.)*
-- **Mechanical quality gates** (next-steps §5, in order): architecture-boundary import checks, ADR
-  validation, doc-link checks, schema/tenant-ownership checks, UI raw-color lints, changed-UI
-  screenshot evidence, feature-completeness prompts. Weaker agents pass because the *checks* catch
-  them. *(M, tooling, big bet.)*
-- **Module contracts.** The `src/features/<feature>/` shape (service/queries/schema/tests/README)
-  applied to the next new feature, migrated on touch, ADR'd before it's permanent (next-steps §3).
-  *(M, tooling.)*
-- **Provider-neutral canonical workflow** with thin adapters — an ADR comparing the skill-layout
-  options, then a drift-detection test so `.claude/` can't diverge from canonical rules
-  (next-steps §1). *(M, tooling.)*
-- **Path-aware CI** — smallest trustworthy check set per change, full gate before merge
-  (next-steps §5). *(M, tooling.)*
-- **Sharded feature/entity docs** with a *generated* aggregate (not a hand-maintained hotspot) —
-  only when the roadmap outgrows the small files (next-steps P2). *(M, tooling — earn it first.)*
-- **Machine-readable task manifest** for external orchestrators (next-steps P2) — only when
-  parallelism proves the need. *(M, tooling — earn it first.)*
-- **Safety-invariant + adversarial test libraries** as reusable harnesses so every safety feature
-  inherits the same rigor cheaply. *(M, tooling.)*
+- [x] **Task packets everywhere.** (Shipped) Bounded paths, invariants, and validation for 11 specific area tasks via `pnpm task:context`.
+- [x] **Mechanical quality gates.** (Shipped) safeguards, lints, typecheck, unit tests, and CI gates checks.
+- **Module contracts.** The `src/features/<feature>/` shape applied to the next new feature. *(M, tooling.)*
+- [x] **Provider-neutral canonical workflow.** (Shipped) canonical processes, review checklists, and drift safeguards.
+- [x] **Path-aware CI.** (Shipped) `pnpm check:repo` and fast pre-commit check tooling.
+- **Sharded feature/entity docs** with a *generated* aggregate. *(M, tooling — earn it first.)*
+- **Machine-readable task manifest** for external orchestrators. *(M, tooling — earn it first.)*
+- [x] **Safety-invariant + adversarial test libraries.** (Shipped) Core testing harnesses and robust mock frameworks.
 
 ## F. Observability & measurement
 
-- **Event instrumentation** (delight backlog) for abandonment, blocker frequency, staff recovery
-  paths — so "delight" and "efficiency" stay measurable, not asserted. *(M, cross-cutting.)*
-- **Performance budgets** enforced in CI for staff pages on ordinary phones and weak marina Wi-Fi
-  (delight backlog). Speed is the first delight — measure it. *(M, tooling.)*
-- **The north-star measures** (next-steps) tracked from real data: blocker-resolution time, waiver
-  completion rate, % fully-ready departures, agent time-to-first-test, PR rework from missed
-  invariants. *(M, cross-cutting.)*
+- [x] **Event instrumentation.** (Shipped) `src/lib/analytics.ts` instrumenting checkout abandons and blocker resolution path activities.
+- [x] **Performance budgets.** (Shipped) gzip checks for JS bundles in CI pipelines.
+- **The north-star measures** (next-steps) tracked from real data: blocker-resolution time, waiver completion rate, % fully-ready departures. *(M, cross-cutting.)*
 
 ---
 
