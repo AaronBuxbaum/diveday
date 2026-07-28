@@ -19,90 +19,57 @@ to do it on a wet phone in glare.
 
 ### A. Speed as a feature you can feel
 
-- **Instant navigation everywhere.** Prefetch on hover/touch-start for staff routes; server
-  components + streaming so the schedule never blanks. Budget: no staff page > 200 ms to first
-  meaningful paint on a mid-range phone over marina Wi-Fi. *(S–M, cross-cutting, quick win)*
-- **Optimistic mutations with honest rollback.** Cancelling a booking, assigning crew, checking a
-  diver in — all reflect instantly and reconcile in the background, but *only where rollback is safe
-  and obvious*. Never optimistic on safety state (boarded/not-boarded). *(M, cross-cutting)*
-- **Content-shaped skeletons, never spinners.** A schedule skeleton looks like trip cards; a
-  manifest skeleton looks like the roster. No layout shift when data lands. *(S, cross-cutting,
-  quick win)*
-- **Perceived-performance polish.** Warm the next-likely route (a trip detail after you view the
-  schedule); keep already-seen data on screen while revalidating. *(M, cross-cutting)*
+- [x] **Instant navigation everywhere.** (Shipped) Prefetch on hover/touch-start for staff routes; server components + streaming so the schedule never blanks.
+- [x] **Optimistic mutations with honest rollback.** (Shipped) Cancelling a booking, assigning crew, checking a diver in — all reflect instantly and reconcile in the background, but *only where rollback is safe and obvious*. Never optimistic on safety state (boarded/not-boarded).
+- [x] **Content-shaped skeletons, never spinners.** (Shipped) A schedule skeleton looks like trip cards; a manifest skeleton looks like the roster. No layout shift when data lands.
+- [x] **Perceived-performance polish.** (Shipped) Warm the next-likely route (a trip detail after you view the schedule); keep already-seen data on screen while revalidating.
 
 ### B. The earned moments
 
 `--accent` (coral) is rationed on purpose. Each pillar deserves *one* concentrated ≤400 ms moment:
 
-- **Booking confirmed** — the diver's "you're on the boat" moment (already the M2 confirmation).
-  Push it further: a calm dive-site line, the date in warm plain language, one clear next step.
-- **Waiver signed** — "You're all set for Saturday — nothing left to bring but yourself."
-- **Cert verified** — a quiet green check that says exactly what it unlocked ("Cleared for the
-  Blue Hole").
-- **Roll call complete** — the captain's moment: every diver accounted for, one satisfying state
-  change, timestamped. Safety-serious, not confetti — the joy is *certainty*.
-- **Trip closed out** — end-of-day "everyone's home" summary for staff.
+- [x] **Booking confirmed** (Shipped) — the diver's "you're on the boat" moment (already the M2 confirmation).
+- [x] **Waiver signed** (Shipped) — "You're all set for Saturday — nothing left to bring but yourself."
+- [x] **Cert verified** (Shipped) — a quiet green check that says exactly what it unlocked ("Cleared for the Blue Hole").
+- [x] **Roll call complete** (Shipped) — the captain's moment: every diver accounted for, one satisfying state change, timestamped. Safety-serious, not confetti.
+- [x] **Trip closed out** (Shipped) — end-of-day "everyone's home" summary for staff.
 
 *(S each, per-pillar, quick win — these are copy + one animation, high delight-per-effort.)*
 
 ### C. Micro-interactions that say "someone cared"
 
-- **Undo over confirm.** Reversible staff actions (cancel booking, unassign gear, remove from
-  manifest) get a 5-second undo toast instead of a modal. Fewer dialogs, safer flow. *(S–M,
-  cross-cutting, quick win)*
-- **Forgiving inputs.** Name autocomplete from prior divers, email typo detection
-  (`gmial.com` → suggest `gmail.com`), phone/date masks, "same as last trip" gear defaults.
-  *(S, bookings/gear, quick win)*
-- **Empty states that teach.** Every list's zero-state names the first action in briefing voice
-  ("No trips yet — schedule your first charter"). Audit all of them as surfaces ship. *(S,
-  cross-cutting, quick win)*
-- **Haptics on key moments** (mobile web where supported): a single soft tap on roll-call confirm.
-  *(S, manifests)*
-- **Sound, optional and off by default** — a short surface-break chime on trip close-out for
-  shops that want it. *(S, cross-cutting — park unless requested.)*
+- [x] **Undo over confirm.** (Shipped) Reversible staff actions (cancel booking, remove certification, remove from manifest) get a 5-second undo toast instead of a modal. Fewer dialogs, safer flow.
+- [x] **Forgiving inputs.** (Shipped) Name autocomplete from prior divers, email typo detection (`gmial.com` → suggest `gmail.com`), phone/date masks, "same as last trip" rental size defaults.
+- [x] **Empty states that teach.** (Shipped) Every list's zero-state names the first action in briefing voice ("No trips yet — schedule your first charter").
+- **Haptics on key moments** (mobile web where supported): a single soft tap on roll-call confirm. *(S, manifests)*
+- **Sound, optional and off by default** — a short surface-break chime on trip close-out for shops that want it. *(S, cross-cutting — park unless requested.)*
 
 ### D. The "wet phone at the dock" flagship
 
 The dock test is our most defensible differentiator because it's a *whole-product* commitment, not a
 feature. Ideas that make it visceral:
 
-- **Glare mode** — a high-contrast, larger-type variant that a captain toggles (or that
-  auto-suggests at high ambient brightness where the sensor is available). AAA contrast, ≥16 px
-  text, ≥44 px targets everywhere it's on. *(M, manifests/cross-cutting, big bet)*
-- **One-handed roll call.** Big targets down one side of the screen, reachable with a thumb; no
-  precision gestures; works with a dripping finger. *(M, manifests)*
-- **Sunlight-safe palette check** — a design-review gate that verifies the roll-call and manifest
-  surfaces hit AAA and target sizes automatically. *(S, manifests, quick win — extends existing
-  design-review skill.)*
+- **Glare mode** — a high-contrast, larger-type variant that a captain toggles (or that auto-suggests at high ambient brightness where the sensor is available). AAA contrast, ≥16 px text, ≥44 px targets everywhere it's on. *(M, manifests/cross-cutting, big bet)*
+- [x] **One-handed roll call.** (Shipped) Big targets down one side of the screen, reachable with a thumb; no precision gestures; works with a dripping finger.
+- [x] **Sunlight-safe palette check.** (Shipped) A design-review gate that verifies the roll-call and manifest surfaces hit AAA and target sizes automatically.
 
 ### E. Voice as delight
 
 Microcopy is a competent divemaster, never a lawyer or a mascot. This is nearly free and almost no
 competitor does it.
 
-- **A copy pass per surface**, reviewed against principle #4 — verbs on buttons, actionable errors,
-  teaching empty states, no jargon divers don't use. *(S, cross-cutting, quick win)*
-- **Context-aware reassurance.** Where we ask for something sensitive (medical answers, cert
-  number), a one-line plain-language *why*. *(S, waivers/certs, quick win)*
-- **Seasonal/local warmth without kitsch** — e.g. surface-interval microcopy that reads like a
-  briefing, not filler. Keep it rationed like `--accent`.
+- [x] **A copy pass per surface.** (Shipped) Reviewed against principle #4 — verbs on buttons, actionable errors, teaching empty states, no jargon divers don't use.
+- [x] **Context-aware reassurance.** (Shipped) Where we ask for something sensitive (medical answers, cert number), a one-line plain-language *why*.
+- **Seasonal/local warmth without kitsch** — e.g. surface-interval microcopy that reads like a briefing, not filler. Keep it rationed like `--accent`.
 
 ---
 
 ## Bigger bets on feel
 
-- **A staff "home" that feels like a cockpit, not a dashboard.** Today's trips, who's not ready,
-  what needs a human — glanceable, calm, and the same shape every morning so muscle memory forms.
-  *(M, cross-cutting, big bet.)*
-- **Motion language as brand.** A small, consistent set of transitions (150–250 ms, ease-out,
-  transform/opacity) so the app *moves* like one product. Codify in the design system, enforce in
-  review. *(M, cross-cutting.)*
-- **Delight regression tests.** Visual regression + interaction snapshots on the earned moments so
-  polish doesn't rot as agents iterate. Delight you can't measure, you lose. *(M, cross-cutting.)*
-- **Personality in demo data.** The seed tells a believable shop's story (a returning diver, a
-  sold-out wreck trip, a diver blocked on a medical referral) so every screenshot sells the
-  product. *(S, cross-cutting, quick win.)*
+- [x] **A staff "home" that feels like a cockpit, not a dashboard.** (Shipped) Today's trips, who's not ready, what needs a human — glanceable, calm, and the same shape every morning so muscle memory forms.
+- **Motion language as brand.** A small, consistent set of transitions (150–250 ms, ease-out, transform/opacity) so the app *moves* like one product. Codify in the design system, enforce in review. *(M, cross-cutting.)*
+- [x] **Delight regression tests.** (Shipped) Visual regression + interaction snapshots on the earned moments so polish doesn't rot as agents iterate. Delight you can't measure, you lose.
+- [x] **Personality in demo data.** (Shipped) The seed tells a believable shop's story (a returning diver, a sold-out wreck trip, a diver blocked on a medical referral) so every screenshot sells the product.
 
 ---
 

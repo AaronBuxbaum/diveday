@@ -47,7 +47,7 @@ export const test = base.extend<
   // Date(iso)`), every Date method, and `instanceof Date` are inherited
   // unchanged, and real timers are left alone — so event- and timer-driven UI
   // (the offline reconcile, debounced search) behaves exactly as in production.
-  context: async ({ context }, use) => {
+  context: async ({ context, workerBaseURL }, use) => {
     await context.addInitScript((iso) => {
       const fixed = new Date(iso).getTime();
       const RealDate = Date;
@@ -57,6 +57,50 @@ export const test = base.extend<
           prop === "now" ? () => fixed : Reflect.get(target, prop, receiver),
       });
     }, E2E_FROZEN_CLOCK);
+
+    await context.addInitScript(() => {
+      const isOfflineCookie = document.cookie
+        .split("; ")
+        .some((c) => c.startsWith("playwright_offline=true"));
+      let offline = isOfflineCookie;
+      window.addEventListener("online", () => {
+        offline = false;
+      });
+      window.addEventListener("offline", () => {
+        offline = true;
+      });
+      Object.defineProperty(navigator, "onLine", {
+        get: () => !offline,
+        configurable: true,
+      });
+    });
+
+    const originalSetOffline = context.setOffline.bind(context);
+    context.setOffline = async (offline: boolean) => {
+      const pages = context.pages();
+      let url = pages[0]?.url() || workerBaseURL;
+      if (url.startsWith("about:")) {
+        url = workerBaseURL;
+      }
+      await context.addCookies([
+        {
+          name: "playwright_offline",
+          value: offline ? "true" : "false",
+          url,
+        },
+      ]);
+      await originalSetOffline(offline);
+
+      for (const page of pages) {
+        try {
+          await page.evaluate((isOffline) => {
+            window.dispatchEvent(new Event(isOffline ? "offline" : "online"));
+          }, offline);
+        } catch {
+          // ignore failures on unprimed pages
+        }
+      }
+    };
     // The trip detail page embeds a live Google Maps iframe (DiveSiteMap.tsx).
     // DIVEDAY_DISABLE_EXTERNAL_HTTP keeps the *server* from waiting on a
     // third-party forecast, but that flag can't reach this request — it's the

@@ -1,0 +1,87 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
+
+const ROOT = process.cwd();
+const envExamplePath = path.join(ROOT, ".env.example");
+const envLocalPath = path.join(ROOT, ".env.local");
+
+// Helper to extract environment variable keys from an env file
+function getEnvKeys(content) {
+  const keys = new Set();
+  const lines = content.split(/\r?\n/);
+  // Match key=value or key=, ignore comments
+  const keyRegex = /^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=/;
+  for (const line of lines) {
+    const match = line.match(keyRegex);
+    if (match) {
+      keys.add(match[1]);
+    }
+  }
+  return keys;
+}
+
+async function run() {
+  let exampleContent;
+  try {
+    exampleContent = await readFile(envExamplePath, "utf8");
+  } catch {
+    console.error(`❌ Error: .env.example not found at ${envExamplePath}`);
+    process.exit(1);
+  }
+
+  const exampleKeys = getEnvKeys(exampleContent);
+  if (exampleKeys.size === 0) {
+    console.log("env: No keys defined in .env.example");
+    process.exit(0);
+  }
+
+  let localContent;
+  try {
+    localContent = await readFile(envLocalPath, "utf8");
+  } catch {
+    // If in CI, we skip checking .env.local because environment variables
+    // are typically injected directly via CI/CD configuration.
+    if (process.env.CI === "true") {
+      console.log("env: .env.local not found in CI, skipping local env check");
+      process.exit(0);
+    }
+
+    console.error(
+      "❌ Error: .env.local is missing.\n" +
+        "It hasn't been pulled from Vercel yet, or has not been created.\n" +
+        "Please run `vercel env pull` to pull variables from Vercel, or copy .env.example to .env.local.",
+    );
+    process.exit(1);
+  }
+
+  const localKeys = getEnvKeys(localContent);
+  const missingKeys = [];
+
+  for (const key of exampleKeys) {
+    // TODO: remove once we have Twilio
+    if (key.startsWith("TWILIO_")) {
+      continue;
+    }
+    if (!localKeys.has(key)) {
+      missingKeys.push(key);
+    }
+  }
+
+  if (missingKeys.length > 0) {
+    console.error(
+      `❌ Error: The following environment variables defined in .env.example are missing from .env.local:\n` +
+        missingKeys.map((k) => `  - ${k}`).join("\n") +
+        "\n\nThese variables might be missing from the Vercel project or need to be pulled.\n" +
+        "Please add them to Vercel (or update your local configuration) and run `vercel env pull` to update .env.local.",
+    );
+    process.exit(1);
+  }
+
+  console.log("env: All entries from .env.example are present in .env.local");
+}
+
+run().catch((err) => {
+  console.error("❌ Error running env check:", err);
+  process.exit(1);
+});

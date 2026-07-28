@@ -29,7 +29,8 @@ adapters and must not introduce unique requirements.
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm check:repo` | architecture, clock, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:env` | verify that all keys in `.env.example` are present in `.env.local` |
+| `pnpm check:repo` | environment, architecture, clock, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |

@@ -8,8 +8,7 @@ are the next ideas worth evaluating, ordered roughly by customer value before op
 - **“Is this for me?” meter** — translate depth, current, ladder/boat access, and experience
   into plain-language fit; link the evidence behind the recommendation rather than pretending it
   is a certification gate.
-- **Recent diver moments** — opt-in post-trip photos and a one-sentence memory, attached to the
-  site and moderated by staff. The human signal will beat stock imagery.
+- [x] **Recent diver moments** (Shipped) — opt-in post-trip photos and crew shout-out on the recap page, moderated by staff.
 - **Site compare** — let a diver compare two upcoming sites on depth range, likely life, travel
   time, and typical conditions without making them decode a table of marine jargon.
 - **Dive-plan peek** — show a short illustrative profile and key landmarks, clearly labelled as

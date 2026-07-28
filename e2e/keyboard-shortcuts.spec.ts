@@ -4,6 +4,8 @@ signedInAsOwner();
 
 test("the ? help lists shortcuts and a g-sequence jumps between surfaces", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
+  await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
+  await page.locator("body").click();
 
   // `?` opens the discoverable cheat-sheet.
   await page.keyboard.press("?");
