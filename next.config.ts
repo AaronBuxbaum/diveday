@@ -27,15 +27,6 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-
-  // TODO: remove to replace with environment variable
-  org: "diveday",
-
-  // TODO: remove to replace with environment variable
-  project: "diveday",
-
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 
