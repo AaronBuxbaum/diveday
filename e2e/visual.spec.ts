@@ -314,7 +314,9 @@ for (const scheme of ["light", "dark"] as const) {
         // default is sized for a single real flow, not a full site tour.
         test.setTimeout(60_000);
         await page.goto("/shop/blue-mantis");
-        await page.getByRole("heading", { name: /Good to see you/ }).waitFor();
+        await page
+          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
+          .waitFor();
         await capture(page, "today", scheme);
 
         // The roster, then one diver's full profile (certs, specialty cards,

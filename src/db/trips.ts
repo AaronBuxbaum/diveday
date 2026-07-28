@@ -786,6 +786,53 @@ export async function setTripCrew(
   });
 }
 
+export type TripCrewChange = {
+  personId: string;
+  operation: "assign" | "unassign";
+};
+
+/**
+ * Apply one crew assignment change without replacing concurrent assignments.
+ * The trip and person are both tenant-checked inside the transaction.
+ */
+export async function changeTripCrew(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  change: TripCrewChange,
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [eligible] = await tx
+      .select({ personId: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .innerJoin(trips, eq(trips.id, tripId))
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          eq(people.shopId, shopId),
+          eq(people.id, change.personId),
+          inArray(personRoles.role, [...STAFF_ROLES]),
+        ),
+      )
+      .limit(1);
+    if (!eligible) return false;
+
+    if (change.operation === "assign") {
+      await tx
+        .insert(tripAssignments)
+        .values({ tripId, personId: change.personId })
+        .onConflictDoNothing();
+    } else {
+      await tx
+        .delete(tripAssignments)
+        .where(
+          and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, change.personId)),
+        );
+    }
+    return true;
+  });
+}
 /**
  * Divers on a trip: non-cancelled bookings with their people, oldest first.
  * `bookings` carries its own `shop_id` (CR-007) — filtered directly rather

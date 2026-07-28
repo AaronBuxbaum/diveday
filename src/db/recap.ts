@@ -39,6 +39,8 @@ export type RecapSite = {
   name: string;
   locationName: string | null;
   marineLife: string | null;
+  forecastLatitude: number | null;
+  forecastLongitude: number | null;
 };
 
 export type RecapPageData = {
@@ -139,6 +141,8 @@ export async function getRecapPageData(
       name: diveSite.name,
       locationName: diveSite.locationName,
       marineLife: diveSite.marineLife,
+      forecastLatitude: diveSite.forecastLatitude,
+      forecastLongitude: diveSite.forecastLongitude,
     });
   }
 

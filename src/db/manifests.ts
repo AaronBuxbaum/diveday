@@ -130,18 +130,19 @@ export async function getTripManifests(
     endsAt: trip.endsAt,
     plannedDives: trip.plannedDives,
   };
-  const diverInputs = roster.map(({ booking, person }) => ({
-    bookingId: booking.id,
-    fullName: person.fullName,
-    email: person.email,
-    emergencyContactName: person.emergencyContactName,
-    emergencyContactPhone: person.emergencyContactPhone,
-    readiness: readinessByBooking.get(booking.id),
-    rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
-    // The card is re-checked here, so a revoked card takes the request off the manifest.
-    nitroxRequested: booking.wantsNitrox && certified.has(person.id),
-    medicalWaiver: medicalByBooking.get(booking.id) ?? null,
-  }));
+  const diverInputs = roster.map(({ booking, person }) => {
+    return {
+      bookingId: booking.id,
+      fullName: person.fullName,
+      email: person.email,
+      emergencyContactName: person.emergencyContactName,
+      emergencyContactPhone: person.emergencyContactPhone,
+      readiness: readinessByBooking.get(booking.id),
+      rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
+      nitroxRequested: booking.wantsNitrox && certified.has(person.id),
+      medicalWaiver: medicalByBooking.get(booking.id) ?? null,
+    };
+  });
   // Carry a not-boarded result forward across the ordered checkpoints so an
   // after-dive list doesn't reset to "awaiting" for a diver who already left.
   const effectiveByBooking = new Map(

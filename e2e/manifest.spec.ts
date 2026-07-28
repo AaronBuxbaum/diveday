@@ -316,3 +316,31 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
 
   await context.setOffline(false);
 });
+
+test("displays deck-ready rental summary and missing diver face-grid on manifest page", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Manifest" })
+    .click();
+
+  // Validate the staging summary
+  await expect(page.locator("#deck-ready-rentals")).toBeVisible();
+  await expect(page.getByText("Deck-Ready Rental Summary")).toBeVisible();
+
+  // Validate the face grid is visible and has missing divers
+  await expect(page.locator("#missing-divers-grid")).toBeVisible();
+  await expect(page.getByText(/Missing Divers/)).toBeVisible();
+
+  // Clicking an avatar scrolls to the corresponding diver row
+  const firstAvatar = page.locator("#missing-divers-grid button").first();
+  await expect(firstAvatar).toBeVisible();
+  await firstAvatar.click();
+});

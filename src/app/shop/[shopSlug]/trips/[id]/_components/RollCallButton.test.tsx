@@ -11,7 +11,7 @@ function mockAction(result: RollCallResult) {
   return vi.fn<RollCallAction>(async () => result);
 }
 
-function setup(action: RollCallAction) {
+function setup(action: RollCallAction, guestsHref?: string) {
   render(
     <RollCallButton
       action={action}
@@ -20,6 +20,7 @@ function setup(action: RollCallAction) {
       label="Board"
       pendingLabel="Boarding…"
       className="btn"
+      guestsHref={guestsHref}
     />,
   );
 }
@@ -63,5 +64,19 @@ describe("RollCallButton", () => {
     expect(vibrateMock).toHaveBeenCalledWith(10);
 
     vi.unstubAllGlobals();
+  });
+
+  it("links a readiness refusal to the Guests control", async () => {
+    setup(
+      mockAction({ ok: false, reason: "not_ready" }),
+      "/shop/blue-mantis/trips/trip-1/guests#booking-1",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Board" }));
+
+    expect(await screen.findByRole("link", { name: /open guests/i })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1/guests#booking-1",
+    );
   });
 });

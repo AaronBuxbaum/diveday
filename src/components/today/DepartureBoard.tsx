@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import type { DepartureSummary } from "@/db/today";
 import { formatTime, formatTimeRange } from "@/lib/format";
@@ -37,13 +40,64 @@ function DepartureCard({
   shopSlug,
   timeZone,
   crewed = false,
+  availableStaff,
+  updateCrewAction,
 }: {
   departure: DepartureSummary;
   shopSlug: string;
   timeZone: string;
   crewed?: boolean;
+  availableStaff: { id: string; fullName: string; roles: string[] }[];
+  updateCrewAction: (
+    tripId: string,
+    change: { personId: string; operation: "assign" | "unassign" },
+  ) => Promise<{ ok: boolean }>;
 }) {
   const { blocked, ready, boarded, booked, capacity } = departure;
+  const [localCrew, setLocalCrew] = useState(departure.crew || []);
+
+  useEffect(() => {
+    setLocalCrew(departure.crew || []);
+  }, [departure.crew]);
+
+  const handleAssign = async (staffId: string) => {
+    const staff = availableStaff.find((s) => s.id === staffId);
+    if (!staff) return;
+    if (localCrew.some((c) => c.id === staffId)) return;
+
+    const updated = [...localCrew, staff];
+    setLocalCrew(updated);
+
+    try {
+      const res = await updateCrewAction(departure.tripId, {
+        personId: staffId,
+        operation: "assign",
+      });
+      if (!res.ok) {
+        setLocalCrew(departure.crew || []);
+      }
+    } catch {
+      setLocalCrew(departure.crew || []);
+    }
+  };
+
+  const handleUnassign = async (staffId: string) => {
+    const updated = localCrew.filter((c) => c.id !== staffId);
+    setLocalCrew(updated);
+
+    try {
+      const res = await updateCrewAction(departure.tripId, {
+        personId: staffId,
+        operation: "unassign",
+      });
+      if (!res.ok) {
+        setLocalCrew(departure.crew || []);
+      }
+    } catch {
+      setLocalCrew(departure.crew || []);
+    }
+  };
+
   return (
     <li className="rounded-2xl border border-border bg-surface-sunken p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -86,6 +140,70 @@ function DepartureCard({
           </Link>
         </div>
       </div>
+
+      <section
+        aria-label="Crew assignments drop zone"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const staffId = e.dataTransfer.getData("text/plain");
+          handleAssign(staffId);
+        }}
+        className="mt-4 rounded-xl border border-dashed border-border bg-surface p-3 transition-colors hover:border-primary/40"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-bold tracking-wide text-muted uppercase">
+            Assigned Crew (drag staff here to assign)
+          </p>
+          {availableStaff.length > 0 ? (
+            <label className="flex items-center gap-2 text-sm">
+              <span className="sr-only">Assign crew member to {departure.title}</span>
+              <select
+                aria-label={`Assign crew member to ${departure.title}`}
+                defaultValue=""
+                onChange={(event) => {
+                  const staffId = event.currentTarget.value;
+                  event.currentTarget.value = "";
+                  void handleAssign(staffId);
+                }}
+                className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm text-foreground"
+              >
+                <option value="">Assign crew…</option>
+                {availableStaff
+                  .filter((staff) => !localCrew.some((crew) => crew.id === staff.id))
+                  .map((staff) => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.fullName}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+        {localCrew.length === 0 ? (
+          <p className="mt-2 text-xs text-muted">No crew assigned. Drag staff from above here.</p>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {localCrew.map((c) => (
+              <span
+                key={c.id}
+                className="inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface px-2.5 py-0.5 text-xs font-medium"
+              >
+                {c.fullName}
+                <button
+                  type="button"
+                  onClick={() => handleUnassign(c.id)}
+                  className="ml-1 text-muted hover:text-danger font-bold text-xs"
+                  aria-label={`Unassign ${c.fullName}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Count label="Ready" value={ready} tone={ready > 0 ? "success" : "default"} />
         <Count label="Blocked" value={blocked} tone={blocked > 0 ? "danger" : "default"} />
@@ -130,12 +248,19 @@ export function DepartureBoard({
   shopSlug,
   timeZone,
   crewedTripIds,
+  availableStaff,
+  updateCrewAction,
 }: {
   departures: readonly DepartureSummary[];
   shopSlug: string;
   timeZone: string;
   /** Trips the signed-in staffer crews — badged so their boat reads first. */
   crewedTripIds?: readonly string[];
+  availableStaff: { id: string; fullName: string; roles: string[] }[];
+  updateCrewAction: (
+    tripId: string,
+    change: { personId: string; operation: "assign" | "unassign" },
+  ) => Promise<{ ok: boolean }>;
 }) {
   if (departures.length === 0) return null;
   const crewed = new Set(crewedTripIds ?? []);
@@ -148,6 +273,28 @@ export function DepartureBoard({
         Check divers in at the counter or run roll call from the manifest — readiness is rechecked
         the moment you board someone.
       </p>
+
+      {availableStaff && availableStaff.length > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm">
+          <span className="text-xs font-bold text-muted uppercase tracking-wider">
+            Drag staff to assign:
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {availableStaff.map((staff) => (
+              <button
+                key={staff.id}
+                type="button"
+                draggable
+                onDragStart={(e) => e.dataTransfer.setData("text/plain", staff.id)}
+                className="cursor-grab rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary transition-all active:cursor-grabbing hover:bg-primary/10"
+              >
+                {staff.fullName} 👤
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <ul className="mt-4 flex flex-col gap-3">
         {departures.map((departure) => (
           <DepartureCard
@@ -156,6 +303,8 @@ export function DepartureBoard({
             shopSlug={shopSlug}
             timeZone={timeZone}
             crewed={crewed.has(departure.tripId)}
+            availableStaff={availableStaff}
+            updateCrewAction={updateCrewAction}
           />
         ))}
       </ul>

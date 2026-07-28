@@ -8,12 +8,16 @@ import {
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { AmbientGlareDetector } from "@/components/AmbientGlareDetector";
+import { MilestoneHaptics } from "@/components/MilestoneHaptics";
+import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
 import { Badge } from "@/components/ui/badge";
+import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
+import { rentalFitByBooking } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -65,6 +69,41 @@ export default async function TripManifestPage({
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
+
+  const fitMap = await rentalFitByBooking(db, shop.id, tripId);
+  const gearSummary: Record<string, number> = {};
+  for (const fit of fitMap.values()) {
+    if (!fit) continue;
+    if (fit.needsStaffFitAt) {
+      gearSummary["Needs Staff Fit ⚠"] = (gearSummary["Needs Staff Fit ⚠"] ?? 0) + 1;
+      continue;
+    }
+    if (fit.rentsBcd) {
+      const label = fit.bcdSize ? `BCD (${fit.bcdSize.toUpperCase()})` : "BCD";
+      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
+    }
+    if (fit.rentsRegulator) {
+      gearSummary.Regulator = (gearSummary.Regulator ?? 0) + 1;
+    }
+    if (fit.rentsWetsuit) {
+      const label = fit.wetsuitSize ? `Wetsuit (${fit.wetsuitSize.toUpperCase()})` : "Wetsuit";
+      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
+    }
+    if (fit.rentsMaskFins) {
+      const label = fit.finSize ? `Fins (${fit.finSize.toUpperCase()})` : "Mask/Fins";
+      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
+    }
+    if (fit.rentsDiveComputer) {
+      gearSummary["Dive Computer"] = (gearSummary["Dive Computer"] ?? 0) + 1;
+    }
+    if (fit.rentsGopro) {
+      gearSummary.GoPro = (gearSummary.GoPro ?? 0) + 1;
+    }
+    if (fit.rentsWeights) {
+      const label = fit.weightPreference ? `Weights (${fit.weightPreference})` : "Weights";
+      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
+    }
+  }
   const plannedDives = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDives);
   const checkpoint: RollCallCheckpoint =
@@ -285,6 +324,37 @@ export default async function TripManifestPage({
         </section>
       ) : null}
 
+      {Object.keys(gearSummary).length > 0 ? (
+        <section
+          id="deck-ready-rentals"
+          className="mt-8 rounded-2xl border border-border bg-surface-sunken p-5"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted">
+              Deck-Ready Rental Summary
+            </h2>
+            <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">
+              Preload Stage
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Stage this gear on the deck before divers arrive to keep boarding moving.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {Object.entries(gearSummary).map(([item, count]) => (
+              <div key={item} className="rounded-xl border border-border bg-surface p-3 shadow-sm">
+                <span className="text-xs font-semibold text-muted block truncate" title={item}>
+                  {item}
+                </span>
+                <span className="text-2xl font-black text-foreground mt-1 block tabular-nums">
+                  {count}x
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="mt-9">
         <h2 className="text-lg font-semibold">Crew</h2>
         {manifest.crew.length === 0 ? (
@@ -337,7 +407,7 @@ export default async function TripManifestPage({
                 : impliedNotBoarded
                   ? "border-l-4 border-dashed border-border-strong bg-surface-sunken/50 px-4 py-5 sm:px-5"
                   : ready
-                    ? "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-inset ring-warning/30 sm:px-5"
+                    ? "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-warning/30 sm:px-5"
                     : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5";
             // Not a Badge: the "explicitly not boarded" state needs a stronger,
             // higher-contrast fill than "still awaiting" so staff can tell at a
@@ -351,8 +421,8 @@ export default async function TripManifestPage({
             return (
               <li
                 key={diver.bookingId}
-                id={`roll-call-${diver.bookingId}`}
-                className={`${rowClass} transition-brand`}
+                id={`diver-row-${diver.bookingId}`}
+                className={`${rowClass} transition-all duration-300`}
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
@@ -456,6 +526,7 @@ export default async function TripManifestPage({
                             ? "border border-success bg-success/15 text-success"
                             : "bg-primary text-primary-foreground hover:bg-primary-hover"
                         }`}
+                        guestsHref={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
                       />
                     ) : null}
                     <RollCallButton
@@ -470,6 +541,7 @@ export default async function TripManifestPage({
                           ? "border border-border-strong bg-surface-sunken"
                           : "border border-border hover:bg-surface-sunken"
                       }`}
+                      guestsHref={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
                     />
                     {rc && !rc.implied ? (
                       <p className="text-xs text-muted">Tap the ✓ status again to undo.</p>
@@ -481,6 +553,19 @@ export default async function TripManifestPage({
           })}
         </ul>
       </section>
+
+      <MissingDiversGrid
+        divers={manifest.divers
+          .filter((diver) => !diver.rollCall)
+          .map((diver) => ({
+            bookingId: diver.bookingId,
+            fullName: diver.fullName,
+            rentsKit: diver.rentalFit.state === "rents",
+          }))}
+      />
+
+      <WaterLocker />
+      <MilestoneHaptics total={manifest.summary.totalDivers} boarded={manifest.summary.boarded} />
     </div>
   );
 }

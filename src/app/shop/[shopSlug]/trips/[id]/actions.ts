@@ -22,12 +22,14 @@ import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
+  changeTripCrew,
   extendTripSeries,
   getLatestSeriesInstance,
   getTripSeriesById,
   getTripWithBooked,
   setTripCrew,
   setTripStatus,
+  type TripCrewChange,
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
@@ -732,4 +734,21 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiresPayment: formData.get("requiresPayment") === "on",
   });
   revalidateAndRedirect(back, `${back}?notice=${saved ? "requirements" : "invalid"}`);
+}
+
+export async function updateTripCrewAction(
+  shopSlug: string,
+  tripId: string,
+  change: TripCrewChange,
+): Promise<{ ok: boolean }> {
+  const s = await requireStaffSession();
+  const db = await getDb();
+  const success = await changeTripCrew(db, s.user.shopId, tripId, change);
+  if (success) {
+    revalidatePath(`/shop/${shopSlug}`);
+    revalidatePath(`/shop/${shopSlug}/trips/${tripId}`);
+    revalidatePath(`/shop/${shopSlug}/trips/${tripId}/manifest`);
+    return { ok: true };
+  }
+  return { ok: false };
 }

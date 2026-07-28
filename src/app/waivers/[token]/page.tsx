@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import type { MedicalAnswers } from "@/db/schema";
+import { bookings, diveSites, type MedicalAnswers, tripDives, trips } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import {
   completeWaiver,
@@ -138,23 +139,65 @@ export default async function WaiverPage({
   const shopName = shop.name;
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
-    // The token knows its booking, so send them onward to their own readiness
-    // page rather than dead-ending on the shop home — that's where the rest of
-    // their pre-trip prep (payment, rentals, nitrox) lives. Minting a fresh
-    // readiness capability here (rather than trying to recall a prior one) is
-    // the same tradeoff issueBookingCapability always makes: only the hash of
-    // an issued token is ever kept.
+    const bookingId = requireTokenBookingId(state.record);
+    const booking = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    const diveSitesList: {
+      name: string;
+      description: string | null;
+      difficulty: string | null;
+      depthRange: string | null;
+      imageUrls: string[];
+    }[] = [];
+
+    if (booking?.tripId) {
+      const tripSites = await db
+        .select({
+          name: diveSites.name,
+          description: diveSites.description,
+          difficulty: diveSites.difficulty,
+          depthRange: diveSites.depthRange,
+          imageUrls: diveSites.imageUrls,
+        })
+        .from(trips)
+        .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+        .where(eq(trips.id, booking.tripId))
+        .limit(1);
+
+      const tripDiveSites = await db
+        .select({
+          name: diveSites.name,
+          description: diveSites.description,
+          difficulty: diveSites.difficulty,
+          depthRange: diveSites.depthRange,
+          imageUrls: diveSites.imageUrls,
+        })
+        .from(tripDives)
+        .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
+        .where(eq(tripDives.tripId, booking.tripId));
+
+      const seenNames = new Set<string>();
+      for (const site of [...tripSites, ...tripDiveSites]) {
+        if (!seenNames.has(site.name)) {
+          seenNames.add(site.name);
+          diveSitesList.push(site);
+        }
+      }
+    }
+
     const readyCapability = await issueBookingCapability(db, {
       shopId: state.record.shopId,
-      bookingId: requireTokenBookingId(state.record),
+      bookingId,
       purpose: "readiness",
     });
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-        {/* Shared with /ready and /recap's earned moment — this page hand-rolled
-            its own accent box before, which is how its heading size and missing
-            eyebrow drifted from theirs (design/principles.md #3). */}
         <EarnedMoment
           as="h1"
           eyebrow={shopName}
@@ -171,6 +214,49 @@ export default async function WaiverPage({
             </Link>
           ) : null}
         </EarnedMoment>
+
+        {diveSitesList.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold tracking-tight">Your scheduled dive sites</h2>
+            <p className="text-sm text-muted mt-1">
+              Here is a sneak peek at what you will explore on this charter:
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {diveSitesList.map((site) => (
+                <div
+                  key={site.name}
+                  className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
+                >
+                  {site.imageUrls && site.imageUrls.length > 0 ? (
+                    // biome-ignore lint/performance/noImgElement: standard img tag is preferred for dynamic external site images
+                    <img
+                      src={site.imageUrls[0]}
+                      alt={site.name}
+                      className="h-32 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-32 w-full bg-surface-sunken flex items-center justify-center text-3xl">
+                      🐠
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-bold text-base">{site.name}</h3>
+                    {(site.depthRange || site.difficulty) && (
+                      <p className="text-xs font-semibold text-primary mt-0.5">
+                        {site.depthRange ? `${site.depthRange}` : ""}
+                        {site.depthRange && site.difficulty ? " · " : ""}
+                        {site.difficulty ? `${site.difficulty}` : ""}
+                      </p>
+                    )}
+                    {site.description && (
+                      <p className="mt-2 text-sm text-muted line-clamp-3">{site.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     );
   }

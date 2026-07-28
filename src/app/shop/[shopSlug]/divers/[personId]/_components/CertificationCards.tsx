@@ -1,3 +1,4 @@
+import { DigitalCardFlip } from "@/components/DigitalCardFlip";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -124,16 +125,19 @@ export function CertificationCards({
                   {card.reviewNote ? (
                     <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
                   ) : null}
-                  {card.cardImageUrl ? (
-                    <a
-                      href={card.cardImageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
-                    >
-                      View card photo
-                    </a>
-                  ) : null}
+                  <details className="mt-2 group print:hidden">
+                    <summary className="cursor-pointer text-sm font-medium text-primary hover:underline">
+                      View digital card
+                    </summary>
+                    <DigitalCardFlip
+                      fullName={diver.person.fullName}
+                      agencyLabel={AGENCY_LABELS[card.agency]}
+                      levelLabel={CERTIFICATION_LEVEL_LABELS[card.level]}
+                      identifier={card.identifier}
+                      cardImageUrl={card.cardImageUrl}
+                      verificationStatus={display}
+                    />
+                  </details>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone(display)}>{CARD_STATUS_LABELS[display]}</Badge>
