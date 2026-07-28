@@ -113,4 +113,27 @@ describe("WaterLocker", () => {
 
     expect(screen.queryByText("Water Shield Active")).toBeNull();
   });
+
+  it("unlocks when the hold button is activated with the keyboard", () => {
+    vi.useFakeTimers();
+    render(<WaterLocker />);
+
+    act(() => {
+      window.dispatchEvent(
+        new TouchEvent("touchstart", {
+          touches: [
+            { clientX: 10, clientY: 10 } as Touch,
+            { clientX: 20, clientY: 20 } as Touch,
+            { clientX: 30, clientY: 30 } as Touch,
+          ],
+        }),
+      );
+    });
+
+    const button = screen.getByRole("button", { name: /hold/i });
+    act(() => fireEvent.keyDown(button, { key: " " }));
+    act(() => vi.advanceTimersByTime(2000));
+
+    expect(screen.queryByText("Water Shield Active")).toBeNull();
+  });
 });

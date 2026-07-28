@@ -22,12 +22,14 @@ import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
+  changeTripCrew,
   extendTripSeries,
   getLatestSeriesInstance,
   getTripSeriesById,
   getTripWithBooked,
   setTripCrew,
   setTripStatus,
+  type TripCrewChange,
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
@@ -737,11 +739,11 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
 export async function updateTripCrewAction(
   shopSlug: string,
   tripId: string,
-  crewIds: string[],
+  change: TripCrewChange,
 ): Promise<{ ok: boolean }> {
   const s = await requireStaffSession();
   const db = await getDb();
-  const success = await setTripCrew(db, s.user.shopId, tripId, crewIds);
+  const success = await changeTripCrew(db, s.user.shopId, tripId, change);
   if (success) {
     revalidatePath(`/shop/${shopSlug}`);
     revalidatePath(`/shop/${shopSlug}/trips/${tripId}`);

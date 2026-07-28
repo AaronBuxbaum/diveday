@@ -78,7 +78,7 @@ export function DigitalCardFlip({
               <img
                 src={cardImageUrl}
                 alt="Uploaded certification card"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
             ) : (
               <div className="flex flex-col items-center justify-between h-full w-full p-5 text-muted">
@@ -102,6 +102,16 @@ export function DigitalCardFlip({
           </div>
         </div>
       </button>
+      {cardImageUrl ? (
+        <a
+          href={cardImageUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 text-xs font-semibold text-primary underline underline-offset-2"
+        >
+          Open full-size card photo ↗
+        </a>
+      ) : null}
       <p className="mt-2 text-xs text-muted text-center">
         Tap the card to flip and view {cardImageUrl ? "the photo upload" : "security details"}
       </p>

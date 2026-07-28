@@ -122,11 +122,16 @@ jobs:
             pnpm exec playwright test
           fi
       - name: Regenerate visual baselines for comparison
+        id: regenerate_visuals
         if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         run: pnpm exec playwright test e2e/visual.spec.ts --update-snapshots --reporter=line
       - name: Commit visual baseline diffs to the pull-request branch
-        if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: >-
+          failure() && steps.regenerate_visuals.outcome == 'success' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
         env:
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |

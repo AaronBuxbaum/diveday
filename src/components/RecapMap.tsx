@@ -23,18 +23,29 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
   const maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
-  const latDiff = maxLat - minLat || 0.1;
-  const lngDiff = maxLng - minLng || 0.1;
+  const rawLatDiff = maxLat - minLat;
+  const rawLngDiff = maxLng - minLng;
+  const latPadding = rawLatDiff > 0 ? rawLatDiff * 0.25 : 0.1;
+  const lngPadding = rawLngDiff > 0 ? rawLngDiff * 0.25 : 0.1;
+  const plotMinLat = minLat - latPadding;
+  const plotMaxLat = maxLat + latPadding;
+  const plotMinLng = minLng - lngPadding;
+  const plotMaxLng = maxLng + lngPadding;
+  const latDiff = plotMaxLat - plotMinLat;
+  const lngDiff = plotMaxLng - plotMinLng;
   const padding = 50;
   const width = 450;
   const height = 280;
 
   const getXY = (lat: number, lng: number) => ({
-    x: padding + ((lng - minLng) / lngDiff) * (width - 2 * padding),
-    y: height - padding - ((lat - minLat) / latDiff) * (height - 2 * padding),
+    x: padding + ((lng - plotMinLng) / lngDiff) * (width - 2 * padding),
+    y: height - padding - ((lat - plotMinLat) / latDiff) * (height - 2 * padding),
   });
 
-  const dockXY = getXY(minLat - latDiff * 0.25, minLng - lngDiff * 0.25);
+  const dockXY = getXY(
+    minLat - rawLatDiff * 0.1 - (rawLatDiff === 0 ? latPadding * 0.5 : 0),
+    minLng - rawLngDiff * 0.1 - (rawLngDiff === 0 ? lngPadding * 0.5 : 0),
+  );
   let pathD = `M ${dockXY.x} ${dockXY.y}`;
   for (const site of mapSites) {
     const xy = getXY(site.forecastLatitude, site.forecastLongitude);

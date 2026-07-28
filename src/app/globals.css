@@ -501,11 +501,11 @@ summary {
   border-radius: 50%;
   background: radial-gradient(
     circle at 30% 30%,
-    rgba(255, 255, 255, 0.6) 0%,
-    rgba(244, 63, 94, 0.3) 70%,
-    rgba(244, 63, 94, 0.6) 100%
+    color-mix(in srgb, var(--surface) 60%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 30%, transparent) 70%,
+    color-mix(in srgb, var(--accent) 60%, transparent) 100%
   );
-  border: 1px solid rgba(244, 63, 94, 0.5);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   opacity: 0;
 }
 

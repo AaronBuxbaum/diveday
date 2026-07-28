@@ -108,6 +108,16 @@ export function WaterLocker() {
               startHold();
             }}
             onTouchEnd={cancelHold}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && !event.repeat) {
+                event.preventDefault();
+                startHold();
+              }
+            }}
+            onKeyUp={(event) => {
+              if (event.key === "Enter" || event.key === " ") cancelHold();
+            }}
+            onBlur={cancelHold}
             className="relative h-20 w-20 overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition-transform duration-100"
           >
             <div

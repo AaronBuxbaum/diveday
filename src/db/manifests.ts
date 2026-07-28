@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
@@ -11,21 +11,12 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
-import { utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
-import {
-  bookings,
-  people,
-  personRoles,
-  rollCallEvents,
-  shops,
-  tripAssignments,
-  trips,
-} from "./schema";
+import { bookings, people, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
 import { getTripRoster, getTripWithBooked } from "./trips";
 
 async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
@@ -139,63 +130,7 @@ export async function getTripManifests(
     endsAt: trip.endsAt,
     plannedDives: trip.plannedDives,
   };
-  const personIds = roster.map(({ person }) => person.id);
-  const [bookingCountsRows, shop] = await Promise.all([
-    personIds.length > 0
-      ? db
-          .select({
-            personId: bookings.personId,
-            count: sql<number>`count(*)::int`,
-          })
-          .from(bookings)
-          .where(and(inArray(bookings.personId, personIds), ne(bookings.status, "cancelled")))
-          .groupBy(bookings.personId)
-      : [],
-    db
-      .select({ timezone: shops.timezone })
-      .from(shops)
-      .where(eq(shops.id, shopId))
-      .limit(1)
-      .then((r) => r[0]),
-  ]);
-
-  const timezone = shop?.timezone ?? "UTC";
-  const bookingCountsByPerson = new Map(
-    bookingCountsRows.map((r) => [r.personId, r.count] as const),
-  );
-
   const diverInputs = roster.map(({ booking, person }) => {
-    const milestones: string[] = [];
-
-    // Birthday check
-    if (person.dateOfBirth) {
-      const parts = person.dateOfBirth.split("-");
-      if (parts.length === 3) {
-        const birthMonth = Number(parts[1]);
-        const birthDay = Number(parts[2]);
-        const wall = utcToWallTime(trip.startsAt, timezone);
-        if (wall.month === birthMonth && wall.day === birthDay) {
-          milestones.push("Birthday Trip 🎂");
-        }
-      }
-    }
-
-    // Booking count check
-    const count = bookingCountsByPerson.get(person.id) ?? 0;
-    if (count === 1) {
-      milestones.push("First Trip 🌟");
-    } else if (count === 5) {
-      milestones.push("5th Trip 🏅");
-    } else if (count === 10) {
-      milestones.push("10th Trip 🏆");
-    } else if (count === 25) {
-      milestones.push("25th Trip 👑");
-    } else if (count === 50) {
-      milestones.push("50th Trip 🧜‍♂️");
-    } else if (count >= 100) {
-      milestones.push("100+ Trips 🐋");
-    }
-
     return {
       bookingId: booking.id,
       fullName: person.fullName,
@@ -206,7 +141,6 @@ export async function getTripManifests(
       rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
-      milestones,
     };
   });
   // Carry a not-boarded result forward across the ordered checkpoints so an

@@ -110,7 +110,6 @@ export type ManifestDiverInput = {
    */
   medicalWaiver?: MedicalWaiverMark | null;
   rollCall?: RollCallRecord;
-  milestones?: string[];
 };
 
 export type RollCallRecord = {
