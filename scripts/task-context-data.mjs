@@ -248,6 +248,25 @@ export const areas = {
       "pnpm e2e -- --reporter=line",
     ],
   },
+  "brand-voice": {
+    goal: "Create consistent DiveDay brand, voice, visual, merch, and vendor collateral from the current identity.",
+    docs: [
+      "docs/design/brand.md",
+      "docs/design/principles.md",
+      "docs/product/vision.md",
+      "docs/product/marketing.md",
+    ],
+    code: ["src/app/globals.css", "src/app/layout.tsx", "src/components/Logo.tsx"],
+    tests: [],
+    invariants: [
+      "The product name is DiveDay: one word, two capitals.",
+      "Use the current lagoon, coral, sand, ocean, ink, and Geist system rather than inventing a parallel identity.",
+      "Coral is a restrained accent; feedback colors are not general brand colors.",
+      "Public and sales copy remains truthful and shipped-only under the marketing claims policy.",
+      "New brand directions are labeled proposed until product-owner approval.",
+    ],
+    validate: ["pnpm check:docs", "pnpm check:agents"],
+  },
   database: {
     goal: "Change persistence safely while preserving tenant, capacity, and transactional invariants.",
     docs: [

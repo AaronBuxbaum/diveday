@@ -71,7 +71,7 @@ adapters and must not introduce unique requirements.
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
 in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**,
-**design-review**, **schema-change**, **debug**, **e2e-and-visual**, **visual-triage**, **adr**,
+**design-review**, **brand-voice**, **schema-change**, **debug**, **e2e-and-visual**, **visual-triage**, **adr**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
 Other providers
 should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical
