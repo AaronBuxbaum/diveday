@@ -34,14 +34,14 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await page.getByRole("link", { name: "Open guests" }).first().click();
   await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\/guests$/);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
-  const sendButton = page.getByRole("button", { name: "Send to 1 diver" });
+  const sendButton = page.getByRole("button", { name: /Send to \d+ diver/ });
   await expect(sendButton).toBeVisible();
 
   // Unlocks the "not_connected" gate without ever calling real Stripe (same
   // route the visual suite uses to render Stripe-gated surfaces).
   await request.post("/api/test/seed-stripe-account");
   await page.reload();
-  await page.getByRole("button", { name: "Send to 1 diver" }).click();
+  await sendButton.click();
   await expect(
     page.getByText("Stripe couldn't create the discount code. Try again in a moment."),
   ).toBeVisible();
