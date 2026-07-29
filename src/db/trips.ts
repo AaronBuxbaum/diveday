@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -800,12 +801,37 @@ export async function setTripCrew(
   const valid = personIds.filter((id) => staff.some((s) => s.person.id === id));
   return db.transaction(async (tx) => {
     const [trip] = await tx
-      .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+      .select({
+        id: trips.id,
+        startsAt: trips.startsAt,
+        endsAt: trips.endsAt,
+        courseId: trips.courseId,
+      })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .limit(1)
       .for("update");
     if (!trip) return false;
+    if (trip.courseId) {
+      const [course] = await tx
+        .select()
+        .from(courses)
+        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, shopId)))
+        .limit(1);
+      const [{ bookedCount }] = await tx
+        .select({ bookedCount: count() })
+        .from(bookings)
+        .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+      const assigned = staff.filter((member) => valid.includes(member.person.id));
+      const instructors = assigned.filter((member) => member.roles.includes("instructor")).length;
+      if (instructors === 0) return false;
+      if (course?.agency === "padi" && !course.minimumCertificationLevel) {
+        const assistants = assigned.filter(
+          (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
+        ).length;
+        if (bookedCount > entryLevelCourseCapacity(instructors, assistants)) return false;
+      }
+    }
     const days = await tx
       .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
       .from(tripScheduleDays)
@@ -817,7 +843,7 @@ export async function setTripCrew(
         .select({ personId: tripAssignments.personId })
         .from(tripAssignments)
         .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-        .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+        .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
         .where(
           and(
             eq(trips.shopId, shopId),
@@ -826,8 +852,8 @@ export async function setTripCrew(
             or(
               ...proposedDays.map((day) =>
                 and(
-                  lt(tripScheduleDays.startsAt, day.endsAt),
-                  gt(tripScheduleDays.endsAt, day.startsAt),
+                  lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
+                  gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
                 ),
               ),
             ),
@@ -876,6 +902,50 @@ export async function changeTripCrew(
       .limit(1);
     if (!eligible) return false;
 
+    const [targetTrip] = await tx
+      .select({ courseId: trips.courseId })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!targetTrip) return false;
+    if (targetTrip.courseId) {
+      const current = await tx
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, tripId));
+      const proposed = new Set(current.map((row) => row.personId));
+      if (change.operation === "assign") proposed.add(change.personId);
+      else proposed.delete(change.personId);
+      const roles = proposed.size
+        ? await tx
+            .select({ personId: personRoles.personId, role: personRoles.role })
+            .from(personRoles)
+            .where(inArray(personRoles.personId, [...proposed]))
+        : [];
+      const instructors = new Set(
+        roles.filter((row) => row.role === "instructor").map((row) => row.personId),
+      );
+      if (instructors.size === 0) return false;
+      const [course] = await tx
+        .select()
+        .from(courses)
+        .where(and(eq(courses.id, targetTrip.courseId), eq(courses.shopId, shopId)))
+        .limit(1);
+      if (course?.agency === "padi" && !course.minimumCertificationLevel) {
+        const assistants = new Set(
+          roles
+            .filter((row) => row.role === "divemaster" && !instructors.has(row.personId))
+            .map((row) => row.personId),
+        );
+        const [{ bookedCount }] = await tx
+          .select({ bookedCount: count() })
+          .from(bookings)
+          .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+        if (bookedCount > entryLevelCourseCapacity(instructors.size, assistants.size)) return false;
+      }
+    }
+
     if (change.operation === "assign") {
       const proposedDays = await tx
         .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
@@ -894,7 +964,7 @@ export async function changeTripCrew(
         .select({ personId: tripAssignments.personId })
         .from(tripAssignments)
         .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-        .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+        .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
         .where(
           and(
             eq(trips.shopId, shopId),
@@ -903,8 +973,8 @@ export async function changeTripCrew(
             or(
               ...effectiveDays.map((day) =>
                 and(
-                  lt(tripScheduleDays.startsAt, day.endsAt),
-                  gt(tripScheduleDays.endsAt, day.startsAt),
+                  lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
+                  gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
                 ),
               ),
             ),

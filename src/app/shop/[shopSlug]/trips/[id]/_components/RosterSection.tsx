@@ -2,6 +2,8 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass } from "@/components/ui/form";
+import type { listBookingNotes } from "@/db/operations";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
@@ -80,6 +82,8 @@ export function RosterSection({
   markPaymentAction,
   removeBookingAction,
   confirmIdentityAction,
+  notesByBooking,
+  addNoteAction,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -99,6 +103,8 @@ export function RosterSection({
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
+  notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
+  addNoteAction: (formData: FormData) => void;
 }) {
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
   // How many divers still have a waiver a staffer can send or resend — the
@@ -400,6 +406,45 @@ export function RosterSection({
                     </SubmitButton>
                   </form>
                 </div>
+                <details className="mt-4 border-t border-border pt-4">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+                    Private staff notes ({notesByBooking.get(booking.id)?.length ?? 0})
+                  </summary>
+                  <div className="mt-2 grid gap-3">
+                    {(notesByBooking.get(booking.id) ?? []).map(({ note, authorName }) => (
+                      <div key={note.id} className="rounded-lg bg-surface-sunken px-3 py-2 text-sm">
+                        <p>{note.body}</p>
+                        <p className="mt-1 text-xs text-muted">
+                          {authorName} · {formatDateTimeTz(note.createdAt, "en-US", shopTimezone)}
+                        </p>
+                      </div>
+                    ))}
+                    <form action={addNoteAction} className="grid gap-2">
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <label htmlFor={`note-${booking.id}`} className="text-sm font-medium">
+                        Add a note only staff can see
+                      </label>
+                      <textarea
+                        id={`note-${booking.id}`}
+                        name="note"
+                        required
+                        maxLength={1000}
+                        rows={2}
+                        className={controlClass}
+                      />
+                      <SubmitButton
+                        pendingLabel="Adding…"
+                        className={buttonClass({
+                          variant: "secondary",
+                          size: "sm",
+                          className: "justify-self-start",
+                        })}
+                      >
+                        Add private note
+                      </SubmitButton>
+                    </form>
+                  </div>
+                </details>
               </li>
             );
           })}

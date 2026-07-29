@@ -42,6 +42,13 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByText("Walk-in Wanda")).toBeVisible();
   await expect(page.getByText("Full", { exact: true })).toBeVisible();
 
+  await page.getByText("Private staff notes (0)").click();
+  await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
+  await page.getByRole("button", { name: "Add private note" }).click();
+  await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
+  await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
+
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
   await addDiver.getByLabel("Name").fill("Waitlist Wally");
