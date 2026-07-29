@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
+  org: "diveday",
+  project: "diveday",
+
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 
