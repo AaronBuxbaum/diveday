@@ -24,11 +24,11 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    for structure, roadmap checkbox, ADR index.
 7. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
    PR with a summary and screenshots. Keep draft until CI is green.
-8. **Close the visual-triage loop** — pushing is not the end of the turn. A UI change that shifts
-   pixels fails `e2e/visual.spec.ts` on the same `e2e` CI job as everything else. Watch for that
-   failure (subscribe to the PR's activity, schedule a check-in if CI is still running) and run
-   the `visual-triage` skill — commit the regenerated baseline (its own labeled commit) for the
-   diffs your change explains, comment on the ones it doesn't. The PR is not done while a visual
-   failure is unexplained.
+8. **Close the visual loop** — pushing is not the end of the turn. A UI change that shifts pixels
+   makes the serialized visual job commit regenerated baselines as a separate
+   `ci: capture visual baseline diffs` commit when CI can push to the branch. Watch that commit and
+   the follow-up visual-only check; run the `visual-triage` skill for any red visual job, forked
+   PR, or diff the generated baseline commit does not explain. The PR is not done while a visual
+   diff or failure is unexplained.
 
 Definition of done: the checklist in `docs/engineering/workflow.md`. All boxes, no exceptions.

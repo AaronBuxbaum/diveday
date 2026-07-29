@@ -23,11 +23,12 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * phone 390, desktop 1280 — so the design-review PNGs and the regression
  * baselines share one definition of "phone" and "desktop".
  *
- * A pixel mismatch fails the test outright — there is no separate hosted
- * review step, so approving an intentional change means regenerating the
- * baseline and committing it as its own, clearly-labeled commit (see the
- * `visual-triage` skill), never folding it silently into the code change that
- * caused it.
+ * CI runs the serialized visual job once with snapshot updates enabled. A
+ * pixel mismatch becomes a baseline PNG diff that CI commits separately on
+ * same-repo branches; real Playwright errors still fail the job. There is no
+ * separate hosted review step, so approving an intentional change means
+ * reviewing that baseline-only commit (see the `visual-triage` skill), never
+ * folding it silently into the code change that caused it.
  *
  * Stability: these are captured full-page with nothing masked, so a
  * regression anywhere — including in a time or a date — is caught. That is

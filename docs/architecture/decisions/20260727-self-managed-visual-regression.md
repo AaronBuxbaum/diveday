@@ -36,27 +36,28 @@ baseline PNGs committed to the repo:
   CI; changing the rendering platform can require a coordinated baseline refresh. Measured size at
   158 screenshots: ~61 MB. Plain git handles this fine; Git LFS is a lever to pull later if growth
   outpaces that, not something needed on day one.
-- **No separate review step exists — a pixel mismatch fails the test outright**, in the dedicated
-  serialized visual CI job that owns the capture. The surrounding end-to-end coverage is sharded
-  independently for faster feedback. Approving an intentional change means regenerating the
-  baseline and committing the new PNG **as its own commit, separate from the code change that
-  caused it**.
-  This is the load-bearing replacement for what Argos's separate hosted approval enforced ("agents
-  cannot silently update a baseline in the same commit that regressed it," per the original ADR) —
-  losing that hosted separation without replacing it with a process rule would have reopened
-  exactly the failure mode Argos was chosen to prevent. GitHub's own image-diff viewer (2-up /
-  swipe / onion-skin, already rendered on any PR touching a binary PNG) is the review UI a human
-  uses to confirm that commit.
+- **No separate hosted review step exists.** The dedicated serialized visual CI job owns capture
+  and runs Playwright once with `--update-snapshots`; a pixel mismatch becomes a baseline PNG diff
+  instead of a failed step. On same-repo pull-request branches and direct `main` pushes, CI commits
+  those PNGs back as a separate `ci: capture visual baseline diffs` commit and lets the cheap
+  visual-only CI path rerun against that baseline-only change. Real Playwright failures still fail
+  the job, and forked PRs get an uploaded baseline artifact because CI cannot push to those
+  branches.
+  This separate generated commit is the load-bearing replacement for what Argos's hosted approval
+  enforced ("agents cannot silently update a baseline in the same commit that regressed it," per
+  the original ADR). GitHub's own image-diff viewer (2-up / swipe / onion-skin, already rendered
+  on any PR touching a binary PNG) is the review UI a human uses to confirm that commit.
 - `.claude/skills/argos-triage` is replaced by `visual-triage`: instead of calling a hosted API to
-  list a build's diffs, the skill checks out the branch and re-runs `e2e/visual.spec.ts` locally —
-  Playwright regenerates the same `expected`/`actual`/`diff` PNGs CI just produced, because the
-  baseline it diffs against is the same committed file in the same repo. `e2e-and-argos` is
-  renamed `e2e-and-visual` with the same content, minus Argos-specific API language.
+  list a build's diffs, the skill inspects the generated baseline commit or, for red/unpushable
+  runs, checks out the branch and re-runs `e2e/visual.spec.ts` locally. The baseline it diffs
+  against is the same committed file in the same repo. `e2e-and-argos` is renamed
+  `e2e-and-visual` with the same content, minus Argos-specific API language.
 - CI (`.github/workflows/ci.yml`) drops `ARGOS_TOKEN` entirely. Visual regression runs in a
-  dedicated macOS-hosted job while non-visual end-to-end coverage runs in parallel shards. A
-  pixel failure remains attached to the visual job that produced it. Baseline-only changes may
-  narrow the affected visual work, but the existing safeguards remain in force and no shard
-  should be treated as a substitute for repository checks.
+  dedicated macOS-hosted job while non-visual end-to-end coverage runs in parallel shards. Pixel
+  diffs are soft-handled as generated baseline commits; non-screenshot Playwright failures remain
+  attached to the visual job that produced them. Baseline-only changes narrow the affected
+  end-to-end work, but the existing safeguards remain in force and no shard should be treated as a
+  substitute for repository checks.
 - `.claude/settings.json`'s `mcp__Argos__*` tool allowlist is removed along with the dependency.
 
 ## Alternatives considered
@@ -85,16 +86,14 @@ baseline PNGs committed to the repo:
 - **No recurring cost.** GitHub Actions minutes for the marginal CI rerun a baseline-approval
   commit triggers are the only added spend; the dedicated visual job keeps that rerun scoped to
   visual work while non-visual end-to-end coverage remains independently sharded.
-- **Approving a diff now means pushing a commit, not clicking a button.** There's no "approve
-  without touching the branch" motion the way Argos's hosted UI allowed; every approval retriggers
-  CI. Mitigated by generating the new baseline from the already-produced `actual.png` (no wasted
-  recapture) and by triaging locally before pushing, so the pushed commit is expected to land
-  green on the first try.
+- **Approving a diff now means reviewing a generated commit, not clicking a button.** There's no
+  "approve without touching the branch" motion the way Argos's hosted UI allowed; CI pushes the
+  baseline commit when permissions allow, and that commit retriggers a scoped visual-only check.
 - **The discipline that prevents an agent from silently approving its own regression is now a
-  process rule** (baseline updates as their own labeled commit), not a system-enforced hosted
-  separation. This is weaker in the sense that nothing blocks an agent from violating it, and
-  stronger in the sense that it's visible in the git log forever, not gated behind an account only
-  humans can see into. The `visual-triage` skill's pitfalls section calls this out explicitly.
+  git-history rule** (baseline updates as their own labeled commit), not a system-enforced hosted
+  separation. This is weaker in the sense that nothing blocks an agent from ignoring the PNG diff,
+  and stronger in the sense that it's visible in the git log forever, not gated behind an account
+  only humans can see into. The `visual-triage` skill's pitfalls section calls this out explicitly.
 - **Baselines are now part of the repo.** ~61 MB at 158 screenshots today; each accepted visual PR
   adds roughly the size of the surfaces it actually changed (typically a handful of files, not all
   158). Plain git handles this comfortably for the foreseeable future; Git LFS remains the next

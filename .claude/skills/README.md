@@ -19,7 +19,7 @@ under the same sync duties (docs/README.md).
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
 | `e2e-and-visual` | Adding/changing a user-facing flow or surface; a visual baseline diffing on time; deciding what needs an e2e spec or a visual snapshot |
-| `visual-triage` | Whenever `e2e/visual.spec.ts` fails in CI or locally — decide which screenshot changes are expected and commit updated baselines, or leave the rest failing with an explanation |
+| `visual-triage` | Whenever CI generates visual baseline diffs or `e2e/visual.spec.ts` fails — decide which screenshot changes are expected and explain or fix the rest |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |

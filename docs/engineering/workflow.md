@@ -24,12 +24,13 @@ How to build anything here. Written for AI agents; humans may follow along.
    (`adr` skill); new domain term → glossary.
 6. **Ship** — commit (imperative subject, body says why), push, keep the PR draft until CI is
    green and the checklist below passes.
-7. **Triage any visual failure** — a UI change that shifts pixels fails `e2e/visual.spec.ts` on
-   one of the macOS-hosted, parallelized/sharded CI jobs. Watch for that failure and run the
-   `visual-triage` skill: commit the regenerated baseline (its own labeled commit) for what your
-   diff explains, comment on what it doesn't. Keep baselines aligned with the macOS rendering
-   platform; do not fold a platform-wide baseline refresh into the code change. Don't end the
-   session's responsibility at "pushed".
+7. **Account for visual diffs** — the serialized visual job runs `e2e/visual.spec.ts` once with
+   snapshot updates enabled. On same-repo branches, screenshot diffs are committed back as a
+   separate `ci: capture visual baseline diffs` commit and the cheap visual-only CI path reruns.
+   Review that PNG commit for what your diff explains. If the visual job stays red, run the
+   `visual-triage` skill and comment on what is unexplained or could not be pushed. Keep baselines
+   aligned with the macOS rendering platform; do not fold a platform-wide baseline refresh into
+   the code change. Don't end the session's responsibility at "pushed".
 
 ## Definition of done
 
@@ -38,9 +39,8 @@ How to build anything here. Written for AI agents; humans may follow along.
 - [ ] UI seen in browser, light + dark; design checklist passes for user-facing changes
 - [ ] Docs/ADR/glossary updated in the same PR
 - [ ] No leftover debug code, no `biome-ignore` without a reason string
-- [ ] Any `e2e/visual.spec.ts` failure on the pushed head triaged (`visual-triage` skill) in the
-      dedicated visual job — baseline regenerated and committed separately, or left red with a
-      comment for the human
+- [ ] Any generated visual-baseline commit reviewed for expected diffs; any red
+      `e2e/visual.spec.ts` result triaged (`visual-triage` skill) with a comment for the human
 
 ## Rules
 

@@ -101,13 +101,14 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave
   it red for someone else. See **Parallel work** first: check for an in-flight fix on the same
   test before starting your own, so two sessions don't race to patch it.
-- **A pushed PR is not done until its visual failures are triaged.** A UI change that shifts
-  pixels fails `e2e/visual.spec.ts` on one of the macOS-hosted, parallelized/sharded CI jobs —
-  there's no separate approval step to wait on. Run the **visual-triage** skill on any red visual
-  assertion: commit the regenerated baseline (as its own labeled commit) for what your diff
-  explains, leave it failing with a comment for what it doesn't. Keep committed baselines aligned
-  with the macOS rendering platform and treat a platform-wide refresh as a separate change. Never
-  end the session leaving that failure unexplained.
+- **A pushed PR is not done until visual diffs are accounted for.** CI's serialized visual job
+  soft-handles screenshot diffs on same-repo branches by committing regenerated baselines as a
+  separate `ci: capture visual baseline diffs` commit, then rerunning the cheap visual-only path.
+  Review that PNG commit for what your code explains. A red visual job means Playwright had a real
+  failure, the branch could not be pushed to, or a diff still needs human judgment; run the
+  **visual-triage** skill and leave a comment for anything unexplained. Keep committed baselines
+  aligned with the macOS rendering platform and treat a platform-wide refresh as a separate change.
+  Never end the session leaving a visual diff or failure unexplained.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings

@@ -81,6 +81,7 @@ moves. If something else moves, that's the nondeterminism to fix.
 - New/changed flow has an e2e spec (happy + failure path); new/changed surface has a visual
   snapshot in `visual.spec.ts`.
 - `pnpm check` green (includes `check:clock`); `pnpm e2e` green.
-- Intentional visual changes are called out in the PR, with the regenerated baseline committed as
-  its own labeled commit (see the `visual-triage` skill) so the reviewer can see exactly what
+- Intentional visual changes are called out in the PR. CI normally commits regenerated baselines
+  as their own `ci: capture visual baseline diffs` commit; review that commit (or run the
+  `visual-triage` skill when CI cannot push or stays red) so the reviewer can see exactly what
   changed via GitHub's image-diff viewer.
