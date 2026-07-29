@@ -5,7 +5,7 @@ import {
   isValidLastMinuteDiscountPercent,
   lastMinuteEntryMatchesTripDate,
 } from "@/lib/last-minute-list";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import {
   type PromotionProvider,
   promotionProviderFromEnvironment,
@@ -14,6 +14,7 @@ import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { listLastMinuteList } from "./last-minute-list";
+import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { type TripLastMinutePromo, tripLastMinutePromos } from "./schema";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -115,35 +116,32 @@ export async function sendLastMinuteDealBlast(
 
   let sentCount = 0;
   if (bookingUrl) {
-    await Promise.all(
-      matches.map(async ({ person }) => {
-        // Checked non-null above (Boolean(person.email)); TS can't see that
-        // through the filter closure, so re-narrow here.
-        if (!person.email) return;
-        try {
-          const delivery = await notify({
-            kind: "last_minute_deal",
-            shopId: input.shopId,
-            to: person.email,
-            diverName: person.fullName,
-            shopName: shop.name,
-            tripTitle: tripRow.title,
-            startsAt: tripRow.startsAt,
-            endsAt: tripRow.endsAt,
-            timezone: shop.timezone,
-            discountPercent: input.discountPercent,
-            code,
-            bookingUrl,
-            expiresAt: tripRow.startsAt,
-          });
-          if (delivery.status === "sent") sentCount += 1;
-        } catch {
-          // Best-effort, like every other blast/reminder send in this codebase
-          // — one failed address must never abort the rest of the blast.
-          console.error("Last-minute deal email could not be sent", { promoId: pendingRow.id });
-        }
-      }),
+    const deliveries = await sendNotificationBatch(
+      db,
+      matches.flatMap(({ person }) =>
+        person.email
+          ? [
+              {
+                kind: "last_minute_deal" as const,
+                shopId: input.shopId,
+                to: person.email,
+                diverName: person.fullName,
+                shopName: shop.name,
+                tripTitle: tripRow.title,
+                startsAt: tripRow.startsAt,
+                endsAt: tripRow.endsAt,
+                timezone: shop.timezone,
+                discountPercent: input.discountPercent,
+                code,
+                bookingUrl,
+                expiresAt: tripRow.startsAt,
+              },
+            ]
+          : [],
+      ),
+      notificationProviderForDb(db),
     );
+    sentCount = deliveries.filter((delivery) => delivery.status === "sent").length;
   }
 
   await db

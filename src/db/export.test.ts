@@ -85,6 +85,8 @@ const FOLDED_TABLES = [
 const EXCLUDED_TABLES = [
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
+  "notification_send_queue", // operational retry state, not shop records
+  "notification_rate_limit_state", // provider coordination, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   "booking_checkouts", // payment attempts; outcomes live in bookings/orders
   "booking_checkout_bookings",

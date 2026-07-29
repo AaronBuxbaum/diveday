@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sendDueCheckoutRecoveries } from "@/db/checkout-recovery";
 import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
+import { drainNotificationRetries } from "@/db/notifications";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
@@ -58,6 +59,7 @@ export async function GET(request: Request) {
     return new NextResponse(null, { status: 401 });
   }
   const db = await getDb();
+  const notificationRetries = await drainNotificationRetries(db);
   const reminders = await sendDueReminders(db);
   const recaps = await sendDueRecaps(db);
   const checkoutRecoveries = await sendDueCheckoutRecoveries(db);
@@ -66,5 +68,12 @@ export async function GET(request: Request) {
   // grow the database without bound (ADR 20260724-per-visitor-demo-shops).
   const maxAgeMs = demoShopMaxAgeMs();
   const demoShops = await reapExpiredDemoShops(db, maxAgeMs ? { maxAgeMs } : {});
-  return NextResponse.json({ reminders, recaps, checkoutRecoveries, mediaDeletions, demoShops });
+  return NextResponse.json({
+    notificationRetries,
+    reminders,
+    recaps,
+    checkoutRecoveries,
+    mediaDeletions,
+    demoShops,
+  });
 }

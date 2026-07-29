@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
+import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
 /**
@@ -792,6 +793,14 @@ export const notificationDeliveryStatus = pgEnum("notification_delivery_status",
   "not_configured",
 ]);
 
+/** Durable retry state for transient provider failures. */
+export const notificationQueueStatus = pgEnum("notification_queue_status", [
+  "queued",
+  "processing",
+  "sent",
+  "failed",
+]);
+
 /**
  * What the provider later said happened to a message we already handed over —
  * a different question from `notification_delivery_status`, which only records
@@ -831,6 +840,10 @@ export const notificationDeliveries = pgTable(
     providerStatusAt: timestamp("provider_status_at", { withTimezone: true }),
     /** The provider's own explanation for a bounce or failure, shown to staff verbatim. */
     providerDetail: text("provider_detail"),
+    /** HTTP-level explanation from our send attempt, before provider webhooks exist. */
+    sendHttpStatus: integer("send_http_status"),
+    sendErrorCode: text("send_error_code"),
+    sendError: text("send_error"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -864,6 +877,9 @@ export const notificationDeliveryAttempts = pgTable(
     kind: notificationKind("kind").notNull(),
     status: notificationDeliveryStatus("status").notNull(),
     providerMessageId: text("provider_message_id"),
+    sendHttpStatus: integer("send_http_status"),
+    sendErrorCode: text("send_error_code"),
+    sendError: text("send_error"),
     /** True when a staff member re-triggered the send from the dashboard. */
     isRetry: boolean("is_retry").notNull().default(false),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
@@ -874,6 +890,47 @@ export const notificationDeliveryAttempts = pgTable(
     index("notification_delivery_attempts_shop_attempted_idx").on(table.shopId, table.attemptedAt),
   ],
 );
+
+/**
+ * Retryable outbound notifications. The payload is the validated application
+ * notification, not provider-specific JSON, so a later worker can render it
+ * again and keep the idempotency boundary stable across process restarts.
+ */
+export const notificationSendQueue = pgTable(
+  "notification_send_queue",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    payload: jsonb("payload").$type<Notification>().notNull(),
+    status: notificationQueueStatus("status").notNull().default("queued"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull(),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    providerMessageId: text("provider_message_id"),
+    httpStatus: integer("http_status"),
+    errorCode: text("error_code"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("notification_send_queue_due_idx").on(
+      table.status,
+      table.nextAttemptAt,
+      table.lockedUntil,
+    ),
+    index("notification_send_queue_shop_status_idx").on(table.shopId, table.status),
+  ],
+);
+
+/** Singleton team-wide permit clock; Resend rate limits are team-scoped. */
+export const notificationRateLimitState = pgTable("notification_rate_limit_state", {
+  key: text("key").primaryKey(),
+  nextAllowedAt: timestamp("next_allowed_at", { withTimezone: true }).notNull(),
+});
 
 /**
  * One connected Stripe account per shop (Connect, Standard — the shop's own

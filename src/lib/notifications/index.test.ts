@@ -12,7 +12,7 @@ const booking = {
   kind: "booking_confirmation" as const,
   bookingId: "00000000-0000-4000-8000-000000000001",
   shopId: "00000000-0000-4000-8000-000000000010",
-  to: "nora@example.com",
+  to: "delivered+booking@resend.dev",
   diverName: "Nora Quinn",
   shopName: "Blue Mantis",
   tripTitle: "Two-Tank Reef",
@@ -66,7 +66,7 @@ describe("notify", () => {
     );
     const request = fetchImpl.mock.calls[0]?.[1];
     expect(JSON.parse(String(request?.body))).toMatchObject({
-      to: ["nora@example.com"],
+      to: ["delivered+booking@resend.dev"],
       subject: "You're on the boat — Two-Tank Reef",
     });
   });
@@ -103,7 +103,108 @@ describe("notify", () => {
       vi.fn().mockResolvedValue(new Response("bad sender", { status: 422 })),
     );
 
-    await expect(notify(booking, provider)).resolves.toEqual({ status: "failed" });
+    await expect(notify(booking, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: false,
+      httpStatus: 422,
+    });
+  });
+
+  it("retries a 429 using Retry-After and keeps the idempotency key", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { code: "rate_limit_exceeded" } }), {
+          status: 429,
+          headers: { "Retry-After": "2" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "resend-after-429" }), { status: 200 }),
+      );
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+      { beforeRequest: vi.fn().mockResolvedValue(undefined), sleep, maxAttempts: 2 },
+    );
+
+    await expect(notify(booking, provider)).resolves.toEqual({
+      status: "sent",
+      providerMessageId: "resend-after-429",
+    });
+    expect(sleep).toHaveBeenCalledWith(2_000);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toMatchObject({
+      "Idempotency-Key": "booking-confirmation/00000000-0000-4000-8000-000000000001",
+    });
+    expect(fetchImpl.mock.calls[1]?.[1]?.headers).toMatchObject({
+      "Idempotency-Key": "booking-confirmation/00000000-0000-4000-8000-000000000001",
+    });
+  });
+
+  it("sends a batch and maps Resend ids back to the input order", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ id: "batch-1" }, { id: "batch-2" }] }), {
+        status: 200,
+      }),
+    );
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+      { beforeRequest: vi.fn().mockResolvedValue(undefined) },
+    );
+    const second = { ...booking, to: "delivered+second@resend.dev" };
+
+    await expect(provider.sendBatch?.([booking, second])).resolves.toEqual([
+      { status: "sent", providerMessageId: "batch-1" },
+      { status: "sent", providerMessageId: "batch-2" },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.resend.com/emails/batch",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toHaveLength(2);
+  });
+
+  it("rejects reserved test domains locally without calling Resend", async () => {
+    const fetchImpl = vi.fn();
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(notify({ ...booking, to: "nora@example.com" }, provider)).resolves.toEqual({
+      status: "failed",
+      retryable: false,
+      errorCode: "invalid_test_recipient",
+      detail: expect.stringContaining("example.com"),
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("keeps reserved test recipients out of a mixed batch", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ data: [{ id: "batch-valid" }] }), { status: 200 }),
+      );
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+      { beforeRequest: vi.fn().mockResolvedValue(undefined) },
+    );
+
+    await expect(
+      provider.sendBatch?.([
+        { ...booking, to: "nora@example.com" },
+        { ...booking, to: "delivered@resend.dev" },
+      ]),
+    ).resolves.toEqual([
+      expect.objectContaining({ errorCode: "invalid_test_recipient", retryable: false }),
+      { status: "sent", providerMessageId: "batch-valid" },
+    ]);
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toHaveLength(1);
   });
 
   it("uses the waiver record as the idempotency boundary for a private link", async () => {
@@ -122,7 +223,7 @@ describe("notify", () => {
           waiverRecordId: "00000000-0000-4000-8000-000000000002",
           bookingId: "00000000-0000-4000-8000-000000000001",
           shopId: "00000000-0000-4000-8000-000000000010",
-          to: "nora@example.com",
+          to: "delivered+waiver@resend.dev",
           diverName: "Nora Quinn",
           shopName: "Blue Mantis",
           tripTitle: "Two-Tank Reef",
@@ -161,7 +262,7 @@ describe("notify", () => {
           kind: "waitlist_invite",
           waitlistEntryId: "00000000-0000-4000-8000-000000000003",
           shopId: "00000000-0000-4000-8000-000000000010",
-          to: "nora@example.com",
+          to: "delivered+waitlist@resend.dev",
           diverName: "Nora Quinn",
           shopName: "Blue Mantis",
           tripTitle: "Two-Tank Reef",
@@ -211,7 +312,7 @@ describe("notify", () => {
           kind: "welcome",
           userAccountId: "00000000-0000-4000-8000-000000000020",
           shopId: "00000000-0000-4000-8000-000000000010",
-          to: "owner@example.com",
+          to: "delivered+welcome@resend.dev",
           ownerName: "Pat Diver",
           shopName: "Blue Mantis",
           signInUrl: "https://diveday.example/sign-in",
@@ -246,7 +347,7 @@ describe("notify", () => {
           userAccountId: "00000000-0000-4000-8000-000000000020",
           tokenId: "00000000-0000-4000-8000-000000000030",
           shopId: "00000000-0000-4000-8000-000000000010",
-          to: "owner@example.com",
+          to: "delivered+verification@resend.dev",
           ownerName: "Pat Diver",
           verifyUrl: "https://diveday.example/verify/raw-token-should-not-appear",
           expiresAt: new Date("2026-07-29T12:00:00.000Z"),
@@ -279,7 +380,7 @@ describe("notify", () => {
           userAccountId: "00000000-0000-4000-8000-000000000020",
           tokenId: "00000000-0000-4000-8000-000000000031",
           shopId: "00000000-0000-4000-8000-000000000010",
-          to: "owner@example.com",
+          to: "delivered+reset@resend.dev",
           ownerName: "Pat Diver",
           resetUrl: "https://diveday.example/reset-password/raw-token-should-not-appear",
           expiresAt: new Date("2026-07-26T13:00:00.000Z"),
@@ -316,7 +417,7 @@ describe("notify", () => {
           kind: "password_changed",
           userAccountId: "00000000-0000-4000-8000-000000000020",
           shopId: "00000000-0000-4000-8000-000000000010",
-          to: "owner@example.com",
+          to: "delivered+changed@resend.dev",
           ownerName: "Pat Diver",
           changedAt: new Date("2026-07-26T13:00:00.000Z"),
         },

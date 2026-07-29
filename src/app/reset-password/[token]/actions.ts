@@ -7,10 +7,11 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
+import { sendNotification } from "@/db/notifications";
 import { getAccountContact, setAccountPassword } from "@/db/user-accounts";
 import { signIn } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/onboarding";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -71,7 +72,7 @@ export async function submitPasswordReset(token: string, formData: FormData) {
   // (security review finding).
   const origin = publicAppUrl();
   after(async () => {
-    await notify({
+    await sendNotification(db, {
       kind: "password_changed",
       userAccountId: claimed.userAccountId,
       shopId: account.shopId,

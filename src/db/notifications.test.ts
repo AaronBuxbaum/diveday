@@ -1,14 +1,21 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
+import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   applyProviderEmailEvent,
+  drainNotificationRetries,
   listDeliveryAttempts,
   listNotificationDeliveryIssues,
   recordNotificationDelivery,
+  reserveResendRequest,
   retryBookingConfirmation,
+  sendNotification,
 } from "./notifications";
+import { notificationRateLimitState, notificationSendQueue } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -27,18 +34,88 @@ async function seededBooking() {
 }
 
 describe("notification delivery status", () => {
+  it("reserves team-wide Resend permits across concurrent workers", async () => {
+    const { db } = await seededBooking();
+    const before = nowDate().getTime();
+    await Promise.all([reserveResendRequest(db), reserveResendRequest(db)]);
+    const [state] = await db.select().from(notificationRateLimitState);
+    expect(state?.key).toBe("resend");
+    expect(state?.nextAllowedAt.getTime()).toBeGreaterThan(before + 150);
+  });
+
+  it("queues a retryable provider failure and drains it later", async () => {
+    const { db, shop, booking } = await seededBooking();
+    const notification: Notification = {
+      kind: "booking_confirmation",
+      bookingId: booking.bookingId,
+      shopId: shop.id,
+      to: "nora@example.com",
+      diverName: "Nora Quinn",
+      shopName: shop.name,
+      tripTitle: "Two-Tank Reef",
+      startsAt: new Date("2026-08-01T12:00:00.000Z"),
+      endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      timezone: shop.timezone,
+    };
+    let attempts = 0;
+    const provider: NotificationProvider = {
+      async send() {
+        attempts += 1;
+        return attempts === 1
+          ? ({
+              status: "failed",
+              retryable: true,
+              httpStatus: 429,
+              retryAfterMs: 1,
+            } satisfies NotificationDelivery)
+          : { status: "sent", providerMessageId: "retry-success" };
+      },
+    };
+
+    await expect(sendNotification(db, notification, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: true,
+    });
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({
+      scanned: 1,
+      sent: 1,
+    });
+    expect(attempts).toBe(2);
+    await expect(
+      db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
+    ).resolves.toMatchObject([{ status: "sent", providerMessageId: "retry-success" }]);
+  });
+
   it("shows a failed booking email on the shop dashboard query", async () => {
     const { db, shop, trip, booking } = await seededBooking();
     await recordNotificationDelivery(db, {
       shopId: shop.id,
       bookingId: booking.bookingId,
       kind: "booking_confirmation",
-      delivery: { status: "failed" },
+      delivery: {
+        status: "failed",
+        retryable: true,
+        httpStatus: 429,
+        errorCode: "rate_limit_exceeded",
+        detail: "slow down",
+      },
     });
 
     await expect(listNotificationDeliveryIssues(db, shop.id)).resolves.toMatchObject([
       {
-        delivery: { kind: "booking_confirmation", status: "failed" },
+        // Send diagnostics are distinct from later provider webhook outcomes.
+        delivery: {
+          kind: "booking_confirmation",
+          status: "failed",
+          sendHttpStatus: 429,
+          sendErrorCode: "rate_limit_exceeded",
+          sendError: "slow down",
+        },
         person: { fullName: "Nora Quinn" },
         trip: { id: trip.id },
       },

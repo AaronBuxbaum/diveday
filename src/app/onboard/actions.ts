@@ -7,10 +7,11 @@ import { after } from "next/server";
 import { AuthError } from "next-auth";
 import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
+import { sendNotification } from "@/db/notifications";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { signIn } from "@/lib/auth";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -160,7 +161,7 @@ export async function onboardAction(formData: FormData) {
     // The founder alert needs no link, so it doesn't wait on APP_HOST being
     // configured the way the owner-facing mail below does.
     after(async () => {
-      await notify({
+      await sendNotification(await getDb(), {
         kind: "new_account_alert",
         userAccountId: accountId,
         shopId,
@@ -179,7 +180,7 @@ export async function onboardAction(formData: FormData) {
           userAccountId: accountId,
           purpose: "email_verification",
         }).catch(() => null);
-        await notify({
+        await sendNotification(db, {
           kind: "welcome",
           userAccountId: accountId,
           shopId,
@@ -189,7 +190,7 @@ export async function onboardAction(formData: FormData) {
           signInUrl: new URL("/sign-in", `${origin}/`).toString(),
         }).catch(() => ({ status: "failed" as const }));
         if (issued) {
-          await notify({
+          await sendNotification(db, {
             kind: "email_verification",
             userAccountId: accountId,
             tokenId: issued.tokenId,

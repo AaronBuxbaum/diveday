@@ -1,15 +1,11 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
 import { nowDate } from "@/lib/clock";
-import {
-  type NotificationDelivery,
-  type NotificationProvider,
-  notificationProviderFromEnvironment,
-  notify,
-} from "@/lib/notifications";
+import type { NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "./checkouts";
 import type { AppDb } from "./client";
+import { notificationProviderForDb, sendNotification } from "./notifications";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -104,7 +100,7 @@ export async function sendDueCheckoutRecoveries(
   options: SendDueCheckoutRecoveriesOptions = {},
 ): Promise<CheckoutRecoveryRunSummary> {
   const now = options.now ?? nowDate();
-  const emailProvider = options.emailProvider ?? notificationProviderFromEnvironment();
+  const emailProvider = notificationProviderForDb(db, options.emailProvider);
   const checkoutProvider = options.checkoutProvider ?? checkoutProviderFromEnvironment();
   const staleBefore = new Date(now.getTime() - RECOVERY_DELAY_HOURS * HOUR_MS);
 
@@ -298,7 +294,8 @@ export async function sendDueCheckoutRecoveries(
 
     let delivery: NotificationDelivery;
     if (checkout.customerEmail) {
-      delivery = await notify(
+      delivery = await sendNotification(
+        db,
         {
           kind: "checkout_recovery",
           checkoutId: checkout.id,

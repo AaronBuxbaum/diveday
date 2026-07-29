@@ -3,13 +3,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassurance, forecastLine } from "@/lib/night-before-brief";
-import {
-  type NotificationDelivery,
-  type NotificationProvider,
-  notificationProviderFromEnvironment,
-  notify,
-  publicAppUrl,
-} from "@/lib/notifications";
+import { type Notification, type NotificationProvider, publicAppUrl } from "@/lib/notifications";
 import {
   notifySms,
   type SmsProvider,
@@ -25,7 +19,11 @@ import {
 } from "@/lib/reminders";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
-import { recordNotificationDelivery } from "./notifications";
+import {
+  notificationProviderForDb,
+  recordNotificationDelivery,
+  sendNotificationBatch,
+} from "./notifications";
 import { getBookingReadinessDetail } from "./readiness";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
 
@@ -126,7 +124,7 @@ export async function sendDueReminders(
   options: SendDueRemindersOptions = {},
 ): Promise<ReminderRunSummary> {
   const now = options.now ?? nowDate();
-  const emailProvider = options.emailProvider ?? notificationProviderFromEnvironment();
+  const emailProvider = notificationProviderForDb(db, options.emailProvider);
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const horizon = new Date(now.getTime() + MAX_REMINDER_LEAD_HOURS * HOUR_MS);
@@ -171,6 +169,22 @@ export async function sendDueReminders(
   // Who has dived with the shop before — a night-before brief speaks to a
   // first-timer (anyone NOT in this set) in a softer voice (brainstorm C).
   const returning = await returningDiverIds(db, [...new Set(rows.map((r) => r.person.id))], now);
+
+  const emailWork: Array<{
+    bookingId: string;
+    shopId: string;
+    kind: ReminderKind;
+    phone: string | null;
+    smsBody: string;
+    notification: Notification;
+  }> = [];
+  const smsWork: Array<{
+    bookingId: string;
+    shopId: string;
+    kind: ReminderKind;
+    phone: string;
+    smsBody: string;
+  }> = [];
 
   for (const { booking, person, trip, shop } of rows) {
     const cadence = dueReminder({
@@ -240,10 +254,14 @@ export async function sendDueReminders(
       whoToText,
     });
 
-    let delivery: NotificationDelivery;
     if (person.email) {
-      delivery = await notify(
-        {
+      emailWork.push({
+        bookingId: booking.id,
+        shopId: shop.id,
+        kind: cadence.kind,
+        phone,
+        smsBody,
+        notification: {
           kind: cadence.kind,
           bookingId: booking.id,
           shopId: shop.id,
@@ -260,26 +278,61 @@ export async function sendDueReminders(
           readinessUrl,
           ...(brief ? { brief } : {}),
         },
-        emailProvider,
-      );
-      // A textable phone gets a courtesy SMS only when the email actually sent,
-      // so the once-per-booking dedup row keeps it from re-firing next run.
-      if (delivery.status === "sent" && phone) {
-        await notifySms({ channel: "sms", to: phone, body: smsBody }, smsProvider);
-      }
+      });
     } else if (phone) {
-      // Phone-only diver: SMS is the tracked channel. SmsDelivery is the same
-      // shape as NotificationDelivery, so it records through the same seam.
-      delivery = await notifySms({ channel: "sms", to: phone, body: smsBody }, smsProvider);
+      smsWork.push({
+        bookingId: booking.id,
+        shopId: shop.id,
+        kind: cadence.kind,
+        phone,
+        smsBody,
+      });
     } else {
       // No reachable channel — record it so staff can see the gap.
-      delivery = { status: "not_configured" };
+      await recordNotificationDelivery(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        kind: cadence.kind,
+        delivery: { status: "not_configured" },
+      });
+      summary.failed += 1;
     }
+  }
 
+  const emailDeliveries = await sendNotificationBatch(
+    db,
+    emailWork.map((work) => work.notification),
+    emailProvider,
+  );
+  for (let index = 0; index < emailWork.length; index += 1) {
+    const work = emailWork[index];
+    const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
+    // A textable phone gets a courtesy SMS only when the email actually sent,
+    // so the once-per-booking dedup row keeps it from re-firing next run.
+    if (delivery.status === "sent" && work.phone) {
+      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
+    }
     await recordNotificationDelivery(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      kind: cadence.kind,
+      shopId: work.shopId,
+      bookingId: work.bookingId,
+      kind: work.kind,
+      delivery,
+    });
+    if (delivery.status === "sent") summary.sent += 1;
+    else summary.failed += 1;
+  }
+
+  for (const work of smsWork) {
+    // Phone-only diver: SMS is the tracked channel. SmsDelivery is the same
+    // shape as NotificationDelivery, so it records through the same seam.
+    const delivery = await notifySms(
+      { channel: "sms", to: work.phone, body: work.smsBody },
+      smsProvider,
+    );
+    await recordNotificationDelivery(db, {
+      shopId: work.shopId,
+      bookingId: work.bookingId,
+      kind: work.kind,
       delivery,
     });
     if (delivery.status === "sent") summary.sent += 1;

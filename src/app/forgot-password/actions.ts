@@ -5,9 +5,10 @@ import { after } from "next/server";
 import { z } from "zod";
 import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
+import { sendNotification } from "@/db/notifications";
 import { findActiveAccountByEmail } from "@/db/user-accounts";
 import { resetPasswordLinkPath } from "@/lib/account-tokens";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -51,7 +52,7 @@ export async function requestPasswordReset(formData: FormData) {
         userAccountId: account.id,
         purpose: "password_reset",
       });
-      await notify({
+      await sendNotification(db, {
         kind: "password_reset_request",
         userAccountId: account.id,
         tokenId: issued.tokenId,

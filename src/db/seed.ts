@@ -29,6 +29,7 @@ import {
   nitroxCertifications,
   notificationDeliveries,
   notificationDeliveryAttempts,
+  notificationSendQueue,
   orderLineItems,
   orders,
   paymentOperationIntents,
@@ -2416,6 +2417,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
+  await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
@@ -2572,6 +2574,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db
     .delete(notificationDeliveryAttempts)
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
+  await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos).
