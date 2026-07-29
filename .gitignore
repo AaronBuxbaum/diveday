@@ -54,3 +54,5 @@ next-env.d.ts
 /.pglite-e2e/
 /.pglite-visual/
 /.reg/
+/infra/dist/
+/cdk.out/

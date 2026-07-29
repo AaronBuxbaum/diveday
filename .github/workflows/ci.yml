@@ -185,8 +185,7 @@ jobs:
       - name: Run reg-suit visual regression
         run: pnpm visual
         env:
-          REG_S3_BUCKET_NAME: ${{ secrets.REG_S3_BUCKET_NAME }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
+          REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
 

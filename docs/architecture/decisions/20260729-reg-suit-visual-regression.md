@@ -14,11 +14,14 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
 
 - Playwright tests run via `e2e/visual.spec.ts` and capture raw screenshots directly to `.reg/actual/` using `page.screenshot()`, running within the standard parallel worker fleet.
 - `reg-suit` manages comparing the current screenshots against the parent git commit's baselines downloaded from AWS S3, generating an interactive HTML report, and publishing the actual screenshots back to S3.
-- Snapshots and HTML reports are kept out of version control. The `.reg/` working directory is added to `.gitignore`.
+- Infrastructure is managed via AWS CDK in TypeScript under the `infra/` directory (precompiled to JS on deployment).
 - S3 configuration is set in `regconfig.json`, resolving the bucket name dynamically from the `$REG_S3_BUCKET_NAME` environment variable.
-- Dev dependencies installed: `reg-suit`, `reg-publish-s3-plugin`, and `reg-keygen-git-hash-plugin`.
-- Add script to `package.json`:
+- Dev dependencies installed: `reg-suit`, `reg-publish-s3-plugin`, `reg-keygen-git-hash-plugin`, `aws-cdk`, `aws-cdk-lib`, and `constructs`.
+- Add scripts to `package.json`:
   - `pnpm visual`: Runs Playwright visual screenshot generation followed by `reg-suit run`.
+  - `pnpm infra:deploy`: Deploys the AWS CDK infrastructure stack (`InfraStack`) using `tsx` on-the-fly.
+  - `pnpm infra:synth`: Synthesizes the CDK infrastructure template.
+  - `pnpm infra:diff`: Compares local CDK modifications against deployed resources.
 
 ## Alternatives considered
 
