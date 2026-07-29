@@ -6,6 +6,7 @@ import { z } from "zod";
 import { issueAccountToken } from "@/db/account-tokens";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { sendNotification } from "@/db/notifications";
 import { getShopById } from "@/db/shops";
 import {
   inviteStaffMember,
@@ -17,7 +18,7 @@ import {
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
 
 const TEAM_PATH_SUFFIX = "/settings/team";
@@ -62,7 +63,7 @@ async function sendInviteEmail(input: {
   }).catch(() => null);
   if (!issued) return;
   after(async () => {
-    await notify({
+    await sendNotification(await getDb(), {
       kind: "staff_invite",
       userAccountId: input.userAccountId,
       tokenId: issued.tokenId,
@@ -135,7 +136,7 @@ export async function resendInviteAction(formData: FormData) {
 
   const userAccountId = String(formData.get("userAccountId") ?? "");
   const member = await findTeamMember(session.user.shopId, userAccountId);
-  if (!member || member.accountStatus !== "invited") redirect(path);
+  if (member?.accountStatus !== "invited") redirect(path);
 
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);

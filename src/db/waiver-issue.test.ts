@@ -8,7 +8,7 @@ import { upcomingTripsWithCounts } from "./trips";
 import { issueAndDeliverWaiver, issueWaiverOnJoin, issueWaiversForBookings } from "./waiver-issue";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
-async function seededBooking(email: string | null = "diver@example.com") {
+async function seededBooking(email: string | null = "delivered@resend.dev") {
   const { db, shop } = await seededShopContext();
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
@@ -17,7 +17,7 @@ async function seededBooking(email: string | null = "diver@example.com") {
     shopId: shop.id,
     tripId: trip.id,
     fullName: "Nora Quinn",
-    email: email ?? "placeholder@example.com",
+    email: email ?? "delivered@resend.dev",
   });
   if (!outcome.ok) throw new Error(`booking failed: ${outcome.reason}`);
   if (email === null) {
@@ -103,14 +103,14 @@ describe("issueWaiversForBookings (bulk roster send)", () => {
       shopId: shop.id,
       tripId: trip.id,
       fullName: "Ann Able",
-      email: "ann@example.com",
+      email: "ann@resend.dev",
     });
     const b = await createBooking(db, {
       actor: "staff",
       shopId: shop.id,
       tripId: trip.id,
       fullName: "Ben Boyd",
-      email: "ben@example.com",
+      email: "ben@resend.dev",
     });
     if (!a.ok || !b.ok) throw new Error("setup booking failed");
 

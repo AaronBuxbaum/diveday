@@ -1,7 +1,8 @@
 import { and, count, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
+import { sendNotification } from "./notifications";
 import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 
@@ -77,7 +78,7 @@ export async function inviteWaitlistDiver(
   if (!ctx.person.email) {
     delivery = "no_email";
   } else if (origin) {
-    const result = await notify({
+    const result = await sendNotification(db, {
       kind: "waitlist_invite",
       waitlistEntryId: ctx.entry.id,
       shopId: input.shopId,

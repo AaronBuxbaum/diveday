@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nowMs } from "@/lib/clock";
 import {
   bookingConfirmationEmail,
   checkoutRecoveryEmail,
@@ -268,10 +269,18 @@ export type Notification = z.infer<typeof notificationSchema>;
 export type NotificationDelivery =
   | { status: "sent"; providerMessageId: string }
   | { status: "not_configured" }
-  | { status: "failed" };
+  | {
+      status: "failed";
+      retryable?: boolean;
+      retryAfterMs?: number;
+      httpStatus?: number;
+      errorCode?: string;
+      detail?: string;
+    };
 
 export interface NotificationProvider {
   send(notification: Notification): Promise<NotificationDelivery>;
+  sendBatch?(notifications: Notification[]): Promise<NotificationDelivery[]>;
 }
 
 type ResendConfig = {
@@ -282,12 +291,49 @@ type ResendConfig = {
 type Fetch = typeof fetch;
 type NotificationEnvironment = Readonly<Record<string, string | undefined>>;
 
+export type ResendProviderOptions = {
+  /** Reserve a team-wide request slot before each attempt. */
+  beforeRequest?: () => Promise<void>;
+  sleep?: (milliseconds: number) => Promise<void>;
+  random?: () => number;
+  maxAttempts?: number;
+};
+
 const resendConfigSchema = z.object({
   apiKey: z.string().trim().min(1),
   from: z.string().trim().min(3).max(320),
 });
 
 const resendResponseSchema = z.object({ id: z.string().min(1) });
+
+const reservedTestEmailDomains = [
+  "example.com",
+  "example.org",
+  "example.net",
+  "test.com",
+  "example",
+  "invalid",
+  "localhost",
+  "test",
+];
+
+function reservedTestRecipientDelivery(to: string): NotificationDelivery | null {
+  const domain = to
+    .slice(to.lastIndexOf("@") + 1)
+    .toLowerCase()
+    .replace(/\.$/, "");
+  const isReserved = reservedTestEmailDomains.some(
+    (reservedDomain) => domain === reservedDomain || domain.endsWith(`.${reservedDomain}`),
+  );
+  if (!isReserved) return null;
+  return {
+    status: "failed",
+    retryable: false,
+    errorCode: "invalid_test_recipient",
+    detail:
+      "Resend blocks reserved test domains such as example.com. Use a real recipient or a Resend test address such as delivered@resend.dev.",
+  };
+}
 
 function messageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
@@ -310,7 +356,7 @@ function messageFor(notification: Notification): NotificationEmail {
   return passwordChangedEmail(notification);
 }
 
-function idempotencyKeyFor(notification: Notification): string {
+export function notificationIdempotencyKey(notification: Notification): string {
   switch (notification.kind) {
     case "booking_confirmation":
       return notification.confirmedAt
@@ -361,36 +407,264 @@ function idempotencyKeyFor(notification: Notification): string {
   }
 }
 
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+let nextInProcessRequestAt = 0;
+let inProcessPermitTail = Promise.resolve();
+
+/**
+ * A local fallback for development and single-instance deployments. Production
+ * callers pass the database-backed permit in `notificationProviderFromEnvironment`.
+ */
+async function acquireInProcessPermit(): Promise<void> {
+  const previous = inProcessPermitTail;
+  let release!: () => void;
+  inProcessPermitTail = new Promise((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  const now = nowMs();
+  const scheduledAt = Math.max(now, nextInProcessRequestAt);
+  nextInProcessRequestAt = scheduledAt + 125;
+  try {
+    if (scheduledAt > now) await sleep(scheduledAt - now);
+  } finally {
+    release();
+  }
+}
+
+function retryDelayMs(
+  attempt: number,
+  retryAfterMs: number | undefined,
+  random: () => number,
+): number {
+  if (retryAfterMs !== undefined) return Math.max(0, retryAfterMs);
+  const base = Math.min(4_000, 250 * 2 ** (attempt - 1));
+  return base + Math.floor(random() * base);
+}
+
+function parseRetryAfter(response: Response): number | undefined {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds * 1_000));
+    const timestamp = Date.parse(retryAfter);
+    if (!Number.isNaN(timestamp)) return Math.max(0, timestamp - nowMs());
+  }
+  const resetHeader = response.headers.get("ratelimit-reset");
+  if (!resetHeader) return undefined;
+  const reset = Number(resetHeader);
+  return Number.isFinite(reset) && reset >= 0 ? Math.ceil(reset * 1_000) : undefined;
+}
+
+function parseProviderError(body: string): { code?: string; message?: string } {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object" || !("error" in parsed)) return {};
+    const error = parsed.error;
+    if (!error || typeof error !== "object") return {};
+    return {
+      code: "code" in error && typeof error.code === "string" ? error.code : undefined,
+      message:
+        "message" in error && typeof error.message === "string"
+          ? error.message.slice(0, 500)
+          : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+type ResendHttpResult =
+  | { ok: true; body: unknown }
+  | {
+      ok: false;
+      retryable: boolean;
+      retryAfterMs?: number;
+      httpStatus?: number;
+      errorCode?: string;
+      detail?: string;
+    };
+
+async function requestResend(
+  config: ResendConfig,
+  fetchImpl: Fetch,
+  options: Required<
+    Pick<ResendProviderOptions, "beforeRequest" | "sleep" | "random" | "maxAttempts">
+  >,
+  endpoint: string,
+  idempotencyKey: string,
+  body: unknown,
+): Promise<ResendHttpResult> {
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
+    await options.beforeRequest();
+    try {
+      const response = await fetchImpl(`https://api.resend.com/${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify(body),
+      });
+      const rawBody = await response.text();
+      let parsedBody: unknown = null;
+      try {
+        parsedBody = JSON.parse(rawBody);
+      } catch {
+        // The status code remains the useful diagnostic for a non-JSON response.
+      }
+      if (response.ok) return { ok: true, body: parsedBody };
+
+      const providerError = parseProviderError(rawBody);
+      const retryable = response.status === 429 || response.status >= 500;
+      const retryAfterMs = parseRetryAfter(response);
+      if (retryable && attempt < options.maxAttempts) {
+        await options.sleep(retryDelayMs(attempt, retryAfterMs, options.random));
+        continue;
+      }
+      return {
+        ok: false,
+        retryable,
+        retryAfterMs,
+        httpStatus: response.status,
+        errorCode: providerError.code,
+        detail: providerError.message,
+      };
+    } catch (error) {
+      if (attempt < options.maxAttempts) {
+        await options.sleep(retryDelayMs(attempt, undefined, options.random));
+        continue;
+      }
+      return {
+        ok: false,
+        retryable: true,
+        errorCode: "network_error",
+        detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+      };
+    }
+  }
+  return { ok: false, retryable: true, errorCode: "retry_exhausted" };
+}
+
+function failedDelivery(result: Extract<ResendHttpResult, { ok: false }>): NotificationDelivery {
+  const delivery: Extract<NotificationDelivery, { status: "failed" }> = {
+    status: "failed",
+    retryable: result.retryable,
+  };
+  if (result.retryAfterMs !== undefined) delivery.retryAfterMs = result.retryAfterMs;
+  if (result.httpStatus !== undefined) delivery.httpStatus = result.httpStatus;
+  if (result.errorCode !== undefined) delivery.errorCode = result.errorCode;
+  if (result.detail !== undefined) delivery.detail = result.detail;
+  return delivery;
+}
+
+function batchIdempotencyKey(notifications: Notification[]): string {
+  let hash = 2_166_136_261;
+  for (const value of notifications.map(notificationIdempotencyKey).join("\u0000")) {
+    hash ^= value.charCodeAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return `notification-batch/${notifications.length}/${hash >>> 0}`;
+}
+
 export function resendNotificationProvider(
   config: ResendConfig,
   fetchImpl: Fetch,
+  providerOptions: ResendProviderOptions = {},
 ): NotificationProvider {
+  const options = {
+    beforeRequest: providerOptions.beforeRequest ?? acquireInProcessPermit,
+    sleep: providerOptions.sleep ?? sleep,
+    random: providerOptions.random ?? Math.random,
+    maxAttempts: providerOptions.maxAttempts ?? 4,
+  };
   return {
     async send(notification) {
+      const invalidRecipient = reservedTestRecipientDelivery(notification.to);
+      if (invalidRecipient) return invalidRecipient;
       const message = messageFor(notification);
-      try {
-        const response = await fetchImpl("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${config.apiKey}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotencyKeyFor(notification),
-          },
-          body: JSON.stringify({
-            from: config.from,
-            to: [notification.to],
-            subject: message.subject,
-            text: message.text,
-            html: message.html,
-          }),
+      const result = await requestResend(
+        config,
+        fetchImpl,
+        options,
+        "emails",
+        notificationIdempotencyKey(notification),
+        {
+          from: config.from,
+          to: [notification.to],
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        },
+      );
+      if (!result.ok) {
+        console.warn("Resend email request failed", {
+          httpStatus: result.httpStatus,
+          errorCode: result.errorCode,
+          retryAfterMs: result.retryAfterMs,
+          retryable: result.retryable,
         });
-        if (!response.ok) return { status: "failed" };
-        const body = resendResponseSchema.safeParse(await response.json());
-        if (!body.success) return { status: "failed" };
-        return { status: "sent", providerMessageId: body.data.id };
-      } catch {
-        return { status: "failed" };
+        return failedDelivery(result);
       }
+      const body = resendResponseSchema.safeParse(result.body);
+      if (!body.success)
+        return { status: "failed", retryable: true, errorCode: "invalid_response" };
+      return { status: "sent", providerMessageId: body.data.id };
+    },
+    async sendBatch(notifications) {
+      if (notifications.length === 0) return [];
+      const results: NotificationDelivery[] = notifications.map(
+        (notification) =>
+          reservedTestRecipientDelivery(notification.to) ?? { status: "not_configured" },
+      );
+      const deliverable = notifications.flatMap((notification, index) =>
+        results[index]?.status === "not_configured" ? [{ notification, index }] : [],
+      );
+      if (deliverable.length === 0) return results;
+
+      const messages = deliverable.map(({ notification }) => {
+        const message = messageFor(notification);
+        return {
+          from: config.from,
+          to: [notification.to],
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        };
+      });
+      const result = await requestResend(
+        config,
+        fetchImpl,
+        options,
+        "emails/batch",
+        batchIdempotencyKey(deliverable.map(({ notification }) => notification)),
+        messages,
+      );
+      if (!result.ok) {
+        console.warn("Resend batch request failed", {
+          count: notifications.length,
+          httpStatus: result.httpStatus,
+          errorCode: result.errorCode,
+          retryAfterMs: result.retryAfterMs,
+          retryable: result.retryable,
+        });
+        for (const { index } of deliverable) results[index] = failedDelivery(result);
+        return results;
+      }
+      const body = result.body as { data?: unknown } | null;
+      const ids = Array.isArray(body?.data)
+        ? body.data.map((item) => resendResponseSchema.safeParse(item).data?.id ?? null)
+        : [];
+      for (const [index, { index: originalIndex }] of deliverable.entries()) {
+        results[originalIndex] = ids[index]
+          ? { status: "sent", providerMessageId: ids[index] as string }
+          : { status: "failed", retryable: true, errorCode: "invalid_response" };
+      }
+      return results;
     },
   };
 }
@@ -417,13 +691,14 @@ export async function notify(
 export function notificationProviderFromEnvironment(
   env: NotificationEnvironment = process.env,
   fetchImpl: Fetch = fetch,
+  providerOptions: ResendProviderOptions = {},
 ): NotificationProvider {
   const config = resendConfigSchema.safeParse({
     apiKey: env.RESEND_API_KEY,
     from: env.RESEND_FROM_EMAIL,
   });
   return config.success
-    ? resendNotificationProvider(config.data, fetchImpl)
+    ? resendNotificationProvider(config.data, fetchImpl, providerOptions)
     : disabledNotificationProvider;
 }
 

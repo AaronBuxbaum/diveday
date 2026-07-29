@@ -1,12 +1,6 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import {
-  type NotificationDelivery,
-  type NotificationProvider,
-  notificationProviderFromEnvironment,
-  notify,
-  publicAppUrl,
-} from "@/lib/notifications";
+import { type Notification, type NotificationProvider, publicAppUrl } from "@/lib/notifications";
 import {
   notifySms,
   type SmsProvider,
@@ -16,7 +10,11 @@ import {
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
-import { recordNotificationDelivery } from "./notifications";
+import {
+  notificationProviderForDb,
+  recordNotificationDelivery,
+  sendNotificationBatch,
+} from "./notifications";
 import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
@@ -414,7 +412,7 @@ export async function sendDueRecaps(
   options: SendDueRecapsOptions = {},
 ): Promise<RecapRunSummary> {
   const now = options.now ?? nowDate();
-  const emailProvider = options.emailProvider ?? notificationProviderFromEnvironment();
+  const emailProvider = notificationProviderForDb(db, options.emailProvider);
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
@@ -468,6 +466,20 @@ export async function sendDueRecaps(
     siteNamesByTrip.set(tripId, names);
   }
 
+  const emailWork: Array<{
+    bookingId: string;
+    shopId: string;
+    phone: string | null;
+    smsBody: string;
+    notification: Notification;
+  }> = [];
+  const smsWork: Array<{
+    bookingId: string;
+    shopId: string;
+    phone: string;
+    smsBody: string;
+  }> = [];
+
   for (const { booking, person, trip, shop } of rows) {
     if (alreadySent.has(booking.id)) {
       summary.skipped += 1;
@@ -478,10 +490,13 @@ export async function sendDueRecaps(
     const phone = smsRecipient(person.phone);
     const sites = siteNamesByTrip.get(trip.id) ?? [];
 
-    let delivery: NotificationDelivery;
     if (recapUrl && person.email) {
-      delivery = await notify(
-        {
+      emailWork.push({
+        bookingId: booking.id,
+        shopId: shop.id,
+        phone,
+        smsBody: `${shop.name}: thanks for diving ${trip.title}! Your recap: ${recapUrl}`,
+        notification: {
           kind: "trip_recap",
           bookingId: booking.id,
           shopId: shop.id,
@@ -494,35 +509,55 @@ export async function sendDueRecaps(
           sites,
           recapUrl,
         },
-        emailProvider,
-      );
-      if (delivery.status === "sent" && phone) {
-        await notifySms(
-          {
-            channel: "sms",
-            to: phone,
-            body: `${shop.name}: thanks for diving ${trip.title}! Your recap: ${recapUrl}`,
-          },
-          smsProvider,
-        );
-      }
+      });
     } else if (recapUrl && phone) {
-      delivery = await notifySms(
-        {
-          channel: "sms",
-          to: phone,
-          body: `${shop.name}: thanks for diving ${trip.title}! Your recap: ${recapUrl}`,
-        },
-        smsProvider,
-      );
+      smsWork.push({
+        bookingId: booking.id,
+        shopId: shop.id,
+        phone,
+        smsBody: `${shop.name}: thanks for diving ${trip.title}! Your recap: ${recapUrl}`,
+      });
     } else {
       // No app origin (no link to send) or no reachable channel — record the gap.
-      delivery = { status: "not_configured" };
+      await recordNotificationDelivery(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        kind: "trip_recap",
+        delivery: { status: "not_configured" },
+      });
+      summary.failed += 1;
     }
+  }
 
+  const emailDeliveries = await sendNotificationBatch(
+    db,
+    emailWork.map((work) => work.notification),
+    emailProvider,
+  );
+  for (let index = 0; index < emailWork.length; index += 1) {
+    const work = emailWork[index];
+    const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
+    if (delivery.status === "sent" && work.phone) {
+      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
+    }
     await recordNotificationDelivery(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
+      shopId: work.shopId,
+      bookingId: work.bookingId,
+      kind: "trip_recap",
+      delivery,
+    });
+    if (delivery.status === "sent") summary.sent += 1;
+    else summary.failed += 1;
+  }
+
+  for (const work of smsWork) {
+    const delivery = await notifySms(
+      { channel: "sms", to: work.phone, body: work.smsBody },
+      smsProvider,
+    );
+    await recordNotificationDelivery(db, {
+      shopId: work.shopId,
+      bookingId: work.bookingId,
       kind: "trip_recap",
       delivery,
     });

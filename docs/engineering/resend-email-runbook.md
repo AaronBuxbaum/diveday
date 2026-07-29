@@ -16,6 +16,26 @@ Two separate systems, deliberately:
 Everything on the sending side degrades to "not configured" rather than half-working. With none of
 it set the app runs, sends nothing, and records `not_configured` where a send would have gone.
 
+### Rate limits, retries, and fan-out
+
+The application reserves a durable team-wide request permit at 8 requests per second, below
+Resend's configured 10 requests per second limit. It honors Resend's `Retry-After` and rate-reset
+headers, retries 429/network/5xx responses with bounded backoff, and stores exhausted retryable
+failures in `notification_send_queue`. The daily `/api/cron/reminders` pass drains that queue before
+running reminders, recaps, and checkout recovery. A permanent 4xx is not retried.
+
+Known fan-outs use Resend's batch endpoint, in groups of at most 100 messages. Each returned provider
+message id is mapped back to the individual notification, so delivery webhooks and staff issues keep
+their existing per-booking meaning. A batch request's idempotency key is deterministic for the whole
+batch; individual sends retain their existing logical-send keys.
+
+Reserved test recipients are rejected before a request is made. Resend blocks domains such as
+`example.com` and returns a permanent `422`; DiveDay records the issue without spending a request
+permit or placing it in the retry queue. For provider testing, use Resend's addresses such as
+`delivered@resend.dev`, `bounced@resend.dev`, `complained@resend.dev`, or `suppressed@resend.dev`.
+The demo seed intentionally uses reserved `.example` addresses, so it is not a real-inbox test
+fixture; use one of Resend's test addresses or a real diver address when testing delivery.
+
 | Variable | Enables | Without it |
 | --- | --- | --- |
 | `RESEND_API_KEY` | Sending | Nothing sends |
