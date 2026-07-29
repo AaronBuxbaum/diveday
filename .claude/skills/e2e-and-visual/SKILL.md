@@ -1,87 +1,58 @@
 ---
 name: e2e-and-visual
-description: Write and maintain end-to-end (Playwright) and visual-regression (Playwright screenshot) tests that stay stable and complete. Use when adding or changing a user-facing flow or surface, when a visual baseline diffs on nothing but time, or when deciding what needs an e2e spec or a visual snapshot.
+description: Write and maintain Playwright functional E2E tests and BackstopJS visual-regression scenarios that stay stable and complete. Use when adding or changing a user-facing flow or surface, when a visual diff appears, or when deciding what needs an E2E spec or visual scenario.
 ---
 
-# E2E flows and visual snapshots
+# E2E flows and visual regression
 
-Two standing obligations, one stability model.
+Every important user flow gets a functional Playwright spec under `e2e/`. Every important user
+surface gets a Backstop scenario in `backstop.config.cjs`, with setup in `backstop/flows.cjs`.
+Keep the two concerns separate: Playwright proves behavior; Backstop compares rendered surfaces.
 
-## Coverage — what must be tested
+## Visual workflow
 
-When you add or change a user-facing **flow**, it gets an e2e spec in `e2e/`. When you add or
-change an important **surface**, it gets a visual snapshot in `e2e/visual.spec.ts`. "Especially
-for new features" is not a hedge — a feature without both is not done.
+1. Add or update the scenario in `backstop.config.cjs`.
+2. Add its route/state setup to `backstop/flows.cjs`; do not duplicate a surface with a screenshot
+   script. Stateful scenarios may use the seeded owner session, `/api/test/reset`, and real UI
+   actions exactly as a user would.
+3. Run a focused capture with `BACKSTOP_FILTER='scenario-label' node scripts/backstop-run.mjs test`
+   or the corresponding `reference` command while iterating.
+4. Open `backstop_data/html_report/index.html` with `pnpm backstop:report` and inspect reference,
+   test, and diff images. Only after the change is understood, run `pnpm backstop:approve` and
+   commit the resulting files under `backstop_data/bitmaps_reference/`.
 
-- **Important flow** = something a real user does that can break silently: booking, waiver
-  issue/sign, cert or nitrox gating, roll call / manifest, refund/cancel, schedule a trip, sign
-  in. New flow → happy path **and** the failure path that matters (full boat, uncertified diver,
-  unsigned waiver, expired card). Bug fix → a failing regression spec first.
-- **Important surface** = a page or state staff or divers actually look at, where a layout,
-  contrast, or token regression would be felt. New surface → add a `capture(page, "<name>",
-  scheme)` call in `e2e/visual.spec.ts` (it runs light + dark × phone + desktop automatically, via
-  Playwright's own `toHaveScreenshot()` against a baseline PNG committed under
-  `e2e/visual.spec.ts-snapshots/`). Reuse the seeded Blue Mantis data; navigate to the surface the
-  way a user reaches it.
+The normal matrix is light/dark × phone/desktop (390×844 and 1280×800). The two dock print
+scenarios use an 816×1056 viewport and print media. Keep that matrix unless the surface itself
+requires a documented exception.
 
-If you're unsure whether something qualifies, it does. Under-covering safety-critical surfaces
-(manifests, roll call, cert/medical gating) is never acceptable — those also get a
-`dive-domain-expert` review.
+## Determinism
 
-## Stability — why the baselines don't drift
+The Backstop wrapper runs a production Next server backed by in-memory PGlite. `onBefore.cjs`
+resets `/api/test/reset` before every scenario/viewport, freezes the browser clock to the same
+`DIVEDAY_CLOCK` used by the server, aborts Google Maps, applies the color scheme/media, and loads
+the generated owner cookies for staff scenarios. `onReady.cjs` runs the stateful flow and waits
+for `document.fonts.ready` before capture.
 
-The demo seed is clock-anchored (one trip always sails *today*, cert expiries are relative) and
-many surfaces render relative time. Against a live clock every visual baseline diffs on nothing
-but time. The fix is a **frozen clock**, not masking:
+Do not mask clock-derived content or moving UI. Freeze the clock at the harness boundary instead.
+If a capture is unstable, identify and remove the source of nondeterminism: use the seeded Blue
+Mantis data, stable labels, deterministic ordering, and explicit readiness waits. Use
+`DIVEDAY_CLOCK=2026-07-21T13:30:00.000Z` for the committed baseline instant.
 
-- The **server** clock is pinned by `DIVEDAY_CLOCK` (`playwright.config.ts`), read through
-  `src/lib/clock.ts` — so the seed and every server render resolve to one fixed instant.
-- The **browser** clock is pinned to the same instant by a context-creation init script in
-  `e2e/fixtures.ts` (a `Proxy` over `Date`) — so client-side relative time agrees with the server,
-  and browser-stamped events (offline roll-call sync, signatures) aren't "in the future" to the
-  server's frozen clock, which would reject them as stale.
-- `E2E_FROZEN_CLOCK` in `e2e/servers.ts` is the single source of that instant.
+## Functional E2E rules
 
-Because both clocks are frozen, screenshots are **captured full-page with nothing masked** — a
-regression in a time or date is a regression the suite should catch. Do not reintroduce masks;
-masking hides the pixels a real regression moves and never stabilised the layout shifts (a
-reordered queue, a trip crossing from upcoming to sailed) a moving clock actually causes.
+- Import `test` and `expect` from `e2e/fixtures`, not directly from `@playwright/test`, so tests
+  get per-worker server routing and reset isolation.
+- Exercise real Next, Auth.js, and PGlite boundaries. Disable third-party HTTP in the server and
+  abort browser-only Google Maps requests.
+- Reuse the per-worker owner session with `signedInAsOwner()` for staff flows; keep auth lifecycle
+  coverage on the live sign-in form.
+- Keep safety-critical failure paths (capacity, waiver/medical state, cert/nitrox gating, and
+  manifest/roll call) explicit.
 
-### Rules that keep it stable
+## Definition of done
 
-1. **Never read the wall clock in `src/lib` or `src/db`.** Use `nowDate()` / `nowMs()` from
-   `src/lib/clock.ts`. `pnpm check:clock` enforces this; it runs inside `pnpm check`. Keep the
-   `now` parameter on domain functions for unit-test injection — just default it to `nowDate()`.
-2. **Server components render relative time from the clock too.** A `new Date()` in a `src/app`
-   server component isn't machine-checked but has the same failure mode — thread `nowDate()`.
-   Client components legitimately read the browser clock; the fixture freezes it for them.
-3. **Test-side dates come from the frozen instant.** In `e2e/`, use `daysFromNow()` / `e2eNow()`
-   from `e2e/helpers.ts` (anchored to `E2E_FROZEN_CLOCK`), never `new Date()` / real
-   `Date.now()`, when a value is compared against server state or a rendered date/year.
-   (`Date.now()` purely for a unique email/title suffix is fine — it's never screenshotted.)
-4. **No other nondeterminism in screenshotted data.** Deterministic ordering, stable seed, no
-   `Math.random()` in rendered content. If a baseline flickers, find the source and remove it —
-   the suite runs with `retries: 0` on purpose.
-
-### Verifying a surface is actually stable
-
-Frozen clock means the render is a pure function of that instant, so two runs are pixel-identical.
-To prove it for a surface you added, capture it under two different `DIVEDAY_CLOCK` values:
-
-```bash
-DIVEDAY_CLOCK=2026-07-21T13:30:00.000Z pnpm e2e -- visual.spec.ts   # baseline instant
-DIVEDAY_CLOCK=2026-07-21T22:00:00.000Z pnpm e2e -- visual.spec.ts   # 8h later
-```
-
-Same instant twice → identical pixels. Different instant → only genuinely time-derived content
-moves. If something else moves, that's the nondeterminism to fix.
-
-## When you're done
-
-- New/changed flow has an e2e spec (happy + failure path); new/changed surface has a visual
-  snapshot in `visual.spec.ts`.
-- `pnpm check` green (includes `check:clock`); `pnpm e2e` green.
-- Intentional visual changes are called out in the PR. CI normally commits regenerated baselines
-  as their own `ci: capture visual baseline diffs` commit; review that commit (or run the
-  `visual-triage` skill when CI cannot push or stays red) so the reviewer can see exactly what
-  changed via GitHub's image-diff viewer.
+- New/changed behavior has a Playwright flow spec or an explicit reason not to add one.
+- New/changed important surfaces have a Backstop scenario and both schemes where applicable.
+- `pnpm backstop` passes against committed references, and any intentional reference update is
+  reviewed in the HTML report and committed explicitly.
+- `pnpm check` passes; run `pnpm e2e` when functional flows changed.

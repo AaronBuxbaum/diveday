@@ -24,10 +24,8 @@ const browserCandidates = [
 const executablePath = browserCandidates.find((candidate) => candidate && fs.existsSync(candidate));
 
 // The worker servers and this runner process must agree on the signing secret:
-// the visual suite mints a signed recap token in-process (e2e/visual.spec.ts) and
-// the server verifies it. Pin one resolved value into the environment before
-// anything — serverEnv below, or an auth.config import from a spec — derives from
-// it, so both halves sign and verify with the same key.
+// Backstop mints a signed recap token in backstop/flows.cjs and the server
+// verifies it. Pin one resolved value into the environment before anything.
 process.env.AUTH_SECRET ??= "diveday-e2e-secret";
 
 // Every worker server shares one read-only production build but owns an
@@ -46,8 +44,8 @@ const serverEnv = {
   DIVEDAY_E2E: "1",
   // Freeze the server clock so the clock-anchored seed and every relative
   // render resolve to one fixed instant on every run — the server half of what
-  // keeps visual baselines stable (the browser half is page.clock in
-  // e2e/visual.spec.ts). src/lib/clock.ts reads this and, as a guard, ignores
+  // keeps visual baselines stable (the browser half is the Backstop init script).
+  // src/lib/clock.ts reads this and, as a guard, ignores
   // it whenever a real DATABASE_URL is set, so it can never freeze production.
   DIVEDAY_CLOCK: E2E_FROZEN_CLOCK,
   // The fleet can run as few as one worker (E2E_WORKER_COUNT), sharing one

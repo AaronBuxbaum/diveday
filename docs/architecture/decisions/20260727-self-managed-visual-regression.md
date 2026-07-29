@@ -1,6 +1,6 @@
 # 20260727-self-managed-visual-regression — Drop Argos for Playwright's own `toHaveScreenshot()`
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260729-backstop-visual-regression
 - **Date:** 2026-07-27
 - **Supersedes:** 20260721-argos-frozen-clock
 

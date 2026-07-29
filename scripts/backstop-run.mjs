@@ -159,10 +159,10 @@ try {
       env: { ...serverEnv, PORT: String(port) },
       stdio: "inherit",
     });
-    server.once("error", (error) => {
-      throw error;
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      waitForServer().then(resolve, reject);
     });
-    await waitForServer();
     await createOwnerStorageState();
 
     const args = [action, "--config=backstop.config.cjs"];

@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e:build": "DATABASE_URL= DATABASE_URL_UNPOOLED= PGLITE_DATA_DIR=.pglite-e2e next build",
+    "e2e:build": "DATABASE_URL= DATABASE_URL_UNPOOLED= PGLITE_DATA_DIR=.pglite-e2e DIVEDAY_E2E=1 next build",
     "e2e:browser-check": "node scripts/ensure-playwright-browser.mjs",
     "e2e": "pnpm e2e:browser-check && pnpm e2e:build && playwright test",
     "backstop": "node scripts/backstop-run.mjs test",
@@ -30,7 +30,6 @@
     "check": "pnpm check:repo && pnpm lint && pnpm typecheck && pnpm test",
     "perf:budget": "node scripts/perf-budget.mjs",
     "task:context": "node scripts/task-context.mjs",
-    "screenshot": "node scripts/screenshot.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.prod.ts",
     "db:reset": "rm -rf .pglite && echo 'Dev database cleared; next `pnpm dev` re-migrates and re-seeds.'"
