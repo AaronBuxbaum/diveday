@@ -11,7 +11,6 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getCurrentWaiverTemplate, saveWaiverTemplate } from "@/db/waivers";
 import { formatShortDate } from "@/lib/format";
-import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -69,7 +68,6 @@ export default async function WaiverTemplatesPage({
     );
   }
 
-  const questionnaire = questionnaireForJurisdiction("rstc");
   const banner =
     notice === "saved"
       ? current
@@ -122,19 +120,6 @@ export default async function WaiverTemplatesPage({
           </ShopNotice>
         </div>
       ) : null}
-
-      <section className="mt-10 rounded-2xl border border-border bg-surface p-5 shadow-sm">
-        <h2 className="text-lg font-semibold">Medical questionnaire</h2>
-        <p className="mt-1 text-sm text-muted">
-          DiveDay uses the RSTC Diver Medical form for every shop. A “yes” to any question means a
-          physician should review the diver before they dive.
-        </p>
-        <p className="mt-3 text-sm">
-          Current form:{" "}
-          <strong className="font-medium text-foreground">{questionnaire.title}</strong> ·{" "}
-          {questionnaire.questions.length} questions.
-        </p>
-      </section>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Release text</h2>

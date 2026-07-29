@@ -1204,6 +1204,105 @@ export async function upcomingTripsForCalendar(
     .orderBy(asc(trips.startsAt));
 }
 
+export type StaffScheduleDay = {
+  dayNumber: number;
+  startsAt: Date;
+  endsAt: Date;
+};
+
+export type StaffScheduleTrip = {
+  id: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  courseTitle: string | null;
+  days: StaffScheduleDay[];
+  crew: Array<{ id: string; name: string; roles: string[] }>;
+};
+
+/**
+ * The staff board's bounded month query. A multi-day class is returned once,
+ * with each meeting window preserved, and crew is grouped by person so the UI
+ * can show both an individual's commitments and an owner's coverage gaps.
+ */
+export async function upcomingStaffSchedule(
+  db: DbExecutor,
+  shopId: string,
+  monthStartUtc: Date,
+  monthEndUtc: Date,
+  now: Date = nowDate(),
+): Promise<StaffScheduleTrip[]> {
+  const rows = await db
+    .select({
+      trip: trips,
+      courseTitle: courses.title,
+      day: tripScheduleDays,
+      personId: people.id,
+      personName: people.fullName,
+      role: personRoles.role,
+    })
+    .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .leftJoin(tripAssignments, eq(tripAssignments.tripId, trips.id))
+    .leftJoin(people, eq(people.id, tripAssignments.personId))
+    .leftJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.endsAt, now),
+        lt(tripScheduleDays.startsAt, monthEndUtc),
+        gt(tripScheduleDays.endsAt, monthStartUtc),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(tripScheduleDays.dayNumber), asc(people.fullName));
+
+  const byTrip = new Map<string, StaffScheduleTrip>();
+  const daysByTrip = new Map<string, Map<number, StaffScheduleDay>>();
+  const crewByTrip = new Map<string, Map<string, { id: string; name: string; roles: string[] }>>();
+  for (const row of rows) {
+    const existing = byTrip.get(row.trip.id) ?? {
+      id: row.trip.id,
+      title: row.trip.title,
+      startsAt: row.trip.startsAt,
+      endsAt: row.trip.endsAt,
+      courseTitle: row.courseTitle,
+      days: [],
+      crew: [],
+    };
+    byTrip.set(row.trip.id, existing);
+
+    const days = daysByTrip.get(row.trip.id) ?? new Map<number, StaffScheduleDay>();
+    days.set(row.day.dayNumber, {
+      dayNumber: row.day.dayNumber,
+      startsAt: row.day.startsAt,
+      endsAt: row.day.endsAt,
+    });
+    daysByTrip.set(row.trip.id, days);
+
+    if (row.personId && row.personName) {
+      const crew = crewByTrip.get(row.trip.id) ?? new Map();
+      const member = crew.get(row.personId) ?? {
+        id: row.personId,
+        name: row.personName,
+        roles: [],
+      };
+      if (row.role && !member.roles.includes(row.role)) member.roles.push(row.role);
+      crew.set(row.personId, member);
+      crewByTrip.set(row.trip.id, crew);
+    }
+  }
+
+  return [...byTrip.values()].map((trip) => ({
+    ...trip,
+    days: [...(daysByTrip.get(trip.id)?.values() ?? [])].sort((a, b) => a.dayNumber - b.dayNumber),
+    crew: [...(crewByTrip.get(trip.id)?.values() ?? [])].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    ),
+  }));
+}
+
 /**
  * The sessions a public course page offers to book. Seats left comes from the
  * same booked-count shape the schedule uses, so a full session reads as full

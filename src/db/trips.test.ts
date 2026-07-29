@@ -25,6 +25,7 @@ import {
   setTripStatus,
   upcomingScheduleRange,
   upcomingScheduleStats,
+  upcomingStaffSchedule,
   upcomingTripsWithCounts,
   updateTrip,
 } from "./trips";
@@ -59,6 +60,20 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     if (!first) throw new Error("first multi-day trip not created");
     expect(await listTripScheduleDays(db, shop.id, first.id)).toHaveLength(2);
     expect(await setTripCrew(db, shop.id, first.id, [instructor.person.id])).toBe(true);
+    const board = await upcomingStaffSchedule(
+      db,
+      shop.id,
+      new Date("2030-08-01T00:00:00Z"),
+      new Date("2030-09-01T00:00:00Z"),
+      new Date("2030-07-01T00:00:00Z"),
+    );
+    expect(board.find((trip) => trip.id === first.id)).toMatchObject({
+      days: [
+        { dayNumber: 1, startsAt: new Date("2030-08-01T12:00:00Z") },
+        { dayNumber: 2, startsAt: new Date("2030-08-02T12:00:00Z") },
+      ],
+      crew: [{ id: instructor.person.id, name: instructor.person.fullName }],
+    });
     const second = await createTrip(db, {
       shopId: shop.id,
       title: "Day-two overlap",

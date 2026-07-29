@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { StaffScheduleBoard } from "@/components/StaffScheduleBoard";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -13,6 +14,7 @@ import {
   pagedUpcomingTripsWithCounts,
   upcomingScheduleRange,
   upcomingScheduleStats,
+  upcomingStaffSchedule,
   upcomingTripsForCalendar,
 } from "@/db/trips";
 import { auth } from "@/lib/auth";
@@ -93,6 +95,19 @@ export default async function TripsPage({
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
 
+  const staffSchedule = staffView
+    ? await upcomingStaffSchedule(
+        db,
+        shop.id,
+        wallTimeToUtc(
+          { year: currentMonth.year, month: currentMonth.month, day: 1, hour: 0, minute: 0 },
+          tz,
+        ),
+        wallTimeToUtc({ year: next.year, month: next.month, day: 1, hour: 0, minute: 0 }, tz),
+        now,
+      )
+    : [];
+
   const tripsByDay = new Map<string, CalendarTrip[]>();
   if (!staffView && hasUpcoming) {
     const monthStart = wallTimeToUtc(
@@ -171,6 +186,10 @@ export default async function TripsPage({
             detail="Trips with no open seats"
           />
         </section>
+      ) : null}
+
+      {staffView && staffSchedule.length > 0 ? (
+        <StaffScheduleBoard shopSlug={shopSlug} trips={staffSchedule} timezone={tz} />
       ) : null}
 
       {!staffView && hasUpcoming ? (
