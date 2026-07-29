@@ -19,7 +19,7 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
   });
   revalidatePath(back);
   if (outcome.ok) {
-    redirect(`${back}?notice=${outcome.duplicate ? "already-checked-in" : "checked-in"}`);
+    redirect(`${back}?notice=${outcome.duplicate ? "already_checked_in" : "checked_in"}`);
   }
   redirect(`${back}?notice=${outcome.reason}`);
 }

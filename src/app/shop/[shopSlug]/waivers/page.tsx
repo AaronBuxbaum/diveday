@@ -156,38 +156,46 @@ export default async function WaiverTemplatesPage({
         {integrityAudit.length === 0 ? (
           <p className="mt-4 text-sm text-muted">No signed records yet.</p>
         ) : (
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-            {integrityAudit.slice(0, 20).map((entry) => (
-              <li
-                key={entry.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-              >
-                <span>
-                  <span className="font-medium">{entry.personName}</span>
-                  <span className="ml-2 text-muted">
-                    {entry.signedAt
-                      ? formatShortDate(entry.signedAt, shop.defaultLocale, shop.timezone)
-                      : "No signature date"}
-                  </span>
-                </span>
-                <span
-                  className={
-                    entry.integrity === "valid"
-                      ? "font-medium text-success"
-                      : entry.integrity === "invalid"
-                        ? "font-medium text-danger"
-                        : "font-medium text-warning"
-                  }
+          <>
+            <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+              {integrityAudit.slice(0, 20).map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
                 >
-                  {entry.integrity === "valid"
-                    ? "Integrity verified"
-                    : entry.integrity === "invalid"
-                      ? "Integrity mismatch"
-                      : "Unsealed legacy record"}
-                </span>
-              </li>
-            ))}
-          </ul>
+                  <span>
+                    <span className="font-medium">{entry.personName}</span>
+                    <span className="ml-2 text-muted">
+                      {entry.signedAt
+                        ? formatShortDate(entry.signedAt, shop.defaultLocale, shop.timezone)
+                        : "No signature date"}
+                    </span>
+                  </span>
+                  <span
+                    className={
+                      entry.integrity === "valid"
+                        ? "font-medium text-success"
+                        : entry.integrity === "invalid"
+                          ? "font-medium text-danger"
+                          : "font-medium text-warning"
+                    }
+                  >
+                    {entry.integrity === "valid"
+                      ? "Integrity verified"
+                      : entry.integrity === "invalid"
+                        ? "Integrity mismatch"
+                        : "Unsealed legacy record"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {integrityAudit.length > 20 ? (
+              <p className="mt-2 text-xs text-muted">
+                Showing the 20 most recent signed records. To view the complete history, use the CSV
+                export.
+              </p>
+            ) : null}
+          </>
         )}
       </section>
     </main>

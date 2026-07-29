@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue } from "./check-in";
+import { listTripsReadiness } from "./readiness";
 import { bookings } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -82,5 +83,23 @@ describe("counter check-in", () => {
         recordedByPersonId: "00000000-0000-4000-8000-000000000000",
       }),
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+  });
+
+  it("refuses to check in a booking that is not ready", async () => {
+    const { db, shop, staff, booking } = await context();
+    const outcome = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "not_ready" });
+  });
+
+  it("queries readiness for multiple trips at once using listTripsReadiness", async () => {
+    const { db, shop, reef } = await context();
+    const results = await listTripsReadiness(db, shop.id, [reef.id]);
+    expect(results).toBeDefined();
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.find((r) => r.booking.tripId === reef.id)).toBeDefined();
   });
 });

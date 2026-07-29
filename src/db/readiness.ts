@@ -22,6 +22,7 @@ import {
 import {
   getCurrentWaiverTemplate,
   listSignedWaiversByPerson,
+  listTripsWaiverStatuses,
   listTripWaiverStatuses,
 } from "./waivers";
 
@@ -632,4 +633,164 @@ export async function getBookingReadinessDetail(
     readiness,
     cancelled: row.status === "cancelled",
   };
+}
+
+export async function listTripsReadiness(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+  now: Date = nowDate(),
+) {
+  if (tripIds.length === 0) return [];
+
+  const [requirements, siteRequirements, waiverRows, currentTemplate, shopRow, courseRows] =
+    await Promise.all([
+      db
+        .select()
+        .from(tripRequirements)
+        .where(and(eq(tripRequirements.shopId, shopId), inArray(tripRequirements.tripId, tripIds))),
+      db
+        .select({
+          tripId: trips.id,
+          minimumCertificationLevel: diveSites.minimumCertificationLevel,
+          requiredSpecialties: diveSites.requiredSpecialties,
+          requiresNitrox: diveSites.requiresNitrox,
+        })
+        .from(trips)
+        .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+        .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
+      listTripsWaiverStatuses(db, shopId, tripIds),
+      getCurrentWaiverTemplate(db, shopId),
+      db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
+      db
+        .select({ id: trips.id, startsAt: trips.startsAt, minimumAge: courses.minimumAge })
+        .from(trips)
+        .leftJoin(courses, eq(courses.id, trips.courseId))
+        .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
+    ]);
+
+  const [shop] = shopRow;
+  if (!shop) throw new Error(`listTripsReadiness: shop ${shopId} not found`);
+  const timezone = shop.timezone;
+
+  const requirementsByTrip = new Map(requirements.map((r) => [r.tripId, r]));
+  const siteRequirementsByTrip = new Map(
+    siteRequirements.map((sr) => [
+      sr.tripId,
+      {
+        minimumCertificationLevel: sr.minimumCertificationLevel,
+        requiredSpecialties: sr.requiredSpecialties,
+        requiresNitrox: sr.requiresNitrox,
+      },
+    ]),
+  );
+  const courseByTrip = new Map(courseRows.map((c) => [c.id, c]));
+
+  const bookingIds = waiverRows.map((row) => row.booking.id);
+  const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
+  const personIds = waiverRows.map((row) => row.person.id);
+
+  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson] =
+    personIds.length === 0
+      ? [[], [], [], new Map<string, never[]>()]
+      : await Promise.all([
+          db
+            .select()
+            .from(certifications)
+            .where(
+              and(
+                eq(certifications.shopId, shopId),
+                inArray(certifications.personId, personIds),
+                isNull(certifications.deletedAt),
+              ),
+            ),
+          db
+            .select()
+            .from(specialtyCertifications)
+            .where(
+              and(
+                eq(specialtyCertifications.shopId, shopId),
+                inArray(specialtyCertifications.personId, personIds),
+                isNull(specialtyCertifications.deletedAt),
+              ),
+            ),
+          db
+            .select()
+            .from(nitroxCertifications)
+            .where(
+              and(
+                eq(nitroxCertifications.shopId, shopId),
+                inArray(nitroxCertifications.personId, personIds),
+                isNull(nitroxCertifications.deletedAt),
+              ),
+            ),
+          listSignedWaiversByPerson(db, shopId, personIds),
+        ]);
+
+  const currentTemplateVersion = currentTemplate?.version ?? null;
+
+  const certificationsByPerson = new Map<string, typeof certificationRows>();
+  for (const certification of certificationRows) {
+    const current = certificationsByPerson.get(certification.personId) ?? [];
+    current.push(certification);
+    certificationsByPerson.set(certification.personId, current);
+  }
+  const specialtiesByPerson = new Map<string, typeof specialtyRows>();
+  for (const specialty of specialtyRows) {
+    const current = specialtiesByPerson.get(specialty.personId) ?? [];
+    current.push(specialty);
+    specialtiesByPerson.set(specialty.personId, current);
+  }
+  const nitroxByPerson = new Map<string, typeof nitroxRows>();
+  for (const card of nitroxRows) {
+    const current = nitroxByPerson.get(card.personId) ?? [];
+    current.push(card);
+    nitroxByPerson.set(card.personId, current);
+  }
+
+  return waiverRows.map((row) => {
+    const tripId = row.booking.tripId;
+    const requirement = requirementsByTrip.get(tripId) ?? null;
+    const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
+    const courseRow = courseByTrip.get(tripId);
+    const courseMinimumAge = courseRow?.minimumAge ?? null;
+    const courseDate = courseRow?.startsAt
+      ? calendarDateInTimezone(courseRow.startsAt, timezone)
+      : null;
+
+    const effectiveWaiver = effectiveWaiverForBooking({
+      bookingWaiver: row.waiver,
+      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
+      currentTemplateVersion,
+      now,
+    });
+
+    return {
+      ...row,
+      bookingWaiver: row.waiver,
+      waiver: effectiveWaiver,
+      requirement,
+      siteRequirement,
+      certifications: certificationsByPerson.get(row.person.id) ?? [],
+      specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
+      nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
+      paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
+      paymentProvider: paymentByBooking.get(row.booking.id)?.provider ?? null,
+      readiness: calculateReadiness({
+        requirement,
+        siteRequirement,
+        waiver: effectiveWaiver,
+        certifications: certificationsByPerson.get(row.person.id) ?? [],
+        specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
+        nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
+        paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
+        identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
+        courseMinimumAge,
+        courseDate,
+        dateOfBirth: row.person.dateOfBirth,
+        now,
+        timezone,
+      }),
+    };
+  });
 }

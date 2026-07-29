@@ -19,14 +19,15 @@ const noticeCopy: Record<
   string,
   { tone: "success" | "danger" | "warning" | "neutral"; text: string }
 > = {
-  "checked-in": { tone: "success", text: "Diver checked in. Next diver is ready when you are." },
-  "already-checked-in": { tone: "neutral", text: "That diver is already checked in." },
-  "not-ready": {
+  checked_in: { tone: "success", text: "Diver checked in. Next diver is ready when you are." },
+  already_checked_in: { tone: "neutral", text: "That diver is already checked in." },
+  not_ready: {
     tone: "warning",
     text: "Readiness changed — resolve the blocker before checking them in.",
   },
-  "not-bookable": { tone: "danger", text: "That booking is no longer available for check-in." },
-  "staff-not-found": { tone: "danger", text: "Your staff access could not be confirmed." },
+  not_bookable: { tone: "danger", text: "That booking is no longer available for check-in." },
+  not_found: { tone: "danger", text: "That booking could not be found." },
+  staff_not_found: { tone: "danger", text: "Your staff access could not be confirmed." },
   invalid: { tone: "danger", text: "Choose a diver from the queue before checking in." },
 };
 

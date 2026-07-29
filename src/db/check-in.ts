@@ -2,7 +2,7 @@ import { and, asc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { ReadinessResult } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
-import { getBookingReadiness, listTripReadiness } from "./readiness";
+import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, personRoles, trips } from "./schema";
 
 const CHECK_IN_LOOKBACK_MS = 6 * 60 * 60 * 1000;
@@ -71,9 +71,9 @@ export async function listCheckInQueue(
 
   const tripIds = [...new Set(rows.map((row) => row.tripId))];
   const readinessByBooking = new Map<string, ReadinessResult>();
-  for (const tripId of tripIds) {
-    const readiness = await listTripReadiness(db, shopId, tripId, now);
-    for (const row of readiness) readinessByBooking.set(row.booking.id, row.readiness);
+  const readinessRows = await listTripsReadiness(db, shopId, tripIds, now);
+  for (const row of readinessRows) {
+    readinessByBooking.set(row.booking.id, row.readiness);
   }
 
   return rows.map((row) => ({

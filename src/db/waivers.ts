@@ -617,6 +617,27 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
     .orderBy(asc(bookings.createdAt));
 }
 
+/** Staff roster view: only the current record joins each active booking across multiple trips. */
+export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
+  if (tripIds.length === 0) return [];
+  return db
+    .select({ booking: bookings, person: people, waiver: waiverRecords })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .leftJoin(
+      waiverRecords,
+      and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.tripId, tripIds),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt));
+}
+
 /**
  * Full evidence history for a staff timeline. Unlike the roster status query,
  * this deliberately includes superseded pending links so a replacement is
