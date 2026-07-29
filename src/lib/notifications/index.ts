@@ -306,6 +306,13 @@ const resendConfigSchema = z.object({
 
 const resendResponseSchema = z.object({ id: z.string().min(1) });
 
+function formatSender(value: string): string {
+  // Keep an explicitly branded sender untouched, while giving the common
+  // `notifications@...` environment value the friendly name recipients see.
+  const sender = value.trim();
+  return sender.includes("<") ? sender : `DiveDay <${sender}>`;
+}
+
 const reservedTestEmailDomains = [
   "example.com",
   "example.org",
@@ -699,7 +706,7 @@ export function notificationProviderFromEnvironment(
 ): NotificationProvider {
   const config = resendConfigSchema.safeParse({
     apiKey: env.RESEND_API_KEY,
-    from: env.RESEND_FROM_EMAIL,
+    from: env.RESEND_FROM_EMAIL ? formatSender(env.RESEND_FROM_EMAIL) : undefined,
   });
   return config.success
     ? resendNotificationProvider(config.data, fetchImpl, providerOptions)

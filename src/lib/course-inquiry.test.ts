@@ -74,8 +74,8 @@ describe("courseInquiryBody", () => {
 
 describe("courseInquiryMailto", () => {
   it("percent-encodes the whole body so no client truncates it at the first line", () => {
-    const href = courseInquiryMailto("hello@bluemantis.example", inquiry());
-    expect(href.startsWith("mailto:hello%40bluemantis.example?")).toBe(true);
+    const href = courseInquiryMailto("hello@demo.invalid", inquiry());
+    expect(href.startsWith("mailto:hello%40demo.invalid?")).toBe(true);
     expect(href).not.toContain("\n");
     // A literal "+" in a subject or body renders as a plus, not a space.
     expect(href).not.toContain("+");
