@@ -175,6 +175,39 @@ export async function setStaffRolesAction(formData: FormData) {
   revalidateAndRedirect(path, `${path}?notice=${notice}`);
 }
 
+export async function saveStaffChangesAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const blocked = await teamManagementBlock(session);
+  if (blocked) redirect(blocked);
+
+  const personId = String(formData.get("personId") ?? "");
+  const userAccountId = String(formData.get("userAccountId") ?? "");
+  const roles = rolesFromFormData(formData);
+  const requestedStatus = String(formData.get("status") ?? "active");
+  const status = requestedStatus === "disabled" ? "disabled" : "active";
+  if (!personId || !userAccountId || roles.length === 0) {
+    redirect(`${path}?notice=roles_invalid`);
+  }
+
+  const db = await getDb();
+  const roleResult = await setStaffRoles(db, { shopId: session.user.shopId, personId, roles });
+  if (!roleResult.ok) revalidateAndRedirect(path, `${path}?notice=${roleResult.reason}`);
+  const statusResult =
+    requestedStatus === "invited"
+      ? { ok: true as const }
+      : await setStaffAccountStatus(db, {
+          shopId: session.user.shopId,
+          personId,
+          userAccountId,
+          status,
+        });
+  revalidateAndRedirect(
+    path,
+    `${path}?notice=${statusResult.ok ? "changes_saved" : statusResult.reason}`,
+  );
+}
+
 export async function setStaffStatusAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;

@@ -183,6 +183,21 @@ describe("notify", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("never sends seeded demo.com recipients to Resend", async () => {
+    const fetchImpl = vi.fn();
+    const provider = resendNotificationProvider(
+      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
+      fetchImpl,
+    );
+
+    await expect(notify({ ...booking, to: "marcus@demo.com" }, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: false,
+      errorCode: "invalid_test_recipient",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("keeps reserved test recipients out of a mixed batch", async () => {
     const fetchImpl = vi
       .fn()

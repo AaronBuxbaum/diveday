@@ -67,7 +67,12 @@ test("the last-owner guard refuses removing the shop's sole owner", async ({ pag
   await page.goto(`/shop/${SHOP}/settings/team`);
 
   const ownerRow = page.locator("li").filter({ hasText: DEV_STAFF_LOGINS.owner.email });
-  await ownerRow.getByRole("button", { name: "Remove from team" }).click();
+  // Removal is intentionally only offered after an account is disabled. A
+  // sole owner cannot be disabled, so exercise the same last-owner guard via
+  // the unified Save changes form while also protecting the new UI contract.
+  await expect(ownerRow.getByRole("button", { name: "Remove from team" })).toHaveCount(0);
+  await ownerRow.getByLabel("Owner").uncheck();
+  await ownerRow.getByRole("button", { name: "Save changes" }).click();
 
   await expect(page.getByText("the shop needs at least one owner")).toBeVisible();
   await expect(

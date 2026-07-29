@@ -1,4 +1,18 @@
-import { and, count, countDistinct, eq, gte, inArray, isNull, lt, ne, sum } from "drizzle-orm";
+import {
+  and,
+  count,
+  countDistinct,
+  eq,
+  exists,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  ne,
+  not,
+  sum,
+} from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { DbExecutor } from "./client";
@@ -7,6 +21,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  orders,
   people,
   personRoles,
   trips,
@@ -192,6 +207,37 @@ export async function getMonthlyReport(
       ),
     );
 
+  // Older/demo data can contain a paid invoice without the booking-payment
+  // mirror (the invoice is still the authoritative collected amount). Use it
+  // only when no current payment row exists, avoiding double counting the
+  // normal webhook/manual-payment path above.
+  const [invoiceRevenue] = await db
+    .select({ total: sum(orders.amountPaidCents) })
+    .from(orders)
+    .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inWindow,
+        eq(orders.shopId, shopId),
+        eq(orders.status, "paid"),
+        gt(orders.amountPaidCents, 0),
+        not(
+          exists(
+            db
+              .select({ id: bookingPayments.id })
+              .from(bookingPayments)
+              .where(
+                and(
+                  eq(bookingPayments.bookingId, orders.bookingId),
+                  eq(bookingPayments.shopId, shopId),
+                ),
+              ),
+          ),
+        ),
+      ),
+    );
+
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => ({
@@ -205,6 +251,9 @@ export async function getMonthlyReport(
 
   return {
     trips: reportTrips,
-    revenueCents: Number(baseRevenue?.total ?? 0) + Number(recoveredDeposits?.total ?? 0),
+    revenueCents:
+      Number(baseRevenue?.total ?? 0) +
+      Number(recoveredDeposits?.total ?? 0) +
+      Number(invoiceRevenue?.total ?? 0),
   };
 }

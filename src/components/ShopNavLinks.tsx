@@ -89,6 +89,7 @@ export function ShopNavLinks({
               href={href}
               className={`${navClass(active)} flex-1 justify-center snap-start sm:flex-none sm:justify-start`}
               aria-current={active ? "page" : undefined}
+              onClick={closeMore}
             >
               {label}
             </Link>

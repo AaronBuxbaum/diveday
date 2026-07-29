@@ -139,7 +139,9 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/trips/new");
     await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
     await page.getByLabel("Title").fill(sessionTitle);
-    await page.getByLabel("Date").fill(daysFromNow(21));
+    // Keep the test-created class clear of the seeded Deep Diver session,
+    // which spans into day 21 and intentionally exercises crew overlap rules.
+    await page.getByLabel("Date").fill(daysFromNow(24));
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("17:00");
     await page.getByRole("button", { name: "Put it on the board" }).click();

@@ -32,7 +32,13 @@ function closeWhenTestFinishes(client: PGlite): void {
  * across tests. The instance is closed automatically when the owning test
  * finishes.
  */
-export async function seededTestDb(): Promise<AppDb> {
+export async function seededTestDb(options: { history?: boolean } = {}): Promise<AppDb> {
+  if (options.history) {
+    const db = await createTestDb();
+    await seedDemo(db, { history: true });
+    closeWhenTestFinishes(db.$client as PGlite);
+    return db;
+  }
   const bytes = await templateBytes();
   if (!bytes) {
     // Global setup didn't run (foreign config / direct runner): pay full price.
@@ -51,8 +57,8 @@ export async function seededTestDb(): Promise<AppDb> {
 }
 
 /** As {@link seededTestDb}, plus the seeded "blue-mantis" demo shop row. */
-export async function seededShopContext() {
-  const db = await seededTestDb();
+export async function seededShopContext(options: { history?: boolean } = {}) {
+  const db = await seededTestDb(options);
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   return { db, shop };

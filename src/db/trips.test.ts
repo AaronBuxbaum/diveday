@@ -19,6 +19,7 @@ import {
   getTripWithBooked,
   listStaff,
   listTripDives,
+  listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
   setTripCrew,
   setTripStatus,
@@ -31,6 +32,44 @@ import {
 const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
+  it("stores variable meeting windows and rejects crew overlap on any course day", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    const first = await createTrip(db, {
+      shopId: shop.id,
+      title: "Open Water test class",
+      startsAt: new Date("2030-08-01T12:00:00Z"),
+      endsAt: new Date("2030-08-02T18:00:00Z"),
+      capacity: 4,
+      scheduleDays: [
+        {
+          dayNumber: 1,
+          startsAt: new Date("2030-08-01T12:00:00Z"),
+          endsAt: new Date("2030-08-01T16:00:00Z"),
+        },
+        {
+          dayNumber: 2,
+          startsAt: new Date("2030-08-02T12:00:00Z"),
+          endsAt: new Date("2030-08-02T18:00:00Z"),
+        },
+      ],
+    });
+    if (!first) throw new Error("first multi-day trip not created");
+    expect(await listTripScheduleDays(db, shop.id, first.id)).toHaveLength(2);
+    expect(await setTripCrew(db, shop.id, first.id, [instructor.person.id])).toBe(true);
+    const second = await createTrip(db, {
+      shopId: shop.id,
+      title: "Day-two overlap",
+      startsAt: new Date("2030-08-02T15:00:00Z"),
+      endsAt: new Date("2030-08-02T17:00:00Z"),
+      capacity: 4,
+    });
+    if (!second) throw new Error("second trip not created");
+    expect(await setTripCrew(db, shop.id, second.id, [instructor.person.id])).toBe(false);
+  });
+
   it("returns upcoming trips ordered by start with correct booked counts", async () => {
     const { db, shop } = await seededShopContext();
 
