@@ -12,10 +12,9 @@ Delight is this product's differentiator — this review is where that stops bei
 1. Read `docs/design/principles.md` (the principles **and** the checklist).
 2. Start the app (`pnpm dev` in background) and capture every changed route:
    ```bash
-   BACKSTOP_FILTER='route-scenario' node scripts/backstop-run.mjs reference
+   npx playwright test e2e/visual.spec.ts --update-snapshots -g 'about page'
    ```
-   This produces a focused Backstop reference capture. Use `test` to compare against existing
-   references, then open `backstop_data/html_report/index.html` with `pnpm backstop:report`.
+   This produces a focused screenshot capture. Inspect the updated files under `e2e/visual.spec.ts-snapshots/`.
 3. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)

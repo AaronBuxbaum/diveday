@@ -25,15 +25,13 @@ optional. E2E tests use the sandbox/system Chrome and never download a second br
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests |
 | `pnpm test` | unit tests (Vitest) |
 | `pnpm e2e` | end-to-end tests (Playwright) |
-| `pnpm backstop` | BackstopJS visual regression comparison and HTML report |
-| `pnpm backstop:reference` | intentionally create/update Backstop reference PNGs |
-| `pnpm backstop:approve` | promote reviewed test captures to references |
-| `pnpm backstop:report` | reopen the latest Backstop report |
+| `pnpm visual` | compare visual regression captures against committed baselines |
+| `pnpm visual:update` | regenerate and approve visual baseline snapshots |
 | `pnpm build` | production build |
 
 ## Stack
 
-Next.js 16 · React 19 · TypeScript strict · Tailwind 4 · Biome · Vitest · Playwright · BackstopJS · pnpm —
+Next.js 16 · React 19 · TypeScript strict · Tailwind 4 · Biome · Vitest · Playwright · pnpm —
 rationale in [docs/architecture/decisions/](docs/architecture/decisions/README.md).
 
 ## Reading order

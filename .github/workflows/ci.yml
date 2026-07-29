@@ -5,9 +5,6 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -90,6 +87,7 @@ jobs:
       - run: pnpm build
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      # perf:budget reads the build manifest produced immediately above.
       - run: pnpm perf:budget
 
   playwright-build:
@@ -145,8 +143,15 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      - name: Run Playwright tests
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/4
+      - name: Run non-visual Playwright tests
+        run: |
+          spec_files=()
+          for spec in e2e/*.spec.ts; do
+            if [ "$spec" != "e2e/visual.spec.ts" ]; then
+              spec_files+=("$spec")
+            fi
+          done
+          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -156,22 +161,10 @@ jobs:
           retention-days: 7
 
   visual:
-    name: Backstop visual regression ${{ matrix.shard }}/4
+    name: reg-suit visual regression
     needs: playwright-build
     runs-on: macos-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - shard: 1
-            shard_index: 0
-          - shard: 2
-            shard_index: 1
-          - shard: 3
-            shard_index: 2
-          - shard: 4
-            shard_index: 3
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -189,104 +182,11 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      - name: Run Backstop visual comparison (non-blocking diffs)
-        id: backstop
-        continue-on-error: true
-        run: node scripts/backstop-run.mjs test
+      - name: Run reg-suit visual regression
+        run: pnpm visual
         env:
-          BACKSTOP_SKIP_BUILD: "1"
-          BACKSTOP_SHARD_INDEX: ${{ matrix.shard_index }}
-          BACKSTOP_SHARD_TOTAL: "4"
-          DIVEDAY_E2E: "1"
-      - name: Generate machine-readable Backstop diff manifest
-        if: always()
-        run: node scripts/backstop-summary.mjs
-        env:
-          BACKSTOP_SHARD_INDEX: ${{ matrix.shard_index }}
-          BACKSTOP_SHARD_TOTAL: "4"
-      - name: Summarize Backstop artifacts
-        if: always()
-        env:
-          BACKSTOP_OUTCOME: ${{ steps.backstop.outcome }}
-        run: |
-          {
-            echo "### Backstop visual regression"
-            echo
-            if [ "$BACKSTOP_OUTCOME" = "failure" ]; then
-              if [ ! -f backstop_data/ci_report/xunit.xml ]; then
-                echo "Backstop failed before producing a comparison report."
-                exit 1
-              fi
-              echo "Backstop found visual differences. This check is non-blocking; review the HTML report and diff images before merging."
-            else
-              echo "Backstop visual comparison passed."
-            fi
-            if [ ! -f backstop_data/json_report/jsonReport.json ]; then
-              echo "Backstop did not produce the machine-readable JSON comparison report."
-              exit 1
-            fi
-            echo
-            echo "[Download the Backstop visual artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)"
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ -f backstop_data/ci_report/xunit.xml ]; then
-            echo "JUnit report generated: backstop_data/ci_report/xunit.xml" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f backstop_data/html_report/index.html ]; then
-            echo "HTML report generated; inspect reference/test/diff images in the downloaded artifact." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f backstop_data/ci_report/diff-summary.md ]; then
-            cat backstop_data/ci_report/diff-summary.md >> "$GITHUB_STEP_SUMMARY"
-          fi
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: backstop-visual-artifacts-${{ matrix.shard }}-of-4
-          path: |
-            backstop_data/html_report/
-            backstop_data/ci_report/
-            backstop_data/json_report/
-            backstop_data/bitmaps_test/
-          if-no-files-found: ignore
-          retention-days: 7
+          REG_S3_BUCKET_NAME: ${{ secrets.REG_S3_BUCKET_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
 
-  backstop-baseline:
-    name: Approve Backstop references on main
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.visual.result == 'success'
-    needs: visual
-    runs-on: macos-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v7
-        with:
-          name: playwright-next-build
-          path: .next
-      - uses: actions/cache@v4
-        with:
-          path: ~/Library/Caches/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install chromium
-      - name: Capture references from merged main
-        run: node scripts/backstop-run.mjs reference
-        env:
-          BACKSTOP_SKIP_BUILD: "1"
-          DIVEDAY_E2E: "1"
-      - name: Commit updated Backstop references
-        run: |
-          git add -A backstop_data/bitmaps_reference
-          if git diff --cached --quiet; then
-            echo "Backstop references already match main."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update Backstop references [skip ci]"
-          git push origin HEAD:main

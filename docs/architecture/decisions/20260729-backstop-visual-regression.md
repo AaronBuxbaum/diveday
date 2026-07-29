@@ -1,6 +1,6 @@
 # 20260729-backstop-visual-regression — Use BackstopJS for visual regression
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260729-reg-suit-visual-regression
 - **Date:** 2026-07-29
 
 ## Context

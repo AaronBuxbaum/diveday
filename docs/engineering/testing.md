@@ -8,7 +8,7 @@
 | Component | Vitest + Testing Library | colocated | interactive components behave (role-based queries) |
 | Fetch boundary | Vitest + MSW | colocated, e.g. `offline-manifest-store.test.ts` | client code that calls a real `/api/*` route — narrow, see [ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md) |
 | E2E | Playwright | `e2e/*.spec.ts` | critical user flows survive integration |
-| Visual | BackstopJS (Playwright engine) | `backstop.config.cjs`, `backstop/` | key surfaces (light + dark × phone + desktop, plus print) still look right — see [ADR 20260729](../architecture/decisions/20260729-backstop-visual-regression.md) |
+| Visual | reg-suit + S3 | `e2e/visual.spec.ts`, `.reg/` | key surfaces (light + dark × phone + desktop, plus print) still look right — see [ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md) |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
 mutating through inline `"use server"` closures — not a client fetching JSON. That's exactly the
@@ -22,10 +22,7 @@ the rare case where a client component makes a real `fetch` to one of our own ro
 pnpm test          # unit + component, once
 pnpm test:watch    # during development
 pnpm e2e           # Playwright (auto-detects sandbox Chromium; CI installs its own)
-pnpm backstop      # BackstopJS visual comparison and HTML report
-pnpm backstop:reference  # intentionally create/update reference PNGs
-pnpm backstop:approve    # promote reviewed test PNGs to references
-pnpm backstop:report     # reopen the latest local report
+pnpm visual        # capture screenshots and run reg-suit comparison and publish to S3
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
 ```
 
@@ -84,17 +81,14 @@ the full suite locally with identical pass counts across repeated runs.
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
-- **Visual regression freezes the clock, never masks.** Backstop scenarios in
-  `backstop.config.cjs` and `backstop/` capture each on-screen surface at light/dark ×
+- **Visual regression freezes the clock, never masks.** Playwright visual tests in
+  `e2e/visual.spec.ts` capture each on-screen surface at light/dark ×
   phone/desktop and the two dock surfaces in print mode. Nothing is masked: the server clock is
-  pinned by `DIVEDAY_CLOCK` and the Backstop browser clock by `backstop/onBefore.cjs`, so
-  clock-derived text is pixel-stable and a regression in a date remains visible. References are
-  committed under `backstop_data/bitmaps_reference/`; test captures and reports are ignored.
-  CI shards the scenario list with `BACKSTOP_SHARD_INDEX` / `BACKSTOP_SHARD_TOTAL`, so each
-  Backstop process still resets an isolated PGlite-backed server serially while the full visual
-  comparison runs in parallel jobs. Review intentional changes in the Backstop HTML report, then
-  run `pnpm backstop:approve` and commit the resulting reference PNGs. CI compares and uploads the
-  report; it never updates or pushes references automatically.
+  pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
+  clock-derived text is pixel-stable and a regression in a date remains visible. Diffs and report
+  are handled by `reg-suit` and published to S3.
+  CI runs the visual suite, generates snapshots in `.reg/actual`, and runs `reg-suit run` to
+  compare against previous S3 baselines and upload the new baselines and HTML report.
 
 ## Adding a test
 

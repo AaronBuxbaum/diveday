@@ -18,8 +18,8 @@ under the same sync duties (docs/README.md).
 | `brand-voice` | Creating or reviewing brand, voice, visual, merch, vendor, or promotional collateral |
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
-| `e2e-and-visual` | Adding/changing a user-facing flow or surface; maintaining Playwright flows and Backstop scenarios |
-| `visual-triage` | Whenever Backstop reports a visual difference — decide which reference changes are expected and explain or fix the rest |
+| `e2e-and-visual` | Adding/changing a user-facing flow or surface; maintaining Playwright functional flows and visual specs |
+| `visual-triage` | Whenever Playwright reports a visual difference — decide which reference changes are expected and explain or fix the rest |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |

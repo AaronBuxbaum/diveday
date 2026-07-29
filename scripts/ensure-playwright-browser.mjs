@@ -6,6 +6,7 @@ const knownBrowsers = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   process.env.CHROME_PATH,
   process.env.CHROMIUM_PATH,
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/opt/pw-browsers/chromium",
   "/usr/bin/chromium",
   "/usr/bin/chromium-browser",

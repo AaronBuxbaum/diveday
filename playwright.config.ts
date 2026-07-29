@@ -15,6 +15,7 @@ const browserCandidates = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   process.env.CHROME_PATH,
   process.env.CHROMIUM_PATH,
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/opt/pw-browsers/chromium",
   "/usr/bin/chromium",
   "/usr/bin/chromium-browser",
@@ -83,9 +84,10 @@ export default defineConfig({
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
   retries: 0,
-  // Playwright owns functional E2E only. BackstopJS owns visual scenarios,
-  // references, comparison, and approval (see
-  // docs/architecture/decisions/20260729-backstop-visual-regression.md).
+  // Visual assertions (e2e/visual.spec.ts) compare against baseline PNGs
+  // committed to the repo via Playwright's own toHaveScreenshot() — no
+  // separate service or token. See
+  // docs/architecture/decisions/20260729-playwright-visual-regression.md.
   reporter: process.env.CI
     ? ([["github"], ["html", { open: "never" }]] as const)
     : ([["list"]] as const),
