@@ -518,7 +518,7 @@ describe("prepareContactImport — safety rules", () => {
     const [rowTab] = prepareContactImport("full_name\n'\tcmd").rows;
     expect(rowTab.fullName).toBe("cmd");
 
-    const [rowCr] = prepareContactImport("full_name\n\"'\rcmd\"").rows;
+    const [rowCr] = prepareContactImport('full_name\n"\'\rcmd"').rows;
     expect(rowCr.fullName).toBe("cmd");
   });
 
