@@ -397,6 +397,16 @@ new domain concept, define it here in the same PR.
 
 ## Rental fit and prep
 
+- **Demand signal** — a staff-only capacity-planning prompt shown when a trip is full and its wait
+  list reaches the larger of two divers or 25% of the trip's capacity. It suggests another boat or
+  departure; it never creates or changes a trip automatically.
+- **Private staff note** — operational context attached to a diver's booking, visible only on
+  authenticated staff surfaces. It is never included in diver readiness, waiver, recap, public
+  schedule, manifest export, or notifications.
+- **Activity event** — an append-only staff-facing sentence describing who did operational work and
+  what happened (for example, “Maya added a private note about Dana”), with the time it happened.
+  Activity uses shop language, never table names or record identifiers.
+
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
@@ -526,3 +536,6 @@ new domain concept, define it here in the same PR.
   soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
+  pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never
+  a promise and never carries medical or safety-clearance information.

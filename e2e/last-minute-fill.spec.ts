@@ -16,7 +16,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   request,
 }) => {
   // Public opt-in, a staff sign-in, and two round trips through the send
-  // action all in one flow — same reasoning as visual.spec.ts's heavier
+  // action all in one flow — same reasoning as Backstop's heavier
   // multi-step tests for the suite's 15s default.
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule");

@@ -141,6 +141,7 @@ export function exportFileName(shopSlug: string, now: Date, timezone: string): s
  * an export that is quiet about its gaps is how migrations lose data.
  */
 const NOT_INCLUDED = [
+  "Private staff notes and the in-product activity feed — working context, not diver or migration records.",
   "Offline manifest snapshots (device-side copies of the live records exported here).",
   "Notification delivery logs — operational plumbing, not shop records.",
   "Stripe account linkage and checkout-session attempts — every money outcome is in bookings.csv and orders.csv, and the Stripe account itself already belongs to the shop.",

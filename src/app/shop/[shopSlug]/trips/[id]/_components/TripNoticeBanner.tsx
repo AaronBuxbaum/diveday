@@ -8,6 +8,11 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
   cancelled: { tone: "danger", text: "Trip cancelled — it's off the public schedule." },
   reinstated: { tone: "success", text: "Back on! The trip is on the schedule again." },
   crew: { tone: "success", text: "Crew updated." },
+  "crew-conflict": {
+    tone: "danger",
+    text: "Crew wasn't changed — someone is already assigned during this time, or the course would fall below its teaching ratio.",
+  },
+  "note-added": { tone: "success", text: "Private staff note added." },
   "booking-removed": { tone: "success", text: "Booking cancelled — the spot is open again." },
   "booking-removed-refunded": {
     tone: "success",

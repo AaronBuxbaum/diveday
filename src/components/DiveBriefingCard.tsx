@@ -2,6 +2,7 @@ import type { diveSites } from "@/db/schema";
 import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
 import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
+import { siteFit } from "@/lib/diver-planning";
 import { DiveSiteFieldGuide } from "./DiveSiteFieldGuide";
 import { DiveSiteLandmarks } from "./DiveSiteLandmarks";
 import { DiveSiteMap } from "./DiveSiteMap";
@@ -26,6 +27,7 @@ export function DiveBriefingCard({
   moments: Moment[];
 }) {
   const heading = title || site?.name || `Dive ${diveNumber}`;
+  const fit = site ? siteFit(site) : null;
   const landmarks = site ? buildDiveSiteLandmarks(site.name, site.landmarks) : [];
   // The long-tail site content folds behind one tap so the page stays a
   // briefing, not a scroll marathon — the essentials above stay in view.
@@ -67,6 +69,15 @@ export function DiveBriefingCard({
         ) : (
           <p className="mt-4 text-muted">The crew will brief the final route at the dock.</p>
         )}
+        {site && (site.difficulty || site.depthRange || site.currentNote) ? (
+          <div className="mt-5 rounded-lg bg-primary/10 p-4">
+            <p className="font-semibold text-primary">{fit?.label}</p>
+            <p className="mt-1 text-sm text-muted">{fit?.detail}</p>
+            <p className="mt-2 text-xs text-muted">
+              A planning guide, not a certification or safety clearance.
+            </p>
+          </div>
+        ) : null}
         {site && (site.difficulty || site.depthRange || site.currentNote) ? (
           <dl className="mt-6 grid grid-cols-2 gap-4 border-y border-border py-5 sm:grid-cols-3">
             <div>

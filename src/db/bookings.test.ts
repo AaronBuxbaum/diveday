@@ -122,6 +122,23 @@ describe("createBooking (in-memory PGlite)", () => {
     );
   });
 
+  it("keeps a diver's optional buddy-group preference with the booking", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Mae Current",
+      email: "mae-current@example.com",
+      groupPreference: "Slow pace and macro photography",
+    });
+    if (!outcome.ok) throw new Error("setup booking failed");
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(
+      roster.find(({ booking }) => booking.id === outcome.bookingId)?.booking.groupPreference,
+    ).toBe("Slow pace and macro photography");
+  });
+
   it("rejects booking the same trip twice", async () => {
     const { db, shop, open } = await seededContext();
     await bookVisitor(db, shop.id, open.id);

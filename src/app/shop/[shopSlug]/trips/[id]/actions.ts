@@ -13,6 +13,7 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { addInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
@@ -413,8 +414,28 @@ export async function saveCrewAction(shopSlug: string, tripId: string, formData:
   const s = await requireStaffSession();
   const ids = formData.getAll("crew").map(String);
   const saved = await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
-  if (!saved) redirect(`${back}?notice=invalid`);
+  if (!saved) redirect(`${back}?notice=crew-conflict`);
+  await recordTripActivity(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    actorPersonId: s.user.personId,
+    action: "updated the crew assignment",
+  });
   revalidateAndRedirect(back, `${back}?notice=crew`);
+}
+
+export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const body = String(formData.get("note") ?? "");
+  const saved = await addInternalNote(await getDb(), {
+    shopId: s.user.shopId,
+    actorPersonId: s.user.personId,
+    bookingId,
+    body,
+  });
+  revalidateAndRedirect(back, `${back}?notice=${saved ? "note-added" : "invalid"}`);
 }
 
 /** Staff-entered booking for walk-ins or divers tracked in another system. */
@@ -432,6 +453,12 @@ export async function addBookingAction(shopSlug: string, tripId: string, formDat
     phone: parsed.data.phone,
   });
   if (!outcome.ok) redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
+  await recordTripActivity(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    actorPersonId: s.user.personId,
+    action: `added ${parsed.data.fullName} to the trip`,
+  });
   // A walk-in gets their waiver right away too, when the trip needs one and they
   // aren't already covered. Best-effort: a delivery failure never undoes the add.
   try {

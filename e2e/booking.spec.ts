@@ -33,6 +33,9 @@ test.describe("staff", () => {
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
     await page.getByLabel("Diver 2 email").fill(`sam-${e2eNow().getTime()}@example.com`);
+    await page
+      .getByLabel("What kind of dive would make your day?")
+      .fill("A relaxed pace and macro photography");
     await page.getByRole("button", { name: "Book these spots" }).click();
     await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
 
@@ -63,6 +66,8 @@ test.describe("staff", () => {
       .click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
+    await expect(page.getByText("Buddy-group note:").first()).toBeVisible();
+    await expect(page.getByText("A relaxed pace and macro photography").first()).toBeVisible();
 
     // Removing a booking confirms first — it can fire an automatic refund that
     // undo can't claw back, so a misclick shouldn't be one tap from done.

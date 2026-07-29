@@ -1,7 +1,22 @@
+const fs = require("node:fs");
 const path = require("node:path");
+const { chromium } = require("@playwright/test");
 
 const baseURL = process.env.BACKSTOP_BASE_URL || "http://127.0.0.1:3200";
 const sourceRoot = path.resolve("backstop");
+const browserExecutable = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+  process.env.CHROME_PATH,
+  process.env.CHROMIUM_PATH,
+  "/opt/pw-browsers/chromium",
+  chromium.executablePath(),
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+]
+  .filter(Boolean)
+  .find((candidate) => fs.existsSync(candidate));
 
 const viewports = [
   { label: "phone", width: 390, height: 844 },
@@ -9,6 +24,21 @@ const viewports = [
 ];
 
 const printViewport = { label: "print", width: 816, height: 1056 };
+
+function parseShardEnv() {
+  const total = Number(process.env.BACKSTOP_SHARD_TOTAL || "1");
+  const index = Number(process.env.BACKSTOP_SHARD_INDEX || "0");
+
+  if (!Number.isInteger(total) || total < 1) {
+    throw new Error("BACKSTOP_SHARD_TOTAL must be a positive integer.");
+  }
+
+  if (!Number.isInteger(index) || index < 0 || index >= total) {
+    throw new Error("BACKSTOP_SHARD_INDEX must be an integer from 0 to BACKSTOP_SHARD_TOTAL - 1.");
+  }
+
+  return { index, total };
+}
 
 function scenario({
   label,
@@ -61,16 +91,15 @@ const publicRoutes = [
 
 const statefulPublic = [
   ["site-briefing", "site-briefing", "light"],
-  ["recap", "recap", "light", true],
-  ["waiver-active", "waiver-active", "light", true],
+  ["recap", "recap", "light"],
+  ["waiver-active", "waiver-active", "light"],
   ["readiness", "readiness", "light"],
-].flatMap(([name, flow, defaultScheme, staff]) =>
+].flatMap(([name, flow, defaultScheme]) =>
   ["light", "dark"].map((scheme) =>
     scenario({
       label: `${name}-${scheme}`,
       flow,
       scheme: scheme || defaultScheme,
-      staff: Boolean(staff),
     }),
   ),
 );
@@ -126,11 +155,22 @@ const scenarios = [
   ...staffStateful,
   ...printScenarios,
 ];
+const shard = parseShardEnv();
+const selectedScenarios =
+  shard.total === 1
+    ? scenarios
+    : scenarios.filter((_scenario, scenarioIndex) => scenarioIndex % shard.total === shard.index);
+
+if (selectedScenarios.length === 0) {
+  throw new Error(
+    `Backstop shard ${shard.index + 1}/${shard.total} did not receive any scenarios.`,
+  );
+}
 
 module.exports = {
   id: "diveday_backstop",
   viewports,
-  scenarios,
+  scenarios: selectedScenarios,
   onBeforeScript: "onBefore.cjs",
   onReadyScript: "onReady.cjs",
   paths: {
@@ -139,8 +179,9 @@ module.exports = {
     engine_scripts: sourceRoot,
     html_report: path.resolve("backstop_data/html_report"),
     ci_report: path.resolve("backstop_data/ci_report"),
+    json_report: path.resolve("backstop_data/json_report"),
   },
-  report: ["browser", "CI"],
+  report: ["browser", "CI", "json"],
   openReport: false,
   archiveReport: false,
   engine: "playwright",
@@ -149,6 +190,7 @@ module.exports = {
     headless: true,
     gotoParameters: { waitUntil: "networkidle" },
     waitTimeout: 60_000,
+    ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   },
   asyncCaptureLimit: 1,
   asyncCompareLimit: 10,

@@ -233,7 +233,7 @@ export const areas = {
       "docs/product/next-steps.md",
       "docs/architecture/decisions/0004-design-tokens.md",
     ],
-    code: ["src/app/globals.css", "src/app", "src/components", "scripts/screenshot.mjs"],
+    code: ["src/app/globals.css", "src/app", "src/components", "backstop.config.cjs", "backstop"],
     tests: ["e2e"],
     invariants: [
       "Use semantic tokens only; no raw colors in components.",
@@ -241,12 +241,7 @@ export const areas = {
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],
-    validate: [
-      "pnpm lint",
-      "pnpm typecheck",
-      "node scripts/screenshot.mjs",
-      "pnpm e2e -- --reporter=line",
-    ],
+    validate: ["pnpm lint", "pnpm typecheck", "pnpm backstop", "pnpm e2e -- --reporter=line"],
   },
   "brand-voice": {
     goal: "Create consistent DiveDay brand, voice, visual, merch, and vendor collateral from the current identity.",

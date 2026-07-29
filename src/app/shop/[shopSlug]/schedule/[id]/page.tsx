@@ -23,6 +23,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { googleMapsUrl } from "@/lib/dive-site-map";
+import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
@@ -280,7 +281,20 @@ export default async function TripDetailPage({
         crewPrediction={crewPrediction}
         automatedForecast={automatedForecast}
       />
-      <PackingSection shop={shop} trip={trip} />
+      {confirmed &&
+      conditionsChangedSinceBooking(
+        trip.conditionsUpdatedAt,
+        confirmed.booking.conditionsBriefedAt,
+      ) ? (
+        <section className="mt-6 rounded-xl border border-warning bg-warning/10 p-5" role="status">
+          <h2 className="font-semibold">Conditions changed since you booked</h2>
+          <p className="mt-1 text-sm text-muted">
+            The crew has published a newer read for this day. Review it below; the final route and
+            go/no-go call still happen at the dock.
+          </p>
+        </section>
+      ) : null}
+      <PackingSection shop={shop} trip={trip} rentalFit={rentalFit} />
       <DiveBriefingsSection briefings={diveBriefings} trip={trip} />
     </main>
   );

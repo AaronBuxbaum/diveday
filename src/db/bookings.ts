@@ -54,6 +54,8 @@ export type BookingRequest = {
    * error costs three call sites once.
    */
   actor: "staff" | "public";
+  /** Optional, non-sensitive interest or pace preference for crew buddy grouping. */
+  groupPreference?: string;
 } & BookingPerson;
 
 export type BookingOutcome =
@@ -305,6 +307,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       .set({
         status: "booked",
         conditionsBriefedAt: trip.conditionsUpdatedAt,
+        groupPreference: req.groupPreference?.trim() || null,
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
@@ -320,6 +323,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       tripId: trip.id,
       personId: person.id,
       conditionsBriefedAt: trip.conditionsUpdatedAt,
+      groupPreference: req.groupPreference?.trim() || null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
     })
     .returning();

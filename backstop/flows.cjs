@@ -1,4 +1,5 @@
 const { createHmac } = require("node:crypto");
+const path = require("node:path");
 
 const SHOP = "blue-mantis";
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
@@ -19,6 +20,21 @@ async function ready(_page, locator) {
 
 async function fonts(page) {
   await page.evaluate(() => document.fonts.ready);
+}
+
+async function withOwnerPage(browserContext, callback) {
+  const browser = browserContext.browser();
+  if (!browser) throw new Error("Backstop owner setup requires a live browser");
+  const context = await browser.newContext({
+    baseURL: baseURL(),
+    storageState: path.resolve("backstop_data/.owner-storage-state.json"),
+  });
+  try {
+    const page = await context.newPage();
+    return await callback(page);
+  } finally {
+    await context.close();
+  }
 }
 
 async function openTrip(page, title = REEF_TRIP, tab) {
@@ -49,27 +65,29 @@ async function siteBriefing(page) {
   await ready(page, page.getByTitle("Satellite map of Molasses Reef"));
 }
 
-async function recap(page) {
-  await go(page, `/shop/${SHOP}/settings`);
-  await page.getByLabel("Review link").fill("https://g.page/r/blue-mantis/review");
-  await page.getByRole("button", { name: "Save review link" }).click();
-  await ready(page, page.getByText("Review link saved."));
+async function recap(page, _scenario, _viewport, browserContext) {
+  await withOwnerPage(browserContext, async (ownerPage) => {
+    await go(ownerPage, `/shop/${SHOP}/settings`);
+    await ownerPage.getByLabel("Review link").fill("https://g.page/r/blue-mantis/review");
+    await ownerPage.getByRole("button", { name: "Save review link" }).click();
+    await ready(ownerPage, ownerPage.getByText("Review link saved."));
+  });
   await page.request.post(`${baseURL()}/api/test/seed-stripe-account`);
   await go(page, `/recap/${recapToken()}`);
   await ready(page, page.getByRole("heading", { name: /Nice diving/ }));
   await ready(page, page.getByRole("heading", { name: "Tip your crew" }));
 }
 
-async function waiverActive(page) {
-  await openTrip(page, REEF_TRIP, "Guests");
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  await ready(page, page.getByRole("heading", { name: "Private waiver link ready" }));
-  const waiverHref = await page
-    .getByRole("link", { name: "Open waiver link" })
-    .getAttribute("href");
+async function waiverActive(page, _scenario, _viewport, browserContext) {
+  const waiverHref = await withOwnerPage(browserContext, async (ownerPage) => {
+    await openTrip(ownerPage, REEF_TRIP, "Guests");
+    const diverSection = ownerPage
+      .locator("section")
+      .filter({ has: ownerPage.getByRole("heading", { name: /^Divers/ }) });
+    await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+    await ready(ownerPage, ownerPage.getByRole("heading", { name: "Private waiver link ready" }));
+    return ownerPage.getByRole("link", { name: "Open waiver link" }).getAttribute("href");
+  });
   await go(page, waiverHref || "/");
   await ready(page, page.getByRole("heading", { name: "A quick step before the dock" }));
 }
