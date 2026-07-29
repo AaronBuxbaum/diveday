@@ -1,7 +1,22 @@
+const fs = require("node:fs");
 const path = require("node:path");
+const { chromium } = require("@playwright/test");
 
 const baseURL = process.env.BACKSTOP_BASE_URL || "http://127.0.0.1:3200";
 const sourceRoot = path.resolve("backstop");
+const browserExecutable = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+  process.env.CHROME_PATH,
+  process.env.CHROMIUM_PATH,
+  "/opt/pw-browsers/chromium",
+  chromium.executablePath(),
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+]
+  .filter(Boolean)
+  .find((candidate) => fs.existsSync(candidate));
 
 const viewports = [
   { label: "phone", width: 390, height: 844 },
@@ -61,16 +76,15 @@ const publicRoutes = [
 
 const statefulPublic = [
   ["site-briefing", "site-briefing", "light"],
-  ["recap", "recap", "light", true],
-  ["waiver-active", "waiver-active", "light", true],
+  ["recap", "recap", "light"],
+  ["waiver-active", "waiver-active", "light"],
   ["readiness", "readiness", "light"],
-].flatMap(([name, flow, defaultScheme, staff]) =>
+].flatMap(([name, flow, defaultScheme]) =>
   ["light", "dark"].map((scheme) =>
     scenario({
       label: `${name}-${scheme}`,
       flow,
       scheme: scheme || defaultScheme,
-      staff: Boolean(staff),
     }),
   ),
 );
@@ -149,6 +163,7 @@ module.exports = {
     headless: true,
     gotoParameters: { waitUntil: "networkidle" },
     waitTimeout: 60_000,
+    ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   },
   asyncCaptureLimit: 1,
   asyncCompareLimit: 10,

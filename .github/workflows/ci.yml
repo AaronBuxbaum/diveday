@@ -10,40 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  detect-changes:
-    name: Detect baseline-only change
-    runs-on: macos-latest
-    outputs:
-      visual_baselines_only: ${{ steps.filter.outputs.visual_baselines_only }}
-    steps:
-      # A visual baseline commit made by the visual job retriggers this
-      # workflow. If that commit only changes baselines, keep the cheap
-      # visual-only path below.
-      # When that change touches *only* committed baselines under
-      # e2e/visual.spec.ts-snapshots/, the Playwright matrix below is skipped
-      # and the serialized visual job runs just the visual spec. Falls back to
-      # "false" whenever the comparison is not trustworthy.
-      - id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.event.after || github.event.pull_request.head.sha || github.sha }}"
-          ZERO="0000000000000000000000000000000000000000"
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "$ZERO" ]; then
-            echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          CHANGED=$(gh api "repos/${{ github.repository }}/compare/$BEFORE...$AFTER" --jq '.files[].filename' 2>/dev/null) || {
-            echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          }
-          if [ -n "$CHANGED" ] && ! echo "$CHANGED" | grep -qv '^e2e/visual\.spec\.ts-snapshots/'; then
-            echo "visual_baselines_only=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "visual_baselines_only=false" >> "$GITHUB_OUTPUT"
-          fi
-
   repo-safeguards:
     name: Repository safeguards
     runs-on: macos-latest
@@ -121,7 +87,6 @@ jobs:
       - run: pnpm build
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      # perf:budget reads the build manifest produced immediately above.
       - run: pnpm perf:budget
 
   playwright-build:
@@ -153,8 +118,7 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/4
-    needs: [detect-changes, playwright-build]
-    if: needs.detect-changes.outputs.visual_baselines_only != 'true'
+    needs: playwright-build
     runs-on: macos-latest
     timeout-minutes: 20
     strategy:
@@ -178,15 +142,8 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      - name: Run non-visual Playwright tests
-        run: |
-          spec_files=()
-          for spec in e2e/*.spec.ts; do
-            if [ "$spec" != "e2e/visual.spec.ts" ]; then
-              spec_files+=("$spec")
-            fi
-          done
-          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+      - name: Run Playwright tests
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -196,13 +153,10 @@ jobs:
           retention-days: 7
 
   visual:
-    name: Visual regression (serialized)
-    needs: [detect-changes, playwright-build]
-    if: needs.detect-changes.result == 'success' && needs.playwright-build.result == 'success'
+    name: Backstop visual regression (serialized)
+    needs: playwright-build
     runs-on: macos-latest
-    permissions:
-      contents: write
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -220,102 +174,27 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      # Run once with snapshot updates enabled. Screenshot mismatches become
-      # git diffs this job can commit; real test failures still fail here.
-      - name: Run visual Playwright suite and update baselines
-        run: pnpm exec playwright test e2e/visual.spec.ts --update-snapshots --reporter=line
-      - name: Detect visual baseline diffs
-        id: visual_diffs
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -n "$(git status --porcelain -- e2e/visual.spec.ts-snapshots/)" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            {
-              echo "### Visual baseline updates"
-              echo
-              echo '```'
-              git status --short -- e2e/visual.spec.ts-snapshots/
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-      # Only this job can update or commit baselines. The regular shards exclude
-      # visual.spec.ts, so no two jobs can write the same snapshot directory.
-      - name: Commit visual baseline diffs
-        if: >-
-          steps.visual_diffs.outputs.changed == 'true' &&
-          (github.event_name == 'push' ||
-            (github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository))
-        shell: bash
+      - name: Run Backstop visual comparison
+        run: node scripts/backstop-run.mjs test
         env:
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PUSH_REF: ${{ github.ref_name }}
+          BACKSTOP_SKIP_BUILD: "1"
+          DIVEDAY_E2E: "1"
+      - name: Summarize Backstop artifacts
+        if: always()
         run: |
-          set -euo pipefail
-          staging_dir="$(mktemp -d)"
-          changed_files="$staging_dir/files"
-          git diff --name-only -- e2e/visual.spec.ts-snapshots/ > "$changed_files"
-          git ls-files --others --exclude-standard -- e2e/visual.spec.ts-snapshots/ >> "$changed_files"
-          sort -u "$changed_files" -o "$changed_files"
-          if [ ! -s "$changed_files" ]; then
-            echo "No regenerated visual baselines to commit."
-            exit 0
+          if [ -f backstop_data/ci_report/xunit.xml ]; then
+            echo "Backstop JUnit report: backstop_data/ci_report/xunit.xml" >> "$GITHUB_STEP_SUMMARY"
           fi
-          while IFS= read -r path; do
-            mkdir -p "$staging_dir/$(dirname "$path")"
-            cp "$path" "$staging_dir/$path"
-          done < "$changed_files"
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # The pull_request checkout is a synthetic merge ref. Switch to the
-            # actual head commit before pushing, otherwise Git would reject the
-            # generated baseline commit as a non-fast-forward update.
-            target_ref="$PR_HEAD_REF"
-            git restore --worktree --staged -- e2e/visual.spec.ts-snapshots/ || true
-            git clean -fd -- e2e/visual.spec.ts-snapshots/ || true
-            git fetch origin "$target_ref"
-            git checkout --force --detach "origin/$target_ref"
-          else
-            target_ref="$PUSH_REF"
+          if [ -f backstop_data/html_report/index.html ]; then
+            echo "Backstop HTML report generated; download the artifact to inspect reference/test/diff images." >> "$GITHUB_STEP_SUMMARY"
           fi
-          while IFS= read -r path; do
-            mkdir -p "$(dirname "$path")"
-            cp "$staging_dir/$path" "$path"
-          done < "$changed_files"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add e2e/visual.spec.ts-snapshots/
-          if git diff --cached --quiet; then
-            echo "No baseline changes after preparing the target branch."
-            exit 0
-          fi
-          git commit -m "ci: capture visual baseline diffs"
-          git push origin "HEAD:$target_ref"
-      - name: Report unpushed visual baseline diffs
-        if: >-
-          steps.visual_diffs.outputs.changed == 'true' &&
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          echo "::warning::Visual baselines changed, but this workflow cannot push to forked pull-request branches."
       - uses: actions/upload-artifact@v7
-        if: >-
-          steps.visual_diffs.outputs.changed == 'true' &&
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name != github.repository
+        if: always()
         with:
-          name: visual-baseline-updates
-          path: e2e/visual.spec.ts-snapshots/
-          if-no-files-found: ignore
-          retention-days: 7
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: visual-playwright-report
-          path: playwright-report/
+          name: backstop-visual-artifacts
+          path: |
+            backstop_data/html_report/
+            backstop_data/ci_report/
+            backstop_data/bitmaps_test/
           if-no-files-found: ignore
           retention-days: 7
