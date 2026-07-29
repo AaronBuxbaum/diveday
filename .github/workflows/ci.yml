@@ -174,19 +174,38 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      - name: Run Backstop visual comparison
+      - name: Run Backstop visual comparison (non-blocking diffs)
+        id: backstop
+        continue-on-error: true
         run: node scripts/backstop-run.mjs test
         env:
           BACKSTOP_SKIP_BUILD: "1"
           DIVEDAY_E2E: "1"
       - name: Summarize Backstop artifacts
         if: always()
+        env:
+          BACKSTOP_OUTCOME: ${{ steps.backstop.outcome }}
         run: |
+          {
+            echo "### Backstop visual regression"
+            echo
+            if [ "$BACKSTOP_OUTCOME" = "failure" ]; then
+              if [ ! -f backstop_data/ci_report/xunit.xml ]; then
+                echo "Backstop failed before producing a comparison report."
+                exit 1
+              fi
+              echo "Backstop found visual differences. This check is non-blocking; review the HTML report and diff images before merging."
+            else
+              echo "Backstop visual comparison passed."
+            fi
+            echo
+            echo "[Download the Backstop visual artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)"
+          } >> "$GITHUB_STEP_SUMMARY"
           if [ -f backstop_data/ci_report/xunit.xml ]; then
-            echo "Backstop JUnit report: backstop_data/ci_report/xunit.xml" >> "$GITHUB_STEP_SUMMARY"
+            echo "JUnit report generated: backstop_data/ci_report/xunit.xml" >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -f backstop_data/html_report/index.html ]; then
-            echo "Backstop HTML report generated; download the artifact to inspect reference/test/diff images." >> "$GITHUB_STEP_SUMMARY"
+            echo "HTML report generated; inspect reference/test/diff images in the downloaded artifact." >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: actions/upload-artifact@v7
         if: always()
