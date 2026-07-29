@@ -205,7 +205,7 @@ describe("schema coverage", () => {
   });
 
   it("forces every column of an exported table to be exported or deliberately excluded", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = await seededShopContext({ history: true });
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 
@@ -239,7 +239,7 @@ describe("schema coverage", () => {
 
 describe("full-shop export dataset", () => {
   it("covers every promised record family with data from the seeded shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = await seededShopContext({ history: true });
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 
@@ -645,7 +645,7 @@ describe("export privilege re-check (database, not JWT)", () => {
 
 describe("export counts (the settings page's cheap view)", () => {
   it("mirrors the bundle exactly — same files, same notes, same row counts", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = await seededShopContext({ history: true });
     const input = await loadShopExportBundleInput(db, shop.id);
     const counts = await loadShopExportCounts(db, shop.id);
     if (!input || !counts) throw new Error("shop failed to load");
