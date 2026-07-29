@@ -197,6 +197,7 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
     await page.getByLabel(/Marcus Webb/).check(); // the seeded instructor
     await page.getByRole("button", { name: "Save crew" }).click();
+    await expect(page.getByRole("status")).toContainText("Crew updated");
     const tripUrl = page.url();
 
     await page.context().clearCookies();

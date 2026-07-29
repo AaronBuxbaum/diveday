@@ -167,6 +167,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.goto(tripPath);
     await page.getByLabel(/Marcus Webb/).check();
     await page.getByRole("button", { name: "Save crew" }).click();
+    await expect(page.getByRole("status")).toContainText("Crew updated");
 
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
@@ -220,6 +221,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.goto(tripPath);
     await page.getByLabel(/Marcus Webb/).check();
     await page.getByRole("button", { name: "Save crew" }).click();
+    await expect(page.getByRole("status")).toContainText("Crew updated");
 
     // Staff must step aside for the public flow: /schedule/[id] redirects a
     // signed-in staff member of this shop straight to the trip's own staff
