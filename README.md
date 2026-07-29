@@ -16,16 +16,24 @@ pnpm install
 pnpm dev          # http://localhost:3000
 ```
 
+Local development and tests use an embedded database and safe fallbacks, so `.env.local` is
+optional. E2E tests use the sandbox/system Chrome and never download a second browser; set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` or `CHROME_PATH` if its location is not auto-detected.
+
 | Command | What |
 | --- | --- |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests |
 | `pnpm test` | unit tests (Vitest) |
 | `pnpm e2e` | end-to-end tests (Playwright) |
+| `pnpm backstop` | BackstopJS visual regression comparison and HTML report |
+| `pnpm backstop:reference` | intentionally create/update Backstop reference PNGs |
+| `pnpm backstop:approve` | promote reviewed test captures to references |
+| `pnpm backstop:report` | reopen the latest Backstop report |
 | `pnpm build` | production build |
 
 ## Stack
 
-Next.js 16 · React 19 · TypeScript strict · Tailwind 4 · Biome · Vitest · Playwright · pnpm —
+Next.js 16 · React 19 · TypeScript strict · Tailwind 4 · Biome · Vitest · Playwright · BackstopJS · pnpm —
 rationale in [docs/architecture/decisions/](docs/architecture/decisions/README.md).
 
 ## Reading order

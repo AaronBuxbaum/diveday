@@ -11,10 +11,17 @@ import {
 // Sandboxed agent environments pre-install Chromium (often a different revision
 // than this Playwright version expects) and block browser downloads. Prefer an
 // explicit override, then the sandbox binary, then Playwright's own resolution.
-const sandboxChromium = "/opt/pw-browsers/chromium";
-const executablePath =
-  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
-  (!process.env.CI && fs.existsSync(sandboxChromium) ? sandboxChromium : undefined);
+const browserCandidates = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+  process.env.CHROME_PATH,
+  process.env.CHROMIUM_PATH,
+  "/opt/pw-browsers/chromium",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+];
+const executablePath = browserCandidates.find((candidate) => candidate && fs.existsSync(candidate));
 
 // The worker servers and this runner process must agree on the signing secret:
 // the visual suite mints a signed recap token in-process (e2e/visual.spec.ts) and
@@ -78,10 +85,9 @@ export default defineConfig({
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
   retries: 0,
-  // Visual assertions (e2e/visual.spec.ts) compare against baseline PNGs
-  // committed to the repo via Playwright's own toHaveScreenshot() — no
-  // separate service or token. See
-  // docs/architecture/decisions/20260727-self-managed-visual-regression.md.
+  // Playwright owns functional E2E only. BackstopJS owns visual scenarios,
+  // references, comparison, and approval (see
+  // docs/architecture/decisions/20260729-backstop-visual-regression.md).
   reporter: process.env.CI
     ? ([["github"], ["html", { open: "never" }]] as const)
     : ([["list"]] as const),

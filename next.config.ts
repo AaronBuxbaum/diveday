@@ -1,6 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+const isE2EBuild = process.env.DIVEDAY_E2E === "1";
+
 const nextConfig: NextConfig = {
   // PGlite ships WASM assets that must load from node_modules at runtime,
   // not be inlined into the server bundle (ADR-0005). node-postgres (pg)
@@ -29,6 +31,12 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(nextConfig, {
   org: "diveday",
   project: "diveday",
+
+  // E2E builds run in isolated test environments and must not upload build
+  // telemetry or source maps. Production builds keep Sentry's normal release
+  // behavior; this guard only applies to the deterministic local/CI fleet.
+  telemetry: isE2EBuild ? false : undefined,
+  sourcemaps: { disable: isE2EBuild },
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
