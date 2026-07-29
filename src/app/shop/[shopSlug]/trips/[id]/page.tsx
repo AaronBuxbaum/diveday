@@ -16,6 +16,7 @@ import {
   getTripWithBooked,
   listStaff,
   listTripDives,
+  listTripScheduleDays,
 } from "@/db/trips";
 import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -78,6 +79,7 @@ export default async function ManageTripPage({
     tripDiveList,
     siteRequirement,
     series,
+    scheduleDays,
     canConfigure,
   ] = await Promise.all([
     listStaff(db, shop.id),
@@ -87,6 +89,7 @@ export default async function ManageTripPage({
     listTripDives(db, shop.id, tripId),
     getTripSiteRequirement(db, shop.id, tripId),
     getTripSeriesSummary(db, shop.id, tripId),
+    listTripScheduleDays(db, shop.id, tripId),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
   ]);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
@@ -136,6 +139,17 @@ export default async function ManageTripPage({
                 {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
               </span>
             </div>
+            {scheduleDays.length > 1 ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+                <span>{scheduleDays.length} meeting days · same instructors each day</span>
+                {scheduleDays.map((day) => (
+                  <span key={day.id}>
+                    Day {day.dayNumber}: {formatShortDate(day.startsAt, "en-US", shop.timezone)} ·{" "}
+                    {formatTimeRangeTz(day.startsAt, day.endsAt, "en-US", shop.timezone)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             {trip.course ? (
               <p className="text-sm font-medium text-primary">
                 Course session · {trip.course.title}

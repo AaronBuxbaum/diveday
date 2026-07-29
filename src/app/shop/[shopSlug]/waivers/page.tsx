@@ -8,10 +8,10 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { getShopById, setShopJurisdiction } from "@/db/shops";
+import { getShopById } from "@/db/shops";
 import { getCurrentWaiverTemplate, saveWaiverTemplate } from "@/db/waivers";
 import { formatShortDate } from "@/lib/format";
-import { MEDICAL_JURISDICTION_LABELS, questionnaireForJurisdiction } from "@/lib/medical";
+import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -23,8 +23,6 @@ export const metadata: Metadata = {
 const templateSchema = z.object({
   body: z.string().trim().min(40).max(12_000),
 });
-
-const jurisdictionSchema = z.object({ jurisdiction: z.enum(["rstc", "uk"]) });
 
 export default async function WaiverTemplatesPage({
   params,
@@ -71,37 +69,15 @@ export default async function WaiverTemplatesPage({
     );
   }
 
-  async function chooseJurisdictionAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const editor = await getDb();
-    if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-      redirect(`/shop/${staff.user.shopSlug}`);
-    }
-    const parsed = jurisdictionSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
-    const updated = await setShopJurisdiction(
-      await getDb(),
-      staff.user.shopId,
-      parsed.data.jurisdiction,
-    );
-    revalidateAndRedirect(
-      `/shop/${staff.user.shopSlug}/waivers`,
-      `/shop/${staff.user.shopSlug}/waivers?notice=${updated ? "jurisdiction" : "invalid"}`,
-    );
-  }
-
-  const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
+  const questionnaire = questionnaireForJurisdiction("rstc");
   const banner =
     notice === "saved"
       ? current
         ? "Saved as a new version."
         : "Your waiver is saved. Every future edit is kept as a new version."
-      : notice === "jurisdiction"
-        ? "Medical questionnaire updated for new waivers."
-        : notice === "invalid"
-          ? "That didn’t save. Give the waiver a name and at least a short release."
-          : undefined;
+      : notice === "invalid"
+        ? "That didn’t save. Give the waiver a name and at least a short release."
+        : undefined;
   const bannerIsError = notice === "invalid";
 
   const editForm = (
@@ -128,7 +104,7 @@ export default async function WaiverTemplatesPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow="Settings"
@@ -147,35 +123,13 @@ export default async function WaiverTemplatesPage({
         </div>
       ) : null}
 
-      <section className="mt-10">
+      <section className="mt-10 rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <h2 className="text-lg font-semibold">Medical questionnaire</h2>
         <p className="mt-1 text-sm text-muted">
-          Which diver medical form waivers present. A “yes” to any question is a physician-referral
-          blocker, not a checkbox.
+          DiveDay uses the RSTC Diver Medical form for every shop. A “yes” to any question means a
+          physician should review the diver before they dive.
         </p>
-        <form
-          action={chooseJurisdictionAction}
-          className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-end"
-        >
-          <FieldGrid columns={1} className="flex-1">
-            <Field label="Jurisdiction">
-              <select name="jurisdiction" defaultValue={shop.jurisdiction} className={controlClass}>
-                {Object.entries(MEDICAL_JURISDICTION_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </FieldGrid>
-          <SubmitButton
-            pendingLabel="Saving…"
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            Save questionnaire
-          </SubmitButton>
-        </form>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-3 text-sm">
           Current form:{" "}
           <strong className="font-medium text-foreground">{questionnaire.title}</strong> ·{" "}
           {questionnaire.questions.length} questions.

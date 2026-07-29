@@ -31,6 +31,7 @@ import {
   tripAssignments,
   tripDives,
   tripRequirements,
+  tripScheduleDays,
   tripSeries,
   trips,
   tripWaitlistEntries,
@@ -50,6 +51,13 @@ export type NewTrip = {
   priceCents?: number | null;
   depositCents?: number | null;
   cancellationWindowHours?: number | null;
+  scheduleDays?: TripScheduleDayInput[];
+};
+
+export type TripScheduleDayInput = {
+  dayNumber: number;
+  startsAt: Date;
+  endsAt: Date;
 };
 
 export type TripDiveDraft = {
@@ -147,6 +155,7 @@ async function insertTripInstance(
     depositCents?: number | null;
     cancellationWindowHours?: number | null;
     drafts: ReturnType<typeof normalizedDiveDrafts>;
+    scheduleDays?: TripScheduleDayInput[];
   },
 ) {
   const [trip] = await tx
@@ -169,6 +178,14 @@ async function insertTripInstance(
     .returning();
   if (!trip) throw new Error("insertTripInstance: insert returned no row");
   await tx.insert(tripDives).values(params.drafts.map((draft) => ({ tripId: trip.id, ...draft })));
+  await tx
+    .insert(tripScheduleDays)
+    .values(
+      (params.scheduleDays?.length
+        ? params.scheduleDays
+        : [{ dayNumber: 1, startsAt: params.startsAt, endsAt: params.endsAt }]
+      ).map((day, index) => ({ tripId: trip.id, ...day, dayNumber: index + 1 })),
+    );
   await tx.insert(tripRequirements).values({
     tripId: trip.id,
     shopId: params.shopId,
@@ -213,6 +230,7 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       depositCents: input.depositCents,
       cancellationWindowHours: input.cancellationWindowHours,
       drafts,
+      scheduleDays: input.scheduleDays,
     });
   });
 }
@@ -754,6 +772,16 @@ export async function getTripCrewIds(db: AppDb, shopId: string, tripId: string):
   return rows.map((r) => r.personId);
 }
 
+export async function listTripScheduleDays(db: DbExecutor, shopId: string, tripId: string) {
+  const rows = await db
+    .select({ day: tripScheduleDays })
+    .from(tripScheduleDays)
+    .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  return rows.map((row) => row.day);
+}
+
 /**
  * Replace a trip's crew. Only people with a staff role in the shop stick.
  * Proves the trip itself belongs to the shop in the same transaction as the
@@ -772,12 +800,42 @@ export async function setTripCrew(
   const valid = personIds.filter((id) => staff.some((s) => s.person.id === id));
   return db.transaction(async (tx) => {
     const [trip] = await tx
-      .select({ id: trips.id })
+      .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .limit(1)
       .for("update");
     if (!trip) return false;
+    const days = await tx
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, tripId));
+    const proposedDays =
+      days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
+    if (valid.length > 0) {
+      const conflict = await tx
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            ne(trips.id, tripId),
+            inArray(tripAssignments.personId, valid),
+            or(
+              ...proposedDays.map((day) =>
+                and(
+                  lt(tripScheduleDays.startsAt, day.endsAt),
+                  gt(tripScheduleDays.endsAt, day.startsAt),
+                ),
+              ),
+            ),
+          ),
+        )
+        .limit(1);
+      if (conflict.length > 0) return false;
+    }
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
     if (valid.length > 0) {
       await tx.insert(tripAssignments).values(valid.map((personId) => ({ tripId, personId })));
@@ -819,6 +877,41 @@ export async function changeTripCrew(
     if (!eligible) return false;
 
     if (change.operation === "assign") {
+      const proposedDays = await tx
+        .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+        .from(tripScheduleDays)
+        .where(eq(tripScheduleDays.tripId, tripId))
+        .orderBy(asc(tripScheduleDays.dayNumber));
+      const effectiveDays =
+        proposedDays.length > 0
+          ? proposedDays
+          : await tx
+              .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
+              .from(trips)
+              .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+              .limit(1);
+      const conflict = await tx
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            ne(trips.id, tripId),
+            eq(tripAssignments.personId, change.personId),
+            or(
+              ...effectiveDays.map((day) =>
+                and(
+                  lt(tripScheduleDays.startsAt, day.endsAt),
+                  gt(tripScheduleDays.endsAt, day.startsAt),
+                ),
+              ),
+            ),
+          ),
+        )
+        .limit(1);
+      if (conflict.length > 0) return false;
       await tx
         .insert(tripAssignments)
         .values({ tripId, personId: change.personId })

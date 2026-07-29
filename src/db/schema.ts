@@ -535,6 +535,25 @@ export const trips = pgTable(
   ],
 );
 
+/** One real meeting window for a course or other multi-day session. */
+export const tripScheduleDays = pgTable(
+  "trip_schedule_days",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    dayNumber: integer("day_number").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("trip_schedule_days_trip_day_unique").on(table.tripId, table.dayNumber),
+    index("trip_schedule_days_trip_starts_idx").on(table.tripId, table.startsAt),
+    check("trip_schedule_days_ends_after_starts", sql`${table.endsAt} > ${table.startsAt}`),
+  ],
+);
+
 /**
  * Optional, ordered briefings within a trip. The trip owns the shared
  * schedule, price, conditions, and description; these rows only add detail

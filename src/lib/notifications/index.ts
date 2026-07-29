@@ -315,6 +315,10 @@ const reservedTestEmailDomains = [
   "invalid",
   "localhost",
   "test",
+  // Demo credentials and seeded people are intentionally non-deliverable.
+  // Keep this guard at the provider boundary so every mail path (including
+  // deferred account invites and batch sends) gets the same protection.
+  "demo.com",
 ];
 
 function reservedTestRecipientDelivery(to: string): NotificationDelivery | null {

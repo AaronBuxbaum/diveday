@@ -15,8 +15,7 @@ import {
   inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
-  setStaffRolesAction,
-  setStaffStatusAction,
+  saveStaffChangesAction,
 } from "./actions";
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
@@ -25,6 +24,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   invited: { tone: "success", text: "Invite sent." },
   invite_resent: { tone: "success", text: "Invite resent." },
   roles_saved: { tone: "success", text: "Roles saved." },
+  changes_saved: { tone: "success", text: "Team changes saved." },
   reactivated: { tone: "success", text: "Account re-enabled." },
   disabled: { tone: "success", text: "Account disabled — they can no longer sign in." },
   removed: { tone: "success", text: "Removed from the team." },
@@ -89,14 +89,29 @@ function StaffRow({ member }: { member: StaffMember }) {
         <Badge tone={status.tone}>{status.label}</Badge>
       </div>
 
-      <form action={setStaffRolesAction} className="mt-4">
+      <form action={saveStaffChangesAction} className="mt-4">
         <input type="hidden" name="personId" value={member.personId} />
+        <input type="hidden" name="userAccountId" value={member.userAccountId} />
         <RoleCheckboxes name="role" defaultRoles={member.roles} />
+        {member.accountStatus !== "invited" ? (
+          <label className="mt-4 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
+            <input
+              name="status"
+              type="checkbox"
+              value="disabled"
+              defaultChecked={member.accountStatus === "disabled"}
+              className="size-4 accent-primary"
+            />
+            Disable sign-in for this person
+          </label>
+        ) : (
+          <input type="hidden" name="status" value="invited" />
+        )}
         <SubmitButton
           pendingLabel="Saving…"
-          className={buttonClass({ variant: "secondary", className: "mt-3 text-foreground" })}
+          className={buttonClass({ variant: "primary", className: "mt-4" })}
         >
-          Save roles
+          Save changes
         </SubmitButton>
       </form>
 
@@ -117,41 +132,23 @@ function StaffRow({ member }: { member: StaffMember }) {
               </SubmitButton>
             </form>
           ) : (
-            <form action={setStaffStatusAction}>
-              <input type="hidden" name="personId" value={member.personId} />
-              <input type="hidden" name="userAccountId" value={member.userAccountId} />
-              <input
-                type="hidden"
-                name="status"
-                value={member.accountStatus === "active" ? "disabled" : "active"}
-              />
-              <SubmitButton
-                pendingLabel="Saving…"
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "w-full text-foreground sm:w-auto",
-                })}
-              >
-                {member.accountStatus === "active" ? "Disable" : "Re-enable"}
-              </SubmitButton>
-            </form>
+            <span className="text-sm text-muted">
+              {member.accountStatus === "active" ? "Sign-in enabled" : "Sign-in disabled"}
+            </span>
           )}
         </div>
-        <form action={removeStaffAction}>
-          <input type="hidden" name="personId" value={member.personId} />
-          <input type="hidden" name="userAccountId" value={member.userAccountId} />
-          <SubmitButton
-            pendingLabel="Removing…"
-            className={buttonClass({
-              variant: "danger",
-              size: "sm",
-              className: "w-full sm:w-auto",
-            })}
-          >
-            Remove from team
-          </SubmitButton>
-        </form>
+        {member.accountStatus === "disabled" ? (
+          <form action={removeStaffAction}>
+            <input type="hidden" name="personId" value={member.personId} />
+            <input type="hidden" name="userAccountId" value={member.userAccountId} />
+            <SubmitButton
+              pendingLabel="Removing…"
+              className={buttonClass({ variant: "danger", size: "sm" })}
+            >
+              Remove from team
+            </SubmitButton>
+          </form>
+        ) : null}
       </div>
     </li>
   );
@@ -180,7 +177,7 @@ export default async function TeamSettingsPage({
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow="Settings"

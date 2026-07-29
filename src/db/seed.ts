@@ -47,6 +47,7 @@ import {
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
+  tripScheduleDays,
   tripSeries,
   trips,
   tripWaitlistEntries,
@@ -1340,6 +1341,19 @@ export async function seedDemoSchedule(
     ])
     .returning();
 
+  await db.insert(tripScheduleDays).values(
+    tripRows.flatMap((trip) => {
+      if (trip.courseId === openWaterCourse?.id) {
+        return [
+          { tripId: trip.id, dayNumber: 1, startsAt: at(9, 12), endsAt: at(9, 18) },
+          { tripId: trip.id, dayNumber: 2, startsAt: at(10, 10), endsAt: at(10, 18) },
+          { tripId: trip.id, dayNumber: 3, startsAt: at(11, 13), endsAt: at(11, 21) },
+        ];
+      }
+      return [{ tripId: trip.id, dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt }];
+    }),
+  );
+
   /**
    * What each tank actually is. "Dive 1 · Dive 2" tells a diver nothing they
    * could not have guessed; these are the words the crew uses at the briefing,
@@ -1700,7 +1714,7 @@ export async function seedDemoSchedule(
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);
-  await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_);
+  await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_, opts.history !== false);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
   // shops (see callers); on for the demo shop and the e2e fleet.
@@ -2133,6 +2147,33 @@ async function seedHistory(
       }),
     );
   }
+
+  // Tip history gives the export and diver recap surfaces more than an empty
+  // state: a couple settled, one is still waiting at checkout, and one
+  // expired. These are fabricated demo Stripe references only; no provider is
+  // contacted and tips never affect the booking-payment gate.
+  const tipRows = plans
+    .map((plan, i) => {
+      const booking = bookingRows[i];
+      if (!booking || plan.status !== "checked_in") return null;
+      const state = i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "paid";
+      const createdAt = new Date(plan.createdAt.getTime() + 2 * 60 * 60 * 1000);
+      return {
+        shopId,
+        bookingId: booking.id,
+        status: state as "pending" | "paid" | "expired",
+        stripeAccountId: "acct_demo",
+        stripeSessionId: `cs_tip_demo_${i + 1}`,
+        checkoutUrl: state === "pending" ? "https://checkout.stripe.com/c/pay/demo-tip" : null,
+        currency: "usd",
+        amountCents: i % 3 === 0 ? 2_500 : 1_500,
+        expiresAt: state === "pending" ? new Date(createdAt.getTime() + DAY_MS) : null,
+        completedAt: state === "paid" ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
+        createdAt,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+  if (tipRows.length > 0) await db.insert(tips).values(tipRows);
 }
 
 /**
@@ -2152,12 +2193,33 @@ async function seedFrontDesk(
   customers: { id: string }[],
   tripRows: { id: string; title: string }[],
   bookingRows: { id: string; tripId: string; personId: string }[],
+  includeHistoryData: boolean,
 ): Promise<void> {
   const tripByTitle = new Map(tripRows.map((trip) => [trip.title, trip.id]));
   const wreckId = tripByTitle.get("Wreck Trip — Spiegel Grove");
 
+  // Keep the export useful on a fresh demo: these are the small operational
+  // records that otherwise tend to remain empty because they are created by
+  // later staff actions in a real shop.
+  const listPeople = customers.slice(9, 13).filter((person) => person !== undefined);
+  if (includeHistoryData && listPeople.length > 0) {
+    await db
+      .insert(lastMinuteListEntries)
+      .values(
+        listPeople.map((person, index) => ({
+          shopId,
+          personId: person.id,
+          availableFrom: dateAt(index === 0 ? 0 : 2),
+          availableUntil: dateAt(30),
+          unsubscribedAt: index === listPeople.length - 1 ? nowDate() : null,
+          createdAt: nextCreatedAt(),
+        })),
+      )
+      .onConflictDoNothing();
+  }
+
   // The sold-out charter is where a wait-list earns its keep.
-  if (wreckId) {
+  if (includeHistoryData && wreckId) {
     const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
     if (waiting.length > 0) {
       await db.insert(tripWaitlistEntries).values(
@@ -2168,6 +2230,85 @@ async function seedFrontDesk(
           createdAt: nextCreatedAt(),
         })),
       );
+    }
+
+    const [promo] = await db
+      .insert(tripLastMinutePromos)
+      .values({
+        shopId,
+        tripId: wreckId,
+        status: "sent",
+        discountPercent: 25,
+        code: "DEMO-REEF-25",
+        stripeCouponId: "coupon_demo_reef",
+        stripePromotionCodeId: "promo_demo_reef",
+        expiresAt: at(2, 18),
+        recipientCount: Math.max(1, listPeople.length - 1),
+        createdByPersonId: null,
+        createdAt: nextCreatedAt(),
+      })
+      .onConflictDoNothing()
+      .returning({ id: tripLastMinutePromos.id });
+    void promo;
+
+    const booking = bookingRows.find((row) => row.tripId === wreckId);
+    if (booking) {
+      const [recorder] = await db
+        .select({ id: people.id })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(and(eq(people.shopId, shopId), eq(personRoles.role, "captain")))
+        .limit(1);
+      if (recorder) {
+        await db.insert(rollCallEvents).values({
+          shopId,
+          tripId: wreckId,
+          bookingId: booking.id,
+          recordedByPersonId: recorder.id,
+          status: "boarded",
+          checkpoint: "departure",
+          source: "live",
+          note: "Demo roll call — checked in at the dock.",
+          occurredAt: nowDate(),
+        });
+      }
+      const [checkout] = await db
+        .insert(bookingCheckouts)
+        .values({
+          shopId,
+          tripId: wreckId,
+          status: "pending",
+          stripeAccountId: "acct_demo",
+          stripeSessionId: "cs_demo_pending",
+          checkoutUrl: "https://checkout.stripe.com/c/pay/demo-pending",
+          customerEmail: "priya.sharma@example.com",
+          amountPerDiverCents: 18_000,
+          totalCents: 18_000,
+          expiresAt: at(1, 12),
+          createdAt: nextCreatedAt(),
+        })
+        .onConflictDoNothing({ target: bookingCheckouts.stripeSessionId })
+        .returning();
+      if (checkout) {
+        await db.insert(bookingCheckoutBookings).values({
+          shopId,
+          checkoutId: checkout.id,
+          bookingId: booking.id,
+        });
+      }
+      await db
+        .insert(paymentOperationIntents)
+        .values({
+          shopId,
+          kind: "checkout_session",
+          status: "succeeded",
+          tripId: wreckId,
+          bookingId: booking.id,
+          stripeObjectId: "cs_demo_pending",
+          startedAt: nextCreatedAt(),
+          resolvedAt: nowDate(),
+        })
+        .onConflictDoNothing();
     }
   }
 
@@ -2523,16 +2664,10 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
 
-  // Re-seed at the richness the shop was minted with: the canonical demo keeps
-  // its billing back-fill, a minted demo stays lean. Re-seeding history on a
-  // minted demo would re-insert globally-unique waiver/Stripe ids that collide
-  // with the canonical demo (see createDemoShop).
-  const [resetShop] = await db
-    .select({ slug: shops.slug })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
-  await seedDemoSchedule(db, shopId, { history: resetShop?.slug === DEMO_SHOP_SLUG });
+  // Reset is an internal test/playground helper, not the production demo
+  // bootstrap. Keep its post-reset state lean and deterministic; reporting
+  // history is created only on a fresh canonical seed.
+  await seedDemoSchedule(db, shopId, { history: false });
 }
 
 /** Default lifetime of a minted demo shop before the reaper clears it. */

@@ -128,11 +128,6 @@ export const UK_QUESTIONNAIRE: MedicalQuestionnaire = {
 
 const QUESTIONNAIRES: readonly MedicalQuestionnaire[] = [RSTC_QUESTIONNAIRE, UK_QUESTIONNAIRE];
 
-const BY_JURISDICTION: Record<MedicalJurisdiction, MedicalQuestionnaire> = {
-  rstc: RSTC_QUESTIONNAIRE,
-  uk: UK_QUESTIONNAIRE,
-};
-
 const BY_ID = new Map(QUESTIONNAIRES.map((q) => [q.id, q]));
 
 export const MEDICAL_JURISDICTION_LABELS: Record<MedicalJurisdiction, string> = {
@@ -142,9 +137,13 @@ export const MEDICAL_JURISDICTION_LABELS: Record<MedicalJurisdiction, string> = 
 
 /** The questionnaire a shop presents, driven by its jurisdiction. */
 export function questionnaireForJurisdiction(
-  jurisdiction: MedicalJurisdiction,
+  _jurisdiction: MedicalJurisdiction,
 ): MedicalQuestionnaire {
-  return BY_JURISDICTION[jurisdiction] ?? RSTC_QUESTIONNAIRE;
+  // DiveDay uses the RSTC form everywhere. Keep the stored jurisdiction and
+  // legacy questionnaire lookup types for signed-record compatibility, but do
+  // not let old shop configuration silently switch a live waiver to another
+  // medical standard.
+  return RSTC_QUESTIONNAIRE;
 }
 
 /** Look up the questionnaire a stored answer was captured against. */

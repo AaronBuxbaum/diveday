@@ -6,13 +6,12 @@ import {
   needsPhysicianReview,
   questionnaireForJurisdiction,
   RSTC_QUESTIONNAIRE,
-  UK_QUESTIONNAIRE,
 } from "./medical";
 
 describe("medical questionnaires", () => {
-  it("selects the questionnaire for a jurisdiction, defaulting to RSTC", () => {
+  it("always uses the RSTC questionnaire", () => {
     expect(questionnaireForJurisdiction("rstc")).toBe(RSTC_QUESTIONNAIRE);
-    expect(questionnaireForJurisdiction("uk")).toBe(UK_QUESTIONNAIRE);
+    expect(questionnaireForJurisdiction("uk")).toBe(RSTC_QUESTIONNAIRE);
   });
 
   it("clears review only when every answer is no", () => {
