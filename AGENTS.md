@@ -29,17 +29,20 @@ adapters and must not introduce unique requirements.
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm check:env` | verify that all keys in `.env.example` are present in `.env.local` |
+| `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
 | `pnpm check:repo` | environment, architecture, clock, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test -- <file> --reporter=dot` | focused Vitest run with low-noise success output |
-| `pnpm e2e -- <spec> --reporter=line` | focused Playwright run |
+| `pnpm e2e -- <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite |
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
-| `node scripts/screenshot.mjs [routes]` | light/dark × desktop/phone PNGs → `.screenshots/` |
+| `pnpm backstop` | build the deterministic E2E server, compare Backstop captures, and write an HTML report |
+| `pnpm backstop:reference` | intentionally create/update Backstop reference PNGs |
+| `pnpm backstop:approve` | promote reviewed Backstop test captures to references |
+| `pnpm backstop:report` | reopen the most recent Backstop report |
 
 ## Route map (don't re-derive this)
 
@@ -101,14 +104,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave
   it red for someone else. See **Parallel work** first: check for an in-flight fix on the same
   test before starting your own, so two sessions don't race to patch it.
-- **A pushed PR is not done until visual diffs are accounted for.** CI's serialized visual job
-  soft-handles screenshot diffs on same-repo branches by committing regenerated baselines as a
-  separate `ci: capture visual baseline diffs` commit, then rerunning the cheap visual-only path.
-  Review that PNG commit for what your code explains. A red visual job means Playwright had a real
-  failure, the branch could not be pushed to, or a diff still needs human judgment; run the
-  **visual-triage** skill and leave a comment for anything unexplained. Keep committed baselines
-  aligned with the macOS rendering platform and treat a platform-wide refresh as a separate change.
-  Never end the session leaving a visual diff or failure unexplained.
+- **A pushed PR is not done until visual diffs are accounted for.** CI runs the serialized Backstop
+  job and uploads its HTML report and test captures on failure. Review reference/test/diff images
+  for what the code explains; never auto-approve a mismatch. For an intentional change, run
+  `pnpm backstop:approve` locally after reviewing the report and commit the resulting
+  `backstop_data/bitmaps_reference/` PNGs with the code change. Never end the session leaving a
+  visual diff or failure unexplained.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings
@@ -127,7 +128,8 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
   bug fixes begin with a failing regression test. Every important **flow** a user runs (booking,
   waivers, cert/nitrox gating, manifest/roll call, refunds, scheduling, sign-in) gets an `e2e/`
-  spec, and every important **surface** they look at gets a visual snapshot in `e2e/visual.spec.ts`
+  spec, and every important **surface** they look at gets a Backstop scenario in
+  `backstop.config.cjs`/`backstop/`
   — especially when introducing a feature. See the **e2e-and-visual** skill; if unsure whether
   something qualifies, it does.
 - **Read time through the clock.** `src/lib` and `src/db` never call `new Date()` / `Date.now()`
@@ -135,7 +137,7 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render
   stay pixel-stable for visual regression; in production the clock is the native call, unchanged.
   `pnpm check:clock` enforces it. Never stabilise a visual test by masking moving text — freeze the
-  clock.
+  clock at the Backstop harness boundary.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->

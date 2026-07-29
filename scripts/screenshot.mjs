@@ -17,10 +17,17 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT_DIR = process.env.OUT_DIR ?? ".screenshots";
 const routes = process.argv.slice(2).length ? process.argv.slice(2) : ["/"];
 
-const sandboxChromium = "/opt/pw-browsers/chromium";
-const executablePath =
-  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
-  (fs.existsSync(sandboxChromium) ? sandboxChromium : undefined);
+const browserCandidates = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+  process.env.CHROME_PATH,
+  process.env.CHROMIUM_PATH,
+  "/opt/pw-browsers/chromium",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+];
+const executablePath = browserCandidates.find((candidate) => candidate && fs.existsSync(candidate));
 
 const viewports = {
   desktop: { width: 1280, height: 800 },

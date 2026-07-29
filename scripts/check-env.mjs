@@ -40,19 +40,11 @@ async function run() {
   try {
     localContent = await readFile(envLocalPath, "utf8");
   } catch {
-    // If in CI, we skip checking .env.local because environment variables
-    // are typically injected directly via CI/CD configuration.
-    if (process.env.CI === "true") {
-      console.log("env: .env.local not found in CI, skipping local env check");
-      process.exit(0);
-    }
-
-    console.error(
-      "❌ Error: .env.local is missing.\n" +
-        "It hasn't been pulled from Vercel yet, or has not been created.\n" +
-        "Please run `vercel env pull` to pull variables from Vercel, or copy .env.example to .env.local.",
-    );
-    process.exit(1);
+    // Local development and the test suite deliberately use embedded PGlite
+    // and safe fallbacks when no real credentials are configured. `.env.local`
+    // is therefore optional; only validate it when a developer has created it.
+    console.log("env: .env.local not found; local development uses documented fallbacks");
+    process.exit(0);
   }
 
   const localKeys = getEnvKeys(localContent);

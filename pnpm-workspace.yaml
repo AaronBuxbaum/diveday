@@ -5,12 +5,13 @@ onlyBuiltDependencies:
 
 supportedArchitectures:
   os:
-  - darwin
+    - darwin
+    - linux
   cpu:
-  - arm64
+    - arm64
+    - x64
 
 publicHoistPattern:
   - '@img/*'
   - 'detect-libc'
   - 'semver'
-

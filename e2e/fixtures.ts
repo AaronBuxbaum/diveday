@@ -11,7 +11,7 @@ import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
  * mutation leaking into another's assertions.
  */
 export const test = base.extend<
-  { demoReset: void },
+  { demoReset: undefined },
   { workerBaseURL: string; ownerStorageState: string }
 >({
   // Reset this worker's demo shop to the seeded fixture before every test so
@@ -28,7 +28,7 @@ export const test = base.extend<
   demoReset: [
     async ({ request }, use) => {
       await request.post("/api/test/reset");
-      await use();
+      await use(undefined);
     },
     { auto: true },
   ],
