@@ -25,6 +25,21 @@ const viewports = [
 
 const printViewport = { label: "print", width: 816, height: 1056 };
 
+function parseShardEnv() {
+  const total = Number(process.env.BACKSTOP_SHARD_TOTAL || "1");
+  const index = Number(process.env.BACKSTOP_SHARD_INDEX || "0");
+
+  if (!Number.isInteger(total) || total < 1) {
+    throw new Error("BACKSTOP_SHARD_TOTAL must be a positive integer.");
+  }
+
+  if (!Number.isInteger(index) || index < 0 || index >= total) {
+    throw new Error("BACKSTOP_SHARD_INDEX must be an integer from 0 to BACKSTOP_SHARD_TOTAL - 1.");
+  }
+
+  return { index, total };
+}
+
 function scenario({
   label,
   flow,
@@ -140,11 +155,22 @@ const scenarios = [
   ...staffStateful,
   ...printScenarios,
 ];
+const shard = parseShardEnv();
+const selectedScenarios =
+  shard.total === 1
+    ? scenarios
+    : scenarios.filter((_scenario, scenarioIndex) => scenarioIndex % shard.total === shard.index);
+
+if (selectedScenarios.length === 0) {
+  throw new Error(
+    `Backstop shard ${shard.index + 1}/${shard.total} did not receive any scenarios.`,
+  );
+}
 
 module.exports = {
   id: "diveday_backstop",
   viewports,
-  scenarios,
+  scenarios: selectedScenarios,
   onBeforeScript: "onBefore.cjs",
   onReadyScript: "onReady.cjs",
   paths: {

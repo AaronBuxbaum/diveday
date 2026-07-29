@@ -90,9 +90,11 @@ the full suite locally with identical pass counts across repeated runs.
   pinned by `DIVEDAY_CLOCK` and the Backstop browser clock by `backstop/onBefore.cjs`, so
   clock-derived text is pixel-stable and a regression in a date remains visible. References are
   committed under `backstop_data/bitmaps_reference/`; test captures and reports are ignored.
-  Review intentional changes in the Backstop HTML report, then run `pnpm backstop:approve` and
-  commit the resulting reference PNGs. CI compares and uploads the report; it never updates or
-  pushes references automatically.
+  CI shards the scenario list with `BACKSTOP_SHARD_INDEX` / `BACKSTOP_SHARD_TOTAL`, so each
+  Backstop process still resets an isolated PGlite-backed server serially while the full visual
+  comparison runs in parallel jobs. Review intentional changes in the Backstop HTML report, then
+  run `pnpm backstop:approve` and commit the resulting reference PNGs. CI compares and uploads the
+  report; it never updates or pushes references automatically.
 
 ## Adding a test
 

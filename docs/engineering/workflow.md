@@ -24,8 +24,8 @@ How to build anything here. Written for AI agents; humans may follow along.
    (`adr` skill); new domain term → glossary.
 6. **Ship** — commit (imperative subject, body says why), push, keep the PR draft until CI is
    green and the checklist below passes.
-7. **Account for visual diffs** — the serialized CI visual job runs BackstopJS against committed
-   references and uploads the HTML report/test captures on failure. Review reference/test/diff
+7. **Account for visual diffs** — the sharded CI visual jobs run BackstopJS against committed
+   references and upload HTML reports/test captures on failure. Review reference/test/diff
    images for what your code explains. For an intentional change, run `pnpm backstop:approve`
    locally after reviewing the report and commit the reference PNGs; CI never updates or pushes
    them automatically. If the visual job stays red, run the `visual-triage` skill and comment on
