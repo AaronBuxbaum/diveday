@@ -1,4 +1,8 @@
-# Diver booking delight — follow-on ideas
+# Diver booking delight - follow-on ideas
+
+Archived 2026-07-29 because every idea in this brainstorm had shipped. Current open brainstorm ideas
+live in [brainstorm/README.md](../brainstorm/README.md); delivered slices live in
+[shipped.md](../shipped.md).
 
 The dive-site library and dated conditions briefing now make a charter easier to imagine. These
 are the next ideas worth evaluating, ordered roughly by customer value before operational cost.

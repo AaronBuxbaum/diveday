@@ -18,7 +18,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/marketing.md](product/marketing.md) | The public-page rulebook: positioning spine, claims policy, voice, SEO conventions, visuals, and the maintenance loop (price source of truth is `src/lib/marketing.ts`) | product claims, positioning, public visuals, or pricing change |
 | [product/rollout.md](product/rollout.md) | The 0→1 go-to-market rollout: phases, launch gates, stakeholder register, channels, metrics | a phase completes, a gate clears, or launch strategy changes |
 | [product/stakeholders/](product/stakeholders/README.md) | Per-discipline stakeholder playbooks for the rollout: who to talk to, when, prep packets, agendas, and the gates each conversation clears | a stakeholder, prep item, or question list changes (gate *status* still lives only in human-decisions.md) |
-| [product/brainstorm/](product/brainstorm/README.md) | Non-canonical idea backlog — unfiltered opportunity notes, not commitments or approved scope | you want raw feature ideas; never cite it as a decision |
+| [product/brainstorm/](product/brainstorm/README.md) | Non-canonical idea backlog — one consolidated list of unfiltered open opportunity notes, not commitments or approved scope | you want raw feature ideas; never cite it as a decision |
 | [architecture/overview.md](architecture/overview.md) | System shape, stack, directory layout, deferred decisions | structure or stack changes |
 | [architecture/decisions/](architecture/decisions/) | ADRs — one per significant, hard-to-reverse choice | you make such a choice (see the `adr` skill) |
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |
@@ -50,6 +50,8 @@ rationale. Not open work; do not plan from them.
 | [archive/product-space-investigation.md](product/archive/product-space-investigation.md) | 2026-07-20 breadth→depth assessment; its recommendations shipped |
 | [archive/codebase-review-20260723.md](product/archive/codebase-review-20260723.md) | 2026-07-23 whole-repository review (CR-001–CR-021); all tickets shipped and human-owned decisions resolved 2026-07-24 |
 | [archive/ux-audit-20260721.md](product/archive/ux-audit-20260721.md) | 2026-07-21 UX work plan (WP-1…WP-11); fully delivered 2026-07-23 |
+| [archive/delight-and-experience.md](product/archive/delight-and-experience.md) | Completed delight-and-experience brainstorm; delivered ideas are summarized in shipped.md |
+| [archive/diver-booking-delight-20260729.md](product/archive/diver-booking-delight-20260729.md) | Completed diver-booking-delight follow-on brainstorm; delivered ideas are summarized in shipped.md |
 
 ## Rules
 

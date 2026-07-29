@@ -18,7 +18,7 @@
 > [design principles](../../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
 > 2026-07-20; its lasting rulings live in
 > [architecture/overview.md](../../architecture/overview.md#settled-shape-decisions)),
-> the five [brainstorm lenses](../brainstorm/README.md), and the shipped code
+> the consolidated [brainstorm backlog](../brainstorm/README.md), and the shipped code
 > (`src/app/**`, `src/lib/**`, `src/db/schema.ts` — 33 tables).
 >
 > This is an assessment, not a commitment. Items that survive review move into
@@ -41,8 +41,8 @@ and most of what's missing is *surface* over data that already exists.
 The data model reaches further than the roadmap headline suggests — **33 tables**, one person-spine,
 one readiness engine, multi-tenant to the core. Concretely shipped and working:
 
-- **The safety brainstorm is essentially complete.** Nearly every idea in
-  [safety-and-trust.md](../brainstorm/safety-and-trust.md) exists in code: the typed fail-closed
+- **The safety brainstorm is essentially complete.** Nearly every idea in the
+  [Safety and Trust backlog](../brainstorm/README.md#safety-and-trust) exists in code: the typed fail-closed
   readiness result ([`src/lib/readiness.ts`](../../../src/lib/readiness.ts)), no-silent-disappearance +
   two-phase roll call, an encrypted offline manifest snapshot with explicit freshness and idempotent
   reconciliation, immutable versioned waivers, verified-vs-claimed cert states, nitrox write-time
@@ -65,17 +65,14 @@ be turned into felt product, and it mostly hasn't been.
 
 The single most-cited idea across all five brainstorm lenses is **one readiness engine, three
 views** — the same result feeding the staff roster, the diver confirmation, and the manifest
-([safety](../brainstorm/safety-and-trust.md) "one source, three views";
-[staff-ops](../brainstorm/staff-operations-efficiency.md) readiness roll-up;
-[diver](../brainstorm/diver-experience-and-growth.md) readiness page;
-[platform](../brainstorm/platform-data-and-intelligence.md) generic core). **The engine is built. Two of
+([brainstorm](../brainstorm/README.md) readiness ideas). **The engine is built. Two of
 the three high-value views are not.** `readiness.ts` is consumed only *inside* two 1,000+-line pages
 (`trips/[id]/page.tsx` — 1,278 lines; `divers/[personId]/page.tsx` — 1,132 lines). There is **no**
 staff blocker queue, **no** one-screen check-in, and **no** no-login diver readiness page (verified:
 no `check-in`, `blocker`, `ready`, or `today` route exists under `src/app/shop/[shopSlug]/`).
 
 This is the crux. The front desk's *entire job* is coordination — who's coming, who's ready, who to
-call ([staff-ops](../brainstorm/staff-operations-efficiency.md)). We have the data to answer that in one
+call ([Staff Operations](../brainstorm/README.md#staff-operations)). We have the data to answer that in one
 glance and we make staff assemble the answer by hand across a 1,300-line trip page. We built the
 brain and skipped the face.
 
@@ -85,12 +82,12 @@ Ranked by leverage against the north star (less staff coordination · more diver
 departure):
 
 1. **The staff blocker queue with one-tap actions** — the front desk's whole day as one actionable
-   list. Unbuilt. ([staff-ops](../brainstorm/staff-operations-efficiency.md) #1.)
+   list. Unbuilt. ([Staff Operations](../brainstorm/README.md#staff-operations).)
 2. **One-screen check-in** ("ready to board" at a glance, one tap to board) — the daily-throughput
    surface where safety and efficiency converge. Unbuilt.
 3. **The no-login diver readiness page** — the diver-side mirror of the blocker queue; the thing that
    kills the "did you get my waiver?" call and raises confidence. Unbuilt.
-   ([diver](../brainstorm/diver-experience-and-growth.md) #1.)
+   ([Diver Experience and Growth](../brainstorm/README.md#diver-experience-and-growth).)
 4. **Notifications don't actually send in a default deployment.** The Resend seam is real but resolves
    to a disabled stub without `RESEND_API_KEY`; policy (H-09) is unowned. So "chasing missing
    waivers" is still manual, one-tap nudges are hollow, and the waitlist recovers **zero** revenue
