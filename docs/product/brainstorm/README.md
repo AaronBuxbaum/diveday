@@ -43,16 +43,12 @@ tests, and `dive-domain-expert` review.
 Lens: give a busy front desk its day back by turning repeated coordination work into a glance or a
 single action.
 
-- **Line-busting check-in mode.** A phone/tablet mode for counter queues: scan/search, confirm
-  readiness, record check-in, move on. *(M, cross-cutting, quick win.)*
 - **Thermal receipt print layout.** A compact manifest/check-in ticket layout for common lobby
   receipt printers. *(M, manifests, quick win.)*
 - **No-boats-today suggestions.** Empty operational days suggest useful shop tasks such as reviewing
   course sign-ups or upcoming blockers. *(S, cross-cutting, quick win.)*
 - **Multi-boat / multi-trip day orchestration.** A shop running several boats can see all departures,
   move divers and crew carefully, and avoid collisions. *(L, cross-cutting, big bet.)*
-- **Shift and staffing view.** Show who is working, what they are qualified to teach or crew, and
-  where coverage gaps exist. *(L, cross-cutting, big bet.)*
 - **End-of-day close-out.** Reconcile who dove, gear returned, incidents logged, and tomorrow's
   blockers in one "everyone is home" ritual. *(M, cross-cutting, quick win.)*
 
@@ -118,14 +114,10 @@ Lens: speed, feel, and authentic divemaster voice. Keep delight rationed; safety
 - **Nitrox MOD calculator.** After enriched-air verification, show a clean maximum-operating-depth
   calculator in the diver prep surface. Planning aid only; never fill authorization. *(S, certs,
   quick win.)*
-- **Clean-slate ripple.** A restrained reset/close-out motion that communicates a board is clean and
-  ready. *(S, cross-cutting, parked.)*
 - **Interval chitchat tips.** Empty states may teach small local or marine facts while waiting, but
   only where they do not distract from operational work. *(S, cross-cutting, parked.)*
 - **Sub-surface page slide.** A small set of brand transitions for page changes, using transform and
   opacity only. Must respect reduced motion. *(S, cross-cutting, parked.)*
-- **Sliding underline tab accent.** Shared tab motion that explains navigation state without adding
-  visual clutter. *(S, cross-cutting, quick win.)*
 - **Swipe-dismiss undo toast.** Toasts can be dismissed with a touch gesture while preserving the
   undo window and keyboard/screen-reader access. *(S, cross-cutting, quick win.)*
 

@@ -29,6 +29,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [engineering/capability-telemetry-runbook.md](engineering/capability-telemetry-runbook.md) | How bearer-capability URLs (waivers/ready/recap tokens) are kept out of Analytics/Speed Insights, and how to audit/rotate an exposed one | the redaction logic changes or a capability type's revocation story changes |
 | [engineering/resend-email-runbook.md](engineering/resend-email-runbook.md) | Setting up sending and the delivery-outcome webhook; how DiveDay's own hosted addresses and DMARC are configured; what to check when mail doesn't arrive | the email envelope, webhook events, or the sending domain changes |
 | [engineering/monitoring-runbook.md](engineering/monitoring-runbook.md) | New-account alerts and Sentry error monitoring: setup, what's covered, capability-URL redaction, troubleshooting | the alert recipient, the Sentry wiring, or what's covered changes |
+| [engineering/infrastructure-runbook.md](engineering/infrastructure-runbook.md) | Provisioning AWS S3, users, and resources using AWS CDK: login, bootstrapping, synthesis, and deployment | CDK stack, context, or credentials changes |
 
 **Strategic assessments** ([product/assessments/](product/assessments/)) — dated buyer/rival analyses,
 not commitments. Their surviving recommendations belong in the roadmap; read for context.

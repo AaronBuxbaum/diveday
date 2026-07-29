@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import * as cdk from 'aws-cdk-lib';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-import { InfraStack } from '../lib/infra-stack';
+import * as path from "node:path";
+import * as cdk from "aws-cdk-lib";
+import * as dotenv from "dotenv";
+import { InfraStack } from "../lib/infra-stack";
 
 // Load .env.local first (local overrides), then fall back to .env
-dotenv.config({ path: path.resolve(__dirname, '../../.env.local') });
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = new cdk.App();
 
@@ -16,8 +16,8 @@ const app = new cdk.App();
 const env = process.env.AWS_ACCOUNT_ID
   ? {
       account: process.env.AWS_ACCOUNT_ID,
-      region: process.env.AWS_DEFAULT_REGION || 'us-east-1',
+      region: process.env.AWS_DEFAULT_REGION || "us-east-1",
     }
   : undefined;
 
-new InfraStack(app, 'InfraStack', { env });
+new InfraStack(app, "InfraStack", { env });
