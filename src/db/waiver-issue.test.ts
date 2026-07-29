@@ -70,6 +70,30 @@ describe("issueAndDeliverWaiver", () => {
     if (result.ok) expect(result.token).toBeTruthy();
   });
 
+  it("surfaces a provider failure distinctly from missing configuration", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ message: "invalid sender" }), { status: 403 }),
+      );
+    vi.stubGlobal("fetch", fetchImpl);
+
+    const { db, shop, bookingId } = await seededBooking();
+    const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
+
+    expect(result).toMatchObject({ ok: true, delivery: "failed" });
+    if (result.ok) expect(result.token).toBeTruthy();
+    const [delivery] = await db
+      .select()
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.bookingId, bookingId));
+    expect(delivery?.status).toBe("failed");
+    expect(delivery?.sendHttpStatus).toBe(403);
+  });
+
   it("reports no_email when the diver has no address on file", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const { db, shop, bookingId } = await seededBooking(null);
