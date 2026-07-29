@@ -40,6 +40,23 @@ describe("bookingConfirmationEmail", () => {
 });
 
 describe("notify", () => {
+  it("brands an unlabelled configured sender as DiveDay", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }));
+    const provider = notificationProviderFromEnvironment(
+      { RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "notifications@demo.invalid" },
+      fetchImpl,
+    );
+
+    await notify(booking, provider);
+
+    const request = fetchImpl.mock.calls[0]?.[1];
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      from: "DiveDay <notifications@demo.invalid>",
+    });
+  });
+
   it("sends a booking confirmation through Resend with an idempotency key", async () => {
     const fetchImpl = vi
       .fn()

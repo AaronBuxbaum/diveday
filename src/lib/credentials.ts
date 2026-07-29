@@ -11,7 +11,7 @@ import { isStaff, type Role } from "@/lib/authz";
  * it's safe to surface in the UI for a visitor to note down and sign back in
  * with later.
  */
-export const DEMO_BYPASS_PASSWORD = "demo-role-switcher-bypass-token";
+export const DEMO_BYPASS_PASSWORD = "password";
 
 export type VerifiedUser = {
   id: string;

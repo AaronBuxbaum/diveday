@@ -46,7 +46,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     const db = await seededTestDb();
     const { email } = DEV_STAFF_LOGINS.instructor;
 
-    const user = await verifyCredentials(db, email, "demo-role-switcher-bypass-token");
+    const user = await verifyCredentials(db, email, "password");
     expect(user?.name).toBe("Marcus Webb");
     expect(user?.roles).toContain("instructor");
   });
@@ -59,7 +59,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     const { shops } = await import("@/db/schema");
     await db.update(shops).set({ isDemo: false });
 
-    const user = await verifyCredentials(db, email, "demo-role-switcher-bypass-token");
+    const user = await verifyCredentials(db, email, "password");
     expect(user).toBeNull();
   });
 });

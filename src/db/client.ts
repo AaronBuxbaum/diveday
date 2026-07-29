@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
 import { withExplicitSslMode } from "./connection-string";
-import { seedIfEmpty } from "./seed";
+import { backfillDemoReportingData, seedIfEmpty } from "./seed";
 import { backfillLegacyNitroxOffering } from "./shops";
 
 // drizzle 1.0 moved relational config out of the driver `schema` option
@@ -92,6 +92,7 @@ async function init(): Promise<AppDb> {
         // through rolls back every row instead of leaving a half-seeded
         // shop a retry would find already-non-empty and stop repairing.
         await seedIfEmpty(tx);
+        await backfillDemoReportingData(tx);
         // Idempotent, so safe alongside seedIfEmpty on every cold start: a
         // shop that already priced or requested nitrox before it became an
         // explicit catalog entry keeps working instead of going dark.
@@ -122,6 +123,7 @@ async function init(): Promise<AppDb> {
   // atomicity as the Postgres branch above.
   await db.transaction(async (tx) => {
     await seedIfEmpty(tx);
+    await backfillDemoReportingData(tx);
     await backfillLegacyNitroxOffering(tx);
   });
   return db;
