@@ -56,6 +56,14 @@ export function RentalFitForm({
           .map((item) => item.kind),
       ),
   );
+  const [bcdSize, setBcdSize] = useState(rentalFit?.bcdSize ?? "");
+  const [wetsuitSize, setWetsuitSize] = useState(rentalFit?.wetsuitSize ?? "");
+  const [finSize, setFinSize] = useState(rentalFit?.finSize ?? "");
+
+  const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
+  const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
+  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk;
+
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
   // Follow the controls, rather than the saved profile, so the estimate is
   // useful before a diver commits their changes. A shop that doesn't fill
@@ -86,6 +94,44 @@ export function RentalFitForm({
         Tell the crew what you'd like to rent and roughly what size. We keep it on file for next
         time, and they'll confirm fit and weighting with you at the dock.
       </p>
+
+      {/* Gear-Status Light-up Indicator */}
+      <div
+        data-testid="gear-status-indicator"
+        role="status"
+        aria-live="polite"
+        className={`mt-4 flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
+          isConfirmed
+            ? "border-success/30 bg-success/5 shadow-sm"
+            : "border-border bg-surface-sunken/40"
+        }`}
+      >
+        <div className="flex gap-2">
+          <BcdIcon active={isConfirmed} />
+          <FinIcon active={isConfirmed} />
+        </div>
+        <div>
+          <p
+            className={`text-sm font-semibold transition-colors duration-300 ${
+              isConfirmed ? "text-success" : "text-muted"
+            }`}
+          >
+            {rentedKinds.size === 0
+              ? "Bringing own gear — no rental needed."
+              : isConfirmed
+                ? "Gear matched and pre-packed."
+                : "Select sizes to confirm your gear match."}
+          </p>
+          <p className="text-xs text-muted mt-0.5">
+            {rentedKinds.size === 0
+              ? "You won't be charged for rentals on this trip."
+              : isConfirmed
+                ? "The crew has your sizes locked in and ready."
+                : "Please specify sizes for all selected items."}
+          </p>
+        </div>
+      </div>
+
       {saved ? (
         <p
           role="status"
@@ -194,7 +240,8 @@ export function RentalFitForm({
               <Field label="BCD size">
                 <select
                   name="bcdSize"
-                  defaultValue={rentalFit?.bcdSize ?? ""}
+                  value={bcdSize}
+                  onChange={(e) => setBcdSize(e.target.value)}
                   className={controlClass}
                 >
                   <option value="">Not sure — help me fit it</option>
@@ -208,7 +255,8 @@ export function RentalFitForm({
               <Field label="Wetsuit size">
                 <select
                   name="wetsuitSize"
-                  defaultValue={rentalFit?.wetsuitSize ?? ""}
+                  value={wetsuitSize}
+                  onChange={(e) => setWetsuitSize(e.target.value)}
                   className={controlClass}
                 >
                   <option value="">Not sure — help me fit it</option>
@@ -234,7 +282,8 @@ export function RentalFitForm({
                 <input
                   name="finSize"
                   maxLength={20}
-                  defaultValue={rentalFit?.finSize ?? ""}
+                  value={finSize}
+                  onChange={(e) => setFinSize(e.target.value)}
                   placeholder="M/L"
                   className={controlClass}
                 />
@@ -278,5 +327,51 @@ export function RentalFitForm({
         </div>
       </form>
     </section>
+  );
+}
+
+function BcdIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={`w-9 h-9 transition-all duration-300 ${
+        active ? "text-success drop-shadow-[0_0_8px_rgba(21,128,61,0.4)]" : "text-muted opacity-30"
+      }`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <title>BCD Icon</title>
+      <path d="M5 3h4l1 6-1 5H5V3z" />
+      <path d="M19 3h-4l-1 6 1 5h4V3z" />
+      <path d="M9 5h6" />
+      <path d="M9 11h6" />
+      <rect x="11" y="4" width="2" height="15" rx="1" />
+      <path d="M7 3v3c0 .5-.5 1-1.5 1H5" />
+    </svg>
+  );
+}
+
+function FinIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={`w-9 h-9 transition-all duration-300 ${
+        active ? "text-success drop-shadow-[0_0_8px_rgba(21,128,61,0.4)]" : "text-muted opacity-30"
+      }`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <title>Fin Icon</title>
+      <path d="M5 4s1 4 0 9L3 20h4l1-7c-1-5 1-9 1-9H5z" />
+      <path d="M15 4s1 4 0 9l-2 7h4l1-7c-1-5 1-9 1-9h-3z" />
+    </svg>
   );
 }

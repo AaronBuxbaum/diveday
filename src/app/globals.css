@@ -546,3 +546,97 @@ summary {
   /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind animation classes */
   animation: progress-wave-move 1.5s infinite linear !important;
 }
+
+/* Sub-Surface Ripple Clean Slate */
+@keyframes sub-surface-ripple {
+  0% {
+    transform: scale(0.1);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes sub-surface-message-fade {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+.sub-surface-ripple-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(1px);
+  transition: backdrop-filter 3s ease;
+}
+
+.sub-surface-ripple-ring {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 4px solid var(--primary);
+  box-shadow: 0 0 16px var(--primary);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sub-surface-ripple-ring:nth-child(1) {
+  animation: sub-surface-ripple 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+.sub-surface-ripple-ring:nth-child(2) {
+  animation: sub-surface-ripple 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) 0.4s forwards;
+}
+
+.sub-surface-ripple-ring:nth-child(3) {
+  animation: sub-surface-ripple 2.2s cubic-bezier(0.1, 0.8, 0.3, 1) 0.8s forwards;
+}
+
+.sub-surface-ripple-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.1),
+    0 0 20px color-mix(in srgb, var(--primary) 20%, transparent);
+  padding: 1.5rem 2.5rem;
+  border-radius: 2rem;
+  animation: sub-surface-message-fade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
