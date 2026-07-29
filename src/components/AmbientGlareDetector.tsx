@@ -14,6 +14,10 @@ interface SensorErrorEvent extends Event {
   error?: Error;
 }
 
+export type ContrastMode = "auto" | "standard" | "full";
+export const CONTRAST_MODE_STORAGE_KEY = "diveday:contrast-mode";
+export const CONTRAST_MODE_CHANGE_EVENT = "diveday:contrast-mode-change";
+
 /**
  * AmbientGlareDetector is a client-side component that listens to the device's
  * AmbientLightSensor. If the ambient light level is above the threshold, it
@@ -21,15 +25,19 @@ interface SensorErrorEvent extends Event {
  * document root, unless overridden by the contrast tuning slider.
  */
 export function AmbientGlareDetector() {
-  const [mode, setMode] = useState<"auto" | "standard" | "full">("auto");
+  const [mode, setMode] = useState<ContrastMode>("auto");
   const [sensorLux, setSensorLux] = useState(0);
 
   // Initialize mode from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedMode = localStorage.getItem("diveday:contrast-mode");
-      if (savedMode === "standard" || savedMode === "full" || savedMode === "auto") {
-        setMode(savedMode);
+      try {
+        const savedMode = localStorage.getItem(CONTRAST_MODE_STORAGE_KEY);
+        if (savedMode === "standard" || savedMode === "full" || savedMode === "auto") {
+          setMode(savedMode as ContrastMode);
+        }
+      } catch (err) {
+        console.warn("Failed to read contrast mode from localStorage:", err);
       }
     }
   }, []);
@@ -39,15 +47,15 @@ export function AmbientGlareDetector() {
     if (typeof window === "undefined") return;
 
     const handleModeChange = (e: Event) => {
-      const detail = (e as CustomEvent<{ mode: "auto" | "standard" | "full" }>)?.detail;
+      const detail = (e as CustomEvent<{ mode: ContrastMode }>)?.detail;
       if (detail?.mode) {
         setMode(detail.mode);
       }
     };
 
-    window.addEventListener("diveday:contrast-mode-change", handleModeChange);
+    window.addEventListener(CONTRAST_MODE_CHANGE_EVENT, handleModeChange);
     return () => {
-      window.removeEventListener("diveday:contrast-mode-change", handleModeChange);
+      window.removeEventListener(CONTRAST_MODE_CHANGE_EVENT, handleModeChange);
     };
   }, []);
 
@@ -146,27 +154,35 @@ export function AmbientGlareDetector() {
  * Toggling standard or full AAA contrast overrides the auto-glare detection.
  */
 export function AmbientContrastSlider() {
-  const [mode, setMode] = useState<"auto" | "standard" | "full">("auto");
+  const [mode, setMode] = useState<ContrastMode>("auto");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
-      const savedMode = localStorage.getItem("diveday:contrast-mode");
-      if (savedMode === "standard" || savedMode === "full" || savedMode === "auto") {
-        setMode(savedMode);
+      try {
+        const savedMode = localStorage.getItem(CONTRAST_MODE_STORAGE_KEY);
+        if (savedMode === "standard" || savedMode === "full" || savedMode === "auto") {
+          setMode(savedMode as ContrastMode);
+        }
+      } catch (err) {
+        console.warn("Failed to read contrast mode from localStorage:", err);
       }
     }
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);
-    const newMode = val === 0 ? "auto" : val === 1 ? "standard" : "full";
+    const newMode: ContrastMode = val === 0 ? "auto" : val === 1 ? "standard" : "full";
     setMode(newMode);
     if (typeof window !== "undefined") {
-      localStorage.setItem("diveday:contrast-mode", newMode);
+      try {
+        localStorage.setItem(CONTRAST_MODE_STORAGE_KEY, newMode);
+      } catch (err) {
+        console.warn("Failed to write contrast mode to localStorage:", err);
+      }
       window.dispatchEvent(
-        new CustomEvent("diveday:contrast-mode-change", { detail: { mode: newMode } }),
+        new CustomEvent(CONTRAST_MODE_CHANGE_EVENT, { detail: { mode: newMode } }),
       );
     }
   };

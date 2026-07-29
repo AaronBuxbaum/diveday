@@ -21,7 +21,12 @@ export function SubSurfaceRipple({ complete }: { complete: boolean }) {
   if (!active) return null;
 
   return (
-    <div data-testid="sub-surface-ripple" className="sub-surface-ripple-overlay" aria-hidden="true">
+    <div
+      data-testid="sub-surface-ripple"
+      className="sub-surface-ripple-overlay"
+      role="status"
+      aria-live="polite"
+    >
       <div className="sub-surface-ripple-ring" />
       <div className="sub-surface-ripple-ring" />
       <div className="sub-surface-ripple-ring" />
@@ -32,6 +37,7 @@ export function SubSurfaceRipple({ complete }: { complete: boolean }) {
           fill="none"
           stroke="currentColor"
           strokeWidth="3"
+          aria-hidden="true"
         >
           <title>Success Checkmark</title>
           <polyline points="20 6 9 17 4 12" />

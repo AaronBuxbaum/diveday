@@ -62,8 +62,7 @@ export function RentalFitForm({
 
   const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
   const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
-  const finsOk = !rentedKinds.has("mask_fins") || !!finSize.trim();
-  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk && finsOk;
+  const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk;
 
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
   // Follow the controls, rather than the saved profile, so the estimate is
@@ -99,6 +98,8 @@ export function RentalFitForm({
       {/* Gear-Status Light-up Indicator */}
       <div
         data-testid="gear-status-indicator"
+        role="status"
+        aria-live="polite"
         className={`mt-4 flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
           isConfirmed
             ? "border-success/30 bg-success/5 shadow-sm"

@@ -623,7 +623,7 @@ summary {
 }
 
 .sub-surface-ripple-ring:nth-child(3) {
-  animation: sub-surface-ripple 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) 0.8s forwards;
+  animation: sub-surface-ripple 2.2s cubic-bezier(0.1, 0.8, 0.3, 1) 0.8s forwards;
 }
 
 .sub-surface-ripple-message {

@@ -132,4 +132,76 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     // Indicator should now light up
     expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
   });
+
+  it("renders 'Gear matched' for wetsuit once wetsuit size is provided", () => {
+    const wetsuitFit = { ...emptyFit, rentsWetsuit: true };
+    const { container } = render(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={wetsuitFit}
+        rentalItems={["wetsuit"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+      />,
+    );
+
+    const indicator = screen.getByTestId("gear-status-indicator");
+    expect(indicator).toHaveTextContent("Select sizes to confirm your gear match.");
+
+    // Select wetsuit size
+    const wetsuitSelect = container.querySelector(
+      'select[name="wetsuitSize"]',
+    ) as HTMLSelectElement;
+    fireEvent.change(wetsuitSelect, { target: { value: "M" } });
+
+    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+  });
+
+  it("renders 'Gear matched' for mask/fins immediately because fin size is optional", () => {
+    const finsFit = { ...emptyFit, rentsMaskFins: true };
+    render(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={finsFit}
+        rentalItems={["mask_fins"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+      />,
+    );
+
+    const indicator = screen.getByTestId("gear-status-indicator");
+    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+  });
+
+  it("confirms gear match when BCD size is provided even if optional fin size is empty", () => {
+    const mixedFit = { ...emptyFit, rentsBcd: true, rentsMaskFins: true };
+    const { container } = render(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={mixedFit}
+        rentalItems={["bcd", "mask_fins"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+      />,
+    );
+
+    const indicator = screen.getByTestId("gear-status-indicator");
+    expect(indicator).toHaveTextContent("Select sizes to confirm your gear match.");
+
+    // Select BCD size
+    const bcdSelect = container.querySelector('select[name="bcdSize"]') as HTMLSelectElement;
+    fireEvent.change(bcdSelect, { target: { value: "L" } });
+
+    // Should be confirmed even though fin size is not provided
+    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+  });
 });

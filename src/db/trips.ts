@@ -1282,7 +1282,9 @@ export async function upcomingStaffSchedule(
     daysByTrip.set(row.trip.id, days);
 
     if (row.personId && row.personName) {
-      const crew = crewByTrip.get(row.trip.id) ?? new Map();
+      const crew =
+        crewByTrip.get(row.trip.id) ??
+        new Map<string, { id: string; name: string; roles: string[] }>();
       const member = crew.get(row.personId) ?? {
         id: row.personId,
         name: row.personName,

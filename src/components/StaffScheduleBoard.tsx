@@ -75,7 +75,12 @@ export function StaffScheduleBoard({
                       key={member.id}
                       className={"rounded-full border border-border px-2.5 py-1 text-xs"}
                     >
-                      {member.name} · {member.roles.map(roleLabel).join(" / ")}
+                      {member.name}
+                      {member.roles.length > 0 ? (
+                        <> · {member.roles.map(roleLabel).join(" / ")}</>
+                      ) : (
+                        <> · Unassigned</>
+                      )}
                     </span>
                   ))
                 ) : (
