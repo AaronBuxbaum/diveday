@@ -3,6 +3,10 @@
 Domain terms agents must use correctly — in code, UI copy, and data models. When you introduce a
 new domain concept, define it here in the same PR.
 
+- **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
+  bookings remain valid, new bookings pause, and booked divers are notified. It is not a
+  cancellation and never implies a refund.
+
 ## Certification
 
 - **Agency** — organization that trains and certifies divers. Major ones: **PADI**, **SSI**,

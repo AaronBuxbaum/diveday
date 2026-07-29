@@ -81,6 +81,33 @@ test.describe("staff", () => {
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
   });
 
+  test("a crew conditions hold pauses public booking and explains the final-call state", async ({
+    page,
+  }) => {
+    const title = `Weather Watch ${e2eNow().getTime()}`;
+    await page.goto("/shop/blue-mantis/trips/new");
+    await page.getByLabel("Title").fill(title);
+    await page.getByLabel("Date").fill(daysFromNow(4));
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("11:00");
+    await page.getByLabel("Capacity").fill("6");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    const tripId = new URL(page.url()).pathname.split("/").at(-1);
+
+    await page.getByLabel("Conditions hold").check();
+    await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
+    await page.getByRole("button", { name: "Publish crew prediction" }).click();
+    await expect(page.getByRole("status")).toContainText("published");
+    await page.getByRole("button", { name: "Sign out" }).click();
+
+    await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
+    await expect(
+      page.getByRole("heading", { name: "This trip is on a conditions hold" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Bookings are paused/ })).toBeVisible();
+    await expect(page.getByLabel("Number of divers")).toHaveCount(0);
+  });
+
   test("staff edits a trip and cancelling removes it from the public schedule", async ({
     page,
   }) => {

@@ -7,6 +7,18 @@ lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Diver experience and growth completion (delivered 2026-07-29)
+
+- **Plan and share the dive** — every public trip offers a portable `.ics` calendar event, mapped
+  directions when a location exists, and native share/copy-link controls; Discover Scuba explains
+  how a giver can book and pay for the recipient without creating an account.
+- **Honest conditions holds** — crew can pause new bookings without cancelling existing seats;
+  the public trip explains the live state and best-effort email carries the crew note when delivery
+  is configured. The transactional booking boundary rejects races after the page was loaded.
+- **Rationed course progression** — only a confirmed diver whose current card is below the trip's
+  requirement sees the shop's active Advanced Open Water path. Public controls retain the shared
+  44 px target, semantic field/button, focus, and reduced-motion rules.
+
 ## Foundation and spine (M0–M1)
 
 - **Tooling, CI, agent layer, design tokens** — the base everything leans on. The agent layer is

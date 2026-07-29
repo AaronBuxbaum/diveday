@@ -279,6 +279,7 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("link")
         .click();
       await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+      await capture(page, "trip-public", scheme);
       await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
       await page
         .getByLabel("Email", { exact: true })

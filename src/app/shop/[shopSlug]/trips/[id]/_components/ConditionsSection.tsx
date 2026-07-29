@@ -20,6 +20,21 @@ export function ConditionsSection({
         Publish the crew’s read on the day. It replaces the automated marine outlook for divers.
       </p>
       <form action={saveAction} className="mt-5 flex flex-col gap-5">
+        <label className="flex min-h-11 max-w-2xl items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+          <input
+            type="checkbox"
+            name="conditionsHold"
+            defaultChecked={trip.conditionsHold}
+            className="mt-1 size-5 accent-current"
+          />
+          <span>
+            <span className="font-semibold">Conditions hold</span>
+            <span className="mt-0.5 block text-sm text-muted">
+              Pause new bookings, publish the final-call state, and email booked divers when
+              delivery is configured.
+            </span>
+          </span>
+        </label>
         <FieldGrid columns={1} className="max-w-2xl">
           <Field label="Conditions overview">
             <textarea

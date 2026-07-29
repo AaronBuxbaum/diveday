@@ -8,6 +8,7 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { listActiveCourses } from "@/db/courses";
 import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { getBookingPayment } from "@/db/payments";
@@ -21,6 +22,7 @@ import { isStaff } from "@/lib/authz";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { googleMapsUrl } from "@/lib/dive-site-map";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
@@ -31,6 +33,7 @@ import { isFull, spotsRemaining } from "@/lib/trips";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
 import {
   BookSpotSection,
+  ConditionsHoldSection,
   TripFullSection,
   TripSailedNotice,
   WaitlistConfirmation,
@@ -38,6 +41,7 @@ import {
 import { DiveBriefingsSection } from "./_components/DiveBriefingsSection";
 import { ForecastSection } from "./_components/ForecastSection";
 import { PackingSection } from "./_components/PackingSection";
+import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
 import { ERROR_MESSAGES, type PaymentPanel } from "./_components/types";
 
@@ -131,23 +135,31 @@ export default async function TripDetailPage({
     perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
   // The confirmed-booking panels draw on six independent queries — batch them.
-  const [payment, readiness, requirement, rentalFit, nitroxCardVerified, readinessCapability] =
-    confirmed
-      ? await Promise.all([
-          resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
-          getBookingReadiness(db, shop.id, confirmed.booking.id),
-          getTripRequirements(db, shop.id, tripId),
-          // Projected: this page is public and the form is a client
-          // component, so staff-only fit columns must not ship to the browser.
-          getRentalFit(db, shop.id, confirmed.person.id).then(toDiverRentalFit),
-          verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
-          issueBookingCapability(db, {
-            shopId: shop.id,
-            bookingId: confirmed.booking.id,
-            purpose: "readiness",
-          }),
-        ])
-      : [null, null, null, null, false, null];
+  const [
+    payment,
+    readiness,
+    requirement,
+    rentalFit,
+    nitroxCardVerified,
+    readinessCapability,
+    courses,
+  ] = confirmed
+    ? await Promise.all([
+        resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
+        getBookingReadiness(db, shop.id, confirmed.booking.id),
+        getTripRequirements(db, shop.id, tripId),
+        // Projected: this page is public and the form is a client
+        // component, so staff-only fit columns must not ship to the browser.
+        getRentalFit(db, shop.id, confirmed.person.id).then(toDiverRentalFit),
+        verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
+        issueBookingCapability(db, {
+          shopId: shop.id,
+          bookingId: confirmed.booking.id,
+          purpose: "readiness",
+        }),
+        listActiveCourses(db, shop.id),
+      ])
+    : [null, null, null, null, false, null, []];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
 
   const inPast = trip.startsAt <= nowDate();
@@ -171,7 +183,24 @@ export default async function TripDetailPage({
       )}
 
       <TripHeader shop={shop} trip={trip} />
-      {!confirmed && !inPast && !full ? (
+      {trip.conditionsHold ? (
+        <div role="status" className="mt-5 rounded-lg border border-warning/40 bg-warning/10 p-4">
+          <h2 className="font-semibold">This trip is on a conditions hold</h2>
+          <p className="mt-1 text-sm text-muted">
+            The crew is watching the weather and will make the final call. Existing seats stay held;
+            new bookings are paused for now.
+          </p>
+        </div>
+      ) : null}
+      {!isEmbed ? (
+        <TripActions
+          calendarUrl={`/shop/${shopSlug}/schedule/${tripId}/calendar`}
+          directionsUrl={
+            trip.diveSite?.locationName ? googleMapsUrl(trip.diveSite.locationName) : null
+          }
+        />
+      ) : null}
+      {!confirmed && !inPast && !full && !trip.conditionsHold ? (
         <a
           href="#book"
           className={buttonClass({
@@ -210,6 +239,11 @@ export default async function TripDetailPage({
           payment={payment}
           payCancelled={pay === "cancelled"}
           readinessLink={readinessLink}
+          progressionCourse={
+            readiness?.blockers.some((blocker) => blocker.code === "certification_insufficient")
+              ? (courses.find((course) => /advanced open water/i.test(course.title)) ?? null)
+              : null
+          }
         />
       ) : waitlistConfirmation ? (
         <WaitlistConfirmation
@@ -219,6 +253,8 @@ export default async function TripDetailPage({
         />
       ) : inPast ? (
         <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
+      ) : trip.conditionsHold ? (
+        <ConditionsHoldSection />
       ) : full ? (
         <TripFullSection
           shopSlug={shopSlug}
