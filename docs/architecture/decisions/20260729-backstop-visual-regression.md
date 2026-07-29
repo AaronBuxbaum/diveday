@@ -18,7 +18,9 @@ Use BackstopJS 6.3.25 with its Playwright engine for visual regression. The sour
 `backstop.config.cjs` plus the stateful journeys in `backstop/`; committed references live under
 `backstop_data/bitmaps_reference/`, while test captures and HTML/CI reports are generated and
 ignored. `scripts/backstop-run.mjs` builds and starts the deterministic E2E server, creates the
-seeded owner session, and runs Backstop serially so each scenario can reset PGlite independently.
+seeded owner session, and can run one Backstop scenario shard at a time. CI runs four shards in
+parallel, each with its own server and in-memory PGlite database, so each scenario can still reset
+state independently without forcing the entire suite through one runner.
 
 Use these commands:
 
@@ -49,8 +51,9 @@ Backstop gives reviewers a local/CI HTML report with reference, test, and diff i
 intentional change is promoted explicitly with `approve`. Reference PNGs remain versioned, so the
 repository still carries the visual contract and no hosted token is required. The scenario setup
 code is separate from functional specs and must be kept in sync when a visual surface's route or
-seeded state changes. We accept serial capture time in exchange for isolated state and stable
-review artifacts.
+seeded state changes. We accept serial capture within each shard in exchange for isolated state and
+stable review artifacts, while using CI-level sharding to keep wall-clock time closer to the
+functional Playwright lane.
 
 Revisit this decision if visual references outgrow practical repository storage or if the team
 needs hosted cross-browser history and review. At that point, the Backstop scenario map and

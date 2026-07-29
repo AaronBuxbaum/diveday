@@ -8,6 +8,8 @@ const reportPath = path.join(reportDirectory, "jsonReport.json");
 const outputDirectory = path.resolve("backstop_data/ci_report");
 const manifestPath = path.join(outputDirectory, "diff-manifest.json");
 const markdownPath = path.join(outputDirectory, "diff-summary.md");
+const shardTotal = Number(process.env.BACKSTOP_SHARD_TOTAL || "1");
+const shardIndex = Number(process.env.BACKSTOP_SHARD_INDEX || "0");
 
 await mkdir(outputDirectory, { recursive: true });
 
@@ -41,6 +43,14 @@ const manifest = {
   schemaVersion: 1,
   status: report ? (failures.length > 0 ? "differences" : "passed") : "unavailable",
   testSuite: report?.testSuite ?? null,
+  shard:
+    shardTotal > 1
+      ? {
+          index: shardIndex,
+          total: shardTotal,
+          label: `${shardIndex + 1}/${shardTotal}`,
+        }
+      : null,
   totals: {
     comparisons: tests.length,
     passed: tests.filter((test) => test.status === "pass").length,
@@ -69,6 +79,7 @@ function artifactLink(relativeToReport) {
 const markdown = [
   "## Machine-readable Backstop diff summary",
   "",
+  ...(shardTotal > 1 ? [`Shard: **${shardIndex + 1}/${shardTotal}**`, ""] : []),
   `Status: **${manifest.status}**`,
   `Comparisons: ${manifest.totals.comparisons}; passed: ${manifest.totals.passed}; failed: ${manifest.totals.failed}`,
   "",
