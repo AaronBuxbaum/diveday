@@ -419,6 +419,16 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   merely attempted. Answers the "every empty seat is money lost" gap. See
   [20260727-last-minute-fill-promos](../architecture/decisions/20260727-last-minute-fill-promos.md).
 
+## Demand, crew, and staff context (delivered 2026-07-29)
+
+- **Demand intelligence** — a full departure with a wait list of at least two divers or 25% of its
+  capacity gets a calm prompt to add another boat or departure.
+- **Conflict-safe crew assignment** — overlapping ordinary trips now count as conflicts (not only
+  multi-day course windows), and staffed course changes cannot remove the last instructor or leave
+  an already-booked entry-level PADI session over ratio.
+- **Private notes and operational activity** — staff can add booking notes that no diver-facing
+  surface reads; each note adds an append-only, plain-language activity sentence to the trip.
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate

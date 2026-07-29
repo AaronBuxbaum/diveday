@@ -642,6 +642,53 @@ export const bookings = pgTable(
   ],
 );
 
+/** Staff-only context attached to a diver or one specific booking. */
+export const internalNotes = pgTable(
+  "internal_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("internal_notes_shop_person_idx").on(table.shopId, table.personId, table.createdAt),
+    index("internal_notes_booking_idx").on(table.bookingId, table.createdAt),
+    check("internal_notes_body_not_blank", sql`length(trim(${table.body})) > 0`),
+  ],
+);
+
+/** Append-only, staff-facing account of operational work in human language. */
+export const activityEvents = pgTable(
+  "activity_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
+    actorPersonId: uuid("actor_person_id")
+      .notNull()
+      .references(() => people.id),
+    message: text("message").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
+    check("activity_events_message_not_blank", sql`length(trim(${table.message})) > 0`),
+  ],
+);
+
 /**
  * A diver's place in line for a full trip. It is deliberately separate from
  * bookings: a wait-list entry never consumes capacity or appears on a manifest.

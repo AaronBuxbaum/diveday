@@ -62,12 +62,12 @@ export default async function DataExportPage() {
         </ul>
         <p className="mt-4 text-sm text-muted">
           <span className="font-medium text-foreground">Not included, on purpose:</span> offline
-          manifest snapshots, notification logs, Stripe checkout attempts (every money outcome is in
-          the bookings and orders files), and any pasted image URL a CSV references that was never
-          stored through DiveDay. Every card photo, dive-site image, and course image DiveDay itself
-          stores comes along as a real file in the bundle's <code>photos/</code> folder, so it
-          survives even after this account closes. Sign-in credentials are never exported. The
-          bundle's README lists the same gaps.
+          manifest snapshots, private staff notes and activity, notification logs, Stripe checkout
+          attempts (every money outcome is in the bookings and orders files), and any pasted image
+          URL a CSV references that was never stored through DiveDay. Every card photo, dive-site
+          image, and course image DiveDay itself stores comes along as a real file in the bundle's{" "}
+          <code>photos/</code> folder, so it survives even after this account closes. Sign-in
+          credentials are never exported. The bundle's README lists the same gaps.
         </p>
       </section>
     </main>

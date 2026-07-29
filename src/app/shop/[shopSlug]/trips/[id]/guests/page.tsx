@@ -8,15 +8,17 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
+import { listBookingNotes, listTripActivity } from "@/db/operations";
 import { getTripRequirements, listTripReadiness } from "@/db/readiness";
 import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
+import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
@@ -30,6 +32,7 @@ import { WaitlistSection } from "../_components/WaitlistSection";
 import {
   addBookingAction,
   addExistingDiverAction,
+  addInternalNoteAction,
   addToWaitlistAction,
   bulkSendWaiversAction,
   confirmDiverIdentityAction,
@@ -90,6 +93,8 @@ export default async function TripGuestsPage({
     recapPhotos,
     lastMinuteList,
     lastMinutePromos,
+    bookingNotes,
+    activity,
   ] = await Promise.all([
     getTripRoster(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
@@ -99,7 +104,21 @@ export default async function TripGuestsPage({
     listRecapPhotosForTrip(db, shop.id, tripId),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
+    listBookingNotes(db, shop.id, tripId),
+    listTripActivity(db, shop.id, tripId),
   ]);
+  const demand = demandRecommendation({
+    capacity: trip.capacity,
+    booked: trip.booked,
+    waitlisted: waitlist.length,
+  });
+  const notesByBooking = new Map<string, typeof bookingNotes>();
+  for (const row of bookingNotes) {
+    if (!row.note.bookingId) continue;
+    const rows = notesByBooking.get(row.note.bookingId) ?? [];
+    rows.push(row);
+    notesByBooking.set(row.note.bookingId, rows);
+  }
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
   const lastMinuteEligibleCount = lastMinuteList.filter(({ entry }) =>
     lastMinuteEntryMatchesTripDate(entry, tripDateIso),
@@ -193,6 +212,22 @@ export default async function TripGuestsPage({
         inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
       />
 
+      {demand ? (
+        <section className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
+          <p className="text-xs font-semibold tracking-widest text-warning uppercase">
+            Demand signal
+          </p>
+          <h2 className="mt-1 text-lg font-semibold">This departure could support more capacity</h2>
+          <p className="mt-1 text-sm text-muted">{demand.message}</p>
+          <Link
+            href={`/shop/${shopSlug}/trips/new`}
+            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+          >
+            Schedule another departure
+          </Link>
+        </section>
+      ) : null}
+
       {cancelled ? null : (
         <AddDiverSection
           shopSlug={shopSlug}
@@ -223,7 +258,27 @@ export default async function TripGuestsPage({
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
         confirmIdentityAction={confirmDiverIdentityAction.bind(null, shopSlug, tripId)}
+        notesByBooking={notesByBooking}
+        addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
       />
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Activity</h2>
+        {activity.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No staff activity recorded yet.</p>
+        ) : (
+          <ol className="mt-4 grid gap-2">
+            {activity.map((event) => (
+              <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
+                <span>{event.message}</span>
+                <span className="ml-2 text-muted">
+                  {formatDateTimeTz(event.occurredAt, "en-US", shop.timezone)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
 
       <LastMinuteDealSection
         eligibleCount={lastMinuteEligibleCount}

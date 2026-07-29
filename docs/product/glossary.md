@@ -393,6 +393,16 @@ new domain concept, define it here in the same PR.
 
 ## Rental fit and prep
 
+- **Demand signal** — a staff-only capacity-planning prompt shown when a trip is full and its wait
+  list reaches the larger of two divers or 25% of the trip's capacity. It suggests another boat or
+  departure; it never creates or changes a trip automatically.
+- **Private staff note** — operational context attached to a diver's booking, visible only on
+  authenticated staff surfaces. It is never included in diver readiness, waiver, recap, public
+  schedule, manifest export, or notifications.
+- **Activity event** — an append-only staff-facing sentence describing who did operational work and
+  what happened (for example, “Maya added a private note about Dana”), with the time it happened.
+  Activity uses shop language, never table names or record identifiers.
+
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on

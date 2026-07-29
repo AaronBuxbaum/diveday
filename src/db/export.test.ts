@@ -85,6 +85,8 @@ const FOLDED_TABLES = [
  * fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  "activity_events", // in-product operational feed, not a migration record
+  "internal_notes", // private staff working context; deliberately not portable in this first slice
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
   "notification_send_queue", // operational retry state, not shop records
