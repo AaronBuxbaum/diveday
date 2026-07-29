@@ -38,6 +38,7 @@ export type ReadyPageData = {
   shop: {
     id: string;
     slug: string;
+    defaultLocale: string;
     contactEmail: string | null;
     contactPhone: string | null;
     rentalItems: string[];
@@ -100,6 +101,7 @@ export async function getReadyPageData(
       wantsNitrox: bookings.wantsNitrox,
       status: bookings.status,
       slug: shops.slug,
+      defaultLocale: shops.defaultLocale,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       rentalItems: shops.rentalItems,
@@ -190,6 +192,7 @@ export async function getReadyPageData(
     shop: {
       id: row.shopId,
       slug: row.slug,
+      defaultLocale: row.defaultLocale,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       rentalItems: row.rentalItems,

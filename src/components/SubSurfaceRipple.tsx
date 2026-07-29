@@ -28,8 +28,6 @@ export function SubSurfaceRipple({ complete }: { complete: boolean }) {
       aria-live="polite"
     >
       <div className="sub-surface-ripple-ring" />
-      <div className="sub-surface-ripple-ring" />
-      <div className="sub-surface-ripple-ring" />
       <div className="sub-surface-ripple-message">
         <svg
           className="w-12 h-12 text-primary"
@@ -39,11 +37,11 @@ export function SubSurfaceRipple({ complete }: { complete: boolean }) {
           strokeWidth="3"
           aria-hidden="true"
         >
-          <title>Success Checkmark</title>
+          <title>Board clean icon</title>
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <span className="text-lg font-black tracking-wider uppercase text-primary">
-          Roster Complete
+          Board clean
         </span>
       </div>
     </div>

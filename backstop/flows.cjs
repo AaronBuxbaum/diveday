@@ -132,6 +132,12 @@ async function divers(page) {
   await go(page, `/shop/${SHOP}/divers`);
 }
 
+async function checkIn(page) {
+  await go(page, `/shop/${SHOP}/check-in`);
+  await ready(page, page.getByRole("heading", { name: "Line-busting check-in" }));
+  await ready(page, page.getByRole("region", { name: "Check-in queue" }));
+}
+
 async function staffTrip(page, tab) {
   await openTrip(page, REEF_TRIP, tab);
   await ready(page, page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }));
@@ -222,6 +228,7 @@ const flows = {
   "waiver-active": waiverActive,
   readiness,
   today,
+  "check-in": checkIn,
   divers,
   "diver-profile": (page) => diverProfile(page, "Priya Sharma", "PS"),
   "diver-profile-expired": (page) => diverProfile(page, "Yusuf Demir", "YD"),

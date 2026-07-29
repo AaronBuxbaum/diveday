@@ -9,6 +9,7 @@ import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
+import { publicCopy } from "@/lib/public-copy";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
@@ -64,10 +65,11 @@ export default async function CoursePage({
   if (!course.isActive && !staffView) notFound();
 
   const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
+  const copy = publicCopy(shop.defaultLocale).course;
 
   const certificationRequired = course.minimumCertificationLevel
     ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
-    : "No certification required";
+    : copy.noCertification;
   // Logistics only. The cert gate and the minimum age are admission facts and
   // belong to CourseAdmission, which is the one place a diver reads them.
   const specs = [
@@ -83,12 +85,12 @@ export default async function CoursePage({
           role="status"
           className="mb-6 rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-sm font-medium"
         >
-          Hidden — divers cannot see this page.{" "}
+          {copy.hidden}{" "}
           <Link
             href={`/shop/${shopSlug}/courses/${slug}/edit`}
             className="font-semibold text-primary hover:underline"
           >
-            Back to editing
+            {copy.backToEditing}
           </Link>
         </p>
       )}

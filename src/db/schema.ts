@@ -36,6 +36,8 @@ export const shops = pgTable(
     slug: text("slug").notNull().unique(),
     /** IANA timezone of the physical shop — all schedule display uses this. */
     timezone: text("timezone").notNull(),
+    /** BCP 47 locale for public and capability-page copy/formatting. */
+    defaultLocale: text("default_locale").notNull().default("en-US"),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
     /**
@@ -1328,6 +1330,30 @@ export const tripAssignments = pgTable(
   (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
 );
 
+/** A dated working window; trip assignments remain the authoritative crew list. */
+export const staffShifts = pgTable(
+  "staff_shifts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    note: text("note"),
+    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("staff_shifts_shop_starts_idx").on(table.shopId, table.startsAt),
+    index("staff_shifts_person_starts_idx").on(table.personId, table.startsAt),
+    check("staff_shifts_ends_after_starts", sql`${table.endsAt} > ${table.startsAt}`),
+  ],
+);
+
 /**
  * `invited`: a staff invite created this row (`inviteStaffMember`,
  * src/db/staff-accounts.ts) but the invitee hasn't accepted yet — an unusable
@@ -1503,6 +1529,9 @@ export const waiverRecords = pgTable(
     medicalAnswers: jsonb("medical_answers").$type<MedicalAnswers>(),
     medicalReviewRequired: boolean("medical_review_required").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    /** HMAC over the immutable signed metadata; null means legacy/unverified. */
+    integrityHash: text("integrity_hash"),
+    integrityVersion: integer("integrity_version"),
     /**
      * Provenance for an imported record (ADR 20260724-import-waiver-acceptance):
      * a free-text label of the prior shop/system the row named, and any

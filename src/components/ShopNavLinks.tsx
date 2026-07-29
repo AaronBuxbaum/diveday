@@ -9,6 +9,7 @@ const linkClass =
 
 const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
   { label: "Today", suffix: "" },
+  { label: "Check-in", suffix: "/check-in" },
   { label: "Blockers", suffix: "/blockers" },
   { label: "Divers", suffix: "/divers" },
   // Staff work a trip on /trips/[id], which is the Schedule surface's detail
@@ -31,6 +32,7 @@ export type ShopNavGates = {
  * than earning their own top-level "More" row.
  */
 const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
+  { label: "Staffing", suffix: "/staffing" },
   { label: "Dive sites", suffix: "/dive-sites" },
   { label: "Courses", suffix: "/courses" },
   { label: "Waivers", suffix: "/waivers", gate: "waivers" },

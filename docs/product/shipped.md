@@ -19,6 +19,24 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   requirement sees the shop's active Advanced Open Water path. Public controls retain the shared
   44 px target, semantic field/button, focus, and reduced-motion rules.
 
+## Operations integrity and staffing (delivered 2026-07-29)
+
+- **Staffing coverage view** — owner/manager shift planning shows working staff, teach/crew/captain
+  capabilities, scheduled-trip coverage gaps, and keeps trip crew assignment as the boarding authority.
+- **Tamper-evident waiver records** — newly signed and in-person waiver records carry a versioned
+  HMAC integrity seal over their signed metadata; staff can review verified, mismatched, and legacy
+  unsealed records ([staffing, waiver audit, and localized copy](../architecture/decisions/20260729-staffing-waiver-audit-and-localized-copy.md)).
+- **Manifest change ritual** — roster, capacity, checkpoint, instructor, crew, and boarding-gate
+  risks are enumerated before crew changes and covered by failure-mode tests.
+- **Localization-ready capability copy** — public and capability-page copy accepts locale-keyed values
+  with English fallback, while existing string data remains compatible.
+- **Line-busting check-in** — `/shop/[shopSlug]/check-in` is a scanner-compatible counter queue:
+  search a booking, recheck readiness, record arrival, and move to the next diver without opening
+  the full guest roster.
+- **Operational motion accents** — the manifest’s existing clean-slate close-out now uses a restrained
+  one-ring “Board clean” signal, and the shared trip tabs use a sliding underline; both respect reduced
+  motion. The ripple is already used when a trip checkpoint reaches `rollCallComplete`.
+
 ## Foundation and spine (M0–M1)
 
 - **Tooling, CI, agent layer, design tokens** — the base everything leans on. The agent layer is

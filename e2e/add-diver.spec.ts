@@ -39,13 +39,14 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
-  await expect(page.getByText("Walk-in Wanda")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Walk-in Wanda" })).toBeVisible();
   await expect(page.getByText("Full", { exact: true })).toBeVisible();
 
   await page.getByText("Private staff notes (0)").click();
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
   await page.getByRole("button", { name: "Add private note" }).click();
   await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  await page.getByText("Private staff notes (1)").click();
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
 

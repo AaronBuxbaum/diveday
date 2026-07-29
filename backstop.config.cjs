@@ -106,6 +106,7 @@ const statefulPublic = [
 
 const staffFlows = [
   ["today", "/shop/blue-mantis", "today"],
+  ["check-in", "/shop/blue-mantis/check-in", "check-in"],
   ["divers", "/shop/blue-mantis/divers", "divers"],
   ["settings-payments", "/shop/blue-mantis/settings", "settings-payments"],
   ["settings-export", "/shop/blue-mantis/settings/export", "settings-export"],

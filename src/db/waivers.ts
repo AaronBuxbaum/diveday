@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
+import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
   createWaiverToken,
   hashWaiverToken,
@@ -47,6 +48,31 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
     .orderBy(desc(waiverTemplates.version));
+}
+
+/** Signed evidence audit, intentionally excluding bearer tokens and medical answers. */
+export async function listWaiverIntegrityAudit(db: DbExecutor, shopId: string) {
+  const rows = await db
+    .select({
+      record: waiverRecords,
+      personName: people.fullName,
+    })
+    .from(waiverRecords)
+    .innerJoin(people, eq(people.id, waiverRecords.personId))
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
+      ),
+    )
+    .orderBy(desc(waiverRecords.signedAt));
+  return rows.map((row) => ({
+    id: row.record.id,
+    personName: row.personName,
+    status: row.record.status,
+    signedAt: row.record.signedAt,
+    integrity: verifyWaiverIntegrity(row.record),
+  }));
 }
 
 /**
@@ -360,6 +386,20 @@ export async function completeWaiver(
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });
   if (saved) {
+    const [signedRecord] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, saved.id))
+      .limit(1);
+    if (signedRecord) {
+      await db
+        .update(waiverRecords)
+        .set({
+          integrityHash: computeWaiverIntegrityHash(signedRecord),
+          integrityVersion: 1,
+        })
+        .where(eq(waiverRecords.id, signedRecord.id));
+    }
     if (input.emergencyContact) {
       await saveEmergencyContact(db, requireTokenBookingId(state.record), input.emergencyContact);
     }
@@ -549,6 +589,10 @@ export async function recordInPersonWaiver(
       })
       .returning();
     if (!record) throw new Error("recordInPersonWaiver: insert returned no row");
+    await tx
+      .update(waiverRecords)
+      .set({ integrityHash: computeWaiverIntegrityHash(record), integrityVersion: 1 })
+      .where(eq(waiverRecords.id, record.id));
     return { ok: true, recordId: record.id, alreadySigned: false };
   });
 }
@@ -567,6 +611,27 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(bookings.createdAt));
+}
+
+/** Staff roster view: only the current record joins each active booking across multiple trips. */
+export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
+  if (tripIds.length === 0) return [];
+  return db
+    .select({ booking: bookings, person: people, waiver: waiverRecords })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .leftJoin(
+      waiverRecords,
+      and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.tripId, tripIds),
         ne(bookings.status, "cancelled"),
       ),
     )

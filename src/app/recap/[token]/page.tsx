@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
+import { capabilityCopy } from "@/lib/capability-copy";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { startTipAction, uploadRecapPhotoAction } from "./actions";
@@ -113,6 +114,7 @@ export default async function DiveRecapPage({
   }
 
   const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
+  const copy = capabilityCopy(shop.defaultLocale);
   // A shop can disconnect Stripe (or lose chargesEnabled) after a tip was
   // already started or paid; canTip alone would then hide the diver's own
   // paid confirmation or an already-open checkout link along with the
@@ -125,7 +127,7 @@ export default async function DiveRecapPage({
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
-  const when = formatShortDate(trip.startsAt, "en-US", shop.timezone);
+  const when = formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone);
   const where = sitesSentence(sites);
   const conditions = [
     trip.waterTemperatureC !== null
@@ -146,7 +148,11 @@ export default async function DiveRecapPage({
         <p className="mt-1 text-base text-muted">{when}</p>
       </header>
 
-      <EarnedMoment className="mt-8" eyebrow="That’s a wrap" title={`Nice diving, ${firstName}.`}>
+      <EarnedMoment
+        className="mt-8"
+        eyebrow={copy.recapEyebrow}
+        title={`${copy.recapHeading}, ${firstName}.`}
+      >
         <p>
           {where
             ? `You logged ${diveCount === 1 ? "a dive" : `${diveCount} dives`} at ${where}.`

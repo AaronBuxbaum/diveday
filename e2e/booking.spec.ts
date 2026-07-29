@@ -97,12 +97,22 @@ test.describe("staff", () => {
     await page.getByLabel("Returns").fill("11:00");
     await page.getByLabel("Capacity").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    const tripId = new URL(page.url()).pathname.split("/").at(-1);
+    await page.goto("/shop/blue-mantis/schedule");
+    const manageLink = page
+      .locator('a[href^="/shop/blue-mantis/trips/"]')
+      .filter({ hasText: title })
+      .first();
+    const manageHref = await manageLink.getAttribute("href");
+    expect(manageHref).toMatch(/^\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/i);
+    const tripId = manageHref?.split("/").at(-1);
+    await manageLink.click();
 
-    await page.getByLabel("Conditions hold").check();
+    await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
-    await expect(page.getByRole("status")).toContainText("published");
+    await expect(page.getByRole("status")).toContainText(
+      "Diver-facing conditions briefing updated.",
+    );
     await page.getByRole("button", { name: "Sign out" }).click();
 
     await page.goto(`/shop/blue-mantis/schedule/${tripId}`);

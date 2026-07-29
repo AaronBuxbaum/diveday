@@ -104,6 +104,19 @@ new domain concept, define it here in the same PR.
 
 ## Operations
 
+- **Check-in** — a staff-recorded arrival state for a booked diver. It confirms the live readiness
+  result at the counter and changes the booking to `checked_in`; it is not boarding, which remains
+  a separate departure-time manifest decision.
+- **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
+  the shift says who is available, while the trip assignment says who is actually on that
+  manifest. Overlapping shifts for one person are rejected.
+- **Coverage gap** — a staffing prompt where a scheduled trip has no assigned crew, lacks its
+  required instructor, or has no assigned crew member whose working shift overlaps the trip. It is
+  a prompt for staff, not a boarding authorization by itself.
+- **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
+  a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
+  `invalid` means staff must stop and investigate.
+
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
   and minimum cert requirements per site (e.g. AOW for a deep wreck).

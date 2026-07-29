@@ -7,8 +7,8 @@
 
 Shops run the same charter on a fixed cadence — "every Saturday two-tank." Staff want to put the
 whole run on the board in one action, but each date drifts: a holiday weekend needs more capacity, a
-weather week gets cancelled, one Saturday swaps its second site. The scheduling roadmap item
-(`docs/product/brainstorm/staff-operations-efficiency.md`, section D) asks for a series that is
+weather week gets cancelled, one Saturday swaps its second site. The scheduling brainstorm item
+([Staff Operations](../../product/brainstorm/README.md#staff-operations)) asks for a series that is
 "scheduled as a series, edited as one or per instance."
 
 Every downstream safety- and money-critical surface — bookings, capacity, manifests, roll call,

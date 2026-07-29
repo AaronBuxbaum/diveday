@@ -38,6 +38,7 @@ import {
   rollCallEvents,
   shops,
   specialtyCertifications,
+  staffShifts,
   tips,
   tripAssignments,
   tripDives,
@@ -256,6 +257,13 @@ export async function loadShopExportBundleInput(
         .where(eq(trips.shopId, shopId))
         .orderBy(asc(tripAssignments.tripId), asc(tripAssignments.personId));
 
+      const staffShiftRows = await tx
+        .select()
+        .from(staffShifts)
+        .innerJoin(people, eq(people.id, staffShifts.personId))
+        .where(eq(staffShifts.shopId, shopId))
+        .orderBy(asc(staffShifts.startsAt), asc(staffShifts.id));
+
       const bookingRows = await tx
         .select()
         .from(bookings)
@@ -370,6 +378,7 @@ export async function loadShopExportBundleInput(
             "name",
             "slug",
             "timezone",
+            "default_locale",
             "medical_jurisdiction",
             "contact_email",
             "contact_phone",
@@ -385,6 +394,7 @@ export async function loadShopExportBundleInput(
               shop.name,
               shop.slug,
               shop.timezone,
+              shop.defaultLocale,
               shop.jurisdiction,
               shop.contactEmail,
               shop.contactPhone,
@@ -748,6 +758,32 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["trip_assignments.csv"],
         },
         {
+          file: "staff_shifts.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "starts_at",
+            "ends_at",
+            "note",
+            "created_by_person_id",
+            "created_by_name",
+            "created_at",
+          ],
+          rows: staffShiftRows.map(({ staff_shifts: row }) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.startsAt,
+            row.endsAt,
+            row.note,
+            row.createdByPersonId,
+            row.createdByPersonId ? personName.get(row.createdByPersonId) : null,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["staff_shifts.csv"],
+        },
+        {
           file: "bookings.csv",
           header: [
             "id",
@@ -945,6 +981,8 @@ export async function loadShopExportBundleInput(
             "completed_at",
             "medical_review_required",
             "medical_answers",
+            "integrity_hash",
+            "integrity_version",
             "superseded_at",
             "expires_at",
             "imported_from_label",
@@ -971,6 +1009,8 @@ export async function loadShopExportBundleInput(
             row.completedAt,
             row.medicalReviewRequired,
             row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null,
+            row.integrityHash,
+            row.integrityVersion,
             row.supersededAt,
             row.expiresAt,
             row.importedFromLabel,
@@ -1404,6 +1444,9 @@ export async function loadShopExportCounts(
         .from(tripAssignments)
         .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
         .where(eq(trips.shopId, shopId)),
+    ),
+    "staff_shifts.csv": await countOf(
+      db.select({ n: count() }).from(staffShifts).where(eq(staffShifts.shopId, shopId)),
     ),
     "bookings.csv": await countOf(
       db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
