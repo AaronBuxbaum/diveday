@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { resetDemoAction, switchDemoRoleAction } from "@/app/actions/demo";
+import { switchDemoRoleAction } from "@/app/actions/demo";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 
@@ -129,18 +129,6 @@ export function DemoBanner({
             >
               Switch role {isExpanded ? "▲" : "▼"}
             </button>
-            <form action={resetDemoAction} className="shrink-0">
-              <SubmitButton
-                pendingLabel="Resetting…"
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "text-foreground",
-                })}
-              >
-                Reset demo data
-              </SubmitButton>
-            </form>
           </div>
         </div>
 
