@@ -64,7 +64,7 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.screenshot({
-      path: `.reg/actual/${name}-${scheme}-vw-${viewport.width}.png`,
+      path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
       fullPage: true,
     });
   }
@@ -89,7 +89,7 @@ async function capturePrint(page: Page, name: string) {
   await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ media: "print" });
   await page.screenshot({
-    path: `.reg/actual/${name}-print.png`,
+    path: `e2e/screenshots/${name}-print.png`,
     fullPage: true,
   });
   await page.emulateMedia({ media: "screen" });

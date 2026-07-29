@@ -182,8 +182,6 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      - name: Prepare reg-suit directory
-        run: mkdir -p .reg/actual
       - name: Run reg-suit visual regression
         run: pnpm visual
         env:

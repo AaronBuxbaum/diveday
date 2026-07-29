@@ -44,6 +44,7 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+/e2e/screenshots/
 
 # env files
 .env*
