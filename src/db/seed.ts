@@ -42,6 +42,7 @@ import {
   shopStripeAccounts,
   shops,
   specialtyCertifications,
+  staffShifts,
   tips,
   tripAssignments,
   tripDives,
@@ -321,6 +322,19 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         };
       }),
     ),
+  );
+
+  const demoShiftStart = new Date(demoTodayDepartureStart().getTime() - 60 * 60 * 1000);
+  const demoShiftEnd = new Date(demoShiftStart.getTime() + 12 * 60 * 60 * 1000);
+  await db.insert(staffShifts).values(
+    staff.map((person) => ({
+      shopId: shop.id,
+      personId: person.id,
+      startsAt: demoShiftStart,
+      endsAt: demoShiftEnd,
+      note: "Demo schedule",
+      createdByPersonId: person.id,
+    })),
   );
 
   await seedDemoSchedule(db, shop.id, opts);

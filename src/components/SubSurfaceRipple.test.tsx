@@ -25,7 +25,7 @@ describe("SubSurfaceRipple", () => {
 
     rerender(<SubSurfaceRipple complete={true} />);
     expect(screen.getByTestId("sub-surface-ripple")).toBeInTheDocument();
-    expect(screen.getByText("Roster Complete")).toBeInTheDocument();
+    expect(screen.getByText("Board clean")).toBeInTheDocument();
   });
 
   it("cleans up/disappears after 3 seconds", () => {

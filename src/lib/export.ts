@@ -47,6 +47,8 @@ export const EXPORT_FILE_NOTES = {
   "trip_requirements.csv":
     "Each trip's own boarding gates: waiver, minimum level, specialties, nitrox, payment. Not the whole gate — the effective requirement also composes in each visited dive site's gate (stricter minimum level wins, specialties union, nitrox if either says so); apply that composition in any system enforcing boarding from this export.",
   "trip_assignments.csv": "Which staff crewed each trip.",
+  "staff_shifts.csv":
+    "Dated staff availability windows; trip assignments remain the authoritative crew list.",
   "bookings.csv":
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified enriched-air card, checked at fill time.",
   "waitlist_entries.csv":
@@ -60,7 +62,7 @@ export const EXPORT_FILE_NOTES = {
   "waiver_templates.csv":
     "Every waiver template version, full text included — signed records reference these.",
   "waiver_records.csv":
-    "Issued and signed waiver evidence; the signed text is the referenced template version. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in. signature_method 'imported' means the record was trusted from a prior shop's own acceptance during a contact import, never reviewed by this shop — imported_from_label and the import_source_*_url columns carry that record's provenance; only 'imported' rows ever populate them.",
+    "Issued and signed waiver evidence; the signed text is the referenced template version. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in. signature_method 'imported' means the record was trusted from a prior shop's own acceptance during a contact import, never reviewed by this shop — imported_from_label and the import_source_*_url columns carry that record's provenance; only 'imported' rows ever populate them. integrity_hash and integrity_version carry the independent signed-metadata audit seal when present; unsealed legacy rows remain explicitly identifiable.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say cancelled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",

@@ -17,6 +17,7 @@ import {
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { entryLevelCourseCapacity } from "@/lib/course-ratios";
+import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -855,6 +856,11 @@ export async function setTripCrew(
         .from(bookings)
         .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
       const assigned = staff.filter((member) => valid.includes(member.person.id));
+      const review = reviewManifestChange({
+        courseRequiresInstructor: true,
+        proposedCrew: assigned,
+      });
+      if (review.blocking) return false;
       const instructors = assigned.filter((member) => member.roles.includes("instructor")).length;
       if (instructors === 0) return false;
       if (course?.agency === "padi" && !course.minimumCertificationLevel) {
@@ -955,6 +961,17 @@ export async function changeTripCrew(
             .from(personRoles)
             .where(inArray(personRoles.personId, [...proposed]))
         : [];
+      const roleSets = new Map<string, string[]>();
+      for (const role of roles) {
+        const personRolesForMember = roleSets.get(role.personId) ?? [];
+        personRolesForMember.push(role.role);
+        roleSets.set(role.personId, personRolesForMember);
+      }
+      const review = reviewManifestChange({
+        courseRequiresInstructor: true,
+        proposedCrew: [...roleSets.values()].map((memberRoles) => ({ roles: memberRoles })),
+      });
+      if (review.blocking) return false;
       const instructors = new Set(
         roles.filter((row) => row.role === "instructor").map((row) => row.personId),
       );

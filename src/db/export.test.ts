@@ -22,6 +22,7 @@ const EXPECTED_FILES = [
   "trip_dives.csv",
   "trip_requirements.csv",
   "trip_assignments.csv",
+  "staff_shifts.csv",
   "bookings.csv",
   "waitlist_entries.csv",
   "last_minute_list.csv",
@@ -54,6 +55,7 @@ const EXPORTED_TABLES = [
   "trip_dives",
   "trip_requirements",
   "trip_assignments",
+  "staff_shifts",
   "bookings",
   "trip_waitlist_entries",
   "last_minute_list_entries",
@@ -111,6 +113,7 @@ const EXCLUDED_TABLES = [
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: ["jurisdiction", "is_demo"], // DiveDay-side config, not shop records
+  staff_shifts: ["shop_id"],
   people: ["shop_id"],
   certifications: ["shop_id"],
   specialty_certifications: ["shop_id"],

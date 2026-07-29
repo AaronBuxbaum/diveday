@@ -22,6 +22,7 @@ export function ConditionsSection({
       <form action={saveAction} className="mt-5 flex flex-col gap-5">
         <label className="flex min-h-11 max-w-2xl items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
           <input
+            id="conditions-hold"
             type="checkbox"
             name="conditionsHold"
             defaultChecked={trip.conditionsHold}

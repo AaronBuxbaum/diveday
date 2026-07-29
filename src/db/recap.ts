@@ -46,6 +46,7 @@ export type RecapPageData = {
     name: string;
     slug: string;
     timezone: string;
+    defaultLocale: string;
     contactEmail: string | null;
     contactPhone: string | null;
     /** Where a "leave us a review" link sends the diver, or null when the shop hasn't set one. */
@@ -109,6 +110,7 @@ export async function getRecapPageData(
       shopName: shops.name,
       slug: shops.slug,
       timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       reviewUrl: shops.reviewUrl,
@@ -163,6 +165,7 @@ export async function getRecapPageData(
       name: row.shopName,
       slug: row.slug,
       timezone: row.timezone,
+      defaultLocale: row.defaultLocale,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       reviewUrl: row.reviewUrl,

@@ -14,6 +14,7 @@ import {
 import { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { capabilityCopy } from "@/lib/capability-copy";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -264,12 +265,13 @@ export default async function DiverReadinessPage({
   }
 
   const { detail, shop, person } = data;
+  const copy = capabilityCopy(shop.defaultLocale);
   const firstName = detail.person.fullName.split(" ")[0] || "there";
-  const when = formatShortDate(detail.trip.startsAt, "en-US", detail.shop.timezone);
+  const when = formatShortDate(detail.trip.startsAt, shop.defaultLocale, detail.shop.timezone);
   const timeRange = formatTimeRangeTz(
     detail.trip.startsAt,
     detail.trip.endsAt,
-    "en-US",
+    shop.defaultLocale,
     detail.shop.timezone,
   );
 
@@ -297,6 +299,9 @@ export default async function DiverReadinessPage({
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
       <FlashParams params={["saved", "error", "pay"]} />
       <header>
+        <p className="text-sm font-medium tracking-widest text-primary uppercase">
+          {copy.readinessTitle}
+        </p>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">
           {detail.shop.name}
         </p>

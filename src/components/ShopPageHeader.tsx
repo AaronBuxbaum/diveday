@@ -80,10 +80,12 @@ export function ShopNotice({
   children,
   tone = "success",
   role = "status",
+  className = "",
 }: {
   children: React.ReactNode;
   tone?: "success" | "danger" | "warning" | "neutral";
   role?: "status" | "alert";
+  className?: string;
 }) {
   const toneClass =
     tone === "danger"
@@ -95,7 +97,10 @@ export function ShopNotice({
           : "border-success/20 bg-success/10 text-success";
 
   return (
-    <div role={role} className={`rounded-xl border px-4 py-3 text-sm font-medium ${toneClass}`}>
+    <div
+      role={role}
+      className={`rounded-xl border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
+    >
       {children}
     </div>
   );

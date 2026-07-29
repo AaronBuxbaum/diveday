@@ -547,40 +547,36 @@ summary {
   animation: progress-wave-move 1.5s infinite linear !important;
 }
 
-/* Sub-Surface Ripple Clean Slate */
+/* Clean-slate close-out: a restrained signal that the board is clear and ready. */
 @keyframes sub-surface-ripple {
   0% {
-    transform: scale(0.1);
-    opacity: 0.8;
+    transform: scale(0.35);
+    opacity: 0.45;
   }
-  50% {
-    opacity: 0.5;
+  70% {
+    opacity: 0.18;
   }
   100% {
-    transform: scale(4);
+    transform: scale(2.7);
     opacity: 0;
   }
 }
 
 @keyframes sub-surface-message-fade {
   0% {
-    transform: scale(0.8);
+    transform: translateY(4px) scale(0.96);
     opacity: 0;
   }
-  15% {
-    transform: scale(1.1);
+  20% {
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
-  30% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  80% {
+  76% {
     transform: scale(1);
     opacity: 1;
   }
   100% {
-    transform: scale(0.9);
+    transform: translateY(-2px) scale(0.98);
     opacity: 0;
   }
 }
@@ -598,32 +594,21 @@ summary {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(1px);
-  transition: backdrop-filter 3s ease;
+  background-color: color-mix(in srgb, var(--background) 18%, transparent);
 }
 
 .sub-surface-ripple-ring {
   position: absolute;
-  width: 200px;
-  height: 200px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  border: 4px solid var(--primary);
-  box-shadow: 0 0 16px var(--primary);
+  border: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
   opacity: 0;
   pointer-events: none;
 }
 
 .sub-surface-ripple-ring:nth-child(1) {
-  animation: sub-surface-ripple 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
-}
-
-.sub-surface-ripple-ring:nth-child(2) {
-  animation: sub-surface-ripple 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) 0.4s forwards;
-}
-
-.sub-surface-ripple-ring:nth-child(3) {
-  animation: sub-surface-ripple 2.2s cubic-bezier(0.1, 0.8, 0.3, 1) 0.8s forwards;
+  animation: sub-surface-ripple 1.4s var(--ease-out-soft) forwards;
 }
 
 .sub-surface-ripple-message {
@@ -632,11 +617,43 @@ summary {
   align-items: center;
   gap: 0.75rem;
   background: var(--surface);
-  border: 2px solid var(--primary);
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.1),
-    0 0 20px color-mix(in srgb, var(--primary) 20%, transparent);
-  padding: 1.5rem 2.5rem;
-  border-radius: 2rem;
-  animation: sub-surface-message-fade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding: 1rem 1.5rem;
+  border-radius: 1rem;
+  animation: sub-surface-message-fade 1.4s var(--ease-out-soft) forwards;
+}
+
+/* The active trip tab explains location with a quiet underline, not another fill. */
+.tab-accent {
+  position: relative;
+}
+
+.tab-accent::after {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.2rem;
+  left: 1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--primary);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0;
+}
+
+.tab-accent-active::after {
+  animation: tab-underline-in 180ms var(--ease-out-soft) both;
+}
+
+@keyframes tab-underline-in {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }

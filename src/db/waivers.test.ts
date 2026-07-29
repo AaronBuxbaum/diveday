@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { getBookingReadiness } from "./readiness";
 import { people, waiverRecords } from "./schema";
@@ -229,6 +230,7 @@ describe("waiver records (in-memory PGlite)", () => {
       .where(eq(waiverRecords.id, issued.recordId));
     expect(record?.templateVersion).toBe(template.version);
     expect(record?.templateBody).toBe(template.body);
+    expect(record ? verifyWaiverIntegrity(record) : "unsealed").toBe("valid");
   });
 });
 

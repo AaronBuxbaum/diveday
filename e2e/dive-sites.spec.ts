@@ -58,7 +58,7 @@ test.describe("staff", () => {
     // Marine life folds behind the per-dive "look for" tap (P2 content fold).
     await page.getByText("What to look for down there").first().click();
     await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
-    await expect(page.getByText("27°C")).toBeVisible();
+    await expect(page.getByText("27°C", { exact: true })).toBeVisible();
     await expect(page.getByText("18 m")).toBeVisible();
     await expect(page.getByText("Crew prediction")).toBeVisible();
 

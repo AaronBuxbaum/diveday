@@ -9,7 +9,11 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { getCurrentWaiverTemplate, saveWaiverTemplate } from "@/db/waivers";
+import {
+  getCurrentWaiverTemplate,
+  listWaiverIntegrityAudit,
+  saveWaiverTemplate,
+} from "@/db/waivers";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -47,6 +51,7 @@ export default async function WaiverTemplatesPage({
   );
   if (!canManage) redirect(`/shop/${shopSlug}`);
   const current = await getCurrentWaiverTemplate(db, shop.id);
+  const integrityAudit = await listWaiverIntegrityAudit(db, shop.id);
 
   async function saveWaiverAction(formData: FormData) {
     "use server";
@@ -137,6 +142,53 @@ export default async function WaiverTemplatesPage({
         <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
           {editForm}
         </div>
+      </section>
+
+      <section className="mt-10" aria-labelledby="waiver-integrity-heading">
+        <h2 id="waiver-integrity-heading" className="text-lg font-semibold">
+          Signed record integrity
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted">
+          New signed records carry a server-sealed HMAC over their signed metadata and template
+          snapshot. A mismatch is an audit stop; older imported or legacy records are clearly marked
+          unsealed.
+        </p>
+        {integrityAudit.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">No signed records yet.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+            {integrityAudit.slice(0, 20).map((entry) => (
+              <li
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+              >
+                <span>
+                  <span className="font-medium">{entry.personName}</span>
+                  <span className="ml-2 text-muted">
+                    {entry.signedAt
+                      ? formatShortDate(entry.signedAt, shop.defaultLocale, shop.timezone)
+                      : "No signature date"}
+                  </span>
+                </span>
+                <span
+                  className={
+                    entry.integrity === "valid"
+                      ? "font-medium text-success"
+                      : entry.integrity === "invalid"
+                        ? "font-medium text-danger"
+                        : "font-medium text-warning"
+                  }
+                >
+                  {entry.integrity === "valid"
+                    ? "Integrity verified"
+                    : entry.integrity === "invalid"
+                      ? "Integrity mismatch"
+                      : "Unsealed legacy record"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );

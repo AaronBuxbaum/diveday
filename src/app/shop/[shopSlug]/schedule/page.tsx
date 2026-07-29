@@ -29,6 +29,7 @@ import {
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
+import { publicCopy } from "@/lib/public-copy";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
@@ -66,6 +67,7 @@ export default async function TripsPage({
   // and calendar come from bounded queries — nothing loads every trip at once,
   // so a shop with hundreds of departures on the books stays quick.
   const tz = shop.timezone;
+  const copy = publicCopy(shop.defaultLocale);
   const now = nowDate();
   const [range, stats, { trips: upcoming, nextCursor }] = await Promise.all([
     upcomingScheduleRange(db, shop.id, now),
@@ -143,13 +145,9 @@ export default async function TripsPage({
     >
       {isEmbed ? null : (
         <ShopPageHeader
-          eyebrow="Trips"
-          title="Schedule"
-          description={
-            staffView
-              ? "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest."
-              : "Find your next day on the water, see what to expect, and reserve your spot."
-          }
+          eyebrow={copy.schedule.eyebrow}
+          title={copy.schedule.title}
+          description={staffView ? copy.schedule.staffDescription : copy.schedule.diverDescription}
           actions={
             staffView ? (
               <Link
@@ -207,12 +205,10 @@ export default async function TripsPage({
 
       {!hasUpcoming ? (
         <EmptyState>
-          <h2 className="font-medium">No trips on the books yet</h2>
+          <h2 className="font-medium">{copy.schedule.noTrips}</h2>
           {staffView ? (
             <>
-              <p className="mt-1 text-sm text-muted">
-                The board is clear. Schedule your first departure and divers can start booking.
-              </p>
+              <p className="mt-1 text-sm text-muted">{copy.schedule.noTripsStaff}</p>
               <Link
                 href={`/shop/${shopSlug}/trips/new`}
                 className={buttonClass({ className: "mt-4 rounded-xl" })}
@@ -221,9 +217,7 @@ export default async function TripsPage({
               </Link>
             </>
           ) : (
-            <p className="mt-1 text-sm text-muted">
-              Check back soon — or call the shop and we&apos;ll find you a boat.
-            </p>
+            <p className="mt-1 text-sm text-muted">{copy.schedule.noTripsPublic}</p>
           )}
         </EmptyState>
       ) : (
