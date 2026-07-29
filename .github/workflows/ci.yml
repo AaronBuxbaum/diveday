@@ -100,8 +100,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test -- --reporter=dot
 
-  build-and-perf:
-    name: Build and performance budget
+  build:
+    name: Build
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
