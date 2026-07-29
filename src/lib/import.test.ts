@@ -513,6 +513,13 @@ describe("prepareContactImport — safety rules", () => {
     // export.ts prefixes a leading '=' with an apostrophe; the importer strips it.
     const [row] = prepareContactImport("full_name\n'=cmd").rows;
     expect(row.fullName).toBe("=cmd");
+
+    // Also strips for tab and carriage return (which then get trimmed as whitespace)
+    const [rowTab] = prepareContactImport("full_name\n'\tcmd").rows;
+    expect(rowTab.fullName).toBe("cmd");
+
+    const [rowCr] = prepareContactImport("full_name\n\"'\rcmd\"").rows;
+    expect(rowCr.fullName).toBe("cmd");
   });
 
   it("counts cards, specialties, and nitrox only among importable rows", () => {

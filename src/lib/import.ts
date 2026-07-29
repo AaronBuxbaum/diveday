@@ -563,7 +563,7 @@ export function parseCsv(text: string): string[][] {
 
 /** Undo the export's formula-injection guard: a leading "'" before =,+,-,@ is presentational. */
 function unguardCell(value: string): string {
-  return /^'[=+\-@]/.test(value) ? value.slice(1) : value;
+  return /^'[=+\-@\t\r]/.test(value) ? value.slice(1) : value;
 }
 
 export type ImportIssue = { level: "error" | "warning" | "info"; message: string };
