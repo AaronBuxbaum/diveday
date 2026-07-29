@@ -14,6 +14,7 @@ import {
   bookingCheckouts,
   bookings,
   nitroxCertifications,
+  orders,
   paymentOperationIntents,
   people,
   personRoles,
@@ -105,6 +106,19 @@ describe("seeded imported-card states", () => {
 });
 
 describe("resetDemoSchedule", () => {
+  it("can restore the full history used by the browser demo", async () => {
+    const { db, shop } = await seededShopContext();
+
+    await resetDemoSchedule(db, shop.id, { history: true });
+
+    expect(
+      (await db.select().from(orders).where(eq(orders.shopId, shop.id))).length,
+    ).toBeGreaterThan(0);
+    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBeGreaterThan(
+      0,
+    );
+  });
+
   it("restores the seeded schedule after the playground is churned", async () => {
     const { db, shop } = await seededShopContext();
     const before = await upcomingTripsWithCounts(db, shop.id);

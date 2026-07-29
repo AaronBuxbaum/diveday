@@ -39,6 +39,8 @@ export const EXPORT_FILE_NOTES = {
   "nitrox_certifications.csv": "Enriched-air (EANx) cards with verification status.",
   "trips.csv":
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
+  "trip_schedule_days.csv":
+    "The meeting windows for each trip day; multi-day courses can have different times on each day.",
   "trip_series.csv":
     "Recurring-trip templates; every materialized instance is its own row in trips.csv carrying series_id.",
   "trip_dives.csv": "The ordered dives within each trip, with their sites.",

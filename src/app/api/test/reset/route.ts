@@ -32,7 +32,10 @@ export async function POST() {
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (shop?.isDemo) {
-    await resetDemoSchedule(db, shop.id);
+    // Browser tests rely on the canonical demo's historical orders and trips
+    // as well as its schedule. Unit fixtures keep the lean default, but the
+    // E2E reset must restore the full customer-facing demo.
+    await resetDemoSchedule(db, shop.id, { history: true });
   }
   // Clear any disposable demo shops earlier tests minted via "Try the live
   // demo", so they don't accumulate and bloat the shared test database.

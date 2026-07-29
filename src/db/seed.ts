@@ -2533,7 +2533,11 @@ async function seedNitrox(
  * Deletes run children-first so foreign keys never block a reset, however far
  * a visitor drove the tool (signed a waiver, saved a fit, ran roll call).
  */
-export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise<void> {
+export async function resetDemoSchedule(
+  db: DbExecutor,
+  shopId: string,
+  opts: { history?: boolean } = {},
+): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 
@@ -2664,10 +2668,7 @@ export async function resetDemoSchedule(db: DbExecutor, shopId: string): Promise
   await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
 
-  // Reset is an internal test/playground helper, not the production demo
-  // bootstrap. Keep its post-reset state lean and deterministic; reporting
-  // history is created only on a fresh canonical seed.
-  await seedDemoSchedule(db, shopId, { history: false });
+  await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }
 
 /** Default lifetime of a minted demo shop before the reaper clears it. */

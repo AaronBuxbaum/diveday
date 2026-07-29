@@ -43,6 +43,7 @@ import {
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
+  tripScheduleDays,
   tripSeries,
   trips,
   tripWaitlistEntries,
@@ -224,6 +225,13 @@ export async function loadShopExportBundleInput(
         .orderBy(asc(trips.startsAt), asc(trips.id));
       const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
       const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
+
+      const scheduleDayRows = await tx
+        .select()
+        .from(tripScheduleDays)
+        .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
+        .where(eq(trips.shopId, shopId))
+        .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
 
       const tripDiveRows = await tx
         .select(getTableColumns(tripDives))
@@ -657,6 +665,18 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_series.csv"],
+        },
+        {
+          file: "trip_schedule_days.csv",
+          header: ["trip_id", "trip_title", "day_number", "starts_at", "ends_at"],
+          rows: scheduleDayRows.map(({ trip_schedule_days: row }) => [
+            row.tripId,
+            tripTitle.get(row.tripId),
+            row.dayNumber,
+            row.startsAt,
+            row.endsAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_schedule_days.csv"],
         },
         {
           file: "trip_dives.csv",
@@ -1356,6 +1376,13 @@ export async function loadShopExportCounts(
     ),
     "trip_series.csv": await countOf(
       db.select({ n: count() }).from(tripSeries).where(eq(tripSeries.shopId, shopId)),
+    ),
+    "trip_schedule_days.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(tripScheduleDays)
+        .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
+        .where(eq(trips.shopId, shopId)),
     ),
     "trip_dives.csv": await countOf(
       db

@@ -18,6 +18,7 @@ const EXPECTED_FILES = [
   "nitrox_certifications.csv",
   "trips.csv",
   "trip_series.csv",
+  "trip_schedule_days.csv",
   "trip_dives.csv",
   "trip_requirements.csv",
   "trip_assignments.csv",
@@ -49,6 +50,7 @@ const EXPORTED_TABLES = [
   "nitrox_certifications",
   "trips",
   "trip_series",
+  "trip_schedule_days",
   "trip_dives",
   "trip_requirements",
   "trip_assignments",
@@ -250,6 +252,7 @@ describe("full-shop export dataset", () => {
       "contacts.csv",
       "people.csv",
       "trips.csv",
+      "trip_schedule_days.csv",
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
@@ -283,6 +286,14 @@ describe("full-shop export dataset", () => {
     const requirements = table(input, "trip_requirements.csv");
     expect(requirements.header).toContain("minimum_certification_level");
     expect(requirements.header).toContain("required_specialties");
+    const scheduleDays = table(input, "trip_schedule_days.csv");
+    expect(scheduleDays.rows.length).toBeGreaterThan(0);
+    expect(
+      scheduleDays.rows.filter(
+        (row) =>
+          row[scheduleDays.header.indexOf("trip_title")] === "Open Water Diver — three-day course",
+      ),
+    ).toHaveLength(3);
     const assignments = table(input, "trip_assignments.csv");
     for (const row of assignments.rows) {
       expect(row[assignments.header.indexOf("person_name")]).toBeTruthy();
