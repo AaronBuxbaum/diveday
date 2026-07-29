@@ -7,6 +7,13 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: /Discover Scuba — Pool & Reef/ }).click();
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
+  await expect(page.getByText("Giving this dive as a gift?")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Share with a buddy" })).toBeVisible();
+  const calendar = await page.request.get(`${new URL(page.url()).pathname}/calendar`);
+  expect(calendar.ok()).toBe(true);
+  expect(calendar.headers()["content-type"]).toContain("text/calendar");
+  expect(await calendar.text()).toContain("BEGIN:VCALENDAR");
 
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");

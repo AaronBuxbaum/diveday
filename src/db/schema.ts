@@ -500,6 +500,8 @@ export const trips = pgTable(
      */
     cancellationWindowHours: integer("cancellation_window_hours"),
     status: tripStatus("status").notNull().default("scheduled"),
+    /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
+    conditionsHold: boolean("conditions_hold").notNull().default(false),
     conditionsSummary: text("conditions_summary"),
     waterTemperatureC: integer("water_temperature_c"),
     visibilityMeters: integer("visibility_meters"),

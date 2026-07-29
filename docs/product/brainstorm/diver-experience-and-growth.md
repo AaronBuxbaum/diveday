@@ -45,9 +45,13 @@ The gap between *booked* and *ready* is where shops lose time and divers lose co
 ## C. Confirmations & reassurance
 
 - [x] **Confirmations that say exactly what's complete and what remains** (Shipped) — Displays booking details and states outstanding waivers/requirements.
-- **A calendar add + directions to the dock** in the confirmation — reduce day-of confusion. *(S, bookings, quick win.)*
+- [x] **A calendar add + directions to the dock.** (Shipped) Every public trip and confirmation
+  offers a portable calendar download, a mapped location when the shop supplied one, and the live
+  trip link.
 - [x] **Pre-dive briefing note.** (Shipped) Night-before brief email/SMS with conditions, arrival time, checklist.
-- **Weather/condition-hold honesty.** If the shop flags a hold, the diver hears it from the app immediately, not a scramble of texts. *(M, bookings.)*
+- [x] **Weather/condition-hold honesty.** (Shipped) A crew hold pauses booking, puts the live state
+  on the trip immediately, and sends a best-effort email to booked divers when delivery is
+  configured.
 
 ## D. Retention & repeat visits (within non-goals)
 
@@ -55,21 +59,25 @@ Not a social network — but a returning diver should feel *known*.
 
 - [x] **"Welcome back" recognition.** (Shipped) Returning diver picker matches by email, pulling prior certs, sizes, contact information.
 - [x] **Post-dive close-the-loop.** (Shipped) Post-trip recap page (`/recap/[token]`) generated and emailed/texted automatically.
-- **Cert-progression nudges.** A diver with OW who keeps booking sites needing AOW sees a gentle "ready to go deeper? here's the course" — sells courses without nagging. *(M, certs/bookings.)*
+- [x] **Cert-progression nudges.** (Shipped) A confirmation with an insufficient-level blocker
+  gently links the shop's active Advanced Open Water course; clear divers and unrelated blockers
+  see no prompt.
 - [x] **Personal dive history with the shop** (Shipped) — Prior visits imported verbatim as an inert history list on the diver's profile.
 
 ## E. Referral & word-of-mouth mechanics
 
 - [x] **Bring-a-buddy booking.** (Shipped) Post-trip recap includes a "bring a buddy" nudge.
-- **Shareable trip pages.** A trip page a diver can text to a friend that books directly — the trip *is* the ad. *(S, bookings, quick win.)*
-- **Gift a dive / DSD.** Book a Discover Scuba experience for someone else (glossary — DSD is an experience, not a cert; stricter ratios apply). A gateway funnel for new divers. *(M, bookings.)*
+- [x] **Shareable trip pages.** (Shipped) Public trip pages use native device sharing with a
+  copy-link fallback and book directly — the trip *is* the ad.
+- [x] **Gift a dive / DSD.** (Shipped) Discover Scuba booking explicitly supports entering the
+  recipient's identity while the giver pays on their device; readiness goes to the recipient.
 
 ## F. Accessibility as reach
 
-- **The whole flow passes the dock test on the diver's phone too** — ≥44 px targets, ≥16 px text,
+- [x] **The whole flow passes the dock test on the diver's phone too** (Shipped) — ≥44 px targets, ≥16 px text,
   AA contrast, one-handed. Divers book from phones on boats and beaches. *(S–M, cross-cutting, quick
   win.)*
-- **Reduced-motion, screen-reader-clean, keyboard-reachable** public flow — reach is growth. *(S,
+- [x] **Reduced-motion, screen-reader-clean, keyboard-reachable** public flow (Shipped) — reach is growth. *(S,
   cross-cutting, quick win.)*
 - **Localization-ready copy** for shops in multilingual markets (park until a shop needs it, but
   don't hard-code English into the data model). *(M, cross-cutting — architecture note now, feature

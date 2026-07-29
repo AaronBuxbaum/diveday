@@ -92,6 +92,7 @@ export function BookingConfirmation({
   payment,
   payCancelled,
   readinessLink,
+  progressionCourse,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -107,6 +108,7 @@ export function BookingConfirmation({
   payCancelled: boolean;
   /** Null when no readiness capability could be issued (e.g. no canonical origin configured). */
   readinessLink: string | null;
+  progressionCourse: { title: string; slug: string } | null;
 }) {
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
   const nextStep = nextDiverStep(checklist);
@@ -129,6 +131,22 @@ export function BookingConfirmation({
       </EarnedMoment>
 
       <PaymentSection payment={payment} payCancelled={payCancelled} payRef={fitRef} />
+
+      {progressionCourse ? (
+        <aside className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <h3 className="font-semibold">Ready to go deeper?</h3>
+          <p className="mt-1 text-sm text-muted">
+            This dive needs the next certification step. See how {progressionCourse.title} gets you
+            there — no pressure, just the path when you want it.
+          </p>
+          <Link
+            href={`/shop/${shopSlug}/courses/${progressionCourse.slug}`}
+            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+          >
+            Explore the course →
+          </Link>
+        </aside>
+      ) : null}
 
       <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
         {nextStep ? (

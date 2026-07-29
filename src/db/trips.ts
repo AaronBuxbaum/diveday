@@ -700,6 +700,7 @@ export async function listTripDives(db: AppDb, shopId: string, tripId: string) {
 }
 
 export type TripConditionsPatch = {
+  conditionsHold?: boolean;
   conditionsSummary?: string;
   waterTemperatureC?: number;
   visibilityMeters?: number;
@@ -713,18 +714,49 @@ export async function updateTripConditions(
   tripId: string,
   patch: TripConditionsPatch,
 ) {
-  const [trip] = await db
-    .update(trips)
-    .set({
-      conditionsSummary: patch.conditionsSummary || null,
-      waterTemperatureC: patch.waterTemperatureC ?? null,
-      visibilityMeters: patch.visibilityMeters ?? null,
-      surfaceConditions: patch.surfaceConditions || null,
-      conditionsUpdatedAt: nowDate(),
-    })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .returning();
-  return trip ?? null;
+  return db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ conditionsHold: trips.conditionsHold })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!before) return { trip: null, holdStarted: false };
+
+    const [trip] = await tx
+      .update(trips)
+      .set({
+        // Undefined means this conditions-only edit does not change the hold.
+        conditionsHold: patch.conditionsHold,
+        conditionsSummary: patch.conditionsSummary || null,
+        waterTemperatureC: patch.waterTemperatureC ?? null,
+        visibilityMeters: patch.visibilityMeters ?? null,
+        surfaceConditions: patch.surfaceConditions || null,
+        conditionsUpdatedAt: nowDate(),
+      })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .returning();
+    return {
+      trip: trip ?? null,
+      holdStarted: patch.conditionsHold === true && !before.conditionsHold,
+    };
+  });
+}
+
+/** Email recipients holding active seats on one tenant-scoped trip. */
+export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: string) {
+  return db
+    .select({ fullName: people.fullName, email: people.email })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+        isNull(people.deletedAt),
+      ),
+    );
 }
 
 export async function setTripStatus(

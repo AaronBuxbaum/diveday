@@ -9,6 +9,7 @@ import {
   passwordChangedEmail,
   passwordResetEmail,
   staffInviteEmail,
+  tripConditionsHoldEmail,
   tripRecapEmail,
   tripReminderEmail,
   verifyAccountEmail,
@@ -166,6 +167,21 @@ const tripRecapSchema = z.object({
   recapUrl: z.url().max(2_000),
 });
 
+const tripConditionsHoldSchema = z.object({
+  kind: z.literal("trip_conditions_hold"),
+  tripId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  conditionsSummary: z.string().trim().max(600).nullish(),
+  tripUrl: z.url().max(2_000),
+  publishedAt: z.date(),
+});
+
 // Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
 // so these are structurally excluded from TrackedNotification
 // (src/db/notifications.ts) exactly like waitlist_invite already is —
@@ -254,6 +270,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   tripReminder7dSchema,
   tripReminder24hSchema,
   tripRecapSchema,
+  tripConditionsHoldSchema,
   welcomeSchema,
   emailVerificationSchema,
   passwordResetRequestSchema,
@@ -356,6 +373,7 @@ function messageFor(notification: Notification): NotificationEmail {
     return tripReminderEmail({ ...notification, lead: "day" });
   }
   if (notification.kind === "trip_recap") return tripRecapEmail(notification);
+  if (notification.kind === "trip_conditions_hold") return tripConditionsHoldEmail(notification);
   if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);
@@ -386,6 +404,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;
+    case "trip_conditions_hold":
+      return `trip-conditions-hold/${notification.tripId}/${notification.publishedAt.toISOString()}/${notification.to}`;
     // One welcome ever, per account.
     case "welcome":
       return `welcome/${notification.userAccountId}`;

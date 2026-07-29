@@ -1,0 +1,21 @@
+import { describe, expect, it } from "vitest";
+import { tripCalendarFile } from "./trip-calendar";
+
+describe("tripCalendarFile", () => {
+  it("writes UTC times and escapes diver-facing text", () => {
+    const file = tripCalendarFile({
+      title: "Reef, wreck; & rays",
+      description: "Meet aboard\nBring a towel",
+      startsAt: new Date("2026-08-03T13:00:00.000Z"),
+      endsAt: new Date("2026-08-03T17:30:00.000Z"),
+      location: "Molasses Reef, Key Largo",
+      url: "https://diveday.test/shop/blue-mantis/schedule/trip-1",
+    });
+
+    expect(file).toContain("DTSTART:20260803T130000Z\r\nDTEND:20260803T173000Z");
+    expect(file).toContain("SUMMARY:Reef\\, wreck\\; & rays");
+    expect(file).toContain("LOCATION:Molasses Reef\\, Key Largo");
+    expect(file).toContain("Meet aboard\\nBring a towel");
+    expect(file).toMatch(/END:VCALENDAR\r\n$/);
+  });
+});

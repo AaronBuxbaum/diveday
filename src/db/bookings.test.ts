@@ -15,7 +15,14 @@ import {
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { setBookingPayment } from "./payments";
-import { bookingCheckoutBookings, bookingCheckouts, bookings, people, personRoles } from "./schema";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookings,
+  people,
+  personRoles,
+  trips,
+} from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
@@ -78,6 +85,16 @@ describe("createBooking (in-memory PGlite)", () => {
     const { db, shop, fullTrip } = await seededContext();
     const outcome = await bookVisitor(db, shop.id, fullTrip.id);
     expect(outcome).toEqual({ ok: false, reason: "trip_full" });
+  });
+
+  it("rejects new bookings while the crew has a conditions hold in place", async () => {
+    const { db, shop, open } = await seededContext();
+    await db.update(trips).set({ conditionsHold: true }).where(eq(trips.id, open.id));
+
+    expect(await bookVisitor(db, shop.id, open.id)).toEqual({
+      ok: false,
+      reason: "trip_unavailable",
+    });
   });
 
   it("books multiple named divers together", async () => {

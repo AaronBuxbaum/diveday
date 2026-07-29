@@ -67,6 +67,18 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
   );
 }
 
+export function ConditionsHoldSection() {
+  return (
+    <section className="mt-10 rounded-lg border border-warning/40 bg-warning/10 p-6">
+      <h2 className="font-semibold">Bookings are paused while the crew watches conditions</h2>
+      <p className="mt-1 text-sm text-muted">
+        Check back after the final weather call. Divers who already booked keep their seats and will
+        can follow the live crew update here.
+      </p>
+    </section>
+  );
+}
+
 export function TripFullSection({
   shopSlug,
   trip,
@@ -149,6 +161,13 @@ export function BookSpotSection({
         </p>
       ) : null}
       <ErrorNotice message={state.error ?? errorMessage} />
+      {trip.course && /discover scuba|try scuba/i.test(trip.course.title) ? (
+        <p className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted">
+          <strong className="text-foreground">Giving this dive as a gift?</strong> Enter the
+          recipient&apos;s name and email below, then pay from this device. Their confirmation and
+          ready-to-dive steps go straight to them.
+        </p>
+      ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
         <FieldGrid columns={1}>

@@ -129,7 +129,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
     .limit(1)
     .for("update");
-  if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
+  if (trip?.status !== "scheduled" || trip.conditionsHold || trip.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
   }
 

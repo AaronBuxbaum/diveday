@@ -4,6 +4,7 @@ import {
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  tripConditionsHoldEmail,
   tripRecapEmail,
   tripReminderEmail,
   verifyAccountEmail,
@@ -38,6 +39,20 @@ describe("bookingConfirmationEmail", () => {
     expect(email.text).toContain("Reef-safe sunscreen");
     expect(email.text).toContain("certification cards");
     expect(email.html).toContain("Pre-Trip Checklist Reminder:");
+  });
+});
+
+describe("tripConditionsHoldEmail", () => {
+  it("reassures the diver that their seat remains held and includes the crew note", () => {
+    const email = tripConditionsHoldEmail({
+      ...base,
+      conditionsSummary: "The captain is watching a passing squall.",
+      tripUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+    });
+    expect(email.subject).toContain("Conditions hold");
+    expect(email.text).toContain("Your seat is still held");
+    expect(email.text).toContain("passing squall");
+    expect(email.html).toContain("See the live trip update");
   });
 });
 

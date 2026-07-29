@@ -100,6 +100,29 @@ type TripReminderEmailInput = {
   brief?: NightBeforeBriefInput;
 };
 
+export type TripConditionsHoldEmailInput = {
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+  conditionsSummary?: string | null;
+  tripUrl: string;
+};
+
+export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
+  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
+  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const detail = input.conditionsSummary?.trim();
+  const detailText = detail ? `\n\nCrew note: ${detail}` : "";
+  const detailHtml = detail ? `<p><strong>Crew note:</strong> ${escapeHtml(detail)}</p>` : "";
+  return {
+    subject: `Conditions hold — ${input.tripTitle}`,
+    text: `Hi ${firstName},\n\n${input.shopName} has placed ${input.tripTitle} on a conditions hold for ${date}. Your seat is still held while the crew makes the final weather call.${detailText}\n\nSee the live trip update:\n${input.tripUrl}\n`,
+    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${escapeHtml(input.shopName)} has placed <strong>${escapeHtml(input.tripTitle)}</strong> on a conditions hold for ${escapeHtml(date)}. Your seat is still held while the crew makes the final weather call.</p>${detailHtml}<p><a href="${escapeHtml(input.tripUrl)}">See the live trip update</a></p>`,
+  };
+}
+
 /** "30 minutes" today, whatever the shop set otherwise. */
 function dockCallPhrase(dockCallMinutes: number | undefined): string {
   return `${dockCallMinutes ?? 30} minutes`;

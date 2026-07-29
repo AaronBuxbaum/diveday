@@ -28,6 +28,7 @@ import {
   getLatestSeriesInstance,
   getTripSeriesById,
   getTripWithBooked,
+  listTripDiverContacts,
   setTripCrew,
   setTripStatus,
   type TripCrewChange,
@@ -41,8 +42,10 @@ import {
   issueWaiversForBookings,
 } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
+import { nowDate } from "@/lib/clock";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -71,6 +74,7 @@ const detailsSchema = z.object({
 });
 
 const conditionsSchema = z.object({
+  conditionsHold: z.string().optional(),
   conditionsSummary: z.string().trim().max(600),
   waterTemperatureC: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -218,7 +222,43 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   const s = await requireStaffSession();
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}?notice=invalid`);
-  const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, parsed.data);
+  const db = await getDb();
+  const { trip: saved, holdStarted } = await updateTripConditions(db, s.user.shopId, tripId, {
+    ...parsed.data,
+    conditionsHold: parsed.data.conditionsHold === "on",
+  });
+  if (saved && holdStarted) {
+    const [shop, contacts] = await Promise.all([
+      getShopById(db, s.user.shopId),
+      listTripDiverContacts(db, s.user.shopId, tripId),
+    ]);
+    const origin = publicAppUrl();
+    if (shop && origin) {
+      const publishedAt = nowDate();
+      await Promise.allSettled(
+        contacts.flatMap((contact) =>
+          contact.email
+            ? [
+                notify({
+                  kind: "trip_conditions_hold",
+                  tripId,
+                  shopId: shop.id,
+                  to: contact.email,
+                  diverName: contact.fullName,
+                  shopName: shop.name,
+                  tripTitle: saved.title,
+                  startsAt: saved.startsAt,
+                  timezone: shop.timezone,
+                  conditionsSummary: saved.conditionsSummary,
+                  tripUrl: new URL(`/shop/${shopSlug}/schedule/${tripId}`, `${origin}/`).toString(),
+                  publishedAt,
+                }),
+              ]
+            : [],
+        ),
+      );
+    }
+  }
   revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions" : "invalid"}`);
 }
 
@@ -227,7 +267,7 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   // Crew-entered conditions (see saveConditionsAction) — operating work, open to
   // all staff.
   const s = await requireStaffSession();
-  const saved = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
+  const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
   revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
 }
 
