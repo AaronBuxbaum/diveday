@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -181,6 +184,9 @@ jobs:
         env:
           BACKSTOP_SKIP_BUILD: "1"
           DIVEDAY_E2E: "1"
+      - name: Generate machine-readable Backstop diff manifest
+        if: always()
+        run: node scripts/backstop-summary.mjs
       - name: Summarize Backstop artifacts
         if: always()
         env:
@@ -198,6 +204,10 @@ jobs:
             else
               echo "Backstop visual comparison passed."
             fi
+            if [ ! -f backstop_data/json_report/jsonReport.json ]; then
+              echo "Backstop did not produce the machine-readable JSON comparison report."
+              exit 1
+            fi
             echo
             echo "[Download the Backstop visual artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -207,6 +217,9 @@ jobs:
           if [ -f backstop_data/html_report/index.html ]; then
             echo "HTML report generated; inspect reference/test/diff images in the downloaded artifact." >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f backstop_data/ci_report/diff-summary.md ]; then
+            cat backstop_data/ci_report/diff-summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -214,6 +227,49 @@ jobs:
           path: |
             backstop_data/html_report/
             backstop_data/ci_report/
+            backstop_data/json_report/
             backstop_data/bitmaps_test/
           if-no-files-found: ignore
           retention-days: 7
+
+  backstop-baseline:
+    name: Approve Backstop references on main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.visual.result == 'success'
+    needs: visual
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v7
+        with:
+          name: playwright-next-build
+          path: .next
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install chromium
+      - name: Capture references from merged main
+        run: node scripts/backstop-run.mjs reference
+        env:
+          BACKSTOP_SKIP_BUILD: "1"
+          DIVEDAY_E2E: "1"
+      - name: Commit updated Backstop references
+        run: |
+          git add -A backstop_data/bitmaps_reference
+          if git diff --cached --quiet; then
+            echo "Backstop references already match main."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update Backstop references [skip ci]"
+          git push origin HEAD:main
