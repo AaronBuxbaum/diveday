@@ -28,9 +28,9 @@ export function StaffScheduleBoard({
         <Badge tone="neutral">Double-booking protected</Badge>
       </div>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-        <ul className="divide-y divide-border">
+        <div className="divide-y divide-border">
           {trips.map((trip) => (
-            <li key={trip.id} className="p-4 sm:p-5">
+            <article key={trip.id} className="p-4 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <Link
@@ -84,9 +84,9 @@ export function StaffScheduleBoard({
                   </span>
                 )}
               </div>
-            </li>
+            </article>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );
