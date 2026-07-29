@@ -114,6 +114,7 @@ test.describe("staff", () => {
       "Diver-facing conditions briefing updated.",
     );
     await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/$/);
 
     await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
     await expect(

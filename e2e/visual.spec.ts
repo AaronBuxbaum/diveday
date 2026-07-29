@@ -1,11 +1,7 @@
-import fs from "node:fs";
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
-
-// Ensure screenshot directory exists to prevent ENOENT errors
-fs.mkdirSync(".reg/actual", { recursive: true });
 
 /**
  * Visual regression coverage. Thirty-nine key surfaces × light/dark, each
