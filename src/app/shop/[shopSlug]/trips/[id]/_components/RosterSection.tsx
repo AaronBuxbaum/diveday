@@ -210,6 +210,12 @@ export function RosterSection({
                     </Badge>
                   ) : null}
                 </div>
+                {booking.groupPreference ? (
+                  <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+                    <span className="font-semibold text-foreground">Buddy-group note:</span>{" "}
+                    {booking.groupPreference}
+                  </p>
+                ) : null}
 
                 {readiness && readiness.status !== "ready" ? (
                   <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">

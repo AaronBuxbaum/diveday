@@ -607,6 +607,8 @@ export const bookings = pgTable(
      */
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
+    /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
+    groupPreference: text("group_preference"),
     status: bookingStatus("status").notNull().default("booked"),
     /**
      * Set for the duration of one in-flight checkout attempt covering this
