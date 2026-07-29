@@ -18,32 +18,73 @@ interface SensorErrorEvent extends Event {
  * AmbientGlareDetector is a client-side component that listens to the device's
  * AmbientLightSensor. If the ambient light level is above the threshold, it
  * automatically activates "glare-mode" by adding the `.glare-mode` class to the
- * document root.
- *
- * It is automatic-only, with no manual toggle button required.
+ * document root, unless overridden by the contrast tuning slider.
  */
 export function AmbientGlareDetector() {
-  const [, setGlareActive] = useState(false);
+  const [mode, setMode] = useState<"auto" | "standard" | "full">("auto");
+  const [sensorLux, setSensorLux] = useState(0);
 
+  // Initialize mode from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMode = localStorage.getItem("diveday:contrast-mode");
+      if (savedMode === "standard" || savedMode === "full" || savedMode === "auto") {
+        setMode(savedMode);
+      }
+    }
+  }, []);
+
+  // Listen to contrast-mode changes from the slider
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // A custom event listener to simulate ambient light changes in tests and dev environments
+    const handleModeChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ mode: "auto" | "standard" | "full" }>)?.detail;
+      if (detail?.mode) {
+        setMode(detail.mode);
+      }
+    };
+
+    window.addEventListener("diveday:contrast-mode-change", handleModeChange);
+    return () => {
+      window.removeEventListener("diveday:contrast-mode-change", handleModeChange);
+    };
+  }, []);
+
+  // Set the .glare-mode class dynamically
+  useEffect(() => {
+    let isGlare = false;
+    if (mode === "full") {
+      isGlare = true;
+    } else if (mode === "standard") {
+      isGlare = false;
+    } else {
+      isGlare = sensorLux >= GLARE_LUX_THRESHOLD;
+    }
+
+    if (isGlare) {
+      document.documentElement.classList.add("glare-mode");
+    } else {
+      document.documentElement.classList.remove("glare-mode");
+    }
+
+    return () => {
+      document.documentElement.classList.remove("glare-mode");
+    };
+  }, [mode, sensorLux]);
+
+  // AmbientLightSensor and custom lux event listeners
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const handleCustomLux = (e: Event) => {
       const detail = (e as CustomEvent<{ lux: number }>)?.detail;
       if (detail && typeof detail.lux === "number") {
-        const isGlare = detail.lux >= GLARE_LUX_THRESHOLD;
-        setGlareActive(isGlare);
-        if (isGlare) {
-          document.documentElement.classList.add("glare-mode");
-        } else {
-          document.documentElement.classList.remove("glare-mode");
-        }
+        setSensorLux(detail.lux);
       }
     };
     window.addEventListener("diveday:set-lux", handleCustomLux);
 
-    // Check if the experimental AmbientLightSensor API is supported
     if (!("AmbientLightSensor" in window)) {
       return () => {
         window.removeEventListener("diveday:set-lux", handleCustomLux);
@@ -64,19 +105,12 @@ export function AmbientGlareDetector() {
         if (!sensor) return;
         const lux = sensor.illuminance;
         if (typeof lux === "number") {
-          const isGlare = lux >= GLARE_LUX_THRESHOLD;
-          setGlareActive(isGlare);
-          if (isGlare) {
-            document.documentElement.classList.add("glare-mode");
-          } else {
-            document.documentElement.classList.remove("glare-mode");
-          }
+          setSensorLux(lux);
         }
       };
 
       const handleError = (event: Event) => {
         const errEvent = event as SensorErrorEvent;
-        // Silently handle errors (e.g. permission denied)
         console.warn("AmbientLightSensor error:", errEvent.error?.name, errEvent.error?.message);
       };
 
@@ -92,10 +126,9 @@ export function AmbientGlareDetector() {
           try {
             sensor.stop();
           } catch {
-            // Ignore errors on stop
+            // Ignore
           }
         }
-        document.documentElement.classList.remove("glare-mode");
       };
     } catch (err) {
       console.warn("Failed to initialize AmbientLightSensor:", err);
@@ -106,4 +139,87 @@ export function AmbientGlareDetector() {
   }, []);
 
   return null;
+}
+
+/**
+ * AmbientContrastSlider is a slider UI that allows manual overrides of the contrast mode.
+ * Toggling standard or full AAA contrast overrides the auto-glare detection.
+ */
+export function AmbientContrastSlider() {
+  const [mode, setMode] = useState<"auto" | "standard" | "full">("auto");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const savedMode = localStorage.getItem("diveday:contrast-mode");
+      if (savedMode === "standard" || savedMode === "full" || savedMode === "auto") {
+        setMode(savedMode);
+      }
+    }
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value, 10);
+    const newMode = val === 0 ? "auto" : val === 1 ? "standard" : "full";
+    setMode(newMode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("diveday:contrast-mode", newMode);
+      window.dispatchEvent(
+        new CustomEvent("diveday:contrast-mode-change", { detail: { mode: newMode } }),
+      );
+    }
+  };
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center h-11 px-3 border border-border rounded-xl bg-surface/50 opacity-50">
+        <span className="text-xs font-semibold text-muted">Contrast: Auto</span>
+      </div>
+    );
+  }
+
+  const sliderVal = mode === "auto" ? 0 : mode === "standard" ? 1 : 2;
+  const modeLabel = mode === "auto" ? "Auto ☀" : mode === "standard" ? "Standard" : "Full AAA ☀";
+
+  return (
+    <div
+      data-testid="contrast-tuning-slider"
+      className="flex flex-col gap-1.5 p-2.5 px-3 border border-border bg-surface rounded-xl shadow-sm min-w-[210px] select-none text-left print:hidden"
+    >
+      <div className="flex justify-between items-center text-xs font-bold text-muted uppercase">
+        <span className="flex items-center gap-1.5">
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <title>Contrast Icon</title>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+          </svg>
+          Contrast
+        </span>
+        <span className="font-semibold px-2 py-0.5 rounded-full bg-surface-sunken text-foreground">
+          {modeLabel}
+        </span>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="2"
+        step="1"
+        value={sliderVal}
+        onChange={handleChange}
+        className="w-full h-1 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-primary"
+      />
+      <div className="flex justify-between text-[8px] text-muted font-bold px-0.5 uppercase tracking-wider">
+        <span>Auto</span>
+        <span>Standard</span>
+        <span>Full AAA</span>
+      </div>
+    </div>
+  );
 }

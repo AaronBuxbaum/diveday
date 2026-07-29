@@ -7,12 +7,13 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
-import { AmbientGlareDetector } from "@/components/AmbientGlareDetector";
+import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
+import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
@@ -209,7 +210,8 @@ export default async function TripManifestPage({
             </span>
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
+        <div className="flex shrink-0 flex-wrap items-center gap-4 print:hidden">
+          <AmbientContrastSlider />
           <PrintButton />
         </div>
       </header>
@@ -566,6 +568,7 @@ export default async function TripManifestPage({
 
       <WaterLocker />
       <MilestoneHaptics total={manifest.summary.totalDivers} boarded={manifest.summary.boarded} />
+      <SubSurfaceRipple complete={rollCallComplete} />
     </div>
   );
 }

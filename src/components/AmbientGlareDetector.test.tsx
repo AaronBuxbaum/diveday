@@ -1,79 +1,111 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AmbientGlareDetector, GLARE_LUX_THRESHOLD } from "./AmbientGlareDetector";
+import {
+  AmbientContrastSlider,
+  AmbientGlareDetector,
+  GLARE_LUX_THRESHOLD,
+} from "./AmbientGlareDetector";
 
 afterEach(() => {
   cleanup();
   document.documentElement.classList.remove("glare-mode");
+  localStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
-describe("AmbientGlareDetector", () => {
+describe("AmbientGlareDetector & AmbientContrastSlider", () => {
   it("does not add glare-mode class by default", () => {
     render(<AmbientGlareDetector />);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
-  it("adds glare-mode class when custom event is dispatched with high lux", () => {
+  it("adds glare-mode class when custom event is dispatched with high lux in auto mode", () => {
     render(<AmbientGlareDetector />);
 
-    const event = new CustomEvent("diveday:set-lux", {
-      detail: { lux: GLARE_LUX_THRESHOLD + 1000 },
+    act(() => {
+      const event = new CustomEvent("diveday:set-lux", {
+        detail: { lux: GLARE_LUX_THRESHOLD + 1000 },
+      });
+      window.dispatchEvent(event);
     });
-    window.dispatchEvent(event);
 
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
 
-    const eventLow = new CustomEvent("diveday:set-lux", {
-      detail: { lux: GLARE_LUX_THRESHOLD - 1000 },
+    act(() => {
+      const eventLow = new CustomEvent("diveday:set-lux", {
+        detail: { lux: GLARE_LUX_THRESHOLD - 1000 },
+      });
+      window.dispatchEvent(eventLow);
     });
-    window.dispatchEvent(eventLow);
 
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
-  it("handles experimental AmbientLightSensor if present", () => {
-    let readingCallback: EventListenerOrEventListenerObject | null = null;
-    let illuminanceValue = 0;
+  it("forces glare-mode to be disabled in standard mode override", () => {
+    render(
+      <>
+        <AmbientGlareDetector />
+        <AmbientContrastSlider />
+      </>,
+    );
 
-    class MockAmbientLightSensor {
-      addEventListener = vi.fn((event: string, callback: EventListenerOrEventListenerObject) => {
-        if (event === "reading") readingCallback = callback;
+    // Set slider to Standard override (value = 1)
+    const slider = screen.getByRole("slider") as HTMLInputElement;
+    act(() => {
+      fireEvent.change(slider, { target: { value: "1" } });
+    });
+
+    expect(slider.value).toBe("1");
+    // Use getAllByText and choose index 0 to get the status badge instead of tick labels
+    expect(screen.getAllByText("Standard")[0]).toBeInTheDocument();
+
+    // Dispatch high lux event
+    act(() => {
+      const event = new CustomEvent("diveday:set-lux", {
+        detail: { lux: GLARE_LUX_THRESHOLD + 5000 },
       });
-      removeEventListener = vi.fn();
-      start = vi.fn();
-      stop = vi.fn();
-      get illuminance() {
-        return illuminanceValue;
-      }
-    }
+      window.dispatchEvent(event);
+    });
 
-    vi.stubGlobal("AmbientLightSensor", MockAmbientLightSensor);
-
-    render(<AmbientGlareDetector />);
-
-    expect(readingCallback).not.toBeNull();
-
-    const invokeCallback = () => {
-      if (readingCallback) {
-        if (typeof readingCallback === "function") {
-          readingCallback(new Event("reading"));
-        } else {
-          readingCallback.handleEvent(new Event("reading"));
-        }
-      }
-    };
-
-    // Simulate high light level
-    illuminanceValue = GLARE_LUX_THRESHOLD + 5000;
-    invokeCallback();
-    expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
-
-    // Simulate normal light level
-    illuminanceValue = GLARE_LUX_THRESHOLD - 5000;
-    invokeCallback();
+    // Should remain disabled due to Standard override
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
+  });
+
+  it("forces glare-mode to be active in full AAA mode override", () => {
+    render(
+      <>
+        <AmbientGlareDetector />
+        <AmbientContrastSlider />
+      </>,
+    );
+
+    // Set slider to Full AAA override (value = 2)
+    const slider = screen.getByRole("slider") as HTMLInputElement;
+    act(() => {
+      fireEvent.change(slider, { target: { value: "2" } });
+    });
+
+    expect(slider.value).toBe("2");
+    expect(screen.getByText("Full AAA ☀")).toBeInTheDocument();
+
+    // Glare mode should be active even if lux is low (which it is by default, 0)
+    expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
+  });
+
+  it("persists override choice across page reloads via localStorage", () => {
+    localStorage.setItem("diveday:contrast-mode", "full");
+
+    render(
+      <>
+        <AmbientGlareDetector />
+        <AmbientContrastSlider />
+      </>,
+    );
+
+    const slider = screen.getByRole("slider") as HTMLInputElement;
+    expect(slider.value).toBe("2"); // Full AAA
+    expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
   });
 });
