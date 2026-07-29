@@ -143,7 +143,10 @@ export async function bookSpot(
     validParty.push({ fullName, email });
   }
   const phone = String(formData.get("phone") ?? "").trim();
+  const groupPreference = String(formData.get("groupPreference") ?? "").trim();
   if (phone.length > 30) fieldErrors.phone = "That phone number is too long.";
+  if (groupPreference.length > 300)
+    fieldErrors.groupPreference = "Keep this note under 300 characters.";
   if (Object.keys(fieldErrors).length > 0) {
     return { error: "Check the highlighted fields and try again.", fieldErrors };
   }
@@ -161,6 +164,7 @@ export async function bookSpot(
       email: entry.email,
       // Only the lead booker's phone is collected, so the crew can reach the party.
       phone: index === 0 && phone ? phone : undefined,
+      groupPreference: groupPreference || undefined,
     })),
   );
   if (!outcome.ok) {

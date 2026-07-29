@@ -522,3 +522,6 @@ new domain concept, define it here in the same PR.
   soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
+  pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never
+  a promise and never carries medical or safety-clearance information.

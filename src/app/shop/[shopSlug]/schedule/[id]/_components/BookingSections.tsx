@@ -151,6 +151,20 @@ export function BookSpotSection({
       <ErrorNotice message={state.error ?? errorMessage} />
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
+        <FieldGrid columns={1}>
+          <Field
+            label="What kind of dive would make your day?"
+            hint="(optional — shared with the crew, never a promise)"
+          >
+            <textarea
+              name="groupPreference"
+              rows={2}
+              maxLength={300}
+              placeholder="Macro photos, a relaxed pace, or staying with friends"
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
         {payAtBooking ? (
           <FieldGrid columns={1} className="max-w-64">
             <Field label="Promo code" hint="(if the shop sent you a last-minute deal)">
