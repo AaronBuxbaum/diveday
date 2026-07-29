@@ -271,7 +271,7 @@ test("a diver with no workable date gets a written email instead of a dead end",
     .getAttribute("href");
   const url = new URL(mailto ?? "");
   expect(url.protocol).toBe("mailto:");
-  expect(decodeURIComponent(url.pathname)).toBe("hello@bluemantis.example");
+  expect(decodeURIComponent(url.pathname)).toBe("hello@demo.invalid");
   const params = new URLSearchParams(url.search);
   expect(params.get("subject")).toBe("Course inquiry: Open Water Diver");
   expect(params.get("body")).toContain("Experience so far: I have never dived before");

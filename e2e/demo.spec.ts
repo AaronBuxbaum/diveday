@@ -14,8 +14,7 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   // A minted demo shows the visitor how to sign back in if their session
   // expires — the shop is throwaway, so plain-text credentials are fine.
   await expect(page.getByText(/Session expired\? Sign back in at/)).toBeVisible();
-  await expect(page.getByText("demo-role-switcher-bypass-token")).toBeVisible();
-
+  await expect(page.getByText("password")).toBeVisible();
 });
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {

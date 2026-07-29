@@ -66,7 +66,7 @@ import { getCurrentWaiverTemplate } from "./waivers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const INSTRUCTOR_EMAIL = "marcus@bluemantis.example";
+const INSTRUCTOR_EMAIL = "marcus@demo.invalid";
 
 /**
  * A fixed booking id on the seeded reef trip, so a signed recap link can be
@@ -164,6 +164,60 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
+ * Repairs the original shared demo after it has already been created by an
+ * older release. Fresh seeds already contain these payment rows; this small,
+ * idempotent backfill keeps the Reports page useful for a persisted demo
+ * without touching real shops or inventing revenue for unpaid seats.
+ */
+export async function backfillDemoReportingData(db: DbExecutor): Promise<void> {
+  const [shop] = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
+    .limit(1);
+  if (!shop) return;
+
+  const [wreck] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shop.id),
+        eq(trips.title, "Wreck Trip — Spiegel Grove"),
+        eq(trips.status, "scheduled"),
+      ),
+    )
+    .limit(1);
+  if (!wreck) return;
+
+  const seats = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, wreck.id)))
+    .orderBy(bookings.createdAt)
+    .limit(2);
+  if (seats.length === 0) return;
+
+  const existing = await db
+    .select({ bookingId: bookingPayments.bookingId })
+    .from(bookingPayments)
+    .where(eq(bookingPayments.shopId, shop.id));
+  const existingIds = new Set(existing.map((row) => row.bookingId));
+  const missing = seats.filter((seat) => !existingIds.has(seat.id));
+  if (missing.length === 0) return;
+
+  await db.insert(bookingPayments).values(
+    missing.map((seat, index) => ({
+      shopId: shop.id,
+      bookingId: seat.id,
+      status: index === 0 ? ("paid" as const) : ("deposit_paid" as const),
+      amountCents: index === 0 ? 18_000 : 6_000,
+      currency: "usd",
+    })),
+  );
+}
+
+/**
  * The stable half of the demo: the shop, its default waiver template, its
  * staff, and their logins. Seeded once and left alone — resetting the demo
  * playground never touches these, so a signed-in demo session survives a reset
@@ -178,7 +232,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       timezone: DEMO_SHOP_TIMEZONE,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
-      contactEmail: "hello@bluemantis.example",
+      contactEmail: "hello@demo.invalid",
       contactPhone: "+1 305 555 0142",
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
       // a full set is cheaper than the pieces, each piece has its own price, and
@@ -221,10 +275,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   });
 
   const staffDefs = [
-    { fullName: "Dana Reyes", email: "dana@bluemantis.example", roles: ["owner", "manager"] },
+    { fullName: "Dana Reyes", email: "dana@demo.invalid", roles: ["owner", "manager"] },
     { fullName: "Marcus Webb", email: INSTRUCTOR_EMAIL, roles: ["instructor"] },
-    { fullName: "Keiko Tanaka", email: "keiko@bluemantis.example", roles: ["divemaster"] },
-    { fullName: "Sal Moretti", email: "sal@bluemantis.example", roles: ["captain"] },
+    { fullName: "Keiko Tanaka", email: "keiko@demo.invalid", roles: ["divemaster"] },
+    { fullName: "Sal Moretti", email: "sal@demo.invalid", roles: ["captain"] },
   ] as const;
 
   const staff = await db
@@ -249,9 +303,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     ),
   );
 
-  // Staff sign-in accounts with deterministic dev passwords (never in prod).
-  // Cost 4 keeps seeding fast in tests; real account creation flows must use
-  // a production-grade cost.
+  // Staff sign-in accounts use the demo bypass token rather than storing that
+  // public password as a real credential. This keeps the bypass scoped to the
+  // demo shop: if a test or operator turns isDemo off, "password" no longer
+  // authenticates these accounts. Cost 4 keeps seeding fast in tests; real
+  // account creation flows must use a production-grade cost.
   const logins = Object.values(DEV_STAFF_LOGINS);
   await db.insert(userAccounts).values(
     await Promise.all(
@@ -261,7 +317,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         return {
           personId: person.id,
           email: login.email,
-          hashedPassword: await hash(login.password, 4),
+          hashedPassword: await hash(crypto.randomUUID(), 4),
         };
       }),
     ),
