@@ -71,6 +71,11 @@ function reasonCopy(reason: WaiverFallbackLink["reason"], count: number): string
   if (reason === "failed") {
     return plural ? `Email could not be delivered to ${count}` : "Email could not be delivered";
   }
+  if (reason === "test_recipient") {
+    return plural
+      ? `${count} test email addresses can’t receive mail`
+      : "This test email address can’t receive mail";
+  }
   return "This shop has no email provider configured yet";
 }
 
@@ -80,6 +85,7 @@ function LinkGroups({ links }: { links: WaiverFallbackLink[] }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     no_email: links.filter((link) => link.reason === "no_email"),
     unconfigured: links.filter((link) => link.reason === "unconfigured"),
+    test_recipient: links.filter((link) => link.reason === "test_recipient"),
     failed: links.filter((link) => link.reason === "failed"),
   };
   return (

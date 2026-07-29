@@ -21,7 +21,7 @@ import { issueWaiverRequest } from "./waivers";
  * `sent` means staff must hand over the fallback link themselves, so the UI
  * shows it rather than silently claiming an email is on its way.
  */
-export type WaiverDelivery = "sent" | "no_email" | "unconfigured" | "failed";
+export type WaiverDelivery = "sent" | "no_email" | "unconfigured" | "test_recipient" | "failed";
 
 export type IssueAndDeliverWaiverResult =
   | {
@@ -105,7 +105,9 @@ export async function issueAndDeliverWaiver(
         ? "sent"
         : result.status === "not_configured"
           ? "unconfigured"
-          : "failed";
+          : result.errorCode === "invalid_test_recipient"
+            ? "test_recipient"
+            : "failed";
   }
 
   return { ok: true, bookingId, diverName, token: outcome.token, delivery };

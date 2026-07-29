@@ -70,6 +70,27 @@ describe("issueAndDeliverWaiver", () => {
     if (result.ok) expect(result.token).toBeTruthy();
   });
 
+  it("surfaces reserved test recipients without calling Resend", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
+    const fetchImpl = vi.fn();
+    vi.stubGlobal("fetch", fetchImpl);
+
+    const { db, shop, bookingId } = await seededBooking("nora@example.com");
+    const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
+
+    expect(result).toMatchObject({ ok: true, delivery: "test_recipient" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const [delivery] = await db
+      .select()
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.bookingId, bookingId));
+    expect(delivery?.status).toBe("failed");
+    expect(delivery?.sendErrorCode).toBe("invalid_test_recipient");
+    expect(delivery?.sendHttpStatus).toBeNull();
+  });
+
   it("surfaces a provider failure distinctly from missing configuration", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("RESEND_API_KEY", "re_test");
