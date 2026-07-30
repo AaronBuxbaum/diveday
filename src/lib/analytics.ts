@@ -68,6 +68,16 @@ export async function trackEvent(
   event: AnalyticsEvent,
   tracker: Tracker = vercelTrack,
 ): Promise<void> {
+  // Browser tests exercise our full Next/database stack but must not wait on a
+  // third-party collector. Swallowing the error is not enough: callers `await`
+  // this before doing their own work (`enterDemoAction` tracks `demo_entered`
+  // before minting the shop), and under restricted outbound egress the request
+  // hangs until it fails rather than failing fast — so a provider that is
+  // merely unreachable still charges its full stall to a user-facing flow.
+  // Best-effort has to mean latency too, not just errors. Passing an explicit
+  // tracker still exercises the seam in unit tests (mirrors marine-forecast.ts).
+  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && tracker === vercelTrack) return;
+
   const { name, ...properties } = event;
   try {
     await tracker(name, properties as EventProps);
