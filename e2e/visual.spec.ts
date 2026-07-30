@@ -267,14 +267,18 @@ for (const scheme of ["light", "dark"] as const) {
       ownerStorageState,
       request,
     }) => {
-      // 20 navigate+capture surfaces (40 screenshots) plus a real send-waiver
+      // 15 navigate+capture surfaces (30 screenshots) plus a real send-waiver
       // action and a real booking, all in one test — comfortably past the
       // suite's 15s default, which is sized for a single real flow, not a
       // full site tour. Without this override the run was flaky: whichever
       // capture landed on a slow font-load or cold render blew the shared
       // budget for every capture after it, and the failing step moved
-      // between runs.
-      test.setTimeout(60_000);
+      // between runs. The five switching-guide captures that used to follow
+      // `recap` here have their own test below: each is a plain unauthenticated
+      // page.goto with no dependency on this test's setup, so — same reasoning
+      // as the "about page" split further down — there is no reason to spend
+      // this test's budget on them too.
+      test.setTimeout(45_000);
       await page.goto("/");
       await capture(page, "landing", scheme);
 
@@ -377,47 +381,6 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { name: "Tip your crew" }).waitFor();
       await capture(page, "recap", scheme);
 
-      // The migration-guides hub: one card per incumbent a shop might be
-      // leaving, the entry point to the portability wedge on the marketing side.
-      await page.goto("/switching");
-      await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
-      await capture(page, "switching-hub", scheme);
-
-      // The "Switching from EVE" migration guide: the marketing face of the
-      // portability wedge — export click-path, the shared scope table, and the
-      // importer, on the market's most motivated switching pool. Represents the
-      // shared guide template every live incumbent page renders.
-      await page.goto("/switching/eve");
-      await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
-      await capture(page, "switching-eve", scheme);
-
-      // The non-incumbent switching guide: shops coming from a spreadsheet — the
-      // market's largest under-served pool. Its own layout (columns-that-matter,
-      // the downloadable template, the free-import offer) around the same shared
-      // honesty table every guide renders.
-      await page.goto("/switching/spreadsheet");
-      await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
-      await capture(page, "switching-spreadsheet", scheme);
-
-      // The FareHarbor guide: the coexist-led variant of the template, for a
-      // booking channel a shop keeps rather than a records system it leaves —
-      // the "keep it, or leave it" section (run-the-day cards + the leave path)
-      // that no other guide renders.
-      await page.goto("/switching/fareharbor");
-      await page
-        .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
-        .waitFor();
-      await capture(page, "switching-fareharbor", scheme);
-
-      // The Rezdy guide: the second booking-channel guide, same coexist template
-      // with its own copy (a monthly-plus-per-booking model). Baselined so its
-      // page — and the extra hub card it adds — stay pixel-stable.
-      await page.goto("/switching/rezdy");
-      await page
-        .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
-        .waitFor();
-      await capture(page, "switching-rezdy", scheme);
-
       // Two more safety-critical bearer-token pages, done last so minting
       // them (a real send-waiver action, a real booking) never changes the
       // seed-derived counts the captures above depend on (CR-019). Setup
@@ -488,6 +451,59 @@ for (const scheme of ["light", "dark"] as const) {
     test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
       await page.goto("/about");
       await capture(page, "about", scheme);
+    });
+
+    // Split out of the public-surfaces tour above (2026-07-30): these five were
+    // the tail end of that test and the surfaces most often still unshot when a
+    // slow CI runner outgrew even that test's extended budget — plain
+    // unauthenticated navigations with no dependency on anything upstream, so
+    // there was no reason to make them compete with recap/waiver/booking setup
+    // for one shared clock.
+    test(`switching guides render true to the design (${scheme})`, async ({ page }) => {
+      // 5 navigate+capture surfaces (10 screenshots) — past the suite's 15s
+      // default the same way the other multi-capture tests in this file are.
+      test.setTimeout(30_000);
+
+      // The migration-guides hub: one card per incumbent a shop might be
+      // leaving, the entry point to the portability wedge on the marketing side.
+      await page.goto("/switching");
+      await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
+      await capture(page, "switching-hub", scheme);
+
+      // The "Switching from EVE" migration guide: the marketing face of the
+      // portability wedge — export click-path, the shared scope table, and the
+      // importer, on the market's most motivated switching pool. Represents the
+      // shared guide template every live incumbent page renders.
+      await page.goto("/switching/eve");
+      await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
+      await capture(page, "switching-eve", scheme);
+
+      // The non-incumbent switching guide: shops coming from a spreadsheet — the
+      // market's largest under-served pool. Its own layout (columns-that-matter,
+      // the downloadable template, the free-import offer) around the same shared
+      // honesty table every guide renders.
+      await page.goto("/switching/spreadsheet");
+      await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
+      await capture(page, "switching-spreadsheet", scheme);
+
+      // The FareHarbor guide: the coexist-led variant of the template, for a
+      // booking channel a shop keeps rather than a records system it leaves —
+      // the "keep it, or leave it" section (run-the-day cards + the leave path)
+      // that no other guide renders.
+      await page.goto("/switching/fareharbor");
+      await page
+        .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
+        .waitFor();
+      await capture(page, "switching-fareharbor", scheme);
+
+      // The Rezdy guide: the second booking-channel guide, same coexist template
+      // with its own copy (a monthly-plus-per-booking model). Baselined so its
+      // page — and the extra hub card it adds — stay pixel-stable.
+      await page.goto("/switching/rezdy");
+      await page
+        .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
+        .waitFor();
+      await capture(page, "switching-rezdy", scheme);
     });
 
     test.describe("staff", () => {
