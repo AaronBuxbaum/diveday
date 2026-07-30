@@ -79,7 +79,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Your afternoon",
-          timeRange: "about 3 hours",
+          timeNote: "about 3 hours",
           items: [
             "Briefing: how the gear works and how to breathe on it",
             "Confined water: mask clearing, regulator recovery, moving around",
@@ -150,7 +150,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Day 1 — classroom and confined water",
-          timeRange: "8:00am–5:00pm",
+          startTime: "08:00",
+          endTime: "17:00",
           items: [
             "Paperwork, medical questionnaire, and gear fitting",
             "Knowledge reviews 1–2, with quizzes",
@@ -160,7 +161,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 2 — confined water and first open water",
-          timeRange: "8:00am–5:00pm",
+          startTime: "08:00",
+          endTime: "17:00",
           items: [
             "Knowledge reviews 3–4, with quizzes",
             "Confined water dives 3–5, including out-of-air skills and mask removal",
@@ -169,7 +171,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 3 — open water and exam",
-          timeRange: "8:00am–4:00pm",
+          startTime: "08:00",
+          endTime: "16:00",
           items: [
             "Knowledge review 5 and the final exam",
             "Open water dives 3–4, to a maximum of 18 meters",
@@ -253,7 +256,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Day 1 — deep and navigation",
-          timeRange: "8:00am–3:00pm",
+          startTime: "08:00",
+          endTime: "15:00",
           items: [
             "Knowledge reviews for the day's dives",
             "Deep adventure dive — maximum 30 meters, or 21 meters for divers aged 12–14",
@@ -262,7 +266,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 2 — three you choose",
-          timeRange: "8:00am–3:00pm",
+          startTime: "08:00",
+          endTime: "15:00",
           items: [
             "Two morning adventure dives from the available options",
             "One afternoon or night dive, depending on your choice",
@@ -337,7 +342,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Day 1 — knowledge and self-rescue",
-          timeRange: "8:00am–4:00pm",
+          startTime: "08:00",
+          endTime: "16:00",
           items: [
             "Knowledge development and the rescue exam",
             "Self-rescue and cramp release",
@@ -346,7 +352,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 2 — rescuing another diver",
-          timeRange: "8:00am–4:00pm",
+          startTime: "08:00",
+          endTime: "16:00",
           items: [
             "Responsive and unresponsive diver underwater",
             "Surfacing an unresponsive diver and in-water rescue breathing",
@@ -355,7 +362,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 3 — scenarios",
-          timeRange: "8:00am–2:00pm",
+          startTime: "08:00",
+          endTime: "14:00",
           items: [
             "Scenario 1: missing diver, search and recovery",
             "Scenario 2: unresponsive diver at the surface, full sequence",
@@ -419,7 +427,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Your morning",
-          timeRange: "about 4 hours",
+          timeNote: "about 4 hours",
           items: [
             "Paperwork, medical questionnaire, and gear fitting",
             "Knowledge review: pressure, air planning, and dive computers",
@@ -486,7 +494,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Course day",
-          timeRange: "8:00am–2:00pm",
+          startTime: "08:00",
+          endTime: "14:00",
           items: [
             "Knowledge development: oxygen exposure, nitrogen loading, and what changes",
             "Working out maximum operating depth from the mix, and the mix from the depth",
@@ -562,7 +571,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Course day",
-          timeRange: "8:00am–2:00pm",
+          startTime: "08:00",
+          endTime: "14:00",
           items: [
             "Knowledge review: weighting, trim, and what actually moves you up and down",
             "Dive 1: proper weight check, weight distribution, and fin pivots",
@@ -635,7 +645,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Evening 1 — dusk and dark",
-          timeRange: "4:00pm–9:30pm",
+          startTime: "16:00",
+          endTime: "21:30",
           items: [
             "Knowledge review: lights, signals, buddy contact, and lost-light procedure",
             "Gear and light check in daylight, before you need them",
@@ -645,7 +656,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Evening 2 — navigation",
-          timeRange: "5:00pm–9:00pm",
+          startTime: "17:00",
+          endTime: "21:00",
           items: [
             "Dive 3: night navigation with compass and natural references",
             "Finding the boat or exit point without a guide",
@@ -729,7 +741,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Day 1 — planning and the first two dives",
-          timeRange: "8:00am–3:00pm",
+          startTime: "08:00",
+          endTime: "15:00",
           items: [
             "Knowledge development: gas planning, narcosis, decompression, and contingencies",
             "Dive 1: to 18–30 meters, with a narcosis comparison task",
@@ -739,7 +752,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 2 — deeper, with a safety stop plan",
-          timeRange: "8:00am–2:00pm",
+          startTime: "08:00",
+          endTime: "14:00",
           items: [
             "Dive 3: to 30–40 meters, with a safety cylinder staged on the line",
             "Dive 4: to a maximum of 40 meters, planned and led by you",
@@ -818,7 +832,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Day 1 — survey from the outside",
-          timeRange: "8:00am–3:00pm",
+          startTime: "08:00",
+          endTime: "15:00",
           items: [
             "Knowledge development: hazards, silt, entanglement, and why you do not take souvenirs",
             "Dive 1: orientation on the wreck, staying outside, spotting hazards",
@@ -827,7 +842,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Day 2 — lines and limited penetration",
-          timeRange: "8:00am–2:00pm",
+          startTime: "08:00",
+          endTime: "14:00",
           items: [
             "Dive 3: running a penetration line outside the wreck, then following it blind",
             "Dive 4: limited penetration inside the light zone, on a continuous guideline to the exit",
@@ -912,7 +928,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       scheduleDays: [
         {
           title: "Phase 1 — knowledge and watermanship",
-          timeRange: "week 1–2",
+          timeNote: "week 1–2",
           items: [
             "Knowledge development and the Divemaster exams",
             "Watermanship: swim, snorkel, tread, and tired-diver tow, scored not pass-fail",
@@ -922,7 +938,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Phase 2 — practical application",
-          timeRange: "week 2–4",
+          timeNote: "week 2–4",
           items: [
             "Dive site setup and management workshop",
             "Mapping project on a site we actually run",
@@ -932,7 +948,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         },
         {
           title: "Phase 3 — internship",
-          timeRange: "week 4 onward",
+          timeNote: "week 4 onward",
           items: [
             "Assisting on Open Water and continuing-education courses",
             "Supervising certified divers on real boat days",

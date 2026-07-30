@@ -5,10 +5,9 @@ import {
   courseSlug,
   courseTotalCents,
   formatFaqs,
-  formatScheduleDays,
+  formatScheduleDayTime,
   parseFaqs,
   parseLines,
-  parseScheduleDays,
   splitCourseImageUrls,
 } from "./courses";
 
@@ -109,40 +108,45 @@ describe("courseSlug", () => {
   });
 });
 
-describe("parseScheduleDays", () => {
-  it("reads a blank-line-separated day plan", () => {
+describe("formatScheduleDayTime", () => {
+  it("formats a real clock range from 24-hour start/end", () => {
     expect(
-      parseScheduleDays(
-        "Day 1 — 8:15am–5:30pm\nAcademics 1–2\nConfined water\n\nDay 2 — 8:00am–4:00pm\nOpen water dives 3–4",
-      ),
-    ).toEqual([
-      { title: "Day 1", timeRange: "8:15am–5:30pm", items: ["Academics 1–2", "Confined water"] },
-      { title: "Day 2", timeRange: "8:00am–4:00pm", items: ["Open water dives 3–4"] },
-    ]);
+      formatScheduleDayTime({ title: "Day 1", startTime: "08:00", endTime: "17:00", items: [] }),
+    ).toBe("8:00 AM – 5:00 PM");
   });
 
-  it("splits on the last separator so a dash inside the title survives", () => {
-    expect(parseScheduleDays("Day 2 — Confined water — 9am–noon\nPool skills")).toEqual([
-      { title: "Day 2 — Confined water", timeRange: "9am–noon", items: ["Pool skills"] },
-    ]);
+  it("formats a single clock time when only a start is set", () => {
+    expect(formatScheduleDayTime({ title: "Check-in", startTime: "08:15", items: [] })).toBe(
+      "8:15 AM",
+    );
   });
 
-  it("keeps a day with no time range and no items", () => {
-    expect(parseScheduleDays("Day 3")).toEqual([{ title: "Day 3", items: [] }]);
+  it("falls back to the free-text note when there's no fixed clock time", () => {
+    expect(formatScheduleDayTime({ title: "Phase 1", timeNote: "week 1–2", items: [] })).toBe(
+      "week 1–2",
+    );
   });
 
-  it("ignores blank blocks and stray whitespace", () => {
-    expect(parseScheduleDays("\n\n  Day 1  \n  Academics  \n\n\n  \n\n")).toEqual([
-      { title: "Day 1", items: ["Academics"] },
-    ]);
+  it("prefers the real clock time over a stray note", () => {
+    expect(
+      formatScheduleDayTime({
+        title: "Day 1",
+        startTime: "08:00",
+        endTime: "17:00",
+        timeNote: "ignored",
+        items: [],
+      }),
+    ).toBe("8:00 AM – 5:00 PM");
   });
 
-  it("round-trips through the textarea encoding", () => {
-    const days = [
-      { title: "Day 1", timeRange: "8:15am–5:30pm", items: ["Academics", "Dives 1–2"] },
-      { title: "Day 2", items: ["Exam"] },
-    ];
-    expect(parseScheduleDays(formatScheduleDays(days))).toEqual(days);
+  it("is undefined when the day carries no time information at all", () => {
+    expect(formatScheduleDayTime({ title: "Day 3", items: [] })).toBeUndefined();
+  });
+
+  it("ignores a malformed clock value rather than throwing", () => {
+    expect(
+      formatScheduleDayTime({ title: "Day 1", startTime: "not-a-time", items: [] }),
+    ).toBeUndefined();
   });
 });
 

@@ -557,7 +557,9 @@ describe("course content and public pages (in-memory PGlite)", () => {
       overview: "Four training dives over two days.",
       durationText: "2 days",
       includes: ["Four dives", "Tanks and weights"],
-      scheduleDays: [{ title: "Day 1", timeRange: "8am–2pm", items: ["Dives 1–2"] }],
+      scheduleDays: [
+        { title: "Day 1", startTime: "08:00", endTime: "14:00", items: ["Dives 1–2"] },
+      ],
       faqs: [{ question: "Do I need a computer?", answer: "We rent one." }],
     });
     expect(saved).toMatchObject({

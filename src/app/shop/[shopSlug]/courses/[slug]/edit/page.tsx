@@ -8,10 +8,11 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
-import { formatFaqs, formatScheduleDays } from "@/lib/courses";
+import { formatFaqs } from "@/lib/courses";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
+import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Edit course page — DiveDay" };
@@ -308,23 +309,12 @@ export default async function EditCoursePage({
         <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
           <legend className="px-1 text-sm font-semibold">Day by day</legend>
           <p className="mt-1 text-sm text-muted">
-            One block per day, separated by a blank line. First line is the day and its hours, split
-            by an em dash; the lines under it are what happens.
+            One card per day: a title, real start/end times when the day runs on a fixed clock (or a
+            free-text note when it doesn't, like "week 1–2"), and what happens.
           </p>
-          <FieldGrid columns={1} className="mt-4">
-            <Field label="Day plan" hint="(optional)">
-              <textarea
-                name="scheduleDays"
-                rows={12}
-                maxLength={8000}
-                defaultValue={formatScheduleDays(course.scheduleDays)}
-                placeholder={
-                  "Day 1 — 8:15am–5:30pm\nAcademics 1–2 and knowledge reviews\nConfined water skills\n\nDay 2 — 8:00am–4:00pm\nOpen water dives 1–2"
-                }
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
+          <div className="mt-4">
+            <DayByDayEditor initialDays={course.scheduleDays} />
+          </div>
         </fieldset>
 
         <fieldset className="rounded-2xl border border-border p-4 sm:p-5">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
-import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
+import { type CourseFaq, type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -185,8 +185,8 @@ export function CourseSchedule({ days }: { days: CourseScheduleDay[] }) {
           <li key={day.title} className="rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-lg font-semibold">{day.title}</h3>
-              {day.timeRange ? (
-                <p className="text-sm tabular-nums text-muted">{day.timeRange}</p>
+              {formatScheduleDayTime(day) ? (
+                <p className="text-sm tabular-nums text-muted">{formatScheduleDayTime(day)}</p>
               ) : null}
             </div>
             {day.items.length > 0 ? (

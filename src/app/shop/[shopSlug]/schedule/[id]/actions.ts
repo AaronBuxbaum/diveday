@@ -213,6 +213,7 @@ export async function bookSpot(
         timezone: shopNow.timezone,
         dockCallMinutes: shopNow.dockCallMinutes,
         readinessUrl: await readinessEmailUrl(dbi, shopNow.id, primaryBookingId),
+        packingList: shopNow.packingList,
       });
       if (delivery.status === "failed") {
         console.error("Booking confirmation notification failed", {

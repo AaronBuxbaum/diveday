@@ -15,15 +15,17 @@ import {
   inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
-  saveStaffChangesAction,
+  saveAllStaffRolesAction,
+  setStaffStatusAction,
 } from "./actions";
+
+const ROLES_FORM_ID = "team-roles-form";
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
 
 const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   invited: { tone: "success", text: "Invite sent." },
   invite_resent: { tone: "success", text: "Invite resent." },
-  roles_saved: { tone: "success", text: "Roles saved." },
   changes_saved: { tone: "success", text: "Team changes saved." },
   reactivated: { tone: "success", text: "Account re-enabled." },
   disabled: { tone: "success", text: "Account disabled — they can no longer sign in." },
@@ -55,7 +57,18 @@ const STATUS_BADGE: Record<StaffMember["accountStatus"], { label: string; tone: 
   disabled: { label: "Disabled", tone: "neutral" },
 };
 
-function RoleCheckboxes({ name, defaultRoles }: { name: string; defaultRoles: readonly string[] }) {
+function RoleCheckboxes({
+  name,
+  defaultRoles,
+  formId,
+}: {
+  name: string;
+  defaultRoles: readonly string[];
+  /** Associates each checkbox with a form elsewhere in the page (HTML `form`
+   * attribute) instead of nesting — lets a per-member Disable/Delete form
+   * sit right below without ever nesting one <form> inside another. */
+  formId?: string;
+}) {
   return (
     <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       <legend className="sr-only">Roles</legend>
@@ -68,6 +81,7 @@ function RoleCheckboxes({ name, defaultRoles }: { name: string; defaultRoles: re
             name={`${name}_${role}`}
             type="checkbox"
             defaultChecked={defaultRoles.includes(role)}
+            form={formId}
             className="size-4 accent-primary"
           />
           {STAFF_ROLE_LABELS[role]}
@@ -79,6 +93,7 @@ function RoleCheckboxes({ name, defaultRoles }: { name: string; defaultRoles: re
 
 function StaffRow({ member }: { member: StaffMember }) {
   const status = STATUS_BADGE[member.accountStatus];
+  const isDisabled = member.accountStatus === "disabled";
   return (
     <li className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -89,31 +104,13 @@ function StaffRow({ member }: { member: StaffMember }) {
         <Badge tone={status.tone}>{status.label}</Badge>
       </div>
 
-      <form action={saveStaffChangesAction} className="mt-4">
-        <input type="hidden" name="personId" value={member.personId} />
-        <input type="hidden" name="userAccountId" value={member.userAccountId} />
-        <RoleCheckboxes name="role" defaultRoles={member.roles} />
-        {member.accountStatus !== "invited" ? (
-          <label className="mt-4 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
-            <input
-              name="status"
-              type="checkbox"
-              value="disabled"
-              defaultChecked={member.accountStatus === "disabled"}
-              className="size-4 accent-primary"
-            />
-            Disable sign-in for this person
-          </label>
-        ) : (
-          <input type="hidden" name="status" value="invited" />
-        )}
-        <SubmitButton
-          pendingLabel="Saving…"
-          className={buttonClass({ variant: "primary", className: "mt-4" })}
-        >
-          Save changes
-        </SubmitButton>
-      </form>
+      <div className="mt-4">
+        <RoleCheckboxes
+          name={`role_${member.personId}`}
+          defaultRoles={member.roles}
+          formId={ROLES_FORM_ID}
+        />
+      </div>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -131,23 +128,37 @@ function StaffRow({ member }: { member: StaffMember }) {
                 Resend invite
               </SubmitButton>
             </form>
-          ) : (
-            <span className="text-sm text-muted">
-              {member.accountStatus === "active" ? "Sign-in enabled" : "Sign-in disabled"}
-            </span>
-          )}
+          ) : null}
         </div>
-        {member.accountStatus === "disabled" ? (
-          <form action={removeStaffAction}>
-            <input type="hidden" name="personId" value={member.personId} />
-            <input type="hidden" name="userAccountId" value={member.userAccountId} />
-            <SubmitButton
-              pendingLabel="Removing…"
-              className={buttonClass({ variant: "danger", size: "sm" })}
-            >
-              Remove from team
-            </SubmitButton>
-          </form>
+        {member.accountStatus !== "invited" ? (
+          <div className="flex gap-2">
+            <form action={setStaffStatusAction}>
+              <input type="hidden" name="personId" value={member.personId} />
+              <input type="hidden" name="userAccountId" value={member.userAccountId} />
+              <input type="hidden" name="status" value={isDisabled ? "active" : "disabled"} />
+              <SubmitButton
+                pendingLabel={isDisabled ? "Enabling…" : "Disabling…"}
+                ariaLabel={`${isDisabled ? "Enable" : "Disable"} ${member.fullName}`}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {isDisabled ? "Enable" : "Disable"}
+              </SubmitButton>
+            </form>
+            {isDisabled ? (
+              <form action={removeStaffAction}>
+                <input type="hidden" name="personId" value={member.personId} />
+                <input type="hidden" name="userAccountId" value={member.userAccountId} />
+                <SubmitButton
+                  pendingLabel="Deleting…"
+                  ariaLabel={`Delete ${member.fullName}`}
+                  confirmMessage={`Delete ${member.fullName} from the team? This can't be undone.`}
+                  className={buttonClass({ variant: "danger", size: "sm" })}
+                >
+                  Delete
+                </SubmitButton>
+              </form>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </li>
@@ -234,14 +245,33 @@ export default async function TeamSettingsPage({
 
       <section className="mt-6">
         <h2 className="font-medium">Current team</h2>
+        <p className="mt-1 text-sm text-muted">
+          Enable, disable, and delete take effect immediately. Role changes below wait for Save
+          changes.
+        </p>
         {staff.length === 0 ? (
           <p className="mt-2 text-sm text-muted">No staff invited yet.</p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-3">
-            {staff.map((member) => (
-              <StaffRow key={member.personId} member={member} />
-            ))}
-          </ul>
+          <>
+            <ul className="mt-3 flex flex-col gap-3">
+              {staff.map((member) => (
+                <StaffRow key={member.personId} member={member} />
+              ))}
+            </ul>
+            {/* Every card's role checkboxes are associated to this form via the
+                HTML `form` attribute (see RoleCheckboxes), not DOM nesting — so
+                this can sit at the bottom of the page while each row keeps its
+                own separate, immediate Enable/Disable/Delete forms. */}
+            <form
+              id={ROLES_FORM_ID}
+              action={saveAllStaffRolesAction}
+              className="mt-4 flex justify-end"
+            >
+              <SubmitButton pendingLabel="Saving…" className={buttonClass({ variant: "primary" })}>
+                Save changes
+              </SubmitButton>
+            </form>
+          </>
         )}
       </section>
     </main>

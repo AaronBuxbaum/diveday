@@ -51,6 +51,26 @@ function EyeIcon() {
   );
 }
 
+/** A chain link — shown next to the eye toggle to jump to the course's live preview page. */
+function LinkIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-5"
+    >
+      <path d="M9 17H7a5 5 0 0 1 0-10h2" />
+      <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+      <path d="M8 12h8" />
+    </svg>
+  );
+}
+
 export default async function CoursesPage() {
   const session = await requireStaffSession();
   const db = await getDb();
@@ -124,6 +144,13 @@ export default async function CoursesPage() {
                   </span>
                 </SubmitButton>
               </form>
+              <Link
+                href={`/shop/${shop.slug}/courses/${course.slug}`}
+                className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+              >
+                <LinkIcon />
+                <span className="sr-only">Preview {course.title}</span>
+              </Link>
             </div>
           </li>
         ))}
