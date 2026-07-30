@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { type AnalyticsEvent, eventSource, type Tracker, trackEvent } from "./analytics";
+import { type AnalyticsEvent, type Tracker, trackEvent } from "./analytics";
 
 describe("trackEvent", () => {
   it("splits the event name from its properties and forwards them", async () => {
@@ -45,25 +45,5 @@ describe("trackEvent", () => {
       ["demo_entered", { source: "pricing" }],
       ["trial_started", { source: "pricing" }],
     ]);
-  });
-});
-
-describe("eventSource", () => {
-  it("keeps the slug vocabulary the marketing pages emit", () => {
-    expect(eventSource("pricing")).toBe("pricing");
-    expect(eventSource("switching-eve")).toBe("switching-eve");
-  });
-
-  it("falls back to unknown for anything the pages never send", () => {
-    // The value reaches us from the visitor's own request, so free-form text,
-    // markup, and absent values all collapse to one bucket rather than
-    // becoming their own event properties.
-    expect(eventSource(undefined)).toBe("unknown");
-    expect(eventSource(null)).toBe("unknown");
-    expect(eventSource("")).toBe("unknown");
-    expect(eventSource("Pricing Page")).toBe("unknown");
-    expect(eventSource("<script>alert(1)</script>")).toBe("unknown");
-    expect(eventSource("a".repeat(41))).toBe("unknown");
-    expect(eventSource(42)).toBe("unknown");
   });
 });

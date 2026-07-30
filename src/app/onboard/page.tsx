@@ -5,7 +5,7 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { eventSource } from "@/lib/analytics";
+import { eventSource } from "@/lib/funnel";
 import { onboardAction } from "./actions";
 
 export const metadata: Metadata = {

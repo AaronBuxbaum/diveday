@@ -1,7 +1,10 @@
 /** Body-shaped skeleton for a public course page (design principle 1). */
 export default function CoursePageLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main
+      data-loading-skeleton
+      className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+    >
       <div className="animate-pulse">
         <div className="h-4 w-24 rounded bg-surface-sunken" />
         <div className="mt-3 h-9 w-80 max-w-full rounded bg-surface-sunken" />

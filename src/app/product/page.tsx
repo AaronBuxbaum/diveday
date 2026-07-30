@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { FrontDeskReadinessFallback } from "@/components/MarketingScreenFallbacks";
@@ -11,6 +12,7 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { trialHref } from "@/lib/funnel";
 import { productCapabilityIndex } from "@/lib/marketing";
 
 export const metadata: Metadata = {
@@ -316,7 +318,7 @@ export default function ProductPage() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction}>
-                <input type="hidden" name="source" value="product" />
+                <FunnelTag source="product" />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
                   className={buttonClass({
@@ -328,7 +330,7 @@ export default function ProductPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard?from=product"
+                href={trialHref("product")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

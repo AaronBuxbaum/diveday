@@ -152,19 +152,21 @@ substrate:
 ## Measuring which story converts
 
 Page views alone can't tell us whether a page persuaded anyone, so both marketing conversions are
-typed events in `src/lib/analytics.ts`, each carrying the same short `source` slug naming the page
-that sent the visitor:
+typed events in `src/lib/analytics.ts`, each carrying the same `source` tag naming the page that
+sent the visitor:
 
 | Event | Fired by | Meaning |
 | --- | --- | --- |
 | `demo_entered` | `src/app/actions/demo.ts` | A skeptic chose to look — the low-commitment half |
 | `trial_started` | `src/app/onboard/actions.ts` | A shop of their own now exists — the committed half |
 
-Every demo form carries a hidden `source`; every "Start a trial" link carries the same slug as
-`/onboard?from=<slug>`, which the sign-up form hands back to the action. The slug is
-visitor-supplied, so it passes through `eventSource()` and anything outside the short slug shape
-becomes `unknown` rather than entering the event stream. **Adding a marketing CTA means tagging
-it** — an untagged link is a conversion we can't attribute. Read the pair per surface: a page with
+The tag vocabulary is a closed registry in `src/lib/funnel.ts`, because the failure it prevents is
+silent: a misspelled tag doesn't error, it opens a second bucket that reads like a real page with
+suspiciously few visits. So a demo form tags itself with `<FunnelTag source="…">` and a trial link
+builds its href with `trialHref("…")` — both type-checked against the registry — and a tag arriving
+off a request goes through `eventSource()`, which returns `unknown` for anything unregistered.
+**Adding a marketing CTA means tagging it**, and a new page means adding its tag to the registry
+first; an untagged link is a conversion we can't attribute. Read the pair per surface: a page with
 demo entries and no trials is telling you something different from a page with neither.
 
 ## Product visuals

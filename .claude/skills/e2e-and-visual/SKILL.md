@@ -21,7 +21,7 @@ The normal matrix is light/dark × phone/desktop (390x844 and 1280x800) using th
 
 ## Determinism
 
-The tests run a production Next server backed by in-memory PGlite. The browser context fixture in `e2e/fixtures.ts` resets `/api/test/reset` and freezes the browser clock to the same `DIVEDAY_CLOCK` used by the server, aborts Google Maps, and handles color schemes. The `capture()` helper waits for `document.fonts.ready` before taking a screenshot.
+The tests run a production Next server backed by in-memory PGlite. The browser context fixture in `e2e/fixtures.ts` resets `/api/test/reset` and freezes the browser clock to the same `DIVEDAY_CLOCK` used by the server, aborts Google Maps, and handles color schemes. The `capture()` helper waits for `document.fonts.ready` before taking a screenshot, and for every `[data-loading-skeleton]` to leave the page — `page.goto` resolves on the streamed shell, so without that wait a route with a `loading.tsx` gets photographed as its pulsing skeleton and diffs against itself. **Every `loading.tsx` root element carries `data-loading-skeleton`**; a new one that forgets it silently drops that route out of visual regression.
 
 Do not mask clock-derived content or moving UI. Freeze the clock at the harness boundary instead. If a capture is unstable, identify and remove the source of nondeterminism: use the seeded Blue Mantis data, stable labels, deterministic ordering, and explicit readiness waits. Use `DIVEDAY_CLOCK=2026-07-21T13:30:00.000Z` for the committed baseline instant.
 

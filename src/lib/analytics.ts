@@ -1,4 +1,5 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
+import type { FunnelSource } from "./funnel";
 
 /**
  * Custom event instrumentation, one seam. Page-level analytics already ships via
@@ -43,7 +44,7 @@ export type AnalyticsEvent =
        * demo-vs-trial story can be read per surface.
        */
       name: "demo_entered";
-      source: string;
+      source: FunnelSource | "unknown";
     }
   | {
       /**
@@ -52,18 +53,8 @@ export type AnalyticsEvent =
        * so demo-vs-trial can be read per marketing surface.
        */
       name: "trial_started";
-      source: string;
+      source: FunnelSource | "unknown";
     };
-
-/**
- * Normalize the funnel `source` a marketing page carries into a form or a query
- * string. It arrives from the visitor's request, so it is clamped to the short
- * slug shape our pages actually emit ("pricing", "switching-eve"); anything else
- * becomes "unknown" rather than letting arbitrary text into the event stream.
- */
-export function eventSource(value: unknown): string {
-  return typeof value === "string" && /^[a-z0-9-]{1,40}$/.test(value) ? value : "unknown";
-}
 
 type EventProps = Record<string, string | number | boolean | null>;
 export type Tracker = (name: string, properties?: EventProps) => Promise<void> | void;

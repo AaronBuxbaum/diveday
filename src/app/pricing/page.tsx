@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { FeatureGroupsGrid } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
@@ -138,7 +140,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <Link
-              href="/onboard?from=pricing"
+              href={trialHref("pricing")}
               className={buttonClass({
                 size: "cta",
                 className: "mt-8 w-full",
@@ -147,7 +149,7 @@ export default function PricingPage() {
               Start a trial
             </Link>
             <form action={enterDemoAction} className="mt-3">
-              <input type="hidden" name="source" value="pricing" />
+              <FunnelTag source="pricing" />
               <SubmitButton
                 pendingLabel="Getting the demo ready…"
                 className={buttonClass({

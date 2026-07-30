@@ -57,7 +57,23 @@ const VIEWPORTS = [
   { width: 1280, height: 800 }, // desktop
 ] as const;
 
+/**
+ * Wait out a route's `loading.tsx` before shooting it. `page.goto` resolves on
+ * `load`, which fires for the streamed shell — so on any route with a Suspense
+ * fallback the screenshot could land on the skeleton instead of the page. Those
+ * skeletons pulse, so two runs of the same unchanged route caught the animation
+ * at different phases and reported a diff; worse, the baseline they were
+ * diffing was itself a skeleton, so those surfaces had never actually been
+ * under visual regression. Keyed on the marker every `loading.tsx` root carries
+ * rather than on `.animate-pulse`, which real UI (a roll-call status dot) uses
+ * for its own reasons and would hang here.
+ */
+async function settle(page: Page) {
+  await page.waitForFunction(() => !document.querySelector("[data-loading-skeleton]"));
+}
+
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
+  await settle(page);
   await page.evaluate(() => document.fonts.ready);
   const baseViewport = page.viewportSize();
   for (const viewport of VIEWPORTS) {
@@ -85,6 +101,7 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
  * gutter that survives a "None margins" print dialog.
  */
 async function capturePrint(page: Page, name: string) {
+  await settle(page);
   await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ media: "print" });
   await page.screenshot({
