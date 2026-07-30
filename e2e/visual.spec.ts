@@ -159,9 +159,23 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
  * four identical copies here. `@page` margins never show in a screenshot; the
  * padding visible in the baseline is the container's own (`print:px-*`), the
  * gutter that survives a "None margins" print dialog.
+ *
+ * `globals.css`'s `@page` rule (real, unmodified for actual printing) combines
+ * with `break-inside: avoid` on each row to push a row that would otherwise
+ * split across a physical page onto the next one — correct for paper, but a
+ * `fullPage` screenshot never draws a page boundary, so that push only shows up
+ * as unexplained blank space. Which row (if any) sits near a Letter-height page
+ * boundary shifts by a sub-pixel amount between renders, so the gap's size —
+ * and therefore the whole image's height — was never reproducible: three local
+ * runs of identical seeded content came back 816×1636, 816×1646, and 816×1667.
+ * The capture only needs to verify the print color scheme and padding, not
+ * pagination, so give it a page tall enough that no row is ever near a break —
+ * scoped to this capture with `addStyleTag`, not to `globals.css`, so real
+ * printing keeps its real Letter pagination.
  */
 async function capturePrint(page: Page, name: string) {
   await page.emulateMedia({ media: "print" });
+  await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
   // After the media switch, so the bands rasterized are the print layout's.
   await paintWholeDocument(page);
   await page.screenshot({

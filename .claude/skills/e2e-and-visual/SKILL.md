@@ -15,7 +15,7 @@ Every important user flow gets a functional Playwright spec under `e2e/`. Every 
    ```bash
    pnpm visual
    ```
-4. If there are diffs, `reg-suit` will compare against the reference commit images on S3 and output an HTML report link. Open the link to review reference, actual, and diff images.
+4. If there are diffs, `reg-suit` will compare against the reference commit images on S3. Run `pnpm visual:report` to pull the reference, actual, and diff PNGs down locally with a markdown summary — the printed HTML report link is a client-rendered SPA (an empty `<div id="app">` until JS runs) and isn't fetchable as a static page, so agents should use the script instead of trying to open that link. See the **visual-triage** skill.
 
 The normal matrix is light/dark × phone/desktop (390x844 and 1280x800) using the `capture()` helper. Print surfaces use the `capturePrint()` helper.
 
@@ -36,5 +36,5 @@ Do not mask clock-derived content or moving UI. Freeze the clock at the harness 
 
 - New/changed behavior has a Playwright flow spec or an explicit reason not to add one.
 - New/changed important surfaces have screenshot captures in `e2e/visual.spec.ts` and both schemes where applicable.
-- `pnpm visual` runs successfully, and any visual differences are expected and reviewed in the reg-suit HTML report.
+- `pnpm visual` runs successfully, and any visual differences are expected and reviewed via `pnpm visual:report` (or the reg-suit HTML report, for a human).
 - `pnpm check` passes; run `pnpm e2e` when functional flows changed.

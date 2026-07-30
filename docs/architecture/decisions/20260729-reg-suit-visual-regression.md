@@ -45,3 +45,13 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   `${{ github.head_ref || github.ref_name }}` at `fetch-depth: 0`. If this job ever
   goes red with zero changed items and a git error, this is why — read the log
   before assuming the baseline moved.
+- **The hosted report needed a script to actually be agent-pullable.** The design goal above ("remains
+  fully pullable/inspectable by MCP servers or AI agents using standard S3 storage") was only half
+  true: the S3 bucket is public and needs no credentials, but `index.html` is a client-rendered SPA —
+  its body is `<div id="app"></div>` until JS runs — so a text-only fetch sees nothing, and every
+  object is stored with `Content-Encoding: gzip`, which some HTTP clients decode transparently and
+  others (plain `curl`, `https.get`) hand back as opaque bytes. `pnpm visual:report`
+  (`scripts/visual-report.mjs`) fetches `out.json` and the relevant `expected`/`actual`/`diff` PNGs
+  for a commit, decoding gzip by magic number rather than trusting the header, and writes them plus a
+  `REPORT.md` summary to `.reg-report/<commit>/` — flat files an agent's `Read` tool can open directly,
+  no browser or AWS credentials required. See the **visual-triage** skill.
