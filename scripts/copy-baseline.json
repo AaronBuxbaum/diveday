@@ -1,11 +1,5 @@
 {
   "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
-  "src/app/shop/[shopSlug]/settings/embed/page.tsx": 12,
-  "src/app/shop/[shopSlug]/settings/export/page.tsx": 8,
-  "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx": 7,
-  "src/app/shop/[shopSlug]/settings/import/page.tsx": 4,
-  "src/app/shop/[shopSlug]/settings/SettingsPage.tsx": 53,
-  "src/app/shop/[shopSlug]/settings/team/page.tsx": 14,
   "src/app/shop/[shopSlug]/trips/[id]/_components/AddDiverSection.tsx": 10,
   "src/app/shop/[shopSlug]/trips/[id]/_components/ConditionsSection.tsx": 13,
   "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx": 5,
