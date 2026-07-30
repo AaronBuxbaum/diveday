@@ -2,6 +2,7 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+import { capture } from "./visual-capture";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -54,3 +55,44 @@ test("a shop's review link appears on the recap page once set, and not before", 
   await expect(reviewLink).toHaveAttribute("href", "https://g.page/r/blue-mantis/review");
   await expect(reviewLink).toHaveAttribute("target", "_blank");
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the recap page renders true to the design (${scheme})`, async ({
+      page,
+      request,
+      browser,
+      ownerStorageState,
+    }) => {
+      // Set a review link so the "Leave a review" section renders too, via a
+      // disposable staff context on the reused per-worker session (not a
+      // live sign-in/out) — `page` itself stays the signed-out visitor a real
+      // diver reaching this link would be, throughout (CR-019).
+      const staffContext = await browser.newContext({ storageState: ownerStorageState });
+      const staffPage = await staffContext.newPage();
+      await staffPage.goto("/shop/blue-mantis/settings");
+      await staffPage.getByLabel("Review link").fill("https://g.page/r/blue-mantis/review");
+      await staffPage.getByRole("button", { name: "Save review link" }).click();
+      await staffPage.getByText("Review link saved.").waitFor();
+      await staffContext.close();
+
+      // The tip section (docs ADR 20260726-post-trip-tipping) needs a
+      // connected, charges-enabled Stripe account — canAcceptPayments is a
+      // pure DB check, independent of whether STRIPE_SECRET_KEY is set — so
+      // this test-only endpoint marks the demo shop connected without ever
+      // calling Stripe, purely to render the surface for this capture. The
+      // actual checkout button stays inert (no STRIPE_SECRET_KEY in this
+      // fleet), the same reason this capture never exercises a real charge.
+      await request.post("/api/test/seed-stripe-account");
+      await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+      await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
+      await page.getByRole("heading", { name: "Tip your crew" }).waitFor();
+      await capture(page, "recap", scheme);
+    });
+  });
+}

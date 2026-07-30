@@ -148,15 +148,13 @@ jobs:
           # every launch here is headless.
           key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --only-shell chromium
-      - name: Run non-visual Playwright tests
-        run: |
-          spec_files=()
-          for spec in e2e/*.spec.ts; do
-            if [ "$spec" != "e2e/visual.spec.ts" ]; then
-              spec_files+=("$spec")
-            fi
-          done
-          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+      # Every spec runs in this shard pool now, including the `@visual`-tagged
+      # captures that used to run alone in the `visual` job below (ADR
+      # 20260730-tag-based-visual-capture) — visual capture work rides this
+      # job's existing 4-way parallelism instead of being serialized onto one
+      # worker in its own job.
+      - name: Run Playwright tests
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -164,12 +162,27 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 7
+      # Whatever `@visual`-tagged tests this shard happened to run wrote PNGs
+      # here; the `visual` job below downloads every shard's copy into one
+      # directory before diffing. `if-no-files-found: ignore` because a shard
+      # that ran no `@visual` test writes nothing.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: visual-screenshots-${{ matrix.shard }}
+          path: e2e/screenshots/
+          if-no-files-found: ignore
+          retention-days: 1
 
   visual:
     name: reg-suit visual regression
-    needs: build
+    # Needs every shard, not `build`: each shard produces whichever slice of
+    # e2e/screenshots/ its own `@visual`-tagged tests wrote (ADR
+    # 20260730-tag-based-visual-capture), and this job's only work now is to
+    # merge those four slices and hand the result to reg-suit — no Playwright
+    # run of its own, so no browser install or build download either.
+    needs: playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       # reg-keygen-git-hash-plugin derives both keys from git: the actual one
       # from HEAD, the expected one by walking back to this commit's parent and
@@ -211,41 +224,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Merge all four shards' screenshots into the one directory reg-suit
+      # reads (regconfig.json's actualDir: e2e/screenshots). The pattern
+      # matches whichever `visual-screenshots-N` artifacts actually exist — a
+      # shard that ran no `@visual` test uploaded none, and that's fine, it
+      # just contributes nothing to the merge.
       - uses: actions/download-artifact@v7
         with:
-          name: next-build
-          path: .next
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          # `-shell` on the key, not just the command, deliberately forces a
-          # fresh cache the first time this lands: the previous key already
-          # has a hit from the pre-`--only-shell` full Chromium download (that
-          # install pulls the headed browser and the headless shell as one
-          # dependency group), and restoring it would keep paying for the
-          # headed binary this fleet never launches until the cache aged out
-          # on its own. See e2e/browser.ts for why only the shell is needed —
-          # every launch here is headless.
-          key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install --only-shell chromium
-      # `pnpm visual` (the local/dev script) rebuilds via e2e:build before testing —
-      # this job already downloaded that exact build above, so `visual:run` (the
-      # shared tail both scripts call) skips straight to the Playwright run
-      # instead of discarding the artifact and recompiling it from scratch.
+          pattern: visual-screenshots-*
+          path: e2e/screenshots
+          merge-multiple: true
       - name: Run reg-suit visual regression
-        run: pnpm visual:run
+        run: pnpm reg:run
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
           REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
           REG_SUIT_GITHUB_CLIENT_ID: ${{ secrets.REG_SUIT_GITHUB_CLIENT_ID }}
-      # This was the only Playwright job that kept no report, which is why a
-      # hang inside `paintWholeDocument` had to be read off a stack trace
-      # rather than the per-step timings the sharded jobs hand over.
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: playwright-report-visual
-          path: playwright-report/
-          if-no-files-found: ignore
-          retention-days: 7

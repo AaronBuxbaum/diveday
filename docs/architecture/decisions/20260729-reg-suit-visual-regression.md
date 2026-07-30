@@ -4,6 +4,12 @@
 - **Date:** 2026-07-29
 - **Supersedes:** 20260729-backstop-visual-regression
 
+**Note (2026-07-30):** the reg-suit/S3 decision below still stands unchanged. Where the `capture()`
+calls that feed it physically live changed — see
+[ADR 20260730-tag-based-visual-capture](20260730-tag-based-visual-capture.md): they moved out of the
+single `e2e/visual.spec.ts` file this ADR describes and into the functional spec files they capture,
+tagged `@visual`.
+
 ## Context
 
 We previously migrated from Playwright's `toHaveScreenshot()` to BackstopJS for visual regression testing (ADR `20260729-backstop-visual-regression`). However, BackstopJS was too slow, serializing visual comparisons within each scenario shard, and requiring complex scenario definitions. While Playwright raw screenshot assertions are fast, committing reference PNGs to the repository increases git repository bloat. We want a lightweight visual regression solution that does not require a hosted dashboard service (like Argos or Percy), keeps snapshot files out of the repository, but remains fully pullable/inspectable by MCP servers or AI agents using standard S3 storage.

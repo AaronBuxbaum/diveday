@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { capture } from "./visual-capture";
 
 test("public marketing pages lead to the product and pricing details", async ({ page }) => {
   await page.goto("/");
@@ -275,3 +276,76 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // Demo-before-trial funnel, same as every guide.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill). Moved here from the old e2e/visual.spec.ts "site tour" so they run
+// in this file's own shard instead of a separate single-worker job — see
+// e2e/visual-capture.ts for why, and PR #258 for the flake that motivated it.
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`marketing surfaces render true to the design (${scheme})`, async ({ page }) => {
+      test.setTimeout(30_000);
+      // The homepage narrative.
+      await page.goto("/");
+      await capture(page, "landing", scheme);
+
+      // The product narrative (readiness, dock, diver arc, honest-no scope).
+      await page.goto("/product");
+      await capture(page, "product", scheme);
+
+      // The pricing page with its objection FAQ.
+      await page.goto("/pricing");
+      await capture(page, "pricing", scheme);
+
+      // The trust page: who's behind DiveDay and what it won't pretend.
+      await page.goto("/about");
+      await capture(page, "about", scheme);
+    });
+
+    test(`switching guides render true to the design (${scheme})`, async ({ page }) => {
+      test.setTimeout(30_000);
+      // The migration-guides hub: one card per incumbent a shop might be
+      // leaving, the entry point to the portability wedge on the marketing side.
+      await page.goto("/switching");
+      await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
+      await capture(page, "switching-hub", scheme);
+
+      // The "Switching from EVE" migration guide: the marketing face of the
+      // portability wedge — export click-path, the shared scope table, and the
+      // importer, on the market's most motivated switching pool. Represents the
+      // shared guide template every live incumbent page renders.
+      await page.goto("/switching/eve");
+      await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
+      await capture(page, "switching-eve", scheme);
+
+      // The non-incumbent switching guide: shops coming from a spreadsheet — the
+      // market's largest under-served pool. Its own layout (columns-that-matter,
+      // the downloadable template, the free-import offer) around the same shared
+      // honesty table every guide renders.
+      await page.goto("/switching/spreadsheet");
+      await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
+      await capture(page, "switching-spreadsheet", scheme);
+
+      // The FareHarbor guide: the coexist-led variant of the template, for a
+      // booking channel a shop keeps rather than a records system it leaves —
+      // the "keep it, or leave it" section (run-the-day cards + the leave path)
+      // that no other guide renders.
+      await page.goto("/switching/fareharbor");
+      await page
+        .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
+        .waitFor();
+      await capture(page, "switching-fareharbor", scheme);
+
+      // The Rezdy guide: the second booking-channel guide, same coexist template
+      // with its own copy (a monthly-plus-per-booking model). Baselined so its
+      // page — and the extra hub card it adds — stay pixel-stable.
+      await page.goto("/switching/rezdy");
+      await page
+        .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
+        .waitFor();
+      await capture(page, "switching-rezdy", scheme);
+    });
+  });
+}

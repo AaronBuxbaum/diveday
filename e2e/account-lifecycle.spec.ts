@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
+import { capture } from "./visual-capture";
 
 // Real verify/reset links only ever exist inside a real email — there is no
 // staff-facing screen that displays them (unlike a waiver or readiness
@@ -119,3 +120,35 @@ test("sign-in links to forgot-password", async ({ page }) => {
   await page.getByRole("link", { name: "Forgot password?" }).click();
   await expect(page).toHaveURL(/\/forgot-password/);
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`account-lifecycle surfaces render true to the design (${scheme})`, async ({ page }) => {
+      test.setTimeout(30_000);
+      // Where the trial actually starts: the form plus the reassurance block a
+      // skeptical owner reads before typing a password.
+      await page.goto("/onboard");
+      await capture(page, "onboard", scheme);
+
+      await page.goto("/sign-in");
+      await capture(page, "sign-in", scheme);
+
+      await page.goto("/forgot-password");
+      await capture(page, "forgot-password", scheme);
+
+      // The token pages' one always-reachable state: an unrecognized token
+      // never renders anything but this same closed notice (no live token to
+      // capture the confirm/reset form with — see the tests above).
+      await page.goto("/verify/not-a-real-token");
+      await capture(page, "verify-invalid", scheme);
+
+      await page.goto("/reset-password/not-a-real-token");
+      await capture(page, "reset-password-invalid", scheme);
+    });
+  });
+}

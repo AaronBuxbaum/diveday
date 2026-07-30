@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { capture } from "./visual-capture";
 
 signedInAsOwner();
 
@@ -89,3 +90,60 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // The current card advances to v2.
   await expect(release.getByText("Version 2")).toBeVisible();
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      // Overrides this file's own signedInAsOwner() above: the diver-facing
+      // waiver page is a bearer-token capability surface, not gated by staff
+      // auth, and the baseline should be what an actual diver sees — a
+      // signed-out visitor — not a staff session that happens to also hold
+      // the link.
+      storageState: undefined,
+    });
+
+    test(`the active waiver page renders true to the design (${scheme})`, async ({
+      page,
+      browser,
+      ownerStorageState,
+    }) => {
+      // Mint a real, unsent waiver link via a disposable staff context so
+      // `page` itself stays the same unauthenticated visitor throughout,
+      // exactly as a real diver reaches this link (CR-019).
+      const staffContext = await browser.newContext({ storageState: ownerStorageState });
+      const staffPage = await staffContext.newPage();
+      await staffPage.goto("/shop/blue-mantis/schedule");
+      await staffPage
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .click();
+      await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
+      await staffPage
+        .getByRole("navigation", { name: "Trip" })
+        .getByRole("link", { name: "Guests" })
+        .click();
+      await staffPage.waitForURL(/\/guests/);
+      const diverSection = staffPage
+        .locator("section")
+        .filter({ has: staffPage.getByRole("heading", { name: /^Divers/ }) });
+      await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+      await staffPage.getByRole("heading", { name: "Private waiver link ready" }).waitFor();
+      const waiverHref = await staffPage
+        .getByRole("link", { name: "Open waiver link" })
+        .getAttribute("href");
+      await staffContext.close();
+
+      // Active (unsigned) waiver — the safety-critical form itself, before any
+      // signature or medical answer is entered.
+      await page.goto(waiverHref ?? "/");
+      await page.getByRole("heading", { name: "A quick step before the dock" }).waitFor();
+      await capture(page, "waiver-active", scheme);
+    });
+  });
+}

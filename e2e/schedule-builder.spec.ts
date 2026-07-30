@@ -1,6 +1,7 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, signInAs } from "./helpers";
+import { capture } from "./visual-capture";
 
 signedInAsOwner();
 
@@ -105,3 +106,20 @@ test.describe("schedule builder, as the daily crew", () => {
     await expect(page.getByRole("button", { name: /^Remove / })).toHaveCount(0);
   });
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the schedule builder renders true to the design (${scheme})`, async ({ page }) => {
+      // The staff schedule as a builder: departures grouped by day, each row
+      // carrying its own move/copy/remove controls and its crew.
+      await page.goto(BOARD);
+      await page.getByRole("heading", { name: "The board" }).waitFor();
+      await capture(page, "schedule-builder", scheme);
+    });
+  });
+}

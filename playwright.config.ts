@@ -9,9 +9,9 @@ import {
 } from "./e2e/servers";
 
 // The worker servers and this runner process must agree on the signing secret:
-// e2e/visual.spec.ts mints a signed recap token in this process (signRecapToken)
-// and a worker server verifies it. Pin one resolved value into the environment
-// before anything.
+// specs that mint a signed recap token in this process (signRecapToken, e.g.
+// e2e/recap.spec.ts) need a worker server to verify it. Pin one resolved
+// value into the environment before anything.
 process.env.AUTH_SECRET ??= "diveday-e2e-secret";
 
 // Every worker server shares one read-only production build but owns an
@@ -77,11 +77,14 @@ export default defineConfig({
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
   retries: 0,
-  // e2e/visual.spec.ts writes raw `page.screenshot()` PNGs into e2e/screenshots
-  // (gitignored); `reg-suit` then diffs them against the baseline for this
-  // branch's parent commit, pulled from S3. Nothing visual is committed to the
-  // repo. See docs/architecture/decisions/20260729-reg-suit-visual-regression.md
-  // and the `visual-triage` skill.
+  // capture()/capturePrint() (e2e/visual-capture.ts), called from
+  // `@visual`-tagged tests across e2e/*.spec.ts, write raw `page.screenshot()`
+  // PNGs into e2e/screenshots (gitignored); `reg-suit` then diffs them against
+  // the baseline for this branch's parent commit, pulled from S3. Nothing
+  // visual is committed to the repo. See
+  // docs/architecture/decisions/20260729-reg-suit-visual-regression.md,
+  // docs/architecture/decisions/20260730-tag-based-visual-capture.md, and the
+  // `visual-triage` skill.
   reporter: process.env.CI
     ? ([["github"], ["html", { open: "never" }]] as const)
     : ([["list"]] as const),

@@ -21,17 +21,19 @@ pnpm e2e          # config auto-detects the sandbox Chromium; no install needed
 ```
 
 If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add a
-visual snapshot in `e2e/visual.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
-check` includes `check:clock`, which fails if domain/data code reads the wall clock directly.
+`@visual`-tagged capture for any new surface, in the spec file that already reaches it (see the
+`e2e-and-visual` skill). `pnpm check` includes `check:clock`, which fails if domain/data code reads
+the wall clock directly.
 
 ## 3. UI changed: look at it
 
-Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
-phone and desktop widths, in light and dark — so a filtered run of it is the capture step:
+Never ship UI you haven't seen. A `@visual`-tagged test asserts nothing — it writes PNGs at both
+the phone and desktop widths, in light and dark — so a filtered run of the file (and test group)
+that captures your surface is the capture step:
 
 ```bash
 pnpm e2e:build
-npx playwright test e2e/visual.spec.ts -g '<name of the capture group>' --reporter=line
+npx playwright test e2e/<spec-file>.spec.ts -g '<name of the capture group>' --reporter=line
 ```
 
 Read the PNGs in `e2e/screenshots/` (gitignored) and check them against the checklist at the bottom of

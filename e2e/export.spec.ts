@@ -2,6 +2,7 @@ import { strFromU8, unzipSync } from "fflate";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAs } from "./helpers";
+import { capture } from "./visual-capture";
 
 /**
  * The full-shop export flow (ADR 20260722-full-shop-export): the promise that
@@ -64,6 +65,24 @@ test.describe("full-shop data export", () => {
     // storage holds (ADR 20260724-export-bundled-photos), not only a URL.
     expect(readme).toContain("photos/");
   });
+
+  // Visual regression capture for this surface (see e2e-and-visual skill /
+  // e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts "site
+  // tour".
+  for (const scheme of ["light", "dark"] as const) {
+    test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+      test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+      test(`the data export settings page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // The data-export surface: the "your data is yours" promise, concrete.
+        await page.goto("/shop/blue-mantis/settings/export");
+        await page.getByRole("heading", { name: "Data export" }).waitFor();
+        await capture(page, "settings-export", scheme);
+      });
+    });
+  }
 });
 
 test("the export never leaves without a staff session", async ({ request }) => {

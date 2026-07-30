@@ -1,6 +1,12 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+// The visual capture below needs e2e/fixtures.ts's frozen-clock context and
+// per-worker baseURL routing (this file's own tests use bare @playwright/test
+// above and don't), so it imports a separately-fixtured `test` rather than
+// reusing this file's.
+import { signedInAsOwner as fixturedSignedInAsOwner, test as fixturedTest } from "./fixtures";
 import { signInAs, signInAsOwner } from "./helpers";
+import { capture } from "./visual-capture";
 
 const CALENDAR_SETTINGS = "/shop/blue-mantis/settings/calendar";
 const MY_DEPARTURES = "My departures";
@@ -144,3 +150,30 @@ test.describe("staff calendar subscriptions", () => {
     await expect(page.getByRole("heading", { name: "All shop departures" })).toHaveCount(0);
   });
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  fixturedTest.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    // The reused per-worker session, not a live sign-in.
+    fixturedSignedInAsOwner();
+    fixturedTest.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    fixturedTest(
+      `the calendar settings page renders true to the design (${scheme})`,
+      async ({ page }) => {
+        // Calendar subscriptions, in the un-subscribed state: both scopes
+        // offered to an owner, neither yet minted. Deliberately not the
+        // just-minted state — that panel shows a live feed token, which is
+        // different on every run and would never match a baseline.
+        await page.goto(CALENDAR_SETTINGS);
+        // Wait on the panel's own button, not the page's <h1>: the panels are
+        // Client Components, and a server-rendered heading resolves before the
+        // interesting part has mounted.
+        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
+        await capture(page, "settings-calendar", scheme);
+      },
+    );
+  });
+}

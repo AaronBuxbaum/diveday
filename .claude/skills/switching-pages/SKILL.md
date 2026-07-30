@@ -69,8 +69,9 @@ verified.
 
 1. `pnpm e2e marketing.spec.ts --reporter=line` — covers `/switching`, `/switching/[competitor]`
    routing (including the 404 case for an unregistered slug), and existing guides.
-2. New guide → add its hub-and-detail coverage to `e2e/marketing.spec.ts` and visual snapshots
-   (light + dark) to `e2e/visual.spec.ts`, following the existing `switching-*` capture names.
+2. New guide → add its hub-and-detail coverage to `e2e/marketing.spec.ts`'s functional tests, and a
+   `switching-*` capture (light + dark) to that same file's `switching guides render true to the
+   design` `@visual`-tagged test, following the existing capture names.
 3. Screenshot the new/changed route and look at the PNGs:
-   `pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'public surfaces' --reporter=line`
+   `pnpm e2e:build && npx playwright test e2e/marketing.spec.ts -g 'switching guides' --reporter=line`
    writes them to `e2e/screenshots/` (gitignored), `switching-*` among them.

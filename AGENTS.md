@@ -154,9 +154,10 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
   bug fixes begin with a failing regression test. Every important **flow** a user runs (booking,
   waivers, cert/nitrox gating, manifest/roll call, refunds, scheduling, sign-in) gets an `e2e/`
-  spec, and every important **surface** they look at gets a screenshot assertion in the visual spec
-  `e2e/visual.spec.ts` — especially when introducing a feature. See the **e2e-and-visual** skill;
-  if unsure whether something qualifies, it does.
+  spec, and every important **surface** they look at gets a screenshot capture — `capture()`/
+  `capturePrint()` from `e2e/visual-capture.ts`, tagged `@visual`, placed in whichever `e2e/` spec
+  file already reaches that surface — especially when introducing a feature. See the
+  **e2e-and-visual** skill; if unsure whether something qualifies, it does.
 - **Never hard-code a locale in the UI.** Every date, time, and money figure under `src/app` or
   `src/components` formats for the negotiated request locale (`requestLocale`, from
   `Accept-Language`) — never a literal `"en-US"`. `pnpm check:locale` enforces this app-wide.

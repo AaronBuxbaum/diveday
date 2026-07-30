@@ -8,7 +8,7 @@
 | Component | Vitest + Testing Library | colocated | interactive components behave (role-based queries) |
 | Fetch boundary | Vitest + MSW | colocated, e.g. `offline-manifest-store.test.ts` | client code that calls a real `/api/*` route — narrow, see [ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md) |
 | E2E | Playwright | `e2e/*.spec.ts` | critical user flows survive integration |
-| Visual | reg-suit + S3 | `e2e/visual.spec.ts`, `.reg/` | key surfaces (light + dark × phone + desktop, plus print) still look right — see [ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md) |
+| Visual | reg-suit + S3 | `capture()`/`capturePrint()` (`e2e/visual-capture.ts`) called from `@visual`-tagged tests across `e2e/*.spec.ts`, `.reg/` | key surfaces (light + dark × phone + desktop, plus print) still look right — see [ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md) and [ADR 20260730-tag-based-visual-capture](../architecture/decisions/20260730-tag-based-visual-capture.md) |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
 mutating through inline `"use server"` closures — not a client fetching JSON. That's exactly the
@@ -81,15 +81,18 @@ the full suite locally with identical pass counts across repeated runs.
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
-- **Visual regression freezes the clock, never masks.** Playwright visual tests in
-  `e2e/visual.spec.ts` capture each on-screen surface at light/dark ×
+- **Visual regression freezes the clock, never masks.** `capture()`/`capturePrint()`
+  (`e2e/visual-capture.ts`), called from `@visual`-tagged tests distributed across `e2e/*.spec.ts`
+  (see [ADR 20260730-tag-based-visual-capture](../architecture/decisions/20260730-tag-based-visual-capture.md)),
+  capture each on-screen surface at light/dark ×
   phone/desktop and the two dock surfaces in print mode. Nothing is masked: the server clock is
   pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
-  clock-derived text is pixel-stable and a regression in a date remains visible. Nothing in that
-  spec asserts — it writes raw PNGs into `e2e/screenshots/` (gitignored) — so a visual change never
-  shows up as a failed Playwright test. `pnpm visual` runs the capture and then `reg-suit run`,
-  which diffs against the S3 baseline for the parent commit and publishes the run and its HTML
-  report. There is no local baseline to update: merging is what makes a change the next baseline.
+  clock-derived text is pixel-stable and a regression in a date remains visible. Neither helper
+  asserts — they write raw PNGs into `e2e/screenshots/` (gitignored) — so a visual change never
+  shows up as a failed Playwright test. `pnpm visual` runs just the `@visual`-tagged tests and then
+  `reg-suit run`, which diffs against the S3 baseline for the parent commit and publishes the run
+  and its HTML report. There is no local baseline to update: merging is what makes a change the
+  next baseline.
 
 ## Adding a test
 

@@ -16,8 +16,9 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
 3. **Domain first** — pure logic in `src/lib/` with unit tests alongside (`pnpm test:watch`).
    Failure paths are part of the slice: full boat, uncertified diver, unsigned waiver.
 4. **UI second** — thin routes in `src/app/`, semantic tokens only, copy in briefing voice.
-   A new critical flow gets an `e2e/` spec (happy + failure path); a new surface gets a visual
-   snapshot in `e2e/visual.spec.ts`. Render relative time via `nowDate()` from `src/lib/clock.ts`,
+   A new critical flow gets an `e2e/` spec (happy + failure path); a new surface gets a
+   `@visual`-tagged capture (`e2e/visual-capture.ts`'s `capture()`) in whichever `e2e/*.spec.ts`
+   file already reaches it. Render relative time via `nowDate()` from `src/lib/clock.ts`,
    never a bare `new Date()`. See the `e2e-and-visual` skill.
 5. **Verify** — run the `verify` skill. UI work additionally gets the `design-review` skill.
 6. **Document** — update whatever your change invalidated: glossary for new terms, overview

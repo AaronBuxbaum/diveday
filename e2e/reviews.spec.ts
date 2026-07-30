@@ -1,7 +1,8 @@
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+import { capture } from "./visual-capture";
 
 /**
  * The verified-review loop end to end (docs ADR 20260729-verified-diver-reviews):
@@ -100,3 +101,24 @@ test("the embed widget emits no structured data — the standalone page is canon
   await page.goto("/shop/blue-mantis/schedule?embed=1");
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    // The reused per-worker session (not this file's own live signInAsOwner()
+    // helper, which the functional tests above use for a fresh session) —
+    // faster, and this capture has no reason to need a live sign-in.
+    signedInAsOwner();
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the moderation queue renders true to the design (${scheme})`, async ({ page }) => {
+      // The moderation queue: published reviews, and the "waiting on you" card
+      // a written review sits in until staff release it.
+      await page.goto("/shop/blue-mantis/reviews");
+      await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+      await capture(page, "staff-reviews", scheme);
+    });
+  });
+}

@@ -53,7 +53,7 @@ published a report for that commit.
 
 ## Mapping and stability
 
-Visual specs are organized in `e2e/visual.spec.ts`. If a diff appears without a relevant code change, check `DIVEDAY_CLOCK`, browser version, fonts, and the deterministic PGlite reset. Do not mask a moving element to make the diff disappear.
+Visual captures are `@visual`-tagged tests distributed across `e2e/*.spec.ts`, each calling `capture()`/`capturePrint()` from `e2e/visual-capture.ts` (ADR 20260730-tag-based-visual-capture) — grep the surface name (e.g. `grep -rl 'capture(page, "manifest"' e2e/`) to find which file and test owns a given baseline. If a diff appears without a relevant code change, check `DIVEDAY_CLOCK`, browser version, fonts, and the deterministic PGlite reset. Do not mask a moving element to make the diff disappear.
 
 Read the *shape* of a no-code-change diff before assuming a baseline moved:
 

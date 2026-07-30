@@ -1,6 +1,7 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAs } from "./helpers";
+import { capture } from "./visual-capture";
 
 // Owner reporting (ADR 20260723-owner-reporting): "how's my month" over data the
 // shop already has — bookings, revenue, seat fill, waiver completion — anchored
@@ -33,6 +34,23 @@ test.describe("owner", () => {
     await expect(page.getByRole("region", { name: "This month's numbers" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
   });
+
+  // Visual regression capture for this surface (see e2e-and-visual skill /
+  // e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts "site
+  // tour".
+  for (const scheme of ["light", "dark"] as const) {
+    test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+      test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+      test(`the reports page renders true to the design (${scheme})`, async ({ page }) => {
+        // Owner reporting: "how's my month" over the seeded back-fill — the KPI
+        // row and the per-trip breakdown that answer the buyer's revenue question.
+        await page.goto("/shop/blue-mantis/reports");
+        await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
+        await capture(page, "reports", scheme);
+      });
+    });
+  }
 });
 
 test("reports are gated to the owner or manager, not the daily crew", async ({ page }) => {

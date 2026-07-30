@@ -176,7 +176,7 @@ export function chromiumExecutableOverride(): string | undefined {
  *     compositor draw whole tiles and decoded images rather than reusing part
  *     of a previous raster or standing in a placeholder — the same class of
  *     "this band came back unpainted" that `paintWholeDocument` in
- *     e2e/visual.spec.ts works around from the page side.
+ *     e2e/visual-capture.ts works around from the page side.
  *
  * These change what Chromium draws, so adopting them re-baselines the visual
  * suite once (ADR 20260730-pinned-browser-visual-determinism).

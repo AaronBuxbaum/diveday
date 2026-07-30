@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { e2eNow } from "./helpers";
+import { capture } from "./visual-capture";
 
 test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
   page,
@@ -49,3 +50,29 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 2$/ })).toBeVisible();
   await expect(page.getByText("French Reef is the second tank")).toBeVisible();
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`schedule surfaces render true to the design (${scheme})`, async ({ page }) => {
+      test.setTimeout(20_000);
+      // Wait for a real departure card, not the loading skeleton: a capture
+      // that navigates and shoots immediately races the schedule's suspense
+      // fallback, and two runs catching different skeleton frames is what
+      // used to produce schedule-dark diffs with no code change.
+      await page.goto("/shop/blue-mantis/schedule");
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
+      await capture(page, "schedule", scheme);
+
+      // The seeded reef trip's public briefing: satellite map, gentle route,
+      // landmarks, and the field guide — DiveDay's flagship "delight" surface.
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+      await page.getByTitle("Satellite map of Molasses Reef").waitFor();
+      await capture(page, "site-briefing", scheme);
+    });
+  });
+}

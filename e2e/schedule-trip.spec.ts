@@ -1,5 +1,6 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, openTripFromBoard, signInAsOwner } from "./helpers";
+import { capture } from "./visual-capture";
 
 signedInAsOwner();
 
@@ -65,3 +66,46 @@ test("end-before-start is rejected with a friendly message", async ({ page }) =>
   await page.goto("/shop/blue-mantis/schedule");
   await expect(page.getByRole("heading", { name: "Backwards Trip" })).not.toBeVisible();
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`a trip's staff pages render true to the design (${scheme})`, async ({ page }) => {
+      // The seeded reef trip: schedule card → Overview (what the dive is) →
+      // Guests (who is attending).
+      await page.goto("/shop/blue-mantis/schedule");
+      await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+      await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+      await capture(page, "trip-manage", scheme);
+
+      await page
+        .getByRole("navigation", { name: "Trip" })
+        .getByRole("link", { name: "Guests" })
+        .click();
+      await page.waitForURL(/\/guests/);
+      await page.getByRole("heading", { name: /Divers/ }).waitFor();
+      await capture(page, "trip-guests", scheme);
+    });
+
+    // H-13: the roster's identity gate gets its own test so its capture never
+    // crowds the trip-pages test's time budget. A Night-trip seat booked
+    // through a shared inbox under a name that doesn't match the person on
+    // file shows the fail-closed "Confirm identity" affordance and blocker
+    // until staff vouch for it — a safety-critical state worth a baseline.
+    test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
+      await page.goto("/shop/blue-mantis/schedule");
+      await openTripFromBoard(page, "Night Dive — City of Washington");
+      await page
+        .getByRole("navigation", { name: "Trip" })
+        .getByRole("link", { name: "Guests" })
+        .click();
+      await page.waitForURL(/\/guests/);
+      await page.getByText("Identity unconfirmed").first().waitFor();
+      await capture(page, "trip-guests-identity", scheme);
+    });
+  });
+}

@@ -1,5 +1,6 @@
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
+import { capture } from "./visual-capture";
 
 // The demo shop prices its rental gear (src/db/seed.ts): a $45 full set, per-piece
 // prices, and a per-dive nitrox surcharge. A diver setting their rental fit should
@@ -42,3 +43,22 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Nitrox carries its per-dive surcharge in the label.
   await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    signedInAsOwner();
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the rental prices settings page renders true to the design (${scheme})`, async ({
+      page,
+    }) => {
+      // Shop settings, where staff set the rental catalog and its prices.
+      await page.goto("/shop/blue-mantis/settings");
+      await page.getByRole("heading", { name: "Rental prices" }).waitFor();
+      await capture(page, "settings-payments", scheme);
+    });
+  });
+}

@@ -1,6 +1,7 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripFromBoard, signInAs } from "./helpers";
+import { capture } from "./visual-capture";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -302,3 +303,36 @@ test("import is refused for staff below owner/manager", async ({ page }) => {
   await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    signedInAsOwner();
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`import surfaces render true to the design (${scheme})`, async ({ page }) => {
+      // The import surface: the honesty table stating what does and doesn't
+      // come across, before any file is chosen.
+      await page.goto("/shop/blue-mantis/settings/import");
+      await page.getByRole("heading", { name: "What comes across" }).waitFor();
+      await capture(page, "settings-import", scheme);
+
+      // The migrated diver, and every surface that has to say so. Her level
+      // card reads verified with an "imported" provenance chip and a one-tap
+      // "Confirm card" nudge (ADR 20260724-import-verified-cards), and her
+      // shop history carries the visits that came across from the old system
+      // (ADR 20260725-import-prior-visits) — imported-marked, unlinked, with a
+      // cancelled booking struck through so it can't be read as a dive.
+      await page.goto("/shop/blue-mantis/divers?q=Hana");
+      await page
+        .getByRole("row")
+        .filter({ hasText: "Hana Kobayashi" })
+        .getByText("HK", { exact: true })
+        .click();
+      await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
+      await capture(page, "diver-profile-imported", scheme);
+    });
+  });
+}

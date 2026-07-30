@@ -10,10 +10,11 @@ Delight is this product's differentiator — this review is where that stops bei
 ## Procedure
 
 1. Read `docs/design/principles.md` (the principles **and** the checklist).
-2. Capture every changed route. The visual spec asserts nothing — it writes PNGs — so a filtered
-   run of it is the fastest way to get review images:
+2. Capture every changed route. `@visual`-tagged tests assert nothing — they write PNGs — so a
+   filtered run of the file (and test group) covering your surface is the fastest way to get
+   review images, e.g.:
    ```bash
-   pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'about page'
+   pnpm e2e:build && npx playwright test e2e/marketing.spec.ts -g 'marketing surfaces'
    ```
    Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored) — every capture is written at
    both the phone and desktop widths in `VIEWPORTS`. A surface with no capture group can't be

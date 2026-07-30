@@ -41,7 +41,8 @@ thread instead of pushing a second, competing fix.
 | Random e2e write failures, reads fine | A leaked `next dev` from an earlier screenshot/verify session holding a deleted `.pglite` — check `curl localhost:3000`, kill it, rerun |
 | Vitest timeout on db tests | Each test boots PGlite; ceiling is 20s in `vitest.config.ts` — a hang usually means an unresolved promise, not slowness |
 | CI failure | The failed step's log tail only — never stream full job logs |
-| `e2e` job red on `e2e/visual.spec.ts` assertions | Not necessarily a bug to fix — it's an untriaged visual diff. Run the `visual-triage` skill |
+| `reg-suit visual regression` CI job red, with a pixel diff reported | Not necessarily a bug to fix — it's an untriaged visual diff. Run the `visual-triage` skill |
+| A `@visual`-tagged test itself fails (timeout, navigation error) in a `Playwright shard N/4` job | This is a real Playwright test failure like any other (`capture()`/`capturePrint()` never assert on pixels, so a failure here means the navigation/wait around the capture broke, not that a baseline moved) — debug it as a normal e2e failure, not via `visual-triage` |
 | Framework behaving "wrong" | This is **Next 16** — check `node_modules/next/dist/docs/` before assuming our bug (middleware→proxy, async `searchParams`, `connection()`) |
 | Redirect loops / auth bounces | Two layers run: `src/proxy.ts` (edge, redirects to `/sign-in` or `/`) and `requireStaffSession()` (server). Identify which bounced before changing either |
 | Sign-in silently fails in dev | `verifyCredentials` returns null for four distinct reasons (no account, disabled, bad password, no staff role) by design — check the seeded account state, don't add error leakage |

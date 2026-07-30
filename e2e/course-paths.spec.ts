@@ -1,6 +1,7 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow, signInAs } from "./helpers";
+import { capture } from "./visual-capture";
 
 signedInAsOwner();
 
@@ -106,3 +107,25 @@ test.describe("certification paths, as the daily crew", () => {
     await expect(page.getByRole("button", { name: /^Delete/ })).toHaveCount(0);
   });
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the path builder renders true to the design (${scheme})`, async ({ page }) => {
+      // The path builder: the ordered rungs with their move/remove controls,
+      // the picker, and the live diver-facing preview — the catalog's one
+      // genuinely interactive surface.
+      await page.goto(PATHS);
+      await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
+      await capture(page, "course-paths", scheme);
+
+      await page.getByRole("link", { name: "From first breath to Rescue Diver" }).first().click();
+      await page.getByRole("region", { name: "Path preview" }).waitFor();
+      await capture(page, "course-path-builder", scheme);
+    });
+  });
+}

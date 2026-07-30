@@ -1,5 +1,6 @@
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+import { capture } from "./visual-capture";
 
 /**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
@@ -78,3 +79,24 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("3 seats open with no last-minute deal sent yet.")).toBeVisible();
 });
+
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour" — the Today work queue is where the last-minute nudge itself
+// renders, so it lives next to the flow that exercises it.
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    // The reused per-worker session, not this file's own live signInAsOwner()
+    // helper — faster, and this capture has no reason to need a live sign-in.
+    signedInAsOwner();
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the Today queue renders true to the design (${scheme})`, async ({ page }) => {
+      await page.goto("/shop/blue-mantis");
+      await page
+        .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
+        .waitFor();
+      await capture(page, "today", scheme);
+    });
+  });
+}

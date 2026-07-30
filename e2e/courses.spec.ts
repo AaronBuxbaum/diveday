@@ -1,5 +1,6 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow } from "./helpers";
+import { capture } from "./visual-capture";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -303,3 +304,45 @@ test("a diver with no workable date gets a written email instead of a dead end",
   expect(params.get("body")).toContain("Experience so far: I have never dived before");
   expect(params.get("body")).toContain("Mira Delgado");
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the public course page renders true to the design (${scheme})`, async ({ page }) => {
+      // "Upcoming dates" is the last section the public course page streams, so
+      // it is the signal that the whole document has landed.
+      await page.goto("/shop/blue-mantis/courses/open-water-diver");
+      await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
+      await capture(page, "course-page", scheme);
+    });
+
+    test.describe("staff", () => {
+      signedInAsOwner();
+
+      test(`the courses catalog and editor render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(20_000);
+        // The courses catalog: the eye visibility toggle beside the new link
+        // icon that jumps to a course's public preview page.
+        await page.goto("/shop/blue-mantis/courses");
+        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await capture(page, "courses-list", scheme);
+
+        // A course's edit page: the Day by day section's real per-day controls
+        // (start/end time, time note, item list) replacing the old textarea.
+        // "Day by day" is a server-rendered <legend>, so it is on screen before
+        // DayByDayEditor (a Client Component) mounts — wait for a control the
+        // editor itself renders instead.
+        await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+        await page.getByText("Day by day").waitFor();
+        await page.getByRole("button", { name: "Add item" }).first().waitFor();
+        await capture(page, "course-edit", scheme);
+      });
+    });
+  });
+}

@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openTripFromBoard } from "./helpers";
+import { capture, capturePrint } from "./visual-capture";
 
 signedInAsOwner();
 
@@ -362,4 +364,75 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
   const firstAvatar = page.locator("#missing-divers-grid button").first();
   await expect(firstAvatar).toBeVisible();
   await firstAvatar.click();
+});
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`manifest surfaces render true to the design (${scheme})`, async ({ page }) => {
+      test.setTimeout(20_000);
+      await page.goto("/shop/blue-mantis/schedule");
+      await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+      await page
+        .getByRole("navigation", { name: "Trip" })
+        .getByRole("link", { name: "Manifest" })
+        .click();
+      await page.waitForURL(/\/manifest/);
+      await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+      // The offline safety copy saves itself in the background on mount; wait
+      // for that to settle (the offline-roll-call link only renders once
+      // saved) so the capture isn't racing that async write.
+      await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+      await capture(page, "manifest", scheme);
+
+      // The tripId used by the offline-manifest captures below — read from
+      // this page's own URL while it's still current.
+      const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
+
+      // The offline shell's list view — every trip currently saved on this
+      // device, reachable at dive.day root as well as `/offline-manifest`
+      // directly (see ADR 20260726-shopwide-offline-manifest-priming). The
+      // manifest visit above already auto-saved this trip, so capture the
+      // populated list before the IndexedDB clear below.
+      await page.goto("/offline-manifest");
+      await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
+      await capture(page, "offline-manifest-list", scheme);
+
+      // The offline fallback a captain lands on after a failed reload with no
+      // snapshot saved — the entire safety surface in that moment, so it gets
+      // its own baseline rather than relying on a text assertion elsewhere in
+      // this file to catch a styling regression.
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            const request = indexedDB.deleteDatabase("diveday-offline-manifests");
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error ?? new Error("failed to clear IndexedDB"));
+          }),
+      );
+      await page.goto(`/offline-manifest?trip=${tripId}`);
+      await page.getByRole("heading", { name: "Nothing saved on this phone yet" }).waitFor();
+      await capture(page, "offline-manifest-empty", scheme);
+    });
+  });
+}
+
+// Print surfaces are scheme- and viewport-independent (see
+// e2e/visual-capture.ts's capturePrint doc comment), so this runs once at a
+// US-Letter-ish width rather than inside the light/dark loop above.
+test.describe("print", { tag: "@visual" }, () => {
+  test.use({ viewport: { width: 816, height: 1056 } });
+
+  test("the manifest prints monochrome and padded", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule");
+    await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/manifest`);
+    await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+    await capturePrint(page, "manifest");
+  });
 });

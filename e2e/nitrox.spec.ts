@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { e2eNow } from "./helpers";
+import { e2eNow, openTripFromBoard } from "./helpers";
+import { capture, capturePrint } from "./visual-capture";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule");
@@ -167,6 +168,78 @@ test.describe("staff", () => {
       await page.getByRole("button", { name: "Save rental catalog" }).click();
       await expect(page.getByText("Rental catalog saved.")).toBeVisible();
     }
+  });
+
+  // Visual regression captures for this file's surfaces (see e2e-and-visual
+  // skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+  // "site tour".
+  for (const scheme of ["light", "dark"] as const) {
+    test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+      test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+      test(`the prep page renders true to the design (${scheme})`, async ({ page }) => {
+        // The morning packing list — tanks, then rental kit. Blue Mantis fills
+        // nitrox, so the Tanks tile grid is at its full Total/Air/Nitrox width;
+        // the collapsed single-tile layout for a shop that doesn't is its own
+        // dedicated test below (toggling the shared catalog here would leak
+        // into a capture after this one in the same test).
+        await page.goto("/shop/blue-mantis/schedule");
+        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Prep" })
+          .click();
+        await page.waitForURL(/\/prep/);
+        await page.getByRole("heading", { name: "Tanks" }).waitFor();
+        await capture(page, "prep", scheme);
+      });
+
+      // A shop that doesn't fill nitrox (or a trip with no live request left on
+      // it once nitrox is off) sees Total and Air collapse into a single tile —
+      // there's nothing for a second number to distinguish. Its own test so
+      // toggling the shared demo shop's rental catalog for its duration is
+      // contained and reverted regardless of pass/fail.
+      test(`the prep page's tank tile collapses with nitrox off (${scheme})`, async ({ page }) => {
+        try {
+          await page.goto("/shop/blue-mantis/settings");
+          await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
+          await page.getByRole("button", { name: "Save rental catalog" }).click();
+          await page.getByText("Rental catalog saved.").waitFor();
+
+          await page.goto("/shop/blue-mantis/schedule");
+          await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+          await page
+            .getByRole("navigation", { name: "Trip" })
+            .getByRole("link", { name: "Prep" })
+            .click();
+          await page.waitForURL(/\/prep/);
+          await page.getByRole("heading", { name: "Tanks" }).waitFor();
+          await capture(page, "prep-no-nitrox", scheme);
+        } finally {
+          await page.goto("/shop/blue-mantis/settings");
+          await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
+          await page.getByRole("button", { name: "Save rental catalog" }).click();
+          await page.getByText("Rental catalog saved.").waitFor();
+        }
+      });
+    });
+  }
+});
+
+// Print surfaces are scheme- and viewport-independent (see
+// e2e/visual-capture.ts's capturePrint doc comment), so this runs once at a
+// US-Letter-ish width rather than inside the light/dark loop above.
+test.describe("print", { tag: "@visual" }, () => {
+  signedInAsOwner();
+  test.use({ viewport: { width: 816, height: 1056 } });
+
+  test("the prep list prints monochrome and padded", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule");
+    await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/prep`);
+    await page.getByRole("heading", { name: "Tanks" }).waitFor();
+    await capturePrint(page, "prep");
   });
 });
 

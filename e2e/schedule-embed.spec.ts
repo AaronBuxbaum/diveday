@@ -1,5 +1,6 @@
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { capture } from "./visual-capture";
 
 /**
  * The embed widget (docs ADR 20260726-schedule-embed): a shop pastes the
@@ -93,3 +94,37 @@ test("settings/embed asks for hosting setup when no public origin is configured"
   await expect(page.getByRole("heading", { name: "Website embed" })).toBeVisible();
   await expect(page.getByText(/configured public hosting address/)).toBeVisible();
 });
+
+// Visual regression captures for this file's surfaces (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour".
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    // The reused per-worker session, not a live sign-in: this file's own
+    // "embedded pages stay chrome-free even for a signed-in staff member"
+    // test above already proves auth state can't change embed rendering, so
+    // both captures below are safe to run authenticated instead of paying
+    // for a live sign-in just for the settings-embed one.
+    signedInAsOwner();
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`embed surfaces render true to the design (${scheme})`, async ({ page }) => {
+      test.setTimeout(20_000);
+      // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
+      // no ShopPageHeader chrome, tighter padding — what a shop's own website
+      // actually shows inside the iframe.
+      await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
+      await capture(page, "schedule-embed", scheme);
+
+      // The embed settings page. This fleet runs `next start` against a
+      // loopback origin with no APP_HOST, and publicAppUrl() refuses a
+      // loopback origin in production — so this baseline is necessarily the
+      // "hosting isn't configured" state, not the generated-snippet state a
+      // real deploy shows. Still a real, reachable page worth a baseline.
+      await page.goto("/shop/blue-mantis/settings/embed");
+      await page.getByRole("heading", { name: "Website embed" }).waitFor();
+      await capture(page, "settings-embed", scheme);
+    });
+  });
+}
