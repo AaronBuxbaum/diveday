@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { copyForLocale, localizedCopy } from "./localized-copy";
-import { publicCopy } from "./public-copy";
 
 describe("copyForLocale", () => {
   it("keeps legacy strings readable", () => {
@@ -18,10 +17,5 @@ describe("copyForLocale", () => {
     expect(localizedCopy("Complete your waiver", "en-US")).toEqual({
       "en-US": "Complete your waiver",
     });
-  });
-
-  it("provides locale-ready public copy without requiring translated rows", () => {
-    expect(publicCopy("fr-FR").schedule.title).toBe("Schedule");
-    expect(publicCopy("fr-FR").course.noCertification).toBe("No certification required");
   });
 });

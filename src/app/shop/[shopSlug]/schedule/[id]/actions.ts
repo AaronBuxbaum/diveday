@@ -10,6 +10,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { saveRentalFit } from "@/db/rental-fit";
+import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
@@ -261,10 +262,28 @@ export async function bookSpot(
   // doesn't discount. Stripe's own hosted checkout page shows the diver the
   // real price before they pay, so a code that silently failed to apply is
   // never hidden from them at the point money actually moves.
+  // Two kinds of code reach this one field, and the diver can't tell them
+  // apart: a trip-scoped last-minute deal (docs ADR
+  // 20260727-last-minute-fill-promos) and a shop-wide code (docs ADR
+  // 20260729-shop-promo-codes). The trip-scoped lookup runs first — a code
+  // issued for *this* departure is the more specific match — and the shop-wide
+  // one is the fallback. Only one is ever applied: Stripe Checkout takes a
+  // single promotion code, and stacking discounts is not a thing DiveDay does.
   const promoCodeInput = String(formData.get("promoCode") ?? "").trim();
-  const promo = promoCodeInput
+  const tripPromo = promoCodeInput
     ? await getActiveTripPromoByCode(dbi, { shopId: shopNow.id, tripId, code: promoCodeInput })
     : null;
+  const shopPromo =
+    promoCodeInput && !tripPromo
+      ? await getRedeemableShopPromo(dbi, {
+          shopId: shopNow.id,
+          code: promoCodeInput,
+          // A trip we can no longer read is treated as an ordinary charter for
+          // scope purposes; a courses-only code then simply doesn't apply,
+          // which is the fail-closed direction.
+          kind: tripNow?.courseId ? "course" : "trip",
+        })
+      : null;
 
   const checkoutUrl = confirmCapability
     ? await startCheckoutUrl(dbi, {
@@ -275,7 +294,9 @@ export async function bookSpot(
         confirmToken: confirmCapability.token,
         customerEmail: validParty[0]?.email ?? "",
         embed,
-        promotionCode: promo?.stripePromotionCodeId ?? undefined,
+        promotionCode:
+          tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
+        shopPromo: shopPromo ? { id: shopPromo.id, code: shopPromo.code } : undefined,
       })
     : null;
   if (checkoutUrl) {
@@ -302,6 +323,7 @@ async function startCheckoutUrl(
     customerEmail: string;
     embed?: boolean;
     promotionCode?: string;
+    shopPromo?: { id: string; code: string };
   },
 ): Promise<string | null> {
   const origin = publicAppUrl();
@@ -315,6 +337,7 @@ async function startCheckoutUrl(
     successUrl: returnBase,
     cancelUrl: `${returnBase}&pay=cancelled`,
     promotionCode: input.promotionCode,
+    shopPromo: input.shopPromo,
   }).catch(() => null);
   return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
 }

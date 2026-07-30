@@ -173,6 +173,14 @@ export const RATE_LIMITS = {
   /** Starting a post-trip tip checkout, per recap token. */
   tipStart: perHour(10),
   /**
+   * Leaving or revising a review, per recap token. A diver edits their own
+   * review a handful of times at most; the unique index already caps them at
+   * one row, so this bounds the write rate rather than the review count.
+   */
+  reviewSubmitByToken: perHour(10),
+  /** Reviews, per IP — catches one visitor spraying many guessed recap tokens. */
+  reviewSubmitByIp: perHour(30),
+  /**
    * Self-cancelling a booking from the readiness link, per IP. Tighter than
    * the general `capabilityAction` bucket (60/hr) — this is an irreversible,
    * money-moving action, not a form save, so a burst of attempts is a signal

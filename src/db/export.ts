@@ -36,6 +36,7 @@ import {
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
+  shopPromoCodes,
   shops,
   specialtyCertifications,
   staffShifts,
@@ -44,6 +45,7 @@ import {
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
+  tripReviews,
   tripScheduleDays,
   tripSeries,
   trips,
@@ -172,6 +174,19 @@ export async function loadShopExportBundleInput(
         .from(recapPhotos)
         .where(eq(recapPhotos.shopId, shopId))
         .orderBy(asc(recapPhotos.createdAt), asc(recapPhotos.id));
+
+      const reviewRows = await tx
+        .select({ review: tripReviews, diverName: people.fullName })
+        .from(tripReviews)
+        .innerJoin(people, eq(people.id, tripReviews.personId))
+        .where(eq(tripReviews.shopId, shopId))
+        .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
+
+      const promoCodeRows = await tx
+        .select()
+        .from(shopPromoCodes)
+        .where(eq(shopPromoCodes.shopId, shopId))
+        .orderBy(asc(shopPromoCodes.createdAt), asc(shopPromoCodes.id));
 
       const courseRows = await tx
         .select()
@@ -1312,6 +1327,66 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["recap_photos.csv"],
         },
         {
+          file: "trip_reviews.csv",
+          header: [
+            "id",
+            "booking_id",
+            "trip_id",
+            "person_id",
+            "diver_name",
+            "rating",
+            "comment",
+            "is_published",
+            "published_at",
+            "created_at",
+            "updated_at",
+          ],
+          rows: reviewRows.map(({ review, diverName }) => [
+            review.id,
+            review.bookingId,
+            review.tripId,
+            review.personId,
+            diverName,
+            review.rating,
+            review.comment,
+            review.isPublished,
+            review.publishedAt,
+            review.createdAt,
+            review.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_reviews.csv"],
+        },
+        {
+          file: "shop_promo_codes.csv",
+          header: [
+            "id",
+            "code",
+            "description",
+            "discount_percent",
+            "scope",
+            "status",
+            "starts_at",
+            "expires_at",
+            "max_redemptions",
+            "created_by_person_id",
+            "created_at",
+          ],
+          rows: promoCodeRows.map((row) => [
+            row.id,
+            row.code,
+            row.description,
+            row.discountPercent,
+            row.scope,
+            row.status,
+            row.startsAt,
+            row.expiresAt,
+            row.maxRedemptions,
+            row.createdByPersonId,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["shop_promo_codes.csv"],
+        },
+        {
           file: "courses.csv",
           header: [
             "id",
@@ -1502,6 +1577,12 @@ export async function loadShopExportCounts(
     ),
     "recap_photos.csv": await countOf(
       db.select({ n: count() }).from(recapPhotos).where(eq(recapPhotos.shopId, shopId)),
+    ),
+    "trip_reviews.csv": await countOf(
+      db.select({ n: count() }).from(tripReviews).where(eq(tripReviews.shopId, shopId)),
+    ),
+    "shop_promo_codes.csv": await countOf(
+      db.select({ n: count() }).from(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId)),
     ),
     "courses.csv": await countOf(
       db.select({ n: count() }).from(courses).where(eq(courses.shopId, shopId)),

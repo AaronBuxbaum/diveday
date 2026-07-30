@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -28,53 +29,50 @@ export function WaitlistConfirmation({
   shopSlug: string;
   embed?: boolean;
 }) {
+  const t = useTranslations();
   return (
     // A wait-list join isn't the earned win the rationed accent is for
     // (design/principles.md #3) — a seat isn't held yet, so this stays the
     // calm everyday treatment; only a real confirmed booking gets the coral.
     <section className="rise-in mt-10 rounded-lg border border-border bg-surface p-6">
       <h2 className="text-xl font-semibold text-balance">
-        You&apos;re on the wait list, {firstName}.
+        {t("booking.waitlistConfirmedHeading", { name: firstName })}
       </h2>
-      <p className="mt-2 text-muted">
-        A spot is not held yet. The shop can see your place in line and will contact you if one
-        opens up.
-      </p>
+      <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
       <Link
         href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
-        Back to the schedule
+        {t("common.backToSchedule")}
       </Link>
     </section>
   );
 }
 
 export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?: boolean }) {
+  const t = useTranslations("booking");
   return (
     <section className="mt-10 rounded-lg border border-border bg-surface p-6">
-      <h2 className="font-medium">This one's already sailed</h2>
+      <h2 className="font-medium">{t("sailedHeading")}</h2>
       <p className="mt-1 text-sm text-muted">
         <Link
           href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
-          Check the schedule
+          {t("sailedCheckSchedule")}
         </Link>{" "}
-        for the next departure.
+        {t("sailedForNext")}
       </p>
     </section>
   );
 }
 
 export function ConditionsHoldSection() {
+  const t = useTranslations("booking");
   return (
     <section className="mt-10 rounded-lg border border-warning/40 bg-warning/10 p-6">
-      <h2 className="font-semibold">Nothing to book here yet</h2>
-      <p className="mt-1 text-sm text-muted">
-        See the conditions update above. Divers who already booked keep their seats and can follow
-        it live here.
-      </p>
+      <h2 className="font-semibold">{t("holdHeading")}</h2>
+      <p className="mt-1 text-sm text-muted">{t("holdBody")}</p>
     </section>
   );
 }
@@ -92,18 +90,19 @@ export function TripFullSection({
   remaining: number;
   errorMessage?: string;
 }) {
+  const t = useTranslations("booking");
   return (
     <section className="mt-10 rounded-lg border border-border bg-surface p-6">
-      <h2 className="font-medium">This boat's full</h2>
+      <h2 className="font-medium">{t("fullHeading")}</h2>
       <p className="mt-1 text-sm text-muted">
-        All {trip.capacity} spots are taken.{" "}
+        {t("fullBody", { capacity: trip.capacity })}{" "}
         <Link
           href={`/shop/${shopSlug}/schedule${tripRef.embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
-          Find another trip
+          {t("findAnotherTrip")}
         </Link>{" "}
-        — the reef isn't going anywhere.
+        {t("reefNotGoingAnywhere")}
       </p>
       <ErrorNotice message={errorMessage} />
       <form
@@ -111,18 +110,16 @@ export function TripFullSection({
         className="mt-6 flex flex-col gap-4 border-t border-border pt-6"
       >
         <div>
-          <h3 className="font-semibold">Join the wait list</h3>
-          <p className="mt-1 text-sm text-muted">
-            If a spot opens, the shop will have your details ready.
-          </p>
+          <h3 className="font-semibold">{t("waitlistHeading")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("waitlistBody")}</p>
         </div>
         <BookingPartyFields maxPartySize={remaining} leadPhone />
         <div>
           <SubmitButton
-            pendingLabel="Joining…"
+            pendingLabel={t("waitlistJoining")}
             className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
           >
-            Join the wait list
+            {t("waitlistHeading")}
           </SubmitButton>
         </div>
       </form>
@@ -139,6 +136,7 @@ export function BookSpotSection({
   errorMessage,
   payAtBooking,
   perDiverPriceCents,
+  locale,
 }: {
   trip: Trip;
   tripRef: TripRef;
@@ -146,47 +144,55 @@ export function BookSpotSection({
   errorMessage?: string;
   payAtBooking: boolean;
   perDiverPriceCents: number | null;
+  locale: string;
 }) {
-  const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  const t = useTranslations("booking");
+  const usd = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
   const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
+  const bookLabel = payAtBooking
+    ? remaining === 1
+      ? t("bookAndPayLastSpot")
+      : t("bookAndPay")
+    : remaining === 1
+      ? t("bookLastSpot")
+      : t("bookSpots");
   return (
     <section id="book" className="mt-10">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Grab a spot</h2>
+        <h2 className="text-lg font-semibold">{t("heading")}</h2>
         <span className="text-sm font-medium text-primary tabular-nums">{capacityLabel(trip)}</span>
       </div>
       {payAtBooking && perDiverPriceCents ? (
         <p className="mt-1 text-sm text-muted">
-          {usd.format(perDiverPriceCents / 100)} per diver — paid securely when you book.
+          {t("paidSecurely", { price: usd.format(perDiverPriceCents / 100) })}
         </p>
       ) : null}
       <ErrorNotice message={state.error ?? errorMessage} />
       {trip.course && /discover scuba|try scuba/i.test(trip.course.title) ? (
         <p className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted">
-          <strong className="text-foreground">Giving this dive as a gift?</strong> Enter the
-          recipient&apos;s name and email below, then pay from this device. Their confirmation and
-          ready-to-dive steps go straight to them.
+          <strong className="text-foreground">{t("giftTitle")}</strong> {t("giftBody")}
         </p>
       ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
         <FieldGrid columns={1}>
-          <Field
-            label="What kind of dive would make your day?"
-            hint="(optional — shared with the crew, never a promise)"
-          >
+          <Field label={t("preferenceLabel")} hint={t("preferenceHint")}>
             <textarea
               name="groupPreference"
               rows={2}
               maxLength={300}
-              placeholder="Macro photos, a relaxed pace, or staying with friends"
+              placeholder={t("preferencePlaceholder")}
               className={controlClass}
             />
           </Field>
         </FieldGrid>
         {payAtBooking ? (
           <FieldGrid columns={1} className="max-w-64">
-            <Field label="Promo code" hint="(if the shop sent you a last-minute deal)">
+            {/* A shop-wide code and a trip-scoped last-minute deal are typed
+                into the same box — the diver has no idea which kind they were
+                handed, and the server resolves both (docs ADR
+                20260729-shop-promo-codes). */}
+            <Field label={t("promoLabel")} hint={t("promoHint")}>
               <input
                 name="promoCode"
                 autoComplete="off"
@@ -198,18 +204,13 @@ export function BookSpotSection({
         ) : null}
         <div className="mt-1">
           <SubmitButton
-            pendingLabel={payAtBooking ? "Heading to payment…" : "Booking…"}
+            pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
             className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
           >
-            {payAtBooking
-              ? `Book and pay${remaining === 1 ? " — last spot" : ""}`
-              : `Book ${remaining === 1 ? "the last spot" : "these spots"}`}
+            {bookLabel}
           </SubmitButton>
         </div>
-        <p className="text-sm text-muted">
-          No account needed. The shop will confirm your certification and rental fit when you
-          arrive.
-        </p>
+        <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
       </form>
     </section>
   );

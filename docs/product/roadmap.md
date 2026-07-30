@@ -64,6 +64,16 @@ Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** â€
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it.
 
+### 6. Staff-surface copy extraction (finishing localization)
+
+Locale-correct *formatting* is app-wide and done; translated *copy* currently covers only the
+diver-facing surface (see
+[diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md)). Staff
+screens under `/shop/**` still carry inline English â€” roughly 16,000 lines of TSX across ~89 route
+files and ~52 components. Extracting them into `src/i18n/locales/<locale>/diver.json` (or a second
+`staff` namespace) is mechanical but large, and is what "the whole app is localized" actually
+requires. The waiver body and medical questionnaire stay out until H-01/H-03 clear.
+
 ## Delight backlog
 
 Cross-cutting quality to fold into slices as they're touched, not defer to a final "polish" pass.

@@ -78,6 +78,10 @@ export const EXPORT_FILE_NOTES = {
     "Staff-moderated diver moments attached to dive sites, published and unpublished.",
   "recap_photos.csv":
     "Photos divers attached to their post-trip recap pages, by booking and trip. Image links stay readable while the DiveDay account is active.",
+  "trip_reviews.csv":
+    "Ratings and words from divers who provably dived — each row was written through that booking's own post-trip recap link, so there are no unverified reviews here. Only is_published rows were shown publicly and only those were counted in the shop's displayed average; a review carrying a comment stayed unpublished until staff released it, while a bare rating published on arrival. One row per booking: a diver revising their review updated it in place.",
+  "shop_promo_codes.csv":
+    "Shop-wide discount codes as configured, with their validity window, scope, and redemption cap. status 'active' was live; 'disabled' was switched off by staff and 'failed' never minted at Stripe at all. The redemption history itself is not included — see the notes below.",
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
 } as const;
 
@@ -147,6 +151,7 @@ const NOT_INCLUDED = [
   "Offline manifest snapshots (device-side copies of the live records exported here).",
   "Notification delivery logs — operational plumbing, not shop records.",
   "Stripe account linkage and checkout-session attempts — every money outcome is in bookings.csv and orders.csv, and the Stripe account itself already belongs to the shop.",
+  "Promo-code redemption rows — each one points at a checkout attempt, which is itself not exported for the reason above; the shop's own Stripe account holds the authoritative redemption record for every code in shop_promo_codes.csv.",
   "DiveDay's shared dive-site catalog templates (the shop's own copies export in dive_sites.csv).",
   "A pasted image URL a CSV references that was never stored through DiveDay (an external link, or a bundled template asset) — only files DiveDay's own storage actually holds can be bundled as bytes.",
   "Login accounts, password hashes, and email-verification/password-reset tokens — credentials are never exported.",

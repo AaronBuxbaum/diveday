@@ -1,17 +1,19 @@
 onlyBuiltDependencies:
+  - '@parcel/watcher'
   - '@sentry/cli'
+  - '@swc/core'
   - esbuild
   - msw
-
-supportedArchitectures:
-  os:
-    - darwin
-    - linux
-  cpu:
-    - arm64
-    - x64
 
 publicHoistPattern:
   - '@img/*'
   - 'detect-libc'
   - 'semver'
+
+supportedArchitectures:
+  cpu:
+    - arm64
+    - x64
+  os:
+    - darwin
+    - linux

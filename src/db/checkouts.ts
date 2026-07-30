@@ -14,6 +14,7 @@ import {
 import { setBookingPaymentIfNotFinal } from "./payments";
 import type { BookingCheckout } from "./schema";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
+import { recordShopPromoRedemption } from "./shop-promos";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 export type StartCheckoutInput = {
@@ -24,12 +25,21 @@ export type StartCheckoutInput = {
   successUrl: string;
   cancelUrl: string;
   /**
-   * A Stripe `PromotionCode` id, already resolved and trip-scope-checked by
-   * the caller (`getActiveTripPromoByCode`, src/db/trip-promos.ts) — never a
-   * raw diver-typed code. Only ever passed on a fresh checkout attempt, not a
-   * reuse (docs ADR 20260727-last-minute-fill-promos).
+   * A Stripe `PromotionCode` id, already resolved and scope-checked by the
+   * caller — `getActiveTripPromoByCode` (src/db/trip-promos.ts) for a
+   * trip-scoped last-minute deal, or `getRedeemableShopPromo`
+   * (src/db/shop-promos.ts) for a shop-wide code — never a raw diver-typed
+   * code. Only ever passed on a fresh checkout attempt, not a reuse (docs ADRs
+   * 20260727-last-minute-fill-promos, 20260729-shop-promo-codes).
    */
   promotionCode?: string;
+  /**
+   * The shop-wide promo row behind `promotionCode`, when that's where it came
+   * from. Snapshotted onto the checkout so a completed session can record its
+   * redemption, and so a later edit to the code can't rewrite what this diver
+   * was quoted. Absent for a trip-scoped last-minute code, which has its own row.
+   */
+  shopPromo?: { id: string; code: string };
 };
 
 export type StartCheckoutOutcome =
@@ -165,6 +175,8 @@ export async function startBookingCheckout(
           totalCents: amountPerDiverCents * input.bookingIds.length,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
+          promoCodeId: input.shopPromo?.id ?? null,
+          promoCode: input.shopPromo?.code ?? null,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
@@ -317,6 +329,20 @@ export async function markCheckoutPaidBySessionId(
     // acquired, would leave the same race the lock exists to close (Codex
     // finding). (The checkout itself is still marked completed above, so a
     // retried webhook delivery doesn't reprocess it.)
+    // A shop-wide code this session actually spent. Written here, inside the
+    // same transaction, and deduped on `checkout_id`, so a retried webhook
+    // delivery or a repair run over an already-completed checkout lands on the
+    // existing row rather than counting the redemption twice
+    // (docs ADR 20260729-shop-promo-codes).
+    if (updated.promoCodeId) {
+      await recordShopPromoRedemption(tx, {
+        shopId: updated.shopId,
+        promoCodeId: updated.promoCodeId,
+        checkoutId: updated.id,
+        amountChargedCents: updated.totalCents,
+      });
+    }
+
     for (const { bookingId } of linked) {
       await setBookingPaymentIfNotFinal(tx, {
         shopId: checkout.shopId,

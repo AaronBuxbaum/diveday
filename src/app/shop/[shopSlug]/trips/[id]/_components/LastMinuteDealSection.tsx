@@ -24,6 +24,7 @@ export function LastMinuteDealSection({
   cancelled,
   promos,
   timezone,
+  locale,
   sendAction,
 }: {
   eligibleCount: number;
@@ -31,6 +32,7 @@ export function LastMinuteDealSection({
   cancelled: boolean;
   promos: TripLastMinutePromo[];
   timezone: string;
+  locale: string;
   sendAction: (formData: FormData) => void;
 }) {
   const canSend = !cancelled && openSeats > 0 && eligibleCount > 0;
@@ -95,7 +97,7 @@ export function LastMinuteDealSection({
                   {promo.discountPercent}% off · <span className="font-mono">{promo.code}</span>
                 </p>
                 <p className="text-muted">
-                  Sent {formatDateTimeTz(promo.createdAt, "en-US", timezone)} to{" "}
+                  Sent {formatDateTimeTz(promo.createdAt, locale, timezone)} to{" "}
                   {promo.recipientCount} {promo.recipientCount === 1 ? "diver" : "divers"}
                 </p>
               </div>

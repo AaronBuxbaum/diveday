@@ -9,6 +9,7 @@ import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
@@ -118,6 +119,9 @@ export default async function ReportsPage({
   const { month } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
 
   // Checked against the database, not the JWT, so a revoked manager loses
@@ -196,7 +200,7 @@ export default async function ReportsPage({
                   {tripTitle ? <span>· {tripTitle}</span> : null}
                   {personName ? <span>· {personName}</span> : null}
                   <span className="text-muted">
-                    · started {formatShortDate(intent.startedAt, "en-US", tz)}
+                    · started {formatShortDate(intent.startedAt, locale, tz)}
                     {intent.stripeObjectId ? ` · Stripe: ${intent.stripeObjectId}` : ""}
                   </span>
                   {tripId ? (
@@ -231,7 +235,7 @@ export default async function ReportsPage({
                 <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="font-medium">{MEDIA_KIND_LABELS[attempt.kind]}</span>
                   <span className="text-muted">
-                    · queued {formatShortDate(attempt.createdAt, "en-US", tz)}
+                    · queued {formatShortDate(attempt.createdAt, locale, tz)}
                     {attempt.lastError ? ` · ${attempt.lastError}` : ""}
                   </span>
                   <form action={retryMediaDeletion}>
@@ -350,7 +354,7 @@ export default async function ReportsPage({
                         <td className="px-4 py-3">
                           <div className="font-medium text-foreground">{trip.title}</div>
                           <div className="text-xs text-muted">
-                            {formatShortDate(trip.startsAt, "en-US", tz)}
+                            {formatShortDate(trip.startsAt, locale, tz)}
                             {/* The raw ratio the Seats column carries on wider screens,
                                 folded in here so a phone never loses "70% of what?". */}
                             <span className="tabular-nums sm:hidden">

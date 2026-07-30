@@ -18,6 +18,7 @@ import {
   listTripDives,
   listTripScheduleDays,
 } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
 import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -68,6 +69,9 @@ export default async function ManageTripPage({
   const { notice, count } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
@@ -135,8 +139,8 @@ export default async function ManageTripPage({
                 </Badge>
               )}
               <span className="text-muted">
-                {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-                {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+                {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
               </span>
             </div>
             {scheduleDays.length > 1 ? (
@@ -144,8 +148,8 @@ export default async function ManageTripPage({
                 <span>{scheduleDays.length} meeting days · same instructors each day</span>
                 {scheduleDays.map((day) => (
                   <span key={day.id}>
-                    Day {day.dayNumber}: {formatShortDate(day.startsAt, "en-US", shop.timezone)} ·{" "}
-                    {formatTimeRangeTz(day.startsAt, day.endsAt, "en-US", shop.timezone)}
+                    Day {day.dayNumber}: {formatShortDate(day.startsAt, locale, shop.timezone)} ·{" "}
+                    {formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone)}
                   </span>
                 ))}
               </div>

@@ -14,7 +14,8 @@ import {
 import { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { capabilityCopy } from "@/lib/capability-copy";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -265,7 +266,8 @@ export default async function DiverReadinessPage({
   }
 
   const { detail, shop, person } = data;
-  const copy = capabilityCopy(shop.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = diverTranslator(locale);
   const firstName = detail.person.fullName.split(" ")[0] || "there";
   const when = formatShortDate(detail.trip.startsAt, shop.defaultLocale, detail.shop.timezone);
   const timeRange = formatTimeRangeTz(
@@ -300,7 +302,7 @@ export default async function DiverReadinessPage({
       <FlashParams params={["saved", "error", "pay"]} />
       <header>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          {copy.readinessTitle}
+          {t("capability.readinessTitle")}
         </p>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">
           {detail.shop.name}
@@ -455,11 +457,11 @@ export default async function DiverReadinessPage({
                   {data.rescheduleCandidates.map((candidate) => (
                     <option key={candidate.id} value={candidate.id}>
                       {candidate.title} —{" "}
-                      {formatShortDate(candidate.startsAt, "en-US", detail.shop.timezone)} ·{" "}
+                      {formatShortDate(candidate.startsAt, locale, detail.shop.timezone)} ·{" "}
                       {formatTimeRangeTz(
                         candidate.startsAt,
                         candidate.endsAt,
-                        "en-US",
+                        locale,
                         detail.shop.timezone,
                       )}{" "}
                       · {candidate.spotsLeft} left

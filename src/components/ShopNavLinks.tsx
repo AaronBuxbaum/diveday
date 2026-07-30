@@ -35,11 +35,15 @@ const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] 
   { label: "Staffing", suffix: "/staffing" },
   { label: "Dive sites", suffix: "/dive-sites" },
   { label: "Courses", suffix: "/courses" },
+  { label: "Reviews", suffix: "/reviews" },
   { label: "Waivers", suffix: "/waivers", gate: "waivers" },
   { label: "Reports", suffix: "/reports", gate: "reports" },
 ];
 
 const moreAdminLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
+  // Promo codes move money, so they sit with the other owner/manager payment
+  // settings rather than in the day-to-day row (H-14).
+  { label: "Promo codes", suffix: "/promos", gate: "reports" },
   { label: "Settings", suffix: "/settings" },
   { label: "Team", suffix: "/settings/team", gate: "team" },
 ];

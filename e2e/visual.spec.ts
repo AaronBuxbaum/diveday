@@ -4,8 +4,8 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * Visual regression coverage. Thirty-nine key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 156 screenshots per run (see
+ * Visual regression coverage. Forty-one key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 164 screenshots per run (see
  * ADR 20260727-self-managed-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -13,7 +13,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 158 screenshots.
+ * via `capturePrint()`. That brings the run to 166 screenshots.
  *
  * Baselines are Playwright's own `toHaveScreenshot()` PNGs, committed to the
  * repo under `e2e/visual.spec.ts-snapshots/`. `capture()` loops over both
@@ -483,6 +483,20 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
+
+        // The moderation queue: published reviews, and the "waiting on you"
+        // card a written review sits in until staff release it
+        // (docs ADR 20260729-verified-diver-reviews).
+        await page.goto("/shop/blue-mantis/reviews");
+        await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await capture(page, "staff-reviews", scheme);
+
+        // Shop-wide discount codes: the create form plus the seeded codes with
+        // their windows and redemption counts
+        // (docs ADR 20260729-shop-promo-codes).
+        await page.goto("/shop/blue-mantis/promos");
+        await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
+        await capture(page, "staff-promos", scheme);
       });
 
       // H-13: the roster's identity gate gets its own test so its capture never

@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { shopOffersNitrox } from "@/lib/rentals";
@@ -31,6 +32,9 @@ export default async function TripPrepPage({
   const { id: tripId } = await params;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
@@ -77,8 +81,8 @@ export default async function TripPrepPage({
           .join(" · ")}
         meta={
           <span>
-            {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
-            {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+            {formatShortDate(trip.startsAt, locale, shop.timezone)},{" "}
+            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
           </span>
         }
         actions={<PrintButton />}

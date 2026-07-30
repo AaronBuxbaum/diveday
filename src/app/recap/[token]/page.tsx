@@ -4,15 +4,18 @@ import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RecapMap } from "@/components/RecapMap";
+import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
-import { capabilityCopy } from "@/lib/capability-copy";
+import { getReviewForBooking } from "@/db/reviews";
+import { requestTranslator } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
-import { startTipAction, uploadRecapPhotoAction } from "./actions";
+import { MAX_REVIEW_COMMENT_LENGTH } from "@/lib/reviews";
+import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
 import { TipAmountPicker } from "./TipAmountPicker";
 
 const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
@@ -90,11 +93,11 @@ export default async function DiveRecapPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ photo?: string; tip?: string }>;
+  searchParams: Promise<{ photo?: string; tip?: string; review?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { photo, tip: tipParam } = await searchParams;
+  const { photo, tip: tipParam, review: reviewParam } = await searchParams;
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
     return (
@@ -114,7 +117,7 @@ export default async function DiveRecapPage({
   }
 
   const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
-  const copy = capabilityCopy(shop.defaultLocale);
+  const { locale, t } = await requestTranslator(shop.defaultLocale);
   // A shop can disconnect Stripe (or lose chargesEnabled) after a tip was
   // already started or paid; canTip alone would then hide the diver's own
   // paid confirmation or an already-open checkout link along with the
@@ -123,11 +126,20 @@ export default async function DiveRecapPage({
   const hasReportableTip =
     tip?.status === "paid" || (tip?.status === "pending" && Boolean(tip.checkoutUrl));
   const showTipSection = canTip || hasReportableTip;
+  const ownReview = await getReviewForBooking(db, bookingId);
+  // Built here rather than as a module constant: the wording is the shop's
+  // language, not the server's.
+  const reviewNotices: Record<string, { tone: "success" | "danger"; text: string }> = {
+    published: { tone: "success", text: t("reviews.savedPublished") },
+    pending: { tone: "success", text: t("reviews.savedPending") },
+    error: { tone: "danger", text: t("reviews.savedError") },
+  };
+  const reviewNotice = reviewParam ? reviewNotices[reviewParam] : undefined;
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
-  const when = formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone);
+  const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const where = sitesSentence(sites);
   const conditions = [
     trip.waterTemperatureC !== null
@@ -150,8 +162,8 @@ export default async function DiveRecapPage({
 
       <EarnedMoment
         className="mt-8"
-        eyebrow={copy.recapEyebrow}
-        title={`${copy.recapHeading}, ${firstName}.`}
+        eyebrow={t("recap.eyebrow")}
+        title={`${t("recap.heading")}, ${firstName}.`}
       >
         <p>
           {where
@@ -161,12 +173,61 @@ export default async function DiveRecapPage({
         </p>
       </EarnedMoment>
 
+      {/* The shop's own rating comes first: it's one tap, it stays on this
+          page, and it's the only review a diver can leave that DiveDay can
+          prove came from someone who was actually on the boat. The off-site
+          ask below it is a second, optional step, not the primary one. */}
+      <section className="mt-8 rounded-xl border border-border bg-surface p-5">
+        <h2 className="text-lg font-semibold">{t("reviews.askHeading")}</h2>
+        <p className="mt-1 text-base text-muted">{t("reviews.askBody")}</p>
+        {reviewNotice ? (
+          <p
+            role={reviewNotice.tone === "danger" ? "alert" : "status"}
+            className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+              reviewNotice.tone === "danger"
+                ? "border-danger/30 bg-danger/10 text-danger"
+                : "border-primary/30 bg-primary/10 text-primary"
+            }`}
+          >
+            {reviewNotice.text}
+          </p>
+        ) : null}
+        {ownReview ? (
+          <p className="mt-3 text-sm text-muted">
+            {t("reviews.yourRating", { rating: ownReview.rating })}
+          </p>
+        ) : null}
+        <form action={submitReviewAction.bind(null, token)} className="mt-3 flex flex-col gap-3">
+          <StarRatingInput
+            legend={t("reviews.ratingLegend")}
+            optionLabel={(rating) => t("reviews.ratingOption", { rating })}
+            defaultValue={ownReview?.rating}
+          />
+          <label htmlFor="review-comment" className="text-sm font-medium">
+            {t("reviews.commentLabel")}
+          </label>
+          <textarea
+            id="review-comment"
+            name="comment"
+            rows={3}
+            maxLength={MAX_REVIEW_COMMENT_LENGTH}
+            defaultValue={ownReview?.comment ?? ""}
+            placeholder={t("reviews.commentPlaceholder")}
+            className={controlClass}
+          />
+          <div>
+            <SubmitButton pendingLabel={t("reviews.submitting")} className={buttonClass()}>
+              {t("reviews.submit")}
+            </SubmitButton>
+          </div>
+        </form>
+      </section>
+
       {shop.reviewUrl ? (
         <section className="mt-8 rounded-xl bg-surface-sunken p-5">
-          <h2 className="text-lg font-semibold">Enjoyed your dive?</h2>
+          <h2 className="text-lg font-semibold">{t("recap.externalReviewHeading")}</h2>
           <p className="mt-1 text-base text-muted">
-            A quick review helps other divers find {shop.name} — and means the world to the crew
-            that took you out today.
+            {t("recap.externalReviewBody", { shop: shop.name })}
           </p>
           <a
             href={shop.reviewUrl}
@@ -174,7 +235,7 @@ export default async function DiveRecapPage({
             rel="noopener"
             className={buttonClass({ size: "cta", className: "mt-4" })}
           >
-            Leave a review
+            {t("recap.externalReviewCta")}
           </a>
         </section>
       ) : null}

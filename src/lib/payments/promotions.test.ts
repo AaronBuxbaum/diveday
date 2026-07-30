@@ -90,3 +90,60 @@ describe("stripe promotion provider", () => {
     expect(await provider.createTripPromotion(request)).toEqual({ status: "failed" });
   });
 });
+
+describe("createShopPromotion", () => {
+  const shopRequest = {
+    stripeAccountId: "acct_123",
+    code: "REEF20",
+    percentOff: 20,
+    name: "Returning divers",
+    expiresAt: null,
+    maxRedemptions: null,
+    idempotencyKey: "shop-promo-1",
+  };
+
+  it("is not_configured without a Stripe key", async () => {
+    const provider = providerWith({}, vi.fn());
+    expect(await provider.createShopPromotion(shopRequest)).toEqual({ status: "not_configured" });
+  });
+
+  it("leaves both bounds unset when the shop set none, rather than inventing one", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ id: "coupon_2" }))
+      .mockResolvedValueOnce(ok({ id: "promo_2" }));
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.createShopPromotion(shopRequest)).toEqual({
+      status: "created",
+      stripeCouponId: "coupon_2",
+      stripePromotionCodeId: "promo_2",
+    });
+
+    const couponForm = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(couponForm.get("name")).toBe("Returning divers");
+    const promoForm = new URLSearchParams(fetchImpl.mock.calls[1][1].body);
+    expect(promoForm.get("code")).toBe("REEF20");
+    expect(promoForm.has("max_redemptions")).toBe(false);
+    expect(promoForm.has("expires_at")).toBe(false);
+  });
+
+  it("passes the bounds through when the shop did set them", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ id: "coupon_2" }))
+      .mockResolvedValueOnce(ok({ id: "promo_2" }));
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    const expiresAt = new Date("2026-09-01T00:00:00Z");
+    await provider.createShopPromotion({ ...shopRequest, expiresAt, maxRedemptions: 25 });
+
+    const promoForm = new URLSearchParams(fetchImpl.mock.calls[1][1].body);
+    expect(promoForm.get("max_redemptions")).toBe("25");
+    expect(promoForm.get("expires_at")).toBe(String(Math.floor(expiresAt.getTime() / 1000)));
+  });
+
+  it("fails on a network error rather than reporting a code that was never minted", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.createShopPromotion(shopRequest)).toEqual({ status: "failed" });
+  });
+});

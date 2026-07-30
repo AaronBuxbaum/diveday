@@ -19,6 +19,7 @@ import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   isRollCallCheckpoint,
@@ -65,6 +66,9 @@ export default async function TripManifestPage({
   const { checkpoint: requestedCheckpoint } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) notFound();
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
@@ -154,13 +158,8 @@ export default async function TripManifestPage({
             {manifest.trip.title}
           </h1>
           <p className="mt-1 text-muted">
-            {formatShortDate(manifest.trip.startsAt, "en-US", shop.timezone)} ·{" "}
-            {formatTimeRangeTz(
-              manifest.trip.startsAt,
-              manifest.trip.endsAt,
-              "en-US",
-              shop.timezone,
-            )}
+            {formatShortDate(manifest.trip.startsAt, locale, shop.timezone)} ·{" "}
+            {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, locale, shop.timezone)}
           </p>
           <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
             The authoritative roster: everyone aboard — divers and crew — with emergency contacts,
@@ -398,7 +397,7 @@ export default async function TripManifestPage({
                                 : "Medical waiver signed"}
                           </span>
                           <span className="mt-0.5 block text-muted">
-                            {formatShortDate(diver.medicalWaiver.at, "en-US", shop.timezone)}
+                            {formatShortDate(diver.medicalWaiver.at, locale, shop.timezone)}
                           </span>
                         </p>
                       ) : null}
@@ -435,9 +434,8 @@ export default async function TripManifestPage({
                     </details>
                     {rc && !rc.implied ? (
                       <p className="mt-3 text-sm text-muted">
-                        {rollCallLabel(rc)}{" "}
-                        {formatDateTimeTz(rc.occurredAt, "en-US", shop.timezone)} by{" "}
-                        {rc.recordedByName}
+                        {rollCallLabel(rc)} {formatDateTimeTz(rc.occurredAt, locale, shop.timezone)}{" "}
+                        by {rc.recordedByName}
                         {rc.note ? ` · ${rc.note}` : ""}
                       </p>
                     ) : impliedNotBoarded ? (
