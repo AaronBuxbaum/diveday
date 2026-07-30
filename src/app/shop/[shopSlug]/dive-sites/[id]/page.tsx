@@ -18,6 +18,12 @@ import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import {
+  depthInUnit,
+  depthToMeters,
+  MAX_ENTERED_DEPTH_METERS,
+  maxEnteredDepth,
+} from "@/lib/depth-units";
 import { splitMediaUrls } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -41,6 +47,9 @@ const siteSchema = z
     marineLifeDescription: z.string().trim().max(1_200),
     difficulty: z.string().trim().max(120),
     depthRange: z.string().trim().max(120),
+    // Typed in the shop's own unit; see the matching guard on the create form.
+    // The real ceiling is applied after the unit is known.
+    maxDepth: z.union([z.literal(""), z.coerce.number().positive().max(1_000)]),
     currentNote: z.string().trim().max(500),
     divePlan: z.string().trim().max(1_200),
     landmarks: z.string().max(4_000),
@@ -74,12 +83,27 @@ export default async function EditDiveSitePage({
   ]);
   if (!site) notFound();
   const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  const depthUnit = shop?.depthUnit ?? "meters";
 
   async function saveAction(formData: FormData) {
     "use server";
     const activeSession = await requireStaffSession();
     const parsed = siteSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}/${id}?error=invalid`);
+    // Depth arrives in whatever unit this shop works in; metres is what's
+    // stored. Re-read the shop rather than trusting a form field for the unit —
+    // a hidden input would let a crafted post store a depth 3.3x off.
+    // `await getDb()`, never the `db` closed over by the page: a server action
+    // serializes what it captures, and handing it a live database client
+    // recurses until the stack blows.
+    const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
+    const maxDepthMeters =
+      parsed.data.maxDepth === ""
+        ? null
+        : depthToMeters(parsed.data.maxDepth, activeShop?.depthUnit ?? "meters");
+    if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
+      redirect(`${back}/${id}?error=invalid`);
+    }
     const specialties = z
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
@@ -107,9 +131,12 @@ export default async function EditDiveSitePage({
         `${back}/${id}?error=${media.reason === "not_configured" ? "images-unconfigured" : "images"}`,
       );
     }
+    // `maxDepth` is the form's unit-relative field, not a column — it becomes
+    // `maxDepthMeters` below, so it must not reach the spread.
+    const { maxDepth: _maxDepth, ...siteFields } = parsed.data;
     const updated = await updateDiveSite(await getDb(), activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
-      ...parsed.data,
+      ...siteFields,
       forecastLatitude: parsed.data.forecastLatitude === "" ? null : parsed.data.forecastLatitude,
       forecastLongitude:
         parsed.data.forecastLongitude === "" ? null : parsed.data.forecastLongitude,
@@ -121,6 +148,7 @@ export default async function EditDiveSitePage({
       requiresNitrox: formData.get("requiresNitrox") === "on",
       difficulty: parsed.data.difficulty,
       depthRange: parsed.data.depthRange,
+      maxDepthMeters,
       currentNote: parsed.data.currentNote,
       divePlan: parsed.data.divePlan,
       landmarks,
@@ -344,6 +372,32 @@ export default async function EditDiveSitePage({
               maxLength={120}
               defaultValue={site.depthRange ?? ""}
               placeholder={t("diveSites.form.depthRangePlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <FieldGrid columns={2} className="gap-y-5">
+          {/* The one depth figure a certification ceiling can be compared
+              against (H-08). Blank simply never warns — this advises, never gates. */}
+          <Field
+            label={t(
+              depthUnit === "feet"
+                ? "diveSites.form.maxDepthFeetLabel"
+                : "diveSites.form.maxDepthMetersLabel",
+            )}
+            hint={t("diveSites.form.maxDepthHint")}
+          >
+            <input
+              name="maxDepth"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={maxEnteredDepth(depthUnit)}
+              step={1}
+              defaultValue={
+                site.maxDepthMeters === null ? "" : depthInUnit(site.maxDepthMeters, depthUnit)
+              }
+              placeholder={depthUnit === "feet" ? "60" : "18"}
               className={controlClass}
             />
           </Field>

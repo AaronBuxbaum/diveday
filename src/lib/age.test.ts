@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { ageOnDate, checkMinimumAge, isPlausibleDateOfBirth, maxPlausibleBirthDate } from "./age";
+import {
+  ageOnDate,
+  birthdayCallout,
+  checkMinimumAge,
+  daysSinceBirthday,
+  daysUntilBirthday,
+  isMinorOnDate,
+  isPlausibleDateOfBirth,
+  maxPlausibleBirthDate,
+} from "./age";
 
 describe("ageOnDate", () => {
   it("counts whole years once the birthday has passed", () => {
@@ -53,6 +62,94 @@ describe("checkMinimumAge", () => {
       minimumAge: 15,
     });
     expect(checkMinimumAge("2011-12-01", 15, "2026-12-15")).toEqual({ status: "meets", age: 15 });
+  });
+});
+
+describe("isMinorOnDate", () => {
+  it("treats 18 as majority, not the diving world's 15", () => {
+    // A 16-year-old holds a full (non-junior) card at 15, but is still a minor
+    // for the guardian-signature question H-21 exists to surface.
+    expect(isMinorOnDate("2010-03-01", "2026-07-24")).toBe(true);
+    expect(isMinorOnDate("2008-07-24", "2026-07-24")).toBe(false);
+  });
+
+  it("stops being true on the eighteenth birthday itself", () => {
+    expect(isMinorOnDate("2008-07-25", "2026-07-24")).toBe(true);
+    expect(isMinorOnDate("2008-07-24", "2026-07-24")).toBe(false);
+  });
+});
+
+describe("daysUntilBirthday", () => {
+  it("is zero on the day itself", () => {
+    expect(daysUntilBirthday("1990-07-24", "2026-07-24")).toBe(0);
+  });
+
+  it("counts forward to a birthday later this year", () => {
+    expect(daysUntilBirthday("1990-07-27", "2026-07-24")).toBe(3);
+  });
+
+  it("rolls into next year once this year's birthday has passed", () => {
+    // Jul 23 has gone; the next one is 364 days out (2027 is not a leap year).
+    expect(daysUntilBirthday("1990-07-23", "2026-07-24")).toBe(364);
+  });
+
+  it("crosses a month and a year boundary", () => {
+    expect(daysUntilBirthday("1990-01-01", "2026-12-30")).toBe(2);
+  });
+
+  it("observes a leap-day birthday on Mar 1 in a common year", () => {
+    expect(daysUntilBirthday("2012-02-29", "2026-02-27")).toBe(2);
+    expect(daysUntilBirthday("2012-02-29", "2028-02-27")).toBe(2);
+  });
+});
+
+describe("daysSinceBirthday", () => {
+  it("is zero on the day itself", () => {
+    expect(daysSinceBirthday("1990-07-24", "2026-07-24")).toBe(0);
+  });
+
+  it("counts back to a birthday earlier this year", () => {
+    expect(daysSinceBirthday("1990-07-21", "2026-07-24")).toBe(3);
+  });
+
+  it("reaches back into last year before this year's birthday arrives", () => {
+    expect(daysSinceBirthday("1990-12-30", "2026-01-02")).toBe(3);
+  });
+});
+
+describe("birthdayCallout", () => {
+  it("says nothing without a date of birth", () => {
+    expect(birthdayCallout(null, "2026-07-24")).toBeNull();
+    expect(birthdayCallout(undefined, "2026-07-24")).toBeNull();
+  });
+
+  it("celebrates the day itself", () => {
+    expect(birthdayCallout("2012-07-24", "2026-07-24")).toEqual({ status: "today" });
+  });
+
+  it("looks ahead across the seven-day window", () => {
+    expect(birthdayCallout("2012-07-27", "2026-07-24")).toEqual({ status: "soon", inDays: 3 });
+    expect(birthdayCallout("2012-07-31", "2026-07-24")).toEqual({ status: "soon", inDays: 7 });
+  });
+
+  it("looks back just as far — a Tuesday birthday still counts on Saturday's boat", () => {
+    expect(birthdayCallout("2012-07-22", "2026-07-24")).toEqual({ status: "recent", daysAgo: 2 });
+    expect(birthdayCallout("2012-07-17", "2026-07-24")).toEqual({ status: "recent", daysAgo: 7 });
+  });
+
+  it("stays quiet past the window in both directions", () => {
+    expect(birthdayCallout("2012-08-01", "2026-07-24")).toBeNull();
+    expect(birthdayCallout("2012-07-16", "2026-07-24")).toBeNull();
+  });
+
+  it("works across a year boundary in both directions", () => {
+    expect(birthdayCallout("2012-01-02", "2025-12-30")).toEqual({ status: "soon", inDays: 3 });
+    expect(birthdayCallout("2012-12-30", "2026-01-02")).toEqual({ status: "recent", daysAgo: 3 });
+  });
+
+  it("honours a caller-supplied window", () => {
+    expect(birthdayCallout("2012-07-27", "2026-07-24", 2)).toBeNull();
+    expect(birthdayCallout("2012-07-22", "2026-07-24", 1)).toBeNull();
   });
 });
 

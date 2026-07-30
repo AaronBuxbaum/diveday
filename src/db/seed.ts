@@ -106,6 +106,18 @@ function dateAt(daysFromNow: number): string {
 }
 
 /**
+ * A birth date chosen so the diver turns exactly `age` on the day `inDays` from
+ * the seeded clock — exact calendar arithmetic, not `dateAt`'s day-count
+ * approximation, because a birthday callout is precisely the boundary-adjacent
+ * case that helper warns against. Anchored to the shop's own timezone so the
+ * rendered age and "turns N in 2 days" stay pixel-stable across visual runs.
+ */
+function birthDateTurning(age: number, inDays: number): string {
+  const wall = utcToWallTime(new Date(nowMs() + inDays * DAY_MS), DEMO_SHOP_TIMEZONE);
+  return `${String(wall.year - age).padStart(4, "0")}-${String(wall.month).padStart(2, "0")}-${String(wall.day).padStart(2, "0")}`;
+}
+
+/**
  * Distinct, clock-anchored `createdAt` stamps for seed rows whose render
  * order depends on insertion order (a trip roster, a diver's card history).
  * Left to the column's `defaultNow()`, every row in the same multi-row
@@ -638,11 +650,16 @@ export async function seedDemoSchedule(
         phone: `+1-305-555-01${String(i + 10).padStart(2, "0")}`,
         emergencyContactName: customer.emergencyContact?.[0] ?? null,
         emergencyContactPhone: customer.emergencyContact?.[1] ?? null,
-        // A couple of dates on file so the H-08 minimum-age gate has something
-        // to demo; most divers deliberately have none, which is the fail-open
-        // case every existing shop starts from. Anchored to the seeded clock so
-        // the rendered age never drifts across visual-regression runs.
-        dateOfBirth: i < 2 ? dateAt(-365 * (28 + i * 5)) : null,
+        // A few dates on file so the H-08 minimum-age gate and the H-21
+        // roster surfaces have something to demo; most divers deliberately have
+        // none, which is the fail-open case every existing shop starts from.
+        // Anchored to the seeded clock so the rendered age never drifts across
+        // visual-regression runs.
+        //
+        // Diver 2 is a 13-year-old with a birthday two days out: one row that
+        // exercises the minor badge, the birthday callout *and* the junior
+        // depth band (12–14 → 18 m) all at once.
+        dateOfBirth: i === 2 ? birthDateTurning(14, 2) : i < 2 ? dateAt(-365 * (28 + i * 5)) : null,
       })),
     )
     .returning();
@@ -1149,6 +1166,7 @@ export async function seedDemoSchedule(
             "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
           difficulty: "beginner",
           depthRange: "6–12 m",
+          maxDepthMeters: 12,
           currentNote: "Usually gentle; the crew confirms the final plan.",
           divePlan:
             "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
@@ -1181,6 +1199,7 @@ export async function seedDemoSchedule(
           "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
         difficulty: "beginner",
         depthRange: "6–12 m",
+        maxDepthMeters: 12,
         currentNote: "Usually gentle; the crew confirms the final plan.",
         divePlan:
           "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
@@ -1209,6 +1228,7 @@ export async function seedDemoSchedule(
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
         difficulty: "advanced",
         depthRange: "18–40 m",
+        maxDepthMeters: 40,
         currentNote: "Open-water current can be strong; the crew confirms the line plan.",
         divePlan:
           "Descend together on the mooring line, tour the exterior flight deck and well deck, then return to the ascent line with reserve gas.",
@@ -1230,6 +1250,7 @@ export async function seedDemoSchedule(
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
         difficulty: "beginner",
         depthRange: "5–8 m",
+        maxDepthMeters: 8,
         currentNote: "Usually gentle; the crew confirms the final plan.",
         divePlan:
           "Arc from the mooring through the bright sand channels, pause at the statue, then return across the shallow coral garden.",
@@ -1252,6 +1273,7 @@ export async function seedDemoSchedule(
           "The hull is a fish apartment block: look into every gap and something is home.",
         difficulty: "intermediate",
         depthRange: "8–15 m",
+        maxDepthMeters: 15,
         currentNote: "Mild, but the site sits in open water — the crew calls the drop.",
         divePlan:
           "Swim the length of the hull from bow to stern along the sand, then return over the plates at 9 meters.",
@@ -1273,6 +1295,7 @@ export async function seedDemoSchedule(
           "The overhangs hide sleeping nurse sharks; check the ceilings, not just the sand.",
         difficulty: "beginner",
         depthRange: "6–14 m",
+        maxDepthMeters: 14,
         currentNote: "Usually gentle; the crew confirms the final plan.",
         divePlan:
           "Drop on the mooring, work the ledges and swim-throughs into the current, then drift back over the coral heads.",
@@ -1298,6 +1321,7 @@ export async function seedDemoSchedule(
           "A resident goliath grouper often holds near the wheelhouse; look into the blue for jacks working the current.",
         difficulty: "advanced",
         depthRange: "15–37 m",
+        maxDepthMeters: 37,
         currentNote: "Can run strong on the surface; the crew calls the line and the drop.",
         divePlan:
           "Descend the mooring to the deck, tour the superstructure and gun mounts, then ascend on reserve gas with a safety stop.",
@@ -1319,6 +1343,7 @@ export async function seedDemoSchedule(
           "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
         difficulty: "beginner",
         depthRange: "5–12 m",
+        maxDepthMeters: 12,
         currentNote: "Usually gentle; the crew confirms the final plan.",
         divePlan:
           "Drift the coral ridge from the mooring, pause over the barrel-shaped heads, then loop back over the sand.",

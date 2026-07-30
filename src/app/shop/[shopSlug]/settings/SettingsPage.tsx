@@ -13,6 +13,7 @@ import { getDb } from "@/db/client";
 import {
   getShopById,
   setShopContact,
+  setShopDepthUnit,
   setShopDockCallMinutes,
   setShopPackingList,
   setShopRentalItems,
@@ -56,6 +57,8 @@ function noticeMessages(
     packing_invalid: { tone: "danger", text: t("settings.main.notice.packingInvalid") },
     dock_saved: { tone: "success", text: t("settings.main.notice.dockSaved") },
     dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    depth_unit_saved: { tone: "success", text: t("settings.main.notice.depthUnitSaved") },
+    depth_unit_invalid: { tone: "danger", text: t("settings.main.notice.depthUnitInvalid") },
     rentals_saved: { tone: "success", text: t("settings.main.notice.rentalsSaved") },
     rental_prices_saved: { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
     rental_prices_invalid: {
@@ -135,6 +138,21 @@ async function savePackingAction(formData: FormData) {
     `/shop/${session.user.shopSlug}/settings`,
     `/shop/${session.user.shopSlug}/settings?notice=packing_saved`,
   );
+}
+
+/**
+ * Whether this shop reads depths in metres or feet. Display and entry only —
+ * every stored depth stays metres, so switching back and forth is lossless and
+ * no site's recorded depth moves.
+ */
+async function saveDepthUnitAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  const parsed = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
+  if (!parsed.success) redirect(`${settings}?notice=depth_unit_invalid`);
+  await setShopDepthUnit(await getDb(), session.user.shopId, parsed.data);
+  revalidateAndRedirect(settings, `${settings}?notice=depth_unit_saved`);
 }
 
 /** How many minutes before departure divers are asked to be at the dock. */
@@ -502,6 +520,29 @@ export default async function PaymentsSettingsPage({
               className={buttonClass()}
             >
               {t("settings.main.dockCall.submit")}
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </section>
+
+      {/* Depth is stored in metres whatever this says; the setting changes only
+          how staff type it in and read it back (H-08). */}
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">{t("settings.main.depthUnit.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.depthUnit.description")}</p>
+        <FieldGrid as="form" action={saveDepthUnitAction} columns={2} className="mt-4">
+          <Field label={t("settings.main.depthUnit.label")}>
+            <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
+              <option value="meters">{t("settings.main.depthUnit.meters")}</option>
+              <option value="feet">{t("settings.main.depthUnit.feet")}</option>
+            </select>
+          </Field>
+          <FieldActions>
+            <SubmitButton
+              pendingLabel={t("settings.main.depthUnit.submitting")}
+              className={buttonClass()}
+            >
+              {t("settings.main.depthUnit.submit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>

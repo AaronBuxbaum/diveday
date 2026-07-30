@@ -25,6 +25,8 @@ export type DiveSiteInput = {
   marineLifeDescription?: string;
   difficulty?: string;
   depthRange?: string;
+  /** Canonical metres, whatever unit the shop typed it in (src/lib/depth-units.ts). */
+  maxDepthMeters?: number | null;
   currentNote?: string;
   divePlan?: string;
   landmarks?: string[];
@@ -100,6 +102,10 @@ export async function updateDiveSite(
       marineLifeDescription: input.marineLifeDescription || null,
       difficulty: input.difficulty || null,
       depthRange: input.depthRange || null,
+      // `?? null` rather than `|| null`: 0 is not a real site depth, but the
+      // distinction still matters — an omitted field clears the column, which
+      // is how a shop takes a depth back off a site.
+      maxDepthMeters: input.maxDepthMeters ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
       landmarks: input.landmarks ?? [],
@@ -140,6 +146,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     marineLifeDescription: source.marineLifeDescription ?? undefined,
     difficulty: source.difficulty ?? undefined,
     depthRange: source.depthRange ?? undefined,
+    maxDepthMeters: source.maxDepthMeters,
     currentNote: source.currentNote ?? undefined,
     divePlan: source.divePlan ?? undefined,
     landmarks: source.landmarks,

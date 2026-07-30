@@ -620,6 +620,9 @@
       "difficultyPlaceholder": "Calm, intermediate, advanced",
       "depthRangeLabel": "Depth range",
       "depthRangePlaceholder": "20–45 ft",
+      "maxDepthMetersLabel": "Maximum depth (metres)",
+      "maxDepthFeetLabel": "Maximum depth (feet)",
+      "maxDepthHint": "(optional · warns when a diver's card doesn't reach it)",
       "currentNoteLabel": "Current and conditions notes",
       "divePlanLabel": "Dive plan",
       "divePlanPlaceholder": "Entry, route, turnaround, and exit notes.",
@@ -1240,6 +1243,12 @@
       "noEmailOnFile": "no email on file",
       "ready": "Ready",
       "needsAttention": "Needs attention",
+      "ageYears": "Age {age}",
+      "minorBadge": "Minor",
+      "depthWarning": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their certification trains for. Not a block: plan the dive shallower, or confirm the instructor is keeping them within limits.",
+      "depthWarningJunior": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their junior certification allows at their age. Not a block: plan the dive shallower, or confirm the instructor is keeping them within limits.",
+      "depthUnitMeters": "m",
+      "depthUnitFeet": "ft",
       "buddyGroupNote": "Buddy-group note:",
       "confirming": "Confirming…",
       "confirmIdentityMessage": "Confirm this booking really is {name}? Only do this once you’ve checked it’s the same person — not someone else sharing the email.",
@@ -1271,6 +1280,10 @@
       "addNoteLabel": "Add a note only staff can see",
       "adding": "Adding…",
       "addPrivateNote": "Add private note"
+    },
+    "celebrations": {
+      "heading": "Celebrations",
+      "description": "Someone on this boat has a birthday. A shout-out at the surface interval costs nothing and gets remembered."
     },
     "manifest": {
       "skipToRollCall": "Skip to roll call",
@@ -1305,6 +1318,8 @@
       "shopTimeLabel": "Shop time: {timezone}",
       "readyToBoard": "Ready to board",
       "blockedBadge": "Blocked",
+      "age": "Age {age}",
+      "minorAge": "Minor · age {age}",
       "emergencyContactLabel": "Emergency contact",
       "notOnFile": "Not on file",
       "rentalFitLabel": "Rental fit",
@@ -1460,6 +1475,8 @@
         "packingInvalid": "Add between one and twelve packing items.",
         "dockSaved": "Dock call time saved for every confirmation and reminder.",
         "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
+        "depthUnitSaved": "Depth unit saved. Recorded depths are unchanged — only how they are shown.",
+        "depthUnitInvalid": "Choose either metres or feet.",
         "rentalsSaved": "Rental catalog saved.",
         "rentalPricesSaved": "Rental prices saved.",
         "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
@@ -1502,6 +1519,15 @@
         "description": "How early divers are asked to arrive before departure — for gear setup, cert checks, and the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip reminder.",
         "label": "Minutes before departure",
         "submit": "Save dock call time",
+        "submitting": "Saving…"
+      },
+      "depthUnit": {
+        "heading": "Depth unit",
+        "description": "Whether your crew reads depths in metres or feet. Depths are always stored in metres, so switching this changes only what you type in and read back — no recorded site depth moves.",
+        "label": "Show depths in",
+        "meters": "Metres (m)",
+        "feet": "Feet (ft)",
+        "submit": "Save depth unit",
         "submitting": "Saving…"
       },
       "paymentsGate": {
@@ -1903,6 +1929,12 @@
     "scheduleTrip": "Schedule a trip"
   },
   "shared": {
+    "birthday": {
+      "label": "Birthday",
+      "today": "today",
+      "soon": "in {days}d",
+      "recent": "{days}d ago"
+    },
     "printButton": {
       "label": "Print / save PDF"
     },

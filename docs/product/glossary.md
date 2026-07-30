@@ -83,6 +83,33 @@ new domain concept, define it here in the same PR.
   certified parent/guardian; 12–14-year-olds reach 18 m (21 m on an AOW deep dive) with any
   certified adult. The restrictions lift at 15. They drive dock-side decisions, so course copy and
   staff surfaces state them rather than implying the adult limits.
+- **Site maximum depth** — `dive_sites.max_depth_meters`, the site's deepest point, stored in
+  **metres always** whatever unit the shop reads. Distinct from `depth_range`, the free-text
+  briefing prose that lives beside it: the number exists solely to be comparable to a
+  certification's depth ceiling. A trip's depth is the deepest site it visits, across the primary
+  site *and* every ordered dive.
+- **Depth ceiling** — how deep a certification trains a diver to go: Open Water 18 m/60 ft,
+  Advanced Open Water 30 m/100 ft, Rescue 30 m (a skills course, not a deeper one), Divemaster and
+  Instructor 40 m — the recreational limit. A verified **Deep** specialty lifts an Open Water diver
+  to 40 m; it can only raise a ceiling, never lower one. A **junior age band** overrides the card
+  outright: 10–11-year-olds are capped at 12 m, 12–14-year-olds at 18 m (21 m on an Advanced card),
+  and the restriction lifts on the 15th birthday, not on any new card. In DiveDay a site deeper
+  than a diver's ceiling is a **warning to staff, never a booking gate** (H-08) — an instructor may
+  deliberately keep a diver shallower than the site's maximum, and that is an ordinary correct
+  dive. No card on file, or no depth on file, produces no warning at all rather than a false one.
+  See [20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md).
+- **Depth unit** — `shops.depth_unit`, whether a shop's staff read depths in metres or feet.
+  Display and entry only: storage is canonical metres, so switching it moves no stored number.
+  Florida crews say "sixty feet"; every agency standard DiveDay encodes is published in metres,
+  which is why the stored unit and the default are metric.
+- **Minor** — a diver under 18 on the trip date. Eighteen, not the diving world's 15: the flag
+  exists because a minor's liability waiver may need a guardian signature, a question of legal
+  majority in the shop's jurisdiction (Florida at launch, H-01). The diving restrictions on
+  under-15s are a separate rule and travel through the junior depth bands above, so the two never
+  have to agree. Shown on the roster and manifest so a captain reading the boarding list can see it
+  without opening a profile (H-21). **A minor can still sign their own waiver solo** — accepted
+  as-is for now and explicitly flagged for the H-01–H-03 waiver legal review, not silently left
+  open.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
   OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence

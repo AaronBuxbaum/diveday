@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
@@ -24,8 +25,8 @@ import {
   reviewSpecialtyCertification,
   upsertTripRequirements,
 } from "./readiness";
-import { specialtyCertifications } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { diveSites, specialtyCertifications } from "./schema";
+import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function readinessContext() {
@@ -578,5 +579,84 @@ describe("trip readiness (in-memory PGlite)", () => {
     ).toBe(true);
     const remaining = await listShopSpecialtyCertifications(db, shop.id);
     expect(remaining.map((row) => row.certification.id)).not.toContain(card.id);
+  });
+});
+
+describe("depth advisory (H-08 — a warning, never a gate)", () => {
+  /**
+   * The seeded two-tank trip visits more than one site, so these helpers set
+   * every site the shop owns — otherwise a sibling site's depth leaks into the
+   * result and the assertion is about the wrong number.
+   */
+  async function withAllSiteDepths(meters: number | null) {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await db.update(diveSites).set({ maxDepthMeters: meters }).where(eq(diveSites.shopId, shop.id));
+    // A verified Open Water card, so there is a ceiling (18 m) to measure at all.
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-DEPTH-OW",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+    const rows = await listTripReadiness(db, shop.id, reef.id);
+    const diver = rows.find((row) => row.booking.id === rosterEntry.booking.id);
+    if (!diver) throw new Error("demo booking missing from readiness");
+    return { db, shop, reef, rosterEntry, diver };
+  }
+
+  it("stays quiet when every site on the trip is within the diver's ceiling", async () => {
+    const { diver } = await withAllSiteDepths(12);
+    expect(diver.depthAdvisory).toMatchObject({ status: "within", siteMaxDepthMeters: 12 });
+  });
+
+  it("warns when the trip goes deeper than the card trains for", async () => {
+    const { diver } = await withAllSiteDepths(30);
+    expect(diver.depthAdvisory).toMatchObject({
+      status: "exceeds",
+      limitMeters: 18,
+      siteMaxDepthMeters: 30,
+      basis: "certification",
+    });
+  });
+
+  it("never turns that warning into a blocker — the diver still boards", async () => {
+    // The whole decision in one assertion: a 30 m trip under an 18 m card
+    // produces an advisory and *no* readiness blocker. An instructor may be
+    // keeping this diver shallower on purpose.
+    const { diver } = await withAllSiteDepths(30);
+    expect(diver.depthAdvisory.status).toBe("exceeds");
+    expect(diver.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+  });
+
+  it("says nothing at all when no site on the trip has a depth on file", async () => {
+    const { diver } = await withAllSiteDepths(null);
+    expect(diver.depthAdvisory).toEqual({ status: "unknown" });
+  });
+
+  it("takes the deepest site the trip visits, not just the first", async () => {
+    // The two-tank case the naive version gets wrong: dive one is shallow and
+    // dive two is the deep one, so reading only the primary site goes quiet on
+    // exactly the trip that needed the warning.
+    const { db, shop, reef, rosterEntry } = await withAllSiteDepths(10);
+    const dives = await listTripDives(db, shop.id, reef.id);
+    const deeper = dives
+      .map(({ dive }) => dive.diveSiteId)
+      .find((id) => id && id !== reef.diveSiteId);
+    if (!deeper) throw new Error("seeded two-tank trip should visit a second site");
+    await db
+      .update(diveSites)
+      .set({ maxDepthMeters: 35 })
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.id, deeper)));
+
+    const rows = await listTripReadiness(db, shop.id, reef.id);
+    const diver = rows.find((row) => row.booking.id === rosterEntry.booking.id);
+    expect(diver?.depthAdvisory).toMatchObject({ status: "exceeds", siteMaxDepthMeters: 35 });
   });
 });

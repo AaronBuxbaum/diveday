@@ -22,6 +22,7 @@ import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
+import { birthdayText } from "@/i18n/birthday-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -439,6 +440,23 @@ export default async function TripManifestPage({
                           ? t("trips.manifest.readyToBoard")
                           : t("trips.manifest.blockedBadge")}
                       </Badge>
+                      {/* The captain reading the boarding list has no other way
+                          to know a booked diver is 12 (H-21). Words, not colour
+                          alone — this is read in sunlight on a moving boat. */}
+                      {diver.age !== null && diver.age !== undefined ? (
+                        <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
+                          {diver.minor
+                            ? t("trips.manifest.minorAge", { age: diver.age })
+                            : t("trips.manifest.age", { age: diver.age })}
+                        </Badge>
+                      ) : null}
+                      {diver.birthday ? (
+                        <Badge tone="primary">
+                          <span aria-hidden="true">🎂</span>
+                          <span className="sr-only">{t("shared.birthday.label")}</span>
+                          <span className="ms-1">{birthdayText(t, diver.birthday)}</span>
+                        </Badge>
+                      ) : null}
                       <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">

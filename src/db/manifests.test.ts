@@ -462,3 +462,51 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
   });
 });
+
+describe("age on the crew's boarding list (H-21)", () => {
+  it("carries age, minor status, and a birthday for divers with a date on file", async () => {
+    const { db, shop, reef } = await manifestContext();
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    if (!manifest) throw new Error("expected a manifest");
+
+    // The seed gives a handful of divers a date of birth, including one
+    // 13-year-old with a birthday two days out (src/db/seed.ts).
+    const withAge = manifest.divers.filter((diver) => diver.age !== null);
+    expect(withAge.length).toBeGreaterThan(0);
+
+    const minors = manifest.divers.filter((diver) => diver.minor);
+    expect(minors.length).toBeGreaterThan(0);
+    for (const minor of minors) {
+      expect(minor.age).not.toBeNull();
+      expect(minor.age as number).toBeLessThan(18);
+    }
+
+    const celebrating = manifest.divers.filter((diver) => diver.birthday);
+    expect(celebrating.length).toBeGreaterThan(0);
+    expect(celebrating[0].birthday).toMatchObject({ status: "soon" });
+  });
+
+  it("stays silent for divers the shop has never asked — no 'unknown age' down the boat", async () => {
+    const { db, shop, reef } = await manifestContext();
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    if (!manifest) throw new Error("expected a manifest");
+
+    const withoutDate = manifest.divers.filter((diver) => diver.age === null);
+    expect(withoutDate.length).toBeGreaterThan(0);
+    for (const diver of withoutDate) {
+      expect(diver.minor).toBe(false);
+      expect(diver.birthday).toBeNull();
+    }
+  });
+
+  it("never lets age become a boarding gate", async () => {
+    // A minor is a fact the crew is told, not a refusal. Nothing about being
+    // under 18 may add a readiness blocker of its own.
+    const { db, shop, reef } = await manifestContext();
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    if (!manifest) throw new Error("expected a manifest");
+    for (const diver of manifest.divers.filter((entry) => entry.minor)) {
+      expect(diver.readiness.blockers.map((blocker) => blocker.code)).not.toContain("minor");
+    }
+  });
+});

@@ -26,6 +26,7 @@ import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
+import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { RecapPhotoGallery } from "../_components/RecapPhotoGallery";
 import { RosterSection } from "../_components/RosterSection";
@@ -247,6 +248,10 @@ export default async function TripGuestsPage({
         />
       )}
 
+      {/* Sits above the roster so the good news is read before the blockers
+          (H-21). Renders nothing when nobody on board is celebrating. */}
+      <CelebrationsSection roster={roster} tripDate={tripDateIso} locale={locale} />
+
       <RosterSection
         locale={locale}
         shopSlug={shopSlug}
@@ -269,6 +274,8 @@ export default async function TripGuestsPage({
         notesByBooking={notesByBooking}
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}
+        depthUnit={shop.depthUnit}
+        tripDate={tripDateIso}
       />
 
       <section className="mt-10">

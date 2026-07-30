@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
@@ -17,6 +19,7 @@ import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import { bookings, people, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
+import { getShopById } from "./shops";
 import { getTripRoster, getTripWithBooked } from "./trips";
 
 async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
@@ -106,14 +109,19 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const [roster, readinessRows, certified, fitByBooking, crew, ...rollCalls] = await Promise.all([
-    getTripRoster(db, shopId, tripId),
-    listTripReadiness(db, shopId, tripId),
-    verifiedNitroxPersonIds(db, shopId),
-    rentalFitByBooking(db, shopId, tripId),
-    listTripCrew(db, shopId, tripId),
-    ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
-  ]);
+  const [shop, roster, readinessRows, certified, fitByBooking, crew, ...rollCalls] =
+    await Promise.all([
+      getShopById(db, shopId),
+      getTripRoster(db, shopId, tripId),
+      listTripReadiness(db, shopId, tripId),
+      verifiedNitroxPersonIds(db, shopId),
+      rentalFitByBooking(db, shopId, tripId),
+      listTripCrew(db, shopId, tripId),
+      ...checkpoints.map((checkpoint) =>
+        listLatestRollCallByBooking(db, shopId, tripId, checkpoint),
+      ),
+    ]);
+  if (!shop) return null;
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
   );
@@ -123,6 +131,9 @@ export async function getTripManifests(
   const medicalByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, medicalWaiverMark(row.waiver)] as const),
   );
+  // Age, minor status, and birthdays are all measured on the day the boat
+  // sails, in the shop's own timezone — not "today" wherever the server is.
+  const tripDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
   const tripInput = {
     id: trip.id,
     title: trip.title,
@@ -141,6 +152,11 @@ export async function getTripManifests(
       rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
+      // Null/false whenever the shop holds no date of birth, so the captain's
+      // list stays quiet rather than showing "unknown" down the whole boat.
+      age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
+      minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
+      birthday: birthdayCallout(person.dateOfBirth, tripDate),
     };
   });
   // Carry a not-boarded result forward across the ordered checkpoints so an
