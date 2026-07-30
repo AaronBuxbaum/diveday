@@ -16,7 +16,7 @@ import { savePathAction } from "../actions";
 export const metadata: Metadata = { title: "Edit a path — DiveDay" };
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "That didn't save — give the path a name and try again.",
+  invalid: "That didn’t save — give the path a name and try again.",
   duplicate: "You already have a path with that name.",
   "not-authorized": "Building paths is limited to owners, managers, and instructors.",
 };
@@ -48,7 +48,7 @@ export default async function EditCoursePathPage({
       <ShopPageHeader
         eyebrow="Catalog"
         title={path.title}
-        description="Drop courses in the order a diver would take them. Nothing here decides who may enrol — that stays with each course's own certification requirement."
+        description="Drop courses in the order a diver would take them. Nothing here decides who may enrol — that stays with each course’s own certification requirement."
         actions={
           <Link
             href={`/shop/${shopSlug}/courses/paths`}
@@ -72,8 +72,8 @@ export default async function EditCoursePathPage({
       {hiddenSteps.length > 0 ? (
         <ShopNotice tone="warning" className="mb-6">
           {hiddenSteps.length === 1
-            ? `${hiddenSteps[0].course.title} is hidden in your catalog, so divers won't be shown that step.`
-            : `${hiddenSteps.length} courses on this path are hidden in your catalog, so divers won't be shown those steps.`}
+            ? `${hiddenSteps[0].course.title} is hidden in your catalog, so divers won’t be shown that step.`
+            : `${hiddenSteps.length} courses on this path are hidden in your catalog, so divers won’t be shown those steps.`}
         </ShopNotice>
       ) : null}
 

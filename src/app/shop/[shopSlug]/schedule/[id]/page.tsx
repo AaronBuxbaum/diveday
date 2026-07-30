@@ -10,7 +10,7 @@ import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listCoursePaths, nextPathStep } from "@/db/course-paths";
-import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
+import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { getBookingPayment } from "@/db/payments";
 import {
@@ -154,17 +154,18 @@ export default async function TripDetailPage({
     confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
     waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
   ]);
-  const diveBriefings = await Promise.all(
-    tripDives.map(async ({ dive, diveSite }) => {
-      const [creatures, moments] = diveSite
-        ? await Promise.all([
-            listDiveSiteCreatures(db, shop.id, diveSite.id),
-            listPublishedDiveSiteMoments(db, shop.id, diveSite.id),
-          ])
-        : [[], []];
-      return { dive, diveSite, creatures, moments };
-    }),
+  // Two queries for the whole day's briefings, not two per dive.
+  const briefingExtras = await listDiveSiteBriefingExtras(
+    db,
+    shop.id,
+    tripDives.map(({ diveSite }) => diveSite?.id).filter((id): id is string => Boolean(id)),
   );
+  const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
+    dive,
+    diveSite,
+    creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+    moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
+  }));
   // Pay-at-booking is offered only when the shop's own Stripe account can
   // take a charge, the trip carries a price, and a canonical origin exists
   // for the return links; otherwise the flow is book-now-pay-later as before.

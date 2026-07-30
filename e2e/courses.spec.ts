@@ -26,7 +26,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
@@ -197,7 +197,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You're on the boat, Ravi/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Ravi/ })).toBeVisible();
   });
 
   // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
@@ -246,7 +246,7 @@ test.describe("staff", () => {
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
       await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-      await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
     };
 
     // Two party bookings fill the 8-seat ratio (6 + 2); the trip's own

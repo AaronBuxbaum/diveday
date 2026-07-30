@@ -4179,6 +4179,27 @@ export async function resetDemoSchedule(
   await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
 
+  // The waiver is the same class of fixture. Editing the release text saves a
+  // *new version* rather than mutating the signed one, so a spec that edits it
+  // leaves the shop on version 2 — and the next spec asserting "Version 1" or
+  // reading the default body sees the previous test's edit instead. The signed
+  // records referencing these rows were cleared at the top of this reset, so
+  // the templates can be replaced outright. The title is immutable in the UI,
+  // so the existing one is the shop's own (the canonical demo and a minted one
+  // seed different titles) and is what gets restored.
+  const [existingWaiver] = await db
+    .select({ title: waiverTemplates.title })
+    .from(waiverTemplates)
+    .where(eq(waiverTemplates.shopId, shopId))
+    .limit(1);
+  await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
+  await db.insert(waiverTemplates).values({
+    shopId,
+    title: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE,
+    version: 1,
+    body: DEFAULT_WAIVER_BODY,
+  });
+
   await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }
 

@@ -244,7 +244,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // The confirmation heading greets by first name only ("...boat, Late! 🤿").
     await expect(
       page.getByRole("heading", {
-        name: new RegExp(`You're on the boat, ${diverName.split(" ")[0]}`),
+        name: new RegExp(`You’re on the boat, ${diverName.split(" ")[0]}`),
       }),
     ).toBeVisible();
 

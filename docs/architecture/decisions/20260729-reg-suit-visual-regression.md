@@ -12,13 +12,13 @@ We previously migrated from Playwright's `toHaveScreenshot()` to BackstopJS for 
 
 Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin` for visual regression:
 
-- Playwright tests run via `e2e/visual.spec.ts` and capture raw screenshots directly to `.reg/actual/` using `page.screenshot()`, running within the standard parallel worker fleet.
+- Playwright tests run via `e2e/visual.spec.ts` and capture raw screenshots with `page.screenshot()` into `e2e/screenshots/` (gitignored, and `regconfig.json`'s `actualDir`), running within the standard parallel worker fleet. Nothing in that spec asserts, so a visual change never fails a Playwright test — it appears as a diff in the reg-suit report.
 - `reg-suit` manages comparing the current screenshots against the parent git commit's baselines downloaded from AWS S3, generating an interactive HTML report, and publishing the actual screenshots back to S3.
 - Infrastructure is managed via AWS CDK in TypeScript under the `infra/` directory (precompiled to JS on deployment).
-- S3 configuration is set in `regconfig.json`, resolving the bucket name dynamically from the `$REG_S3_BUCKET_NAME` environment variable.
+- S3 configuration is set in `regconfig.json`, resolving the bucket name dynamically from the `$REG_SUIT_S3_BUCKET_NAME` environment variable, with credentials from `$REG_SUIT_AWS_ACCESS_KEY_ID` / `$REG_SUIT_AWS_SECRET_ACCESS_KEY` and the PR comment from `$REG_SUIT_GITHUB_CLIENT_ID`.
 - Dev dependencies installed: `reg-suit`, `reg-publish-s3-plugin`, `reg-keygen-git-hash-plugin`, `aws-cdk`, `aws-cdk-lib`, and `constructs`.
 - Add scripts to `package.json`:
-  - `pnpm visual`: Runs Playwright visual screenshot generation followed by `reg-suit run`.
+  - `pnpm visual`: Runs Playwright visual screenshot generation followed by `reg-suit run`. There is deliberately no `visual:update` counterpart — baselines are keyed to git commits in S3, so the way an intentional change becomes the next baseline is by merging it, not by regenerating anything locally.
   - `pnpm infra:deploy`: Deploys the AWS CDK infrastructure stack (`DiveDay`) using `tsx` on-the-fly.
   - `pnpm infra:synth`: Synthesizes the CDK infrastructure template.
   - `pnpm infra:diff`: Compares local CDK modifications against deployed resources.
@@ -32,5 +32,5 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
 ## Consequences
 
 - **Git repository clean:** Visual baselines are stored externally in S3, avoiding repository size growth.
-- **AWS S3 dependency:** Running the visual regression suite requires AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) and an S3 bucket configured via `$REG_S3_BUCKET_NAME`.
+- **AWS S3 dependency:** Running the visual regression suite requires `$REG_SUIT_AWS_ACCESS_KEY_ID`, `$REG_SUIT_AWS_SECRET_ACCESS_KEY`, and an S3 bucket named by `$REG_SUIT_S3_BUCKET_NAME` (all set from repository secrets in `.github/workflows/ci.yml`). Without them `pnpm visual` still captures the screenshots; only the comparison step needs the bucket.
 - **Fast runtimes:** Parallel screenshot capture in Playwright coupled with `reg-suit`'s fast image comparison engine ensures quick feedback loops.

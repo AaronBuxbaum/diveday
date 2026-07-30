@@ -34,7 +34,7 @@ test.describe("staff-prepared trip", () => {
     // Same frozen-clock suffix convention as the trip title above.
     await page.getByLabel("Email", { exact: true }).fill(`nemo-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
-    await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
 
     // The confirmation hands the diver their readiness link — follow it.
     await page.getByRole("link", { name: /readiness page/ }).click();

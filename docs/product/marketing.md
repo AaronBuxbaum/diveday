@@ -12,7 +12,7 @@ step-by-step editing procedure is the `marketing-page` skill.
 
 **These pages are product surface.** DiveDay is developed exclusively by AI sessions, so marketing
 has no separate team, tooling, or CMS: copy is code, reviewed like code, tested like code
-(`e2e/marketing.spec.ts`, `backstop.config.cjs`), and governed by this doc the same way
+(`e2e/marketing.spec.ts`, and the marketing captures in `e2e/visual.spec.ts`), and governed by this doc the same way
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
 

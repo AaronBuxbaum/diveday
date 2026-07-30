@@ -15,9 +15,9 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   page,
   request,
 }) => {
-  // Public opt-in, a staff sign-in, and two round trips through the send
-  // action all in one flow — same reasoning as Backstop's heavier
-  // multi-step tests for the suite's 15s default.
+  // Public opt-in, a staff sign-in, and two round trips through the send action
+  // all in one flow — the suite's 15s default is sized for a single real flow,
+  // not a chain of them.
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByLabel("Name").fill("Nora Quinn");
@@ -25,7 +25,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
   await page.locator('input[name="availableFrom"]').fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You're on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
@@ -62,7 +62,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await page.getByLabel("Name").fill("Priya Shah");
   await page.getByLabel("Email").fill("priya.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You're on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");

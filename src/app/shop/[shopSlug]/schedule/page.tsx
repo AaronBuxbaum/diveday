@@ -86,13 +86,13 @@ export async function generateMetadata({
  */
 const BUILDER_NOTICES: Record<string, { tone: "success" | "danger" | "warning"; message: string }> =
   {
-    added: { tone: "success", message: "It's on the board." },
+    added: { tone: "success", message: "It’s on the board." },
     moved: { tone: "success", message: "Moved." },
     copied: { tone: "success", message: "Copied — the new departure has no divers or crew yet." },
     removed: { tone: "success", message: "Taken off the board." },
     invalid: {
       tone: "danger",
-      message: "That didn't save — check the date, times, and seats, then try again.",
+      message: "That didn’t save — check the date, times, and seats, then try again.",
     },
     "end-before-start": {
       tone: "danger",
@@ -105,7 +105,7 @@ const BUILDER_NOTICES: Record<string, { tone: "success" | "danger" | "warning"; 
     "not-found": { tone: "danger", message: "That departure is no longer on the board." },
     "not-scheduled": {
       tone: "warning",
-      message: "A cancelled trip can't be moved. Reinstate it from its own page first.",
+      message: "A cancelled trip can’t be moved. Reinstate it from its own page first.",
     },
     "already-sailed": {
       tone: "warning",
@@ -115,7 +115,7 @@ const BUILDER_NOTICES: Record<string, { tone: "success" | "danger" | "warning"; 
     "has-roster": {
       tone: "warning",
       message:
-        "Divers have booked this departure, so it can't be deleted. Cancel it from its own page — that keeps the roster and the refund story.",
+        "Divers have booked this departure, so it can’t be deleted. Cancel it from its own page — that keeps the roster and the refund story.",
     },
   };
 

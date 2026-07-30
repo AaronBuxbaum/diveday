@@ -7,6 +7,34 @@ lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Schedule builder, catalog paths, and the diver-copy completion (delivered 2026-07-30)
+
+- **The schedule *is* the builder** — staff add a departure inline under any day, slide one to
+  another day or time, copy it forward, or take an untouched one off, without leaving
+  `/shop/[shopSlug]/schedule`. A move carries a multi-day course's whole shape; a copy takes the
+  dive and none of the day (no roster, crew, or conditions); a removal refuses a departure anyone
+  has booked, waitlisted, or counted heads against, and names which. Crew shows on each row, so the
+  separate read-only staff list and staff schedule board are gone
+  ([schedule-builder-and-course-paths](../architecture/decisions/20260730-schedule-builder-and-course-paths.md)).
+- **Certification paths in the catalog** — a shop defines the order it walks divers through its own
+  courses with an interactive builder at `/shop/[shopSlug]/courses/paths/[pathSlug]`: pick from the
+  catalog, reorder, annotate each rung, watch the diver-facing trail rebuild live. Divers read it on
+  the public course page, and it replaces the title-matching guess that decided what to suggest
+  after a cert-blocked booking. Guidance, never a gate. Included in the shop's data export.
+- **The diver-facing surface is fully translated** — trip page, course page, schedule calendar, and
+  the waiver/readiness/recap capability pages all read from `src/i18n/locales/<locale>/diver.json`
+  in English and Spanish, including the dock-day timeline and site-fit readings that used to return
+  English prose out of `src/lib`. Staff copy remains inline English (still a stated gap).
+- **Fewer round trips on the two hottest pages** — Today asked the readiness engine once per
+  departure (about ten queries each, so ~60 to render a six-departure morning) and now asks once for
+  the whole window; the public trip page asked per dive for a site's creatures and moments and now
+  asks once for the day. Median server response for Today on the seeded demo: 263 ms → 165 ms
+  ([performance-budgets](../architecture/performance-budgets.md)).
+- **The diver trip page actually server-rendered again** — `DiverIntlProvider` passed next-intl only
+  `locale` and `messages`, so the provider reached for a request config this app deliberately does
+  not install, threw during the server render, and dropped every diver trip page to a blank
+  client-only 200. Fixed by passing every config prop explicitly.
+
 ## Growth layer: reviews, discounts, SEO, and languages (delivered 2026-07-29)
 
 - **Verified diver reviews** — a diver rates their day (and optionally writes) from their own

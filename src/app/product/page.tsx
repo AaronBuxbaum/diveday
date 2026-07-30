@@ -11,6 +11,7 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { productCapabilityIndex } from "@/lib/marketing";
 
 export const metadata: Metadata = {
   title: "Product — booking to head count | DiveDay",
@@ -147,6 +148,44 @@ export default function ProductPage() {
           </div>
         </section>
 
+        <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                Getting paid
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                The money runs through your Stripe account, not ours.
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-muted">
+                Divers pay when they book, or leave a deposit and settle the balance at the dock.
+                Staff raise an invoice at the counter for a trip, a course, rentals, nitrox, or a
+                retail line. When a diver cancels inside the window you published, the refund goes
+                back automatically — and when they don&apos;t, the page says so before they commit
+                rather than after.
+              </p>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="rounded-xl border border-border bg-surface p-5 sm:p-6">
+                <h3 className="font-semibold leading-6">Your account, your money</h3>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  Payouts, disputes, and history stay in the Stripe account you already control.
+                  DiveDay never sits between you and the payment — and there is no per-booking cut
+                  on top of the flat price.
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-surface p-5 sm:p-6">
+                <h3 className="font-semibold leading-6">Priced before they board</h3>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  Payment is part of the same readiness answer as the waiver and the card, so
+                  &ldquo;are they ready?&rdquo; means all of it. Nobody boards on an assumption that
+                  someone else already settled up.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="border-t border-border bg-surface">
           <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
             <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
@@ -191,6 +230,43 @@ export default function ProductPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-border bg-surface">
+          <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+            <div className="max-w-2xl">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                Everything in the box
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                The whole list, plainly.
+              </h2>
+              <p className="mt-4 text-lg leading-8 text-muted">
+                No tiers, no add-ons, nothing here held back for a bigger plan. Every line is
+                something you can go and do in the demo right now — open it in another tab and check
+                us on any of them.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
+              {productCapabilityIndex.map((group) => (
+                <section key={group.area}>
+                  <h3 className="text-xs font-semibold tracking-widest text-primary uppercase">
+                    {group.area}
+                  </h3>
+                  <ul className="mt-4 space-y-2.5 text-sm leading-6 text-muted">
+                    {group.items.map((item) => (
+                      <li key={item} className="flex gap-2.5">
+                        <span aria-hidden="true" className="font-semibold text-primary">
+                          ✓
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
             </div>
           </div>
         </section>

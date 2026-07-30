@@ -55,7 +55,7 @@ test.describe("refunds", () => {
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule");

@@ -37,7 +37,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   const comment = "The crew found us a nurse shark under the ledge.";
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await page.getByRole("radio", { name: "4 out of 5 stars" }).check();
-  await page.getByLabel("Anything you'd tell another diver?").fill(comment);
+  await page.getByLabel("Anything you’d tell another diver?").fill(comment);
   await page.getByRole("button", { name: "Leave my review" }).click();
   await expect(
     page.getByText("Thanks — the shop will read your words before they go up."),

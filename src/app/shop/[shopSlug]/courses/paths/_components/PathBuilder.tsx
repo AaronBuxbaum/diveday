@@ -167,7 +167,7 @@ export function PathBuilder({
             description={
               atCap
                 ? `A path holds up to ${MAX_PATH_STEPS} courses.`
-                : "Only courses that aren't already on this path are listed."
+                : "Only courses that aren’t already on this path are listed."
             }
           >
             <div className="flex flex-wrap items-center gap-2">

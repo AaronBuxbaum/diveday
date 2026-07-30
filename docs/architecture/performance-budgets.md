@@ -26,6 +26,27 @@ build, gzips the shared chunks, and fails if the total exceeds the budget. CI ru
 `checks` job right after `pnpm build`. Run without a build it prints how to produce one and exits
 zero, so it never fails a checkout that simply hasn't built.
 
+## Not budgeted, but watched: server round trips per page
+
+The budget above governs bytes. The other half of "slow at the dock" is how many database round
+trips a page makes before it can answer, and no check enforces that — it is a review expectation,
+recorded here so it is at least written down.
+
+The pattern that keeps reappearing is a loop that queries per row. Two measured examples, both
+fixed 2026-07-30:
+
+- **Today** called the readiness engine once per departure in the window. Each call is about ten
+  queries of its own, so a six-departure morning was roughly sixty round trips to render the shop's
+  most-visited page. `listTripsReadiness` answers for every trip at once: median server response on
+  the seeded demo went from **263 ms to 165 ms**.
+- **The public trip page** asked for a dive site's creatures and moments once per dive — six round
+  trips on a three-tank day, on the page a diver reaches straight from a marketing link.
+  `listDiveSiteBriefingExtras` covers any number of dives in two.
+
+When you add a query inside a `.map()` over rows, ask for the batched form instead. `src/db` already
+carries several (`listTripsReadiness`, `tripScheduleDayCounts`, `tripCrewByTrip`,
+`listDiveSiteBriefingExtras`); adding one more is cheaper than the round trips.
+
 ## When the budget fails
 
 The shared floor regressed. In order of preference:

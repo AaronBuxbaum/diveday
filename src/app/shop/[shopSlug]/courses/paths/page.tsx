@@ -14,7 +14,7 @@ import { createPathAction, deletePathAction, setPathVisibilityAction } from "./a
 export const metadata: Metadata = { title: "Certification paths — DiveDay" };
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "That didn't save — give the path a name and try again.",
+  invalid: "That didn’t save — give the path a name and try again.",
   duplicate: "You already have a path with that name.",
   "not-authorized": "Building paths is limited to owners, managers, and instructors.",
 };
@@ -45,7 +45,7 @@ export default async function CoursePathsPage({
       <ShopPageHeader
         eyebrow="Catalog"
         title="Certification paths"
-        description="The order you'd walk a diver through your courses. A path is guidance, not a gate — it never changes who may enrol in anything."
+        description="The order you’d walk a diver through your courses. A path is guidance, not a gate — it never changes who may enrol in anything."
         actions={
           <Link
             href={`/shop/${shopSlug}/courses`}
@@ -140,7 +140,7 @@ export default async function CoursePathsPage({
         <section className="mt-8 rounded-2xl border border-border bg-surface p-5 shadow-sm">
           <h2 className="font-semibold">Start a new path</h2>
           <p className="mt-1 text-sm text-muted">
-            Name it the way a diver would ask for it. You'll add the courses next.
+            Name it the way a diver would ask for it. You’ll add the courses next.
           </p>
           <FieldGrid as="form" action={create} columns={1} className="mt-4 gap-y-4">
             <Field label="Path name">

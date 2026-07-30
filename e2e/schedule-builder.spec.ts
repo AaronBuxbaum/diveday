@@ -34,7 +34,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Returns").fill("13:00");
     await page.getByLabel("Seats").fill("8");
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toContainText("It's on the board.");
+    await expect(page.getByRole("status")).toContainText("It’s on the board.");
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
     await expect(row.getByText("0/8")).toBeVisible();

@@ -85,10 +85,11 @@ the full suite locally with identical pass counts across repeated runs.
   `e2e/visual.spec.ts` capture each on-screen surface at light/dark ×
   phone/desktop and the two dock surfaces in print mode. Nothing is masked: the server clock is
   pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
-  clock-derived text is pixel-stable and a regression in a date remains visible. Diffs and report
-  are handled by `reg-suit` and published to S3.
-  CI runs the visual suite, generates snapshots in `.reg/actual`, and runs `reg-suit run` to
-  compare against previous S3 baselines and upload the new baselines and HTML report.
+  clock-derived text is pixel-stable and a regression in a date remains visible. Nothing in that
+  spec asserts — it writes raw PNGs into `e2e/screenshots/` (gitignored) — so a visual change never
+  shows up as a failed Playwright test. `pnpm visual` runs the capture and then `reg-suit run`,
+  which diffs against the S3 baseline for the parent commit and publishes the run and its HTML
+  report. There is no local baseline to update: merging is what makes a change the next baseline.
 
 ## Adding a test
 

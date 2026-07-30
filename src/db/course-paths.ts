@@ -182,20 +182,25 @@ export async function listCoursePaths(
     .orderBy(asc(coursePaths.title));
   if (paths.length === 0) return [];
 
-  const stepRows = await db
+  const byPath = await stepsForPaths(
+    db,
+    paths.map((path) => path.id),
+  );
+  return paths.map((path) => ({ ...path, steps: byPath.get(path.id) ?? [] }));
+}
+
+/** Ordered rungs for the given paths, joined to their courses, grouped by path. */
+async function stepsForPaths(db: AppDb, pathIds: string[]): Promise<Map<string, CoursePathStep[]>> {
+  const byPath = new Map<string, CoursePathStep[]>();
+  if (pathIds.length === 0) return byPath;
+  const rows = await db
     .select({ step: coursePathSteps, course: courses })
     .from(coursePathSteps)
     .innerJoin(courses, eq(courses.id, coursePathSteps.courseId))
-    .where(
-      inArray(
-        coursePathSteps.pathId,
-        paths.map((path) => path.id),
-      ),
-    )
+    .where(inArray(coursePathSteps.pathId, pathIds))
     .orderBy(asc(coursePathSteps.position));
 
-  const byPath = new Map<string, CoursePathStep[]>();
-  for (const row of stepRows) {
+  for (const row of rows) {
     const list = byPath.get(row.step.pathId) ?? [];
     list.push({
       id: row.step.id,
@@ -214,7 +219,7 @@ export async function listCoursePaths(
     });
     byPath.set(row.step.pathId, list);
   }
-  return paths.map((path) => ({ ...path, steps: byPath.get(path.id) ?? [] }));
+  return byPath;
 }
 
 export async function getCoursePathBySlug(
@@ -228,8 +233,13 @@ export async function getCoursePathBySlug(
     .where(and(eq(coursePaths.shopId, shopId), eq(coursePaths.slug, slug)))
     .limit(1);
   if (!path) return null;
-  const all = await listCoursePaths(db, shopId);
-  return all.find((candidate) => candidate.id === path.id) ?? null;
+  // Just this path's rungs. Loading every path in the shop and picking one out
+  // of the result was correct but read the whole catalog to render a single
+  // builder page.
+  return {
+    ...path,
+    steps: await stepsForPaths(db, [path.id]).then((byPath) => byPath.get(path.id) ?? []),
+  };
 }
 
 /** Paths that contain a given course, for the "part of" note on its public page. */

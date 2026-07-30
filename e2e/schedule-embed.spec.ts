@@ -68,7 +68,7 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   await page.getByLabel("Email", { exact: true }).fill(`embed-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
 
-  await expect(page.getByRole("heading", { name: /You're on the boat, Embed/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Embed/ })).toBeVisible();
   // The redirect after a successful book-now-pay-later booking must have
   // carried embed=1 forward, or the confirmation reloads into full chrome.
   await expect(page).toHaveURL(/embed=1/);

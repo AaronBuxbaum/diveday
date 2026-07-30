@@ -39,8 +39,7 @@ adapters and must not introduce unique requirements.
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
-| `pnpm visual` | compare visual regression captures against committed baselines |
-| `pnpm visual:update` | regenerate and approve visual baseline snapshots |
+| `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit |
 
 Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`). Unlike npm, pnpm
 forwards that `--` into the underlying command instead of consuming it, so `vitest`/`playwright`
@@ -55,6 +54,8 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`, `src/app/verify/[token]`, `src/app/reset-password/[token]`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; account rows in `src/db/user-accounts.ts` |
 | Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
+| Certification paths (the catalog's progressions) | `src/db/course-paths.ts` + `src/app/shop/[shopSlug]/courses/paths/**`. Guidance, never a gate — admission stays on each course's `minimum_certification_level` |
+| The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/_components/ScheduleBuilder.tsx` + that route's `actions.ts`; the mutations and their refusals live in `src/db/trips.ts` (`moveTrip`, `duplicateTrip`, `deleteTrip`) |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | Email: sending and delivery outcomes | `src/lib/notifications/` + `src/app/api/webhooks/resend/`; setup in [docs/engineering/resend-email-runbook.md](docs/engineering/resend-email-runbook.md). Mail *to* DiveDay is hosted mailboxes, not code |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
@@ -65,7 +66,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
 | Discount codes | shop-wide in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts` (staff page `shop/[shopSlug]/promos`); one-trip last-minute deals stay in `src/db/trip-promos.ts`. Both resolve in `bookSpot`; Stripe owns the arithmetic |
 | Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule |
-| Diver-facing copy and languages | `src/i18n/` — messages in `locales/<locale>/diver.json`; `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language` (falling back to `shops.default_locale`), `DiverIntlProvider` + `useTranslations()` for Client Components. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces coverage |
+| Diver-facing copy and languages | `src/i18n/` — messages in `locales/<locale>/diver.json`; `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language` (falling back to `shops.default_locale`), `DiverIntlProvider` + `useTranslations()` for Client Components. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces coverage. **Any Client Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the server render and the whole page silently degrades to a blank client-only 200 |
 | SEO structured data | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; never in `?embed=1` mode or on a bearer-token page |
 | Notifications (email/SMS) | `src/lib/notifications/` (Resend/Twilio adapters); log + resend state in `src/db/notifications.ts` |
 | Data portability (CSV export/import) | `src/db/export.ts` / `src/db/import.ts`; staff UI at `src/app/shop/[shopSlug]/settings/import/` — security-sensitive, see hard rules |
@@ -122,11 +123,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave
   it red for someone else. See **Parallel work** first: check for an in-flight fix on the same
   test before starting your own, so two sessions don't race to patch it.
-- **A pushed PR is not done until visual diffs are accounted for.** CI runs the serialized visual
-  job. Review visual diff images for what the code explains; never auto-approve a mismatch. For
-  an intentional change, run `pnpm visual:update` locally and commit the resulting
-  `e2e/visual.spec.ts-snapshots/` PNGs with the code change. Never end the session leaving a
-  visual diff or failure unexplained.
+- **A pushed PR is not done until visual diffs are accounted for.** Review every diff image for
+  what the code explains; never wave a mismatch through. Baselines live in S3 keyed by git commit
+  (ADR 20260729-reg-suit-visual-regression) — there is nothing to regenerate or commit locally, so
+  "approving" an intentional change means saying in the PR *why* the pixels moved and merging;
+  the merge is what becomes the next baseline. See the **visual-triage** skill. Never end the
+  session leaving a visual diff or failure unexplained.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings

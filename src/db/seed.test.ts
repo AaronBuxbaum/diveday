@@ -36,6 +36,7 @@ import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
+import { getCurrentWaiverTemplate, listWaiverTemplateHistory, saveWaiverTemplate } from "./waivers";
 
 describe("seeded imported-card states", () => {
   // The two states H-23/H-24 exist for are only visible on a diver who holds an
@@ -216,6 +217,31 @@ describe("resetDemoSchedule", () => {
       .from(shopStripeAccounts)
       .where(eq(shopStripeAccounts.shopId, shop.id));
     expect(stripeRow).toBeUndefined();
+  });
+
+  it("restores the waiver to version 1 with the shop's own title, so an edited release text doesn't leak into the next spec", async () => {
+    // Editing the release text appends a version rather than mutating the one
+    // divers may already have signed, so the edit survives a reset that only
+    // clears signed records — leaving the next spec on "Version 2" and reading
+    // the previous test's body (e2e/waivers.spec.ts's own "Version 1" check).
+    const { db, shop } = await seededShopContext();
+    const before = await getCurrentWaiverTemplate(db, shop.id);
+    expect(before?.version).toBe(1);
+
+    const edited = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: before?.title ?? "",
+      body: "Leaked release text from a previous spec.",
+    });
+    expect(edited.version).toBe(2);
+
+    await resetDemoSchedule(db, shop.id);
+
+    const after = await getCurrentWaiverTemplate(db, shop.id);
+    expect(after?.version).toBe(1);
+    expect(after?.title).toBe(before?.title);
+    expect(after?.body).toBe(before?.body);
+    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(1);
   });
 
   it("purges a staff member invited mid-test, not just non-staff churn (was the flakiest screenshot in the visual suite: settings/team leaking a test-invited instructor whose email embeds Date.now())", async () => {

@@ -317,7 +317,7 @@ export function ScheduleBuilder({
                             <SubmitButton
                               pendingLabel="…"
                               ariaLabel={`Remove ${ref}`}
-                              confirmMessage={`Take "${trip.title}" off the board for good?`}
+                              confirmMessage={`Take “${trip.title}” off the board for good?`}
                               className={buttonClass({ variant: "danger", size: "sm" })}
                             >
                               Remove
