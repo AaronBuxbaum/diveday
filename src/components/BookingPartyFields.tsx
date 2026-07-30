@@ -99,7 +99,7 @@ export function BookingPartyFields({
           >
             {Array.from({ length: limit }, (_, index) => index + 1).map((count) => (
               <option key={count} value={count}>
-                {count} {count === 1 ? "diver" : "divers"}
+                {t("party.diverCountOption", { count })}
               </option>
             ))}
           </select>
@@ -124,7 +124,11 @@ export function BookingPartyFields({
             </legend>
             <FieldGrid columns={2}>
               <Field
-                label={index === 0 ? "Name" : `Diver ${index + 1} name`}
+                label={
+                  index === 0
+                    ? t("party.nameLabel")
+                    : t("party.diverNameLabel", { number: index + 1 })
+                }
                 className="text-base"
                 description={
                   <>
@@ -141,8 +145,11 @@ export function BookingPartyFields({
                         }}
                         className="mt-1 block text-left text-xs font-semibold text-primary hover:underline animate-fade-in"
                       >
-                        Did you mean <strong>{nameSuggestion.fullName}</strong> (
-                        {nameSuggestion.email})?
+                        {t.rich("party.didYouMeanName", {
+                          strong: (chunks) => <strong>{chunks}</strong>,
+                          name: nameSuggestion.fullName,
+                          email: nameSuggestion.email,
+                        })}
                       </button>
                     ) : null}
                   </>
@@ -165,7 +172,11 @@ export function BookingPartyFields({
                 />
               </Field>
               <Field
-                label={index === 0 ? "Email" : `Diver ${index + 1} email`}
+                label={
+                  index === 0
+                    ? t("party.emailLabel")
+                    : t("party.diverEmailLabel", { number: index + 1 })
+                }
                 className="text-base"
                 description={
                   <>
@@ -176,7 +187,7 @@ export function BookingPartyFields({
                         onClick={() => updateMember(index, { email: suggestion })}
                         className="justify-self-start text-xs font-medium text-primary hover:underline"
                       >
-                        Did you mean {suggestion}?
+                        {t("party.didYouMeanEmail", { email: suggestion })}
                       </button>
                     ) : null}
                   </>
@@ -199,8 +210,8 @@ export function BookingPartyFields({
               </Field>
               {index === 0 && leadPhone ? (
                 <Field
-                  label="Phone"
-                  hint="(if the crew needs to reach you)"
+                  label={t("party.phoneLabel")}
+                  hint={t("party.phoneHint")}
                   className="text-base sm:col-span-2"
                   description={<FieldError id="phone-error" message={fieldErrors?.phone} />}
                 >

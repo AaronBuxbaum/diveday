@@ -16,6 +16,7 @@ import { getShopById } from "@/db/shops";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
@@ -79,6 +80,7 @@ export default async function TripGuestsPage({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
@@ -158,13 +160,13 @@ export default async function TripGuestsPage({
     <>
       <FlashParams params={["notice", "bid", "waiver"]} />
       <ShopPageHeader
-        eyebrow="Trips"
+        eyebrow={t("trips.guests.eyebrow")}
         title={trip.title}
         meta={
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
               {cancelled ? (
-                <Badge tone="danger">Cancelled</Badge>
+                <Badge tone="danger">{t("trips.guests.cancelledBadge")}</Badge>
               ) : (
                 // A sold-out boat is a win worth noticing, not a quiet state
                 // (design/principles.md #3) — "success" stands out where
@@ -180,7 +182,7 @@ export default async function TripGuestsPage({
             </div>
             {trip.course ? (
               <p className="text-sm font-medium text-primary">
-                Course session · {trip.course.title}
+                {t("trips.guests.courseSession", { title: trip.course.title })}
               </p>
             ) : null}
           </div>
@@ -190,19 +192,17 @@ export default async function TripGuestsPage({
       <TripNoticeBanner
         notice={notice}
         count={count}
+        locale={locale}
         undoBookingId={undoBookingId}
         undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
       />
 
       {notice === "waiver-link" && waiver ? (
         <section className="rise-in mt-6 rounded-lg border border-accent/40 bg-accent/10 p-5">
-          <h2 className="font-semibold">Private waiver link ready</h2>
-          <p className="mt-1 text-sm text-muted">
-            Share this link with the diver. It expires in seven days and is replaced if you issue a
-            new one.
-          </p>
+          <h2 className="font-semibold">{t("trips.guests.privateWaiverLinkReady")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("trips.guests.waiverLinkDescription")}</p>
           <Link href={`/waivers/${waiver}`} className={buttonClass({ className: "mt-3" })}>
-            Open waiver link
+            {t("trips.guests.openWaiverLink")}
           </Link>
         </section>
       ) : null}
@@ -215,20 +215,21 @@ export default async function TripGuestsPage({
         tripTitle={trip.title}
         tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
         inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
+        locale={locale}
       />
 
       {demand ? (
         <section className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
           <p className="text-xs font-semibold tracking-widest text-warning uppercase">
-            Demand signal
+            {t("trips.guests.demandSignal")}
           </p>
-          <h2 className="mt-1 text-lg font-semibold">This departure could support more capacity</h2>
+          <h2 className="mt-1 text-lg font-semibold">{t("trips.guests.demandHeading")}</h2>
           <p className="mt-1 text-sm text-muted">{demand.message}</p>
           <Link
             href={`/shop/${shopSlug}/trips/new`}
             className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
           >
-            Schedule another departure
+            {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
         </section>
       ) : null}
@@ -242,6 +243,7 @@ export default async function TripGuestsPage({
           addBookingAction={addBookingAction.bind(null, shopSlug, tripId)}
           addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
           addExistingDiverAction={addExistingDiverAction.bind(null, shopSlug, tripId)}
+          locale={locale}
         />
       )}
 
@@ -270,9 +272,9 @@ export default async function TripGuestsPage({
       />
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Activity</h2>
+        <h2 className="text-lg font-semibold">{t("trips.guests.activityHeading")}</h2>
         {activity.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No staff activity recorded yet.</p>
+          <p className="mt-3 text-sm text-muted">{t("trips.guests.noActivity")}</p>
         ) : (
           <ol className="mt-4 grid gap-2">
             {activity.map((event) => (
@@ -300,6 +302,7 @@ export default async function TripGuestsPage({
       <RecapPhotoGallery
         photos={recapPhotos}
         removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
+        locale={locale}
       />
     </>
   );

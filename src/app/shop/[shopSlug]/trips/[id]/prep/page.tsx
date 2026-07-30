@@ -7,6 +7,7 @@ import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { shopOffersNitrox } from "@/lib/rentals";
@@ -35,6 +36,7 @@ export default async function TripPrepPage({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
@@ -67,15 +69,15 @@ export default async function TripPrepPage({
   return (
     <>
       <ShopPageHeader
-        eyebrow="Trips"
+        eyebrow={t("trips.prep.eyebrow")}
         title={trip.title}
         description={[
-          `${checklist.diverCount} ${checklist.diverCount === 1 ? "diver" : "divers"}`,
+          t("trips.prep.diverCount", { count: checklist.diverCount }),
           checklist.crewCount > 0
-            ? `${checklist.crewCount} diving ${checklist.crewCount === 1 ? "crew member" : "crew"}`
+            ? t("trips.prep.crewCount", { count: checklist.crewCount })
             : null,
-          `${checklist.diveCount} ${checklist.diveCount === 1 ? "dive" : "dives"}`,
-          "one tank per diver per dive",
+          t("trips.prep.diveCount", { count: checklist.diveCount }),
+          t("trips.prep.oneTankPerDiver"),
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -85,36 +87,36 @@ export default async function TripPrepPage({
             {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
           </span>
         }
-        actions={<PrintButton />}
+        actions={<PrintButton label={t("shared.printButton.label")} />}
       />
 
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
         <p className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          No divers booked yet — nothing to prepare.
+          {t("trips.prep.noDivers")}
         </p>
       ) : (
         <>
           <section aria-labelledby="tanks-heading">
             <h2 id="tanks-heading" className="text-lg font-semibold">
-              Tanks
+              {t("trips.prep.tanksHeading")}
             </h2>
             <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
               {showNitrox ? (
                 <>
                   <div className="rounded-lg border border-border bg-surface p-4">
-                    <p className="text-sm text-muted">Total</p>
+                    <p className="text-sm text-muted">{t("trips.prep.total")}</p>
                     <p className="mt-1 text-3xl font-semibold tabular-nums">
                       {checklist.tanks.total}
                     </p>
                   </div>
                   <div className="rounded-lg border border-border bg-surface p-4">
-                    <p className="text-sm text-muted">Air</p>
+                    <p className="text-sm text-muted">{t("trips.prep.air")}</p>
                     <p className="mt-1 text-3xl font-semibold tabular-nums">
                       {checklist.tanks.air}
                     </p>
                   </div>
                   <div className="rounded-lg border border-border bg-surface p-4">
-                    <p className="text-sm text-muted">Nitrox</p>
+                    <p className="text-sm text-muted">{t("trips.prep.nitrox")}</p>
                     <p className="mt-1 text-3xl font-semibold tabular-nums">
                       {checklist.tanks.nitrox}
                     </p>
@@ -124,7 +126,7 @@ export default async function TripPrepPage({
                 // Air and total are the same number with no nitrox split to draw,
                 // so there's nothing for a second tile to distinguish.
                 <div className="rounded-lg border border-border bg-surface p-4">
-                  <p className="text-sm text-muted">Total</p>
+                  <p className="text-sm text-muted">{t("trips.prep.total")}</p>
                   <p className="mt-1 text-3xl font-semibold tabular-nums">
                     {checklist.tanks.total}
                   </p>
@@ -133,10 +135,9 @@ export default async function TripPrepPage({
             </div>
             <p className="mt-2 text-sm text-muted">
               {checklist.crewCount > 0
-                ? `Includes the roster and the ${checklist.crewCount === 1 ? "divemaster or instructor" : "divemasters and instructors"} assigned to this trip; spares are not counted.`
-                : "Divers on the roster only — spares are not counted. Assign a divemaster or instructor to this trip to include their tanks."}{" "}
-              DiveDay logs no gas analysis: every mix is still analyzed and signed for at the fill
-              station.
+                ? t("trips.prep.includesCrew", { count: checklist.crewCount })
+                : t("trips.prep.diversOnlyNote")}{" "}
+              {t("trips.prep.noGasAnalysisNote")}
             </p>
           </section>
 
@@ -146,12 +147,9 @@ export default async function TripPrepPage({
               className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4"
             >
               <h2 id="nitrox-blocked-heading" className="font-semibold">
-                Nitrox requested without a verified card
+                {t("trips.prep.nitroxBlockedHeading")}
               </h2>
-              <p className="mt-1 text-sm">
-                Planned as air. Verify the Nitrox card on the diver’s record, or tell them at the
-                counter before the boat leaves.
-              </p>
+              <p className="mt-1 text-sm">{t("trips.prep.nitroxBlockedDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.nitroxBlockers.map((blocker) => (
                   <li key={blocker.bookingId}>• {blocker.fullName}</li>
@@ -166,12 +164,9 @@ export default async function TripPrepPage({
               className="mt-6 rounded-lg border border-border bg-surface p-4"
             >
               <h2 id="no-fit-heading" className="font-semibold">
-                No rental fit on file
+                {t("trips.prep.noFitHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">
-                They may be bringing their own kit — but nobody has asked. Their sizes are missing
-                from the list below.
-              </p>
+              <p className="mt-1 text-sm text-muted">{t("trips.prep.noFitDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.diversWithoutFit.map((name) => (
                   <li key={name}>• {name}</li>
@@ -186,13 +181,9 @@ export default async function TripPrepPage({
               className="mt-6 rounded-lg border border-warning/40 bg-warning/5 p-4"
             >
               <h2 id="staff-fit-heading" className="font-semibold">
-                Fit these divers at check-in
+                {t("trips.prep.staffFitHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">
-                A size they asked for wasn’t available. They still count on the list below, but
-                without a size — start from what they asked for, bring a range around it, and fit
-                them in person rather than packing a substitute.
-              </p>
+              <p className="mt-1 text-sm text-muted">{t("trips.prep.staffFitDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.diversNeedingStaffFit.map((diver) => (
                   <li key={diver.fullName}>
@@ -202,21 +193,25 @@ export default async function TripPrepPage({
                         the profile and sees no size on the packing line, so
                         without this there is nothing to bring a range around. */}
                     {diver.statedSizes ? (
-                      <span className="text-muted"> — asked for {diver.statedSizes}</span>
+                      <span className="text-muted">
+                        {" "}
+                        {t("trips.prep.askedFor", { sizes: diver.statedSizes })}
+                      </span>
                     ) : (
-                      <span className="text-muted"> — no sizes on file to start from</span>
+                      <span className="text-muted"> {t("trips.prep.noSizesOnFile")}</span>
                     )}
                     {/* How old the flag is: a shortage is about one day, so a
                         months-old flag is a prompt to re-ask, not to trust. */}
                     <span className="text-muted">
                       {" "}
-                      (flagged{" "}
-                      {diver.flaggedDaysAgo === 0
-                        ? "today"
-                        : diver.flaggedDaysAgo === 1
-                          ? "yesterday"
-                          : `${diver.flaggedDaysAgo} days ago`}
-                      )
+                      {t("trips.prep.flaggedAgo", {
+                        when:
+                          diver.flaggedDaysAgo === 0
+                            ? t("trips.prep.today")
+                            : diver.flaggedDaysAgo === 1
+                              ? t("trips.prep.yesterday")
+                              : t("trips.prep.daysAgo", { count: diver.flaggedDaysAgo }),
+                      })}
                     </span>
                   </li>
                 ))}
@@ -226,13 +221,13 @@ export default async function TripPrepPage({
 
           <section aria-labelledby="kit-heading" className="mt-8">
             <h2 id="kit-heading" className="text-lg font-semibold">
-              Rental kit
+              {t("trips.prep.rentalKitHeading")}
             </h2>
             {checklist.lines.length === 0 ? (
               <p className="mt-3 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
                 {checklist.diversWithoutFit.length > 0 || checklist.diversNeedingStaffFit.length > 0
-                  ? "Nothing to pull from the fits on file — but the divers listed above still need sorting out."
-                  : "Nothing to pull — every diver on this trip brings their own kit."}
+                  ? t("trips.prep.nothingToPullNeedsSorting")
+                  : t("trips.prep.nothingToPullOwnKit")}
               </p>
             ) : (
               <div className="mt-3">
@@ -240,16 +235,16 @@ export default async function TripPrepPage({
                   <thead>
                     <tr className="border-b border-border">
                       <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        Item
+                        {t("trips.prep.itemColumn")}
                       </th>
                       <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        Size
+                        {t("trips.prep.sizeColumn")}
                       </th>
                       <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        Qty
+                        {t("trips.prep.qtyColumn")}
                       </th>
                       <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        For
+                        {t("trips.prep.forColumn")}
                       </th>
                     </tr>
                   </thead>
@@ -263,13 +258,15 @@ export default async function TripPrepPage({
                         <td className="px-3 py-3 sm:px-4">
                           {line.fitAtCheckIn ? (
                             // The count is real; the size deliberately isn't.
-                            <span className="font-medium text-warning">Fit at check-in</span>
+                            <span className="font-medium text-warning">
+                              {t("trips.prep.fitAtCheckIn")}
+                            </span>
                           ) : (
                             (line.size ??
                             (UNSIZED_ITEM_KINDS.includes(line.kind) ? (
                               <span className="text-muted">—</span>
                             ) : (
-                              <span className="text-muted">Not recorded</span>
+                              <span className="text-muted">{t("trips.prep.notRecorded")}</span>
                             )))
                           )}
                         </td>

@@ -184,6 +184,27 @@ export default async function CoursePage({
           shopName={shop.name}
           contactEmail={shop.contactEmail}
           contactPhone={shop.contactPhone}
+          copy={{
+            getInTouch: t("inquiry.getInTouch"),
+            noDateBody: t("inquiry.noDateBody"),
+            yourName: t("inquiry.yourName"),
+            namePlaceholder: t("inquiry.namePlaceholder"),
+            howManyDivers: t("inquiry.howManyDivers"),
+            optional: t("common.optional"),
+            whenSuits: t("inquiry.whenSuits"),
+            whenSuitsHint: t("inquiry.whenSuitsHint"),
+            whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
+            whereYouAreUpTo: t("inquiry.whereYouAreUpTo"),
+            chooseOne: t("inquiry.chooseOne"),
+            anythingElse: t("inquiry.anythingElse"),
+            messagePlaceholder: t("inquiry.messagePlaceholder"),
+            messageSoFar: t("inquiry.messageSoFar"),
+            openInEmailApp: t("inquiry.openInEmailApp"),
+            copyMessage: t("inquiry.copy"),
+            copied: t("inquiry.copied"),
+            orWriteTo: t("inquiry.orWriteTo"),
+            callLabel: t("inquiry.callLabel"),
+          }}
         />
       ) : null}
     </main>

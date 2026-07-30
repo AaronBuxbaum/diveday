@@ -6,13 +6,56 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { type CourseScheduleDay, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/courses";
 
 /**
+ * Every value is a plain ICU-style template string (e.g. "Day {number}"),
+ * never a function — the day/item counts are unbounded and change purely
+ * client-side (add/remove row), so there is no fixed set of server-rendered
+ * strings to hand down. `fill()` below does the one-level `{token}`
+ * substitution locally, entirely within the client bundle; no translator
+ * function ever crosses the Server->Client boundary.
+ */
+export interface DayByDayEditorCopy {
+  dayLabel: string;
+  removeDay: string;
+  dayTitleLabel: string;
+  dayTitlePlaceholder: string;
+  startTimeLabel: string;
+  endTimeLabel: string;
+  timeNoteLabel: string;
+  timeNoteDescription: string;
+  timeNotePlaceholder: string;
+  whatHappens: string;
+  itemLabel: string;
+  removeItemLabel: string;
+  itemPlaceholder: string;
+  remove: string;
+  itemsMax: string;
+  addItem: string;
+  daysMax: string;
+  addDay: string;
+  optionalHint: string;
+}
+
+/** One-level `{token}` substitution — not a translator, just string.replace. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    key in values ? String(values[key]) : match,
+  );
+}
+
+/**
  * Real per-day controls instead of one textarea round-tripped through an
  * implicit "Day 1 — 8:15am–5:30pm" formatting convention. State lives here and
  * serializes to one hidden JSON field on every change — the surrounding
  * `<form>` (edit/page.tsx) submits it like any other field; `sanitizeScheduleDays`
  * (src/lib/courses.ts) validates it server-side.
  */
-export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay[] }) {
+export function DayByDayEditor({
+  initialDays,
+  copy,
+}: {
+  initialDays: CourseScheduleDay[];
+  copy: DayByDayEditorCopy;
+}) {
   const [days, setDays] = useState<CourseScheduleDay[]>(initialDays);
 
   function updateDay(index: number, patch: Partial<CourseScheduleDay>) {
@@ -63,28 +106,31 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
             className="rounded-xl border border-border p-4"
           >
             <div className="flex items-center justify-between gap-2">
-              <h4 className="font-medium">Day {dayNumber}</h4>
+              <h4 className="font-medium">{fill(copy.dayLabel, { number: dayNumber })}</h4>
               <button
                 type="button"
                 onClick={() => removeDay(dayIndex)}
                 className={buttonClass({ variant: "danger", size: "sm" })}
               >
-                Remove day
+                {copy.removeDay}
               </button>
             </div>
 
             <FieldGrid columns={1} className="mt-3 gap-y-4">
-              <Field label={`Day ${dayNumber} title`}>
+              <Field label={fill(copy.dayTitleLabel, { number: dayNumber })}>
                 <input
                   value={day.title}
                   onChange={(event) => updateDay(dayIndex, { title: event.target.value })}
                   maxLength={160}
-                  placeholder="Classroom and confined water"
+                  placeholder={copy.dayTitlePlaceholder}
                   className={controlClass}
                 />
               </Field>
               <FieldGrid columns={2}>
-                <Field label={`Day ${dayNumber} start time`} hint="(optional)">
+                <Field
+                  label={fill(copy.startTimeLabel, { number: dayNumber })}
+                  hint={copy.optionalHint}
+                >
                   <input
                     type="time"
                     value={day.startTime ?? ""}
@@ -92,7 +138,10 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
                     className={controlClass}
                   />
                 </Field>
-                <Field label={`Day ${dayNumber} end time`} hint="(optional)">
+                <Field
+                  label={fill(copy.endTimeLabel, { number: dayNumber })}
+                  hint={copy.optionalHint}
+                >
                   <input
                     type="time"
                     value={day.endTime ?? ""}
@@ -102,24 +151,22 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
                 </Field>
               </FieldGrid>
               <Field
-                label={`Day ${dayNumber} time note`}
-                hint="(optional)"
-                description={
-                  'For a day with no fixed clock time, e.g. "week 1–2" or "about 3 hours". Ignored when start time is set.'
-                }
+                label={fill(copy.timeNoteLabel, { number: dayNumber })}
+                hint={copy.optionalHint}
+                description={copy.timeNoteDescription}
               >
                 <input
                   value={day.timeNote ?? ""}
                   onChange={(event) => updateDay(dayIndex, { timeNote: event.target.value })}
                   maxLength={120}
-                  placeholder="about 3 hours"
+                  placeholder={copy.timeNotePlaceholder}
                   className={controlClass}
                 />
               </Field>
             </FieldGrid>
 
             <div className="mt-4">
-              <span className="text-sm font-medium">What happens</span>
+              <span className="text-sm font-medium">{copy.whatHappens}</span>
               <div className="mt-2 flex flex-col gap-2">
                 {day.items.map((item, itemIndex) => (
                   <div
@@ -131,17 +178,20 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
                       value={item}
                       onChange={(event) => updateItem(dayIndex, itemIndex, event.target.value)}
                       maxLength={200}
-                      aria-label={`Day ${dayNumber} item ${itemIndex + 1}`}
-                      placeholder="Confined water skills"
+                      aria-label={fill(copy.itemLabel, { number: dayNumber, index: itemIndex + 1 })}
+                      placeholder={copy.itemPlaceholder}
                       className={controlClass}
                     />
                     <button
                       type="button"
                       onClick={() => removeItem(dayIndex, itemIndex)}
-                      aria-label={`Remove day ${dayNumber} item ${itemIndex + 1}`}
+                      aria-label={fill(copy.removeItemLabel, {
+                        number: dayNumber,
+                        index: itemIndex + 1,
+                      })}
                       className={buttonClass({ variant: "ghost", size: "sm" })}
                     >
-                      Remove
+                      {copy.remove}
                     </button>
                   </div>
                 ))}
@@ -153,8 +203,8 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
                 className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
               >
                 {day.items.length >= MAX_SCHEDULE_DAY_ITEMS
-                  ? `${MAX_SCHEDULE_DAY_ITEMS} items max`
-                  : "Add item"}
+                  ? fill(copy.itemsMax, { max: MAX_SCHEDULE_DAY_ITEMS })
+                  : copy.addItem}
               </button>
             </div>
           </div>
@@ -166,7 +216,9 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
         disabled={days.length >= MAX_SCHEDULE_DAYS}
         className={buttonClass({ variant: "secondary", className: "self-start" })}
       >
-        {days.length >= MAX_SCHEDULE_DAYS ? `${MAX_SCHEDULE_DAYS} days max` : "Add day"}
+        {days.length >= MAX_SCHEDULE_DAYS
+          ? fill(copy.daysMax, { max: MAX_SCHEDULE_DAYS })
+          : copy.addDay}
       </button>
     </div>
   );

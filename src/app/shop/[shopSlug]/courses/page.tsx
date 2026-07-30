@@ -7,6 +7,8 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility } from "@/db/courses";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
@@ -77,6 +79,7 @@ export default async function CoursesPage() {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const courseList = await listCourses(db, shop.id);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
 
   // No redirect: the icon and the "Hidden" badge already show the new state
   // in place, and a same-page redirect after a form submit resets scroll to
@@ -93,15 +96,15 @@ export default async function CoursesPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Catalog"
-        title="Courses"
-        description="Your shop copy of the PADI and SSI catalog. Open a course to edit its page and pricing, or hide the ones you don’t offer."
+        eyebrow={t("courses.list.eyebrow")}
+        title={t("courses.list.title")}
+        description={t("courses.list.description")}
         actions={
           <Link
             href={`/shop/${shop.slug}/courses/paths`}
             className={buttonClass({ variant: "secondary" })}
           >
-            Certification paths
+            {t("courses.list.certificationPaths")}
           </Link>
         }
       />
@@ -122,14 +125,16 @@ export default async function CoursesPage() {
                 </span>
                 {course.isActive ? null : (
                   <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
-                    Hidden
+                    {t("courses.list.hidden")}
                   </span>
                 )}
               </span>
               <p className="mt-1 text-sm text-muted">
                 {course.minimumCertificationLevel
-                  ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
-                  : "Open to uncertified divers"}
+                  ? t("courses.list.orHigher", {
+                      level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+                    })
+                  : t("courses.list.openToUncertified")}
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -137,7 +142,7 @@ export default async function CoursesPage() {
                 href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                Edit
+                {t("courses.list.edit")}
               </Link>
               <form action={visibilityAction}>
                 <input type="hidden" name="courseId" value={course.id} />
@@ -148,7 +153,10 @@ export default async function CoursesPage() {
                 >
                   {course.isActive ? <EyeIcon /> : <EyeOffIcon />}
                   <span className="sr-only">
-                    {course.isActive ? "Hide" : "Show"} {course.title}
+                    {t("courses.list.hideShowSrLabel", {
+                      action: course.isActive ? t("courses.list.hide") : t("courses.list.show"),
+                      title: course.title,
+                    })}
                   </span>
                 </SubmitButton>
               </form>
@@ -157,7 +165,9 @@ export default async function CoursesPage() {
                 className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
               >
                 <LinkIcon />
-                <span className="sr-only">Preview {course.title}</span>
+                <span className="sr-only">
+                  {t("courses.list.previewSrLabel", { title: course.title })}
+                </span>
               </Link>
             </div>
           </li>

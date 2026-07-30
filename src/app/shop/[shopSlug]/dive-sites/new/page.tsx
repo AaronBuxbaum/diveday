@@ -8,6 +8,9 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
+import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { splitMediaUrls } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
@@ -54,10 +57,12 @@ export default async function NewDiveSitePage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireStaffSession();
+  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { error } = await searchParams;
   const back = `/shop/${shopSlug}/dive-sites`;
+  const shop = await getShopById(await getDb(), session.user.shopId);
+  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
 
   async function createAction(formData: FormData) {
     "use server";
@@ -116,57 +121,56 @@ export default async function NewDiveSitePage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
-        ← Dive-site library
+        {t("diveSites.backToLibrary")}
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          eyebrow="Catalog"
-          title="Build a dive-site briefing"
-          description="Everything is optional except the name. Keep it useful, vivid, and true to the site."
+          eyebrow={t("diveSites.catalogEyebrow")}
+          title={t("diveSites.new.title")}
+          description={t("diveSites.new.description")}
         />
       </div>
       {error ? (
         <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
           {error === "images"
-            ? "One of those image links couldn't be used — use up to six complete HTTP(S) links, one per line, each pointing to a real, reachable image."
+            ? t("diveSites.form.errorImages")
             : error === "images-unconfigured"
-              ? "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
-              : "That didn't save. Check the required name and links, then try again."}
+              ? t("diveSites.form.errorImagesUnconfigured")
+              : t("diveSites.new.errorInvalid")}
         </p>
       ) : null}
-      <SiteForm action={createAction} submitLabel="Save site briefing" />
+      <SiteForm t={t} action={createAction} submitLabel={t("diveSites.new.saveSiteBriefing")} />
     </main>
   );
 }
 
 function SiteForm({
+  t,
   action,
   submitLabel,
 }: {
+  t: StaffTranslator;
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
 }) {
   return (
     <form action={action} className="mt-8 flex flex-col gap-5">
       <FieldGrid columns={1}>
-        <Field label="Name">
+        <Field label={t("diveSites.form.nameLabel")}>
           <input
             name="name"
             required
             maxLength={120}
-            placeholder="Molasses Reef"
+            placeholder={t("diveSites.form.namePlaceholder")}
             className={controlClass}
           />
         </Field>
       </FieldGrid>
       <fieldset className="rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-medium">Automated marine forecast point</legend>
-        <p className="mt-1 text-sm text-muted">
-          Use the offshore dive point, not the shop address. Leave both blank to keep crew-only
-          conditions.
-        </p>
+        <legend className="px-1 text-sm font-medium">{t("diveSites.form.forecastLegend")}</legend>
+        <p className="mt-1 text-sm text-muted">{t("diveSites.form.forecastDescription")}</p>
         <FieldGrid columns={2} className="mt-4 gap-y-5">
-          <Field label="Latitude">
+          <Field label={t("diveSites.form.latitudeLabel")}>
             <input
               name="forecastLatitude"
               type="number"
@@ -176,7 +180,7 @@ function SiteForm({
               className={controlClass}
             />
           </Field>
-          <Field label="Longitude">
+          <Field label={t("diveSites.form.longitudeLabel")}>
             <input
               name="forecastLongitude"
               type="number"
@@ -189,39 +193,42 @@ function SiteForm({
         </FieldGrid>
       </fieldset>
       <FieldGrid columns={1} className="gap-y-5">
-        <Field label="Location" hint="(optional)">
+        <Field label={t("diveSites.form.locationLabel")} hint={t("diveSites.form.optionalHint")}>
           <input
             name="locationName"
             maxLength={160}
-            placeholder="Key Largo National Marine Sanctuary"
+            placeholder={t("diveSites.form.locationPlaceholder")}
             className={controlClass}
           />
         </Field>
-        <Field label="What makes this site special?">
+        <Field label={t("diveSites.form.descriptionLabel")}>
           <textarea name="description" rows={3} maxLength={1200} className={controlClass} />
         </Field>
       </FieldGrid>
       <FieldGrid columns={2} className="gap-y-5">
-        <Field label="Satellite map image URL">
+        <Field label={t("diveSites.form.satelliteImageLabel")}>
           <textarea name="satelliteImageUrl" rows={2} className={controlClass} />
         </Field>
-        <Field label="Route image URL" hint="(optional)">
+        <Field label={t("diveSites.form.routeImageLabel")} hint={t("diveSites.form.optionalHint")}>
           <textarea name="routeImageUrl" rows={2} className={controlClass} />
         </Field>
       </FieldGrid>
       <FieldGrid columns={1} className="gap-y-5">
-        <Field label="Site photo URLs" hint="(one per line, up to six)">
+        <Field
+          label={t("diveSites.form.sitePhotosLabel")}
+          hint={t("diveSites.form.sitePhotosHint")}
+        >
           <textarea name="imageUrls" rows={4} className={controlClass} />
         </Field>
-        <Field label="What might divers see?">
+        <Field label={t("diveSites.form.marineLifeLabel")}>
           <input
             name="marineLife"
             maxLength={400}
-            placeholder="Parrotfish, eagle rays, elkhorn coral"
+            placeholder={t("diveSites.form.marineLifePlaceholder")}
             className={controlClass}
           />
         </Field>
-        <Field label="Underwater briefing">
+        <Field label={t("diveSites.form.briefingLabel")}>
           <textarea
             name="marineLifeDescription"
             rows={3}
@@ -231,49 +238,49 @@ function SiteForm({
         </Field>
       </FieldGrid>
       <FieldGrid columns={2} className="gap-y-5">
-        <Field label="Difficulty" hint="(optional)">
+        <Field label={t("diveSites.form.difficultyLabel")} hint={t("diveSites.form.optionalHint")}>
           <input
             name="difficulty"
             maxLength={120}
-            placeholder="Calm, intermediate, advanced"
+            placeholder={t("diveSites.form.difficultyPlaceholder")}
             className={controlClass}
           />
         </Field>
-        <Field label="Depth range" hint="(optional)">
+        <Field label={t("diveSites.form.depthRangeLabel")} hint={t("diveSites.form.optionalHint")}>
           <input
             name="depthRange"
             maxLength={120}
-            placeholder="20–45 ft"
+            placeholder={t("diveSites.form.depthRangePlaceholder")}
             className={controlClass}
           />
         </Field>
       </FieldGrid>
       <FieldGrid columns={1} className="gap-y-5">
-        <Field label="Current and conditions notes" hint="(optional)">
+        <Field label={t("diveSites.form.currentNoteLabel")} hint={t("diveSites.form.optionalHint")}>
           <textarea name="currentNote" rows={2} maxLength={500} className={controlClass} />
         </Field>
-        <Field label="Dive plan" hint="(optional)">
+        <Field label={t("diveSites.form.divePlanLabel")} hint={t("diveSites.form.optionalHint")}>
           <textarea
             name="divePlan"
             rows={3}
             maxLength={1200}
-            placeholder="Entry, route, turnaround, and exit notes."
+            placeholder={t("diveSites.form.divePlanPlaceholder")}
             className={controlClass}
           />
         </Field>
-        <Field label="Landmarks" hint="(one per line, optional)">
+        <Field label={t("diveSites.form.landmarksLabel")} hint={t("diveSites.form.landmarksHint")}>
           <textarea name="landmarks" rows={3} maxLength={4000} className={controlClass} />
         </Field>
       </FieldGrid>
       <fieldset className="rounded-2xl border border-border bg-surface-sunken p-5">
-        <legend className="px-1 text-sm font-medium">Certification requirements</legend>
-        <p className="text-sm text-muted">
-          These requirements travel with the site into every new trip that uses it.
-        </p>
+        <legend className="px-1 text-sm font-medium">
+          {t("diveSites.form.certificationLegend")}
+        </legend>
+        <p className="text-sm text-muted">{t("diveSites.new.certificationDescription")}</p>
         <FieldGrid columns={1} className="mt-4">
-          <Field label="Minimum certification">
+          <Field label={t("diveSites.form.minimumCertificationLabel")}>
             <select name="minimumCertificationLevel" defaultValue="" className={controlClass}>
-              <option value="">No level required by the site</option>
+              <option value="">{t("diveSites.form.noLevelRequired")}</option>
               {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -296,12 +303,12 @@ function SiteForm({
           ))}
           <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
             <input name="requiresNitrox" type="checkbox" className="size-4 accent-primary" />
-            Nitrox
+            {t("diveSites.form.nitroxCheckbox")}
           </label>
         </div>
       </fieldset>
       <SubmitButton
-        pendingLabel="Saving…"
+        pendingLabel={t("diveSites.form.saving")}
         className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
       >
         {submitLabel}

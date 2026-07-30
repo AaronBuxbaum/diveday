@@ -14,6 +14,7 @@ import { listShopPromoCodes } from "@/db/shop-promos";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
@@ -24,40 +25,27 @@ export const metadata: Metadata = {
   title: "Promo codes — DiveDay",
 };
 
-const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
-  created: { tone: "success", text: "Code created and live on your Stripe account." },
-  enabled: { tone: "success", text: "Code switched on." },
-  disabled: { tone: "success", text: "Code switched off — it stops discounting immediately." },
-  invalid: { tone: "danger", text: "Check the code, discount, and dates and try again." },
-  invalid_code: {
-    tone: "danger",
-    text: "A code can use letters, numbers, hyphens, and underscores only.",
-  },
-  invalid_discount: {
-    tone: "danger",
-    text: `Pick a discount between ${PROMO_DISCOUNT_MIN}% and ${PROMO_DISCOUNT_MAX}%.`,
-  },
-  invalid_window: { tone: "danger", text: "The end date has to come after the start date." },
-  duplicate: { tone: "danger", text: "You already have a code with that text." },
-  not_connected: {
-    tone: "warning",
-    text: "Connect your Stripe account in Settings first — a code is created on your own account.",
-  },
-  stripe_failed: {
-    tone: "danger",
-    text: "Stripe didn't create that code. It's saved as failed here and can't discount anything; try again.",
-  },
-  not_authorized: {
-    tone: "danger",
-    text: "Promo codes discount real money, so they're limited to owners and managers.",
-  },
+// A notice query param maps to a message key, never to a sentence — the words
+// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
+const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: StaffMessageKey }> = {
+  created: { tone: "success", key: "promos.notice.created" },
+  enabled: { tone: "success", key: "promos.notice.enabled" },
+  disabled: { tone: "success", key: "promos.notice.disabled" },
+  invalid: { tone: "danger", key: "promos.notice.invalid" },
+  invalid_code: { tone: "danger", key: "promos.notice.invalidCode" },
+  invalid_discount: { tone: "danger", key: "promos.notice.invalidDiscount" },
+  invalid_window: { tone: "danger", key: "promos.notice.invalidWindow" },
+  duplicate: { tone: "danger", key: "promos.notice.duplicate" },
+  not_connected: { tone: "warning", key: "promos.notice.notConnected" },
+  stripe_failed: { tone: "danger", key: "promos.notice.stripeFailed" },
+  not_authorized: { tone: "danger", key: "promos.notice.notAuthorized" },
 };
 
-const SCOPE_LABELS = {
-  all: "Trips and courses",
-  trips: "Trips only",
-  courses: "Courses only",
-} as const;
+const SCOPE_KEYS: Record<"all" | "trips" | "courses", StaffMessageKey> = {
+  all: "promos.scope.all",
+  trips: "promos.scope.trips",
+  courses: "promos.scope.courses",
+};
 
 export default async function PromosPage({
   params,
@@ -85,6 +73,7 @@ export default async function PromosPage({
   const connected = canAcceptPayments(stripeAccount);
   const banner = notice ? NOTICES[notice] : undefined;
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
   const now = nowDate();
 
@@ -92,15 +81,17 @@ export default async function PromosPage({
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Promo codes"
-        title="Discounts a diver can type"
-        description="A code works across your whole schedule, unlike the one-trip deal you send from a departure's page. DiveDay creates it on your own Stripe account, and Stripe enforces the expiry and the redemption cap when the diver pays."
+        eyebrow={t("promos.eyebrow")}
+        title={t("promos.title")}
+        description={t("promos.description")}
       />
 
       {banner ? (
         <div className="mb-6">
           <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.text}
+            {banner.key === "promos.notice.invalidDiscount"
+              ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
+              : t(banner.key)}
           </ShopNotice>
         </div>
       ) : null}
@@ -108,32 +99,32 @@ export default async function PromosPage({
       {connected ? null : (
         <div className="mb-6">
           <ShopNotice tone="warning" role="status">
-            Connect your Stripe account in{" "}
-            <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
-              Settings
-            </Link>{" "}
-            before creating a code — the coupon lives on your account, not DiveDay&apos;s.
+            {t.rich("promos.connectBanner", {
+              settingsLink: (chunks) => (
+                <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </ShopNotice>
         </div>
       )}
 
       <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">New code</h2>
-        <p className="mt-1 text-sm text-muted">
-          Divers type this at checkout. Leave the dates or the cap empty for no limit.
-        </p>
+        <h2 className="font-medium">{t("promos.newCode.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("promos.newCode.detail")}</p>
         <FieldGrid as="form" action={createPromoAction} columns={2} className="mt-4">
-          <Field label="Code" hint="letters, numbers, - and _">
+          <Field label={t("promos.fields.code")} hint={t("promos.fields.codeHint")}>
             <input
               name="code"
               required
               maxLength={40}
-              placeholder="REEF20"
+              placeholder={t("promos.fields.codePlaceholder")}
               autoComplete="off"
               className={`${controlClass} uppercase`}
             />
           </Field>
-          <Field label="Discount" hint="percent off">
+          <Field label={t("promos.fields.discount")} hint={t("promos.fields.discountHint")}>
             <input
               name="discountPercent"
               type="number"
@@ -144,54 +135,54 @@ export default async function PromosPage({
               className={controlClass}
             />
           </Field>
-          <Field label="Good for">
+          <Field label={t("promos.fields.goodFor")}>
             <select name="scope" defaultValue="all" className={controlClass}>
-              {Object.entries(SCOPE_LABELS).map(([value, label]) => (
+              {Object.entries(SCOPE_KEYS).map(([value, key]) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(key)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Redemption cap" hint="(optional)">
+          <Field
+            label={t("promos.fields.redemptionCap")}
+            hint={t("promos.fields.redemptionCapHint")}
+          >
             <input
               name="maxRedemptions"
               type="number"
               min={1}
-              placeholder="Unlimited"
+              placeholder={t("promos.fields.redemptionCapPlaceholder")}
               className={controlClass}
             />
           </Field>
-          <Field label="Starts" hint="(optional)">
+          <Field label={t("promos.fields.starts")} hint={t("promos.fields.startsHint")}>
             <input name="startsAt" type="datetime-local" className={controlClass} />
           </Field>
-          <Field label="Expires" hint="(optional)">
+          <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
             <input name="expiresAt" type="datetime-local" className={controlClass} />
           </Field>
-          <Field label="What it's for" hint="(optional — your note, never shown to divers)">
+          <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
             <input
               name="description"
               maxLength={200}
-              placeholder="Autumn returning-diver push"
+              placeholder={t("promos.fields.whatForPlaceholder")}
               className={controlClass}
             />
           </Field>
           <FieldActions>
-            <SubmitButton pendingLabel="Creating…" className={buttonClass()}>
-              Create code
+            <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
+              {t("promos.createCode")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </section>
 
-      <h2 className="mt-8 font-medium">Your codes</h2>
+      <h2 className="mt-8 font-medium">{t("promos.yourCodes")}</h2>
       {promos.length === 0 ? (
         <EmptyState>
-          <h3 className="font-medium">No codes yet</h3>
-          <p className="mt-1 text-sm text-muted">
-            Create one above, or send a one-trip deal from a departure&apos;s page when a boat needs
-            filling.
-          </p>
+          <h3 className="font-medium">{t("promos.empty.heading")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("promos.empty.detail")}</p>
         </EmptyState>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
@@ -213,37 +204,44 @@ export default async function PromosPage({
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="font-mono text-base font-semibold">{promo.code}</span>
                     <span className="text-sm font-medium text-primary tabular-nums">
-                      {promo.discountPercent}% off
+                      {t("promos.discountOff", { percent: promo.discountPercent })}
                     </span>
                     <Badge tone={live ? "success" : "neutral"}>
                       {promo.status === "failed"
-                        ? "Failed at Stripe"
+                        ? t("promos.status.failed")
                         : promo.status === "pending"
-                          ? "Never finished"
+                          ? t("promos.status.pending")
                           : live
-                            ? "Live"
+                            ? t("promos.status.live")
                             : promo.status === "disabled"
-                              ? "Switched off"
-                              : "Not live right now"}
+                              ? t("promos.status.disabled")
+                              : t("promos.status.notLive")}
                     </Badge>
                   </div>
                   {promo.description ? (
                     <p className="mt-1 text-sm text-muted">{promo.description}</p>
                   ) : null}
                   <p className="mt-2 text-sm text-muted">
-                    {SCOPE_LABELS[promo.scope]} ·{" "}
+                    {t(SCOPE_KEYS[promo.scope])} ·{" "}
                     {promo.startsAt
-                      ? `from ${formatDateTimeTz(promo.startsAt, locale, timezone)}`
-                      : "live now"}{" "}
+                      ? t("promos.fromDate", {
+                          date: formatDateTimeTz(promo.startsAt, locale, timezone),
+                        })
+                      : t("promos.liveNow")}{" "}
                     ·{" "}
                     {promo.expiresAt
-                      ? `until ${formatDateTimeTz(promo.expiresAt, locale, timezone)}`
-                      : "no end date"}
+                      ? t("promos.untilDate", {
+                          date: formatDateTimeTz(promo.expiresAt, locale, timezone),
+                        })
+                      : t("promos.noEndDate")}
                   </p>
                   <p className="mt-1 text-sm text-muted tabular-nums">
-                    Redeemed {promo.timesRedeemed}
-                    {promo.maxRedemptions === null ? "" : ` of ${promo.maxRedemptions}`} time
-                    {promo.timesRedeemed === 1 ? "" : "s"}
+                    {promo.maxRedemptions === null
+                      ? t("promos.redeemedNoCap", { count: promo.timesRedeemed })
+                      : t("promos.redeemedWithCap", {
+                          count: promo.timesRedeemed,
+                          max: promo.maxRedemptions,
+                        })}
                   </p>
                 </div>
                 {switchable ? (
@@ -251,14 +249,14 @@ export default async function PromosPage({
                     <input type="hidden" name="promoId" value={promo.id} />
                     <input type="hidden" name="enable" value={String(promo.status !== "active")} />
                     <SubmitButton
-                      pendingLabel="Saving…"
+                      pendingLabel={t("promos.saving")}
                       className={buttonClass(
                         promo.status === "active"
                           ? { variant: "secondary", className: "text-foreground" }
                           : {},
                       )}
                     >
-                      {promo.status === "active" ? "Switch off" : "Switch on"}
+                      {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
                     </SubmitButton>
                   </form>
                 ) : null}

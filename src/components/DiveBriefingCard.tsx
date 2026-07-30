@@ -69,7 +69,7 @@ export function DiveBriefingCard({
   return (
     <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
       {site && getSeedDiveSiteMap(site.name) ? (
-        <DiveSiteMap siteName={site.name} />
+        <DiveSiteMap siteName={site.name} t={t} />
       ) : site?.satelliteImageUrl ? (
         // biome-ignore lint/performance/noImgElement: first-party blob/bundled URL only — ingested server-side at save time (CR-020), never a live third-party host.
         <img

@@ -1,38 +1,41 @@
 import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
-export function MarketingFooter() {
+export async function MarketingFooter() {
+  const t = diverTranslator(await requestLocale());
   return (
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2">
           <LogoMark className="size-4 shrink-0 text-primary" />
           <span>
-            <span className="font-semibold text-foreground">DiveDay.</span> A calmer way to run a
-            dive day.
+            {/* i18n-exempt: brand name */}
+            <span className="font-semibold text-foreground">DiveDay.</span> {t("nav.tagline")}
           </span>
         </p>
         <div className="flex flex-wrap gap-4">
           <Link href="/product" className="hover:text-foreground hover:underline">
-            Product
+            {t("nav.product")}
           </Link>
           <Link href="/pricing" className="hover:text-foreground hover:underline">
-            Pricing
+            {t("nav.pricing")}
           </Link>
           <Link href="/switching" className="hover:text-foreground hover:underline">
-            Switch
+            {t("nav.switch")}
           </Link>
           <Link href="/about" className="hover:text-foreground hover:underline">
-            About
+            {t("nav.about")}
           </Link>
           <Link href="/sign-in" className="hover:text-foreground hover:underline">
-            Sign in
+            {t("nav.signIn")}
           </Link>
           <a
             href={`mailto:${FOUNDER_EMAIL}`}
             className="hover:text-foreground hover:underline"
-            title="Say hello — always welcome"
+            title={t("nav.sayHello")}
           >
             {FOUNDER_EMAIL}
           </a>

@@ -6,6 +6,38 @@ import { buttonClass } from "@/components/ui/button";
 import type { DepartureSummary } from "@/db/today";
 import { formatTime, formatTimeRange } from "@/lib/format";
 
+export type DepartureBoardCopy = {
+  crewingBadge: string;
+  courseSession: string;
+  bookedOfCapacity: string;
+  boarding: string;
+  openGuests: string;
+  crewDropZoneAria: string;
+  assignCrewMemberAria: string;
+  assignedCrewHeading: string;
+  assignCrewOption: string;
+  unassignAria: string;
+  noCrewAssigned: string;
+  countReady: string;
+  countBlocked: string;
+  countBoarded: string;
+  blockedWarningOne: string;
+  blockedWarningOther: string;
+  noneBooked: string;
+  everyoneAboard: string;
+  clearToBoard: string;
+  sailingToday: string;
+  sailingTodaySubtitle: string;
+  dragStaffLabel: string;
+};
+
+/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    key in values ? String(values[key]) : match,
+  );
+}
+
 /**
  * A count that has to be read at a glance in sunlight: big, tabular, and
  * labelled in words so the tone is never the only signal.
@@ -43,6 +75,7 @@ function DepartureCard({
   crewed = false,
   availableStaff,
   updateCrewAction,
+  copy,
 }: {
   departure: DepartureSummary;
   shopSlug: string;
@@ -54,6 +87,7 @@ function DepartureCard({
     tripId: string,
     change: { personId: string; operation: "assign" | "unassign" },
   ) => Promise<{ ok: boolean }>;
+  copy: DepartureBoardCopy;
 }) {
   const { blocked, ready, boarded, booked, capacity } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
@@ -108,20 +142,20 @@ function DepartureCard({
             {formatTime(departure.startsAt, locale, timeZone)}
             {crewed ? (
               <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-                You’re crewing
+                {copy.crewingBadge}
               </span>
             ) : null}
           </p>
           <h3 className="mt-0.5 font-semibold">{departure.title}</h3>
           {departure.courseTitle ? (
             <p className="text-sm font-medium text-primary">
-              Course session · {departure.courseTitle}
+              {fill(copy.courseSession, { title: departure.courseTitle })}
             </p>
           ) : null}
           <p className="text-sm text-muted">
             {formatTimeRange(departure.startsAt, departure.endsAt, locale, timeZone)} ·{" "}
             <span className="tabular-nums">
-              {booked} of {capacity} booked
+              {fill(copy.bookedOfCapacity, { booked, capacity })}
             </span>
           </p>
         </div>
@@ -132,19 +166,19 @@ function DepartureCard({
             href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
             className={buttonClass()}
           >
-            Boarding
+            {copy.boarding}
           </Link>
           <Link
             href={`/shop/${shopSlug}/trips/${departure.tripId}/guests`}
             className={buttonClass({ variant: "secondary" })}
           >
-            Open guests
+            {copy.openGuests}
           </Link>
         </div>
       </div>
 
       <section
-        aria-label="Crew assignments drop zone"
+        aria-label={copy.crewDropZoneAria}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -155,13 +189,15 @@ function DepartureCard({
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-bold tracking-wide text-muted uppercase">
-            Assigned Crew (drag staff here to assign)
+            {copy.assignedCrewHeading}
           </p>
           {availableStaff.length > 0 ? (
             <label className="flex items-center gap-2 text-sm">
-              <span className="sr-only">Assign crew member to {departure.title}</span>
+              <span className="sr-only">
+                {fill(copy.assignCrewMemberAria, { title: departure.title })}
+              </span>
               <select
-                aria-label={`Assign crew member to ${departure.title}`}
+                aria-label={fill(copy.assignCrewMemberAria, { title: departure.title })}
                 defaultValue=""
                 onChange={(event) => {
                   const staffId = event.currentTarget.value;
@@ -170,7 +206,7 @@ function DepartureCard({
                 }}
                 className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm text-foreground"
               >
-                <option value="">Assign crew…</option>
+                <option value="">{copy.assignCrewOption}</option>
                 {availableStaff
                   .filter((staff) => !localCrew.some((crew) => crew.id === staff.id))
                   .map((staff) => (
@@ -183,7 +219,7 @@ function DepartureCard({
           ) : null}
         </div>
         {localCrew.length === 0 ? (
-          <p className="mt-2 text-xs text-muted">No crew assigned. Drag staff from above here.</p>
+          <p className="mt-2 text-xs text-muted">{copy.noCrewAssigned}</p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {localCrew.map((c) => (
@@ -196,7 +232,7 @@ function DepartureCard({
                   type="button"
                   onClick={() => handleUnassign(c.id)}
                   className="ml-1 text-muted hover:text-danger font-bold text-xs"
-                  aria-label={`Unassign ${c.fullName}`}
+                  aria-label={fill(copy.unassignAria, { name: c.fullName })}
                 >
                   ×
                 </button>
@@ -207,20 +243,27 @@ function DepartureCard({
       </section>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <Count label="Ready" value={ready} tone={ready > 0 ? "success" : "default"} />
-        <Count label="Blocked" value={blocked} tone={blocked > 0 ? "danger" : "default"} />
-        <Count label="Boarded" value={boarded} tone={boarded > 0 ? "primary" : "default"} />
+        <Count label={copy.countReady} value={ready} tone={ready > 0 ? "success" : "default"} />
+        <Count
+          label={copy.countBlocked}
+          value={blocked}
+          tone={blocked > 0 ? "danger" : "default"}
+        />
+        <Count
+          label={copy.countBoarded}
+          value={boarded}
+          tone={boarded > 0 ? "primary" : "default"}
+        />
       </div>
       {blocked > 0 ? (
         <p className="mt-3 text-sm font-semibold text-danger">
           <span aria-hidden="true">⚠ </span>
-          {blocked} {blocked === 1 ? "diver cannot" : "divers cannot"} board yet — they are in the
-          list below.
+          {fill(blocked === 1 ? copy.blockedWarningOne : copy.blockedWarningOther, {
+            count: blocked,
+          })}
         </p>
       ) : booked === 0 ? (
-        <p className="mt-3 text-sm text-muted">
-          No one&apos;s booked yet — share the trip page and they&apos;ll show up here.
-        </p>
+        <p className="mt-3 text-sm text-muted">{copy.noneBooked}</p>
       ) : boarded === booked ? (
         // The manifest already celebrates this milestone ("Roll call complete
         // ✦"); Today watches the same board without ever visiting the
@@ -229,12 +272,12 @@ function DepartureCard({
         // is actually full.
         <p className="rise-in mt-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold">
           <span aria-hidden="true">✦ </span>
-          Everyone&apos;s aboard.
+          {copy.everyoneAboard}
         </p>
       ) : (
         <p className="mt-3 text-sm font-semibold text-success">
           <span aria-hidden="true">✓ </span>
-          Everyone aboard this trip is clear to board.
+          {copy.clearToBoard}
         </p>
       )}
     </li>
@@ -253,6 +296,7 @@ export function DepartureBoard({
   crewedTripIds,
   availableStaff,
   updateCrewAction,
+  copy,
 }: {
   departures: readonly DepartureSummary[];
   shopSlug: string;
@@ -265,23 +309,21 @@ export function DepartureBoard({
     tripId: string,
     change: { personId: string; operation: "assign" | "unassign" },
   ) => Promise<{ ok: boolean }>;
+  copy: DepartureBoardCopy;
 }) {
   if (departures.length === 0) return null;
   const crewed = new Set(crewedTripIds ?? []);
   return (
     <section aria-labelledby="departures-heading" className="mb-10">
       <h2 id="departures-heading" className="text-lg font-semibold">
-        Sailing today
+        {copy.sailingToday}
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        Check divers in at the counter or run roll call from the manifest — readiness is rechecked
-        the moment you board someone.
-      </p>
+      <p className="mt-1 text-sm text-muted">{copy.sailingTodaySubtitle}</p>
 
       {availableStaff && availableStaff.length > 0 ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm">
           <span className="text-xs font-bold text-muted uppercase tracking-wider">
-            Drag staff to assign:
+            {copy.dragStaffLabel}
           </span>
           <div className="flex flex-wrap gap-2">
             {availableStaff.map((staff) => (
@@ -310,6 +352,7 @@ export function DepartureBoard({
             crewed={crewed.has(departure.tripId)}
             availableStaff={availableStaff}
             updateCrewAction={updateCrewAction}
+            copy={copy}
           />
         ))}
       </ul>

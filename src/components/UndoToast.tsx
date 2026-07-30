@@ -15,6 +15,8 @@ export function UndoToast({
   message,
   action,
   fields,
+  pendingLabel,
+  undoLabel,
   // Deliberately clear of Playwright's 8s expect timeout (playwright.config.ts)
   // so any render delay can't make the toast vanish out from under an assertion
   // racing to see it — that collision produced exactly this failure signature.
@@ -23,6 +25,8 @@ export function UndoToast({
   message: string;
   action: (formData: FormData) => void;
   fields: Record<string, string>;
+  pendingLabel: string;
+  undoLabel: string;
   autoDismissMs?: number;
 }) {
   const [visible, setVisible] = useState(true);
@@ -43,10 +47,10 @@ export function UndoToast({
             <input key={name} type="hidden" name={name} value={value} />
           ))}
           <SubmitButton
-            pendingLabel="Undoing…"
+            pendingLabel={pendingLabel}
             className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-semibold text-primary underline-offset-2 hover:underline"
           >
-            Undo
+            {undoLabel}
           </SubmitButton>
         </form>
       </div>

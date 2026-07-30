@@ -7,6 +7,8 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { trialHref } from "@/lib/funnel";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
@@ -16,7 +18,8 @@ export const metadata: Metadata = {
     "On a spreadsheet, or leaving EVE, DiveShop360, DiveAdmin, or Smartwaiver? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
 };
 
-export default function SwitchHubPage() {
+export default async function SwitchHubPage() {
+  const t = diverTranslator(await requestLocale());
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNav />
@@ -24,16 +27,13 @@ export default function SwitchHubPage() {
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              Switching to DiveDay
+              {t("switching.hub.eyebrow")}
             </p>
             <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-              The door swings both ways.
+              {t("switching.hub.title")}
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              Most shops stay on a spreadsheet, or software they've outgrown, because moving looks
-              painful. These guides make the move concrete: how to get your divers out of whatever
-              you use now, exactly what comes across into DiveDay, and what — honestly — stays
-              behind.
+              {t("switching.hub.description")}
             </p>
           </div>
         </section>
@@ -44,13 +44,14 @@ export default function SwitchHubPage() {
               href="/switching/spreadsheet"
               className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
             >
-              <h2 className="text-xl font-semibold tracking-tight">Coming from a spreadsheet</h2>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {t("switching.hub.spreadsheetTitle")}
+              </h2>
               <p className="mt-3 flex-1 leading-7 text-muted">
-                Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep —
-                and add the jobs a list can't do, like checking every card before the boat leaves.
+                {t("switching.hub.spreadsheetDescription")}
               </p>
               <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
-                Read the guide →
+                {t("switching.hub.readGuide")}
               </span>
             </Link>
             {MIGRATION_GUIDES.map((guide) => (
@@ -60,11 +61,11 @@ export default function SwitchHubPage() {
                 className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
               >
                 <h2 className="text-xl font-semibold tracking-tight">
-                  Switching from {guide.competitor}
+                  {t("switching.hub.switchingFrom", { competitor: guide.competitor })}
                 </h2>
                 <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
                 <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
-                  Read the guide →
+                  {t("switching.hub.readGuide")}
                 </span>
               </Link>
             ))}
@@ -77,25 +78,22 @@ export default function SwitchHubPage() {
         <section className="border-t border-border bg-surface">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Don't see your system?</h2>
-              <p className="mt-2 max-w-xl text-muted">
-                Most exports import as-is — a spreadsheet of your divers with recognizable name,
-                card, and size columns is all it takes. Try the live demo, or start a trial and
-                bring a CSV: DiveDay maps the common column names, previews the file, and flags
-                anything it doesn't recognize before saving.
-              </p>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                {t("switching.hub.dontSeeSystem")}
+              </h2>
+              <p className="mt-2 max-w-xl text-muted">{t("switching.hub.dontSeeSystemBody")}</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction} className="contents">
                 <FunnelTag source="switching-hub" />
                 <SubmitButton
-                  pendingLabel="Getting the demo ready…"
+                  pendingLabel={t("switching.hub.gettingDemoReady")}
                   className={buttonClass({
                     size: "cta",
                     className: "cursor-pointer disabled:opacity-70",
                   })}
                 >
-                  Try the live demo
+                  {t("marketing.common.tryDemo")}
                 </SubmitButton>
               </form>
               <Link
@@ -106,7 +104,7 @@ export default function SwitchHubPage() {
                   className: "border-border-strong",
                 })}
               >
-                Start a trial
+                {t("marketing.common.startTrial")}
               </Link>
             </div>
           </div>

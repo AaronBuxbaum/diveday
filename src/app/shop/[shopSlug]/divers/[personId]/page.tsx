@@ -8,6 +8,7 @@ import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
@@ -36,6 +37,7 @@ export default async function DiverDetailPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
   if (!shop || !diver) notFound();
   // Refunds and diver deletion are owner/manager only (H-14, ADR
@@ -58,25 +60,34 @@ export default async function DiverDetailPage({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
       <FlashParams params={["notice", "undo", "cardType"]} />
-      <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} />
+      <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       {notice === "card-deleted" && undo && cardType ? (
         <UndoToast
-          message="Card removed."
+          message={staffTranslator(locale)("divers.notices.cardRemovedToast")}
           action={restoreCardAction.bind(null, shopSlug, personId)}
           fields={{ certificationId: undo, cardType }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={notice} />
+        <NoticeBanner notice={notice} locale={locale} />
       )}
-      <StatsSummary diver={diver} />
+      <StatsSummary diver={diver} locale={locale} />
       <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
-      <SpecialtyCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
+      <SpecialtyCards
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        shop={shop}
+        locale={locale}
+      />
       <RentalFit
         diver={diver}
         shopSlug={shopSlug}
         personId={personId}
         rentalItems={shop.rentalItems}
         canOverride={canOverrideFit}
+        locale={locale}
       />
       <BookActivity
         locale={locale}
@@ -95,7 +106,9 @@ export default async function DiverDetailPage({
         canRefund={canRefund}
       />
       <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
-      {canDelete ? <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} /> : null}
+      {canDelete ? (
+        <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
+      ) : null}
     </main>
   );
 }

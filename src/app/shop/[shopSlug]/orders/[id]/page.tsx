@@ -10,17 +10,19 @@ import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Order — DiveDay" };
 
-const STATUS_LABELS: Record<string, string> = {
-  open: "Open — awaiting payment",
-  paid: "Paid",
-  void: "Void",
-  uncollectible: "Uncollectible",
-  refunded: "Refunded",
+const STATUS_KEYS: Record<string, StaffMessageKey> = {
+  open: "orders.detail.status.open",
+  paid: "orders.detail.status.paid",
+  void: "orders.detail.status.void",
+  uncollectible: "orders.detail.status.uncollectible",
+  refunded: "orders.detail.status.refunded",
 };
 
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -28,14 +30,14 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   open: "primary",
 };
 
-const KIND_LABELS: Record<string, string> = {
-  trip_fee: "Trip fee",
-  course_fee: "Course fee",
-  rental: "Rental",
-  nitrox: "Nitrox",
-  deposit: "Deposit",
-  merchandise: "Merchandise",
-  other: "Other",
+const KIND_KEYS: Record<string, StaffMessageKey> = {
+  trip_fee: "orders.detail.kind.trip_fee",
+  course_fee: "orders.detail.kind.course_fee",
+  rental: "orders.detail.kind.rental",
+  nitrox: "orders.detail.kind.nitrox",
+  deposit: "orders.detail.kind.deposit",
+  merchandise: "orders.detail.kind.merchandise",
+  other: "orders.detail.kind.other",
 };
 
 function centsToDisplay(cents: number, currency: string): string {
@@ -49,6 +51,7 @@ function centsToDisplay(cents: number, currency: string): string {
  * credentials, so on a demo shop these actions are refused before any Stripe
  * call — and the buttons are rendered disabled to match (src/db/seed.ts).
  */
+// i18n-exempt: scanner false positive — the copy scanner reads the `>` closing this generic as JSX and treats the rest of the signature as a text node; it is code, not copy.
 async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string): Promise<boolean> {
   const shop = await getShopById(db, shopId);
   return shop?.isDemo ?? false;
@@ -109,29 +112,27 @@ const FAILED_NOTICES = new Set([
   "not_authorized",
 ]);
 
-const NOTICE_MESSAGES: Record<string, string> = {
-  refreshed: "Status refreshed from Stripe.",
-  refresh_failed: "Couldn't reach Stripe to refresh this order.",
-  voided: "Order voided.",
-  void_failed: "Couldn't void this order — it may already be paid or void.",
-  refunded: "Payment refunded — the trip now shows as unpaid for this diver.",
-  refund_failed: "Couldn't refund this order — it may not have a refundable payment yet.",
-  not_authorized:
-    "Refunds are limited to owners and managers — ask one of them to issue this refund.",
-  demo_disabled:
-    "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
+// A notice query param maps to a message key, never to a sentence — the words
+// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
+const NOTICE_KEYS: Record<string, StaffMessageKey> = {
+  refreshed: "orders.detail.notice.refreshed",
+  refresh_failed: "orders.detail.notice.refreshFailed",
+  voided: "orders.detail.notice.voided",
+  void_failed: "orders.detail.notice.voidFailed",
+  refunded: "orders.detail.notice.refunded",
+  refund_failed: "orders.detail.notice.refundFailed",
+  not_authorized: "orders.detail.notice.notAuthorized",
+  demo_disabled: "orders.detail.notice.demoDisabled",
 };
-
-/** Why a Stripe action is greyed out on a demo shop — shown on hover and to AT. */
-const DEMO_ACTION_HINT =
-  "Demo orders aren't backed by a live Stripe invoice, so this action is disabled.";
 
 /** A greyed-out stand-in for a Stripe action a demo shop can't perform. */
 function DisabledDemoButton({
   label,
+  hint,
   variant,
 }: {
   label: string;
+  hint: string;
   variant: "secondary" | "danger";
 }) {
   return (
@@ -139,7 +140,7 @@ function DisabledDemoButton({
       type="button"
       disabled
       aria-disabled="true"
-      title={DEMO_ACTION_HINT}
+      title={hint}
       className={buttonClass({
         variant,
         className: `cursor-not-allowed opacity-50${variant === "secondary" ? " text-foreground" : ""}`,
@@ -167,20 +168,23 @@ export default async function OrderDetailPage({
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
   const canRefund = await canPersonRefund(db, session.user.shopId, session.user.personId);
+  const locale = await requestLocale();
+  const t = staffTranslator(locale);
+  const demoActionHint = t("orders.detail.demoActionHint");
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Front desk"
+        eyebrow={t("orders.detail.eyebrow")}
         title={order.person.fullName}
-        description={order.order.description || "Order"}
+        description={order.order.description || t("orders.detail.fallbackDescription")}
         actions={
           <Link
             href={`/shop/${shopSlug}/divers/${order.person.id}`}
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            Back to diver
+            {t("orders.detail.backToDiver")}
           </Link>
         }
       />
@@ -197,7 +201,7 @@ export default async function OrderDetailPage({
             }
             role={FAILED_NOTICES.has(notice) ? "alert" : "status"}
           >
-            {NOTICE_MESSAGES[notice] ?? notice}
+            {NOTICE_KEYS[notice] ? t(NOTICE_KEYS[notice]) : notice}
           </ShopNotice>
         </div>
       ) : null}
@@ -205,7 +209,9 @@ export default async function OrderDetailPage({
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex items-center justify-between gap-3">
           <Badge tone={STATUS_TONES[order.order.status] ?? "neutral"}>
-            {STATUS_LABELS[order.order.status] ?? order.order.status}
+            {STATUS_KEYS[order.order.status]
+              ? t(STATUS_KEYS[order.order.status])
+              : order.order.status}
           </Badge>
           <span className="text-lg font-semibold tabular-nums">
             {centsToDisplay(order.order.totalCents, order.order.currency)}
@@ -218,7 +224,7 @@ export default async function OrderDetailPage({
               <span>
                 {item.description}{" "}
                 <span className="text-muted">
-                  ({KIND_LABELS[item.kind] ?? item.kind}
+                  ({KIND_KEYS[item.kind] ? t(KIND_KEYS[item.kind]) : item.kind}
                   {item.quantity > 1 ? ` × ${item.quantity}` : ""})
                 </span>
               </span>
@@ -237,9 +243,9 @@ export default async function OrderDetailPage({
               rel="noreferrer"
               className="font-medium text-primary underline"
             >
-              Open the payable invoice
+              {t("orders.detail.openInvoice")}
             </a>{" "}
-            — share this link with the customer if Stripe's email didn't reach them.
+            {t("orders.detail.openInvoiceHint")}
           </p>
         ) : null}
 
@@ -247,27 +253,35 @@ export default async function OrderDetailPage({
           {order.order.status === "open" ? (
             demo ? (
               <>
-                <DisabledDemoButton label="Refresh status" variant="secondary" />
-                <DisabledDemoButton label="Void order" variant="danger" />
+                <DisabledDemoButton
+                  label={t("orders.detail.refreshStatus")}
+                  hint={demoActionHint}
+                  variant="secondary"
+                />
+                <DisabledDemoButton
+                  label={t("orders.detail.voidOrder")}
+                  hint={demoActionHint}
+                  variant="danger"
+                />
               </>
             ) : (
               <>
                 <form action={refreshAction}>
                   <input type="hidden" name="orderId" value={order.order.id} />
                   <SubmitButton
-                    pendingLabel="Refreshing…"
+                    pendingLabel={t("orders.detail.refreshing")}
                     className={buttonClass({ variant: "secondary", className: "text-foreground" })}
                   >
-                    Refresh status
+                    {t("orders.detail.refreshStatus")}
                   </SubmitButton>
                 </form>
                 <form action={voidAction}>
                   <input type="hidden" name="orderId" value={order.order.id} />
                   <SubmitButton
-                    pendingLabel="Voiding…"
+                    pendingLabel={t("orders.detail.voiding")}
                     className={buttonClass({ variant: "danger" })}
                   >
-                    Void order
+                    {t("orders.detail.voidOrder")}
                   </SubmitButton>
                 </form>
               </>
@@ -275,22 +289,26 @@ export default async function OrderDetailPage({
           ) : null}
           {canRefund && order.order.status === "paid" ? (
             demo ? (
-              <DisabledDemoButton label="Refund payment" variant="danger" />
+              <DisabledDemoButton
+                label={t("orders.detail.refundPayment")}
+                hint={demoActionHint}
+                variant="danger"
+              />
             ) : (
               <form action={refundAction}>
                 <input type="hidden" name="orderId" value={order.order.id} />
                 <SubmitButton
-                  pendingLabel="Refunding…"
+                  pendingLabel={t("orders.detail.refunding")}
                   className={buttonClass({ variant: "danger" })}
                 >
-                  Refund payment
+                  {t("orders.detail.refundPayment")}
                 </SubmitButton>
               </form>
             )
           ) : null}
         </div>
         {demo && (order.order.status === "open" || order.order.status === "paid") ? (
-          <p className="mt-2 text-xs text-muted">{DEMO_ACTION_HINT}</p>
+          <p className="mt-2 text-xs text-muted">{demoActionHint}</p>
         ) : null}
       </section>
     </main>

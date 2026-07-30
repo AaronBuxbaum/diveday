@@ -11,6 +11,7 @@ import { getDb } from "@/db/client";
 import { getShopReviewAggregate, listShopReviewsForStaff } from "@/db/reviews";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { setReviewPublishedAction } from "./actions";
@@ -19,10 +20,12 @@ export const metadata: Metadata = {
   title: "Reviews — DiveDay",
 };
 
-const NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
-  published: { tone: "success", text: "Review published to your schedule page." },
-  hidden: { tone: "success", text: "Review hidden — it no longer counts toward your rating." },
-  error: { tone: "danger", text: "That review couldn't be updated. Try again." },
+// A notice query param maps to a message key, never to a sentence — the words
+// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
+const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
+  published: { tone: "success", key: "reviews.notice.published" },
+  hidden: { tone: "success", key: "reviews.notice.hidden" },
+  error: { tone: "danger", key: "reviews.notice.error" },
 };
 
 export default async function ReviewsPage({
@@ -44,21 +47,22 @@ export default async function ReviewsPage({
   const waiting = reviews.filter((review) => !review.isPublished);
   const banner = notice ? NOTICES[notice] : undefined;
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Reviews"
-        title="What divers said"
-        description="Every review here was left through a diver's own post-trip recap link, so all of them came from someone who was on the boat. A rating on its own publishes straight away; anything with words waits for you."
+        eyebrow={t("reviews.eyebrow")}
+        title={t("reviews.title")}
+        description={t("reviews.description")}
         actions={
           <Link
             href={`/shop/${shopSlug}/schedule`}
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            View public page
+            {t("reviews.viewPublicPage")}
           </Link>
         }
       />
@@ -66,38 +70,39 @@ export default async function ReviewsPage({
       {banner ? (
         <div className="mb-6">
           <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.text}
+            {t(banner.key)}
           </ShopNotice>
         </div>
       ) : null}
 
-      <section aria-label="Rating overview" className="mb-8 grid gap-3 sm:grid-cols-3">
+      <section aria-label={t("reviews.overviewLabel")} className="mb-8 grid gap-3 sm:grid-cols-3">
         <ShopStat
-          label="Public rating"
+          label={t("reviews.publicRating")}
           value={aggregate.average === null ? "—" : aggregate.average.toFixed(1)}
           detail={
             aggregate.count === 0
-              ? "Nothing published yet"
-              : `Across ${aggregate.count} published ${aggregate.count === 1 ? "review" : "reviews"}`
+              ? t("reviews.noneYet")
+              : t("reviews.acrossCount", { count: aggregate.count })
           }
           tone="primary"
         />
-        <ShopStat label="Published" value={aggregate.count} detail="Shown on your schedule page" />
         <ShopStat
-          label="Waiting on you"
+          label={t("reviews.published")}
+          value={aggregate.count}
+          detail={t("reviews.publishedDetail")}
+        />
+        <ShopStat
+          label={t("reviews.waitingOnYou")}
           value={waiting.length}
-          detail="Reviews with words to read"
+          detail={t("reviews.waitingDetail")}
           tone={waiting.length > 0 ? "primary" : undefined}
         />
       </section>
 
       {reviews.length === 0 ? (
         <EmptyState>
-          <h2 className="font-medium">No reviews yet</h2>
-          <p className="mt-1 text-sm text-muted">
-            Divers are asked for one on their recap page after a trip sails. The first ones will
-            land here.
-          </p>
+          <h2 className="font-medium">{t("reviews.emptyHeading")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("reviews.emptyDetail")}</p>
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -110,39 +115,42 @@ export default async function ReviewsPage({
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <StarRating rating={review.rating} />
                   <Badge tone={review.isPublished ? "success" : "neutral"}>
-                    {review.isPublished ? "Published" : "Waiting on you"}
+                    {review.isPublished ? t("reviews.published") : t("reviews.waitingOnYou")}
                   </Badge>
                 </div>
                 {review.comment ? (
                   <p className="mt-2 text-base text-pretty">{review.comment}</p>
                 ) : (
-                  <p className="mt-2 text-sm text-muted italic">
-                    Rating only — no words to review.
-                  </p>
+                  <p className="mt-2 text-sm text-muted italic">{t("reviews.ratingOnly")}</p>
                 )}
                 <p className="mt-2 text-sm text-muted">
-                  {review.diverName} ·{" "}
-                  <Link
-                    href={`/shop/${shopSlug}/trips/${review.tripId}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {review.tripTitle}
-                  </Link>{" "}
-                  · {formatShortDate(review.divedAt, locale, timezone)}
+                  {t.rich("reviews.reviewMeta", {
+                    diverName: review.diverName,
+                    tripTitle: review.tripTitle,
+                    date: formatShortDate(review.divedAt, locale, timezone),
+                    trip: (chunks) => (
+                      <Link
+                        href={`/shop/${shopSlug}/trips/${review.tripId}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  })}
                 </p>
               </div>
               <form action={setReviewPublishedAction} className="shrink-0">
                 <input type="hidden" name="reviewId" value={review.id} />
                 <input type="hidden" name="publish" value={String(!review.isPublished)} />
                 <SubmitButton
-                  pendingLabel="Saving…"
+                  pendingLabel={t("reviews.saving")}
                   className={buttonClass(
                     review.isPublished
                       ? { variant: "secondary", className: "text-foreground" }
                       : {},
                   )}
                 >
-                  {review.isPublished ? "Hide" : "Publish"}
+                  {review.isPublished ? t("reviews.hide") : t("reviews.publish")}
                 </SubmitButton>
               </form>
             </li>

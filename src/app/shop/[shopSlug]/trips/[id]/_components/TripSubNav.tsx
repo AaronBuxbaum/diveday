@@ -22,24 +22,40 @@ import { usePathname } from "next/navigation";
  */
 export type TripSubNavPage = "overview" | "guests" | "manifest" | "prep";
 
-const TABS: { page: TripSubNavPage; label: string; suffix: string }[] = [
-  { page: "overview", label: "Overview", suffix: "" },
-  { page: "guests", label: "Guests", suffix: "/guests" },
-  { page: "manifest", label: "Manifest", suffix: "/manifest" },
-  { page: "prep", label: "Prep", suffix: "/prep" },
+/** Every word this nav renders, resolved on the server — see the note in `src/i18n/staff-messages.ts`. */
+export type TripSubNavCopy = {
+  ariaLabel: string;
+  overview: string;
+  guests: string;
+  manifest: string;
+  prep: string;
+};
+
+const TAB_ORDER: {
+  page: TripSubNavPage;
+  copyKey: keyof Omit<TripSubNavCopy, "ariaLabel">;
+  suffix: string;
+}[] = [
+  { page: "overview", copyKey: "overview", suffix: "" },
+  { page: "guests", copyKey: "guests", suffix: "/guests" },
+  { page: "manifest", copyKey: "manifest", suffix: "/manifest" },
+  { page: "prep", copyKey: "prep", suffix: "/prep" },
 ];
 
 export function TripSubNav({
   shopSlug,
   tripId,
+  copy,
   className = "",
 }: {
   shopSlug: string;
   tripId: string;
+  copy: TripSubNavCopy;
   className?: string;
 }) {
   const root = `/shop/${shopSlug}/trips/${tripId}`;
   const pathname = usePathname();
+  const TABS = TAB_ORDER.map((tab) => ({ ...tab, label: copy[tab.copyKey] }));
   // Overview is the bare trip route; any suffixed surface wins over it. Match on
   // the exact segment (or a deeper path under it) so a query string never throws
   // the highlight off.
@@ -52,7 +68,7 @@ export function TripSubNav({
 
   return (
     <nav
-      aria-label="Trip"
+      aria-label={copy.ariaLabel}
       className={`flex snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`}
     >
       {TABS.map(({ page, label, suffix }) => {

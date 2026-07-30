@@ -6,6 +6,8 @@ import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { checkInAction } from "./actions";
@@ -15,20 +17,23 @@ export const metadata: Metadata = {
   title: "Check-in — DiveDay",
 };
 
+/**
+ * A notice query param maps to a message key, never to a sentence — the words
+ * come from the staff bundle at render time (docs ADR
+ * 20260730-staff-copy-localization). Typing the value as `StaffMessageKey`
+ * makes a stale key a compile error rather than a rendered key on screen.
+ */
 const noticeCopy: Record<
   string,
-  { tone: "success" | "danger" | "warning" | "neutral"; text: string }
+  { tone: "success" | "danger" | "warning" | "neutral"; key: StaffMessageKey }
 > = {
-  checked_in: { tone: "success", text: "Diver checked in. Next diver is ready when you are." },
-  already_checked_in: { tone: "neutral", text: "That diver is already checked in." },
-  not_ready: {
-    tone: "warning",
-    text: "Readiness changed — resolve the blocker before checking them in.",
-  },
-  not_bookable: { tone: "danger", text: "That booking is no longer available for check-in." },
-  not_found: { tone: "danger", text: "That booking could not be found." },
-  staff_not_found: { tone: "danger", text: "Your staff access could not be confirmed." },
-  invalid: { tone: "danger", text: "Choose a diver from the queue before checking in." },
+  checked_in: { tone: "success", key: "checkIn.notice.checkedIn" },
+  already_checked_in: { tone: "neutral", key: "checkIn.notice.alreadyCheckedIn" },
+  not_ready: { tone: "warning", key: "checkIn.notice.notReady" },
+  not_bookable: { tone: "danger", key: "checkIn.notice.notBookable" },
+  not_found: { tone: "danger", key: "checkIn.notice.notFound" },
+  staff_not_found: { tone: "danger", key: "checkIn.notice.staffNotFound" },
+  invalid: { tone: "danger", key: "checkIn.notice.invalid" },
 };
 
 export default async function CheckInPage({
@@ -44,6 +49,10 @@ export default async function CheckInPage({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop || shop.id !== session.user.shopId) notFound();
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
 
   const query = q?.trim() ?? "";
   const queue = await listCheckInQueue(db, shop.id, { query });
@@ -52,40 +61,46 @@ export default async function CheckInPage({
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Counter mode"
-        title="Line-busting check-in"
-        description="Scan a booking code or search a diver, confirm live readiness, and keep the line moving. Check-in is arrival status; boarding is still confirmed on the manifest."
+        eyebrow={t("checkIn.eyebrow")}
+        title={t("checkIn.title")}
+        description={t("checkIn.description")}
       />
 
       {copy ? (
         <ShopNotice tone={copy.tone} className="mb-6">
-          {copy.text}
+          {t(copy.key)}
         </ShopNotice>
       ) : null}
 
       <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <CheckInSearch query={query} />
+        <CheckInSearch
+          query={query}
+          copy={{
+            label: t("checkIn.search.label"),
+            hint: t("checkIn.search.hint"),
+            placeholder: t("checkIn.search.placeholder"),
+            submit: t("checkIn.search.submit"),
+          }}
+        />
       </section>
 
-      <section aria-label="Check-in queue" className="mt-8">
+      <section aria-label={t("checkIn.queueAriaLabel")} className="mt-8">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h2 className="text-xl font-semibold">Ready at the counter</h2>
+            <h2 className="text-xl font-semibold">{t("checkIn.readyHeading")}</h2>
             <p className="mt-1 text-sm text-muted">
-              {query ? `Search results for “${query}”.` : "Today’s departures and the next boat."}
+              {query ? t("checkIn.searchResultsFor", { query }) : t("checkIn.todaysDepartures")}
             </p>
           </div>
           <Badge tone="neutral" tabularNums>
-            {queue.length} {queue.length === 1 ? "diver" : "divers"}
+            {t("checkIn.diverCount", { count: queue.length })}
           </Badge>
         </div>
 
         {queue.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-            <h3 className="font-semibold">No one matches that scan</h3>
-            <p className="mt-1 text-sm text-muted">
-              Try the diver’s name, email, or full booking ID.
-            </p>
+            <h3 className="font-semibold">{t("checkIn.emptyTitle")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("checkIn.emptyDescription")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -102,17 +117,14 @@ export default async function CheckInPage({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-semibold">{row.personName}</h3>
-                        {checkedIn ? <Badge tone="success">Checked in</Badge> : null}
+                        {checkedIn ? (
+                          <Badge tone="success">{t("checkIn.checkedInBadge")}</Badge>
+                        ) : null}
                       </div>
                       <p className="mt-1 text-sm font-medium text-primary">{row.tripTitle}</p>
                       <p className="mt-1 text-sm text-muted">
-                        {formatShortDate(row.startsAt, shop.defaultLocale, shop.timezone)} ·{" "}
-                        {formatTimeRange(
-                          row.startsAt,
-                          row.endsAt,
-                          shop.defaultLocale,
-                          shop.timezone,
-                        )}
+                        {formatShortDate(row.startsAt, locale, shop.timezone)} ·{" "}
+                        {formatTimeRange(row.startsAt, row.endsAt, locale, shop.timezone)}
                       </p>
                       {row.email ? (
                         <p className="mt-1 truncate text-xs text-muted">{row.email}</p>
@@ -120,7 +132,7 @@ export default async function CheckInPage({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge tone={ready ? "success" : "warning"}>
-                        {ready ? "Ready" : "Needs attention"}
+                        {ready ? t("checkIn.readyBadge") : t("checkIn.needsAttentionBadge")}
                       </Badge>
                       {checkedIn ? null : ready ? (
                         <form action={checkInAction.bind(null, shopSlug)}>
@@ -128,9 +140,9 @@ export default async function CheckInPage({
                           <button
                             type="submit"
                             className={buttonClass({ className: "whitespace-nowrap" })}
-                            aria-label={`Check in ${row.personName}`}
+                            aria-label={t("checkIn.checkInAriaLabel", { name: row.personName })}
                           >
-                            Check in
+                            {t("checkIn.checkInButton")}
                           </button>
                         </form>
                       ) : null}
@@ -139,6 +151,7 @@ export default async function CheckInPage({
                   {!ready ? (
                     <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-warning">
                       {row.readiness.blockers.slice(0, 3).map((blocker) => (
+                        // i18n-exempt: domain-returned sentence from src/lib/readiness.ts, flagged out of scope in report
                         <li key={blocker.code}>• {blocker.message}</li>
                       ))}
                     </ul>

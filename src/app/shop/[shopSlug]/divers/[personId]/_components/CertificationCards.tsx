@@ -4,6 +4,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
@@ -19,7 +21,7 @@ import {
   statusTone,
 } from "./shared";
 
-export function CertificationCards({
+export async function CertificationCards({
   diver,
   shopSlug,
   personId,
@@ -31,21 +33,38 @@ export function CertificationCards({
   shop: Shop;
 }) {
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  // Shared across every card on this diver. Per-card interpolated text (card
+  // number, ID, aria-label) is built fresh per card below, in the .map — ICU
+  // composes those server-side so word order stays correct per locale,
+  // rather than concatenating a prefix/suffix on the client.
+  const cardCopy = {
+    diverLabel: t("divers.certifications.card.diverLabel"),
+    statusVerified: t("divers.certifications.card.statusVerified"),
+    statusRefresherDue: t("divers.certifications.card.statusRefresherDue"),
+    statusPending: t("divers.certifications.card.statusPending"),
+    noPhoto: t("divers.certifications.card.noPhoto"),
+    certifiedByStaff: t("divers.certifications.card.certifiedByStaff"),
+    refresherDueVerify: t("divers.certifications.card.refresherDueVerify"),
+    awaitingVerification: t("divers.certifications.card.awaitingVerification"),
+    secureLabel: t("divers.certifications.card.secureLabel"),
+    openFullSize: t("divers.certifications.card.openFullSize"),
+    uploadedAlt: t("divers.certifications.card.uploadedAlt"),
+  };
+  const uploadedPhotoText = t("divers.certifications.card.uploadedPhoto");
+  const securityDetailsText = t("divers.certifications.card.securityDetails");
   return (
     <section className="mt-10" aria-labelledby="cards-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="cards-heading" className="text-lg font-semibold">
-            Certification cards
+            {t("divers.certifications.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            Evidence starts pending. Look the card number up with the issuing agency, then mark it
-            certified — only certified cards affect readiness.
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("divers.certifications.description")}</p>
         </div>
         <details>
           <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
-            Add card
+            {t("divers.certifications.addCard")}
           </summary>
           <FieldGrid
             as="form"
@@ -54,7 +73,7 @@ export function CertificationCards({
             columns={2}
             className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
           >
-            <Field label="Agency">
+            <Field label={t("divers.certifications.agency")}>
               <select name="agency" className={controlClass}>
                 {Object.entries(AGENCY_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -63,7 +82,7 @@ export function CertificationCards({
                 ))}
               </select>
             </Field>
-            <Field label="Level">
+            <Field label={t("divers.certifications.level")}>
               <select name="level" className={controlClass}>
                 {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -72,25 +91,28 @@ export function CertificationCards({
                 ))}
               </select>
             </Field>
-            <Field label="Card number">
+            <Field label={t("divers.certifications.cardNumber")}>
               <input name="identifier" required className={controlClass} />
             </Field>
-            <Field label="Refresher due" hint="(optional; shop policy — cards don’t expire)">
+            <Field
+              label={t("divers.certifications.refresherDue")}
+              hint={t("divers.certifications.refresherHint")}
+            >
               <input name="expiresOn" type="date" className={controlClass} />
             </Field>
             <Field
-              label="Card photo"
-              hint="(optional; JPG, PNG, or WebP; ≤5 MB)"
+              label={t("divers.certifications.cardPhoto")}
+              hint={t("divers.certifications.cardPhotoHint")}
               className="sm:col-span-2"
             >
               <ImageFileInput name="cardImage" />
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel="Capturing…"
+                pendingLabel={t("divers.certifications.capturing")}
                 className={buttonClass({ variant: "secondary" })}
               >
-                Capture for review
+                {t("divers.certifications.captureForReview")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
@@ -98,9 +120,7 @@ export function CertificationCards({
       </div>
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
         {diver.certifications.length === 0 ? (
-          <li className="px-4 py-5 text-sm text-muted">
-            No level cards yet — add their first card above so it can make them trip-ready.
-          </li>
+          <li className="px-4 py-5 text-sm text-muted">{t("divers.certifications.empty")}</li>
         ) : (
           diver.certifications.map((card) => {
             const display = cardDisplayStatus(card, todayLocal);
@@ -118,7 +138,12 @@ export function CertificationCards({
                     {card.identifier}
                     {card.expiresAt ? (
                       <span className={expired ? "font-medium text-danger" : undefined}>
-                        {` · refresher ${expired ? "overdue" : "due"} ${formatCalendarDate(card.expiresAt)}`}
+                        {t(
+                          expired
+                            ? "divers.certifications.refresherOverdue"
+                            : "divers.certifications.refresherDueOn",
+                          { date: formatCalendarDate(card.expiresAt) },
+                        )}
                       </span>
                     ) : null}
                   </p>
@@ -127,15 +152,27 @@ export function CertificationCards({
                   ) : null}
                   <details className="mt-2 group print:hidden">
                     <summary className="cursor-pointer text-sm font-medium text-primary hover:underline">
-                      View digital card
+                      {t("divers.certifications.viewDigitalCard")}
                     </summary>
                     <DigitalCardFlip
                       fullName={diver.person.fullName}
                       agencyLabel={AGENCY_LABELS[card.agency]}
                       levelLabel={CERTIFICATION_LEVEL_LABELS[card.level]}
-                      identifier={card.identifier}
                       cardImageUrl={card.cardImageUrl}
                       verificationStatus={display}
+                      copy={{
+                        ...cardCopy,
+                        cardNumberText: t("divers.certifications.card.cardNumberText", {
+                          id: card.identifier,
+                        }),
+                        idText: t("divers.certifications.card.idText", { id: card.identifier }),
+                        flipAriaLabel: t("divers.certifications.card.flipAriaLabel", {
+                          level: CERTIFICATION_LEVEL_LABELS[card.level],
+                        }),
+                        tapToFlipText: t("divers.certifications.card.tapToFlipText", {
+                          target: card.cardImageUrl ? uploadedPhotoText : securityDetailsText,
+                        }),
+                      }}
                     />
                   </details>
                 </div>
@@ -143,7 +180,11 @@ export function CertificationCards({
                   <Badge tone={statusTone(display)}>{CARD_STATUS_LABELS[display]}</Badge>
                   {isImportedCard(card) ? (
                     <Badge tone="neutral">
-                      {card.importedFromLabel ? `imported · ${card.importedFromLabel}` : "imported"}
+                      {card.importedFromLabel
+                        ? t("divers.certifications.importedWithSource", {
+                            source: card.importedFromLabel,
+                          })
+                        : t("divers.certifications.importedLabel")}
                     </Badge>
                   ) : null}
                   {card.status === "pending" || needsImportConfirm(card) ? (
@@ -151,11 +192,15 @@ export function CertificationCards({
                       <input type="hidden" name="certificationId" value={card.id} />
                       <SubmitButton
                         pendingLabel={
-                          needsImportConfirm(card) ? "Confirming…" : "Marking certified…"
+                          needsImportConfirm(card)
+                            ? t("divers.certifications.confirming")
+                            : t("divers.certifications.markingCertified")
                         }
                         className={buttonClass({ variant: "secondary", size: "sm" })}
                       >
-                        {needsImportConfirm(card) ? "Confirm card" : "Mark certified"}
+                        {needsImportConfirm(card)
+                          ? t("divers.certifications.confirmCard")
+                          : t("divers.certifications.markCertified")}
                       </SubmitButton>
                     </form>
                   ) : null}
@@ -163,10 +208,10 @@ export function CertificationCards({
                     <input type="hidden" name="certificationId" value={card.id} />
                     {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                     <SubmitButton
-                      pendingLabel="Deleting…"
+                      pendingLabel={t("divers.certifications.deleting")}
                       className={buttonClass({ variant: "danger", size: "sm" })}
                     >
-                      Delete
+                      {t("divers.certifications.delete")}
                     </SubmitButton>
                   </form>
                 </div>

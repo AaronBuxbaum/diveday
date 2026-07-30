@@ -1,209 +1,134 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 
-type NoticeText = string | ((count?: number) => string);
-
-const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: NoticeText }> = {
-  saved: { tone: "success", text: "Changes saved." },
-  cancelled: { tone: "danger", text: "Trip cancelled — it's off the public schedule." },
-  reinstated: { tone: "success", text: "Back on! The trip is on the schedule again." },
-  crew: { tone: "success", text: "Crew updated." },
-  "crew-conflict": {
-    tone: "danger",
-    text: "Crew wasn't changed — someone is already assigned during this time, or the course would fall below its teaching ratio.",
-  },
-  "note-added": { tone: "success", text: "Private staff note added." },
-  "note-deleted": { tone: "success", text: "Private staff note deleted." },
-  "booking-removed": { tone: "success", text: "Booking cancelled — the spot is open again." },
-  "booking-removed-refunded": {
-    tone: "success",
-    text: "Booking cancelled and the payment refunded — the spot is open again.",
-  },
-  "booking-removed-forfeit": {
-    tone: "success",
-    text: "Booking cancelled — the spot is open again. It was past the cancellation window, so the seat was non-refundable.",
-  },
+/**
+ * One entry per notice code, carrying its own tone and message key(s) — same
+ * shape as `divers/[personId]/_components/NoticeBanner.tsx`'s `NOTICE_KEYS`.
+ * A handful of refusals also carry a specific count (how many divers are
+ * already booked, how many the last-minute deal reached); those get a second,
+ * pluralized key used only once the count is known.
+ */
+const NOTICE_KEYS: Record<
+  string,
+  { tone: "success" | "danger"; key: StaffMessageKey; countKey?: StaffMessageKey }
+> = {
+  saved: { tone: "success", key: "trips.notices.saved" },
+  cancelled: { tone: "danger", key: "trips.notices.cancelled" },
+  reinstated: { tone: "success", key: "trips.notices.reinstated" },
+  crew: { tone: "success", key: "trips.notices.crew" },
+  "crew-conflict": { tone: "danger", key: "trips.notices.crewConflict" },
+  "note-added": { tone: "success", key: "trips.notices.noteAdded" },
+  "note-deleted": { tone: "success", key: "trips.notices.noteDeleted" },
+  "booking-removed": { tone: "success", key: "trips.notices.bookingRemoved" },
+  "booking-removed-refunded": { tone: "success", key: "trips.notices.bookingRemovedRefunded" },
+  "booking-removed-forfeit": { tone: "success", key: "trips.notices.bookingRemovedForfeit" },
   "booking-removed-refund-manual": {
     tone: "danger",
-    text: "Booking cancelled — a refund is owed but must be issued by hand (counter payment, or Stripe isn't connected). Refund from the diver's payments.",
+    key: "trips.notices.bookingRemovedRefundManual",
   },
   "booking-removed-refund-failed": {
     tone: "danger",
-    text: "Booking cancelled, but the automatic refund didn't go through — issue it from the diver's payments.",
+    key: "trips.notices.bookingRemovedRefundFailed",
   },
   "booking-removed-refund-review": {
     tone: "danger",
-    text: "Booking cancelled. The payment record and Stripe disagree on what was captured — review the diver's payments before issuing any refund.",
+    key: "trips.notices.bookingRemovedRefundReview",
   },
   "booking-removed-refund-owner": {
     tone: "danger",
-    text: "Booking cancelled and the spot is open. This booking was paid, so a refund may be owed — an owner or manager needs to issue it from the diver's payments.",
+    key: "trips.notices.bookingRemovedRefundOwner",
   },
-  "booking-restored": { tone: "success", text: "Back on the roster." },
-  "booking-restore-full": {
-    tone: "danger",
-    text: "Couldn't undo — the freed spot has been taken and the trip is full again. Add them to the wait list instead.",
-  },
-  "diver-added": { tone: "success", text: "Diver added to the trip." },
-  "diver-waitlisted": { tone: "success", text: "Diver added to the wait list." },
-  "identity-confirmed": {
-    tone: "success",
-    text: "Identity confirmed — this diver can be cleared to board.",
-  },
-  "diver-invalid": { tone: "danger", text: "Enter a name and a valid email to add a diver." },
-  "diver-full": {
-    tone: "danger",
-    text: "That trip is full — add them to the wait list instead.",
-  },
-  "diver-waitlist-available": {
-    tone: "danger",
-    text: "There's room on this trip — add them to the trip instead of the wait list.",
-  },
-  "diver-already": { tone: "danger", text: "That diver already has a booking on this trip." },
-  "diver-course-unstaffed": {
-    tone: "danger",
-    text: "This course session needs an instructor assigned before you can add divers.",
-  },
-  "diver-course-prerequisite": {
-    tone: "danger",
-    text: "That diver doesn't have a verified certification on file for this course's prerequisite.",
-  },
-  "diver-course-ratio-full": {
-    tone: "danger",
-    text: "This session is at its instructor-to-student ratio limit — assign another instructor or a certified assistant, or add them to the wait list.",
-  },
-  "diver-course-min-age": {
-    tone: "danger",
-    text: "That diver is under this course's minimum age on the day it runs, going by the date of birth on their profile. Correct the date if it's wrong.",
-  },
-  "diver-unavailable": { tone: "danger", text: "This trip can't accept new divers right now." },
-  "waiver-complete": { tone: "success", text: "That diver already has a completed waiver." },
-  "waiver-in-person": {
-    tone: "success",
-    text: "Paper waiver recorded — the diver's release is on file.",
-  },
-  "waiver-medical-attestation": {
-    tone: "danger",
-    text: "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
-  },
-  "waiver-error": {
-    tone: "danger",
-    text: "That waiver link could not be created. Try a current booking and template.",
-  },
-  "bulk-waiver": {
-    tone: "success",
-    text: "Waiver links sent to the selected divers who still needed one — anyone already signed was left alone.",
-  },
-  "bulk-waiver-none": {
-    tone: "danger",
-    text: "Tick at least one diver, then send the waiver to the whole selection.",
-  },
-  "series-applied": {
-    tone: "success",
-    text: "Those details now apply to every upcoming date in this series.",
-  },
-  "series-applied-partial": {
-    tone: "success",
-    text: "Applied to the upcoming dates in this series. A few already had more divers than the new capacity, or already had a roll call recorded past the new dive count, so those were left as they were — adjust them from their own trip pages.",
-  },
-  "series-cancelled": {
-    tone: "danger",
-    text: "Cancelled every upcoming date in this series. Reinstate any single date from its own trip page.",
-  },
-  "series-extended": {
-    tone: "success",
-    text: "Added more dates — the series runs further out on the board now.",
-  },
-  "series-error": {
-    tone: "danger",
-    text: "That series change didn't go through. Try again from a scheduled date in the series.",
-  },
-  "recap-note": {
-    tone: "success",
-    text: "Recap note saved — it rides along on every diver's recap once this trip departs.",
-  },
-  "recap-photo-removed": { tone: "success", text: "Photo removed from the recap." },
-  requirements: { tone: "success", text: "Trip readiness requirements updated." },
-  payment: { tone: "success", text: "Payment status updated." },
-  conditions: { tone: "success", text: "Crew prediction published — divers will see it now." },
-  "conditions-cleared": {
-    tone: "success",
-    text: "Crew prediction cleared. Divers will see the automated outlook when it is available.",
-  },
-  "not-authorized": {
-    tone: "danger",
-    text: "You don't have permission to change this trip's setup. Trip configuration is limited to owners, managers, and instructors — ask one of them to make this change.",
-  },
-  invalid: {
-    tone: "danger",
-    text: "That didn't save — check the date, times, and capacity, then try again.",
-  },
-  "end-before-start": { tone: "danger", text: "The trip has to end after it starts." },
+  "booking-restored": { tone: "success", key: "trips.notices.bookingRestored" },
+  "booking-restore-full": { tone: "danger", key: "trips.notices.bookingRestoreFull" },
+  "diver-added": { tone: "success", key: "trips.notices.diverAdded" },
+  "diver-waitlisted": { tone: "success", key: "trips.notices.diverWaitlisted" },
+  "identity-confirmed": { tone: "success", key: "trips.notices.identityConfirmed" },
+  "diver-invalid": { tone: "danger", key: "trips.notices.diverInvalid" },
+  "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
+  "diver-waitlist-available": { tone: "danger", key: "trips.notices.diverWaitlistAvailable" },
+  "diver-already": { tone: "danger", key: "trips.notices.diverAlready" },
+  "diver-course-unstaffed": { tone: "danger", key: "trips.notices.diverCourseUnstaffed" },
+  "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },
+  "diver-course-ratio-full": { tone: "danger", key: "trips.notices.diverCourseRatioFull" },
+  "diver-course-min-age": { tone: "danger", key: "trips.notices.diverCourseMinAge" },
+  "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
+  "waiver-complete": { tone: "success", key: "trips.notices.waiverComplete" },
+  "waiver-in-person": { tone: "success", key: "trips.notices.waiverInPerson" },
+  "waiver-medical-attestation": { tone: "danger", key: "trips.notices.waiverMedicalAttestation" },
+  "waiver-error": { tone: "danger", key: "trips.notices.waiverError" },
+  "bulk-waiver": { tone: "success", key: "trips.notices.bulkWaiver" },
+  "bulk-waiver-none": { tone: "danger", key: "trips.notices.bulkWaiverNone" },
+  "series-applied": { tone: "success", key: "trips.notices.seriesApplied" },
+  "series-applied-partial": { tone: "success", key: "trips.notices.seriesAppliedPartial" },
+  "series-cancelled": { tone: "danger", key: "trips.notices.seriesCancelled" },
+  "series-extended": { tone: "success", key: "trips.notices.seriesExtended" },
+  "series-error": { tone: "danger", key: "trips.notices.seriesError" },
+  "recap-note": { tone: "success", key: "trips.notices.recapNote" },
+  "recap-photo-removed": { tone: "success", key: "trips.notices.recapPhotoRemoved" },
+  requirements: { tone: "success", key: "trips.notices.requirements" },
+  payment: { tone: "success", key: "trips.notices.payment" },
+  conditions: { tone: "success", key: "trips.notices.conditions" },
+  "conditions-cleared": { tone: "success", key: "trips.notices.conditionsCleared" },
+  "not-authorized": { tone: "danger", key: "trips.notices.notAuthorized" },
+  invalid: { tone: "danger", key: "trips.notices.invalid" },
+  "end-before-start": { tone: "danger", key: "trips.notices.endBeforeStart" },
   "capacity-below-booked": {
     tone: "danger",
-    text: (count) =>
-      count === undefined
-        ? "That capacity is below how many divers are already booked on this trip — cancel bookings first, or set a higher capacity."
-        : `That capacity is below the ${count} diver${count === 1 ? "" : "s"} already booked on this trip — cancel bookings first, or set a higher capacity.`,
+    key: "trips.notices.capacityBelowBooked",
+    countKey: "trips.notices.capacityBelowBookedCount",
   },
   "last-minute-sent": {
     tone: "success",
-    text: (count) =>
-      count === undefined
-        ? "Last-minute deal sent."
-        : `Last-minute deal sent to ${count} diver${count === 1 ? "" : "s"}.`,
+    key: "trips.notices.lastMinuteSent",
+    countKey: "trips.notices.lastMinuteSentCount",
   },
   "last-minute-invalid-discount": {
     tone: "danger",
-    text: "Pick a discount between 5% and 90%.",
+    key: "trips.notices.lastMinuteInvalidDiscount",
   },
   "last-minute-trip-unavailable": {
     tone: "danger",
-    text: "This trip isn't open for a last-minute deal — it's past, cancelled, or already departed.",
+    key: "trips.notices.lastMinuteTripUnavailable",
   },
-  "last-minute-trip-full": {
-    tone: "danger",
-    text: "This trip is already full — there's nothing to fill.",
-  },
-  "last-minute-not-connected": {
-    tone: "danger",
-    text: "Connect Stripe in Settings before sending a last-minute deal — the discount code needs a connected account to exist on.",
-  },
-  "last-minute-no-recipients": {
-    tone: "danger",
-    text: "No one on the last-minute list is around for this trip's date yet.",
-  },
-  "last-minute-stripe-failed": {
-    tone: "danger",
-    text: "Stripe couldn't create the discount code. Try again in a moment.",
-  },
+  "last-minute-trip-full": { tone: "danger", key: "trips.notices.lastMinuteTripFull" },
+  "last-minute-not-connected": { tone: "danger", key: "trips.notices.lastMinuteNotConnected" },
+  "last-minute-no-recipients": { tone: "danger", key: "trips.notices.lastMinuteNoRecipients" },
+  "last-minute-stripe-failed": { tone: "danger", key: "trips.notices.lastMinuteStripeFailed" },
   "planned-dives-below-history": {
     tone: "danger",
-    text: (count) =>
-      count === undefined
-        ? "Can't drop the dive count below one staff already recorded a roll call against — that history has to stay reachable."
-        : `Can't drop the dive count below ${count} — staff already recorded a roll call after dive ${count} on this trip, and that history has to stay reachable.`,
+    key: "trips.notices.plannedDivesBelowHistory",
+    countKey: "trips.notices.plannedDivesBelowHistoryCount",
   },
 };
 
 export function TripNoticeBanner({
   notice,
   count,
+  locale,
   undoBookingId,
   undoAction,
 }: {
   notice?: string;
   /** The specific count behind a "-below-" refusal notice, e.g. the booked count or recorded dive number. */
   count?: string;
+  locale: string;
   undoBookingId?: string;
   // Only the roster's reversible removals carry an undo; Overview's config
   // notices render the same banner without one.
   undoAction?: (formData: FormData) => void;
 }) {
-  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
+  // `Object.hasOwn`, not a bare lookup: `notice` is an attacker-supplied query
+  // param, and `?notice=constructor` would otherwise return a truthy inherited
+  // value and render an empty banner.
+  const banner = notice && Object.hasOwn(NOTICE_KEYS, notice) ? NOTICE_KEYS[notice] : undefined;
   if (!banner) return null;
+  const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
-  const text = typeof banner.text === "function" ? banner.text(parsedCount) : banner.text;
+  const text =
+    parsedCount !== undefined && banner.countKey
+      ? t(banner.countKey, { count: parsedCount })
+      : t(banner.key);
   return (
     <div className="mt-6">
       <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
@@ -213,10 +138,10 @@ export function TripNoticeBanner({
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />
               <SubmitButton
-                pendingLabel="Undoing…"
+                pendingLabel={t("trips.notices.undoing")}
                 className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
               >
-                Undo
+                {t("trips.notices.undo")}
               </SubmitButton>
             </form>
           ) : null}

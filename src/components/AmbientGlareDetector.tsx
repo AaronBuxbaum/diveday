@@ -18,6 +18,19 @@ export type ContrastMode = "auto" | "standard" | "full";
 export const CONTRAST_MODE_STORAGE_KEY = "diveday:contrast-mode";
 export const CONTRAST_MODE_CHANGE_EVENT = "diveday:contrast-mode-change";
 
+/** Every word `AmbientContrastSlider` renders, resolved server-side. */
+export interface AmbientContrastCopy {
+  contrastAutoFallback: string;
+  contrastIconTitle: string;
+  contrastLabel: string;
+  labelAuto: string;
+  labelStandard: string;
+  labelFullAaa: string;
+  modeAuto: string;
+  modeStandard: string;
+  modeFullAaa: string;
+}
+
 /**
  * AmbientGlareDetector is a client-side component that listens to the device's
  * AmbientLightSensor. If the ambient light level is above the threshold, it
@@ -153,7 +166,7 @@ export function AmbientGlareDetector() {
  * AmbientContrastSlider is a slider UI that allows manual overrides of the contrast mode.
  * Toggling standard or full AAA contrast overrides the auto-glare detection.
  */
-export function AmbientContrastSlider() {
+export function AmbientContrastSlider({ copy }: { copy: AmbientContrastCopy }) {
   const [mode, setMode] = useState<ContrastMode>("auto");
   const [mounted, setMounted] = useState(false);
 
@@ -190,13 +203,14 @@ export function AmbientContrastSlider() {
   if (!mounted) {
     return (
       <div className="flex items-center h-11 px-3 border border-border rounded-xl bg-surface/50 opacity-50">
-        <span className="text-xs font-semibold text-muted">Contrast: Auto</span>
+        <span className="text-xs font-semibold text-muted">{copy.contrastAutoFallback}</span>
       </div>
     );
   }
 
   const sliderVal = mode === "auto" ? 0 : mode === "standard" ? 1 : 2;
-  const modeLabel = mode === "auto" ? "Auto ☀" : mode === "standard" ? "Standard" : "Full AAA ☀";
+  const modeLabel =
+    mode === "auto" ? copy.modeAuto : mode === "standard" ? copy.modeStandard : copy.modeFullAaa;
 
   return (
     <div
@@ -212,11 +226,11 @@ export function AmbientContrastSlider() {
             stroke="currentColor"
             strokeWidth="2"
           >
-            <title>Contrast Icon</title>
+            <title>{copy.contrastIconTitle}</title>
             <circle cx="12" cy="12" r="4" />
             <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
           </svg>
-          Contrast
+          {copy.contrastLabel}
         </span>
         <span className="font-semibold px-2 py-0.5 rounded-full bg-surface-sunken text-foreground">
           {modeLabel}
@@ -232,9 +246,9 @@ export function AmbientContrastSlider() {
         className="w-full h-1 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-primary"
       />
       <div className="flex justify-between text-[8px] text-muted font-bold px-0.5 uppercase tracking-wider">
-        <span>Auto</span>
-        <span>Standard</span>
-        <span>Full AAA</span>
+        <span>{copy.labelAuto}</span>
+        <span>{copy.labelStandard}</span>
+        <span>{copy.labelFullAaa}</span>
       </div>
     </div>
   );

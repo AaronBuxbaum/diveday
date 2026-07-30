@@ -1,5 +1,13 @@
 "use client";
 
+// i18n-exempt-file: error.tsx is a Next.js file convention with a fixed
+// {error, reset} prop signature — the framework instantiates it directly, so
+// no Server Component ancestor can pass it a `copy` prop the way every other
+// staff Client Component receives its words (src/i18n/staff-messages.ts).
+// Bridging server-resolved copy across an error boundary would need new
+// context-provider plumbing threaded through the layout for three short,
+// rare-path strings; flagged for a follow-up decision rather than invented
+// unilaterally during a text-extraction pass.
 import { buttonClass } from "@/components/ui/button";
 
 /**

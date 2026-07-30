@@ -1,27 +1,19 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { Notice } from "@/components/account/Notice";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { checkAccountToken, wasAccountTokenConsumed } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { confirmEmailVerification } from "./actions";
 
 export const metadata: Metadata = {
   title: "Confirm your email — DiveDay",
   robots: { index: false, follow: false },
 };
-
-function Notice({ title, text }: { title: string; text: string }) {
-  return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-3 text-muted">{text}</p>
-      </section>
-    </main>
-  );
-}
 
 /**
  * Deliberately does not confirm on the bare GET: a corporate link-prescanner
@@ -40,6 +32,7 @@ export default async function VerifyAccountPage({
   const { token } = await params;
   const { confirmed } = await searchParams;
   const db = await getDb();
+  const t = diverTranslator(await requestLocale());
 
   // Never trust the query param alone — it's caller-controlled, so a garbage
   // token with a forged `?confirmed=1` must still read as failed rather than
@@ -52,8 +45,8 @@ export default async function VerifyAccountPage({
         <>
           <FlashParams params={["confirmed"]} />
           <Notice
-            title="Email confirmed"
-            text="Thanks — your email is confirmed. You're all set."
+            title={t("account.verify.confirmedTitle")}
+            text={t("account.verify.confirmedText")}
           />
         </>
       );
@@ -64,8 +57,8 @@ export default async function VerifyAccountPage({
   if (!check) {
     return (
       <Notice
-        title="This confirmation link isn’t available"
-        text="It may have expired or already been used. If you already confirmed your email, you're all set — sign in and carry on."
+        title={t("account.verify.unavailableTitle")}
+        text={t("account.verify.unavailableText")}
       />
     );
   }
@@ -73,13 +66,11 @@ export default async function VerifyAccountPage({
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
       <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Confirm your email</h1>
-        <p className="mt-3 text-muted">
-          Confirm this is your email address so we know it&apos;s really you.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("account.verify.title")}</h1>
+        <p className="mt-3 text-muted">{t("account.verify.description")}</p>
         <form action={confirmEmailVerification.bind(null, token)} className="mt-5">
-          <SubmitButton pendingLabel="Confirming…" className={buttonClass()}>
-            Confirm my email
+          <SubmitButton pendingLabel={t("account.verify.confirming")} className={buttonClass()}>
+            {t("account.verify.submit")}
           </SubmitButton>
         </form>
       </section>

@@ -5,12 +5,39 @@ import { useState, useTransition } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { buttonClass } from "@/components/ui/button";
 
+/** One role card's full content, resolved server-side (icon/name are data, the rest is translated copy). */
+interface DemoRoleInfo {
+  id: "owner" | "instructor" | "divemaster" | "captain" | "diver";
+  icon: string;
+  name: string;
+  title: string;
+  desc: string;
+  tryThis: string;
+  /** "Switch to {title}" pre-formatted server-side — functions can't cross into a Client Component. */
+  switchAriaLabel: string;
+}
+
+interface DemoBannerCopy {
+  shopLabel: string;
+  viewingAs: string;
+  switchRole: string;
+  sharedWarning: string;
+  sessionExpired: string;
+  withCredentials: string;
+  chooseRole: string;
+  active: string;
+  tryLabel: string;
+  current: string;
+  switchAction: string;
+}
+
 interface DemoBannerProps {
   currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver";
   currentName?: string | null;
   shopSlug: string;
-  /** Roles that have a seeded person in this shop; others are hidden. */
-  availableRoles: string[];
+  /** Every role this shop can show, in display order, already filtered to who's seeded. */
+  roles: DemoRoleInfo[];
+  copy: DemoBannerCopy;
   /**
    * A per-visitor minted demo (not the shared fixture): addressable by slug and
    * readable by anyone who has it, so it shows a "don't enter real data" notice.
@@ -22,54 +49,12 @@ interface DemoBannerProps {
   demoPassword?: string;
 }
 
-const ROLES_INFO = [
-  {
-    id: "owner",
-    title: "Admin / Owner",
-    name: "Dana Reyes",
-    icon: "👑",
-    desc: "Full business control. Create trips, manage staff, and view operational reports.",
-    tryThis: "Check the Reports dashboard or schedule a trip.",
-  },
-  {
-    id: "instructor",
-    title: "Instructor",
-    name: "Marcus Webb",
-    icon: "🎓",
-    desc: "Assigned to teach courses. Focuses on student certification safety gating.",
-    tryThis: "Open a Discover Scuba course trip to see staff assignments.",
-  },
-  {
-    id: "divemaster",
-    title: "Divemaster",
-    name: "Keiko Tanaka",
-    icon: "🤿",
-    desc: "Guides divers, verifies waiver paperwork, and keeps rental fit up to date.",
-    tryThis: "Check Waivers, or open a trip's prep list to see what to pull.",
-  },
-  {
-    id: "captain",
-    title: "Captain",
-    name: "Sal Moretti",
-    icon: "⚓",
-    desc: "Runs the boat — boarding, the manifest, and the final roll call before departure.",
-    tryThis: "Open an upcoming trip manifest and run the passenger roll call.",
-  },
-  {
-    id: "diver",
-    title: "Diver",
-    name: "Public Guest",
-    icon: "🐬",
-    desc: "What your customers see — book a trip, sign the waiver, request rental gear.",
-    tryThis: "Pick a trip on the schedule and book a spot.",
-  },
-] as const;
-
 export function DemoBanner({
   currentRole,
   currentName,
   shopSlug,
-  availableRoles,
+  roles,
+  copy,
   isMintedDemo = false,
   currentEmail,
   demoPassword,
@@ -78,8 +63,7 @@ export function DemoBanner({
   const [isPending, startTransition] = useTransition();
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
-  const activeInfo = ROLES_INFO.find((r) => r.id === currentRole);
-  const roles = ROLES_INFO.filter((role) => availableRoles.includes(role.id));
+  const activeInfo = roles.find((r) => r.id === currentRole);
 
   const handleRoleSwitch = (roleId: string) => {
     if (roleId === currentRole) return;
@@ -103,10 +87,10 @@ export function DemoBanner({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="inline-flex items-center rounded-md border border-accent/30 bg-accent/15 px-2 py-0.5 text-xs font-semibold tracking-wide text-foreground uppercase">
-              Demo shop
+              {copy.shopLabel}
             </span>
             <p className="text-sm text-foreground">
-              Viewing as{" "}
+              {copy.viewingAs}{" "}
               <span className="font-semibold text-primary">
                 {activeInfo?.icon} {activeInfo?.title}
               </span>
@@ -126,21 +110,21 @@ export function DemoBanner({
                 className: "text-foreground",
               })}
             >
-              Switch role {isExpanded ? "▲" : "▼"}
+              {copy.switchRole} {isExpanded ? "▲" : "▼"}
             </button>
           </div>
         </div>
 
         {isMintedDemo ? (
           <div className="mt-2 space-y-1 text-xs text-muted">
-            <p>Shared demo link — don&apos;t enter real customer details.</p>
+            <p>{copy.sharedWarning}</p>
             {currentEmail && demoPassword ? (
               <p>
-                Session expired? Sign back in at{" "}
+                {copy.sessionExpired}{" "}
                 <Link href="/sign-in" className="font-medium text-primary hover:underline">
                   /sign-in
                 </Link>{" "}
-                with <span className="font-mono">{currentEmail}</span> /{" "}
+                {copy.withCredentials} <span className="font-mono">{currentEmail}</span> /{" "}
                 <span className="font-mono">{demoPassword}</span>.
               </p>
             ) : null}
@@ -151,7 +135,7 @@ export function DemoBanner({
         {isExpanded ? (
           <div className="mt-4 border-t border-border/60 pt-4">
             <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              Choose a role to experience DiveDay from different perspectives:
+              {copy.chooseRole}
             </h3>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {roles.map((role) => {
@@ -173,14 +157,14 @@ export function DemoBanner({
                         </span>
                         {isActive ? (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                            Active
+                            {copy.active}
                           </span>
                         ) : null}
                       </div>
                       <p className="mt-0.5 text-xs text-muted font-medium">{role.name}</p>
                       <p className="mt-2 text-xs text-muted leading-relaxed">{role.desc}</p>
                       <div className="mt-3 rounded-lg bg-surface-sunken/50 p-2 text-xs border border-border/40">
-                        <span className="font-semibold text-foreground">💡 Try:</span>{" "}
+                        <span className="font-semibold text-foreground">💡 {copy.tryLabel}</span>{" "}
                         <span className="text-muted">{role.tryThis}</span>
                       </div>
                     </div>
@@ -188,7 +172,7 @@ export function DemoBanner({
                     <button
                       type="button"
                       disabled={isActive || isPending}
-                      aria-label={isActive ? undefined : `Switch to ${role.title}`}
+                      aria-label={isActive ? undefined : role.switchAriaLabel}
                       onClick={() => handleRoleSwitch(role.id)}
                       className={`mt-4 w-full rounded-lg py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${
                         isActive
@@ -212,9 +196,9 @@ export function DemoBanner({
                           />
                         </span>
                       ) : isActive ? (
-                        "Current"
+                        copy.current
                       ) : (
-                        "Switch"
+                        copy.switchAction
                       )}
                     </button>
                   </div>

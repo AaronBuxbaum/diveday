@@ -8,9 +8,17 @@ afterEach(() => {
   cleanup();
 });
 
+const copy = {
+  mapAriaLabel: "Stylized recap navigation map of your dive sites",
+  charterPath: "CHARTER PATH",
+  boatTrack: "Boat Track",
+  theDock: "The Dock",
+  reconstructedPath: "📍 Reconstructed boat path visiting 2 dive sites",
+};
+
 describe("RecapMap", () => {
   it("renders null when there are no sites", () => {
-    const { container } = render(<RecapMap sites={[]} />);
+    const { container } = render(<RecapMap sites={[]} copy={copy} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -32,7 +40,7 @@ describe("RecapMap", () => {
       },
     ];
 
-    render(<RecapMap sites={sites} />);
+    render(<RecapMap sites={sites} copy={copy} />);
 
     expect(screen.getByLabelText(/stylized recap navigation map/i)).toBeInTheDocument();
     expect(screen.getByText("French Reef")).toBeInTheDocument();
@@ -52,6 +60,7 @@ describe("RecapMap", () => {
             forecastLongitude: -80.38,
           },
         ]}
+        copy={copy}
       />,
     );
 
@@ -73,7 +82,7 @@ describe("RecapMap", () => {
       },
     ];
 
-    const { container } = render(<RecapMap sites={sites} />);
+    const { container } = render(<RecapMap sites={sites} copy={copy} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -97,6 +106,7 @@ describe("RecapMap", () => {
             forecastLongitude: -80.4,
           },
         ]}
+        copy={copy}
       />,
     );
 

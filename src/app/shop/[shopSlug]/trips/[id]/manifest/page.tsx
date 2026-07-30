@@ -9,8 +9,11 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
-import { MissingDiversGrid } from "@/components/MissingDiversGrid";
-import { OfflineManifestManager } from "@/components/OfflineManifestManager";
+import { MissingDiversGrid, type MissingDiversGridCopy } from "@/components/MissingDiversGrid";
+import {
+  OfflineManifestManager,
+  type OfflineManifestManagerCopy,
+} from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
@@ -20,6 +23,7 @@ import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   isRollCallCheckpoint,
@@ -69,6 +73,7 @@ export default async function TripManifestPage({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   if (!shop) notFound();
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
@@ -143,6 +148,24 @@ export default async function TripManifestPage({
     return { ok: true, saved };
   }
 
+  const errorRefusal = t("trips.rollCall.errorRefusal");
+  // One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
+  // link to that diver's own Guests anchor, so it is built here (server-side,
+  // with `t.rich`) rather than reassembled from string fragments in the
+  // Client Component — see the note on `RollCallButtonCopy`.
+  function rollCallButtonCopy(bookingId: string) {
+    return {
+      errorRefusal,
+      blockedMessage: t.rich("trips.rollCall.stillBlocked", {
+        guestsLink: (chunks) => (
+          <Link href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${bookingId}`}>
+            {chunks}
+          </Link>
+        ),
+      }),
+    };
+  }
+
   return (
     <div className="boat-mode">
       <AmbientGlareDetector />
@@ -150,7 +173,7 @@ export default async function TripManifestPage({
         href="#roll-call-list"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
       >
-        Skip to roll call
+        {t("trips.manifest.skipToRollCall")}
       </a>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
@@ -162,21 +185,32 @@ export default async function TripManifestPage({
             {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, locale, shop.timezone)}
           </p>
           <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
-            The authoritative roster: everyone aboard — divers and crew — with emergency contacts,
-            at every checkpoint. Board the ready divers on{" "}
-            <span className="font-semibold text-foreground">Before departure</span>, then run roll
-            call again after each dive.
+            {t.rich("trips.manifest.description", {
+              strong: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+            })}
           </p>
           <p className="mt-3 flex flex-wrap gap-2 print:hidden">
-            <Badge tone="primary">Live manifest · save an offline copy below</Badge>
+            <Badge tone="primary">{t("trips.manifest.liveManifestBadge")}</Badge>
             <span className="glare-mode-indicator rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground ring-1 ring-inset ring-foreground/20">
-              Glare mode active ☀
+              {t("trips.manifest.glareModeActive")}
             </span>
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-4 print:hidden">
-          <AmbientContrastSlider />
-          <PrintButton />
+          <AmbientContrastSlider
+            copy={{
+              contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
+              contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
+              contrastLabel: t("shared.ambientContrast.contrastLabel"),
+              labelAuto: t("shared.ambientContrast.labelAuto"),
+              labelStandard: t("shared.ambientContrast.labelStandard"),
+              labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
+              modeAuto: t("shared.ambientContrast.modeAuto"),
+              modeStandard: t("shared.ambientContrast.modeStandard"),
+              modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+            }}
+          />
+          <PrintButton label={t("shared.printButton.label")} />
         </div>
       </header>
       <OfflineManifestManager
@@ -185,16 +219,46 @@ export default async function TripManifestPage({
           name: shop.name,
           timezone: shop.timezone,
         })}
+        copy={
+          {
+            checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
+            reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
+            reconcileRejectedOther: t("trips.offlineManifestManager.reconcileRejectedOther"),
+            reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
+            reconcilePendingOther: t("trips.offlineManifestManager.reconcilePendingOther"),
+            reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
+            reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
+            savingMessage: t("trips.offlineManifestManager.savingMessage"),
+            saveSuccessMessage: t("trips.offlineManifestManager.saveSuccessMessage"),
+            saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
+            offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
+            offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
+            refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
+            heading: t("trips.offlineManifestManager.heading"),
+            body: t("trips.offlineManifestManager.body"),
+            connectivityOfflineWithCopy: t(
+              "trips.offlineManifestManager.connectivityOfflineWithCopy",
+            ),
+            connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
+            freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
+            freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
+            freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
+            savedSummary: t("trips.offlineManifestManager.savedSummary"),
+            refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
+            refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
+            openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
+          } satisfies OfflineManifestManagerCopy
+        }
       />
 
       <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          ["Divers", manifest.summary.totalDivers],
-          ["Ready", manifest.summary.ready],
-          ["Blocked", manifest.summary.blocked],
-          ["Boarded", manifest.summary.boarded],
-          ["Not boarded", manifest.summary.notBoarded],
-          ["Awaiting", manifest.summary.awaiting],
+          [t("trips.manifest.summaryDivers"), manifest.summary.totalDivers],
+          [t("trips.manifest.summaryReady"), manifest.summary.ready],
+          [t("trips.manifest.summaryBlocked"), manifest.summary.blocked],
+          [t("trips.manifest.summaryBoarded"), manifest.summary.boarded],
+          [t("trips.manifest.summaryNotBoarded"), manifest.summary.notBoarded],
+          [t("trips.manifest.summaryAwaiting"), manifest.summary.awaiting],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-lg border border-border bg-surface px-4 py-3">
             <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
@@ -205,7 +269,7 @@ export default async function TripManifestPage({
 
       <nav
         className="mt-7 flex gap-2 overflow-x-auto pb-2 print:hidden"
-        aria-label="Roll-call checkpoint"
+        aria-label={t("trips.manifest.checkpointNavAriaLabel")}
       >
         {checkpoints.map((value) => (
           <Link
@@ -234,21 +298,25 @@ export default async function TripManifestPage({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-              Active checkpoint
+              {t("trips.manifest.activeCheckpoint")}
             </p>
             <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
-              {rollCallComplete ? "Roll call complete ✦" : rollCallCheckpointLabel(checkpoint)}
+              {rollCallComplete
+                ? t("trips.manifest.rollCallComplete")
+                : rollCallCheckpointLabel(checkpoint)}
             </h2>
           </div>
           <p className="text-base font-bold tabular-nums">
-            {manifest.summary.totalDivers - manifest.summary.awaiting} of{" "}
-            {manifest.summary.totalDivers} recorded
+            {t("trips.manifest.recordedOfTotal", {
+              recorded: manifest.summary.totalDivers - manifest.summary.awaiting,
+              total: manifest.summary.totalDivers,
+            })}
           </p>
         </div>
         <div
           className="mt-3 h-3 overflow-hidden rounded-full bg-surface-sunken"
           role="progressbar"
-          aria-label="Roll-call progress"
+          aria-label={t("trips.manifest.progressAriaLabel")}
           aria-valuemin={0}
           aria-valuemax={manifest.summary.totalDivers}
           aria-valuenow={manifest.summary.totalDivers - manifest.summary.awaiting}
@@ -269,33 +337,28 @@ export default async function TripManifestPage({
         </div>
         <p className="mt-2 text-sm font-semibold text-muted" aria-live="polite">
           {manifest.summary.awaiting === 0
-            ? "Everyone’s accounted for — ready for the next check."
-            : String(manifest.summary.awaiting) +
-              " " +
-              (manifest.summary.awaiting === 1 ? "diver" : "divers") +
-              " still to call."}
+            ? t("trips.manifest.allAccountedFor")
+            : t("trips.manifest.stillToCall", { count: manifest.summary.awaiting })}
         </p>
       </section>
 
       {manifest.summary.blocked > 0 ? (
         <section className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
-          <h2 className="font-semibold text-warning">Readiness needs attention</h2>
+          <h2 className="font-semibold text-warning">
+            {t("trips.manifest.readinessNeedsAttention")}
+          </h2>
           <p className="mt-1 text-sm text-muted">
-            {manifest.summary.blocked} {manifest.summary.blocked === 1 ? "diver is" : "divers are"}{" "}
-            blocked.{" "}
             {isDeparture
-              ? "They remain on this manifest and cannot board until their readiness check clears."
-              : "They already sailed — record whoever is aboard. Their readiness is a paperwork flag to follow up on shore, not a bar to this head count."}
+              ? t("trips.manifest.blockedDeparture", { count: manifest.summary.blocked })
+              : t("trips.manifest.blockedAfterDive", { count: manifest.summary.blocked })}
           </p>
         </section>
       ) : null}
 
       <section className="mt-9">
-        <h2 className="text-lg font-semibold">Crew</h2>
+        <h2 className="text-lg font-semibold">{t("trips.manifest.crewHeading")}</h2>
         {manifest.crew.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">
-            No crew on this trip yet — assign instructors and crew from the trip page.
-          </p>
+          <p className="mt-3 text-sm text-muted">{t("trips.manifest.noCrew")}</p>
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {manifest.crew.map((member) => (
@@ -314,14 +377,17 @@ export default async function TripManifestPage({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
-              {rollCallCheckpointLabel(checkpoint)} roll call
+              {t("trips.manifest.checkpointRollCallHeading", {
+                checkpoint: rollCallCheckpointLabel(checkpoint),
+              })}
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Check each diver at this checkpoint. Every change is time-stamped with the staff
-              member who made it.
+              {t("trips.manifest.checkEachDiverDescription")}
             </p>
           </div>
-          <p className="text-sm text-muted">Shop time: {shop.timezone}</p>
+          <p className="text-sm text-muted">
+            {t("trips.manifest.shopTimeLabel", { timezone: shop.timezone })}
+          </p>
         </div>
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
           {manifest.divers.map((diver, index) => {
@@ -367,34 +433,38 @@ export default async function TripManifestPage({
                       </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
                       <Badge tone={ready ? "success" : "danger"}>
-                        {ready ? "Ready to board" : "Blocked"}
+                        {ready
+                          ? t("trips.manifest.readyToBoard")
+                          : t("trips.manifest.blockedBadge")}
                       </Badge>
                       <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
-                        <span className="font-bold">Emergency contact</span>
+                        <span className="font-bold">
+                          {t("trips.manifest.emergencyContactLabel")}
+                        </span>
                         <span className="mt-0.5 block text-muted">
                           {diver.emergencyContactName && diver.emergencyContactPhone
                             ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                            : "Not on file"}
+                            : t("trips.manifest.notOnFile")}
                         </span>
                       </p>
                       <p>
-                        <span className="font-bold">Rental fit</span>
+                        <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
                         <span className="mt-0.5 block text-muted">
                           {diver.rentalFit.text}
-                          {diver.nitroxRequested ? " · Nitrox requested" : ""}
+                          {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
                         </span>
                       </p>
                       {diver.medicalWaiver ? (
                         <p>
                           <span className="font-bold">
                             {diver.medicalWaiver.source === "paper"
-                              ? "Medical reviewed (paper)"
+                              ? t("trips.manifest.medicalReviewedPaper")
                               : diver.medicalWaiver.source === "imported"
-                                ? "Medical clearance imported — not reviewed here"
-                                : "Medical waiver signed"}
+                                ? t("trips.manifest.medicalClearanceImported")
+                                : t("trips.manifest.medicalWaiverSigned")}
                           </span>
                           <span className="mt-0.5 block text-muted">
                             {formatShortDate(diver.medicalWaiver.at, locale, shop.timezone)}
@@ -415,13 +485,13 @@ export default async function TripManifestPage({
                           href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
                           className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
                         >
-                          Resolve blockers on Guests →
+                          {t("trips.manifest.resolveBlockersLink")}
                         </Link>
                       </>
                     ) : null}
                     <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3 print:hidden">
                       <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
-                        Add a note to this roll-call record
+                        {t("trips.manifest.addNoteSummary")}
                       </summary>
                       <RollCallNote
                         bookingId={diver.bookingId}
@@ -430,20 +500,46 @@ export default async function TripManifestPage({
                         initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
                         canAutoSave={!!rc && !rc.implied}
                         saveNote={saveRollCallNoteAction}
+                        copy={{
+                          optionalNote: t("shared.rollCallNote.optionalNote"),
+                          message: {
+                            manualOnly: t("shared.rollCallNote.message.manualOnly"),
+                            saving: t("shared.rollCallNote.message.saving"),
+                            saved: t("shared.rollCallNote.message.saved"),
+                            queued: t("shared.rollCallNote.message.queued"),
+                            error: t("shared.rollCallNote.message.error"),
+                            idle: t("shared.rollCallNote.message.idle"),
+                          },
+                          statusPill: {
+                            saving: t("shared.rollCallNote.statusPill.saving"),
+                            saved: t("shared.rollCallNote.statusPill.saved"),
+                            queued: t("shared.rollCallNote.statusPill.queued"),
+                            error: t("shared.rollCallNote.statusPill.error"),
+                          },
+                          notePlaceholder: t("shared.rollCallNote.notePlaceholder"),
+                        }}
                       />
                     </details>
                     {rc && !rc.implied ? (
                       <p className="mt-3 text-sm text-muted">
-                        {rollCallLabel(rc)} {formatDateTimeTz(rc.occurredAt, locale, shop.timezone)}{" "}
-                        by {rc.recordedByName}
-                        {rc.note ? ` · ${rc.note}` : ""}
+                        {rc.note
+                          ? t("trips.manifest.rollCallRecordedByWithNote", {
+                              label: rollCallLabel(rc),
+                              date: formatDateTimeTz(rc.occurredAt, locale, shop.timezone),
+                              name: rc.recordedByName,
+                              note: rc.note,
+                            })
+                          : t("trips.manifest.rollCallRecordedByPlain", {
+                              label: rollCallLabel(rc),
+                              date: formatDateTimeTz(rc.occurredAt, locale, shop.timezone),
+                              name: rc.recordedByName,
+                            })}
                       </p>
                     ) : impliedNotBoarded ? (
                       // Carried-forward not-boarded only happens after a dive, where
                       // boarding is a head count — so it never depends on readiness.
                       <p className="mt-3 text-sm text-muted">
-                        Carried forward — not boarded on an earlier checkpoint. Mark boarded to
-                        bring them back on.
+                        {t("trips.manifest.carriedForward")}
                       </p>
                     ) : null}
                   </div>
@@ -453,32 +549,42 @@ export default async function TripManifestPage({
                         action={rollCallAction}
                         bookingId={diver.bookingId}
                         status={boarded ? "cleared" : "boarded"}
-                        label={boarded ? "Boarded ✓" : "Mark boarded"}
-                        pendingLabel={boarded ? "Undoing…" : "Boarding…"}
+                        label={
+                          boarded
+                            ? t("trips.manifest.boardedCheck")
+                            : t("trips.manifest.markBoarded")
+                        }
+                        pendingLabel={
+                          boarded ? t("trips.manifest.undoing") : t("trips.manifest.boarding")
+                        }
                         className={`${BOAT_TARGET_CLASS} ${
                           boarded
                             ? "border border-success bg-success/15 text-success"
                             : "bg-primary text-primary-foreground hover:bg-primary-hover"
                         }`}
-                        guestsHref={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
+                        copy={rollCallButtonCopy(diver.bookingId)}
                       />
                     ) : null}
                     <RollCallButton
                       action={rollCallAction}
                       bookingId={diver.bookingId}
                       status={explicitNotBoarded ? "cleared" : "not_boarded"}
-                      label={explicitNotBoarded ? "Not boarded ✓" : "Mark not boarded"}
-                      pendingLabel="Saving…"
+                      label={
+                        explicitNotBoarded
+                          ? t("trips.manifest.notBoardedCheck")
+                          : t("trips.manifest.markNotBoarded")
+                      }
+                      pendingLabel={t("trips.manifest.saving")}
                       formId={`not-boarded-${diver.bookingId}`}
                       className={`${BOAT_TARGET_CLASS} ${
                         explicitNotBoarded
                           ? "border border-border-strong bg-surface-sunken"
                           : "border border-border hover:bg-surface-sunken"
                       }`}
-                      guestsHref={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
+                      copy={rollCallButtonCopy(diver.bookingId)}
                     />
                     {rc && !rc.implied ? (
-                      <p className="text-xs text-muted">Tap the ✓ status again to undo.</p>
+                      <p className="text-xs text-muted">{t("trips.manifest.tapToUndo")}</p>
                     ) : null}
                   </div>
                 </div>
@@ -496,11 +602,38 @@ export default async function TripManifestPage({
             fullName: diver.fullName,
             rentsKit: diver.rentalFit.state === "rents",
           }))}
+        copy={
+          {
+            heading: t("trips.manifest.missingDiversHeading", {
+              count: manifest.divers.filter((diver) => !diver.rollCall).length,
+            }),
+            awaitingBoarding: t("trips.manifest.awaitingBoarding"),
+            tapHint: t("trips.manifest.missingDiversTapHint"),
+            rentsKitLabel: t("trips.manifest.rentsKitLabel"),
+            ownKitLabel: t("trips.manifest.ownKitLabel"),
+          } satisfies MissingDiversGridCopy
+        }
       />
 
-      <WaterLocker />
+      <WaterLocker
+        copy={{
+          rainAlt: t("shared.waterLocker.rainAlt"),
+          heading: t("shared.waterLocker.heading"),
+          body: t("shared.waterLocker.body"),
+          holdLine1: t("shared.waterLocker.holdLine1"),
+          holdLine2: t("shared.waterLocker.holdLine2"),
+          unlockingProgress: t("shared.waterLocker.unlockingProgress"),
+          holdToUnlock: t("shared.waterLocker.holdToUnlock"),
+        }}
+      />
       <MilestoneHaptics total={manifest.summary.totalDivers} boarded={manifest.summary.boarded} />
-      <SubSurfaceRipple complete={rollCallComplete} />
+      <SubSurfaceRipple
+        complete={rollCallComplete}
+        copy={{
+          iconTitle: t("shared.subSurfaceRipple.iconTitle"),
+          message: t("shared.subSurfaceRipple.message"),
+        }}
+      />
     </div>
   );
 }

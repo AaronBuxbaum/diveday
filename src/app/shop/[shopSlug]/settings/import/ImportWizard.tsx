@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -8,40 +9,101 @@ import { buttonClass } from "@/components/ui/button";
 import { type ImportField, type PreparedImport, prepareContactImport } from "@/lib/import";
 import { type ImportActionState, importContactsAction } from "./actions";
 
-const FIELD_LABELS: Record<ImportField, string> = {
-  first_name: "First name",
-  last_name: "Last name",
-  full_name: "Full name",
-  email: "Email",
-  phone: "Phone",
-  date_of_birth: "Date of birth",
-  emergency_contact_name: "Emergency contact",
-  emergency_contact_phone: "Emergency phone",
-  dive_insurance: "Dive insurance",
-  certification_agency: "Cert agency",
-  certification_level: "Cert level",
-  certification_number: "Cert number",
-  certification_status: "Cert status",
-  certification_expires_at: "Refresher due",
-  specialty: "Specialty",
-  specialty_certification_number: "Specialty number",
-  nitrox_certified: "Nitrox",
-  nitrox_certification_number: "Nitrox number",
-  bcd_size: "BCD size",
-  wetsuit_size: "Wetsuit size",
-  boot_size: "Boot size",
-  fin_size: "Fin size",
-  waiver_accepted: "Waiver accepted",
-  waiver_signed_at: "Waiver signed",
-  waiver_source_name: "Waiver source",
-  waiver_document_url: "Waiver document",
-  medical_document_url: "Medical document",
-  visit_date: "Past visit date",
-  visit_title: "Past visit",
-  visit_status: "Past visit status",
-  visit_amount: "Past visit amount",
-  visit_reference: "Booking reference",
+/**
+ * Every word this wizard renders, resolved on the server and passed down as
+ * plain data — see the note in `src/i18n/staff-messages.ts`. Several of these
+ * are ICU-flavored templates (`{name}`, and `{count, plural, one {…} other
+ * {…}}`) because the values they interpolate — a parsed CSV's row counts, an
+ * import result's summary counts — are only known once this client component
+ * runs; `fill()` below resolves them locally, the same syntax `staffTranslator`
+ * resolves on the server.
+ */
+type ImportWizardCopy = {
+  heading: string;
+  chooseFile: string;
+  chooseDifferentFile: string;
+  columnTitle: string;
+  fieldLabels: Record<ImportField, string>;
+  ignoredMedicalColumns: string;
+  unmappedColumns: string;
+  waiverRowsNotice: string;
+  visitRowsNotice: string;
+  stats: {
+    diversInFile: string;
+    extraCardRows: string;
+    skipped: string;
+    cards: string;
+    specialties: string;
+    nitroxCards: string;
+    waivers: string;
+    pastVisits: string;
+  };
+  table: {
+    rowNumber: string;
+    name: string;
+    email: string;
+    card: string;
+    waiver: string;
+    notes: string;
+    noName: string;
+    skippedBadge: string;
+    mergedBadge: string;
+    certImported: string;
+    certForReview: string;
+    certLine: string;
+    specialtyLine: string;
+    waiverAcceptedImported: string;
+    emptyValue: string;
+  };
+  hiddenRowsNotice: string;
+  submit: string;
+  submitting: string;
+  result: {
+    summary: string;
+    cardsLine: string;
+    rowsMergedNote: string;
+    cardsSkippedNote: string;
+    rowsSkippedNote: string;
+    cardsHeldByAnother: string;
+    specialtyGateNote: string;
+    waiversLine: string;
+    waiversSkippedExistingNote: string;
+    waiversSkippedNoTemplateNote: string;
+    waiverDocumentsFailedNote: string;
+    visitsLine: string;
+    visitsSkippedNote: string;
+    seeRoster: string;
+  };
 };
+
+/**
+ * Minimal ICU-subset formatter for copy that arrives as plain strings — a
+ * translator function may never cross the Server→Client boundary (see
+ * AGENTS.md). Supports "{name}" substitution and
+ * "{name, plural, one {…} other {…}}" with "#" standing for the plural value,
+ * matching the ICU syntax `staffTranslator` already resolves server-side.
+ */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(
+    /\{(\w+)(?:,\s*plural,\s*((?:\w+\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*)+))?\}/g,
+    (match, name: string, pluralBranches: string | undefined) => {
+      if (pluralBranches === undefined) {
+        const value = values[name];
+        return value !== undefined ? String(value) : match;
+      }
+      const count = Number(values[name]);
+      const branches: Record<string, string> = {};
+      const branchRe = /(\w+)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
+      let branchMatch: RegExpExecArray | null = branchRe.exec(pluralBranches);
+      while (branchMatch) {
+        branches[branchMatch[1]] = branchMatch[2];
+        branchMatch = branchRe.exec(pluralBranches);
+      }
+      const branch = (count === 1 ? branches.one : undefined) ?? branches.other ?? "";
+      return branch.replace(/#/g, String(count));
+    },
+  );
+}
 
 const PREVIEW_LIMIT = 60;
 const issueTone: Record<"error" | "warning" | "info", string> = {
@@ -50,7 +112,16 @@ const issueTone: Record<"error" | "warning" | "info", string> = {
   info: "text-muted",
 };
 
-export function ImportWizard({ diversHref }: { diversHref: string }) {
+export function ImportWizard({
+  diversHref,
+  intro,
+  copy,
+}: {
+  diversHref: string;
+  /** Rendered on the server via `t.rich` for the embedded `contacts.csv` mono span. */
+  intro: ReactNode;
+  copy: ImportWizardCopy;
+}) {
   const [state, formAction] = useActionState<ImportActionState, FormData>(importContactsAction, {
     status: "idle",
   });
@@ -79,19 +150,14 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Upload a contacts file</h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">
-        A CSV from your old system, or DiveDay's own <span className="font-mono">contacts.csv</span>{" "}
-        from the data export. Rows with an email are matched to your existing divers, so
-        re-importing one updates that diver instead of duplicating them; rows without an email
-        always come in as new records. Nothing is written until you review the preview and confirm.
-      </p>
+      <h2 className="text-lg font-semibold">{copy.heading}</h2>
+      <p className="mt-1 max-w-2xl text-sm text-muted">{intro}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <label
           className={buttonClass({ variant: "secondary", size: "lg", className: "cursor-pointer" })}
         >
-          {fileName ? "Choose a different file" : "Choose CSV file"}
+          {fileName ? copy.chooseDifferentFile : copy.chooseFile}
           <input
             ref={inputRef}
             type="file"
@@ -119,9 +185,9 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
               <span
                 key={entry.field}
                 className="inline-flex items-baseline gap-1.5 rounded-full bg-surface-sunken px-3 py-1 text-xs"
-                title={`Column “${entry.header}”`}
+                title={fill(copy.columnTitle, { header: entry.header })}
               >
-                <span className="font-medium text-foreground">{FIELD_LABELS[entry.field]}</span>
+                <span className="font-medium text-foreground">{copy.fieldLabels[entry.field]}</span>
                 <span className="font-mono text-muted">{entry.header}</span>
               </span>
             ))}
@@ -129,32 +195,24 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
 
           {prepared.ignoredMedicalColumns.length > 0 ? (
             <p className="mt-3 text-sm text-warning">
-              Left behind on purpose: {prepared.ignoredMedicalColumns.join(", ")}. These weren't
-              recognized as a waiver column, so their contents never import — individual medical
-              answers are never reconstructed from another system. A recognized “waiver accepted”
-              column is trusted instead; see below.
+              {fill(copy.ignoredMedicalColumns, {
+                columns: prepared.ignoredMedicalColumns.join(", "),
+              })}
             </p>
           ) : null}
           {prepared.totals.withWaiver > 0 ? (
             <p className="mt-3 text-sm text-warning">
-              {prepared.totals.withWaiver} row{prepared.totals.withWaiver === 1 ? "" : "s"} claim a
-              waiver already accepted at a prior shop. DiveDay trusts that — including its medical
-              clearance — and marks the record “imported” so it's never confused with a release
-              signed here. See “What comes across” above.
+              {fill(copy.waiverRowsNotice, { count: prepared.totals.withWaiver })}
             </p>
           ) : null}
           {prepared.totals.withVisit > 0 ? (
             <p className="mt-3 text-sm text-muted">
-              {prepared.totals.withVisit} row{prepared.totals.withVisit === 1 ? "" : "s"} record a
-              past visit. Those come across as history on the diver's profile — what was booked,
-              when, and what your old system called it — and nothing more: they never become trips
-              on your schedule, never count toward capacity or reporting, and a booking is not proof
-              anyone dived.
+              {fill(copy.visitRowsNotice, { count: prepared.totals.withVisit })}
             </p>
           ) : null}
           {prepared.unmappedColumns.length > 0 ? (
             <p className="mt-1 text-xs text-muted">
-              Not recognized, so ignored: {prepared.unmappedColumns.join(", ")}.
+              {fill(copy.unmappedColumns, { columns: prepared.unmappedColumns.join(", ") })}
             </p>
           ) : null}
 
@@ -163,19 +221,19 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
               two rows. */}
           <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Divers in file", value: prepared.totals.importable },
+              { label: copy.stats.diversInFile, value: prepared.totals.importable },
               // A certification export lists one row per card, so rows that add
               // cards to a diver an earlier row brought in are the norm, not
               // duplicates to explain away.
-              { label: "Extra card rows", value: prepared.totals.merged },
-              { label: "Skipped", value: prepared.totals.skipped },
-              { label: "Cards", value: prepared.totals.withCard },
+              { label: copy.stats.extraCardRows, value: prepared.totals.merged },
+              { label: copy.stats.skipped, value: prepared.totals.skipped },
+              { label: copy.stats.cards, value: prepared.totals.withCard },
               // "Specialties", not "Specialty cards": a two-line label in one
               // tile drops that tile's number below the other five.
-              { label: "Specialties", value: prepared.totals.withSpecialty },
-              { label: "Nitrox cards", value: prepared.totals.withNitrox },
-              { label: "Waivers", value: prepared.totals.withWaiver },
-              { label: "Past visits", value: prepared.totals.withVisit },
+              { label: copy.stats.specialties, value: prepared.totals.withSpecialty },
+              { label: copy.stats.nitroxCards, value: prepared.totals.withNitrox },
+              { label: copy.stats.waivers, value: prepared.totals.withWaiver },
+              { label: copy.stats.pastVisits, value: prepared.totals.withVisit },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl bg-surface-sunken px-4 py-3">
                 <dt className="text-xs text-muted">{stat.label}</dt>
@@ -190,12 +248,12 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             <table className="w-full min-w-[36rem] text-left text-sm">
               <thead className="bg-surface-sunken text-xs text-muted">
                 <tr>
-                  <th className="px-3 py-2 font-medium">#</th>
-                  <th className="px-3 py-2 font-medium">Name</th>
-                  <th className="px-3 py-2 font-medium">Email</th>
-                  <th className="px-3 py-2 font-medium">Card</th>
-                  <th className="px-3 py-2 font-medium">Waiver</th>
-                  <th className="px-3 py-2 font-medium">Notes</th>
+                  <th className="px-3 py-2 font-medium">{copy.table.rowNumber}</th>
+                  <th className="px-3 py-2 font-medium">{copy.table.name}</th>
+                  <th className="px-3 py-2 font-medium">{copy.table.email}</th>
+                  <th className="px-3 py-2 font-medium">{copy.table.card}</th>
+                  <th className="px-3 py-2 font-medium">{copy.table.waiver}</th>
+                  <th className="px-3 py-2 font-medium">{copy.table.notes}</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,19 +264,19 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                   >
                     <td className="px-3 py-2 tabular-nums text-muted">{row.rowNumber}</td>
                     <td className="px-3 py-2">
-                      {row.fullName || <span className="text-danger">— no name —</span>}
+                      {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
                       {row.action === "skip" ? (
                         <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">
-                          skipped
+                          {copy.table.skippedBadge}
                         </span>
                       ) : null}
                       {row.action === "merge" ? (
                         <span className="ml-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
-                          same diver as row {row.mergedIntoRow}
+                          {fill(copy.table.mergedBadge, { row: row.mergedIntoRow ?? "" })}
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2 text-muted">{row.email ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted">{row.email ?? copy.table.emptyValue}</td>
                     {/* One row can carry a level card and a specialty card (a
                         certification export lists one card per row, so usually
                         it's one or the other). Both belong here — a specialty
@@ -228,31 +286,43 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
                         <span className="flex flex-col gap-0.5">
                           {row.cert ? (
                             <span className="whitespace-nowrap">
-                              {row.cert.level.replaceAll("_", " ")} ·{" "}
-                              {row.cert.status === "verified" ? "imported" : "for review"}
+                              {fill(copy.table.certLine, {
+                                level: row.cert.level.replaceAll("_", " "),
+                                status:
+                                  row.cert.status === "verified"
+                                    ? copy.table.certImported
+                                    : copy.table.certForReview,
+                              })}
                             </span>
                           ) : null}
                           {row.specialties.map((card) => (
                             <span key={card.specialty} className="whitespace-nowrap">
-                              {card.specialty} specialty ·{" "}
-                              {card.status === "verified" ? "imported" : "for review"}
+                              {fill(copy.table.specialtyLine, {
+                                specialty: card.specialty,
+                                status:
+                                  card.status === "verified"
+                                    ? copy.table.certImported
+                                    : copy.table.certForReview,
+                              })}
                             </span>
                           ))}
                         </span>
                       ) : (
-                        "—"
+                        copy.table.emptyValue
                       )}
                     </td>
                     <td className="px-3 py-2 text-muted">
                       {row.waiver ? (
-                        <span className="whitespace-nowrap">accepted · imported</span>
+                        <span className="whitespace-nowrap">
+                          {copy.table.waiverAcceptedImported}
+                        </span>
                       ) : (
-                        "—"
+                        copy.table.emptyValue
                       )}
                     </td>
                     <td className="px-3 py-2">
                       {row.issues.length === 0 ? (
-                        <span className="text-muted">—</span>
+                        <span className="text-muted">{copy.table.emptyValue}</span>
                       ) : (
                         <ul className="space-y-0.5">
                           {row.issues.map((issue) => (
@@ -270,8 +340,10 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
           </div>
           {hiddenRows > 0 ? (
             <p className="mt-2 text-xs text-muted">
-              Showing the first {PREVIEW_LIMIT} rows. All {prepared.rows.length} are imported on
-              confirm.
+              {fill(copy.hiddenRowsNotice, {
+                limit: PREVIEW_LIMIT,
+                total: prepared.rows.length,
+              })}
             </p>
           ) : null}
 
@@ -287,13 +359,11 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
             <form action={formAction} className="mt-5">
               <input type="hidden" name="csv" value={csvText} />
               <SubmitButton
-                pendingLabel="Importing…"
+                pendingLabel={copy.submitting}
                 disabled={prepared.totals.importable === 0}
                 className={buttonClass({ size: "lg" })}
               >
-                {prepared.totals.importable === 1
-                  ? "Import 1 contact"
-                  : `Import ${prepared.totals.importable} contacts`}
+                {fill(copy.submit, { count: prepared.totals.importable })}
               </SubmitButton>
             </form>
           ) : null}
@@ -304,66 +374,77 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
         <div className="mt-6">
           <ShopNotice tone="success">
             <p className="font-medium">
-              Imported. {state.summary.peopleCreated} added, {state.summary.peopleUpdated} updated.
+              {fill(copy.result.summary, {
+                added: state.summary.peopleCreated,
+                updated: state.summary.peopleUpdated,
+              })}
             </p>
             <p className="mt-1 text-sm">
-              {state.summary.cardsAdded} card{state.summary.cardsAdded === 1 ? "" : "s"},{" "}
-              {state.summary.specialtyAdded} specialty card
-              {state.summary.specialtyAdded === 1 ? "" : "s"}, and {state.summary.nitroxAdded}{" "}
-              nitrox card
-              {state.summary.nitroxAdded === 1 ? "" : "s"} imported and flagged imported, with a
-              one-tap confirm on each diver's record.
+              {fill(copy.result.cardsLine, {
+                cardsAdded: state.summary.cardsAdded,
+                specialtyAdded: state.summary.specialtyAdded,
+                nitroxAdded: state.summary.nitroxAdded,
+              })}
               {state.summary.rowsMerged > 0
-                ? ` ${state.summary.rowsMerged} row(s) added cards to a diver an earlier row brought in.`
+                ? fill(copy.result.rowsMergedNote, { count: state.summary.rowsMerged })
                 : ""}
               {state.summary.cardsSkippedExisting +
                 state.summary.specialtySkippedExisting +
                 state.summary.nitroxSkippedExisting >
               0
-                ? ` ${state.summary.cardsSkippedExisting + state.summary.specialtySkippedExisting + state.summary.nitroxSkippedExisting} card(s) already on those divers' records were left untouched.`
+                ? fill(copy.result.cardsSkippedNote, {
+                    count:
+                      state.summary.cardsSkippedExisting +
+                      state.summary.specialtySkippedExisting +
+                      state.summary.nitroxSkippedExisting,
+                  })
                 : ""}
-              {state.summary.rowsSkipped > 0 ? ` ${state.summary.rowsSkipped} row(s) skipped.` : ""}
+              {state.summary.rowsSkipped > 0
+                ? fill(copy.result.rowsSkippedNote, { count: state.summary.rowsSkipped })
+                : ""}
             </p>
             {/* Never folded into "already on file": that number belongs to a
                 different diver, so nothing was written for this one. */}
             {state.summary.cardsHeldByAnotherDiver > 0 ? (
               <p className="mt-1 text-sm">
-                {state.summary.cardsHeldByAnotherDiver} card number(s) in the file are already on a
-                different diver in your shop, so those cards were not added to anyone. Check the
-                file for a repeated number, then enter those cards by hand.
+                {fill(copy.result.cardsHeldByAnother, {
+                  count: state.summary.cardsHeldByAnotherDiver,
+                })}
               </p>
             ) : null}
             {state.summary.specialtyAdded > 0 ? (
-              <p className="mt-1 text-sm">
-                A dive that requires one of those specialties waits on that confirm — tap it on the
-                diver's record and the gate opens.
-              </p>
+              <p className="mt-1 text-sm">{copy.result.specialtyGateNote}</p>
             ) : null}
             {state.summary.waiversAdded +
               state.summary.waiversSkippedExisting +
               state.summary.waiversSkippedNoTemplate >
             0 ? (
               <p className="mt-1 text-sm">
-                {state.summary.waiversAdded} waiver
-                {state.summary.waiversAdded === 1 ? "" : "s"} imported as accepted, marked
-                “imported” on the diver's profile.
+                {fill(copy.result.waiversLine, { count: state.summary.waiversAdded })}
                 {state.summary.waiversSkippedExisting > 0
-                  ? ` ${state.summary.waiversSkippedExisting} diver(s) already had a current waiver on file, left untouched.`
+                  ? fill(copy.result.waiversSkippedExistingNote, {
+                      count: state.summary.waiversSkippedExisting,
+                    })
                   : ""}
                 {state.summary.waiversSkippedNoTemplate > 0
-                  ? ` ${state.summary.waiversSkippedNoTemplate} skipped — set up a waiver template first.`
+                  ? fill(copy.result.waiversSkippedNoTemplateNote, {
+                      count: state.summary.waiversSkippedNoTemplate,
+                    })
                   : ""}
                 {state.summary.waiverDocumentsFailed > 0
-                  ? ` ${state.summary.waiverDocumentsFailed} document link(s) didn't fetch and were left off the record.`
+                  ? fill(copy.result.waiverDocumentsFailedNote, {
+                      count: state.summary.waiverDocumentsFailed,
+                    })
                   : ""}
               </p>
             ) : null}
             {state.summary.visitsAdded + state.summary.visitsSkippedExisting > 0 ? (
               <p className="mt-1 text-sm">
-                {state.summary.visitsAdded} past visit
-                {state.summary.visitsAdded === 1 ? "" : "s"} added to divers' shop history.
+                {fill(copy.result.visitsLine, { count: state.summary.visitsAdded })}
                 {state.summary.visitsSkippedExisting > 0
-                  ? ` ${state.summary.visitsSkippedExisting} were already imported and were left as they are — re-running the same export doesn't double anyone's history.`
+                  ? fill(copy.result.visitsSkippedNote, {
+                      count: state.summary.visitsSkippedExisting,
+                    })
                   : ""}
               </p>
             ) : null}
@@ -371,7 +452,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
               href={diversHref}
               className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
             >
-              See the roster
+              {copy.result.seeRoster}
             </Link>
           </ShopNotice>
         </div>

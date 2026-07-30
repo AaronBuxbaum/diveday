@@ -10,6 +10,8 @@ import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { DiverList } from "./_components/DiverList";
@@ -41,6 +43,7 @@ export default async function DiversPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const query = q?.trim() ?? "";
   const filter = isDiverFilter(filterParam) ? filterParam : "all";
   const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after, filter });
@@ -86,15 +89,15 @@ export default async function DiversPage({
 
   const noticeText =
     notice === "duplicate"
-      ? "A diver with that email is already in this shop."
+      ? t("divers.page.noticeDuplicate")
       : notice === "deleted"
-        ? "Diver removed from active shop work. Their bookings and cards are preserved."
+        ? t("divers.page.noticeDeleted")
         : notice === "restored"
-          ? "Diver restored to active shop work."
+          ? t("divers.page.noticeRestored")
           : notice === "not-authorized"
-            ? "Removing or restoring a diver is limited to owners and managers."
+            ? t("divers.page.noticeNotAuthorized")
             : notice === "invalid"
-              ? "Check the diver's name, email, and phone number."
+              ? t("divers.page.noticeInvalid")
               : null;
   const noticeIsError =
     notice === "duplicate" || notice === "invalid" || notice === "not-authorized";
@@ -103,12 +106,14 @@ export default async function DiversPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Front desk"
-        title="Divers"
-        description="Start with the person. Their cards, rental fit, and bookings stay together so the front desk always has the right context."
+        eyebrow={t("divers.page.eyebrow")}
+        title={t("divers.page.title")}
+        description={t("divers.page.description")}
         meta={
           <span className="text-sm text-muted">
-            {query ? `${diverPage.total} matching` : `${diverPage.total} on file`}
+            {query
+              ? t("divers.page.matchingCount", { count: diverPage.total })
+              : t("divers.page.onFileCount", { count: diverPage.total })}
           </span>
         }
       />
@@ -122,14 +127,14 @@ export default async function DiversPage({
             <form action={restoreDiverAction}>
               <input type="hidden" name="personId" value={deleted} />
               <SubmitButton
-                pendingLabel="Restoring…"
+                pendingLabel={t("divers.page.restoring")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
                   className: "border-success/30 text-success",
                 })}
               >
-                Undo remove
+                {t("divers.page.undoRemove")}
               </SubmitButton>
             </form>
           ) : null}
@@ -138,27 +143,28 @@ export default async function DiversPage({
 
       <details className="mt-8 rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
-          Add a diver{" "}
+          {t("divers.page.addDiverSummary")}{" "}
           <span aria-hidden="true" className="text-xl font-normal text-primary">
             +
           </span>
         </summary>
-        <p className="mt-2 text-sm text-muted">
-          Add a returning diver before they book, then fill in the details you already have.
-        </p>
+        <p className="mt-2 text-sm text-muted">{t("divers.page.addDiverBody")}</p>
         <FieldGrid columns={3} className="mt-4" as="form" action={addDiverAction}>
-          <Field label="Full name">
+          <Field label={t("divers.page.fullNameLabel")}>
             <input name="fullName" required autoComplete="name" className={controlClass} />
           </Field>
-          <Field label="Email" hint="(optional)">
+          <Field label={t("divers.page.emailLabel")} hint={t("divers.page.optionalHint")}>
             <input name="email" type="email" autoComplete="email" className={controlClass} />
           </Field>
-          <Field label="Phone" hint="(optional)">
+          <Field label={t("divers.page.phoneLabel")} hint={t("divers.page.optionalHint")}>
             <input name="phone" type="tel" autoComplete="tel" className={controlClass} />
           </Field>
           <FieldActions>
-            <SubmitButton pendingLabel="Adding…" className={buttonClass({ size: "lg" })}>
-              Add diver
+            <SubmitButton
+              pendingLabel={t("divers.page.adding")}
+              className={buttonClass({ size: "lg" })}
+            >
+              {t("divers.page.addDiver")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
@@ -170,6 +176,38 @@ export default async function DiversPage({
         query={query}
         filter={filter}
         cursorActive={Boolean(after)}
+        copy={{
+          viewAllDivers: t("divers.list.viewAllDivers"),
+          viewMissingContact: t("divers.list.viewMissingContact"),
+          viewInsured: t("divers.list.viewInsured"),
+          savedViewsAriaLabel: t("divers.list.savedViewsAriaLabel"),
+          namePromptText: t("divers.list.namePromptText"),
+          removeSavedViewAriaLabel: t("divers.list.removeSavedViewAriaLabel"),
+          saveThisView: t("divers.list.saveThisView"),
+          peopleHeading: t("divers.list.peopleHeading"),
+          matchesText: t("divers.list.matchesText"),
+          onFileShowingText: t("divers.list.onFileShowingText"),
+          searchHintText: t("divers.list.searchHintText"),
+          searchDiversLabel: t("divers.list.searchDiversLabel"),
+          searchPlaceholder: t("divers.list.searchPlaceholder"),
+          noDiversMatchView: t("divers.list.noDiversMatchView"),
+          noDiversOnFile: t("divers.list.noDiversOnFile"),
+          tryDifferentSearch: t("divers.list.tryDifferentSearch"),
+          addOneHere: t("divers.list.addOneHere"),
+          noContactDetails: t("divers.list.noContactDetails"),
+          cardCountText: t("divers.list.cardCountText"),
+          fitSaved: t("divers.list.fitSaved"),
+          noFitOnFile: t("divers.list.noFitOnFile"),
+          pendingReviewText: t("divers.list.pendingReviewText"),
+          toConfirmText: t("divers.list.toConfirmText"),
+          noneText: t("divers.list.noneText"),
+          tableHeaderPerson: t("divers.list.tableHeaderPerson"),
+          tableHeaderCards: t("divers.list.tableHeaderCards"),
+          tableHeaderRentalFit: t("divers.list.tableHeaderRentalFit"),
+          tableHeaderAttention: t("divers.list.tableHeaderAttention"),
+          showMoreDivers: t("divers.list.showMoreDivers"),
+          backToTop: t("divers.list.backToTop"),
+        }}
       />
     </main>
   );

@@ -1,4 +1,7 @@
 "use client";
+// i18n-exempt-file: root crash boundary — it replaces the layout that would
+// normally resolve a locale, and must render without depending on any state
+// that might be what crashed.
 
 import { useEffect } from "react";
 import { LogoMark } from "@/components/Logo";

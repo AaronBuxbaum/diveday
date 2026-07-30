@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -12,16 +13,21 @@ import { createPortal } from "react-dom";
  * the browser and the command palette (which owns ⌘K).
  */
 
-type NavShortcut = { key: string; label: string; suffix: string };
+type NavShortcut = { key: string; goToLabel: string; suffix: string };
 
-const BASE_NAV_SHORTCUTS: NavShortcut[] = [
-  { key: "t", label: "Today", suffix: "" },
-  { key: "s", label: "Schedule", suffix: "/schedule" },
-  { key: "d", label: "Divers", suffix: "/divers" },
-  { key: "b", label: "Blockers", suffix: "/blockers" },
-];
-
-const WAIVERS_SHORTCUT: NavShortcut = { key: "w", label: "Waivers", suffix: "/waivers" };
+/** Every word this component renders, resolved server-side. */
+export interface KeyboardShortcutsCopy {
+  buttonAriaLabel: string;
+  buttonTitle: string;
+  dialogAriaLabel: string;
+  closeAriaLabel: string;
+  heading: string;
+  paletteLabel: string;
+  helpLabel: string;
+  sequenceHint: ReactNode;
+  /** Already filtered for the viewer's permissions — e.g. no `w` entry when they can't manage waivers. */
+  navShortcuts: NavShortcut[];
+}
 
 /** True when focus is in a text-entry surface, where letter keys are content. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -34,20 +40,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 export function KeyboardShortcuts({
   shopSlug,
-  canManageWaivers,
+  copy,
 }: {
   shopSlug: string;
-  canManageWaivers: boolean;
+  copy: KeyboardShortcutsCopy;
 }) {
   const router = useRouter();
   const root = `/shop/${shopSlug}`;
   const [helpOpen, setHelpOpen] = useState(false);
   // Timestamp of a pending "g", so the next key completes the sequence.
   const pendingG = useRef<number | null>(null);
-  const navShortcuts = useMemo(
-    () => (canManageWaivers ? [...BASE_NAV_SHORTCUTS, WAIVERS_SHORTCUT] : BASE_NAV_SHORTCUTS),
-    [canManageWaivers],
-  );
+  const navShortcuts = copy.navShortcuts;
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -94,8 +97,8 @@ export function KeyboardShortcuts({
         type="button"
         onClick={() => setHelpOpen(true)}
         aria-keyshortcuts="?"
-        aria-label="Keyboard shortcuts"
-        title="Keyboard shortcuts (press ?)"
+        aria-label={copy.buttonAriaLabel}
+        title={copy.buttonTitle}
         className="hidden size-9 shrink-0 items-center justify-center rounded-xl border border-border text-sm font-semibold text-muted transition-colors hover:bg-surface-sunken hover:text-foreground sm:inline-flex"
       >
         <kbd className="font-semibold">?</kbd>
@@ -118,34 +121,33 @@ export function KeyboardShortcuts({
               <div
                 role="dialog"
                 aria-modal="true"
-                aria-label="Keyboard shortcuts"
+                aria-label={copy.dialogAriaLabel}
                 className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <h2 className="text-base font-semibold">Keyboard shortcuts</h2>
+                  <h2 className="text-base font-semibold">{copy.heading}</h2>
                   <button
                     type="button"
                     onClick={close}
-                    aria-label="Close"
+                    aria-label={copy.closeAriaLabel}
                     className="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-sunken hover:text-foreground"
                   >
                     ✕
                   </button>
                 </div>
                 <dl className="divide-y divide-border">
-                  <ShortcutRow keys={["⌘", "K"]} label="Search divers, trips, and pages" />
-                  <ShortcutRow keys={["?"]} label="Show this help" />
+                  <ShortcutRow keys={["⌘", "K"]} label={copy.paletteLabel} />
+                  <ShortcutRow keys={["?"]} label={copy.helpLabel} />
                   {navShortcuts.map((shortcut) => (
                     <ShortcutRow
                       key={shortcut.key}
                       keys={["G", shortcut.key.toUpperCase()]}
-                      label={`Go to ${shortcut.label}`}
+                      label={shortcut.goToLabel}
                     />
                   ))}
                 </dl>
                 <p className="border-t border-border px-5 py-3 text-xs text-muted">
-                  Press keys one after another for a sequence — e.g. <kbd>G</kbd> then <kbd>S</kbd>{" "}
-                  for the schedule.
+                  {copy.sequenceHint}
                 </p>
               </div>
             </div>,

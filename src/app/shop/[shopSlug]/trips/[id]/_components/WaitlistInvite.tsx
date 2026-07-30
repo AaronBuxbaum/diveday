@@ -4,14 +4,38 @@ import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { nowDate } from "@/lib/clock";
 
-function relativeTime(from: Date, now = nowDate()): string {
+/** Every word this client component renders, resolved on the server — see the
+ * note in src/i18n/staff-messages.ts. Templates rather than finished strings:
+ * the relative time and the email draft both depend on values only known in
+ * the browser (the current instant, `window.location.origin`). */
+export type WaitlistInviteCopy = {
+  invitedRelative: string;
+  inviteEmailed: string;
+  reSendInvite: string;
+  emailAnInvite: string;
+  copied: string;
+  copyInviteMessage: string;
+  justNow: string;
+  minutesAgo: string;
+  hoursAgo: string;
+  daysAgo: string;
+  emailSubject: string;
+  emailBody: string;
+};
+
+/** Local, non-imported — never a translator crossing the server/client boundary. */
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
+}
+
+function relativeTime(copy: WaitlistInviteCopy, from: Date, now = nowDate()): string {
   const mins = Math.max(0, Math.round((now.getTime() - from.getTime()) / 60000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return copy.justNow;
+  if (mins < 60) return fill(copy.minutesAgo, { mins: String(mins) });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return fill(copy.hoursAgo, { hours: String(hours) });
   const days = Math.round(hours / 24);
-  return `${days}d ago`;
+  return fill(copy.daysAgo, { days: String(days) });
 }
 
 /**
@@ -32,6 +56,7 @@ export function WaitlistInvite({
   tripTitle,
   tripWhen,
   invite,
+  copy,
 }: {
   entryId: string;
   personName: string;
@@ -42,6 +67,7 @@ export function WaitlistInvite({
   tripTitle: string;
   tripWhen: string;
   invite: (entryId: string) => Promise<"sent" | "fallback">;
+  copy: WaitlistInviteCopy;
 }) {
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
@@ -53,8 +79,8 @@ export function WaitlistInvite({
     typeof window === "undefined"
       ? bookingPath
       : new URL(bookingPath, window.location.origin).toString();
-  const subject = `A spot opened up on ${tripTitle}`;
-  const body = `Hi ${firstName},\n\nA seat just opened on ${tripTitle} (${tripWhen}) with ${shopName}. You're next on the wait list — grab it here before it goes:\n${bookingUrl}\n\nSee you on the boat!`;
+  const subject = fill(copy.emailSubject, { tripTitle });
+  const body = fill(copy.emailBody, { firstName, tripTitle, tripWhen, shopName, bookingUrl });
   const mailto = personEmail
     ? `mailto:${encodeURIComponent(personEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     : null;
@@ -102,10 +128,10 @@ export function WaitlistInvite({
         >
           <span aria-live="polite">
             {emailed
-              ? "Invite emailed"
+              ? copy.inviteEmailed
               : invited
-                ? "Re-send invite"
-                : `Email ${firstName} an invite`}
+                ? copy.reSendInvite
+                : fill(copy.emailAnInvite, { firstName })}
           </span>
         </button>
       ) : (
@@ -115,10 +141,14 @@ export function WaitlistInvite({
           disabled={pending}
           className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
         >
-          <span aria-live="polite">{copied ? "Copied" : "Copy invite message"}</span>
+          <span aria-live="polite">{copied ? copy.copied : copy.copyInviteMessage}</span>
         </button>
       )}
-      {invited ? <span className="text-xs text-muted">Invited {relativeTime(invited)}</span> : null}
+      {invited ? (
+        <span className="text-xs text-muted">
+          {fill(copy.invitedRelative, { time: relativeTime(copy, invited) })}
+        </span>
+      ) : null}
     </div>
   );
 }

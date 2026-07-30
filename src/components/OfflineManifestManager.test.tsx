@@ -8,7 +8,38 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
-import { OfflineManifestManager } from "./OfflineManifestManager";
+import { OfflineManifestManager, type OfflineManifestManagerCopy } from "./OfflineManifestManager";
+
+const copy: OfflineManifestManagerCopy = {
+  checkingDevice: "Checking this device…",
+  reconcileRejectedOne:
+    "1 offline change didn't match the live manifest and wasn't applied — open the live manifest to sort it out.",
+  reconcileRejectedOther:
+    "{count} offline changes didn't match the live manifest and weren't applied — open the live manifest to sort it out.",
+  reconcilePendingOne: "1 offline change is still waiting to send.",
+  reconcilePendingOther: "{count} offline changes are still waiting to send.",
+  reconcileCaughtUp: "Offline roll call is all caught up with the live manifest.",
+  reconcileErrorFallback:
+    "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
+  savingMessage: "Saving the latest manifest to this device…",
+  saveSuccessMessage: "This device has an up-to-date offline copy.",
+  saveErrorFallback:
+    "This device couldn't save the manifest. It'll try again once you have signal.",
+  offlineWithSavedCopy: "Offline — showing the last saved copy.",
+  offlineNoSavedCopy: "No offline copy on this device yet.",
+  refreshNoSignal: "No signal — showing the last saved copy.",
+  heading: "Offline safety copy",
+  body: "This device keeps an offline copy of the manifest up to date automatically while you have signal. Roll call keeps working offline, and every change is double-checked against the live manifest once you're back.",
+  connectivityOfflineWithCopy: "No signal · device copy",
+  connectivityOffline: "No signal",
+  freshnessCurrent: "Fresh copy",
+  freshnessAging: "Aging copy",
+  freshnessStale: "Stale copy",
+  savedSummary: "Saved {date} · {pending} waiting to send · {rejected} need a look",
+  refreshingLabel: "Refreshing…",
+  refreshNowLabel: "Refresh now",
+  openOfflineRollCall: "Open offline roll call",
+};
 
 // A stable object, not a fresh one per call — real Next.js useRouter()
 // returns the same router reference across renders; a fresh object per call
@@ -98,7 +129,7 @@ describe("OfflineManifestManager", () => {
     // Mount's own save+reconcile settles immediately.
     vi.mocked(syncOfflineManifest).mockResolvedValueOnce(envelope());
 
-    render(<OfflineManifestManager payload={payload} />);
+    render(<OfflineManifestManager payload={payload} copy={copy} />);
     await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
 
     // From here on, every call hangs until resolved by hand — standing in

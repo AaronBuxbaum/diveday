@@ -4,7 +4,13 @@ import { useEffect, useRef } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 
-export function CheckInSearch({ query }: { query: string }) {
+export function CheckInSearch({
+  query,
+  copy,
+}: {
+  query: string;
+  copy: { label: string; hint: string; placeholder: string; submit: string };
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -14,10 +20,8 @@ export function CheckInSearch({ query }: { query: string }) {
   return (
     <form method="get" className="flex flex-col gap-3 sm:flex-row sm:items-end">
       <label className="min-w-0 flex-1 text-sm font-medium" htmlFor="check-in-search">
-        Scan or search diver
-        <span className="mt-1 block text-xs font-normal text-muted">
-          A barcode scanner can type a booking ID here.
-        </span>
+        {copy.label}
+        <span className="mt-1 block text-xs font-normal text-muted">{copy.hint}</span>
         <input
           ref={inputRef}
           id="check-in-search"
@@ -25,7 +29,7 @@ export function CheckInSearch({ query }: { query: string }) {
           type="search"
           inputMode="search"
           defaultValue={query}
-          placeholder="Name, email, or booking ID"
+          placeholder={copy.placeholder}
           className={`${controlClass} mt-2`}
         />
       </label>
@@ -33,7 +37,7 @@ export function CheckInSearch({ query }: { query: string }) {
         type="submit"
         className={buttonClass({ variant: "secondary", className: "shrink-0" })}
       >
-        Search queue
+        {copy.submit}
       </button>
     </form>
   );

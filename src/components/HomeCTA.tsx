@@ -8,22 +8,28 @@ import { trialHref } from "@/lib/funnel";
 
 interface HomeCTAProps {
   enterDemoAction: (formData: FormData) => Promise<void>;
+  copy: {
+    gettingReady: string;
+    tryDemo: string;
+    startTrial: string;
+    seeLiveSchedule: string;
+  };
 }
 
-export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
+export function HomeCTA({ enterDemoAction, copy }: HomeCTAProps) {
   return (
     <div className="flex flex-col items-start gap-3">
       <div className="flex flex-col gap-3 sm:flex-row">
         <form action={enterDemoAction}>
           <FunnelTag source="home-hero" />
           <SubmitButton
-            pendingLabel="Getting your shop ready…"
+            pendingLabel={copy.gettingReady}
             className={buttonClass({
               size: "cta",
               className: "cursor-pointer disabled:opacity-70",
             })}
           >
-            Try the live demo
+            {copy.tryDemo}
           </SubmitButton>
         </form>
         <Link
@@ -34,14 +40,14 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
             className: "border-border-strong",
           })}
         >
-          Start a trial
+          {copy.startTrial}
         </Link>
       </div>
       <Link
         href="/shop/blue-mantis/schedule"
         className={buttonClass({ variant: "link", className: "px-0" })}
       >
-        See a live schedule →
+        {copy.seeLiveSchedule}
       </Link>
     </div>
   );

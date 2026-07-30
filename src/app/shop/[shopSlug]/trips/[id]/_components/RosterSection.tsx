@@ -4,13 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
-import { PaymentStatusControl } from "./PaymentStatusControl";
+import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -30,34 +31,42 @@ type WaiverControl = {
   confirm: boolean;
 };
 
-const WAIVER_CONTROLS: Record<ReturnType<typeof waiverState>, WaiverControl> = {
+type WaiverControlKeys = {
+  labelKey: StaffMessageKey;
+  hintKey?: StaffMessageKey;
+  tone: string;
+  action: "send" | "resend" | null;
+  confirm: boolean;
+};
+
+const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
   not_sent: {
-    label: "Send waiver",
+    labelKey: "trips.roster.waiverSend",
     tone: "border border-border bg-surface hover:bg-surface-sunken",
     action: "send",
     confirm: false,
   },
   awaiting_signature: {
-    label: "Waiver sent",
-    hint: "Resend",
+    labelKey: "trips.roster.waiverSent",
+    hintKey: "trips.roster.waiverResendHint",
     tone: "border border-border bg-surface hover:bg-surface-sunken",
     action: "resend",
     confirm: true,
   },
   expired: {
-    label: "Link expired",
+    labelKey: "trips.roster.waiverLinkExpired",
     tone: "border border-danger/40 text-danger hover:bg-danger/10",
     action: "resend",
     confirm: false,
   },
   complete: {
-    label: "Waiver signed",
+    labelKey: "trips.roster.waiverSigned",
     tone: "bg-success/10 text-success",
     action: null,
     confirm: false,
   },
   medical_review: {
-    label: "Medical review",
+    labelKey: "trips.roster.waiverMedicalReview",
     tone: "bg-warning/10 text-warning",
     action: null,
     confirm: false,
@@ -110,6 +119,31 @@ export function RosterSection({
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
 }) {
+  const t = staffTranslator(locale);
+  const WAIVER_CONTROLS = Object.fromEntries(
+    Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
+      status,
+      {
+        label: t(entry.labelKey),
+        hint: entry.hintKey ? t(entry.hintKey) : undefined,
+        tone: entry.tone,
+        action: entry.action,
+        confirm: entry.confirm,
+      } satisfies WaiverControl,
+    ]),
+  ) as Record<ReturnType<typeof waiverState>, WaiverControl>;
+  const paymentStatusCopy: PaymentStatusControlCopy = {
+    prefix: t("trips.roster.paymentPrefix"),
+    statuses: {
+      unpaid: t("trips.roster.paymentUnpaid"),
+      deposit_paid: t("trips.roster.paymentDepositPaid"),
+      paid: t("trips.roster.paymentPaid"),
+      waived: t("trips.roster.paymentWaived"),
+      refunded: t("trips.roster.paymentRefunded"),
+    },
+    update: t("trips.roster.paymentUpdate"),
+    updating: t("trips.roster.paymentUpdating"),
+  };
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
   // How many divers still have a waiver a staffer can send or resend — the
   // count the bulk control acts on. A signed or medical-review diver is not
@@ -124,9 +158,9 @@ export function RosterSection({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">
-            Divers{" "}
+            {t("trips.roster.heading")}{" "}
             <span className="font-normal text-muted tabular-nums">
-              {booked} of {capacity}
+              {t("trips.roster.bookedOfCapacity", { booked, capacity })}
             </span>
           </h2>
         </div>
@@ -137,19 +171,19 @@ export function RosterSection({
             sendable, so it's never a dead control. */}
         {sendableCount > 0 ? (
           <form id="roster-bulk" action={bulkSendWaiversAction} className="flex items-center gap-2">
-            <span className="text-sm text-muted">Tick divers, then</span>
+            <span className="text-sm text-muted">{t("trips.roster.tickDiversThen")}</span>
             <SubmitButton
-              pendingLabel="Sending…"
+              pendingLabel={t("trips.roster.sending")}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
-              Send waivers to selected
+              {t("trips.roster.sendWaiversToSelected")}
             </SubmitButton>
           </form>
         ) : null}
       </div>
       {roster.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          No bookings yet — share the trip page and they'll show up here.
+          {t("trips.roster.noBookings")}
         </p>
       ) : (
         <ul className="mt-5 grid gap-4">
@@ -196,7 +230,9 @@ export function RosterSection({
                           name="bookingId"
                           value={booking.id}
                           form="roster-bulk"
-                          aria-label={`Select ${person.fullName} to send a waiver`}
+                          aria-label={t("trips.roster.selectToSendWaiverAriaLabel", {
+                            name: person.fullName,
+                          })}
                           className="size-4 shrink-0"
                         />
                       </label>
@@ -208,7 +244,9 @@ export function RosterSection({
                       >
                         {person.fullName}
                       </Link>
-                      <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
+                      <p className="text-sm text-muted">
+                        {person.email ?? t("trips.roster.noEmailOnFile")}
+                      </p>
                     </div>
                   </div>
                   {readiness ? (
@@ -216,13 +254,17 @@ export function RosterSection({
                       tone={readiness.status === "ready" ? "success" : "danger"}
                       className="shrink-0"
                     >
-                      {readiness.status === "ready" ? "Ready" : "Needs attention"}
+                      {readiness.status === "ready"
+                        ? t("trips.roster.ready")
+                        : t("trips.roster.needsAttention")}
                     </Badge>
                   ) : null}
                 </div>
                 {booking.groupPreference ? (
                   <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-                    <span className="font-semibold text-foreground">Buddy-group note:</span>{" "}
+                    <span className="font-semibold text-foreground">
+                      {t("trips.roster.buddyGroupNote")}
+                    </span>{" "}
                     {booking.groupPreference}
                   </p>
                 ) : null}
@@ -246,11 +288,13 @@ export function RosterSection({
                   <form action={confirmIdentityAction} className="mt-2">
                     <input type="hidden" name="bookingId" value={booking.id} />
                     <SubmitButton
-                      pendingLabel="Confirming…"
-                      confirmMessage={`Confirm this booking really is ${person.fullName}? Only do this once you’ve checked it’s the same person — not someone else sharing the email.`}
+                      pendingLabel={t("trips.roster.confirming")}
+                      confirmMessage={t("trips.roster.confirmIdentityMessage", {
+                        name: person.fullName,
+                      })}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
-                      Confirm this is {person.fullName}
+                      {t("trips.roster.confirmThisIs", { name: person.fullName })}
                     </SubmitButton>
                   </form>
                 ) : null}
@@ -258,7 +302,7 @@ export function RosterSection({
                 <div className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      Waiver
+                      {t("trips.roster.waiverColumnHeading")}
                     </p>
                     <div className="mt-2">
                       {waiverControl.action ? (
@@ -266,11 +310,13 @@ export function RosterSection({
                           <input type="hidden" name="bookingId" value={booking.id} />
                           <SubmitButton
                             pendingLabel={
-                              waiverControl.action === "send" ? "Sending…" : "Resending…"
+                              waiverControl.action === "send"
+                                ? t("trips.roster.sending")
+                                : t("trips.roster.resending")
                             }
                             confirmMessage={
                               waiverControl.confirm
-                                ? `Send ${person.fullName} a new waiver link? Their previous link will stop working.`
+                                ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
                                 : undefined
                             }
                             className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
@@ -303,7 +349,7 @@ export function RosterSection({
                       // link, which captures the questionnaire and routes to review.
                       <details className="mt-2">
                         <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-                          Mark signed on paper
+                          {t("trips.roster.markSignedOnPaper")}
                         </summary>
                         <form
                           action={markWaiverInPersonAction}
@@ -317,37 +363,51 @@ export function RosterSection({
                               required
                               className="mt-1 size-4 shrink-0"
                             />
-                            <span>
-                              I have this diver&apos;s signed release on file and have reviewed
-                              their medical questionnaire — no answer needs physician sign-off.
-                            </span>
+                            <span>{t("trips.roster.medicalAttestationLabel")}</span>
                           </label>
                           <SubmitButton
-                            pendingLabel="Recording…"
+                            pendingLabel={t("trips.roster.recording")}
                             className={buttonClass({
                               variant: "secondary",
                               size: "sm",
                               className: "mt-3",
                             })}
                           >
-                            Record paper signature
+                            {t("trips.roster.recordPaperSignature")}
                           </SubmitButton>
                         </form>
                       </details>
                     ) : null}
                     {currentWaiver?.completedAt && waiverStatus === "complete" ? (
                       <p className="mt-2 text-sm text-muted">
-                        Signed {formatDateTimeTz(currentWaiver.completedAt, locale, shopTimezone)}
                         {currentWaiver.signatureMethod === "in_person_attested"
-                          ? " · recorded from a paper copy"
+                          ? t("trips.roster.signedPaper", {
+                              date: formatDateTimeTz(
+                                currentWaiver.completedAt,
+                                locale,
+                                shopTimezone,
+                              ),
+                            })
                           : currentWaiver.signatureMethod === "imported"
-                            ? " · imported from a prior shop"
-                            : ""}
+                            ? t("trips.roster.signedImported", {
+                                date: formatDateTimeTz(
+                                  currentWaiver.completedAt,
+                                  locale,
+                                  shopTimezone,
+                                ),
+                              })
+                            : t("trips.roster.signedPlain", {
+                                date: formatDateTimeTz(
+                                  currentWaiver.completedAt,
+                                  locale,
+                                  shopTimezone,
+                                ),
+                              })}
                       </p>
                     ) : null}
                     {waiverStatus === "medical_review" ? (
                       <div className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                        <p className="font-medium">Follow up before boarding</p>
+                        <p className="font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
                         {flaggedPrompts.length > 0 ? (
                           <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
                             {flaggedPrompts.map((prompt) => (
@@ -355,10 +415,7 @@ export function RosterSection({
                             ))}
                           </ul>
                         ) : (
-                          <p className="mt-1">
-                            A diver answered yes to a medical question. Confirm physician clearance
-                            before boarding.
-                          </p>
+                          <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
                         )}
                       </div>
                     ) : null}
@@ -366,7 +423,7 @@ export function RosterSection({
 
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      Rental fit
+                      {t("trips.roster.rentalFitColumnHeading")}
                     </p>
                     <p className="mt-2 text-sm text-muted">
                       {rentalFitLine(rentalFitByBooking.get(booking.id) ?? null).text}
@@ -374,8 +431,8 @@ export function RosterSection({
                     {nitrox ? (
                       <p className="mt-2 text-sm font-medium text-primary">
                         {nitrox.approved
-                          ? "Nitrox requested — verified card, billed per dive. The mix is still analyzed and signed for at the fill station."
-                          : "Nitrox requested, but no verified card. Planned as air."}
+                          ? t("trips.roster.nitroxApproved")
+                          : t("trips.roster.nitroxUnverified")}
                       </p>
                     ) : null}
                   </div>
@@ -390,16 +447,19 @@ export function RosterSection({
                       sourceNote={paymentSource}
                       refundNote={
                         refundEligible && cancellationDeadline
-                          ? `Refund-eligible until ${formatDateTimeTz(cancellationDeadline, locale, shopTimezone)}`
+                          ? t("trips.roster.refundEligibleUntil", {
+                              date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
+                            })
                           : null
                       }
+                      copy={paymentStatusCopy}
                     />
                   ) : null}
                   <Link
                     href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
                     className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
                   >
-                    Create order
+                    {t("trips.roster.createOrder")}
                   </Link>
                   {/* A cancel inside the shop's refund window fires an automatic
                       Stripe refund that the Undo banner can't claw back — a real
@@ -408,17 +468,21 @@ export function RosterSection({
                   <form action={removeBookingAction} className="sm:ml-auto">
                     <input type="hidden" name="bookingId" value={booking.id} />
                     <SubmitButton
-                      pendingLabel="Removing…"
-                      confirmMessage={`Remove ${person.fullName} from this trip? If they're eligible for a refund, it's issued automatically.`}
+                      pendingLabel={t("trips.roster.removing")}
+                      confirmMessage={t("trips.roster.confirmRemoveBooking", {
+                        name: person.fullName,
+                      })}
                       className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
                     >
-                      Remove booking
+                      {t("trips.roster.removeBooking")}
                     </SubmitButton>
                   </form>
                 </div>
                 <details className="mt-4 border-t border-border pt-4">
                   <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-                    Private staff notes ({notesByBooking.get(booking.id)?.length ?? 0})
+                    {t("trips.roster.privateStaffNotes", {
+                      count: notesByBooking.get(booking.id)?.length ?? 0,
+                    })}
                   </summary>
                   <div className="mt-2 grid gap-3">
                     {(notesByBooking.get(booking.id) ?? []).map(({ note, authorName }) => (
@@ -435,11 +499,11 @@ export function RosterSection({
                         <form action={deleteNoteAction} className="shrink-0">
                           <input type="hidden" name="noteId" value={note.id} />
                           <SubmitButton
-                            pendingLabel="…"
-                            confirmMessage="Delete this private note?"
+                            pendingLabel={t("trips.roster.deletingEllipsis")}
+                            confirmMessage={t("trips.roster.confirmDeleteNote")}
                             className="rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
                           >
-                            Delete
+                            {t("trips.roster.delete")}
                           </SubmitButton>
                         </form>
                       </div>
@@ -447,7 +511,7 @@ export function RosterSection({
                     <form action={addNoteAction} className="grid gap-2">
                       <input type="hidden" name="bookingId" value={booking.id} />
                       <label htmlFor={`note-${booking.id}`} className="text-sm font-medium">
-                        Add a note only staff can see
+                        {t("trips.roster.addNoteLabel")}
                       </label>
                       <textarea
                         id={`note-${booking.id}`}
@@ -458,14 +522,14 @@ export function RosterSection({
                         className={controlClass}
                       />
                       <SubmitButton
-                        pendingLabel="Adding…"
+                        pendingLabel={t("trips.roster.adding")}
                         className={buttonClass({
                           variant: "secondary",
                           size: "sm",
                           className: "justify-self-start",
                         })}
                       >
-                        Add private note
+                        {t("trips.roster.addPrivateNote")}
                       </SubmitButton>
                     </form>
                   </div>

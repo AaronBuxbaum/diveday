@@ -15,10 +15,14 @@ export function SnippetField({
   label,
   rows,
   snippet,
+  copyLabel,
+  copiedLabel,
 }: {
   label: string;
   rows: number;
   snippet: string;
+  copyLabel: string;
+  copiedLabel: string;
 }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -51,7 +55,7 @@ export function SnippetField({
               }
             }}
           >
-            {copied ? "Copied" : "Copy"}
+            {copied ? copiedLabel : copyLabel}
           </button>
         </div>
       </div>
