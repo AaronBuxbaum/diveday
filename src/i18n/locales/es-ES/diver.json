@@ -377,5 +377,184 @@
     "anythingElse": "Algo más",
     "copy": "Copiar mensaje",
     "copied": "Copiado"
+  },
+  "account": {
+    "common": {
+      "backToSignIn": "Volver a iniciar sesión",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "saving": "Guardando…"
+    },
+    "forgotPassword": {
+      "title": "Restablece tu contraseña",
+      "description": "Introduce el correo de tu cuenta de DiveDay y te enviaremos un enlace para crear una nueva.",
+      "sent": "Si ese correo tiene una cuenta de DiveDay, un enlace de restablecimiento está en camino.",
+      "sending": "Enviando…",
+      "submit": "Enviar enlace de restablecimiento"
+    },
+    "invite": {
+      "unavailableTitle": "Esta invitación no está disponible",
+      "unavailableText": "Puede haber caducado, haberse usado ya o haber sido revocada. Pide a quien te invitó que envíe una nueva.",
+      "title": "Crea tu contraseña",
+      "description": "Elige una contraseña para terminar de configurar tu cuenta de DiveDay.",
+      "confirmPassword": "Confirmar contraseña",
+      "submit": "Crear contraseña e iniciar sesión"
+    },
+    "verify": {
+      "title": "Confirma tu correo electrónico",
+      "description": "Confirma que este es tu correo electrónico para saber que eres realmente tú.",
+      "confirming": "Confirmando…",
+      "submit": "Confirmar mi correo",
+      "confirmedTitle": "Correo confirmado",
+      "confirmedText": "Gracias — tu correo está confirmado. Todo listo.",
+      "unavailableTitle": "Este enlace de confirmación no está disponible",
+      "unavailableText": "Puede haber caducado o haberse usado ya. Si ya confirmaste tu correo, todo listo — inicia sesión y continúa."
+    },
+    "resetPassword": {
+      "unavailableTitle": "Este enlace de restablecimiento no está disponible",
+      "unavailableText": "Puede haber caducado o haberse usado ya — los enlaces de restablecimiento funcionan una sola vez, durante una hora. Pide uno nuevo desde la página de inicio de sesión.",
+      "title": "Crea una nueva contraseña",
+      "description": "Elige una nueva contraseña para tu cuenta de DiveDay.",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar nueva contraseña",
+      "submit": "Guardar nueva contraseña"
+    },
+    "signIn": {
+      "title": "Bienvenido de nuevo",
+      "description": "Inicia sesión para llevar la tienda.",
+      "error": "Ese correo y contraseña no coinciden — inténtalo de nuevo.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signingIn": "Iniciando sesión…",
+      "submit": "Iniciar sesión",
+      "needShop": "¿Necesitas una tienda?",
+      "createShop": "Crear una tienda"
+    }
+  },
+  "marketing": {
+    "home": {
+      "eyebrow": "Operaciones tranquilas. Salidas más seguras.",
+      "heroTitle": "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
+      "heroDescription": "DiveDay reúne reservas, preparación y el listado del barco en un solo lugar — para que tu equipo dedique menos tiempo al papeleo y más a cuidar de los buceadores.",
+      "exploreNote": "Explora una tienda real en funcionamiento. Cambia entre las vistas de propietario, instructor, divemaster, capitán y buceador.",
+      "phoneFrameLabel": "Un capitán marcando buceadores embarcados en la pantalla móvil de pase de lista de DiveDay.",
+      "dockEyebrow": "En el muelle",
+      "dockDetail": "Botones de pase de lista lo bastante grandes para dedos mojados — con o sin señal.",
+      "momentsEyebrow": "Seguro para llevar el barco",
+      "momentsTitle": "La vista adecuada para quien sostiene el trabajo.",
+      "momentsDescription": "Todos trabajan desde el mismo día — lo que la recepción revisa por la mañana es exactamente lo que ve el capitán en el muelle, incluido quién ha embarcado y por qué alguien todavía no puede.",
+      "moments": {
+        "diver": {
+          "role": "Para el buceador",
+          "title": "Una forma clara de subir al barco",
+          "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con la tienda."
+        },
+        "frontDesk": {
+          "role": "Para la recepción",
+          "title": "Una sola respuesta a «¿están listos?»",
+          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar en silencio."
+        }
+      },
+      "productEyebrow": "En vez de tres aplicaciones",
+      "productTitle": "Cada pequeño requisito tiene un lugar donde encajar.",
+      "seeFullProduct": "Ver el producto completo",
+      "exportEyebrow": "Seguro para irse",
+      "exportTitle": "Tus datos se van contigo — cualquier día, sin llamadas.",
+      "exportDescription1": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo. Por eso la salida ya está incluida. {claim} {terms}",
+      "exportDescription2": "¿Llegas en vez de irte? Trae la hoja de cálculo que ya llevas — el importador mapea tus columnas y muestra exactamente qué se traslada, y qué honestamente no, antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
+      "spreadsheetLink": "¿Llevas el día en una hoja de cálculo? Mira cómo se traslada →",
+      "switchingLink": "¿Cambias desde EVE, DiveShop360, DiveAdmin o Smartwaiver? Lee las guías →",
+      "inExportEyebrow": "En la exportación",
+      "exportItem1": "Un ZIP de archivos CSV documentados, descargado desde Ajustes por ti",
+      "exportItem2": "Buceadores, reservas, registros de descargo y historial de pagos",
+      "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
+      "exportItem4": "Un README que explica cada archivo — sin proyecto de descifrado después",
+      "tryEyebrow": "Fácil de probar",
+      "tryTitle": "Mira cómo se siente cuando toda la tienda está en la misma página.",
+      "tryDescription": "DiveDay es reciente, y las primeras tiendas lo moldean. Las tiendas fundadoras tienen una línea directa con el fundador y respuestas el mismo día — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
+      "gettingReady": "Preparando tu tienda…",
+      "tryDemo": "Probar la demo en vivo",
+      "startTrial": "Empezar una prueba",
+      "viewPricing": "Ver precios"
+    },
+    "common": {
+      "gettingReady": "Preparando tu tienda…",
+      "tryDemo": "Probar la demo en vivo",
+      "startTrial": "Empezar una prueba",
+      "checkItLabel": "Compruébalo: "
+    },
+    "about": {
+      "eyebrow": "Quiénes somos",
+      "heroTitle": "Hecho por buceadores, para buceadores.",
+      "heroDescription": "DiveDay no es un producto secundario dentro de una empresa más grande, ni una hoja de ruta fijada por un comité que nunca ha visto un barco. Lo construye un pequeño equipo de buceadores, con un fundador responsable de cada decisión que toma.",
+      "founderEyebrow": "Del fundador",
+      "founderTitle": "Por qué existe esto.",
+      "founderP1": "Un dueño de una tienda de buceo me explicó un día cualquiera: una pizarra para el barco de mañana, una tablilla para el listado, una hoja de cálculo que alguien actualiza a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Nada de eso era culpa suya ni de su equipo; llevan una operación ajustada. Las herramientas simplemente nunca llegaron para este sector.",
+      "founderP2": "Ese es el patrón en cuanto lo buscas: un sector entero funcionando con software que nadie construyó realmente para él. Lo que existe es, en el mejor caso, anticuado y, en el peor, hostil — hecho para una oficina trasera, no para un muelle mojado. Así que las tiendas se quedan con la pizarra y la tablilla, porque el papel nunca falla, nunca te desconecta y nunca te hace tocar cinco pantallas con las manos mojadas.",
+      "founderP3": "DiveDay existe para cerrar esa brecha: software lo bastante rápido, claro y tolerante como para que un equipo lo use sin que se lo pidan — construido observando cómo transcurre de verdad un día de barco, no a partir de una especificación escrita lejos del agua. Si tu equipo no lo abriría una mañana ajetreada, no ha cumplido su función.",
+      "runEyebrow": "Cómo se lleva",
+      "runTitle": "Puedes contactar al fundador.",
+      "runP1": "Escribe sobre una mala mañana en el mostrador y llegas al fundador — no a una cola, ni a un número de ticket, ni a un formulario que te pide adjuntar una captura antes de que alguien lo lea. Quien responde es quien puede resolverlo.",
+      "runP2": "Los precios funcionan igual: un número fijo, sin plazas que contar, sin nivel que esconda la función que realmente necesitas. Aquí nadie cobra por venderte más, así que la página de precios no tiene nada que ocultar.",
+      "emailCta": "Escribe a {email}",
+      "seeCost": "Ver qué cuesta",
+      "seeProduct": "Ver qué hace →",
+      "rulesEyebrow": "A qué nos comprometemos",
+      "rulesTitle": "Cuatro reglas, y puedes comprobar cada una.",
+      "rulesDescription": "Un proveedor nuevo no puede señalar clientes, así que esto no son promesas — son cosas que puedes ir a probar en la demo en unos cinco minutos.",
+      "rules": {
+        "survivesDock": {
+          "title": "Tiene que sobrevivir al muelle.",
+          "body": "Manos mojadas, sol fuerte, una barra de señal, un barco que ya va tarde. Si una pantalla solo funciona sentado en una oficina, no está terminada.",
+          "check": "guarda un listado en tu teléfono, apaga la red y haz el pase de lista igualmente."
+        },
+        "noSilentPasses": {
+          "title": "Sin pases silenciosos.",
+          "body": "Un software que deja pasar a un buceador en silencio porque un campo estaba vacío es peor que el papel. Cuando DiveDay no puede verificar algo, lo dice y se detiene — y dice qué es.",
+          "check": "abre la cola de bloqueos y lee por qué está ahí cada nombre."
+        },
+        "onePrice": {
+          "title": "Un precio, sin plazas.",
+          "body": "Todo lo que hace el producto está incluido en el precio. No hay nivel que esconda la función que realmente necesitas, y aquí nadie cobra por venderte más.",
+          "check": "lee la página de precios. Es un número y una lista."
+        },
+        "yourRecords": {
+          "title": "Tus registros son tuyos.",
+          "body": "La exportación no es una palanca de retención que soltamos cuando amenazas con irte. Es un botón, funciona el primer día de una prueba, y entrega archivos documentados en vez de un volcado propietario.",
+          "check": "empieza una prueba y descarga el ZIP antes de haber introducido nada."
+        }
+      },
+      "plainlyEyebrow": "Sin rodeos",
+      "plainlyTitle": "Lo que no vamos a fingir.",
+      "plainlyDescription": "Lo vas a descubrir de todos modos. Mejor aquí, antes de haber movido una temporada de reservas.",
+      "truths": {
+        "new": {
+          "title": "DiveDay es nuevo.",
+          "body": "No hay una base de clientes que señalar ni un muro de logos del que tomar prestada credibilidad. Por eso la demo es una tienda real en funcionamiento y el botón de exportar funciona desde tu primer día."
+        },
+        "notEverything": {
+          "title": "No lo hace todo.",
+          "body": "Sin caja registradora, sin sincronización con agencias, sin inventario de equipo. Esos son trabajos reales que hace otro software, y fingir lo contrario solo desperdiciaría una temporada tuya."
+        },
+        "stillMoving": {
+          "title": "Todavía está en marcha.",
+          "body": "El acceso anticipado significa que las tiendas que se unen primero orientan lo que se construye después, no una hoja de ruta fijada con meses de antelación en una sala lejos del agua. Ese es el trato: un producto que se adapta a tu temporada, y que sigue cambiando mientras lo usas."
+        }
+      },
+      "leaveEyebrow": "Seguro para irse",
+      "leaveTitle": "A quién le estás comprando en realidad.",
+      "leaveP1": "Confiar en un proveedor pequeño los registros que suben a tus buceadores a un barco es una decisión real, así que aquí están las partes que vale la pena conocer antes de tomarla — incluida la más importante, que es cómo te irías.",
+      "leaveP2": "{terms} Viniendo en la otra dirección, una persona se sentará con tu exportación o hoja de cálculo anterior y traerá a tus buceadores contigo.",
+      "switchingLink": "Cómo funciona el cambio, en ambas direcciones →",
+      "whoBuildsLabel": "Quién lo construye",
+      "whoBuildsValue": "Aaron Buxbaum, fundador — ingeniero de software (Google Maps, una empresa de biotecnología hasta su salida a bolsa, coches autónomos) y buceador obsesivo. La persona responsable de cada decisión que toma DiveDay.",
+      "whereLiveLabel": "Dónde viven tus registros",
+      "whereLiveValue": "En servidores en Estados Unidos, y en una descarga que puedes obtener en cualquier momento.",
+      "committingLabel": "A qué te comprometes",
+      "committingValue": "Mes a mes, por ubicación, cancela cuando quieras. Sin cuota de alta, sin contrato del que salir.",
+      "whoAnswersLabel": "Quién te responde",
+      "whoAnswersValue": "El fundador, directamente. Las tiendas fundadoras lo tienen por escrito en la página de precios.",
+      "closingTitle": "La forma honesta de juzgar todo esto es ir a usarlo.",
+      "closingDescription": "Sin llamada, sin formulario primero. Recorre una tienda de ejemplo completa como propietario, capitán o buceador, y decide si sientes que tu equipo la abriría una mañana ajetreada."
+    }
   }
 }

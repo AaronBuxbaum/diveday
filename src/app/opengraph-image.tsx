@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+// i18n-exempt-file: link-preview card rendered for crawlers with no visitor
+// locale context, the same carve-out as static metadata.title.
 /**
  * The shared-link card for every public page. Rendered by satori, which cannot
  * read CSS custom properties, so the deep-ocean dark palette from

@@ -7,6 +7,8 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { signIn } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 
@@ -42,22 +44,23 @@ export default async function SignInPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = diverTranslator(await requestLocale());
 
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNav />
       <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
         <div className="rounded-lg border border-border bg-surface p-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-1 text-sm text-muted">Sign in to run the shop.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("account.signIn.title")}</h1>
+          <p className="mt-1 text-sm text-muted">{t("account.signIn.description")}</p>
           {error ? (
             <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-              That email and password don&apos;t match — give it another go.
+              {t("account.signIn.error")}
             </p>
           ) : null}
           <form action={authenticate} className="mt-5 flex flex-col gap-4">
             <FieldGrid columns={1} className="gap-y-4">
-              <Field label="Email">
+              <Field label={t("account.common.email")}>
                 <input
                   name="email"
                   type="email"
@@ -66,7 +69,7 @@ export default async function SignInPage({
                   className={controlClass}
                 />
               </Field>
-              <Field label="Password">
+              <Field label={t("account.common.password")}>
                 <input
                   name="password"
                   type="password"
@@ -78,17 +81,17 @@ export default async function SignInPage({
             </FieldGrid>
             <div className="flex justify-end">
               <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot password?
+                {t("account.signIn.forgotPassword")}
               </Link>
             </div>
-            <SubmitButton pendingLabel="Signing in…" className={buttonClass()}>
-              Sign in
+            <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
+              {t("account.signIn.submit")}
             </SubmitButton>
           </form>
           <p className="mt-4 text-center text-sm text-muted">
-            Need a shop?{" "}
+            {t("account.signIn.needShop")}{" "}
             <Link href={trialHref("sign-in")} className="text-primary font-medium hover:underline">
-              Create a shop
+              {t("account.signIn.createShop")}
             </Link>
           </p>
         </div>

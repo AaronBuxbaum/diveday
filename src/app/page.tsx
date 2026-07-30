@@ -14,6 +14,8 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 
@@ -45,24 +47,23 @@ const softwareApplicationJsonLd = {
   },
 };
 
-const dailyMoments = [
-  {
-    role: "For the diver",
-    title: "A clear way onto the boat",
-    description:
-      "A live schedule, a calm booking flow, and one obvious next step instead of a back-and-forth with the shop.",
-    mockup: marketingMockups.diverBooking,
-  },
-  {
-    role: "For the front desk",
-    title: "One answer to “are they ready?”",
-    description:
-      "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of quietly waving it through.",
-    mockup: marketingMockups.frontDeskReadiness,
-  },
-] as const;
+export default async function Home() {
+  const t = diverTranslator(await requestLocale());
+  const dailyMoments = [
+    {
+      role: t("marketing.home.moments.diver.role"),
+      title: t("marketing.home.moments.diver.title"),
+      description: t("marketing.home.moments.diver.description"),
+      mockup: marketingMockups.diverBooking,
+    },
+    {
+      role: t("marketing.home.moments.frontDesk.role"),
+      title: t("marketing.home.moments.frontDesk.title"),
+      description: t("marketing.home.moments.frontDesk.description"),
+      mockup: marketingMockups.frontDeskReadiness,
+    },
+  ] as const;
 
-export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       <script
@@ -78,33 +79,27 @@ export default function Home() {
           <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
             <div className="max-w-2xl">
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                Calm operations. Safer departures.
+                {t("marketing.home.eyebrow")}
               </p>
               <h1 className="mt-5 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
-                Run the whole dive day, from booking to head count.
+                {t("marketing.home.heroTitle")}
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-                DiveDay puts bookings, readiness, trip prep, and the boat manifest in one place — so
-                your crew spends less time chasing paperwork and more time taking care of divers.
+                {t("marketing.home.heroDescription")}
               </p>
               <div className="mt-8">
                 <HomeCTA enterDemoAction={enterDemoAction} />
               </div>
-              <p className="mt-4 text-sm text-muted">
-                Explore a real working shop. Switch between owner, instructor, divemaster, captain,
-                and diver views.
-              </p>
+              <p className="mt-4 text-sm text-muted">{t("marketing.home.exploreNote")}</p>
             </div>
 
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
-              <CaptainPhoneFrame label="A captain marking divers boarded on DiveDay's mobile roll-call screen." />
+              <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} />
               <div className="mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3 shadow-lg">
                 <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  At the dock
+                  {t("marketing.home.dockEyebrow")}
                 </p>
-                <p className="mt-1 text-sm font-medium">
-                  Roll-call buttons big enough for wet thumbs — with or without signal.
-                </p>
+                <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
               </div>
             </div>
           </div>
@@ -113,15 +108,13 @@ export default function Home() {
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              Safe to run the boat on
+              {t("marketing.home.momentsEyebrow")}
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              The right view for the person holding the work.
+              {t("marketing.home.momentsTitle")}
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
-              Everyone works from the same day — what the front desk checks in the morning is
-              exactly what the captain sees at the dock, down to who has boarded and why someone
-              can't yet.
+              {t("marketing.home.momentsDescription")}
             </p>
           </div>
 
@@ -146,10 +139,10 @@ export default function Home() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                  Instead of three apps
+                  {t("marketing.home.productEyebrow")}
                 </p>
                 <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                  Every small requirement has a place to land.
+                  {t("marketing.home.productTitle")}
                 </h2>
               </div>
               <Link
@@ -159,7 +152,7 @@ export default function Home() {
                   className: "self-start border-border-strong lg:self-auto",
                 })}
               >
-                See the full product
+                {t("marketing.home.seeFullProduct")}
               </Link>
             </div>
             <div className="mt-12">
@@ -172,54 +165,53 @@ export default function Home() {
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div className="max-w-2xl">
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                Safe to leave
+                {t("marketing.home.exportEyebrow")}
               </p>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                Your data leaves with you — any day, no phone call.
+                {t("marketing.home.exportTitle")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
-                DiveDay is new, and you shouldn't have to take a new vendor on faith. So the exit is
-                built in. {fullShopExport.claim} {fullShopExport.terms}
+                {t("marketing.home.exportDescription1", {
+                  claim: fullShopExport.claim,
+                  terms: fullShopExport.terms,
+                })}
               </p>
               <p className="mt-4 text-lg leading-8 text-muted">
-                Arriving instead of leaving? Bring the spreadsheet you already keep — the importer
-                maps your columns and shows exactly what comes across, and what honestly doesn't,
-                before a single row is saved. Or hand us the sheet and we'll bring your divers in
-                with you, free.
+                {t("marketing.home.exportDescription2")}
               </p>
               <Link
                 href="/switching/spreadsheet"
                 className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
               >
-                Running the day on a spreadsheet? See how it comes across →
+                {t("marketing.home.spreadsheetLink")}
               </Link>
               <Link
                 href="/switching"
                 className={buttonClass({ variant: "link", className: "mt-2 text-left" })}
               >
-                Switching from EVE, DiveShop360, DiveAdmin, or Smartwaiver? Read the guides →
+                {t("marketing.home.switchingLink")}
               </Link>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
               <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                In the export
+                {t("marketing.home.inExportEyebrow")}
               </p>
               <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
                 <li className="flex gap-3">
                   <span className="font-semibold text-primary">✓</span>
-                  <span>One ZIP of documented CSV files, downloaded from Settings by you</span>
+                  <span>{t("marketing.home.exportItem1")}</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="font-semibold text-primary">✓</span>
-                  <span>Divers, bookings, waiver records, and payment history</span>
+                  <span>{t("marketing.home.exportItem2")}</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="font-semibold text-primary">✓</span>
-                  <span>A contacts file shaped for another system's import wizard</span>
+                  <span>{t("marketing.home.exportItem3")}</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="font-semibold text-primary">✓</span>
-                  <span>A README that explains every file — no decoding project later</span>
+                  <span>{t("marketing.home.exportItem4")}</span>
                 </li>
               </ul>
             </div>
@@ -229,28 +221,26 @@ export default function Home() {
         <section className="border-t border-border bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              Easy to try
+              {t("marketing.home.tryEyebrow")}
             </p>
             <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
-              See how it feels when the whole shop is on the same page.
+              {t("marketing.home.tryTitle")}
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-              DiveDay is early, and the first shops shape it. Founding shops get a founder-direct
-              line with same-day responses — what your crew runs into this season is what gets
-              attention next.
+              {t("marketing.home.tryDescription")}
             </p>
             <div className="mt-8 flex flex-col items-center gap-3">
               <div className="flex flex-col justify-center gap-3 sm:flex-row">
                 <form action={enterDemoAction}>
                   <FunnelTag source="home-closing" />
                   <SubmitButton
-                    pendingLabel="Getting your shop ready…"
+                    pendingLabel={t("marketing.home.gettingReady")}
                     className={buttonClass({
                       size: "cta",
                       className: "cursor-pointer disabled:opacity-70",
                     })}
                   >
-                    Try the live demo
+                    {t("marketing.home.tryDemo")}
                   </SubmitButton>
                 </form>
                 <Link
@@ -261,11 +251,11 @@ export default function Home() {
                     className: "border-border-strong",
                   })}
                 >
-                  Start a trial
+                  {t("marketing.home.startTrial")}
                 </Link>
               </div>
               <Link href="/pricing" className={buttonClass({ variant: "link" })}>
-                View pricing
+                {t("marketing.home.viewPricing")}
               </Link>
             </div>
           </div>
