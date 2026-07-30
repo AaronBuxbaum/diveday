@@ -10,7 +10,8 @@
     "name": "Name",
     "email": "Email",
     "phone": "Phone",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again."
   },
   "schedule": {
     "eyebrow": "Trips",
@@ -154,7 +155,18 @@
     "openingPayment": "Opening payment…",
     "shopTakesOver": "You’re booked — the shop takes it from here",
     "shopTakesOverBody": "We’re double-checking a couple of things on our side. Nothing you need to do right now.",
-    "trackReadiness": "Track everything on your readiness page →"
+    "trackReadiness": "Track everything on your readiness page →",
+    "errors": {
+      "invalid": "Check your name and email and give it another go.",
+      "full": "Someone grabbed the last spot just before you — the boat's full.",
+      "available": "Good news — a spot just opened. Book it before it goes.",
+      "already": "You're already on this trip's list — no need to book twice.",
+      "unavailable": "This trip isn't taking bookings anymore.",
+      "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
+      "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
+      "fit": "We couldn't save that rental fit. Please check the details and try again.",
+      "pay": "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop."
+    }
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
@@ -544,7 +556,19 @@
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
       "alreadyHaveShop": "Already have a shop?",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "errors": {
+        "invalidInput": "Check the form and try again",
+        "shopNameRequired": "Shop name is required",
+        "shopSlugRequired": "Shop link is required",
+        "shopSlugInvalid": "Shop link must only contain letters, numbers, and hyphens",
+        "timezoneRequired": "Timezone is required",
+        "timezoneInvalid": "Not a recognized timezone",
+        "ownerNameRequired": "Full name is required",
+        "ownerEmailInvalid": "Invalid email address",
+        "ownerPasswordTooShort": "Password must be at least {min} characters",
+        "ownerPasswordTooLong": "Password must be at most {max} characters"
+      }
     }
   },
   "switching": {

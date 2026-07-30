@@ -7,8 +7,10 @@ import { getDb } from "@/db/client";
 import { joinLastMinuteList } from "@/db/last-minute-list";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { createTrip, deleteTrip, duplicateTrip, moveTrip } from "@/db/trips";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -38,7 +40,10 @@ export async function joinLastMinuteListAction(
   if (
     !checkRateLimit(rateLimitKey("last-minute-list", ip), RATE_LIMITS.lastMinuteListJoin).allowed
   ) {
-    return { error: RATE_LIMIT_MESSAGE };
+    // Resolved here, not passed back as a code: this state reaches
+    // LastMinuteListForm.tsx straight off `useActionState`, with no
+    // Server Component render in between to translate it first.
+    return { error: diverTranslator(await requestLocale())("common.rateLimited") };
   }
 
   const parsed = joinSchema.safeParse({

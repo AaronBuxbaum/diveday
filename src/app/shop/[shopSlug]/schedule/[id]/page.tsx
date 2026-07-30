@@ -55,7 +55,7 @@ import { ForecastSection } from "./_components/ForecastSection";
 import { PackingSection } from "./_components/PackingSection";
 import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
-import { ERROR_MESSAGES, type PaymentPanel } from "./_components/types";
+import { ERROR_MESSAGE_KEYS, isErrorCode, type PaymentPanel } from "./_components/types";
 
 /**
  * The departure's own title, description, and canonical URL. Embed mode points
@@ -215,7 +215,7 @@ export default async function TripDetailPage({
   const inPast = trip.startsAt <= nowDate();
   const full = isFull(trip);
   const remaining = spotsRemaining(trip);
-  const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
+  const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
   const tripRef = { shopSlug, tripId, embed: isEmbed };
 
   // One `Event` for this departure, on the canonical standalone page only —

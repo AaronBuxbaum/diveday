@@ -214,5 +214,15 @@ export const RATE_LIMITS = {
   capabilityAction: perHour(60),
 } as const satisfies Record<string, RateLimitConfig>;
 
-/** A single generic message for every rate-limit rejection in the app — never reveals which dimension (IP vs. email vs. token) tripped, so it can't be used to enumerate accounts or tokens. */
-export const RATE_LIMIT_MESSAGE = "Too many attempts. Please wait a few minutes and try again.";
+/**
+ * A single generic code for every rate-limit rejection in the app — never
+ * reveals which dimension (IP vs. email vs. token) tripped, so it can't be
+ * used to enumerate accounts or tokens.
+ *
+ * `src/lib` never picks a copy bundle (a caller on the staff side and a
+ * caller on the diver side would otherwise need two different resolved
+ * strings from one constant): this is a stable code, not rendered text.
+ * Each caller looks it up in its own `Record<code, MessageKey>` against
+ * whichever bundle its surface uses, the same as any other domain code.
+ */
+export const RATE_LIMIT_MESSAGE = "rate_limited";
