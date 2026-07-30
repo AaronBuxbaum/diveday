@@ -160,6 +160,28 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // The snapshot now saves itself automatically, so simulate the ADR's other
   // named failure mode instead — browser storage eviction/clearing site data
   // removing the record between saves.
+  //
+  // Two things have to hold for an eviction to still be evicted a reload later,
+  // and `setOffline` alone only buys the first.
+  //
+  // It does stop the *current* document from re-saving: every writer in
+  // OfflineManifestAutoSave and OfflineManifestManager returns early on
+  // `!navigator.onLine`, so cutting the network before the delete (rather than
+  // after) closes the window where a tick lands between the two and quietly
+  // puts the record back.
+  //
+  // But `navigator.onLine` reads **true again in the reloaded document** under
+  // Playwright's offline emulation — it blocks transport, it does not persist
+  // the flag across a navigation. So the reloaded page believes it has signal,
+  // starts an auto-save round, and re-populates the store from
+  // /api/offline-manifests/upcoming while the assertion below is still waiting.
+  // The test then fails saying the empty state is missing, when what actually
+  // happened is the eviction was undone a few hundred milliseconds earlier.
+  // Refusing that one request is what makes "still no signal" true for the code
+  // that asks — and it is the honest simulation, since a captain whose storage
+  // was cleared on the boat has no way to refetch either.
+  await context.setOffline(true);
+  await context.route("**/api/offline-manifests/upcoming*", (route) => route.abort());
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
@@ -169,7 +191,6 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
       }),
   );
 
-  await context.setOffline(true);
   await page.reload();
   // No snapshot survives, so the worker still redirects here rather than
   // letting the reload fail outright — the shell says so plainly instead of
