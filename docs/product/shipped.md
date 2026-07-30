@@ -7,6 +7,28 @@ lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Calendar subscriptions, feature modules, and the copy ratchet (delivered 2026-07-30)
+
+- **Staff calendar subscriptions** — a captain or instructor subscribes to their DiveDay departures
+  from Google, Apple, or Outlook via a read-only iCalendar feed at `/calendar/<token>.ics`
+  (`webcal:` form offered too). Two scopes: their own assignments, or every shop departure for an
+  owner/manager. The credential never expires — a lapsed one would stop a calendar updating
+  silently — so rotation is the remedy and issuing *is* rotating; authorization is re-derived from
+  current roles on every fetch, so leaving the team kills the feed with no cleanup step
+  ([calendar-feed-subscriptions](../architecture/decisions/20260730-calendar-feed-subscriptions.md)).
+- **Feature modules** — `src/features/<feature>/` publishes exactly one entry point (`index.ts`) and
+  documents itself (`README.md`); `pnpm check:architecture` fails a deep import, a missing file, or
+  a `lib`/`db` file reaching up into a feature. Dependency direction is now `app → features →
+  lib/db`, one way and enforced. `calendar-sync` is the first module — a convention proven on one
+  feature, not a migration order
+  ([feature-module-contracts](../architecture/decisions/20260730-feature-module-contracts.md)).
+- **The copy ratchet** — a staff message bundle (`staff.json`, server-side only) plus
+  `pnpm check:copy`, which blocks *new* hard-coded copy outright and lets the ~1,000 strings of
+  existing debt only ever shrink: a count that rises fails, and a count that falls must be banked in
+  the same change. Domain layers now return codes rather than sentences. The staffing page and the
+  whole calendar-subscriptions surface ship fully translated into `es-ES`
+  ([staff-copy-localization](../architecture/decisions/20260730-staff-copy-localization.md)).
+
 ## Schedule builder, catalog paths, and the diver-copy completion (delivered 2026-07-30)
 
 - **The schedule *is* the builder** — staff add a departure inline under any day, slide one to

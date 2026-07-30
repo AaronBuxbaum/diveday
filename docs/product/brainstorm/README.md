@@ -24,10 +24,6 @@ tests, and `dive-domain-expert` review.
   back yet." Mirrors how dives actually run. *(M, manifests, quick win.)*
 - **Physical headcount reconciliation.** A captain enters the count they see on deck; the app
   cross-checks it against boarded/not-boarded state. *(M, manifests, big bet.)*
-- **Tamper-evident waiver artifacts.** Integrity-check signed waiver metadata so the signed record is
-  auditable beyond normal row history. *(M, waivers, quick win.)*
-- **Manifest failure-mode ritual.** Before major manifest changes, enumerate every way a diver could
-  be lost or mis-gated, then add tests for the plausible failures. *(M, manifests, quick win.)*
 - **Incident-ready export.** One tap exports the manifest, roll-call timeline, cert evidence, and
   relevant waiver state for a given departure as a signed PDF for authorities and insurers. *(S-M,
   manifests, quick win.)*
@@ -94,10 +90,6 @@ Lens: make connected data compound while keeping safety facts human-verifiable a
 
 - **Cohort and retention view.** Show repeat-diver rate, course-funnel conversion, and retention by
   trip/course type. *(M, cross-cutting, quick win.)*
-- **Calendar sync.** Staff trips and assignments sync to external calendars; diver `.ics` downloads
-  are already shipped. External-service adoption needs an ADR. *(S-M, cross-cutting, quick win.)*
-- **Module contracts.** Apply a `src/features/<feature>/` shape to the next new feature before making
-  it a permanent layout rule. *(M, tooling, quick win.)*
 - **Sharded feature/entity docs with generated aggregate.** Split high-conflict docs only after
   collisions prove the need; generate the readable overview. *(M, tooling, parked.)*
 - **Machine-readable task manifest.** Give external orchestrators a structured list of safe paths,

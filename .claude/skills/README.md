@@ -20,6 +20,7 @@ under the same sync duties (docs/README.md).
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
 | `e2e-and-visual` | Adding/changing a user-facing flow or surface; maintaining Playwright functional flows and visual specs |
 | `visual-triage` | Whenever Playwright reports a visual difference — decide which reference changes are expected and explain or fix the rest |
+| `i18n-copy` | Writing or editing any on-screen wording; a red `pnpm check:copy`; extracting a file off the copy baseline |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |

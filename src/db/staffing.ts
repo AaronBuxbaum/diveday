@@ -16,6 +16,15 @@ export function capabilitiesForRoles(roles: readonly string[]): StaffCapability[
   return capabilities;
 }
 
+/**
+ * Why a trip's staffing is not yet settled. A code, not a sentence: the data
+ * layer states the fact and the UI renders the words for the reader's locale.
+ * An English string returned from here would be copy that no translation pass
+ * and no `pnpm check:copy` scan can reach (docs ADR
+ * 20260730-staff-copy-localization).
+ */
+export type StaffingGapCode = "no_crew" | "course_needs_instructor" | "no_shift_coverage";
+
 export type StaffingView = {
   from: Date;
   to: Date;
@@ -30,7 +39,7 @@ export type StaffingView = {
     courseTitle: string | null;
     crew: { personId: string; name: string; roles: string[] }[];
     coveredByShift: boolean;
-    gaps: string[];
+    gaps: StaffingGapCode[];
   }[];
 };
 
@@ -125,10 +134,10 @@ export async function getStaffingView(
         (shift) => shift.startsAt < entry.trip.endsAt && shift.endsAt > entry.trip.startsAt,
       ),
     );
-    const gaps = [
-      ...(entry.crew.length === 0 ? ["No crew assigned"] : []),
-      ...(entry.courseTitle && !hasInstructor ? ["Course needs an instructor"] : []),
-      ...(!crewShifted ? ["No working shift covers this trip"] : []),
+    const gaps: StaffingGapCode[] = [
+      ...(entry.crew.length === 0 ? (["no_crew"] as const) : []),
+      ...(entry.courseTitle && !hasInstructor ? (["course_needs_instructor"] as const) : []),
+      ...(!crewShifted ? (["no_shift_coverage"] as const) : []),
     ];
     return { ...entry, coveredByShift: crewShifted, gaps };
   });

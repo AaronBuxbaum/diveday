@@ -16,6 +16,7 @@ import {
   setStaffAccountStatus,
   setStaffRoles,
 } from "@/db/staff-accounts";
+import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -230,11 +231,23 @@ export async function removeStaffAction(formData: FormData) {
   const userAccountId = String(formData.get("userAccountId") ?? "");
   if (!personId || !userAccountId) redirect(path);
 
-  const result = await removeStaffMember(await getDb(), {
+  const db = await getDb();
+  const result = await removeStaffMember(db, {
     shopId: session.user.shopId,
     personId,
     userAccountId,
   });
+  if (result.ok) {
+    // Their calendar subscription dies on its next fetch regardless —
+    // `verifyCalendarFeed` re-derives roles every time — but leaving the row
+    // live means the shop cannot see it is gone. Revoke it now so "removed
+    // from the team" means removed everywhere it is visible.
+    //
+    // This coordination lives here, not in `removeStaffMember`: `src/db` may
+    // not import a feature module (ADR 20260730-feature-module-contracts), so
+    // the composition layer is where two features meet.
+    await revokeFeedsForFormerStaff(db, { shopId: session.user.shopId });
+  }
   const notice = result.ok ? "removed" : result.reason;
   revalidateAndRedirect(path, `${path}?notice=${notice}`);
 }

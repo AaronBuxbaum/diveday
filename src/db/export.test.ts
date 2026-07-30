@@ -112,6 +112,7 @@ const EXCLUDED_TABLES = [
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_tokens", // bearer credentials (email verify / password reset), never exported
+  "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
 ];
 
 /**
@@ -228,7 +229,15 @@ describe("schema coverage", () => {
   });
 
   it("forces every column of an exported table to be exported or deliberately excluded", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    // Deliberately *not* `{ history: true }`. This assertion only reads
+    // `table.header`, and every header in loadShopExportBundleInput is a static
+    // literal emitted whether or not the table has rows — so the back-filled
+    // reporting history buys it nothing. It costs a lot, though: the history
+    // path skips the template snapshot and pays a full migrate-and-seed, which
+    // pushed this test over its 20s budget under full-suite parallelism while
+    // passing in isolation. The sibling dataset test below still asks for
+    // history, because it genuinely asserts on rows.
+    const { db, shop } = await seededShopContext();
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 

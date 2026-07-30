@@ -5,8 +5,8 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Forty-six key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 184 screenshots per run (see
+ * Visual regression coverage. Forty-seven key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 188 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  *
@@ -14,7 +14,7 @@ import { openTripFromBoard } from "./helpers";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 186 screenshots.
+ * via `capturePrint()`. That brings the run to 190 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -313,10 +313,12 @@ for (const scheme of ["light", "dark"] as const) {
       signedInAsOwner();
 
       test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
-        // 15 navigate+capture surfaces (30 screenshots) in one test — same
+        // 26 navigate+capture surfaces (104 screenshots) in one test — same
         // reasoning as the public-surfaces override above: the suite's 15s
         // default is sized for a single real flow, not a full site tour.
-        test.setTimeout(60_000);
+        // The budget is sized to the surface count, so it moves when the count
+        // does; this is not a knob to widen when a capture goes flaky.
+        test.setTimeout(120_000);
         await page.goto("/shop/blue-mantis");
         await page
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
@@ -481,6 +483,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
         await capture(page, "settings-team", scheme);
+
+        // Calendar subscriptions, in the un-subscribed state: both scopes
+        // offered to an owner, neither yet minted. Deliberately not the
+        // just-minted state — that panel shows a live feed token, which is
+        // different on every run and would never match a baseline.
+        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }).waitFor();
+        await capture(page, "settings-calendar", scheme);
 
         // The courses catalog: the eye visibility toggle beside the new link
         // icon that jumps to a course's public preview page.

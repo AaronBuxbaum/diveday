@@ -1772,6 +1772,58 @@ export const bookingCapabilities = pgTable(
   ],
 );
 
+/**
+ * What a `calendar_feeds` row exposes. `assignments` is one staff member's own
+ * crewed departures; `shop_trips` is every scheduled departure at the shop, for
+ * an owner or manager who keeps the whole operation on one calendar.
+ */
+export const calendarFeedScope = pgEnum("calendar_feed_scope", ["assignments", "shop_trips"]);
+
+/**
+ * A long-lived, revocable bearer credential over a read-only iCalendar feed
+ * (docs ADR 20260730-calendar-feed-subscriptions). Google, Apple, and Outlook
+ * subscribe by URL and poll it on their own schedule, so unlike a
+ * `booking_capabilities` row this one has no expiry: a feed that died after 60
+ * days would silently stop updating a captain's calendar, which is worse than
+ * the credential living until it is rotated. Rotation is the mitigation, and
+ * `issueCalendarFeed` revokes the prior row for the same person+scope so a
+ * leaked URL stops working the moment a new one is minted.
+ *
+ * Only the hash is stored; the raw token exists solely in the response that
+ * issued it, which is why the staff page can show the URL once and thereafter
+ * only offers to rotate it.
+ */
+export const calendarFeeds = pgTable(
+  "calendar_feeds",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    scope: calendarFeedScope("scope").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Stamped on each successful fetch so staff can tell a subscribed calendar
+     * from a URL nobody ever pasted anywhere. Deliberately coarse — calendar
+     * clients poll often, and a per-hit write on a hot path buys nothing.
+     */
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The verify-path lookup: hash the bearer token, find the row.
+    index("calendar_feeds_token_hash_idx").on(table.tokenHash),
+    // "Does this person already have a live feed for this scope?" — the
+    // issue/rotate path and the staff settings panel both ask exactly this.
+    index("calendar_feeds_person_scope_idx").on(table.personId, table.scope, table.revokedAt),
+  ],
+);
+
 /** Evidence belongs to a person; requirements decide whether it is sufficient for a trip. */
 export const certifications = pgTable(
   "certifications",
@@ -2293,6 +2345,8 @@ export type BookingPayment = typeof bookingPayments.$inferSelect;
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
+export type CalendarFeed = typeof calendarFeeds.$inferSelect;
+export type CalendarFeedScope = (typeof calendarFeedScope.enumValues)[number];
 export type Certification = typeof certifications.$inferSelect;
 export type SpecialtyCertification = typeof specialtyCertifications.$inferSelect;
 export type DiveSpecialty = (typeof diveSpecialty.enumValues)[number];
