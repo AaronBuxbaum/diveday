@@ -13,7 +13,7 @@ promo/coupon system… that broader model, if it's ever built, should treat this
 of Stripe promotion codes, not the thing it replaces."
 
 This is that broader model. The FareHarbor gap audit
-([fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md))
+([fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md))
 ranks it second by leverage-per-effort and notes the real work is design, not plumbing: "promo/discount
 codes need real design work (discount-stacking rules)."
 

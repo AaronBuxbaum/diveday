@@ -16,7 +16,7 @@ Two things do not exist yet:
   opposite case — interest in one *full* trip, first-come, never a general availability signal. Reusing
   it would conflate "I want the seat that's already gone" with "I'm around and might take a deal."
 - Any discount/promo-code model. Flagged as a real gap with no data model to hang it on
-  ([fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md)) —
+  ([fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md)) —
   "not just a second line-item adjustment... a real promotion model (codes, limits, redemption
   history) has to exist before the server can even validate a submitted code."
 

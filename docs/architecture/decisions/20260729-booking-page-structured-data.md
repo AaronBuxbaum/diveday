@@ -8,7 +8,7 @@
 JSON-LD already exists on the marketing pages (`SoftwareApplication` on `/`, `FAQPage` on
 `/pricing`), but not on the pages that are actually the product's public surface: a shop's schedule,
 one departure, and a course. The FareHarbor gap audit
-([fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md))
+([fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md))
 called this "cheap, no-risk SEO win once the embed/standalone-page question above is settled
 (structured data belongs on whichever URL is canonical)."
 

@@ -5,7 +5,7 @@
 
 ## Context
 
-[fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md)
+[fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md)
 flagged crew tipping alongside the review-request gap: a diver who just had a great day has nowhere to
 say thanks in dollars, and a shop has no built-in way to offer that without falling back to a jar at
 the counter or a separate app. The recap page is the natural surface — it's already the "that was

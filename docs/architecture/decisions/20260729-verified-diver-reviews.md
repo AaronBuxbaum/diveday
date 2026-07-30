@@ -9,7 +9,7 @@
 page that points a happy diver at whatever public review platform the shop configured
 (`shops.review_url`). What it deliberately did not ship was any review DiveDay itself holds. The
 FareHarbor gap audit
-([fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md))
+([fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md))
 left that row open: "an internal ratings display (or embedding TripAdvisor/Google's own widget)
 remains open if a shop asks for one."
 
