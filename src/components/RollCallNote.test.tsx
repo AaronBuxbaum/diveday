@@ -66,7 +66,7 @@ describe("RollCallNote", () => {
     await userEvent.type(screen.getByLabelText("Optional note"), "late");
     await userEvent.tab();
 
-    expect(await screen.findByText(/will sync when you’re back online/)).toBeInTheDocument();
+    expect(await screen.findByText(/will send when you’re back online/)).toBeInTheDocument();
     // The note is held on the device, flagged as not yet synced.
     expect(readNoteDraft(BOOKING, "departure")).toEqual({ value: "late", pending: true });
 

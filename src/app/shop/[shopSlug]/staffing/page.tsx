@@ -87,17 +87,19 @@ export default async function StaffingPage({
       ) : null}
 
       <section className="mt-8 rounded-2xl border border-border bg-surface p-5">
-        <form className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end" method="get">
+        <FieldGrid as="form" columns={3} method="get">
           <Field label="From">
             <input name="from" type="date" defaultValue={fromValue} className={controlClass} />
           </Field>
           <Field label="Through">
             <input name="to" type="date" defaultValue={toValue} className={controlClass} />
           </Field>
-          <button type="submit" className={buttonClass({ variant: "secondary" })}>
-            Show window
-          </button>
-        </form>
+          <FieldActions>
+            <button type="submit" className={buttonClass({ variant: "secondary" })}>
+              Show window
+            </button>
+          </FieldActions>
+        </FieldGrid>
       </section>
 
       <section className="mt-8" aria-labelledby="working-heading">
@@ -282,7 +284,7 @@ export default async function StaffingPage({
                 </ul>
               ) : (
                 <p className="mt-3 text-sm text-success">
-                  Crew assignment and working shift overlap are present.
+                  Crew is assigned, and their shift covers this trip.
                 </p>
               )}
             </article>

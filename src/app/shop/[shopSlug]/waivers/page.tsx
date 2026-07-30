@@ -79,7 +79,7 @@ export default async function WaiverTemplatesPage({
         ? "Saved as a new version."
         : "Your waiver is saved. Every future edit is kept as a new version."
       : notice === "invalid"
-        ? "That didn’t save. Give the waiver a name and at least a short release."
+        ? "That didn't save. The release needs to be at least a few sentences long."
         : undefined;
   const bannerIsError = notice === "invalid";
 

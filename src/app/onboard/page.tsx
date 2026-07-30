@@ -25,7 +25,7 @@ export default async function OnboardPage({
         <div className="rounded-lg border border-border bg-surface p-6 sm:p-8 shadow-sm">
           <h1 className="text-3xl font-semibold tracking-tight">Set up your shop</h1>
           <p className="mt-1.5 text-sm text-muted">
-            A few details and you&apos;ll be looking at your own working shop.
+            A few details, and you&apos;ll be looking at your own working shop.
           </p>
 
           {error ? (

@@ -83,7 +83,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
         </FieldGrid>
         <div>
           <SubmitButton
-            pendingLabel="Joining…"
+            pendingLabel="Notifying…"
             className={buttonClass({ variant: "secondary", className: "px-5 py-2.5" })}
           >
             Notify me

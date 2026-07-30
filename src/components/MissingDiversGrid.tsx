@@ -41,14 +41,14 @@ export function MissingDiversGrid({ divers }: { divers: MissingDiver[] }) {
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted">
-          Missing Divers ({divers.length})
+          Missing divers ({divers.length})
         </h2>
         <span className="text-xs font-semibold text-danger bg-danger/10 px-2 py-0.5 rounded-full">
-          Awaiting Boarding
+          Awaiting boarding
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        Tap a diver&apos;s profile avatar to scroll directly to their check-in card.
+        Tap a diver&apos;s profile avatar to scroll directly to their roll-call row.
       </p>
       <div className="mt-4 flex flex-wrap gap-4 justify-start">
         {divers.map((diver) => {

@@ -87,7 +87,7 @@ const COLUMNS_THAT_MATTER: { column: string; detail: string }[] = [
   {
     column: "Nitrox",
     detail:
-      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across, imported as a verified nitrox card. The enriched-air fill gives plain air until a staffer confirms they've seen that card.",
+      "A yes/no column, plus the nitrox card number if you keep one — the card number is what actually brings it across, imported as a verified nitrox card. The Nitrox fill gives plain air until a staffer confirms they've seen that card.",
   },
   {
     column: "Rental sizes",

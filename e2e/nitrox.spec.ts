@@ -14,7 +14,7 @@ async function openWreckTrip(page: Page) {
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("a verified nitrox card turns a diver's tanks to enriched air on the prep list", async ({
+  test("a verified nitrox card turns a diver's tanks to Nitrox on the prep list", async ({
     page,
   }) => {
     // A unique card number keeps the flow self-contained and re-run safe.
@@ -234,5 +234,5 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
 
   // The request stuck (checkbox stays on) and the flag still explains what's needed.
   await expect(page.locator('input[name="nitrox"]')).toBeChecked();
-  await expect(page.getByText("Your enriched-air request is on file")).toBeVisible();
+  await expect(page.getByText("Your Nitrox request is on file")).toBeVisible();
 });

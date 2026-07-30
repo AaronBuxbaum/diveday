@@ -231,7 +231,7 @@ export function SpecialtyCards({
                       action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                       certificationId={card.id}
                       cardType="nitrox"
-                      what="the enriched-air fill this card allows"
+                      what="the Nitrox fill this card allows"
                     />
                   ) : null}
                 </li>

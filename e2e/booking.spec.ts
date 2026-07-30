@@ -111,7 +111,7 @@ test.describe("staff", () => {
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText(
-      "Diver-facing conditions briefing updated.",
+      "Crew prediction published — divers will see it now.",
     );
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/$/);
@@ -120,7 +120,7 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("heading", { name: "This trip is on a conditions hold" }),
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Bookings are paused/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Nothing to book here yet/ })).toBeVisible();
     await expect(page.getByLabel("Number of divers")).toHaveCount(0);
   });
 

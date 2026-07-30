@@ -149,7 +149,7 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
             strokeWidth="3"
             paintOrder="stroke"
           >
-            The Dock ⚓
+            The Dock
           </text>
         </g>
 

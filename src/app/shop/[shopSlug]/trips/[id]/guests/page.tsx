@@ -36,6 +36,7 @@ import {
   addToWaitlistAction,
   bulkSendWaiversAction,
   confirmDiverIdentityAction,
+  deleteInternalNoteAction,
   deleteRecapPhotoAction,
   inviteWaitlistAction,
   issueWaiverAction,
@@ -260,6 +261,7 @@ export default async function TripGuestsPage({
         confirmIdentityAction={confirmDiverIdentityAction.bind(null, shopSlug, tripId)}
         notesByBooking={notesByBooking}
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
+        deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}
       />
 
       <section className="mt-10">

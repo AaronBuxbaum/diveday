@@ -70,10 +70,10 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
 export function ConditionsHoldSection() {
   return (
     <section className="mt-10 rounded-lg border border-warning/40 bg-warning/10 p-6">
-      <h2 className="font-semibold">Bookings are paused while the crew watches conditions</h2>
+      <h2 className="font-semibold">Nothing to book here yet</h2>
       <p className="mt-1 text-sm text-muted">
-        Check back after the final weather call. Divers who already booked keep their seats and will
-        can follow the live crew update here.
+        See the conditions update above. Divers who already booked keep their seats and can follow
+        it live here.
       </p>
     </section>
   );

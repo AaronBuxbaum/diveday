@@ -755,7 +755,7 @@ describe("IMPORT_HONESTY_TABLE", () => {
     expect(cert?.detail).toMatch(/verified/i);
     expect(cert?.detail).toMatch(/imported/i);
 
-    const nitrox = IMPORT_HONESTY_TABLE.find((r) => r.what === "Enriched air (nitrox)");
+    const nitrox = IMPORT_HONESTY_TABLE.find((r) => r.what === "Nitrox");
     expect(nitrox?.scope).toBe("included");
     expect(nitrox?.detail).toMatch(/verified/i);
   });

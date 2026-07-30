@@ -453,10 +453,10 @@ export const IMPORT_HONESTY_TABLE: {
       "Imported as verified specialty cards, flagged imported — from a specialty column, or from a certification row that names one (“PADI Deep Diver”). Your diver's agency number is what carries them, the same number their level card uses, so a “Deep, Wreck” cell comes across as both cards and a certification file with one row per card brings in every card a diver holds. A specialty is what clears a riskier dive, so this one is stricter than a level card: the dive that requires it waits until a staffer confirms they've seen the card, and everything else about the diver's day does not.",
   },
   {
-    what: "Enriched air (nitrox)",
+    what: "Nitrox",
     scope: "included",
     detail:
-      "Imported as a verified nitrox card, flagged imported, whenever the row carries a nitrox card number — so a diver can request enriched air right away. A fill is the highest-stakes gate, so an imported nitrox card gives plain air until a staffer confirms they've seen the card or checked the number with the agency; boarding never waits on it.",
+      "Imported as a verified nitrox card, flagged imported, whenever the row carries a nitrox card number — so a diver can request Nitrox right away. A fill is the highest-stakes gate, so an imported nitrox card gives plain air until a staffer confirms they've seen the card or checked the number with the agency; boarding never waits on it.",
   },
   {
     what: "Signed waivers & medical clearance",
@@ -1328,7 +1328,7 @@ export function prepareContactImport(text: string): PreparedImport {
         issues.push({
           level: "info",
           message:
-            "Enriched-air marked on the source with no card number — add and verify a nitrox card in DiveDay.",
+            "Nitrox marked on the source with no card number — add and verify a nitrox card in DiveDay.",
         });
       }
     }

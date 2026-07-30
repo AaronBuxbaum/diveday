@@ -37,11 +37,11 @@ export function SubSurfaceRipple({ complete }: { complete: boolean }) {
           strokeWidth="3"
           aria-hidden="true"
         >
-          <title>Board clean icon</title>
+          <title>Roll call complete icon</title>
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <span className="text-lg font-black tracking-wider uppercase text-primary">
-          Board clean
+          Roll call complete
         </span>
       </div>
     </div>

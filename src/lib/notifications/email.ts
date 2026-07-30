@@ -210,8 +210,8 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     : "";
 
   const dock = dockCallPhrase(input.dockCallMinutes);
-  const reminderText = `\n\nPre-Trip Checklist Reminder:\n· Reef-safe sunscreen\n· Hair ties & dry bag\n· Your physical certification cards\n· Water bottle & towel\n`;
-  const reminderHtml = `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f3f4f6; border-radius: 8px;"><strong>Pre-Trip Checklist Reminder:</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;"><li>Reef-safe sunscreen</li><li>Hair ties &amp; dry bag</li><li>Your physical certification cards</li><li>Water bottle &amp; towel</li></ul></div>`;
+  const reminderText = `\n\nPre-Trip Checklist Reminder:\n- Reef-safe sunscreen\n- Hair ties & dry bag\n- Your certification card (physical or digital)\n- Water bottle & towel\n`;
+  const reminderHtml = `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f3f4f6; border-radius: 8px;"><strong>Pre-Trip Checklist Reminder:</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;"><li>Reef-safe sunscreen</li><li>Hair ties &amp; dry bag</li><li>Your certification card (physical or digital)</li><li>Water bottle &amp; towel</li></ul></div>`;
 
   return {
     subject: `You're on the boat — ${input.tripTitle}`,

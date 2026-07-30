@@ -80,9 +80,20 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 ## Parallel work
 
+- Assume multiple work scopes can be in flight in this working directory at once — other
+  sessions or terminals may have uncommitted changes, staged work, or a mid-rebase state at
+  any time. Run `git status` before anything that touches shared working-tree state, not just
+  before destructive commands.
 - Before starting non-trivial work, list the repo's open PRs and read their declared owned
   paths. Overlap with your plan → pick a different slice or coordinate in that PR's thread;
   never assume you are the only session running.
+- Avoid `git stash` to test something on a different ref — a stash is a single shared slot, so
+  popping it later can silently apply on top of a *different* scope's uncommitted work and
+  produce confusing conflicts, or another session's stash can collide with yours. Prefer, in
+  order: a `git worktree` (or this harness's worktree tools) for true isolation, committing your
+  in-progress change to a WIP commit on your branch, or `git stash push --include-untracked` with
+  a descriptive message and popping it immediately after — never leave a stash sitting while you
+  go do something else.
 - Use a unique branch/feature slug and open a draft PR early for non-trivial concurrent work.
 - State owned paths, expected schema changes, and planned ADR ids in the PR description.
 - New ADRs use collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer.

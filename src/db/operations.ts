@@ -51,6 +51,44 @@ export async function addInternalNote(
   });
 }
 
+export async function deleteInternalNote(
+  db: AppDb,
+  input: { shopId: string; noteId: string; actorPersonId: string },
+) {
+  return db.transaction(async (tx) => {
+    const [note] = await tx
+      .select({
+        bookingId: internalNotes.bookingId,
+        tripId: bookings.tripId,
+        diverName: people.fullName,
+      })
+      .from(internalNotes)
+      .innerJoin(bookings, eq(bookings.id, internalNotes.bookingId))
+      .innerJoin(people, eq(people.id, internalNotes.personId))
+      .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)))
+      .limit(1);
+    if (!note) return false;
+    const [actor] = await tx
+      .select({ name: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    if (!actor) return false;
+    await tx
+      .delete(internalNotes)
+      .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)));
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: note.tripId,
+      bookingId: note.bookingId,
+      actorPersonId: input.actorPersonId,
+      message: `${actor.name} deleted a private note about ${note.diverName}`,
+      occurredAt: nowDate(),
+    });
+    return true;
+  });
+}
+
 export async function listBookingNotes(db: AppDb, shopId: string, tripId: string) {
   return db
     .select({ note: internalNotes, authorName: people.fullName })

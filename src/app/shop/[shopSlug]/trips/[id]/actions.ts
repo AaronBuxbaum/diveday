@@ -13,7 +13,7 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { addInternalNote, recordTripActivity } from "@/db/operations";
+import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
@@ -436,6 +436,22 @@ export async function addInternalNoteAction(shopSlug: string, tripId: string, fo
     body,
   });
   revalidateAndRedirect(back, `${back}?notice=${saved ? "note-added" : "invalid"}`);
+}
+
+export async function deleteInternalNoteAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const noteId = String(formData.get("noteId") ?? "");
+  const deleted = await deleteInternalNote(await getDb(), {
+    shopId: s.user.shopId,
+    actorPersonId: s.user.personId,
+    noteId,
+  });
+  revalidateAndRedirect(back, `${back}?notice=${deleted ? "note-deleted" : "invalid"}`);
 }
 
 /** Staff-entered booking for walk-ins or divers tracked in another system. */

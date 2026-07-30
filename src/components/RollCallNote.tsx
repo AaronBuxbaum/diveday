@@ -125,7 +125,7 @@ export function RollCallNote({
       : status === "saved"
         ? "Saved to this roll-call record."
         : status === "queued"
-          ? "Saved on this device — will sync when you’re back online."
+          ? "Saved on this device — will send when you’re back online."
           : status === "error"
             ? "Couldn’t save to the record — still saved on this device. Try again."
             : "Saves automatically — on this device and to the roll-call record.";

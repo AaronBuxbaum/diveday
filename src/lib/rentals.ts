@@ -6,7 +6,7 @@
  * along with a wetsuit in the prep list (src/lib/dive-prep.ts).
  *
  * Nitrox fills are a separate concept, kept out of this list: most shops don't
- * fill enriched air at all, and unlike the items above a fill has no size or
+ * fill Nitrox at all, and unlike the items above a fill has no size or
  * `rental_fit_profiles` column — it's a per-booking request, gated by a
  * verified card (src/db/nitrox.ts). It still lives in the same stored catalog
  * (`shops.rental_items`) so shop settings has one "what we offer" list; see
@@ -45,8 +45,7 @@ export type RentableItem = {
    * Whether a diver with no fit on file defaults to renting this. Core gear a
    * shop stocks for everyone defaults on, as does the dive computer (safety kit
    * most divers want); only the GoPro defaults off, so nobody is packed a GoPro
-   * they never asked for. Note the computer defaults on but is priced as its own
-   * add-on line — being on by default is separate from being part of the set.
+   * they never asked for.
    */
   defaultRented: boolean;
 };
@@ -94,7 +93,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
 /**
  * The catalog entry for nitrox fills — shaped like {@link RentableItem} minus
  * `field`, since a fill has no `rental_fit_profiles` column to toggle. Most
- * shops don't fill enriched air, so this defaults off, unlike every core gear
+ * shops don't fill Nitrox, so this defaults off, unlike every core gear
  * item above.
  */
 export const NITROX_CATALOG_ITEM = {
@@ -139,12 +138,10 @@ export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
 }
 
 /**
- * The core kit that makes up a "set". A shop usually prices these five as one
+ * The core kit that makes up a "set". A shop usually prices these six as one
  * cheaper bundle; a diver who takes all of them is quoted the set, and anyone
- * taking a partial set pays per piece. The `dive_computer` and `gopro` add-ons
- * and nitrox are always priced on their own, never folded into the set — the
- * computer defaults on for every diver but is billed as its own line, so a diver
- * who brings their own keeps the full-set discount on the hard goods.
+ * taking a partial set pays per piece. The `gopro` add-on and nitrox are always
+ * priced on their own, never folded into the set.
  */
 export const CORE_RENTAL_KINDS = [
   "bcd",
@@ -152,6 +149,7 @@ export const CORE_RENTAL_KINDS = [
   "wetsuit",
   "mask_fins",
   "weights",
+  "dive_computer",
 ] as const satisfies readonly RentableItemKind[];
 
 export type CoreRentalKind = (typeof CORE_RENTAL_KINDS)[number];
@@ -167,7 +165,7 @@ export type RentalPricing = {
   setCents: number | null;
   /** Per-piece price for each rentable item. A missing key means "not priced online". */
   perItemCents: Partial<Record<RentableItemKind, number>>;
-  /** Enriched-air surcharge, charged per dive. null = not priced online. */
+  /** Nitrox surcharge, charged per dive. null = not priced online. */
   nitroxCents: number | null;
 };
 
@@ -217,10 +215,10 @@ const ITEM_LABEL: Record<RentableItemKind, string> = {
 /**
  * What a diver is quoted for the gear they picked. Taking every core item the
  * shop offers is billed at the set price when the shop has one (cheaper than the
- * pieces, by design); a partial set is billed per piece. The dive-computer and
- * GoPro add-ons and nitrox are always separate. Items the shop hasn't priced are
- * left off the total and reported in `unpricedKinds`, so a quote is never
- * silently short. `plannedDives` scales the per-dive nitrox surcharge.
+ * pieces, by design); a partial set is billed per piece. The GoPro add-on and
+ * nitrox are always separate. Items the shop hasn't priced are left off the
+ * total and reported in `unpricedKinds`, so a quote is never silently short.
+ * `plannedDives` scales the per-dive nitrox surcharge.
  */
 export function quoteRentalFit(
   pricing: RentalPricing,
@@ -228,8 +226,8 @@ export function quoteRentalFit(
     rentedKinds: readonly RentableItemKind[];
     /**
      * The kinds this shop actually stocks (its rental catalog). The "set" is
-     * every core item the shop offers, so a shop that doesn't rent a dive
-     * computer still reaches its set with the core it does stock — and set
+     * every core item the shop offers, so a shop that doesn't stock a given
+     * core item still reaches its set with the core it does stock — and set
      * eligibility never depends on an item the diver can't pick.
      */
     offeredKinds: readonly RentableItemKind[];
@@ -255,7 +253,7 @@ export function quoteRentalFit(
     }
   }
 
-  for (const kind of ["dive_computer", "gopro"] as const) {
+  for (const kind of ["gopro"] as const) {
     if (!rented.has(kind)) continue;
     const cents = pricing.perItemCents[kind];
     if (cents === undefined) unpricedKinds.push(kind);
@@ -266,7 +264,7 @@ export function quoteRentalFit(
     const dives = Math.max(1, fit.plannedDives);
     lines.push({
       kind: "nitrox",
-      label: `Enriched air — ${dives} ${dives === 1 ? "dive" : "dives"}`,
+      label: `Nitrox — ${dives} ${dives === 1 ? "dive" : "dives"}`,
       cents: pricing.nitroxCents * dives,
     });
   }

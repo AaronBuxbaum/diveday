@@ -16,7 +16,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   verified: { tone: "success", text: "Card marked certified. It now counts toward readiness." },
   "card-deleted": {
     tone: "success",
-    text: "Card deleted. It no longer counts toward readiness; its history is kept for records.",
+    text: "Card removed. It no longer counts toward readiness; its history is kept for records.",
   },
   "card-restored": { tone: "success", text: "Card restored. It counts toward readiness again." },
   "card-restore-conflict": {
@@ -51,7 +51,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   course_unstaffed: { tone: "danger", text: "Assign an instructor before booking this course." },
   course_prerequisite: {
     tone: "danger",
-    text: "Mark the required certification certified before booking this course.",
+    text: "Mark the required certification as certified before booking this course.",
   },
   course_ratio_full: {
     tone: "danger",
@@ -73,7 +73,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: string
   },
   deleted: {
     tone: "success",
-    text: "Diver removed from active shop work. Their booking and card history is preserved.",
+    text: "Diver removed from active shop work. Their bookings and cards are preserved.",
   },
   "not-authorized-refund": {
     tone: "danger",

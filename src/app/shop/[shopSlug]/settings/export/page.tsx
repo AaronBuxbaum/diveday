@@ -31,7 +31,7 @@ export default async function DataExportPage() {
       <ShopPageHeader
         eyebrow="Settings"
         title="Data export"
-        description="Download everything this shop keeps in DiveDay as plain CSV files — divers, cards, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Yours to keep, on every plan, whenever you want it — including a ready-to-import contacts file another system's import wizard can map directly."
+        description="Download everything this shop keeps in DiveDay as plain CSV files — divers, cards, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Yours to keep, whenever you want it — including a ready-to-import contacts file another system's import wizard can map directly."
         actions={
           <DownloadExportButton href={`/shop/${session.user.shopSlug}/settings/export/download`} />
         }
@@ -62,12 +62,12 @@ export default async function DataExportPage() {
         </ul>
         <p className="mt-4 text-sm text-muted">
           <span className="font-medium text-foreground">Not included, on purpose:</span> offline
-          manifest snapshots, private staff notes and activity, notification logs, Stripe checkout
-          attempts (every money outcome is in the bookings and orders files), and any pasted image
-          URL a CSV references that was never stored through DiveDay. Every card photo, dive-site
-          image, and course image DiveDay itself stores comes along as a real file in the bundle's{" "}
-          <code>photos/</code> folder, so it survives even after this account closes. Sign-in
-          credentials are never exported. The bundle's README lists the same gaps.
+          manifest copies saved on staff phones, private staff notes and activity, notification
+          logs, Stripe checkout attempts (every money outcome is in the bookings and orders files),
+          and any pasted image URL a CSV references that was never stored through DiveDay. Every
+          card photo, dive-site image, and course image DiveDay itself stores comes along as a real
+          file in the bundle's <code>photos/</code> folder, so it survives even after this account
+          closes. Sign-in credentials are never exported. The bundle's README lists the same gaps.
         </p>
       </section>
     </main>

@@ -87,7 +87,7 @@ export function DigitalCardFlip({
                   <p className="text-xs font-semibold">NO CARD PHOTO</p>
                   <p className="mt-1 text-[10px]">
                     {isCertified
-                      ? "Verified via online database query"
+                      ? "Certified by staff"
                       : verificationStatus === "expired"
                         ? "Refresher due — verify current status with the agency"
                         : "Awaiting staff verification"}
@@ -113,7 +113,7 @@ export function DigitalCardFlip({
         </a>
       ) : null}
       <p className="mt-2 text-xs text-muted text-center">
-        Tap the card to flip and view {cardImageUrl ? "the photo upload" : "security details"}
+        Tap the card to flip and view {cardImageUrl ? "the uploaded photo" : "security details"}
       </p>
     </div>
   );

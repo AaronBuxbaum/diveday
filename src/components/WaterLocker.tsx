@@ -91,10 +91,10 @@ export function WaterLocker() {
         <span className="text-5xl animate-bounce" role="img" aria-label="Rain">
           🌧️
         </span>
-        <h2 className="mt-6 text-2xl font-bold tracking-tight">Water Shield Active</h2>
+        <h2 className="mt-6 text-2xl font-bold tracking-tight">Screen locked — water detected</h2>
         <p className="mt-3 text-base text-muted">
-          Screen moisture anomalies detected. Interaction locked to prevent accidental taps from
-          water droplets.
+          We&apos;re ignoring random taps from water on the screen. Hold to unlock once it&apos;s
+          dry.
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-4">

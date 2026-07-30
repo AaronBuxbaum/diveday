@@ -20,7 +20,7 @@ export const productFeatureGroups = [
     title: "The paperwork, evidence, and exceptions stay together",
     features: [
       "Waivers signed from home, with medical flags raised long before the boat",
-      "C-cards photographed once, verified by staff, and kept with the diver",
+      "C-cards photographed once, certified by staff, and kept with the diver",
       "One honest answer to “is this diver ready?” — waiver, cert, sites, and payment together",
       "A clear staff view of exactly what still needs attention",
     ],
@@ -31,7 +31,7 @@ export const productFeatureGroups = [
     features: [
       "Every diver's rental sizes on the trip's prep list, so the boat is packed without a clipboard",
       "Dive-site briefings with the route and conditions notes crews actually use",
-      "Nitrox requested per booking — filled as plain air until the diver's enriched-air card is verified",
+      "Nitrox requested per booking — filled as plain air until the diver's nitrox card is verified",
       "Save the manifest to a phone and roll call keeps working with no signal — every dive, print backup included",
     ],
   },

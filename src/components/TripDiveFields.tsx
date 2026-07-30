@@ -67,13 +67,13 @@ export function TripDiveFields({
                     className={controlClass}
                   />
                 </Field>
-                <Field label="Site briefing" hint="(optional)">
+                <Field label="Dive briefing" hint="(optional)">
                   <select
                     name={`dive-${number}-siteId`}
                     defaultValue={initial?.diveSiteId ?? ""}
                     className={controlClass}
                   >
-                    <option value="">No saved site briefing</option>
+                    <option value="">No saved dive briefing</option>
                     {diveSites.map((site) => (
                       <option key={site.id} value={site.id}>
                         {site.name}
@@ -97,7 +97,7 @@ export function TripDiveFields({
         })}
       </div>
       <p className="mt-3 text-xs text-muted">
-        Site briefings add the saved map and field guide. The trip description and conditions below
+        Dive briefings add the saved map and field guide. The trip description and conditions below
         remain shared across the whole boat day.
       </p>
     </section>

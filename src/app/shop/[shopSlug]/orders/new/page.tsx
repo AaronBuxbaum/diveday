@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: "New order — DiveDay" };
 const LINE_ITEM_KINDS = [
   { value: "trip_fee", label: "Trip fee" },
   { value: "course_fee", label: "Course fee" },
-  { value: "e_learning_fee", label: "e-Learning" },
+  { value: "e_learning_fee", label: "e-Learning fee" },
   { value: "rental", label: "Rental" },
   { value: "nitrox", label: "Nitrox (per dive)" },
   { value: "deposit", label: "Deposit" },

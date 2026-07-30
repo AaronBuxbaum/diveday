@@ -13,7 +13,7 @@ export function StatsSummary({ diver }: { diver: DiverProfile }) {
         </p>
         {/* An imported specialty or nitrox card counts as needing attention even
             though its status is `verified`: each one's gate — the specialty dive,
-            the enriched-air fill — stays shut until a staffer attests they have
+            the Nitrox fill — stays shut until a staffer attests they have
             seen the card (H-24). A header reading "0 pending review" would say
             all-clear while a deep dive or a fill is still blocked. A level card
             is not counted: it cleared readiness on arrival, so its confirm is a

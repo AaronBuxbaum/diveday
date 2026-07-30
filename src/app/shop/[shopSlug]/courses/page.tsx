@@ -101,7 +101,7 @@ export default async function CoursesPage() {
               <p className="mt-1 text-sm text-muted">
                 {course.minimumCertificationLevel
                   ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
-                  : "Open to uncertified"}
+                  : "Open to uncertified divers"}
               </p>
             </div>
             <div className="flex items-center gap-1">

@@ -190,7 +190,7 @@ async function missingFitByTrip(
 }
 
 /**
- * Divers who asked for enriched air but hold no verified nitrox card right
+ * Divers who asked for Nitrox but hold no verified nitrox card right
  * now. A diver may request nitrox before their card is verified (it's flagged,
  * not blocked), and a card can be pulled after a request was accepted — either
  * way the tank has to go back to air unless someone verifies a card before the
@@ -494,7 +494,7 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${ungatedCount} ${ungatedCount === 1 ? "diver wants" : "divers want"} enriched air without a verified card — those tanks are planned as air.`,
+        detail: `${ungatedCount} ${ungatedCount === 1 ? "diver wants" : "divers want"} Nitrox without a verified card — those tanks are planned as air.`,
         actionLabel: "Open prep list",
         href: `${tripHref}/prep`,
         dueAt: trip.startsAt,

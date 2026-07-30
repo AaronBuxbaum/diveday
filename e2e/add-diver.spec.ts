@@ -50,6 +50,14 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
 
+  // Deleting is confirm-gated and staff-only; the note and its trace disappear.
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByRole("status")).toContainText("Private staff note deleted.");
+  await expect(page.getByText("Private staff notes (0)")).toBeVisible();
+  await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
+  await expect(page.getByText(/deleted a private note about Walk-in Wanda/)).toBeVisible();
+
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
   await addDiver.getByLabel("Name").fill("Waitlist Wally");

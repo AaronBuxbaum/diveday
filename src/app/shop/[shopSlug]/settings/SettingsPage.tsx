@@ -77,7 +77,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
   refreshed: { tone: "success", text: "Payment status refreshed from Stripe." },
   not_authorized: {
     tone: "danger",
-    text: "Payment settings — the Stripe connection and rental catalog and prices — are limited to owners and managers.",
+    text: "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
   },
 };
 
@@ -556,7 +556,7 @@ export default async function PaymentsSettingsPage({
                 <PriceField
                   name="setPrice"
                   label="Full set"
-                  hint="(BCD, reg, wetsuit, mask & fins, weights)"
+                  hint="(BCD, reg, wetsuit, mask & fins, weights, dive computer)"
                   cents={shop.rentalPricing.setCents}
                 />
                 {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
@@ -570,7 +570,7 @@ export default async function PaymentsSettingsPage({
                 {offeredKinds.has("nitrox") ? (
                   <PriceField
                     name="nitroxPrice"
-                    label="Enriched air"
+                    label="Nitrox"
                     hint="(per dive)"
                     cents={shop.rentalPricing.nitroxCents}
                   />
@@ -587,7 +587,7 @@ export default async function PaymentsSettingsPage({
               <div>
                 <h2 className="font-medium">No Stripe account connected</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Connect a Stripe account you own — DiveDay never touches your money, and payments
+                  Connect a Stripe account you own — DiveDay never holds your money, and payments
                   for orders and invoices go straight into your own Stripe balance.
                 </p>
                 {connectConfigured ? (

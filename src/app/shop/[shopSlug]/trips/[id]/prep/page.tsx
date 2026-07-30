@@ -145,8 +145,8 @@ export default async function TripPrepPage({
                 Nitrox requested without a verified card
               </h2>
               <p className="mt-1 text-sm">
-                Planned as air. Verify the enriched-air card on the diver’s record, or tell them at
-                the counter before the boat leaves.
+                Planned as air. Verify the Nitrox card on the diver’s record, or tell them at the
+                counter before the boat leaves.
               </p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.nitroxBlockers.map((blocker) => (

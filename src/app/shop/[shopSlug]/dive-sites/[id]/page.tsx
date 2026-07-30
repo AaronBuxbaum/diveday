@@ -182,7 +182,7 @@ export default async function EditDiveSitePage({
                     pendingLabel="Archiving…"
                     className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
                   >
-                    Archive briefing
+                    Archive site
                   </SubmitButton>
                 </form>
               </details>
@@ -201,10 +201,10 @@ export default async function EditDiveSitePage({
       {error ? (
         <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
           {error === "images"
-            ? "One of those image links couldn’t be used — use up to six complete HTTP(S) links, one per line, to a real, reachable image."
+            ? "One of those image links couldn't be used — use up to six complete HTTP(S) links, one per line, each pointing to a real, reachable image."
             : error === "images-unconfigured"
-              ? "Image hosting isn’t set up for this shop yet — leave the image links blank for now, or ask your admin to configure it."
-              : "That didn’t save. Check the name and links, then try again."}
+              ? "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
+              : "That didn't save. Check the name and links, then try again."}
         </p>
       ) : null}
       <form action={saveAction} className="mt-8 flex flex-col gap-5">

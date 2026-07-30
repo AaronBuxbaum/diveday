@@ -21,7 +21,7 @@ function ResendButton({ label }: { label: string }) {
 }
 
 const ERROR_COPY: Record<Extract<ResendState, { status: "error" }>["reason"], string> = {
-  invalid: "Something went wrong — open the trip to check the booking.",
+  invalid: "That booking could not be found — open the trip to check it.",
   no_email: "No email on file — add one from the roster, then resend.",
   not_configured: "Email isn’t configured for this shop yet.",
   failed: "Still couldn’t deliver it — open the trip to check the booking.",

@@ -15,7 +15,10 @@ export function UndoToast({
   message,
   action,
   fields,
-  autoDismissMs = 8000,
+  // Deliberately clear of Playwright's 8s expect timeout (playwright.config.ts)
+  // so any render delay can't make the toast vanish out from under an assertion
+  // racing to see it — that collision produced exactly this failure signature.
+  autoDismissMs = 12000,
 }: {
   message: string;
   action: (formData: FormData) => void;

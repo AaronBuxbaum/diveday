@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { controlClass } from "@/components/ui/form";
 import {
@@ -83,7 +84,7 @@ export function OfflineManifestView() {
       const pending = next.events.filter((event) => event.syncStatus === "pending").length;
       setMessage(
         rejected > 0
-          ? `${rejected} change${rejected === 1 ? " doesn't" : "s don't"} match the live manifest. Open the live manifest to sort it out.`
+          ? `${rejected} offline change${rejected === 1 ? " didn't" : "s didn't"} match the live manifest and ${rejected === 1 ? "wasn't" : "weren't"} applied — open the live manifest to sort it out.`
           : pending > 0
             ? `${pending} change${pending === 1 ? " is" : "s are"} still waiting to send.`
             : "All offline changes are caught up with the live manifest.",
@@ -378,6 +379,7 @@ export function OfflineManifestView() {
 
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+      <AmbientGlareDetector />
       <a
         href="#offline-roll-call"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
@@ -396,6 +398,9 @@ export function OfflineManifestView() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="print:hidden">
+              <AmbientContrastSlider />
+            </div>
             <ConnectivityStatus />
             <span
               className={
@@ -412,8 +417,9 @@ export function OfflineManifestView() {
         </div>
         {expired ? (
           <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6 font-semibold text-danger">
-            This saved copy has expired and is not a boarding source. Any change still waiting to
-            send below will keep trying, but new roll call must be recorded on the live manifest.
+            This saved copy has expired and can&apos;t be used to board divers. Any change still
+            waiting to send below will keep trying, but new roll call must be recorded on the live
+            manifest.
           </p>
         ) : (
           <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">

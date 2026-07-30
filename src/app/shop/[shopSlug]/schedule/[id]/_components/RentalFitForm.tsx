@@ -127,7 +127,7 @@ export function RentalFitForm({
               ? "You won't be charged for rentals on this trip."
               : isConfirmed
                 ? "The crew has your sizes locked in and ready."
-                : "Please specify sizes for all selected items."}
+                : "Add sizes for all selected items."}
           </p>
         </div>
       </div>
@@ -181,7 +181,7 @@ export function RentalFitForm({
                 ? pricing.setCents !== null && coreSetSentence
                   ? `A full set includes ${coreSetSentence}. Take it for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
                   : "Prices are per piece."
-                : "Ask the shop what’s included in the trip price."}
+                : "Ask the shop what's included in the trip price."}
             </p>
             {showPricing && quote.subtotalCents > 0 ? (
               <p className="mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
@@ -189,7 +189,7 @@ export function RentalFitForm({
                   Estimated rental: {formatMoneyCents(quote.subtotalCents)} per person
                 </span>
                 {quote.unpricedKinds.length > 0 ? " — plus a few items settled at the shop" : ""}.
-                We’ll confirm at the dock.
+                We'll confirm at the dock.
               </p>
             ) : null}
           </fieldset>
@@ -197,7 +197,7 @@ export function RentalFitForm({
 
         {nitroxOffered ? (
           <fieldset>
-            <legend className="text-sm font-medium">Enriched air (nitrox)</legend>
+            <legend className="text-sm font-medium">Nitrox</legend>
             <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
               <input
                 name="nitrox"
@@ -215,14 +215,14 @@ export function RentalFitForm({
             </label>
             {nitroxCardVerified ? (
               <p className="mt-2 text-sm text-muted">
-                The crew will set aside nitrox-compatible tanks. You’ll analyze your own tanks and
+                The crew will set aside nitrox-compatible tanks. You'll analyze your own tanks and
                 sign for the mix at the fill station, as always.
               </p>
             ) : nitroxRequested ? (
               <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                {wantsNitrox ? "Your enriched-air request is on file. " : ""}
+                {wantsNitrox ? "Your nitrox request is on file. " : ""}
                 We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send
-                the shop a photo of your card or get in touch and they’ll add it. Until then, the
+                the shop a photo of your card or get in touch and they'll add it. Until then, the
                 crew will plan standard air tanks.
               </p>
             ) : (

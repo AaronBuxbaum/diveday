@@ -37,7 +37,7 @@ describe("bookingConfirmationEmail", () => {
     const email = bookingConfirmationEmail(base);
     expect(email.text).toContain("Pre-Trip Checklist Reminder:");
     expect(email.text).toContain("Reef-safe sunscreen");
-    expect(email.text).toContain("certification cards");
+    expect(email.text).toContain("certification card");
     expect(email.html).toContain("Pre-Trip Checklist Reminder:");
   });
 });

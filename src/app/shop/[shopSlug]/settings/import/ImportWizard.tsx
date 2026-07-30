@@ -146,7 +146,7 @@ export function ImportWizard({ diversHref }: { diversHref: string }) {
           {prepared.totals.withVisit > 0 ? (
             <p className="mt-3 text-sm text-muted">
               {prepared.totals.withVisit} row{prepared.totals.withVisit === 1 ? "" : "s"} record a
-              past booking. Those come across as history on the diver's profile — what was booked,
+              past visit. Those come across as history on the diver's profile — what was booked,
               when, and what your old system called it — and nothing more: they never become trips
               on your schedule, never count toward capacity or reporting, and a booking is not proof
               anyone dived.

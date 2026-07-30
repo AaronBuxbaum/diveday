@@ -455,15 +455,15 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   {
     slug: "enriched-air-nitrox-diver",
     version: 1,
-    title: "Enriched Air (Nitrox) Diver",
+    title: "Nitrox Diver",
     agency: "padi",
-    description: "Learn to plan and dive with enriched air up to 40% oxygen.",
+    description: "Learn to plan and dive with Nitrox up to 40% oxygen.",
     minimumCertificationLevel: "open_water",
     content: {
       ...blank,
       summary: "More bottom time on repetitive dives, and the planning that makes it safe",
       overview:
-        "Enriched air is ordinary air with more oxygen and less nitrogen. Less nitrogen means slower nitrogen loading, which usually means longer no-decompression limits — the difference shows up most on the second and third dives of a day.\n\nThe trade is a new limit to respect. Oxygen becomes the thing you can get too much of, so every dive has a maximum operating depth set by the mix. The course teaches you to analyze your own cylinder, log the result, set your computer to the mix you actually have, and work out the depth you must not pass.\n\nThe certification covers recreational blends from 22% to 40% oxygen. There are no required training dives — this is a knowledge and practical-skills course — though we usually run two dives with it so you use the procedures for real.",
+        "Nitrox is ordinary air with more oxygen and less nitrogen. Less nitrogen means slower nitrogen loading, which usually means longer no-decompression limits — the difference shows up most on the second and third dives of a day.\n\nThe trade is a new limit to respect. Oxygen becomes the thing you can get too much of, so every dive has a maximum operating depth set by the mix. The course teaches you to analyze your own cylinder, log the result, set your computer to the mix you actually have, and work out the depth you must not pass.\n\nThe certification covers recreational blends from 22% to 40% oxygen. There are no required training dives — this is a knowledge and practical-skills course — though we usually run two dives with it so you use the procedures for real.",
       heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
       imageUrls: [bundledImage("Grouper 2 Molasses Reef 1999.jpg")],
       durationText: "1 day · knowledge and practical sessions",
@@ -479,9 +479,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Analyzer use and cylinder-logging practice",
       ],
       excludes: [
-        "The two optional dives — boat, tanks, and the enriched air in them are billed together if you add them",
+        "The two optional dives — boat, tanks, and the Nitrox in them are billed together if you add them",
         "Personal gear rental",
-        "Enriched air fills after the course",
+        "Nitrox fills after the course",
       ],
       scheduleDays: [
         {
@@ -491,15 +491,15 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
             "Knowledge development: oxygen exposure, nitrogen loading, and what changes",
             "Working out maximum operating depth from the mix, and the mix from the depth",
             "Practical: analyze two cylinders, log them, and set your computer to the blend",
-            "Two optional dives on enriched air, using the procedures end to end",
+            "Two optional dives on Nitrox, using the procedures end to end",
           ],
         },
       ],
       faqs: [
         {
-          question: "Does enriched air let me dive deeper?",
+          question: "Does Nitrox let me dive deeper?",
           answer:
-            "No — the opposite. You have two limits now: the one your certification gives you, and a maximum operating depth set by your mix and an oxygen partial-pressure ceiling of 1.4 bar. Whichever is shallower is your limit for that dive. Enriched air buys bottom time, not depth.",
+            "No — the opposite. You have two limits now: the one your certification gives you, and a maximum operating depth set by your mix and an oxygen partial-pressure ceiling of 1.4 bar. Whichever is shallower is your limit for that dive. Nitrox buys bottom time, not depth.",
         },
         {
           question: "What blends does this certify me for?",
@@ -721,7 +721,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Tanks, weights, and boat",
       ],
       excludes: [
-        "Enriched air fills",
+        "Nitrox fills",
         "Personal gear rental",
         "Marine park fees",
         "Dive computer rental",
@@ -755,9 +755,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
             "40 meters (130 feet), which is the limit of recreational diving. Nothing beyond that is a specialty — it is technical diving, with different gear and training.",
         },
         {
-          question: "Should I dive enriched air on deep dives?",
+          question: "Should I dive Nitrox on deep dives?",
           answer:
-            "It helps with nitrogen loading, but the oxygen limit gets shallower as the mix gets richer, and at 40 meters most shops' standard blends are already past their limit, so air is usually what you breathe. Take the Enriched Air course and plan each dive on its own numbers.",
+            "It helps with nitrogen loading, but the oxygen limit gets shallower as the mix gets richer, and at 40 meters most shops' standard blends are already past their limit, so air is usually what you breathe. Take the Nitrox course and plan each dive on its own numbers.",
         },
         {
           question: "What does narcosis feel like?",
@@ -813,7 +813,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Personal gear rental",
         "Dive light — bring your own or rent one from us; you need one for the penetration dive.",
         "Marine park fees",
-        "Enriched air fills",
+        "Nitrox fills",
       ],
       scheduleDays: [
         {

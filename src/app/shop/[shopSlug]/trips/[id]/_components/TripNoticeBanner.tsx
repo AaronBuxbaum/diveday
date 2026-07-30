@@ -13,6 +13,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
     text: "Crew wasn't changed — someone is already assigned during this time, or the course would fall below its teaching ratio.",
   },
   "note-added": { tone: "success", text: "Private staff note added." },
+  "note-deleted": { tone: "success", text: "Private staff note deleted." },
   "booking-removed": { tone: "success", text: "Booking cancelled — the spot is open again." },
   "booking-removed-refunded": {
     tone: "success",
@@ -124,7 +125,7 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger"; text: Notice
   "recap-photo-removed": { tone: "success", text: "Photo removed from the recap." },
   requirements: { tone: "success", text: "Trip readiness requirements updated." },
   payment: { tone: "success", text: "Payment status updated." },
-  conditions: { tone: "success", text: "Diver-facing conditions briefing updated." },
+  conditions: { tone: "success", text: "Crew prediction published — divers will see it now." },
   "conditions-cleared": {
     tone: "success",
     text: "Crew prediction cleared. Divers will see the automated outlook when it is available.",

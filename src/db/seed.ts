@@ -731,8 +731,8 @@ export async function seedDemoSchedule(
         {
           shopId,
           agency: "padi",
-          title: "Enriched Air (Nitrox) Diver",
-          description: "Plan and dive safely with enriched air nitrox.",
+          title: "Nitrox Diver",
+          description: "Plan and dive safely with Nitrox.",
           priceCents: 19500,
           eLearningPriceCents: 15000,
           minimumCertificationLevel: "open_water" as const,
@@ -819,7 +819,7 @@ export async function seedDemoSchedule(
         {
           shopId,
           agency: "ssi",
-          title: "Enriched Air Nitrox 40",
+          title: "Nitrox 40",
           description: "Use nitrox mixes up to 40 percent oxygen.",
           priceCents: 18500,
           eLearningPriceCents: 14000,
@@ -1378,8 +1378,8 @@ export async function seedDemoSchedule(
         endsAt: at(6, 21, 0),
         capacity: 10,
       },
-      ...courseSession("Enriched Air (Nitrox) Diver", {
-        title: "Enriched Air (Nitrox) — classroom & two dives",
+      ...courseSession("Nitrox Diver", {
+        title: "Nitrox Diver — classroom & two dives",
         description: "Analyze your own cylinder, then use the procedures on two reef dives.",
         startsAt: at(8, 12, 0),
         endsAt: at(8, 20, 0),
@@ -1643,7 +1643,7 @@ export async function seedDemoSchedule(
   const laterRosters: Array<[string, number[]]> = [
     ["Two-Tank Reef — Benwood & Elbow", [10, 11, 12]],
     ["Afternoon Two-Tank — French Reef", [13, 14, 15]],
-    ["Enriched Air (Nitrox) — classroom & two dives", [16, 17]],
+    ["Nitrox Diver — classroom & two dives", [16, 17]],
     ["Night Diver — three evenings", [13]],
     ["Deep Diver — Spiegel Grove & the wall", [17]],
   ];
@@ -1695,19 +1695,93 @@ export async function seedDemoSchedule(
       .where(eq(bookings.id, nightIdentityBooking.id));
   }
 
-  // Payment demo on the pay-to-board wreck trip: one paid, one deposit, the
-  // rest unpaid (an absent row reads as unpaid in readiness).
+  // Payment demo, spread across the boats a visitor actually looks at — not
+  // just the pay-to-board wreck charter. Reef and Night don't require payment
+  // to board (requiresPayment is wreck-only), so these rows never change who
+  // can board; they exist so Reports shows real revenue for the current month
+  // instead of $0, including on a freshly minted "try the demo" shop, which
+  // never runs seedHistory's back-fill.
   const wreckBookings = bookingRows_.filter((b) => b.tripId === wreck.id);
-  const paidBooking = wreckBookings.find((b) => b.personId === customers[1]?.id);
-  const depositBooking = wreckBookings.find((b) => b.personId === customers[0]?.id);
-  const paymentSeed = [
-    paidBooking
-      ? { bookingId: paidBooking.id, status: "paid" as const, amountCents: 18_000 }
-      : null,
-    depositBooking
-      ? { bookingId: depositBooking.id, status: "deposit_paid" as const, amountCents: 6_000 }
-      : null,
-  ].filter((row): row is NonNullable<typeof row> => row !== null);
+  const reefBookings = bookingRows_.filter((b) => b.tripId === reef.id);
+  const nightBookings = bookingRows_.filter((b) => b.tripId === night.id);
+  const findBooking = (rows: typeof bookingRows_, personIndex: number) =>
+    rows.find((b) => b.personId === customers[personIndex]?.id);
+  const bookingByTripTitle = (tripTitle: string, personIndex: number) => {
+    const trip = tripRows.find((row) => row.title === tripTitle);
+    if (!trip) return undefined;
+    return findBooking(
+      bookingRows_.filter((b) => b.tripId === trip.id),
+      personIndex,
+    );
+  };
+  const paidBooking = findBooking(wreckBookings, 1);
+  const depositBooking = findBooking(wreckBookings, 0);
+
+  const paymentPlan: Array<{
+    booking: (typeof bookingRows_)[number] | undefined;
+    status: "paid" | "deposit_paid";
+    amountCents: number;
+  }> = [
+    // Wreck: a solid majority paid or on deposit, a few still owing 5 days out.
+    { booking: paidBooking, status: "paid", amountCents: 18_000 },
+    { booking: depositBooking, status: "deposit_paid", amountCents: 6_000 },
+    { booking: findBooking(wreckBookings, 2), status: "paid", amountCents: 18_000 },
+    { booking: findBooking(wreckBookings, 5), status: "paid", amountCents: 18_000 },
+    { booking: findBooking(wreckBookings, 6), status: "deposit_paid", amountCents: 6_000 },
+    // Reef: today's busy boat, paid ahead of the dock like a real morning.
+    { booking: findBooking(reefBookings, 1), status: "paid", amountCents: 12_000 },
+    { booking: findBooking(reefBookings, 2), status: "paid", amountCents: 12_000 },
+    { booking: findBooking(reefBookings, 3), status: "paid", amountCents: 12_000 },
+    { booking: findBooking(reefBookings, 5), status: "deposit_paid", amountCents: 4_000 },
+    { booking: findBooking(reefBookings, 6), status: "paid", amountCents: 12_000 },
+    { booking: findBooking(reefBookings, 7), status: "paid", amountCents: 12_000 },
+    // Night: quiet boat, still a couple of paid seats.
+    { booking: findBooking(nightBookings, 5), status: "paid", amountCents: 9_500 },
+    { booking: findBooking(nightBookings, 6), status: "deposit_paid", amountCents: 3_500 },
+    // Later sailings this month.
+    {
+      booking: bookingByTripTitle("Two-Tank Reef — Benwood & Elbow", 10),
+      status: "paid",
+      amountCents: 12_000,
+    },
+    {
+      booking: bookingByTripTitle("Two-Tank Reef — Benwood & Elbow", 11),
+      status: "deposit_paid",
+      amountCents: 4_000,
+    },
+    {
+      booking: bookingByTripTitle("Afternoon Two-Tank — French Reef", 13),
+      status: "paid",
+      amountCents: 11_000,
+    },
+    {
+      booking: bookingByTripTitle("Afternoon Two-Tank — French Reef", 15),
+      status: "deposit_paid",
+      amountCents: 3_500,
+    },
+    {
+      booking: bookingByTripTitle("Nitrox Diver — classroom & two dives", 16),
+      status: "paid",
+      amountCents: 19_500,
+    },
+    {
+      booking: bookingByTripTitle("Night Diver — three evenings", 13),
+      status: "paid",
+      amountCents: 9_500,
+    },
+    {
+      booking: bookingByTripTitle("Deep Diver — Spiegel Grove & the wall", 17),
+      status: "deposit_paid",
+      amountCents: 5_000,
+    },
+  ];
+  const paymentSeed = paymentPlan
+    .filter((row) => row.booking !== undefined)
+    .map((row) => ({
+      bookingId: (row.booking as (typeof bookingRows_)[number]).id,
+      status: row.status,
+      amountCents: row.amountCents,
+    }));
   if (paymentSeed.length > 0) {
     await db
       .insert(bookingPayments)
@@ -1749,19 +1823,41 @@ export async function seedDemoSchedule(
 
   // A real booking never sits with zero waiver activity: the live
   // booking-creation flow issues a waiver request the instant a diver joins a
-  // trip (issueWaiverOnJoin). The seed mirrors that so every upcoming
-  // booking already has a pending (issued, unsigned) waiver on file — except
-  // the reef trip's first-booked diver (the pinned recap booking above), who
-  // stays genuinely unsent. That one holdout is the shop's real-world
-  // straggler — a request that quietly never went out — and it's what keeps
-  // the "click Send waiver" flows (staff UI, e2e) demonstrable.
+  // trip (issueWaiverOnJoin). The seed mirrors that so every upcoming booking
+  // already has a waiver on file — except the reef trip's first-booked diver
+  // (the pinned recap booking above), who stays genuinely unsent. That one
+  // holdout is the shop's real-world straggler — a request that quietly never
+  // went out — and it's what keeps the "click Send waiver" flows (staff UI,
+  // e2e) demonstrable.
+  //
+  // A realistic subset of those waivers is already signed. A signature is
+  // effective for the *person*, not just the one booking (effectiveWaiverForBooking
+  // in src/lib/waivers.ts reuses a diver's latest completed waiver across every
+  // trip they're on), so signing anyone who also sits on today's reef roster
+  // would silently clear their reef booking too — the boat the manifest/roll-
+  // call demo boards from must keep nobody fully cleared (see
+  // e2e/manifest.spec.ts). customers 0-8 crew reef, customers 4-6 also crew
+  // Night, and customers 0-9 crew Wreck, so customer[9] (Wreck only) is the
+  // only "today path" diver safe to sign; a few later-sailing regulars
+  // (customers 10+, never on today's boats) get signed waivers too, so
+  // browsing past today's board doesn't read as universally unsigned.
   const waiverTemplate = await getCurrentWaiverTemplate(db, shopId);
   if (!waiverTemplate) throw new Error("seed: waiver template missing before upcoming waivers");
+  const signedWaiverBookingIds = new Set(
+    [
+      findBooking(wreckBookings, 9)?.id,
+      bookingByTripTitle("Two-Tank Reef — Benwood & Elbow", 10)?.id,
+      bookingByTripTitle("Afternoon Two-Tank — French Reef", 13)?.id,
+      bookingByTripTitle("Nitrox Diver — classroom & two dives", 16)?.id,
+    ].filter((id): id is string => id !== undefined),
+  );
   let upcomingWaiverToken = 0;
   const upcomingWaiverRows = bookingRows_
     .filter((booking) => booking.id !== recapBookingId)
     .map((booking) => {
       upcomingWaiverToken++;
+      const createdAt = nextCreatedAt();
+      const signed = signedWaiverBookingIds.has(booking.id);
       return {
         shopId,
         bookingId: booking.id,
@@ -1777,7 +1873,17 @@ export async function seedDemoSchedule(
         // Comfortably past every seeded upcoming trip (furthest is ~21 days
         // out) so a fresh demo never opens with an already-expired link.
         expiresAt: at(30, 12),
-        createdAt: nextCreatedAt(),
+        createdAt,
+        ...(signed
+          ? {
+              status: "completed" as const,
+              signedName: "Signed on file",
+              signatureMethod: "in_person" as const,
+              consentedAt: createdAt,
+              signedAt: createdAt,
+              completedAt: createdAt,
+            }
+          : {}),
       };
     });
   if (upcomingWaiverRows.length > 0) await db.insert(waiverRecords).values(upcomingWaiverRows);
@@ -2472,7 +2578,7 @@ async function seedRentalFit(
 
 /**
  * Nitrox demo: a couple of verified EANx cards (and one pending), plus an
- * enriched-air request on the wreck charter — so the prep list shows a real
+ * Nitrox request on the wreck charter — so the prep list shows a real
  * mix split and a real card gate the moment a fresh checkout boots.
  */
 async function seedNitrox(
@@ -2578,7 +2684,7 @@ async function seedNitrox(
     ]);
   }
 
-  // An enriched-air request from a diver whose card is verified, on the
+  // A Nitrox request from a diver whose card is verified, on the
   // nitrox-required wreck charter.
   const wreckBookingForCert = bookingRows.find(
     (b) => b.tripId === wreck.id && b.personId === customers[0].id,

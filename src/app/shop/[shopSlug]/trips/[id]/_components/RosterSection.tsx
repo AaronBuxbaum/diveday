@@ -84,6 +84,7 @@ export function RosterSection({
   confirmIdentityAction,
   notesByBooking,
   addNoteAction,
+  deleteNoteAction,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -105,6 +106,7 @@ export function RosterSection({
   confirmIdentityAction: (formData: FormData) => void;
   notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
   addNoteAction: (formData: FormData) => void;
+  deleteNoteAction: (formData: FormData) => void;
 }) {
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
   // How many divers still have a waiver a staffer can send or resend — the
@@ -418,11 +420,26 @@ export function RosterSection({
                   </summary>
                   <div className="mt-2 grid gap-3">
                     {(notesByBooking.get(booking.id) ?? []).map(({ note, authorName }) => (
-                      <div key={note.id} className="rounded-lg bg-surface-sunken px-3 py-2 text-sm">
-                        <p>{note.body}</p>
-                        <p className="mt-1 text-xs text-muted">
-                          {authorName} · {formatDateTimeTz(note.createdAt, "en-US", shopTimezone)}
-                        </p>
+                      <div
+                        key={note.id}
+                        className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <p>{note.body}</p>
+                          <p className="mt-1 text-xs text-muted">
+                            {authorName} · {formatDateTimeTz(note.createdAt, "en-US", shopTimezone)}
+                          </p>
+                        </div>
+                        <form action={deleteNoteAction} className="shrink-0">
+                          <input type="hidden" name="noteId" value={note.id} />
+                          <SubmitButton
+                            pendingLabel="…"
+                            confirmMessage="Delete this private note?"
+                            className="rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+                          >
+                            Delete
+                          </SubmitButton>
+                        </form>
                       </div>
                     ))}
                     <form action={addNoteAction} className="grid gap-2">

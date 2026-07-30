@@ -17,16 +17,16 @@ export const onboardSchema = z.object({
   shopSlug: z
     .string()
     .trim()
-    .min(1, "Slug is required")
+    .min(1, "Shop link is required")
     .max(50)
     .toLowerCase()
-    .regex(/^[a-z0-9-]+$/, "Slug must only contain letters, numbers, and hyphens"),
+    .regex(/^[a-z0-9-]+$/, "Shop link must only contain letters, numbers, and hyphens"),
   timezone: z
     .string()
     .trim()
     .min(1, "Timezone is required")
     .refine(isValidTimeZone, "Not a recognized timezone"),
-  ownerName: z.string().trim().min(1, "Owner name is required").max(100),
+  ownerName: z.string().trim().min(1, "Full name is required").max(100),
   ownerEmail: z.string().trim().email("Invalid email address").max(150),
   ownerPassword: z
     .string()

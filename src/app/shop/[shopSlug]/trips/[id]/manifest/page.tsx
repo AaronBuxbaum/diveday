@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
-import { rentalFitByBooking } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
@@ -71,40 +70,6 @@ export default async function TripManifestPage({
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
 
-  const fitMap = await rentalFitByBooking(db, shop.id, tripId);
-  const gearSummary: Record<string, number> = {};
-  for (const fit of fitMap.values()) {
-    if (!fit) continue;
-    if (fit.needsStaffFitAt) {
-      gearSummary["Needs Staff Fit ⚠"] = (gearSummary["Needs Staff Fit ⚠"] ?? 0) + 1;
-      continue;
-    }
-    if (fit.rentsBcd) {
-      const label = fit.bcdSize ? `BCD (${fit.bcdSize.toUpperCase()})` : "BCD";
-      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
-    }
-    if (fit.rentsRegulator) {
-      gearSummary.Regulator = (gearSummary.Regulator ?? 0) + 1;
-    }
-    if (fit.rentsWetsuit) {
-      const label = fit.wetsuitSize ? `Wetsuit (${fit.wetsuitSize.toUpperCase()})` : "Wetsuit";
-      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
-    }
-    if (fit.rentsMaskFins) {
-      const label = fit.finSize ? `Fins (${fit.finSize.toUpperCase()})` : "Mask/Fins";
-      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
-    }
-    if (fit.rentsDiveComputer) {
-      gearSummary["Dive Computer"] = (gearSummary["Dive Computer"] ?? 0) + 1;
-    }
-    if (fit.rentsGopro) {
-      gearSummary.GoPro = (gearSummary.GoPro ?? 0) + 1;
-    }
-    if (fit.rentsWeights) {
-      const label = fit.weightPreference ? `Weights (${fit.weightPreference})` : "Weights";
-      gearSummary[label] = (gearSummary[label] ?? 0) + 1;
-    }
-  }
   const plannedDives = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDives);
   const checkpoint: RollCallCheckpoint =
@@ -323,37 +288,6 @@ export default async function TripManifestPage({
               ? "They remain on this manifest and cannot board until their readiness check clears."
               : "They already sailed — record whoever is aboard. Their readiness is a paperwork flag to follow up on shore, not a bar to this head count."}
           </p>
-        </section>
-      ) : null}
-
-      {Object.keys(gearSummary).length > 0 ? (
-        <section
-          id="deck-ready-rentals"
-          className="mt-8 rounded-2xl border border-border bg-surface-sunken p-5"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted">
-              Deck-Ready Rental Summary
-            </h2>
-            <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">
-              Preload Stage
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-muted">
-            Stage this gear on the deck before divers arrive to keep boarding moving.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {Object.entries(gearSummary).map(([item, count]) => (
-              <div key={item} className="rounded-xl border border-border bg-surface p-3 shadow-sm">
-                <span className="text-xs font-semibold text-muted block truncate" title={item}>
-                  {item}
-                </span>
-                <span className="text-2xl font-black text-foreground mt-1 block tabular-nums">
-                  {count}x
-                </span>
-              </div>
-            ))}
-          </div>
         </section>
       ) : null}
 

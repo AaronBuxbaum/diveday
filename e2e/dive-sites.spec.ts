@@ -30,7 +30,7 @@ test.describe("staff", () => {
 
     await page.goto("/shop/blue-mantis/trips/new");
     await page.getByLabel("Title").fill(tripTitle);
-    await page.getByLabel("Site briefing").first().selectOption({ label: siteName });
+    await page.getByLabel("Dive briefing").first().selectOption({ label: siteName });
     await page.getByLabel("Date").fill(daysFromNow(5));
     await page.getByLabel("Departs").fill("09:00");
     await page.getByLabel("Returns").fill("12:00");
@@ -47,7 +47,7 @@ test.describe("staff", () => {
     await page.getByLabel("Water temp °C").fill("27");
     await page.getByLabel("Visibility metres").fill("18");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
-    await expect(page.getByRole("status")).toContainText("conditions briefing updated");
+    await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
     // Staff are routed to the trip editor; view the public diver briefing signed
     // out, then sign back in to finish the staff-side edits below.

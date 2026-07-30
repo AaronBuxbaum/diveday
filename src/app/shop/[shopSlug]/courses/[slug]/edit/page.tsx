@@ -22,9 +22,9 @@ const messages: Record<string, string> = {
   hidden: "Course page hidden. Scheduled sessions are unchanged.",
 };
 const errors: Record<string, string> = {
-  invalid: "That didn’t save. Check the fields and try again.",
+  invalid: "That didn't save. Check the fields and try again.",
   images: "You can keep up to eight gallery photos. Remove one before adding more.",
-  upload: "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
+  upload: "That photo didn't upload. Try a JPG, PNG, or WebP under 5 MB.",
   "too-many-photos": `Add up to ${MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION} new gallery photos per save. Save this batch, then add more.`,
 };
 
@@ -119,7 +119,7 @@ export default async function EditCoursePage({
             <Field
               label="Overview"
               hint="(optional)"
-              description="A few paragraphs in the diver’s words, not the agency’s."
+              description="A few paragraphs in the diver's words, not the agency's."
             >
               <textarea
                 name="overview"
@@ -135,7 +135,7 @@ export default async function EditCoursePage({
         <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
           <legend className="px-1 text-sm font-semibold">Pricing</legend>
           <p className="mt-1 text-sm text-muted">
-            Two lines on one bill: your instruction fee and the agency’s e-learning code. The diver
+            Two lines on one bill: your instruction fee and the agency's e-learning fee. The diver
             pays the total in a single payment.
           </p>
           <FieldGrid columns={2} className="mt-4 gap-y-5">
@@ -255,7 +255,7 @@ export default async function EditCoursePage({
           <legend className="px-1 text-sm font-semibold">Who can enroll</legend>
           <p className="mt-1 text-sm text-muted">
             The one block on the page that answers “can I do this?”. The certification and minimum
-            age are the agency’s{" "}
+            age come from the agency:{" "}
             <strong className="font-medium text-foreground">
               {course.minimumCertificationLevel
                 ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`

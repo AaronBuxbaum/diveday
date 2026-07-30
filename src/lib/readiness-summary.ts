@@ -147,7 +147,7 @@ const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; d
   nitrox_missing: {
     state: "action",
     detail:
-      "This dive uses enriched air — send the shop a photo of your nitrox card or get in touch so they can add it.",
+      "This dive uses Nitrox — send the shop a photo of your Nitrox card or get in touch so they can add it.",
   },
   nitrox_pending: {
     state: "waiting",

@@ -53,9 +53,13 @@ jobs:
       - run: pnpm typecheck
 
   unit-tests:
-    name: Unit tests
+    name: Unit tests shard ${{ matrix.shard }}/4
     runs-on: macos-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -64,7 +68,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test -- --reporter=dot
+      - run: pnpm test -- --reporter=dot --shard=${{ matrix.shard }}/4
 
   build:
     name: Build

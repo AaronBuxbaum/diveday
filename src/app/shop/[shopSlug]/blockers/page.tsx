@@ -139,7 +139,7 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
             ? "Everyone booked on an upcoming departure is ready to board."
             : `${blocked} ${blocked === 1 ? "diver" : "divers"} across ${trips.length} ${
                 trips.length === 1 ? "departure" : "departures"
-              } can’t board yet. Clearing a row takes you straight to the fix.`
+              } can't board yet. Clearing a row takes you straight to the fix.`
         }
       />
 

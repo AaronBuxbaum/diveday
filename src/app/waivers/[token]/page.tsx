@@ -207,7 +207,7 @@ export default async function WaiverPage({
         >
           <p>
             {needsReview
-              ? "Thanks — a team member will privately review one of your answers before the trip. Please don’t assume you’re cleared until they confirm."
+              ? "Thanks — one of your medical answers needs a closer look, and a doctor’s sign-off may be required. Please don’t assume you’re cleared until your shop confirms."
               : "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed."}
           </p>
           {readyPath ? (

@@ -88,7 +88,7 @@ export default async function DiversPage({
     notice === "duplicate"
       ? "A diver with that email is already in this shop."
       : notice === "deleted"
-        ? "Diver removed. Their history is preserved, but they no longer appear in active work."
+        ? "Diver removed from active shop work. Their bookings and cards are preserved."
         : notice === "restored"
           ? "Diver restored to active shop work."
           : notice === "not-authorized"

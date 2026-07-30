@@ -41,11 +41,11 @@ describe("DigitalCardFlip", () => {
     expect(img).toHaveAttribute("src", "https://example.com/card.jpg");
   });
 
-  it("renders the database verified placeholder on the back if cardImageUrl is null", () => {
+  it("renders the certified placeholder on the back if cardImageUrl is null", () => {
     render(<DigitalCardFlip {...props} cardImageUrl={null} />);
 
     expect(screen.getByText("NO CARD PHOTO")).toBeInTheDocument();
-    expect(screen.getByText("Verified via online database query")).toBeInTheDocument();
+    expect(screen.getByText("Certified by staff")).toBeInTheDocument();
   });
 
   it("toggles the flip status when the button is clicked", () => {

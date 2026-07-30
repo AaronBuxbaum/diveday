@@ -31,12 +31,12 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "contacts.csv":
-    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification card (current before expired, verified before pending, expiry included so the destination can enforce it), enriched-air status, rental sizes, and the most recent live signed waiver (accepted/date/source, medical_review holds excluded on purpose). The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the card; a waiver_accepted row should land trusted-and-marked-imported the same way this shop's own importer treats one.",
+    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification card (current before expired, verified before pending, expiry included so the destination can enforce it), Nitrox status, rental sizes, and the most recent live signed waiver (accepted/date/source, medical_review holds excluded on purpose). The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the card; a waiver_accepted row should land trusted-and-marked-imported the same way this shop's own importer treats one.",
   "people.csv": "Everyone the shop knows — divers and staff — with their roles.",
   "certifications.csv": "Certification-ladder cards with their verification status.",
   "specialty_certifications.csv":
     "Specialty cards (deep, wreck, night, drysuit) with verification status.",
-  "nitrox_certifications.csv": "Enriched-air (EANx) cards with verification status.",
+  "nitrox_certifications.csv": "Nitrox (EANx) cards with verification status.",
   "trips.csv":
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
   "trip_series.csv":
@@ -50,7 +50,7 @@ export const EXPORT_FILE_NOTES = {
   "staff_shifts.csv":
     "Dated staff availability windows; trip assignments remain the authoritative crew list.",
   "bookings.csv":
-    "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified enriched-air card, checked at fill time.",
+    "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time.",
   "waitlist_entries.csv":
     "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
   "last_minute_list.csv":

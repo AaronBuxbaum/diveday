@@ -45,7 +45,7 @@ export async function onboardAction(formData: FormData) {
       const [existingShop] = await tx.select().from(shops).where(eq(shops.slug, shopSlug)).limit(1);
 
       if (existingShop) {
-        onboardingError = `The slug "${shopSlug}" is already taken.`;
+        onboardingError = `The shop link "${shopSlug}" is already taken.`;
         tx.rollback();
         return;
       }
@@ -215,7 +215,9 @@ export async function onboardAction(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect("/onboard?error=Authentication+failed+after+onboarding");
+      redirect(
+        `/onboard?error=${encodeURIComponent("Your shop was created, but signing you in failed. Try signing in below.")}`,
+      );
     }
     throw error; // Propagate NEXT_REDIRECT
   }

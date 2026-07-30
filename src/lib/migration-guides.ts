@@ -583,7 +583,7 @@ const rezdy: MigrationGuide = {
 
   exportHeading: "Get your data out of Rezdy",
   exportIntro:
-    "Rezdy runs in a browser, and — to its credit — it's open about letting your data out as CSV. The goal is your people as a spreadsheet. Menu labels shift between updates and Rezdy's own help centre is the authoritative source for the exact path, so treat these as the shape of it, not word-for-word buttons.",
+    "Rezdy runs in a browser, and — to its credit — it's open about letting your data out as CSV. The goal is your people as a spreadsheet. Menu labels shift between updates and Rezdy's own help center is the authoritative source for the exact path, so treat these as the shape of it, not word-for-word buttons.",
   exportSteps: [
     {
       title: "Sign into your Rezdy dashboard as an owner or manager",
@@ -612,7 +612,7 @@ const rezdy: MigrationGuide = {
     },
   ],
   exportNotes: [
-    "Rezdy doesn't lock your data in — no setup fee, no contract, self-serve CSV export and an operator API. Confirm the exact menu path against Rezdy's own help centre, since labels shift between updates.",
+    "Rezdy doesn't lock your data in — no setup fee, no contract, self-serve CSV export and an operator API. Confirm the exact menu path against Rezdy's own help center, since labels shift between updates.",
     "Your column headings don't have to match anything. DiveDay recognizes the common names Rezdy and every other system use, and shows you exactly how each column mapped before you commit.",
     "Certification cards and rental sizes aren't in a Rezdy export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
     "What Rezdy does hold is bookings, and those come across: the Orders report's one-row-per-booking shape is exactly what carries your regulars' visit history over with them.",

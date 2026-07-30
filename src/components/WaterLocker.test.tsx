@@ -30,7 +30,7 @@ describe("WaterLocker", () => {
       window.dispatchEvent(touchEvent);
     });
 
-    expect(screen.getByText("Water Shield Active")).toBeInTheDocument();
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
   });
 
   it("cancels the anomalous touch before it can trigger the underlying page", () => {
@@ -75,7 +75,7 @@ describe("WaterLocker", () => {
       );
     });
 
-    expect(screen.getByText("Water Shield Active")).toBeInTheDocument();
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
   });
 
   it("unlocks when the hold button is pressed and held for 2 seconds", () => {
@@ -94,7 +94,7 @@ describe("WaterLocker", () => {
       );
     });
 
-    expect(screen.getByText("Water Shield Active")).toBeInTheDocument();
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
 
     const button = screen.getByRole("button", { name: /hold/i });
 
@@ -105,13 +105,13 @@ describe("WaterLocker", () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    expect(screen.getByText("Water Shield Active")).toBeInTheDocument();
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(1100);
     });
 
-    expect(screen.queryByText("Water Shield Active")).toBeNull();
+    expect(screen.queryByText("Screen locked — water detected")).toBeNull();
   });
 
   it("unlocks when the hold button is activated with the keyboard", () => {
@@ -134,6 +134,6 @@ describe("WaterLocker", () => {
     act(() => fireEvent.keyDown(button, { key: " " }));
     act(() => vi.advanceTimersByTime(2000));
 
-    expect(screen.queryByText("Water Shield Active")).toBeNull();
+    expect(screen.queryByText("Screen locked — water detected")).toBeNull();
   });
 });

@@ -128,10 +128,10 @@ export default async function NewDiveSitePage({
       {error ? (
         <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
           {error === "images"
-            ? "One of those image links couldn’t be used — use up to six complete HTTP(S) links, one per line, to a real, reachable image."
+            ? "One of those image links couldn't be used — use up to six complete HTTP(S) links, one per line, each pointing to a real, reachable image."
             : error === "images-unconfigured"
-              ? "Image hosting isn’t set up for this shop yet — leave the image links blank for now, or ask your admin to configure it."
-              : "That didn’t save. Check the required name and links, then try again."}
+              ? "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
+              : "That didn't save. Check the required name and links, then try again."}
         </p>
       ) : null}
       <SiteForm action={createAction} submitLabel="Save site briefing" />
@@ -266,7 +266,7 @@ function SiteForm({
         </Field>
       </FieldGrid>
       <fieldset className="rounded-2xl border border-border bg-surface-sunken p-5">
-        <legend className="px-1 text-sm font-medium">Site requirements</legend>
+        <legend className="px-1 text-sm font-medium">Certification requirements</legend>
         <p className="text-sm text-muted">
           These requirements travel with the site into every new trip that uses it.
         </p>
