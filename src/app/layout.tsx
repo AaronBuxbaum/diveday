@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Color_Emoji, Noto_Sans_Symbols_2 } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
 import "./globals.css";
 import { publicAppUrl } from "@/lib/notifications";
 import { Observability } from "./observability-client";
@@ -15,21 +15,22 @@ const geistMono = Geist_Mono({
 });
 
 // Geist's "latin" subset does not cover the arrows, checkmarks, and dingbats
-// (→ ✓ ★ ☀ …) this app renders in real UI, or the emoji (🤿 🐬 ⛵ …) in
-// marketing copy — both fell back to whatever font the OS happened to have,
-// which is the runner image's fontconfig in CI. Self-hosting them the same
-// way as Geist pins that fallback to the build, closing the residual risk
-// ADR 20260730-pinned-browser-visual-determinism left open. `preload: false`:
-// these only cover rare glyphs, not the above-the-fold text every page pays
-// for on first paint.
+// (→ ✓ ★ ☀ …) this app renders in real UI — they fell back to whatever font
+// the OS happened to have, which is the runner image's fontconfig in CI.
+// Self-hosting them the same way as Geist pins that fallback to the build,
+// closing the residual risk ADR 20260730-pinned-browser-visual-determinism
+// left open. `preload: false`: these only cover rare glyphs, not the
+// above-the-fold text every page pays for on first paint.
+//
+// Pictographic emoji (🤿 🐬 ⛵ …) deliberately stay unpinned: a self-hosted
+// Noto_Color_Emoji was tried and reverted (see the ADR) because it overrides
+// every browser's own platform emoji font — Apple Color Emoji, Segoe UI
+// Emoji — with Google's set, which renders visibly smaller and flatter than
+// what users' actual browsers show natively. Matching real Chrome mattered
+// more than pinning emoji for CI, so those glyphs still resolve through
+// `system-ui, sans-serif` and remain a known source of CI-only diffs.
 const notoSymbols = Noto_Sans_Symbols_2({
   variable: "--font-noto-symbols",
-  weight: "400",
-  preload: false,
-});
-
-const notoEmoji = Noto_Color_Emoji({
-  variable: "--font-noto-emoji",
   weight: "400",
   preload: false,
 });
@@ -58,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} ${notoEmoji.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
