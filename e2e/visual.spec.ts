@@ -41,12 +41,21 @@ import { openTripFromBoard } from "./helpers";
  * layout shifts (a reordered queue, a trip crossing from upcoming to sailed)
  * that a moving clock actually causes.
  *
- * `capture` also waits on `document.fonts.ready` before every screenshot.
- * The Geist fonts (next/font/google) load asynchronously; without this wait,
- * a capture can land on either side of the fallback→webfont swap and render
- * the same text with different sub-pixel antialiasing, which reads as a false
- * diff (this is what produced the "flaky" schedule/today/divers diffs on
- * builds with no real change).
+ * Before every screenshot, `capture` runs `paintWholeDocument` (see its own
+ * comment): it scrolls the document through to force the compositor to
+ * rasterize every band, then waits on `document.fonts.ready`. The Geist fonts
+ * (next/font/google) load asynchronously; without that wait a capture can land
+ * on either side of the fallback→webfont swap and render the same text with
+ * different sub-pixel antialiasing, which reads as a false diff.
+ *
+ * Every `capture` needs the surface to have finished rendering first — wait for
+ * a heading, a known element, or (for a Client Component) a control it only
+ * renders once mounted. A capture that navigates and shoots immediately
+ * photographs whichever frame the suspense fallback was on, and two runs
+ * disagreeing about that is what "flaky visual diff" has always turned out to
+ * mean here. Waiting on a server-rendered element is not enough when the
+ * interesting part is client-rendered: `course-edit` waited on a <legend> that
+ * precedes its editor's mount.
  */
 
 // Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
@@ -57,11 +66,50 @@ const VIEWPORTS = [
   { width: 1280, height: 800 }, // desktop
 ] as const;
 
+/**
+ * Force Chromium to paint the whole document, then settle fonts, before a
+ * `fullPage` screenshot.
+ *
+ * A full-page capture of a tall page can come back with everything below the
+ * viewport *unpainted*: `recap` at 390 was blank below its first screenful on
+ * one run and fully drawn on the next, at the same 3453px height. Waiting on an
+ * element does not prevent it — Playwright counts an off-screen node as
+ * visible, so the wait resolves while those pixels are still unrasterized. That
+ * is what made the unstable set rotate between runs (recap, manifest,
+ * settings-*, course-edit, schedule-builder, site-briefing — all the tall
+ * ones): each run left a different band unpainted. Scrolling the document
+ * through in viewport-sized steps makes the compositor rasterize every band;
+ * we then return to the top so the screenshot still starts where it always did.
+ *
+ * Fonts are re-awaited here, per viewport, rather than once per `capture`: a
+ * resize relayouts the document and can begin a font load that the other
+ * viewport never needed. `.then(() => true)` keeps the resolved value
+ * serializable — `document.fonts.ready` resolves to a FontFaceSet, which
+ * Playwright cannot return.
+ */
+async function paintWholeDocument(page: Page) {
+  await page.evaluate(async () => {
+    const settle = () =>
+      new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // Re-read scrollHeight each pass: painting a band can add height. The step
+    // cap is a guard against a page that grows forever, not an expected exit.
+    for (let step = 0; step < 100; step += 1) {
+      const y = step * window.innerHeight;
+      if (y >= document.documentElement.scrollHeight) break;
+      window.scrollTo(0, y);
+      await settle();
+    }
+    window.scrollTo(0, 0);
+    await settle();
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+}
+
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
-  await page.evaluate(() => document.fonts.ready);
   const baseViewport = page.viewportSize();
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
+    await paintWholeDocument(page);
     await page.screenshot({
       path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
       fullPage: true,
@@ -85,8 +133,9 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
  * gutter that survives a "None margins" print dialog.
  */
 async function capturePrint(page: Page, name: string) {
-  await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ media: "print" });
+  // After the media switch, so the bands rasterized are the print layout's.
+  await paintWholeDocument(page);
   await page.screenshot({
     path: `e2e/screenshots/${name}-print.png`,
     fullPage: true,
