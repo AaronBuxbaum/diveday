@@ -22,11 +22,52 @@ import {
 // or a boat's signal drops, which push alone can never cover.
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
-export function OfflineManifestManager({ payload }: { payload: OfflineManifestPayload }) {
+/** Every word `OfflineManifestManager` renders, resolved server-side. */
+export interface OfflineManifestManagerCopy {
+  checkingDevice: string;
+  reconcileRejectedOne: string;
+  /** `{count}` placeholder. */
+  reconcileRejectedOther: string;
+  reconcilePendingOne: string;
+  /** `{count}` placeholder. */
+  reconcilePendingOther: string;
+  reconcileCaughtUp: string;
+  reconcileErrorFallback: string;
+  savingMessage: string;
+  saveSuccessMessage: string;
+  saveErrorFallback: string;
+  offlineWithSavedCopy: string;
+  offlineNoSavedCopy: string;
+  refreshNoSignal: string;
+  heading: string;
+  body: string;
+  connectivityOfflineWithCopy: string;
+  connectivityOffline: string;
+  freshnessCurrent: string;
+  freshnessAging: string;
+  freshnessStale: string;
+  /** `{date}`, `{pending}`, `{rejected}` placeholders. */
+  savedSummary: string;
+  refreshingLabel: string;
+  refreshNowLabel: string;
+  openOfflineRollCall: string;
+}
+
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
+}
+
+export function OfflineManifestManager({
+  payload,
+  copy,
+}: {
+  payload: OfflineManifestPayload;
+  copy: OfflineManifestManagerCopy;
+}) {
   const router = useRouter();
   const tripId = payload.manifests[0]?.trip.id ?? "";
   const [saved, setSaved] = useState<OfflineManifestEnvelope | null>(null);
-  const [message, setMessage] = useState("Checking this device…");
+  const [message, setMessage] = useState(copy.checkingDevice);
   const [busy, setBusy] = useState(false);
   // saveOfflineManifest/syncOfflineManifest overlap easily across the mount
   // effect, the reconnect listener, and the interval — this keeps them from
@@ -76,22 +117,22 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
         if (pendingBefore > 0 || rejected > rejectedBefore) {
           setMessage(
             rejected > 0
-              ? `${rejected} offline change${rejected === 1 ? " didn't" : "s didn't"} match the live manifest and ${rejected === 1 ? "wasn't" : "weren't"} applied — open the live manifest to sort it out.`
+              ? fill(rejected === 1 ? copy.reconcileRejectedOne : copy.reconcileRejectedOther, {
+                  count: String(rejected),
+                })
               : pending > 0
-                ? `${pending} offline change${pending === 1 ? " is" : "s are"} still waiting to send.`
-                : "Offline roll call is all caught up with the live manifest.",
+                ? fill(pending === 1 ? copy.reconcilePendingOne : copy.reconcilePendingOther, {
+                    count: String(pending),
+                  })
+                : copy.reconcileCaughtUp,
           );
           router.refresh();
         }
       }
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
-      );
+      setMessage(error instanceof Error ? error.message : copy.reconcileErrorFallback);
     }
-  }, [router, tripId]);
+  }, [router, tripId, copy]);
 
   // A reconciling device applying a backlog of offline events publishes one
   // push signal per event (recordRollCall), and this same device is normally
@@ -136,34 +177,33 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   // joining someone else's in-flight promise skips it entirely.
   const queuedSave = useRef<{ silent: boolean } | null>(null);
 
-  const runSaveOnce = useCallback(async (opts: { silent: boolean }) => {
-    if (!opts.silent) {
-      setBusy(true);
-      setMessage("Saving the latest manifest to this device…");
-    }
-    try {
-      await primeOfflineManifestShell();
-      const envelope = await saveOfflineManifest(payloadRef.current);
-      setSaved(envelope);
-      lastPendingCount.current = envelope.events.filter(
-        (event) => event.syncStatus === "pending",
-      ).length;
-      lastRejectedCount.current = envelope.events.filter(
-        (event) => event.syncStatus === "rejected",
-      ).length;
-      // Settled message either way — a silent background save still needs
-      // to land on something other than the initial "Checking…" text.
-      setMessage("This device has an up-to-date offline copy.");
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "This device couldn't save the manifest. It'll try again once you have signal.",
-      );
-    } finally {
-      if (!opts.silent) setBusy(false);
-    }
-  }, []);
+  const runSaveOnce = useCallback(
+    async (opts: { silent: boolean }) => {
+      if (!opts.silent) {
+        setBusy(true);
+        setMessage(copy.savingMessage);
+      }
+      try {
+        await primeOfflineManifestShell();
+        const envelope = await saveOfflineManifest(payloadRef.current);
+        setSaved(envelope);
+        lastPendingCount.current = envelope.events.filter(
+          (event) => event.syncStatus === "pending",
+        ).length;
+        lastRejectedCount.current = envelope.events.filter(
+          (event) => event.syncStatus === "rejected",
+        ).length;
+        // Settled message either way — a silent background save still needs
+        // to land on something other than the initial "Checking…" text.
+        setMessage(copy.saveSuccessMessage);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : copy.saveErrorFallback);
+      } finally {
+        if (!opts.silent) setBusy(false);
+      }
+    },
+    [copy],
+  );
 
   const save = useCallback(
     async (opts: { silent: boolean }) => {
@@ -225,11 +265,7 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
         if (cancelled) return;
         await reconcile();
       } else {
-        setMessage(
-          envelope
-            ? "Offline — showing the last saved copy."
-            : "No offline copy on this device yet.",
-        );
+        setMessage(envelope ? copy.offlineWithSavedCopy : copy.offlineNoSavedCopy);
       }
     })();
     return () => {
@@ -249,18 +285,18 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
         // router.refresh() can't fetch anything with no network, so it would
         // never deliver the new payload the effect above is waiting for —
         // that'd leave a manual click's busy/disabled state stuck forever.
-        if (opts.manual) setMessage("No signal — showing the last saved copy.");
+        if (opts.manual) setMessage(copy.refreshNoSignal);
         return;
       }
       if (opts.manual) {
         manualRefreshPending.current = true;
         setBusy(true);
-        setMessage("Saving the latest manifest to this device…");
+        setMessage(copy.savingMessage);
       }
       router.refresh();
       void reconcile();
     },
-    [router, reconcile],
+    [router, reconcile, copy],
   );
 
   useEffect(() => {
@@ -306,7 +342,11 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
   const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
   const freshnessLabel =
-    freshness === "current" ? "Fresh copy" : freshness === "aging" ? "Aging copy" : "Stale copy";
+    freshness === "current"
+      ? copy.freshnessCurrent
+      : freshness === "aging"
+        ? copy.freshnessAging
+        : copy.freshnessStale;
 
   return (
     <section
@@ -316,15 +356,13 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
           <h2 id="offline-heading" className="font-semibold">
-            Offline safety copy
+            {copy.heading}
           </h2>
-          <p className="mt-1 text-sm leading-6 text-muted">
-            This device keeps an offline copy of the manifest up to date automatically while you
-            have signal. Roll call keeps working offline, and every change is double-checked against
-            the live manifest once you&apos;re back.
-          </p>
+          <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ConnectivityStatus offlineLabel={saved ? "No signal · device copy" : "No signal"} />
+            <ConnectivityStatus
+              offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
+            />
             {freshness ? (
               <span
                 className={
@@ -344,8 +382,11 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
           </p>
           {saved ? (
             <p className="mt-1 text-xs text-muted">
-              Saved {new Date(saved.snapshot.savedAt).toLocaleString()} · {pending} waiting to send
-              · {rejected} need a look
+              {fill(copy.savedSummary, {
+                date: new Date(saved.snapshot.savedAt).toLocaleString(),
+                pending: String(pending),
+                rejected: String(rejected),
+              })}
             </p>
           ) : null}
         </div>
@@ -356,14 +397,14 @@ export function OfflineManifestManager({ payload }: { payload: OfflineManifestPa
             onClick={() => refresh({ manual: true })}
             className={buttonClass({ variant: "secondary" })}
           >
-            {busy ? "Refreshing…" : "Refresh now"}
+            {busy ? copy.refreshingLabel : copy.refreshNowLabel}
           </button>
           {saved ? (
             <a
               href={`/offline-manifest?trip=${tripId}`}
               className={buttonClass({ variant: "primary" })}
             >
-              Open offline roll call
+              {copy.openOfflineRollCall}
             </a>
           ) : null}
         </div>

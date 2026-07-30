@@ -1241,6 +1241,11 @@
     },
     "manifest": {
       "skipToRollCall": "Ir al pase de lista",
+      "missingDiversHeading": "Buceadores ausentes ({count})",
+      "awaitingBoarding": "Pendiente de embarque",
+      "missingDiversTapHint": "Toca el avatar de un buceador para ir directamente a su fila del pase de lista.",
+      "rentsKitLabel": "Alquiler 🤿",
+      "ownKitLabel": "Equipo propio ⛵",
       "description": "El listado oficial: todos a bordo — buceadores y tripulación — con sus contactos de emergencia, en cada punto de control. Embarca a los buceadores listos en <strong>Antes de zarpar</strong>, y vuelve a pasar lista después de cada inmersión.",
       "liveManifestBadge": "Manifiesto en vivo · guarda una copia sin conexión abajo",
       "glareModeActive": "Modo antirreflejo activado ☀",
@@ -1287,6 +1292,32 @@
       "markNotBoarded": "Marcar no embarcado",
       "saving": "Guardando…",
       "tapToUndo": "Toca de nuevo el estado ✓ para deshacer."
+    },
+    "offlineManifestManager": {
+      "checkingDevice": "Comprobando este dispositivo…",
+      "reconcileRejectedOne": "1 cambio sin conexión no coincidió con el manifiesto en vivo y no se aplicó — abre el manifiesto en vivo para resolverlo.",
+      "reconcileRejectedOther": "{count} cambios sin conexión no coincidieron con el manifiesto en vivo y no se aplicaron — abre el manifiesto en vivo para resolverlo.",
+      "reconcilePendingOne": "1 cambio sin conexión sigue pendiente de enviarse.",
+      "reconcilePendingOther": "{count} cambios sin conexión siguen pendientes de enviarse.",
+      "reconcileCaughtUp": "El pase de lista sin conexión está al día con el manifiesto en vivo.",
+      "reconcileErrorFallback": "No se pudo contactar con DiveDay ahora mismo — tus cambios sin conexión siguen guardados aquí e intentarán enviarse de nuevo al reconectar.",
+      "savingMessage": "Guardando el manifiesto más reciente en este dispositivo…",
+      "saveSuccessMessage": "Este dispositivo tiene una copia sin conexión actualizada.",
+      "saveErrorFallback": "Este dispositivo no pudo guardar el manifiesto. Lo intentará de nuevo en cuanto haya señal.",
+      "offlineWithSavedCopy": "Sin conexión — mostrando la última copia guardada.",
+      "offlineNoSavedCopy": "Aún no hay copia sin conexión en este dispositivo.",
+      "refreshNoSignal": "Sin señal — mostrando la última copia guardada.",
+      "heading": "Copia de seguridad sin conexión",
+      "body": "Este dispositivo mantiene automáticamente una copia sin conexión del manifiesto actualizada mientras tengas señal. El pase de lista sigue funcionando sin conexión, y cada cambio se verifica contra el manifiesto en vivo en cuanto vuelves a tener señal.",
+      "connectivityOfflineWithCopy": "Sin señal · copia en el dispositivo",
+      "connectivityOffline": "Sin señal",
+      "freshnessCurrent": "Copia actualizada",
+      "freshnessAging": "Copia envejeciendo",
+      "freshnessStale": "Copia desactualizada",
+      "savedSummary": "Guardado {date} · {pending} pendientes de enviar · {rejected} necesitan revisión",
+      "refreshingLabel": "Actualizando…",
+      "refreshNowLabel": "Actualizar ahora",
+      "openOfflineRollCall": "Abrir pase de lista sin conexión"
     },
     "rollCall": {
       "errorRefusal": "Eso no se guardó. Revisa tu conexión o vuelve a tocar.",
@@ -1837,6 +1868,17 @@
       "goToWaivers": "Exenciones",
       "goToBoarding": "Embarque — el barco de hoy"
     },
+    "keyboardShortcuts": {
+      "buttonAriaLabel": "Atajos de teclado",
+      "buttonTitle": "Atajos de teclado (pulsa ?)",
+      "dialogAriaLabel": "Atajos de teclado",
+      "closeAriaLabel": "Cerrar",
+      "heading": "Atajos de teclado",
+      "paletteLabel": "Buscar buceadores, salidas y páginas",
+      "helpLabel": "Mostrar esta ayuda",
+      "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el calendario.",
+      "goToLabel": "Ir a {page}"
+    },
     "shopNav": {
       "home": "Inicio de DiveDay",
       "signOut": "Cerrar sesión"
@@ -2006,6 +2048,17 @@
           "genericError": "Ese cambio no se pudo guardar en este dispositivo — inténtalo de nuevo."
         }
       }
+    },
+    "ambientContrast": {
+      "contrastAutoFallback": "Contraste: Automático",
+      "contrastIconTitle": "Icono de contraste",
+      "contrastLabel": "Contraste",
+      "labelAuto": "Automático",
+      "labelStandard": "Estándar",
+      "labelFullAaa": "AAA completo",
+      "modeAuto": "Automático ☀",
+      "modeStandard": "Estándar",
+      "modeFullAaa": "AAA completo ☀"
     }
   }
 }

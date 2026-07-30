@@ -1241,6 +1241,11 @@
     },
     "manifest": {
       "skipToRollCall": "Skip to roll call",
+      "missingDiversHeading": "Missing divers ({count})",
+      "awaitingBoarding": "Awaiting boarding",
+      "missingDiversTapHint": "Tap a diver's profile avatar to scroll directly to their roll-call row.",
+      "rentsKitLabel": "Rentals 🤿",
+      "ownKitLabel": "Own kit ⛵",
       "description": "The authoritative roster: everyone aboard — divers and crew — with emergency contacts, at every checkpoint. Board the ready divers on <strong>Before departure</strong>, then run roll call again after each dive.",
       "liveManifestBadge": "Live manifest · save an offline copy below",
       "glareModeActive": "Glare mode active ☀",
@@ -1287,6 +1292,32 @@
       "markNotBoarded": "Mark not boarded",
       "saving": "Saving…",
       "tapToUndo": "Tap the ✓ status again to undo."
+    },
+    "offlineManifestManager": {
+      "checkingDevice": "Checking this device…",
+      "reconcileRejectedOne": "1 offline change didn't match the live manifest and wasn't applied — open the live manifest to sort it out.",
+      "reconcileRejectedOther": "{count} offline changes didn't match the live manifest and weren't applied — open the live manifest to sort it out.",
+      "reconcilePendingOne": "1 offline change is still waiting to send.",
+      "reconcilePendingOther": "{count} offline changes are still waiting to send.",
+      "reconcileCaughtUp": "Offline roll call is all caught up with the live manifest.",
+      "reconcileErrorFallback": "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
+      "savingMessage": "Saving the latest manifest to this device…",
+      "saveSuccessMessage": "This device has an up-to-date offline copy.",
+      "saveErrorFallback": "This device couldn't save the manifest. It'll try again once you have signal.",
+      "offlineWithSavedCopy": "Offline — showing the last saved copy.",
+      "offlineNoSavedCopy": "No offline copy on this device yet.",
+      "refreshNoSignal": "No signal — showing the last saved copy.",
+      "heading": "Offline safety copy",
+      "body": "This device keeps an offline copy of the manifest up to date automatically while you have signal. Roll call keeps working offline, and every change is double-checked against the live manifest once you're back.",
+      "connectivityOfflineWithCopy": "No signal · device copy",
+      "connectivityOffline": "No signal",
+      "freshnessCurrent": "Fresh copy",
+      "freshnessAging": "Aging copy",
+      "freshnessStale": "Stale copy",
+      "savedSummary": "Saved {date} · {pending} waiting to send · {rejected} need a look",
+      "refreshingLabel": "Refreshing…",
+      "refreshNowLabel": "Refresh now",
+      "openOfflineRollCall": "Open offline roll call"
     },
     "rollCall": {
       "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
@@ -1837,6 +1868,17 @@
       "goToWaivers": "Waivers",
       "goToBoarding": "Boarding — today's boat"
     },
+    "keyboardShortcuts": {
+      "buttonAriaLabel": "Keyboard shortcuts",
+      "buttonTitle": "Keyboard shortcuts (press ?)",
+      "dialogAriaLabel": "Keyboard shortcuts",
+      "closeAriaLabel": "Close",
+      "heading": "Keyboard shortcuts",
+      "paletteLabel": "Search divers, trips, and pages",
+      "helpLabel": "Show this help",
+      "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the schedule.",
+      "goToLabel": "Go to {page}"
+    },
     "shopNav": {
       "home": "DiveDay home",
       "signOut": "Sign out"
@@ -2006,6 +2048,17 @@
           "genericError": "That change couldn't be saved on this device — try it again."
         }
       }
+    },
+    "ambientContrast": {
+      "contrastAutoFallback": "Contrast: Auto",
+      "contrastIconTitle": "Contrast Icon",
+      "contrastLabel": "Contrast",
+      "labelAuto": "Auto",
+      "labelStandard": "Standard",
+      "labelFullAaa": "Full AAA",
+      "modeAuto": "Auto ☀",
+      "modeStandard": "Standard",
+      "modeFullAaa": "Full AAA ☀"
     }
   }
 }

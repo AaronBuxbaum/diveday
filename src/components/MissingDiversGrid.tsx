@@ -6,6 +6,15 @@ type MissingDiver = {
   rentsKit: boolean;
 };
 
+/** Every word `MissingDiversGrid` renders, resolved server-side. */
+export interface MissingDiversGridCopy {
+  heading: string;
+  awaitingBoarding: string;
+  tapHint: string;
+  rentsKitLabel: string;
+  ownKitLabel: string;
+}
+
 function getInitials(fullName: string): string {
   return fullName
     .split(" ")
@@ -31,7 +40,13 @@ function getAvatarColor(fullName: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function MissingDiversGrid({ divers }: { divers: MissingDiver[] }) {
+export function MissingDiversGrid({
+  divers,
+  copy,
+}: {
+  divers: MissingDiver[];
+  copy: MissingDiversGridCopy;
+}) {
   if (divers.length === 0) return null;
 
   return (
@@ -40,16 +55,12 @@ export function MissingDiversGrid({ divers }: { divers: MissingDiver[] }) {
       className="mt-8 rounded-2xl border border-border bg-surface-sunken p-5 print:hidden"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-muted">
-          Missing divers ({divers.length})
-        </h2>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted">{copy.heading}</h2>
         <span className="text-xs font-semibold text-danger bg-danger/10 px-2 py-0.5 rounded-full">
-          Awaiting boarding
+          {copy.awaitingBoarding}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted">
-        Tap a diver&apos;s profile avatar to scroll directly to their roll-call row.
-      </p>
+      <p className="mt-1 text-xs text-muted">{copy.tapHint}</p>
       <div className="mt-4 flex flex-wrap gap-4 justify-start">
         {divers.map((diver) => {
           const colorClass = getAvatarColor(diver.fullName);
@@ -80,7 +91,7 @@ export function MissingDiversGrid({ divers }: { divers: MissingDiver[] }) {
                 {diver.fullName.split(" ")[0]}
               </span>
               <span className="block w-full truncate text-[10px] text-muted">
-                {diver.rentsKit ? "Rentals 🤿" : "Own kit ⛵"}
+                {diver.rentsKit ? copy.rentsKitLabel : copy.ownKitLabel}
               </span>
             </button>
           );

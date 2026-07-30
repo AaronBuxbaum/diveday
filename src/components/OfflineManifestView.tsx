@@ -419,7 +419,19 @@ export function OfflineManifestView() {
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="print:hidden">
-              <AmbientContrastSlider />
+              <AmbientContrastSlider
+                copy={{
+                  contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
+                  contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
+                  contrastLabel: t("shared.ambientContrast.contrastLabel"),
+                  labelAuto: t("shared.ambientContrast.labelAuto"),
+                  labelStandard: t("shared.ambientContrast.labelStandard"),
+                  labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
+                  modeAuto: t("shared.ambientContrast.modeAuto"),
+                  modeStandard: t("shared.ambientContrast.modeStandard"),
+                  modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+                }}
+              />
             </div>
             <ConnectivityStatus />
             <span

@@ -405,7 +405,16 @@
   "party": {
     "numberOfDivers": "Número de buceadores",
     "yourDetails": "Tus datos",
-    "diverN": "Buceador {number}"
+    "diverN": "Buceador {number}",
+    "diverCountOption": "{count, plural, one {# buceador} other {# buceadores}}",
+    "nameLabel": "Nombre",
+    "diverNameLabel": "Nombre del buceador {number}",
+    "emailLabel": "Correo electrónico",
+    "diverEmailLabel": "Correo del buceador {number}",
+    "phoneLabel": "Teléfono",
+    "phoneHint": "(por si la tripulación necesita contactarte)",
+    "didYouMeanName": "¿Quisiste decir <strong>{name}</strong> ({email})?",
+    "didYouMeanEmail": "¿Quisiste decir {email}?"
   },
   "site": {
     "seeMoreHeading": "Ve más yendo despacio",

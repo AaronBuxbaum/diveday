@@ -9,8 +9,11 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
-import { MissingDiversGrid } from "@/components/MissingDiversGrid";
-import { OfflineManifestManager } from "@/components/OfflineManifestManager";
+import { MissingDiversGrid, type MissingDiversGridCopy } from "@/components/MissingDiversGrid";
+import {
+  OfflineManifestManager,
+  type OfflineManifestManagerCopy,
+} from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
@@ -194,7 +197,19 @@ export default async function TripManifestPage({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-4 print:hidden">
-          <AmbientContrastSlider />
+          <AmbientContrastSlider
+            copy={{
+              contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
+              contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
+              contrastLabel: t("shared.ambientContrast.contrastLabel"),
+              labelAuto: t("shared.ambientContrast.labelAuto"),
+              labelStandard: t("shared.ambientContrast.labelStandard"),
+              labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
+              modeAuto: t("shared.ambientContrast.modeAuto"),
+              modeStandard: t("shared.ambientContrast.modeStandard"),
+              modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+            }}
+          />
           <PrintButton label={t("shared.printButton.label")} />
         </div>
       </header>
@@ -204,6 +219,36 @@ export default async function TripManifestPage({
           name: shop.name,
           timezone: shop.timezone,
         })}
+        copy={
+          {
+            checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
+            reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
+            reconcileRejectedOther: t("trips.offlineManifestManager.reconcileRejectedOther"),
+            reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
+            reconcilePendingOther: t("trips.offlineManifestManager.reconcilePendingOther"),
+            reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
+            reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
+            savingMessage: t("trips.offlineManifestManager.savingMessage"),
+            saveSuccessMessage: t("trips.offlineManifestManager.saveSuccessMessage"),
+            saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
+            offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
+            offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
+            refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
+            heading: t("trips.offlineManifestManager.heading"),
+            body: t("trips.offlineManifestManager.body"),
+            connectivityOfflineWithCopy: t(
+              "trips.offlineManifestManager.connectivityOfflineWithCopy",
+            ),
+            connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
+            freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
+            freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
+            freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
+            savedSummary: t("trips.offlineManifestManager.savedSummary"),
+            refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
+            refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
+            openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
+          } satisfies OfflineManifestManagerCopy
+        }
       />
 
       <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -557,6 +602,17 @@ export default async function TripManifestPage({
             fullName: diver.fullName,
             rentsKit: diver.rentalFit.state === "rents",
           }))}
+        copy={
+          {
+            heading: t("trips.manifest.missingDiversHeading", {
+              count: manifest.divers.filter((diver) => !diver.rollCall).length,
+            }),
+            awaitingBoarding: t("trips.manifest.awaitingBoarding"),
+            tapHint: t("trips.manifest.missingDiversTapHint"),
+            rentsKitLabel: t("trips.manifest.rentsKitLabel"),
+            ownKitLabel: t("trips.manifest.ownKitLabel"),
+          } satisfies MissingDiversGridCopy
+        }
       />
 
       <WaterLocker

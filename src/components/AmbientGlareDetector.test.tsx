@@ -2,10 +2,23 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  type AmbientContrastCopy,
   AmbientContrastSlider,
   AmbientGlareDetector,
   GLARE_LUX_THRESHOLD,
 } from "./AmbientGlareDetector";
+
+const contrastCopy: AmbientContrastCopy = {
+  contrastAutoFallback: "Contrast: Auto",
+  contrastIconTitle: "Contrast Icon",
+  contrastLabel: "Contrast",
+  labelAuto: "Auto",
+  labelStandard: "Standard",
+  labelFullAaa: "Full AAA",
+  modeAuto: "Auto ☀",
+  modeStandard: "Standard",
+  modeFullAaa: "Full AAA ☀",
+};
 
 class MockAmbientLightSensor implements EventTarget {
   illuminance = 0;
@@ -80,7 +93,7 @@ describe("AmbientGlareDetector & AmbientContrastSlider", () => {
     render(
       <>
         <AmbientGlareDetector />
-        <AmbientContrastSlider />
+        <AmbientContrastSlider copy={contrastCopy} />
       </>,
     );
 
@@ -110,7 +123,7 @@ describe("AmbientGlareDetector & AmbientContrastSlider", () => {
     render(
       <>
         <AmbientGlareDetector />
-        <AmbientContrastSlider />
+        <AmbientContrastSlider copy={contrastCopy} />
       </>,
     );
 
@@ -133,7 +146,7 @@ describe("AmbientGlareDetector & AmbientContrastSlider", () => {
     render(
       <>
         <AmbientGlareDetector />
-        <AmbientContrastSlider />
+        <AmbientContrastSlider copy={contrastCopy} />
       </>,
     );
 

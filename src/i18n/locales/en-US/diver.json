@@ -405,7 +405,16 @@
   "party": {
     "numberOfDivers": "Number of divers",
     "yourDetails": "Your details",
-    "diverN": "Diver {number}"
+    "diverN": "Diver {number}",
+    "diverCountOption": "{count, plural, one {# diver} other {# divers}}",
+    "nameLabel": "Name",
+    "diverNameLabel": "Diver {number} name",
+    "emailLabel": "Email",
+    "diverEmailLabel": "Diver {number} email",
+    "phoneLabel": "Phone",
+    "phoneHint": "(if the crew needs to reach you)",
+    "didYouMeanName": "Did you mean <strong>{name}</strong> ({email})?",
+    "didYouMeanEmail": "Did you mean {email}?"
   },
   "site": {
     "seeMoreHeading": "See more by slowing down",

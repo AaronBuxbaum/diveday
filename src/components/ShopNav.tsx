@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/KeyboardShortcuts";
 import { LogoMark } from "@/components/Logo";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
@@ -29,6 +29,33 @@ export function ShopNav({
 }) {
   const root = `/shop/${shopSlug}`;
   const t = staffTranslator(locale);
+  const baseNavShortcuts = [
+    { key: "t", suffix: "", page: t("shared.commandPalette.goToToday") },
+    { key: "s", suffix: "/schedule", page: t("shared.commandPalette.goToSchedule") },
+    { key: "d", suffix: "/divers", page: t("shared.commandPalette.goToDivers") },
+    { key: "b", suffix: "/blockers", page: t("shared.commandPalette.goToBlockers") },
+    ...(navGates.waivers
+      ? [{ key: "w", suffix: "/waivers", page: t("shared.commandPalette.goToWaivers") }]
+      : []),
+  ];
+  const keyboardShortcutsCopy: KeyboardShortcutsCopy = {
+    buttonAriaLabel: t("shared.keyboardShortcuts.buttonAriaLabel"),
+    buttonTitle: t("shared.keyboardShortcuts.buttonTitle"),
+    dialogAriaLabel: t("shared.keyboardShortcuts.dialogAriaLabel"),
+    closeAriaLabel: t("shared.keyboardShortcuts.closeAriaLabel"),
+    heading: t("shared.keyboardShortcuts.heading"),
+    paletteLabel: t("shared.keyboardShortcuts.paletteLabel"),
+    helpLabel: t("shared.keyboardShortcuts.helpLabel"),
+    sequenceHint: t.rich("shared.keyboardShortcuts.sequenceHint", {
+      kbdG: (chunks) => <kbd>{chunks}</kbd>,
+      kbdS: (chunks) => <kbd>{chunks}</kbd>,
+    }),
+    navShortcuts: baseNavShortcuts.map(({ key, suffix, page }) => ({
+      key,
+      suffix,
+      goToLabel: t("shared.keyboardShortcuts.goToLabel", { page }),
+    })),
+  };
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur print:hidden sm:px-6">
       {/*
@@ -73,7 +100,7 @@ export function ShopNav({
               goToBoarding: t("shared.commandPalette.goToBoarding"),
             }}
           />
-          <KeyboardShortcuts shopSlug={shopSlug} canManageWaivers={navGates.waivers} />
+          <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             <button
               type="submit"
