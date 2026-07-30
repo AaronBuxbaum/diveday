@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { DiverTranslator } from "@/i18n/messages";
 import type { CalendarDay } from "@/lib/calendar";
 
 /** A single dive/trip placed on a calendar day. `time` is pre-formatted in the shop timezone. */
@@ -9,7 +10,19 @@ export type CalendarTrip = {
   full: boolean;
 };
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/**
+ * The seven weekday names in the reader's own language, from `Intl` rather than
+ * from the message bundle: a weekday name is not copy anyone writes, and a
+ * hand-maintained list of seven strings per locale is seven chances to be wrong
+ * about a language nobody on the team speaks. 2024-01-07 is a Sunday, so the
+ * week starts where the grid does (src/lib/calendar.ts).
+ */
+function weekdayNames(locale: string): string[] {
+  const format = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  return Array.from({ length: 7 }, (_, index) =>
+    format.format(new Date(Date.UTC(2024, 0, 7 + index))),
+  );
+}
 
 /**
  * Month overview of scheduled dives for the diver-facing schedule. Read-only
@@ -30,9 +43,14 @@ export function ScheduleCalendar({
    * delimiter, since month nav already has a `?month=` query and the day
    * links don't. */
   embed = false,
+  locale,
+  t,
 }: {
   shopSlug: string;
   label: string;
+  /** The negotiated request locale, for the weekday row's own names. */
+  locale: string;
+  t: DiverTranslator;
   weeks: CalendarDay[][];
   todayIso: string;
   tripsByDay: Map<string, CalendarTrip[]>;
@@ -41,13 +59,14 @@ export function ScheduleCalendar({
   embed?: boolean;
 }) {
   const embedSuffix = embed ? "&embed=1" : "";
+  const weekdays = weekdayNames(locale);
   // size-11 (44px) meets the dock-test floor (design/principles.md #2) — size-9
   // (36px) was under it on the one control every visit to this page uses.
   const navClass =
     "inline-flex size-11 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground";
   return (
     <section
-      aria-label="Dive schedule calendar"
+      aria-label={t("schedule.calendarLabel")}
       className="mb-8 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -56,7 +75,7 @@ export function ScheduleCalendar({
           {prevMonthKey ? (
             <Link
               href={`/shop/${shopSlug}/schedule?month=${prevMonthKey}${embedSuffix}`}
-              aria-label="Previous month"
+              aria-label={t("schedule.previousMonth")}
               className={navClass}
             >
               <span aria-hidden="true">←</span>
@@ -69,7 +88,7 @@ export function ScheduleCalendar({
           {nextMonthKey ? (
             <Link
               href={`/shop/${shopSlug}/schedule?month=${nextMonthKey}${embedSuffix}`}
-              aria-label="Next month"
+              aria-label={t("schedule.nextMonth")}
               className={navClass}
             >
               <span aria-hidden="true">→</span>
@@ -83,7 +102,7 @@ export function ScheduleCalendar({
       </div>
 
       <div className="grid grid-cols-7 gap-1">
-        {WEEKDAYS.map((weekday) => (
+        {weekdays.map((weekday) => (
           <div
             key={weekday}
             className="pb-1 text-center text-xs font-semibold tracking-wide text-muted uppercase"
@@ -123,7 +142,10 @@ export function ScheduleCalendar({
                     <li key={trip.id}>
                       <Link
                         href={`/shop/${shopSlug}/schedule/${trip.id}${embed ? "?embed=1" : ""}`}
-                        aria-label={`${trip.time} dive${trip.full ? " (full)" : ""}`}
+                        aria-label={t(
+                          trip.full ? "schedule.calendarDiveFull" : "schedule.calendarDive",
+                          { time: trip.time },
+                        )}
                         // Not a full 44px target — a day with several dives stacks these
                         // tightly, and blowing each up to 44px would balloon the month
                         // grid this component's whole point is to keep glanceable. This

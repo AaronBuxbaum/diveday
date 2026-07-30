@@ -7,6 +7,7 @@ import { generateDemoShopIdentity } from "@/lib/demo-identity";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
+import { insertCoursePath } from "./course-paths";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
@@ -17,6 +18,7 @@ import {
   bookingPayments,
   bookings,
   certifications,
+  coursePaths,
   courses,
   type DiveSpecialty,
   diveSiteCreatures,
@@ -1071,6 +1073,39 @@ export async function seedDemoSchedule(
   }
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
   const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));
+
+  // Two certification paths, because a shop that has built only one never
+  // discovers that the builder reorders and that a course can sit on more than
+  // one path. The ladder is what a diver asks for at the counter; the wreck
+  // path is the one the shop actually sells in the Keys.
+  const seededPaths: Array<{ title: string; summary: string; steps: string[] }> = [
+    {
+      title: "From first breath to Rescue Diver",
+      summary: "A first taste, then the three cards, in the order we teach them.",
+      steps: [
+        "Discover Scuba Diving",
+        "Open Water Diver",
+        "Advanced Open Water Diver",
+        "Rescue Diver",
+      ],
+    },
+    {
+      title: "Wreck diver",
+      summary: "Everything the Spiegel Grove and the Duane ask of you.",
+      steps: ["Advanced Open Water Diver", "Nitrox Diver", "Deep Diver", "Wreck Diver"],
+    },
+  ];
+  for (const path of seededPaths) {
+    await insertCoursePath(db, {
+      shopId,
+      title: path.title,
+      summary: path.summary,
+      steps: path.steps
+        .map((title) => courseIdByTitle.get(title))
+        .filter((id): id is string => Boolean(id))
+        .map((courseId) => ({ courseId })),
+    });
+  }
 
   const [existingMolassesTemplate] = await db
     .select()
@@ -4071,6 +4106,9 @@ export async function resetDemoSchedule(
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
+  // Paths first: their steps cascade from either side, but a path row itself
+  // is only shop-scoped, so deleting courses alone would strand it.
+  await db.delete(coursePaths).where(eq(coursePaths.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
@@ -4140,6 +4178,27 @@ export async function resetDemoSchedule(
   // either, so restoring to that state is just deleting/nulling them.
   await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+
+  // The waiver is the same class of fixture. Editing the release text saves a
+  // *new version* rather than mutating the signed one, so a spec that edits it
+  // leaves the shop on version 2 — and the next spec asserting "Version 1" or
+  // reading the default body sees the previous test's edit instead. The signed
+  // records referencing these rows were cleared at the top of this reset, so
+  // the templates can be replaced outright. The title is immutable in the UI,
+  // so the existing one is the shop's own (the canonical demo and a minted one
+  // seed different titles) and is what gets restored.
+  const [existingWaiver] = await db
+    .select({ title: waiverTemplates.title })
+    .from(waiverTemplates)
+    .where(eq(waiverTemplates.shopId, shopId))
+    .limit(1);
+  await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
+  await db.insert(waiverTemplates).values({
+    shopId,
+    title: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE,
+    version: 1,
+    body: DEFAULT_WAIVER_BODY,
+  });
 
   await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }
@@ -4212,6 +4271,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
+  // Paths first: their steps cascade from either side, but a path row itself
+  // is only shop-scoped, so deleting courses alone would strand it.
+  await db.delete(coursePaths).where(eq(coursePaths.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));

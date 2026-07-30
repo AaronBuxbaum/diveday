@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -168,6 +168,55 @@ export async function listPublishedDiveSiteMoments(db: AppDb, shopId: string, si
       ),
     )
     .orderBy(asc(diveSiteMoments.createdAt));
+}
+
+/**
+ * Creatures and published moments for several sites at once, grouped by site.
+ *
+ * The public trip page renders a briefing per dive, and asking per site cost it
+ * two round trips per dive — six on a three-tank day, on the page a diver hits
+ * straight from a marketing link. Two queries cover any number of dives.
+ */
+export async function listDiveSiteBriefingExtras(
+  db: AppDb,
+  shopId: string,
+  siteIds: string[],
+): Promise<{
+  creatures: Map<string, Awaited<ReturnType<typeof listDiveSiteCreatures>>>;
+  moments: Map<string, Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>>;
+}> {
+  const unique = [...new Set(siteIds)];
+  if (unique.length === 0) return { creatures: new Map(), moments: new Map() };
+
+  const [creatureRows, momentRows] = await Promise.all([
+    db
+      .select()
+      .from(diveSiteCreatures)
+      .where(
+        and(eq(diveSiteCreatures.shopId, shopId), inArray(diveSiteCreatures.diveSiteId, unique)),
+      ),
+    db
+      .select()
+      .from(diveSiteMoments)
+      .where(
+        and(
+          eq(diveSiteMoments.shopId, shopId),
+          inArray(diveSiteMoments.diveSiteId, unique),
+          eq(diveSiteMoments.isPublished, true),
+        ),
+      )
+      .orderBy(asc(diveSiteMoments.createdAt)),
+  ]);
+
+  const creatures = new Map<string, typeof creatureRows>();
+  for (const row of creatureRows) {
+    creatures.set(row.diveSiteId, [...(creatures.get(row.diveSiteId) ?? []), row]);
+  }
+  const moments = new Map<string, typeof momentRows>();
+  for (const row of momentRows) {
+    moments.set(row.diveSiteId, [...(moments.get(row.diveSiteId) ?? []), row]);
+  }
+  return { creatures, moments };
 }
 
 export async function listGlobalDiveSiteTemplates(db: AppDb) {

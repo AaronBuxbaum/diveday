@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -20,7 +20,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 
   // Staff view of a trip card redirects straight into the manage-trip editor.
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: title }).click();
+  await openTripFromBoard(page, title);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 
   // Who is attending — and adding one — lives on the Guests tab now.
@@ -93,7 +93,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await expect(page.getByRole("status")).toContainText(title);
 
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: title }).click();
+  await openTripFromBoard(page, title);
   await page
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })
@@ -141,7 +141,7 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
   await expect(page.getByRole("status")).toContainText(title);
 
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: title }).click();
+  await openTripFromBoard(page, title);
   await page
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })

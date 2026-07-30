@@ -6,6 +6,12 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 }) => {
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: /Discover Scuba — Pool & Reef/ }).click();
+  // Wait for the navigation before asserting on text. `click()` returns as soon
+  // as the click is dispatched, so the next assertion can still run against the
+  // schedule — where "Course session · Discover Scuba Diving" appears once per
+  // seeded session. A strict-mode violation is thrown immediately rather than
+  // retried, so that race fails the test outright instead of settling.
+  await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
   await expect(page.getByText("Giving this dive as a gift?")).toBeVisible();
   await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();
@@ -20,7 +26,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
@@ -191,7 +197,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You're on the boat, Ravi/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Ravi/ })).toBeVisible();
   });
 
   // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
@@ -240,7 +246,7 @@ test.describe("staff", () => {
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
       await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-      await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
     };
 
     // Two party bookings fill the 8-seat ratio (6 + 2); the trip's own

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -22,7 +22,7 @@ test("a repeating series is scheduled, then rolled forward and cancelled as one"
 
   // Open the first instance and confirm the series controls are present.
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: title }).first().click();
+  await openTripFromBoard(page, title);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   const tripUrl = page.url();
   const series = page

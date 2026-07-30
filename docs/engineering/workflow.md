@@ -24,12 +24,13 @@ How to build anything here. Written for AI agents; humans may follow along.
    (`adr` skill); new domain term → glossary.
 6. **Ship** — commit (imperative subject, body says why), push, keep the PR draft until CI is
    green and the checklist below passes.
-7. **Account for visual diffs** — the visual CI job runs Playwright VRT against committed
-   references. Review visual diff images for what your code explains. For an intentional change,
-   run `pnpm visual:update` locally and commit the reference PNGs; CI never updates or pushes
-   them automatically to forked branches (it commits them automatically only on same-repo branches).
-   If the visual job stays red, run the `visual-triage` skill and resolve the unexplained diffs.
-   Don't end the session's responsibility at "pushed".
+7. **Account for visual diffs** — CI captures the visual surfaces and has `reg-suit` diff them
+   against the S3 baseline for the branch's parent commit
+   ([ADR](../architecture/decisions/20260729-reg-suit-visual-regression.md)). Read every diff image
+   for what your code explains. There is nothing to regenerate or commit: baselines are keyed to
+   git commits in S3, so an intentional change becomes the next baseline by being merged — which
+   makes saying *why* the pixels moved the whole of "approving" it. If diffs remain unexplained,
+   run the `visual-triage` skill. Don't end the session's responsibility at "pushed".
 
 ## Definition of done
 

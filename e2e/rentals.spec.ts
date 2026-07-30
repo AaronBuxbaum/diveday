@@ -18,7 +18,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // suite screenshots stays pixel-stable across runs.
   await page.getByLabel("Email").fill(`rin+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat, Rin/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Rin/ })).toBeVisible();
 
   // Per-piece prices show next to the gear, the set price is offered, and the
   // default fit — every core item including the dive computer, which is

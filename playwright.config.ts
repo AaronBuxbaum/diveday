@@ -25,8 +25,9 @@ const browserCandidates = [
 const executablePath = browserCandidates.find((candidate) => candidate && fs.existsSync(candidate));
 
 // The worker servers and this runner process must agree on the signing secret:
-// Backstop mints a signed recap token in backstop/flows.cjs and the server
-// verifies it. Pin one resolved value into the environment before anything.
+// e2e/visual.spec.ts mints a signed recap token in this process (signRecapToken)
+// and a worker server verifies it. Pin one resolved value into the environment
+// before anything.
 process.env.AUTH_SECRET ??= "diveday-e2e-secret";
 
 // Every worker server shares one read-only production build but owns an
@@ -45,7 +46,8 @@ const serverEnv = {
   DIVEDAY_E2E: "1",
   // Freeze the server clock so the clock-anchored seed and every relative
   // render resolve to one fixed instant on every run — the server half of what
-  // keeps visual baselines stable (the browser half is the Backstop init script).
+  // keeps visual baselines stable (the browser half is the `context` init
+  // script in e2e/fixtures.ts).
   // src/lib/clock.ts reads this and, as a guard, ignores
   // it whenever a real DATABASE_URL is set, so it can never freeze production.
   DIVEDAY_CLOCK: E2E_FROZEN_CLOCK,
@@ -84,10 +86,11 @@ export default defineConfig({
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
   retries: 0,
-  // Visual assertions (e2e/visual.spec.ts) compare against baseline PNGs
-  // committed to the repo via Playwright's own toHaveScreenshot() — no
-  // separate service or token. See
-  // docs/architecture/decisions/20260729-playwright-visual-regression.md.
+  // e2e/visual.spec.ts writes raw `page.screenshot()` PNGs into e2e/screenshots
+  // (gitignored); `reg-suit` then diffs them against the baseline for this
+  // branch's parent commit, pulled from S3. Nothing visual is committed to the
+  // repo. See docs/architecture/decisions/20260729-reg-suit-visual-regression.md
+  // and the `visual-triage` skill.
   reporter: process.env.CI
     ? ([["github"], ["html", { open: "never" }]] as const)
     : ([["list"]] as const),
@@ -111,7 +114,16 @@ export default defineConfig({
   webServer: e2eWorkerIndexes.map((i) => {
     const port = e2ePort(i);
     return {
-      command: `./node_modules/.bin/next start --hostname 127.0.0.1 --port ${port}`,
+      // `--keepAliveTimeout` well above Node's 5s default, because the request
+      // fixture is long-lived and pools its sockets. Every test opens one for
+      // the `/api/test/reset` in fixtures.ts, then the body runs — an onboarding
+      // flow or a booking journey, comfortably past five seconds — and a later
+      // `request.post` to a test endpoint reuses that idle socket. If the server
+      // has closed it in the meantime the POST lands on a dead connection and
+      // fails with ECONNRESET, in whichever spec happened to pause longest
+      // between two API calls. Widening the server's idle window closes the
+      // whole class rather than retrying at each call site.
+      command: `./node_modules/.bin/next start --hostname 127.0.0.1 --port ${port} --keepAliveTimeout 120000`,
       url: e2eBaseURL(i),
       env: { ...serverEnv, PORT: String(port) },
       reuseExistingServer: !process.env.CI,

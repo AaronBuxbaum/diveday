@@ -1,27 +1,44 @@
+/** The fixed beats of a dock day; the component looks each one up in `trip.timeline.*`. */
+export type DockDayStep =
+  | "arrive"
+  | "briefing"
+  | "departure"
+  | "boatRide"
+  | "surfaceInterval"
+  | "return";
+
 /**
  * The diver's dock-day rhythm. `dockCallMinutes` is the shop's arrival call
  * (default 30); the crew briefing sits between arrival and departure, so a
  * short call time never puts the briefing before the diver is asked to arrive.
+ *
+ * Returns message *keys*, not prose: `src/lib` never renders, and a compiled-in
+ * English label here is exactly the kind of string a diver on a Spanish page
+ * would have read in English forever (docs ADR 20260729-diver-copy-localization).
  */
-export function dockDayTimeline(startsAt: Date, dockCallMinutes = 30, endsAt?: Date) {
+export function dockDayTimeline(
+  startsAt: Date,
+  dockCallMinutes = 30,
+  endsAt?: Date,
+): Array<{ step: DockDayStep; at: Date }> {
   const at = (minutesBefore: number) => new Date(startsAt.getTime() - minutesBefore * 60_000);
   const briefingBefore = Math.min(15, Math.floor(dockCallMinutes / 2));
   return [
-    { label: "Arrive and check in", at: at(dockCallMinutes) },
-    { label: "Crew briefing and kit set-up", at: at(briefingBefore) },
-    { label: "Departure", at: startsAt },
+    { step: "arrive", at: at(dockCallMinutes) },
+    { step: "briefing", at: at(briefingBefore) },
+    { step: "departure", at: startsAt },
     ...(endsAt
-      ? [
+      ? ([
           {
-            label: "Boat ride and dives — crew confirms the live plan",
+            step: "boatRide",
             at: new Date(startsAt.getTime() + (endsAt.getTime() - startsAt.getTime()) / 3),
           },
           {
-            label: "Surface interval and second briefing",
+            step: "surfaceInterval",
             at: new Date(startsAt.getTime() + ((endsAt.getTime() - startsAt.getTime()) * 2) / 3),
           },
-          { label: "Expected return", at: endsAt },
-        ]
+          { step: "return", at: endsAt },
+        ] as const)
       : []),
   ];
 }
@@ -32,25 +49,25 @@ export type SitePlanningFacts = {
   currentNote: string | null;
 };
 
-export function siteFit(facts: SitePlanningFacts) {
+/** Which of the three fit readings a site's published facts support. */
+export type SiteFitTone = "demanding" | "welcoming" | "unknown";
+
+/**
+ * How demanding a site reads from what the shop published about it. Returns the
+ * *tone*, not prose, for the same reason `dockDayTimeline` returns steps: the
+ * component looks up `trip.siteFit<Tone>Label`/`Detail` in the reader's own
+ * language.
+ */
+export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
   const evidence = [facts.difficulty, facts.depthRange, facts.currentNote]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
   const text = evidence.join(" ").toLowerCase();
-  const demanding = /advanced|expert|strong|swift|surge|deep|30\s*m|100\s*ft/.test(text);
-  const welcoming = /beginner|easy|gentle|sheltered|calm|shallow/.test(text);
-  return {
-    label: demanding
-      ? "Best with recent experience"
-      : welcoming
-        ? "Welcoming dive"
-        : "Ask the crew about fit",
-    detail: demanding
-      ? "Depth or water movement can add work here. Read the site facts and check with the crew if it has been a while."
-      : welcoming
-        ? "The published depth and water movement make this an approachable crew-led day."
-        : "The crew adapts the route to the group and the day. The facts below are the useful starting point.",
-  };
+  if (/advanced|expert|strong|swift|surge|deep|30\s*m|100\s*ft/.test(text)) {
+    return { tone: "demanding" };
+  }
+  if (/beginner|easy|gentle|sheltered|calm|shallow/.test(text)) return { tone: "welcoming" };
+  return { tone: "unknown" };
 }
 
 export function packingConfidence(

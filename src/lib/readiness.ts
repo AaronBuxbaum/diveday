@@ -45,6 +45,23 @@ const levelRank: Record<CertificationLevel, number> = {
   instructor: 5,
 };
 
+/**
+ * Does a held card clear a required level? Ranking only — this answers the
+ * ladder question and nothing else, so callers that also need "and the card is
+ * verified and unexpired" must still go through `hasVerifiedCertificationAtLeast`.
+ */
+export function certificationMeets(
+  held: CertificationLevel,
+  required: CertificationLevel,
+): boolean {
+  return levelRank[held] >= levelRank[required];
+}
+
+/** A level's place on the ladder, for ordering rather than comparison. Open Water is 1. */
+export function certificationRank(level: CertificationLevel): number {
+  return levelRank[level];
+}
+
 /** The stricter of two levels; null means "no level demanded" and never wins. */
 export function higherCertificationLevel(
   a: CertificationLevel | null | undefined,

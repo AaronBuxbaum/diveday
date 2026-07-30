@@ -42,6 +42,35 @@ const plainTruths = [
   },
 ] as const;
 
+/**
+ * Product commitments, each with the demo action that proves it. Every one is a
+ * shipped behaviour a visitor can reproduce (docs/product/marketing.md,
+ * shipped-only) — which is the point: a vendor with no install base earns trust
+ * by being checkable, not by asserting harder.
+ */
+const operatingRules = [
+  {
+    title: "It has to survive the dock.",
+    body: "Wet hands, bright sun, one bar of signal, a boat that's already late. If a screen only works sitting down in an office, it hasn't been finished.",
+    check: "save a manifest to your phone, turn the network off, and run roll call anyway.",
+  },
+  {
+    title: "No silent passes.",
+    body: "Software that quietly waves a diver through because a field was blank is worse than paper. When DiveDay can't verify something, it says so and stops — and says which thing.",
+    check: "open the blockers queue and read why each name is on it.",
+  },
+  {
+    title: "One price, no seats.",
+    body: "Everything the product does is in the price. There is no tier that hides the feature you actually need, and nobody here is paid to sell you more of it.",
+    check: "read the pricing page. It's one number and one list.",
+  },
+  {
+    title: "Your records are yours.",
+    body: "The export isn't a retention lever we release when you threaten to leave. It's a button, it works on day one of a trial, and it hands back documented files rather than a proprietary dump.",
+    check: "start a trial and download the ZIP before you've entered anything.",
+  },
+] as const;
+
 export default function AboutPage() {
   return (
     <div className="flex flex-1 flex-col">
@@ -146,23 +175,29 @@ export default function AboutPage() {
 
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">Plainly</p>
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              What we hold it to
+            </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              What we're not going to pretend.
+              Four rules, and you can check every one.
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
-              You are going to find these out anyway. Better here, before you've moved a season of
-              bookings.
+              A new vendor can&apos;t point at customers, so these aren&apos;t promises —
+              they&apos;re things you can go and test in the demo in about five minutes.
             </p>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {plainTruths.map((truth) => (
+          <div className="mt-12 grid gap-5 sm:grid-cols-2">
+            {operatingRules.map((rule) => (
               <article
-                key={truth.title}
+                key={rule.title}
                 className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
               >
-                <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
-                <p className="mt-3 leading-7 text-muted">{truth.body}</p>
+                <h3 className="text-xl font-semibold tracking-tight">{rule.title}</h3>
+                <p className="mt-3 leading-7 text-muted">{rule.body}</p>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  <span className="font-semibold text-primary">Check it: </span>
+                  {rule.check}
+                </p>
               </article>
             ))}
           </div>
@@ -170,6 +205,34 @@ export default function AboutPage() {
 
         <section className="border-y border-border bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+            <div className="max-w-2xl">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                Plainly
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                What we're not going to pretend.
+              </h2>
+              <p className="mt-4 text-lg leading-8 text-muted">
+                You are going to find these out anyway. Better here, before you've moved a season of
+                bookings.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 md:grid-cols-3">
+              {plainTruths.map((truth) => (
+                <article
+                  key={truth.title}
+                  className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
+                >
+                  <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
+                  <p className="mt-3 leading-7 text-muted">{truth.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+          <div>
             <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
               <div className="max-w-2xl">
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">

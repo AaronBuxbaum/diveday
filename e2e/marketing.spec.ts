@@ -25,6 +25,14 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "A manifest that stays useful after the signal disappears.",
     }),
   ).toBeVisible();
+  // The money story and the full capability index — the two things a buyer
+  // comparing DiveDay against an incumbent's feature page goes looking for.
+  await expect(
+    page.getByRole("heading", { name: "The money runs through your Stripe account, not ours." }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
   // The honest-no scope block and the demo CTA both land on the product page.
   await expect(page.getByRole("heading", { name: "What DiveDay doesn't do." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
@@ -65,6 +73,15 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
   await expect(page.getByText("Aaron Buxbaum, founder")).toBeVisible();
+
+  // Trust from a vendor with no install base is checkable, not asserted: each
+  // rule ships with the demo action that proves it.
+  await expect(
+    page.getByRole("heading", { name: "Four rules, and you can check every one." }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "It has to survive the dock." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No silent passes." })).toBeVisible();
+  await expect(page.getByText("save a manifest to your phone")).toBeVisible();
 
   // A trust page that didn't land on the exit would be missing the point.
   await expect(

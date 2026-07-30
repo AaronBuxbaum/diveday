@@ -1,3 +1,4 @@
+import type { DiverTranslator } from "@/i18n/messages";
 import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
 
 type FieldGuideCreature = {
@@ -13,10 +14,12 @@ export function DiveSiteFieldGuide({
   creatures,
   summary,
   highlights,
+  t,
 }: {
   creatures: FieldGuideCreature[];
   summary: string | null;
   highlights: string | null;
+  t: DiverTranslator;
 }) {
   if (creatures.length === 0 && !summary && !highlights) return null;
   const tips = [...new Set(creatures.map((creature) => creature.preparationTip).filter(Boolean))];
@@ -75,7 +78,7 @@ export function DiveSiteFieldGuide({
             ◌
           </span>
           <div>
-            <h4 className="font-semibold">See more by slowing down</h4>
+            <h4 className="font-semibold">{t("site.seeMoreHeading")}</h4>
             <p className="mt-1 text-sm leading-relaxed text-muted">{tips.slice(0, 2).join(" ")}</p>
           </div>
         </aside>

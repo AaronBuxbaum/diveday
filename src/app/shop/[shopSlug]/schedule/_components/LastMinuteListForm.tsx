@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -15,6 +16,7 @@ const INITIAL_STATE: LastMinuteListFormState = {};
  * trip, since it isn't about a specific departure.
  */
 export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
+  const t = useTranslations();
   const [state, formAction] = useActionState(
     joinLastMinuteListAction.bind(null, shopSlug),
     INITIAL_STATE,
@@ -23,20 +25,16 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   if (state.success) {
     return (
       <section className="rise-in mt-10 rounded-2xl border border-border bg-surface p-6">
-        <h2 className="font-semibold">You're on the list.</h2>
-        <p className="mt-1 text-sm text-muted">
-          We'll email you if a discounted last-minute spot opens up in your dates.
-        </p>
+        <h2 className="font-semibold">{t("lastMinute.joinedHeading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("lastMinute.joinedBody")}</p>
       </section>
     );
   }
 
   return (
     <section className="mt-10 rounded-2xl border border-border bg-surface p-6">
-      <h2 className="font-semibold">Want a deal on a last-minute spot?</h2>
-      <p className="mt-1 text-sm text-muted">
-        Tell us when you're around and we'll email you if a boat needs to fill seats at a discount.
-      </p>
+      <h2 className="font-semibold">{t("lastMinute.heading")}</h2>
+      <p className="mt-1 text-sm text-muted">{t("lastMinute.body")}</p>
       {state.error ? (
         <p role="alert" className="mt-3 text-sm text-danger">
           {state.error}
@@ -44,7 +42,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
       ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
-          <Field label="Name">
+          <Field label={t("common.name")}>
             <input
               name="fullName"
               required
@@ -53,7 +51,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
               className={controlClass}
             />
           </Field>
-          <Field label="Email">
+          <Field label={t("common.email")}>
             <input
               name="email"
               type="email"
@@ -64,7 +62,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
               className={controlClass}
             />
           </Field>
-          <Field label="Phone" hint="(optional)">
+          <Field label={t("common.phone")} hint={t("common.optional")}>
             <input
               name="phone"
               type="tel"
@@ -74,19 +72,19 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
             />
           </Field>
           <div />
-          <Field label="Around from" hint="(optional)">
+          <Field label={t("lastMinute.availableFrom")} hint={t("common.optional")}>
             <input name="availableFrom" type="date" className={controlClass} />
           </Field>
-          <Field label="Around until" hint="(optional)">
+          <Field label={t("lastMinute.availableUntil")} hint={t("common.optional")}>
             <input name="availableUntil" type="date" className={controlClass} />
           </Field>
         </FieldGrid>
         <div>
           <SubmitButton
-            pendingLabel="Notifying…"
+            pendingLabel={t("lastMinute.submitting")}
             className={buttonClass({ variant: "secondary", className: "px-5 py-2.5" })}
           >
-            Notify me
+            {t("lastMinute.submit")}
           </SubmitButton>
         </div>
       </form>

@@ -6,7 +6,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
-import { listTripReadiness } from "./readiness";
+import { listTripsReadiness } from "./readiness";
 import {
   bookings,
   nitroxCertifications,
@@ -365,13 +365,20 @@ export async function getTodayWork(
   const today = shopDay(now, timeZone);
   const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
 
-  const readinessByTrip = new Map(
-    await Promise.all(
-      inWindow.map(
-        async (trip) => [trip.id, await listTripReadiness(db, shopId, trip.id)] as const,
-      ),
-    ),
-  );
+  // One batched readiness pass for the whole window, not one per trip. The
+  // per-trip call issues about ten queries of its own, so a six-departure
+  // morning was sixty round trips to render the shop's most-visited page;
+  // `listTripsReadiness` answers the same question for every trip at once.
+  const readinessByTrip = new Map<string, Awaited<ReturnType<typeof listTripsReadiness>>>();
+  for (const trip of inWindow) readinessByTrip.set(trip.id, []);
+  for (const row of await listTripsReadiness(
+    db,
+    shopId,
+    inWindow.map((trip) => trip.id),
+    now,
+  )) {
+    readinessByTrip.get(row.booking.tripId)?.push(row);
+  }
   const bookingIdsByTrip = new Map(
     inWindow.map((trip) => [
       trip.id,

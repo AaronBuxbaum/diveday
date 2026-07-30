@@ -9,11 +9,15 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
-import { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
+import { listCoursePaths, nextPathStep } from "@/db/course-paths";
+import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { getBookingPayment } from "@/db/payments";
-import { getBookingReadiness, getTripRequirements } from "@/db/readiness";
+import {
+  getBookingReadiness,
+  getTripRequirements,
+  highestVerifiedCertificationLevel,
+} from "@/db/readiness";
 import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
@@ -150,17 +154,18 @@ export default async function TripDetailPage({
     confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
     waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
   ]);
-  const diveBriefings = await Promise.all(
-    tripDives.map(async ({ dive, diveSite }) => {
-      const [creatures, moments] = diveSite
-        ? await Promise.all([
-            listDiveSiteCreatures(db, shop.id, diveSite.id),
-            listPublishedDiveSiteMoments(db, shop.id, diveSite.id),
-          ])
-        : [[], []];
-      return { dive, diveSite, creatures, moments };
-    }),
+  // Two queries for the whole day's briefings, not two per dive.
+  const briefingExtras = await listDiveSiteBriefingExtras(
+    db,
+    shop.id,
+    tripDives.map(({ diveSite }) => diveSite?.id).filter((id): id is string => Boolean(id)),
   );
+  const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
+    dive,
+    diveSite,
+    creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+    moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
+  }));
   // Pay-at-booking is offered only when the shop's own Stripe account can
   // take a charge, the trip carries a price, and a canonical origin exists
   // for the return links; otherwise the flow is book-now-pay-later as before.
@@ -169,7 +174,7 @@ export default async function TripDetailPage({
   const payAtBooking = Boolean(
     perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
-  // The confirmed-booking panels draw on six independent queries — batch them.
+  // The confirmed-booking panels draw on seven independent queries — batch them.
   const [
     payment,
     readiness,
@@ -177,7 +182,8 @@ export default async function TripDetailPage({
     rentalFit,
     nitroxCardVerified,
     readinessCapability,
-    courses,
+    coursePaths,
+    heldLevel,
   ] = confirmed
     ? await Promise.all([
         resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
@@ -192,10 +198,17 @@ export default async function TripDetailPage({
           bookingId: confirmed.booking.id,
           purpose: "readiness",
         }),
-        listActiveCourses(db, shop.id),
+        listCoursePaths(db, shop.id, { activeOnly: true }),
+        highestVerifiedCertificationLevel(db, shop.id, confirmed.person.id, shop.timezone),
       ])
-    : [null, null, null, null, false, null, []];
+    : [null, null, null, null, false, null, [], null];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
+
+  // "What should I learn next?" is the shop's own answer, read off the paths it
+  // built in the catalog — not a title match on the word "advanced", which is
+  // what stood here before and quietly did nothing for a shop that named its
+  // courses anything else.
+  const progression = nextPathStep(coursePaths, heldLevel);
 
   const inPast = trip.startsAt <= nowDate();
   const full = isFull(trip);
@@ -233,7 +246,7 @@ export default async function TripDetailPage({
     // The booking form and its sibling notices are Client Components, so the
     // shop's locale and messages have to cross the boundary explicitly — see
     // src/i18n/settings.ts for why the locale isn't in the URL.
-    <DiverIntlProvider locale={locale}>
+    <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
       <main
         className={
           isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"
@@ -308,9 +321,9 @@ export default async function TripDetailPage({
             payment={payment}
             payCancelled={pay === "cancelled"}
             readinessLink={readinessLink}
-            progressionCourse={
+            progression={
               readiness?.blockers.some((blocker) => blocker.code === "certification_insufficient")
-                ? (courses.find((course) => /advanced open water/i.test(course.title)) ?? null)
+                ? progression
                 : null
             }
           />
@@ -368,7 +381,7 @@ export default async function TripDetailPage({
           </section>
         ) : null}
         <PackingSection shop={shop} trip={trip} rentalFit={rentalFit} locale={locale} />
-        <DiveBriefingsSection briefings={diveBriefings} trip={trip} />
+        <DiveBriefingsSection briefings={diveBriefings} trip={trip} locale={locale} />
       </main>
     </DiverIntlProvider>
   );

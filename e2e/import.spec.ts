@@ -1,6 +1,6 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAs } from "./helpers";
+import { daysFromNow, e2eNow, openTripFromBoard, signInAs } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -140,7 +140,7 @@ test.describe("contact import — specialty cards", () => {
     await expect(page.getByRole("status")).toContainText(title);
 
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: title }).click();
+    await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await page.getByRole("checkbox", { name: "Deep" }).check();
     await page.getByRole("button", { name: /Save requirements/ }).click();
@@ -185,7 +185,7 @@ test.describe("contact import — specialty cards", () => {
     await deepCard.getByRole("button", { name: "Confirm card" }).click();
 
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: title }).click();
+    await openTripFromBoard(page, title);
     await page
       .getByRole("navigation", { name: "Trip" })
       .getByRole("link", { name: "Guests" })

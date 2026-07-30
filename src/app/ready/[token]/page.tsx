@@ -14,7 +14,8 @@ import {
 import { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { diverTranslator } from "@/i18n/messages";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -40,18 +41,23 @@ export const metadata: Metadata = {
 
 const STATE_STYLE: Record<
   ChecklistState,
-  { glyph: string; word: string; box: string; text: string }
+  { glyph: string; word: DiverMessageKey; box: string; text: string }
 > = {
-  done: { glyph: "✓", word: "Done", box: "bg-success/10 text-success", text: "text-success" },
+  done: {
+    glyph: "✓",
+    word: "ready.stateDone",
+    box: "bg-success/10 text-success",
+    text: "text-success",
+  },
   action: {
     glyph: "→",
-    word: "Your turn",
+    word: "ready.stateAction",
     box: "bg-primary/10 text-primary",
     text: "text-primary",
   },
   waiting: {
     glyph: "•",
-    word: "With the shop",
+    word: "ready.stateWaiting",
     box: "bg-surface-sunken text-muted",
     text: "text-muted",
   },
@@ -62,11 +68,13 @@ function ChecklistRow({
   state,
   detail,
   action,
+  t,
 }: {
   label: string;
   state: ChecklistState;
   detail: string;
   action?: React.ReactNode;
+  t: DiverTranslator;
 }) {
   const style = STATE_STYLE[state];
   return (
@@ -80,7 +88,7 @@ function ChecklistRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <h3 className="text-base font-semibold">{label}</h3>
-          <span className={`text-sm font-semibold ${style.text}`}>{style.word}</span>
+          <span className={`text-sm font-semibold ${style.text}`}>{t(style.word)}</span>
         </div>
         <p className="mt-0.5 text-base text-muted">{detail}</p>
         {action ? <div className="mt-3">{action}</div> : null}
@@ -101,12 +109,17 @@ function Notice({ title, text }: { title: string; text: string }) {
 }
 
 /** The action a checklist item enables on this page, if any. */
-function itemAction(item: DiverChecklistItem, token: string, canPay: boolean): React.ReactNode {
+function itemAction(
+  item: DiverChecklistItem,
+  token: string,
+  canPay: boolean,
+  t: DiverTranslator,
+): React.ReactNode {
   if (item.code === "waiver_pending") {
     return (
       <form action={signWaiverFromReady.bind(null, token)}>
-        <SubmitButton pendingLabel="Opening…" className={buttonClass({ size: "sm" })}>
-          Sign your waiver
+        <SubmitButton pendingLabel={t("ready.opening")} className={buttonClass({ size: "sm" })}>
+          {t("ready.signWaiver")}
         </SubmitButton>
       </form>
     );
@@ -114,8 +127,11 @@ function itemAction(item: DiverChecklistItem, token: string, canPay: boolean): R
   if (item.code === "payment_due" && canPay) {
     return (
       <form action={payFromReady.bind(null, token)}>
-        <SubmitButton pendingLabel="Opening payment…" className={buttonClass({ size: "sm" })}>
-          Pay for this trip
+        <SubmitButton
+          pendingLabel={t("ready.openingPayment")}
+          className={buttonClass({ size: "sm" })}
+        >
+          {t("ready.payForTrip")}
         </SubmitButton>
       </form>
     );
@@ -123,41 +139,26 @@ function itemAction(item: DiverChecklistItem, token: string, canPay: boolean): R
   return null;
 }
 
-const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; text: string }> = {
-  "saved-contact": { tone: "success", text: "Emergency contact saved — thank you." },
-  "saved-contact-empty": {
-    tone: "neutral",
-    text: "We need both a name and a phone number so the crew can reach someone.",
-  },
-  "pay-paid": {
-    tone: "success",
-    text: "Payment received — we’re confirming it with your shop. Nothing more to do.",
-  },
-  "error-waiver": {
-    tone: "danger",
-    text: "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
-  },
-  "error-contact": {
-    tone: "danger",
-    text: "That name or phone number is too long — try a shorter version.",
-  },
-  "error-pay": {
-    tone: "danger",
-    text: "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
-  },
-  "pay-cancelled": { tone: "neutral", text: "Payment cancelled — your seat is still held." },
-  "error-cancel": {
-    tone: "danger",
-    text: "We couldn’t cancel this online — contact the shop directly.",
-  },
-  "saved-rescheduled": {
-    tone: "success",
-    text: "You’re moved! This is your new trip — the old one’s released.",
-  },
-  "error-reschedule": {
-    tone: "danger",
-    text: "That trip couldn’t hold you — maybe it just filled up. Try another, or contact the shop.",
-  },
+/**
+ * Notice keys, not sentences: the query string carries a key, and the page
+ * looks it up in the diver's own language. Storing the prose here would have
+ * pinned every one of these to English no matter what the reader asked for
+ * (docs ADR 20260729-diver-copy-localization).
+ */
+const READY_NOTICES: Record<
+  string,
+  { tone: "success" | "danger" | "neutral"; key: DiverMessageKey }
+> = {
+  "saved-contact": { tone: "success", key: "ready.contactSaved" },
+  "saved-contact-empty": { tone: "neutral", key: "ready.contactIncomplete" },
+  "pay-paid": { tone: "success", key: "ready.paymentReceived" },
+  "error-waiver": { tone: "danger", key: "ready.waiverUnavailable" },
+  "error-contact": { tone: "danger", key: "ready.contactTooLong" },
+  "error-pay": { tone: "danger", key: "ready.paymentUnavailable" },
+  "pay-cancelled": { tone: "neutral", key: "ready.paymentCancelled" },
+  "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  "saved-rescheduled": { tone: "success", key: "ready.movedHeading" },
+  "error-reschedule": { tone: "danger", key: "ready.moveFailed" },
 };
 
 /**
@@ -173,27 +174,23 @@ const READY_NOTICES: Record<string, { tone: "success" | "danger" | "neutral"; te
  * against — only whether the payment row currently reads `refunded` or
  * still `paid`/`deposit_paid` does.
  */
-function verifiedCancelNotice(paymentStatus: string | null | undefined): string {
-  if (paymentStatus === "refunded") {
-    return "You paid for this trip, so a refund has been issued back to your card.";
-  }
-  if (paymentStatus === "paid" || paymentStatus === "deposit_paid") {
-    return "You paid for this trip. This shop handles cancellation refunds directly — reach out to them about it.";
-  }
-  return "";
+function verifiedCancelNotice(paymentStatus: string | null | undefined): DiverMessageKey | null {
+  if (paymentStatus === "refunded") return "ready.refundIssued";
+  if (paymentStatus === "paid" || paymentStatus === "deposit_paid") return "ready.refundManual";
+  return null;
 }
 
 /** What cancelling right now would mean for money already paid — shown before the diver commits. */
-const CANCEL_PREVIEW_TEXT: Record<ReadyPageData["cancelPreview"], string> = {
-  refund: " You're still inside the free-cancellation window, so what you paid comes back to you.",
-  forfeit: " You're past the free-cancellation window, so what you paid won't be refunded.",
+const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey | null> = {
+  refund: "ready.cancelPreviewRefund",
+  forfeit: "ready.cancelPreviewForfeit",
   // Genuinely paid — this trip just has no stated cancellation window, so
   // nothing is refunded automatically. Disclosing this only after the
   // irreversible cancel action (Codex finding) would leave a paid diver
   // finding out too late that the shop, not an automatic reversal, decides
   // their refund.
-  no_policy: " This shop doesn't automate cancellation refunds, so nothing is refunded right away.",
-  unpaid: "",
+  no_policy: "ready.cancelPreviewNoPolicy",
+  unpaid: null,
 };
 
 /** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
@@ -201,14 +198,16 @@ function cancelledNotice(
   paymentStatus: string | null | undefined,
   tripTitle: string,
   shopName: string,
+  t: DiverTranslator,
 ) {
-  const refundText = verifiedCancelNotice(paymentStatus);
+  const refundKey = verifiedCancelNotice(paymentStatus);
   return (
     <Notice
-      title="This booking was cancelled"
+      title={t("ready.cancelledHeading")}
       text={
-        refundText ||
-        `Your seat on ${tripTitle} is no longer held. If that’s a surprise, get in touch with ${shopName}.`
+        refundKey
+          ? t(refundKey)
+          : t("ready.cancelledSeatReleased", { trip: tripTitle, shop: shopName })
       }
     />
   );
@@ -225,6 +224,10 @@ export default async function DiverReadinessPage({
   const { token } = await params;
   const { saved, error, pay, cancelled } = await searchParams;
   const db = await getDb();
+  // A dead link resolves no shop, so there is no `shops.default_locale` to fall
+  // back to — negotiate from the visitor's own device alone for those branches,
+  // then re-negotiate below once the shop is known.
+  const anonT = diverTranslator(await requestLocale());
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
     // A diver's own cancel action revokes this exact token as part of
@@ -242,15 +245,17 @@ export default async function DiverReadinessPage({
         const data = await getReadyPageData(db, resolved.bookingId);
         if (data?.detail.cancelled) {
           const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
-          return cancelledNotice(payment?.status, data.detail.trip.title, data.detail.shop.name);
+          return cancelledNotice(
+            payment?.status,
+            data.detail.trip.title,
+            data.detail.shop.name,
+            anonT,
+          );
         }
       }
     }
     return (
-      <Notice
-        title="This readiness link isn’t available"
-        text="Ask your dive shop for a fresh link — nothing here is private to anyone but you."
-      />
+      <Notice title={anonT("ready.unavailableHeading")} text={anonT("ready.unavailableBody")} />
     );
   }
   const { bookingId } = capability;
@@ -258,10 +263,7 @@ export default async function DiverReadinessPage({
   const data = await getReadyPageData(db, bookingId);
   if (!data) {
     return (
-      <Notice
-        title="This readiness link isn’t available"
-        text="Ask your dive shop for a fresh link."
-      />
+      <Notice title={anonT("ready.unavailableHeading")} text={anonT("waiver.unavailableBody")} />
     );
   }
 
@@ -287,9 +289,10 @@ export default async function DiverReadinessPage({
     // `?cancelled=refunded` could claim a refund that hasn't happened. Same
     // fix: read the booking's own current payment status fresh.
     const payment = await getBookingPayment(db, data.shop.id, bookingId);
-    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name);
+    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
   }
 
+  const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
   const nextStep = nextDiverStep(items);
   const ready = detail.readiness.status === "ready";
@@ -298,228 +301,237 @@ export default async function DiverReadinessPage({
   const notice = noticeKey ? READY_NOTICES[noticeKey] : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-      <FlashParams params={["saved", "error", "pay"]} />
-      <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          {t("capability.readinessTitle")}
-        </p>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          {detail.shop.name}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
-          {detail.trip.title}
-        </h1>
-        <p className="mt-1 text-base text-muted">
-          {when} · {timeRange}
-        </p>
-      </header>
-
-      {notice ? (
-        <div className="mt-6">
-          <ShopNotice tone={notice.tone} role={notice.tone === "danger" ? "alert" : "status"}>
-            {notice.text}
-          </ShopNotice>
-        </div>
-      ) : null}
-
-      {ready ? (
-        <EarnedMoment
-          className="mt-8"
-          eyebrow="You’re all set"
-          title={`See you ${when}, ${firstName}! 🤿`}
-        >
-          <p>
-            Everything’s in order for your trip. Your shop will confirm exact arrival details —
-            we’ll see you at the dock.
+    // The whole page under the provider, not just the one Client Component that
+    // needs it today: a `useTranslations` call in a client child without it
+    // throws during the server render and takes the entire page down to a blank
+    // 200 (which is exactly how RentalFitForm broke this surface once).
+    <DiverIntlProvider locale={locale} timeZone={detail.shop.timezone}>
+      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+        <FlashParams params={["saved", "error", "pay"]} />
+        <header>
+          <p className="text-sm font-medium tracking-widest text-primary uppercase">
+            {t("capability.readinessTitle")}
           </p>
-        </EarnedMoment>
-      ) : (
-        <section className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-          <h2 className="text-xl font-semibold text-balance">Almost there, {firstName}.</h2>
-          <p className="mt-2 text-base text-muted">
-            {nextStep
-              ? `Next: ${nextStep.detail}`
-              : "Your shop is finishing the last checks — there’s nothing you need to do right now."}
+          <p className="text-sm font-medium tracking-widest text-primary uppercase">
+            {detail.shop.name}
           </p>
-        </section>
-      )}
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
+            {detail.trip.title}
+          </h1>
+          <p className="mt-1 text-base text-muted">
+            {when} · {timeRange}
+          </p>
+        </header>
 
-      <section className="mt-6" aria-labelledby="checklist-heading">
-        <h2
-          id="checklist-heading"
-          className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
-        >
-          Your pre-trip checklist
-        </h2>
-        <ul className="mt-3 divide-y divide-border rounded-2xl border border-border bg-surface">
-          {items.map((item) => (
-            <ChecklistRow
-              key={item.category}
-              label={item.label}
-              state={item.state}
-              detail={item.detail}
-              action={itemAction(item, token, data.canPay)}
-            />
-          ))}
-          <ChecklistRow
-            label="Emergency contact"
-            state={hasEmergencyContact ? "done" : "action"}
-            detail={
-              hasEmergencyContact
-                ? `On file — ${person.emergencyContactName}. Update it below if it’s changed.`
-                : "Someone we can reach for you on the day — a name and a phone the crew can call."
-            }
-            action={
-              <form
-                action={saveEmergencyContactFromReady.bind(null, token)}
-                className="flex flex-col gap-3"
-              >
-                <FieldGrid columns={2}>
-                  <Field label="Contact name">
-                    <input
-                      name="emergencyContactName"
-                      autoComplete="name"
-                      maxLength={120}
-                      defaultValue={person.emergencyContactName ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                  <Field label="Contact phone">
-                    <input
-                      name="emergencyContactPhone"
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      maxLength={40}
-                      defaultValue={person.emergencyContactPhone ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                </FieldGrid>
-                <div>
-                  <SubmitButton
-                    pendingLabel="Saving…"
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {hasEmergencyContact ? "Update contact" : "Save contact"}
-                  </SubmitButton>
-                </div>
-              </form>
-            }
-          />
-        </ul>
-      </section>
+        {notice ? (
+          <div className="mt-6">
+            <ShopNotice tone={notice.tone} role={notice.tone === "danger" ? "alert" : "status"}>
+              {t(notice.key)}
+            </ShopNotice>
+          </div>
+        ) : null}
 
-      <section className="mt-6" aria-labelledby="setup-heading">
-        <h2 id="setup-heading" className="text-sm font-bold tracking-[0.16em] text-muted uppercase">
-          Gear and setup
-        </h2>
-        <RentalFitForm
-          action={saveFitFromReady.bind(null, token)}
-          rentalFit={data.rentalFit}
-          rentalItems={data.shop.rentalItems}
-          pricing={data.shop.rentalPricing}
-          wantsNitrox={data.wantsNitrox}
-          nitroxCardVerified={data.nitroxCardVerified}
-          plannedDives={data.trip.plannedDives}
-          saved={saved === "fit"}
-        />
-      </section>
+        {ready ? (
+          <EarnedMoment
+            className="mt-8"
+            eyebrow={t("ready.allSetHeading")}
+            title={t("ready.seeYou", { when, name: firstName })}
+          >
+            <p>{t("ready.allSetBodyReady")}</p>
+          </EarnedMoment>
+        ) : (
+          <section className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+            <h2 className="text-xl font-semibold text-balance">
+              {t("ready.almostThere", { name: firstName })}
+            </h2>
+            <p className="mt-2 text-base text-muted">
+              {nextStep
+                ? t("ready.nextDetail", { detail: nextStep.detail })
+                : t("ready.allSetBody")}
+            </p>
+          </section>
+        )}
 
-      {data.canManageBooking ? (
-        <section
-          className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
-          aria-labelledby="change-plans-heading"
-        >
+        <section className="mt-6" aria-labelledby="checklist-heading">
           <h2
-            id="change-plans-heading"
+            id="checklist-heading"
             className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
           >
-            Need to change your plans?
+            {t("ready.checklistHeading")}
           </h2>
-
-          {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
-            <div className="mt-3">
-              <p className="text-base text-muted">
-                Pick a different trip and we’ll move you — your current spot only releases once the
-                new one’s confirmed, so you’re never left without one.
-              </p>
-              <form
-                action={rescheduleMyBookingAction.bind(null, token)}
-                className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
-              >
-                <label htmlFor="newTripId" className="sr-only">
-                  Pick a trip
-                </label>
-                <select id="newTripId" name="newTripId" required className={controlClass}>
-                  <option value="">Choose a trip…</option>
-                  {data.rescheduleCandidates.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.title} —{" "}
-                      {formatShortDate(candidate.startsAt, locale, detail.shop.timezone)} ·{" "}
-                      {formatTimeRangeTz(
-                        candidate.startsAt,
-                        candidate.endsAt,
-                        locale,
-                        detail.shop.timezone,
-                      )}{" "}
-                      · {candidate.spotsLeft} left
-                    </option>
-                  ))}
-                </select>
-                <SubmitButton
-                  pendingLabel="Moving…"
-                  confirmMessage="Move your booking to this trip? Your current spot releases as soon as the new one holds."
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
+          <ul className="mt-3 divide-y divide-border rounded-2xl border border-border bg-surface">
+            {items.map((item) => (
+              <ChecklistRow
+                key={item.category}
+                label={item.label}
+                state={item.state}
+                detail={item.detail}
+                action={itemAction(item, token, data.canPay, t)}
+                t={t}
+              />
+            ))}
+            <ChecklistRow
+              label={t("ready.emergencyContact")}
+              state={hasEmergencyContact ? "done" : "action"}
+              detail={
+                hasEmergencyContact
+                  ? t("ready.emergencyOnFile", { name: person.emergencyContactName ?? "" })
+                  : t("ready.emergencyContactBody")
+              }
+              action={
+                <form
+                  action={saveEmergencyContactFromReady.bind(null, token)}
+                  className="flex flex-col gap-3"
                 >
-                  Move my booking
+                  <FieldGrid columns={2}>
+                    <Field label={t("ready.contactName")}>
+                      <input
+                        name="emergencyContactName"
+                        autoComplete="name"
+                        maxLength={120}
+                        defaultValue={person.emergencyContactName ?? ""}
+                        className={controlClass}
+                      />
+                    </Field>
+                    <Field label={t("ready.contactPhone")}>
+                      <input
+                        name="emergencyContactPhone"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        maxLength={40}
+                        defaultValue={person.emergencyContactPhone ?? ""}
+                        className={controlClass}
+                      />
+                    </Field>
+                  </FieldGrid>
+                  <div>
+                    <SubmitButton
+                      pendingLabel={t("common.saving")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {hasEmergencyContact ? t("ready.updateContact") : t("ready.saveContact")}
+                    </SubmitButton>
+                  </div>
+                </form>
+              }
+              t={t}
+            />
+          </ul>
+        </section>
+
+        <section className="mt-6" aria-labelledby="setup-heading">
+          <h2
+            id="setup-heading"
+            className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
+          >
+            Gear and setup
+          </h2>
+          <RentalFitForm
+            action={saveFitFromReady.bind(null, token)}
+            rentalFit={data.rentalFit}
+            rentalItems={data.shop.rentalItems}
+            pricing={data.shop.rentalPricing}
+            wantsNitrox={data.wantsNitrox}
+            nitroxCardVerified={data.nitroxCardVerified}
+            plannedDives={data.trip.plannedDives}
+            saved={saved === "fit"}
+          />
+        </section>
+
+        {data.canManageBooking ? (
+          <section
+            className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+            aria-labelledby="change-plans-heading"
+          >
+            <h2
+              id="change-plans-heading"
+              className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
+            >
+              {t("ready.changePlans")}
+            </h2>
+
+            {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
+              <div className="mt-3">
+                <p className="text-base text-muted">{t("ready.reschedulePitch")}</p>
+                <form
+                  action={rescheduleMyBookingAction.bind(null, token)}
+                  className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
+                >
+                  <label htmlFor="newTripId" className="sr-only">
+                    {t("ready.pickATrip")}
+                  </label>
+                  <select id="newTripId" name="newTripId" required className={controlClass}>
+                    <option value="">{t("ready.chooseTrip")}</option>
+                    {data.rescheduleCandidates.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.title} —{" "}
+                        {formatShortDate(candidate.startsAt, locale, detail.shop.timezone)} ·{" "}
+                        {formatTimeRangeTz(
+                          candidate.startsAt,
+                          candidate.endsAt,
+                          locale,
+                          detail.shop.timezone,
+                        )}{" "}
+                        · {t("ready.spotsLeft", { count: candidate.spotsLeft })}
+                      </option>
+                    ))}
+                  </select>
+                  <SubmitButton
+                    pendingLabel={t("ready.moving")}
+                    confirmMessage={t("ready.moveConfirm")}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("ready.moveBooking")}
+                  </SubmitButton>
+                </form>
+              </div>
+            ) : null}
+
+            <div
+              className={
+                data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
+              }
+            >
+              <p className="text-base text-muted">
+                {t("ready.cancelLead")} {cancelPreviewKey ? t(cancelPreviewKey) : null}
+              </p>
+              <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+                <SubmitButton
+                  pendingLabel={t("ready.cancelling")}
+                  confirmMessage={t("ready.cancelConfirm", { trip: detail.trip.title })}
+                  className={buttonClass({ variant: "danger", size: "sm" })}
+                >
+                  {t("ready.cancelSpot")}
                 </SubmitButton>
               </form>
             </div>
+          </section>
+        ) : null}
+
+        <p className="mt-8 text-center text-sm text-muted">
+          {t("ready.questionsPrefix", { shop: detail.shop.name })}
+          {shop.contactPhone || shop.contactEmail ? " — " : ""}
+          {shop.contactPhone ? (
+            <a
+              href={telHref(shop.contactPhone)}
+              className="font-medium text-primary hover:underline"
+            >
+              {shop.contactPhone}
+            </a>
           ) : null}
-
-          <div
-            className={
-              data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
-            }
-          >
-            <p className="text-base text-muted">
-              Cancelling frees your seat right away.
-              {CANCEL_PREVIEW_TEXT[data.cancelPreview]}
-            </p>
-            <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
-              <SubmitButton
-                pendingLabel="Cancelling…"
-                confirmMessage={`Cancel your spot on ${detail.trip.title}? This can’t be undone.`}
-                className={buttonClass({ variant: "danger", size: "sm" })}
-              >
-                Cancel my spot
-              </SubmitButton>
-            </form>
-          </div>
-        </section>
-      ) : null}
-
-      <p className="mt-8 text-center text-sm text-muted">
-        Questions? Reach out to {detail.shop.name}
-        {shop.contactPhone || shop.contactEmail ? " — " : ""}
-        {shop.contactPhone ? (
-          <a href={telHref(shop.contactPhone)} className="font-medium text-primary hover:underline">
-            {shop.contactPhone}
-          </a>
-        ) : null}
-        {shop.contactPhone && shop.contactEmail ? " · " : ""}
-        {shop.contactEmail ? (
-          <a
-            href={`mailto:${shop.contactEmail}`}
-            className="font-medium text-primary hover:underline"
-          >
-            {shop.contactEmail}
-          </a>
-        ) : null}
-        . They can see exactly what’s on this page.
-      </p>
-    </main>
+          {shop.contactPhone && shop.contactEmail ? " · " : ""}
+          {shop.contactEmail ? (
+            <a
+              href={`mailto:${shop.contactEmail}`}
+              className="font-medium text-primary hover:underline"
+            >
+              {shop.contactEmail}
+            </a>
+          ) : null}
+          . {t("ready.questionsSuffix")}
+        </p>
+      </main>
+    </DiverIntlProvider>
   );
 }

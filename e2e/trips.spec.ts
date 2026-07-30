@@ -6,7 +6,11 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
 }) => {
   await page.goto("/shop/blue-mantis/schedule");
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-  await expect(page.getByText("Two-Tank Reef — Molasses & French")).toBeVisible();
+  // Scoped to the departure's own card heading: the reviews section below the
+  // list quotes trip titles too, so a bare text match finds two things.
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Two-Tank Reef — Molasses & French" }),
+  ).toBeVisible();
   // Assert the count rather than visibility: a capacity badge can double-render
   // for a sub-frame during hydration, and Playwright throws strict-mode
   // violations immediately without retrying — so an unscoped `toBeVisible` here
@@ -14,7 +18,7 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   // fails loudly if two trips ever genuinely show the same capacity.
   await expect(page.getByText("3 spots left")).toHaveCount(1); // 9 of 12 booked
   await expect(page.getByText("Full")).toHaveCount(1); // sold-out wreck trip
-  await expect(page.getByRole("link", { name: "Schedule a trip" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   await expect(page.getByText(/reserve your spot/i)).toBeVisible();
 

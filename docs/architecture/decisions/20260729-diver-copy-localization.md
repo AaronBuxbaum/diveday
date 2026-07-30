@@ -66,11 +66,22 @@ negotiated locale. This was the more damaging of the two problems: 81 call sites
 passed a compiled-in `"en-US"` to `Intl`, so no amount of translation would have fixed the date order
 on a staff screen. `pnpm check:locale` guards the whole UI tree against a regression.
 
-*Translated copy is the diver-facing surface, and is not yet app-wide.* The public schedule, trip,
-and course pages, the booking form, and the post-trip recap read from the message bundles. Staff
-screens under `/shop/**` still have English prose compiled into them — roughly 16,000 lines of TSX
-across ~89 route files and ~52 components — and extracting it is a large mechanical job that has not
-been done. This is a known, stated gap, not a claim of completeness.
+*Translated copy is the diver-facing surface, and as of 2026-07-30 that surface is complete.* The
+public schedule and its calendar, the trip page (header, packing, dive briefings, forecast, share
+controls, booking form, confirmation, rental fit), the course page, and all three capability pages
+(`/waivers`, `/ready`, `/recap`) read from the message bundles. Two `src/lib` helpers that used to
+return English prose — `dockDayTimeline` and `siteFit` in `src/lib/diver-planning.ts` — now return
+keys, because `src/lib` never renders and a compiled-in sentence there is exactly the string a diver
+on a Spanish page reads in English forever.
+
+Staff screens under `/shop/**` still have English prose compiled into them — roughly 16,000 lines of
+TSX across ~89 route files and ~52 components — and extracting it is a large mechanical job that has
+not been done. This is a known, stated gap, not a claim of completeness.
+
+Two diver-facing strings are deliberately left in English and are not gaps: the readiness
+checklist's blocker *details*, which are safety wording shared verbatim with the staff surfaces and
+whose translation is the same sign-off decision as the waiver body; and each page's static
+`metadata.title`, which Next resolves before any request-locale negotiation has happened.
 
 *The waiver body and the medical questionnaire stay English regardless.* That wording is legally
 reviewed, and translating a liability release or a medical screening question is a sign-off decision,

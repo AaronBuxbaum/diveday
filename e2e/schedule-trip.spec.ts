@@ -10,7 +10,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   const title = `Turtle Reef Special ${e2eNow().getTime()}`;
 
   await page.goto("/shop/blue-mantis/schedule");
-  await page.getByRole("link", { name: "Schedule a trip" }).click();
+  await page.getByRole("link", { name: "Full trip form" }).click();
   await expect(page.getByRole("heading", { name: "Schedule a trip" })).toBeVisible();
 
   await page.getByLabel("Title").fill(title);

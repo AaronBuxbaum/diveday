@@ -109,23 +109,24 @@ export default async function WaiverPage({
   const { token } = await params;
   const { saved, error } = await searchParams;
   const db = await getDb();
+  // A dead or expired link resolves no shop, so there is no
+  // `shops.default_locale` to fall back to — negotiate from the visitor's own
+  // device alone for those branches.
+  const anonT = diverTranslator(await requestLocale());
   const state = await getWaiverForToken(db, token);
 
   if (state.state === "unavailable") {
     return (
       <Unavailable
-        title="This waiver link isn’t available"
-        text="Ask your dive shop for a fresh link."
+        title={anonT("waiver.unavailableHeading")}
+        text={anonT("waiver.unavailableBody")}
       />
     );
   }
 
   if (state.state === "expired") {
     return (
-      <Unavailable
-        title="This waiver link has expired"
-        text="Ask your dive shop for a fresh link — no information was submitted."
-      />
+      <Unavailable title={anonT("waiver.expiredHeading")} text={anonT("waiver.expiredBody")} />
     );
   }
 
@@ -133,8 +134,8 @@ export default async function WaiverPage({
   if (!shop) {
     return (
       <Unavailable
-        title="This waiver link isn’t available"
-        text="Ask your dive shop for a fresh link."
+        title={anonT("waiver.unavailableHeading")}
+        text={anonT("waiver.unavailableBody")}
       />
     );
   }
@@ -206,24 +207,18 @@ export default async function WaiverPage({
           eyebrow={shopName}
           title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
         >
-          <p>
-            {needsReview
-              ? "Thanks — one of your medical answers needs a closer look, and a doctor’s sign-off may be required. Please don’t assume you’re cleared until your shop confirms."
-              : "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed."}
-          </p>
+          <p>{needsReview ? t("waiver.medicalReview") : t("waiver.signedBody")}</p>
           {readyPath ? (
             <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
-              See what’s left before you sail
+              {t("waiver.seeWhatsLeft")}
             </Link>
           ) : null}
         </EarnedMoment>
 
         {diveSitesList.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-lg font-semibold tracking-tight">Your scheduled dive sites</h2>
-            <p className="text-sm text-muted mt-1">
-              Here is a sneak peek at what you will explore on this charter:
-            </p>
+            <h2 className="text-lg font-semibold tracking-tight">{t("waiver.scheduledSites")}</h2>
+            <p className="text-sm text-muted mt-1">{t("waiver.sitesPeek")}</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {diveSitesList.map((site) => (
                 <div
@@ -274,9 +269,9 @@ export default async function WaiverPage({
     draft && draft.questionnaireId === questionnaire.id ? draft.responses : undefined;
   const errorText =
     error === "invalid"
-      ? "Please answer every question, type your full name, and confirm your agreement."
+      ? t("waiver.incomplete")
       : error === "unavailable"
-        ? "That link is no longer active. Ask the shop for a fresh one."
+        ? t("waiver.linkInactive")
         : undefined;
 
   async function saveDraftAction(formData: FormData) {
@@ -397,13 +392,13 @@ export default async function WaiverPage({
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">Emergency contact</h2>
+          <h2 className="text-lg font-semibold">{t("waiver.emergencyContact")}</h2>
           <p className="mt-1 text-sm text-muted">
             Someone we can reach for you on the day — optional, but it’s what the crew has if
             anything happens on the water.
           </p>
           <FieldGrid columns={2} className="mt-4">
-            <Field label="Contact name">
+            <Field label={t("waiver.contactName")}>
               <input
                 name="emergencyContactName"
                 autoComplete="name"
@@ -412,7 +407,7 @@ export default async function WaiverPage({
                 className={controlClass}
               />
             </Field>
-            <Field label="Contact phone">
+            <Field label={t("waiver.contactPhone")}>
               <input
                 name="emergencyContactPhone"
                 type="tel"
@@ -427,9 +422,9 @@ export default async function WaiverPage({
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">Your signature</h2>
+          <h2 className="text-lg font-semibold">{t("waiver.signature")}</h2>
           <FieldGrid columns={1} className="mt-4">
-            <Field label="Type your full name">
+            <Field label={t("waiver.typeFullName")}>
               <input
                 name="signerName"
                 autoComplete="name"
@@ -467,7 +462,7 @@ export default async function WaiverPage({
             Save and finish later
           </button>
           <SubmitButton
-            pendingLabel="Signing…"
+            pendingLabel={t("waiver.signing")}
             className={buttonClass({
               size: "lg",
               className: `disabled:opacity-70 ${labelTextBase}`,

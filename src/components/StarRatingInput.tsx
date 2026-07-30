@@ -17,13 +17,20 @@ import { REVIEW_RATINGS } from "@/lib/reviews";
 export function StarRatingInput({
   name = "rating",
   legend,
-  optionLabel,
+  optionLabels,
   defaultValue,
 }: {
   name?: string;
   legend: string;
-  /** Localized "{rating} out of 5 stars" for one value — the accessible name. */
-  optionLabel: (rating: number) => string;
+  /**
+   * The accessible name for each star, already translated, keyed by rating.
+   *
+   * Deliberately data rather than a `(rating) => string` callback: this is a
+   * Client Component, and React refuses a function passed across that boundary
+   * from a Server Component — which crashed the whole server render of every
+   * page that used it. Five strings cross fine.
+   */
+  optionLabels: Record<number, string>;
   defaultValue?: number;
 }) {
   const [selected, setSelected] = useState(defaultValue ?? 0);
@@ -35,10 +42,15 @@ export function StarRatingInput({
       <legend className="text-sm font-medium">{legend}</legend>
       <div className="mt-1 flex gap-0.5">
         {REVIEW_RATINGS.map((value) => (
+          // The label is the 44px target (design/principles.md #2) and the
+          // radio fills it invisibly rather than sitting `sr-only` in a corner:
+          // a 1px-clipped input is not something a pointer — or an automated
+          // click — can actually land on, so the label ends up swallowing every
+          // press aimed at the control itself.
           <label
             key={value}
             onMouseEnter={() => setHovered(value)}
-            className="cursor-pointer text-3xl leading-none transition-colors"
+            className="relative flex size-11 cursor-pointer items-center justify-center text-3xl leading-none transition-colors"
           >
             <input
               type="radio"
@@ -47,21 +59,19 @@ export function StarRatingInput({
               required
               defaultChecked={defaultValue === value}
               onChange={() => setSelected(value)}
-              className="peer sr-only"
+              className="peer absolute inset-0 size-full cursor-pointer opacity-0"
             />
-            {/* size-11 keeps every star a 44px tap target even though the
-                glyph is smaller (design/principles.md #2), and the ring shows
-                keyboard focus, which `sr-only` on the input would otherwise
-                hide entirely. */}
+            {/* The ring shows keyboard focus, which the transparent input above
+                would otherwise hide entirely. */}
             <span
               aria-hidden="true"
-              className={`flex size-11 items-center justify-center rounded-lg peer-focus-visible:ring-2 peer-focus-visible:ring-primary ${
+              className={`pointer-events-none flex size-11 items-center justify-center rounded-lg peer-focus-visible:ring-2 peer-focus-visible:ring-primary ${
                 value <= lit ? "text-warning" : "text-border-strong"
               }`}
             >
               ★
             </span>
-            <span className="sr-only">{optionLabel(value)}</span>
+            <span className="sr-only">{optionLabels[value]}</span>
           </label>
         ))}
       </div>

@@ -1,8 +1,13 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { SiteCertRequirement } from "@/lib/readiness";
-import { calculateReadiness, unavailableReadiness } from "@/lib/readiness";
+import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import {
+  calculateReadiness,
+  higherCertificationLevel,
+  unavailableReadiness,
+  validVerifiedCertification,
+} from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { paymentsByBooking } from "./payments";
@@ -238,6 +243,40 @@ export async function listShopCertifications(db: AppDb, shopId: string) {
     .innerJoin(people, eq(people.id, certifications.personId))
     .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)))
     .orderBy(asc(people.fullName), asc(certifications.createdAt));
+}
+
+/**
+ * The highest level on a diver's *verified, unexpired* cards, or null when they
+ * hold none the shop has checked.
+ *
+ * Deliberately ignores pending and expired cards: a suggestion of what to learn
+ * next should be built on the same evidence the boarding gate trusts, or the
+ * two surfaces will tell a diver different stories about where they stand.
+ */
+export async function highestVerifiedCertificationLevel(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  timezone: string,
+  now = nowDate(),
+): Promise<CertificationLevel | null> {
+  const rows = await db
+    .select()
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.shopId, shopId),
+        eq(certifications.personId, personId),
+        isNull(certifications.deletedAt),
+      ),
+    );
+  const todayLocal = calendarDateInTimezone(now, timezone);
+  let highest: CertificationLevel | null = null;
+  for (const certification of rows) {
+    if (!validVerifiedCertification(certification, todayLocal)) continue;
+    highest = higherCertificationLevel(highest, certification.level);
+  }
+  return highest;
 }
 
 export type NewSpecialtyCertification = {

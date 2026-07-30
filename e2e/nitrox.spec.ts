@@ -89,7 +89,7 @@ test.describe("staff", () => {
     await anon.getByLabel("Name").fill("Priya Sharma");
     await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(anon.getByRole("heading", { name: /You're on the boat, Priya/ })).toBeVisible();
+    await expect(anon.getByRole("heading", { name: /You’re on the boat, Priya/ })).toBeVisible();
 
     await anon.locator('input[name="nitrox"]').check();
     await anon.getByRole("button", { name: "Save rental fit" }).click();
@@ -219,7 +219,7 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   // demo reset in fixtures.ts.
   await page.getByLabel("Email").fill(`nora+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
   // No card on file, but the request is offered with a flag — the diver can ask
   // now and is told to send their card before the crew can reserve a compatible tank.

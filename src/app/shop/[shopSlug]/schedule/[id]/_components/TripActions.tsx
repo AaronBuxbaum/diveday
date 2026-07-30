@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 
@@ -10,12 +11,13 @@ export function TripActions({
   calendarUrl: string;
   directionsUrl: string | null;
 }) {
+  const t = useTranslations("trip");
   const [copied, setCopied] = useState(false);
 
   async function shareTrip() {
     const data = {
       title: document.title,
-      text: "Dive with me — here are the trip details.",
+      text: t("shareText"),
       url: window.location.href,
     };
     if (navigator.share) {
@@ -30,9 +32,9 @@ export function TripActions({
 
   return (
     <fieldset className="mt-5 flex flex-wrap gap-2">
-      <legend className="sr-only">Plan and share this trip</legend>
+      <legend className="sr-only">{t("planAndShare")}</legend>
       <a href={calendarUrl} className={buttonClass({ variant: "secondary", size: "sm" })}>
-        Add to calendar
+        {t("addToCalendar")}
       </a>
       {directionsUrl ? (
         <a
@@ -41,7 +43,7 @@ export function TripActions({
           rel="noreferrer"
           className={buttonClass({ variant: "secondary", size: "sm" })}
         >
-          Get directions
+          {t("getDirections")}
         </a>
       ) : null}
       <button
@@ -49,10 +51,10 @@ export function TripActions({
         onClick={shareTrip}
         className={buttonClass({ variant: "secondary", size: "sm" })}
       >
-        {copied ? "Link copied" : "Share with a buddy"}
+        {copied ? t("linkCopied") : t("shareWithBuddy")}
       </button>
       <span className="sr-only" aria-live="polite">
-        {copied ? "Trip link copied to clipboard." : ""}
+        {copied ? t("linkCopiedAnnouncement") : ""}
       </span>
     </fieldset>
   );

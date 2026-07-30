@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { openTripFromBoard, signInAsOwner } from "./helpers";
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). The fleet has no
@@ -73,11 +73,13 @@ test("a diver can type a promo code on a payable trip's booking form", async ({
   await request.post("/api/test/seed-stripe-account");
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
-  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
-  const tripUrl = page.url();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  // The board links staff at trip *management*; the booking form a diver sees
+  // is the public page for the same departure.
+  const tripId = new URL(page.url()).pathname.split("/").pop();
 
   await page.context().clearCookies();
-  await page.goto(tripUrl);
+  await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
   const promoField = page.getByLabel("Promo code");
   // One box for both kinds of code — a diver has no idea whether they were
   // handed a shop-wide code or a one-trip deal, and the server resolves both.

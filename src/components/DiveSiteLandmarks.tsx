@@ -1,14 +1,23 @@
+import type { DiverTranslator } from "@/i18n/messages";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 
-export function DiveSiteLandmarks({ landmarks }: { landmarks: DiveSiteLandmark[] }) {
+export function DiveSiteLandmarks({
+  landmarks,
+  t,
+}: {
+  landmarks: DiveSiteLandmark[];
+  t: DiverTranslator;
+}) {
   if (landmarks.length === 0) return null;
 
   return (
     <section className="pt-2">
-      <p className="text-sm font-medium tracking-widest text-primary uppercase">Look for these</p>
+      <p className="text-sm font-medium tracking-widest text-primary uppercase">
+        {t("site.landmarksEyebrow")}
+      </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
-        <h3 className="text-xl font-semibold tracking-tight">Landmarks that tell the story</h3>
-        <p className="text-sm text-muted">The crew will point out the best approach.</p>
+        <h3 className="text-xl font-semibold tracking-tight">{t("site.landmarksHeading")}</h3>
+        <p className="text-sm text-muted">{t("site.landmarksNote")}</p>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {landmarks.map((landmark, index) => (

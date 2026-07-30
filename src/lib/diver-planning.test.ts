@@ -25,7 +25,7 @@ describe("diver planning", () => {
     const start = new Date("2026-07-18T12:00:00Z");
     const end = new Date("2026-07-18T17:00:00Z");
     const timeline = dockDayTimeline(start, 30, end);
-    expect(timeline.map(({ label }) => label)).toContain("Surface interval and second briefing");
+    expect(timeline.map(({ step }) => step)).toContain("surfaceInterval");
     expect(timeline.at(-1)?.at).toEqual(end);
   });
 });
@@ -34,11 +34,13 @@ describe("booking delight planning", () => {
   it("explains site fit from evidence without turning it into a gate", () => {
     expect(
       siteFit({ difficulty: "advanced", depthRange: "25–30 m", currentNote: "strong current" })
-        .label,
-    ).toBe("Best with recent experience");
+        .tone,
+    ).toBe("demanding");
     expect(
-      siteFit({ difficulty: "beginner", depthRange: "8–12 m", currentNote: "gentle" }).label,
-    ).toBe("Welcoming dive");
+      siteFit({ difficulty: "beginner", depthRange: "8–12 m", currentNote: "gentle" }).tone,
+    ).toBe("welcoming");
+    // No published facts at all is its own answer, never a guess either way.
+    expect(siteFit({ difficulty: null, depthRange: null, currentNote: null }).tone).toBe("unknown");
   });
 
   it("separates what a diver brings from requested rental gear", () => {

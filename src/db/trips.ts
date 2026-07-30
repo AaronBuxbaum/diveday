@@ -32,6 +32,7 @@ import {
   rollCallEvents,
   tripAssignments,
   tripDives,
+  tripLastMinutePromos,
   tripRequirements,
   tripScheduleDays,
   tripSeries,
@@ -689,6 +690,206 @@ export async function updateTrip(
   });
 }
 
+export type MoveTripOutcome =
+  | { ok: true; trip: Trip }
+  | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" };
+
+/**
+ * Slides a whole departure to a new instant, keeping its shape.
+ *
+ * Only the *start* moves; the end and every schedule day shift by the same
+ * delta, so a two-tank morning stays three and a half hours long and a
+ * three-day course stays three days with its second and third mornings intact.
+ * Editing the individual windows is still the trip page's job — this is the
+ * schedule builder's "drag it to Thursday", nothing more.
+ *
+ * Refuses a trip that has any roll-call history: the crew has begun counting
+ * heads against that departure, and moving the date under a manifest already in
+ * progress is not a schedule edit, it is a falsified record. Refuses a cancelled
+ * trip for the same reason a cancelled trip is not on the board.
+ */
+export async function moveTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  startsAt: Date,
+): Promise<MoveTripOutcome> {
+  if (Number.isNaN(startsAt.getTime())) return { ok: false, reason: "invalid" };
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!existing) return { ok: false, reason: "not_found" };
+    if (existing.status !== "scheduled") return { ok: false, reason: "not_scheduled" };
+
+    const [{ events }] = await tx
+      .select({ events: count() })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, tripId));
+    if (events > 0) return { ok: false, reason: "already_sailed" };
+
+    const deltaMs = startsAt.getTime() - existing.startsAt.getTime();
+    if (deltaMs === 0) return { ok: true, trip: existing };
+    const shift = (date: Date) => new Date(date.getTime() + deltaMs);
+
+    const [trip] = await tx
+      .update(trips)
+      .set({ startsAt, endsAt: shift(existing.endsAt) })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .returning();
+    if (!trip) return { ok: false, reason: "not_found" };
+
+    const days = await tx
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, tripId));
+    for (const day of days) {
+      await tx
+        .update(tripScheduleDays)
+        .set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })
+        .where(eq(tripScheduleDays.id, day.id));
+    }
+    return { ok: true, trip };
+  });
+}
+
+export type DeleteTripOutcome =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "has_roster" | "already_sailed" };
+
+/**
+ * Takes a departure off the board for good — the schedule builder's "remove".
+ *
+ * Deliberately *not* how a trip with divers on it goes away. A trip anyone has
+ * booked, joined a wait list for, or counted heads against gets cancelled
+ * (`setTripStatus`), which keeps the roster, the refund story, and the record
+ * that the day existed. Hard deletion is reserved for a departure that was put
+ * on the board by mistake and that nobody has touched — there, leaving a
+ * cancelled ghost behind is clutter, not history.
+ *
+ * The guard is checked under a row lock, so a booking landing mid-delete loses
+ * the race rather than being silently erased with its trip.
+ */
+export async function deleteTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<DeleteTripOutcome> {
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!existing) return { ok: false, reason: "not_found" };
+
+    // Any booking at all, cancelled ones included: a cancelled booking is a
+    // diver who was once on this manifest, and that is history to keep.
+    const [{ roster }] = await tx
+      .select({ roster: count() })
+      .from(bookings)
+      .where(eq(bookings.tripId, tripId));
+    if (roster > 0) return { ok: false, reason: "has_roster" };
+
+    const [{ waiting }] = await tx
+      .select({ waiting: count() })
+      .from(tripWaitlistEntries)
+      .where(eq(tripWaitlistEntries.tripId, tripId));
+    if (waiting > 0) return { ok: false, reason: "has_roster" };
+
+    const [{ events }] = await tx
+      .select({ events: count() })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, tripId));
+    if (events > 0) return { ok: false, reason: "already_sailed" };
+
+    // Children without a cascade of their own, innermost first. `activityEvents`
+    // cascades from the trip and needs no line here.
+    await tx.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.tripId, tripId));
+    await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
+    await tx.delete(tripRequirements).where(eq(tripRequirements.tripId, tripId));
+    await tx.delete(tripDives).where(eq(tripDives.tripId, tripId));
+    await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+    await tx.delete(trips).where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    return { ok: true };
+  });
+}
+
+/**
+ * Puts a copy of an existing departure on the board at a new instant — "same
+ * trip, next Thursday", the move a shop makes twenty times a season.
+ *
+ * Copies what defines the dive: title, description, course, capacity, planned
+ * dives and their sites, prices, and the cancellation window, with every
+ * schedule day shifted by the same delta so a multi-day course keeps its shape.
+ * Copies nothing about the *day*: no roster, no wait list, no crew, no
+ * conditions, no series membership. A duplicate is a fresh departure that looks
+ * like the old one, never a second view of it.
+ */
+export async function duplicateTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  startsAt: Date,
+): Promise<Trip | null> {
+  if (Number.isNaN(startsAt.getTime())) return null;
+  return db.transaction(async (tx) => {
+    const [source] = await tx
+      .select()
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1);
+    if (!source) return null;
+
+    const deltaMs = startsAt.getTime() - source.startsAt.getTime();
+    const shift = (date: Date) => new Date(date.getTime() + deltaMs);
+    const [dives, days] = await Promise.all([
+      tx
+        .select()
+        .from(tripDives)
+        .where(eq(tripDives.tripId, tripId))
+        .orderBy(asc(tripDives.diveNumber)),
+      tx
+        .select()
+        .from(tripScheduleDays)
+        .where(eq(tripScheduleDays.tripId, tripId))
+        .orderBy(asc(tripScheduleDays.dayNumber)),
+    ]);
+    const { ok, course } = await resolveCourse(tx, shopId, source.courseId ?? undefined);
+    if (!ok) return null;
+
+    return insertTripInstance(tx, {
+      shopId,
+      courseId: source.courseId ?? undefined,
+      course,
+      title: source.title,
+      description: source.description ?? undefined,
+      startsAt,
+      endsAt: shift(source.endsAt),
+      capacity: source.capacity,
+      plannedDives: source.plannedDives,
+      priceCents: source.priceCents,
+      depositCents: source.depositCents,
+      cancellationWindowHours: source.cancellationWindowHours,
+      drafts: dives.map((dive) => ({
+        diveNumber: dive.diveNumber,
+        title: dive.title,
+        diveSiteId: dive.diveSiteId,
+        description: dive.description,
+      })),
+      scheduleDays: days.map((day) => ({
+        dayNumber: day.dayNumber,
+        startsAt: shift(day.startsAt),
+        endsAt: shift(day.endsAt),
+      })),
+    });
+  });
+}
+
 /** Ordered dive details for a trip, scoped through the owning shop. */
 export async function listTripDives(db: AppDb, shopId: string, tripId: string) {
   return db
@@ -1225,6 +1426,50 @@ export async function pagedUpcomingTripsWithCounts(
     nextCursor:
       rows.length > limit && last ? encodeCursor(last.startsAt.toISOString(), last.id) : null,
   };
+}
+
+/** The crew assigned to each of these trips, in one query, grouped by trip. */
+export async function tripCrewByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, Array<{ id: string; name: string }>>> {
+  if (tripIds.length === 0) return new Map();
+  const rows = await db
+    .select({ tripId: tripAssignments.tripId, personId: people.id, name: people.fullName })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .where(and(eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds)))
+    .orderBy(asc(people.fullName));
+  const byTrip = new Map<string, Array<{ id: string; name: string }>>();
+  for (const row of rows) {
+    const list = byTrip.get(row.tripId) ?? [];
+    list.push({ id: row.personId, name: row.name });
+    byTrip.set(row.tripId, list);
+  }
+  return byTrip;
+}
+
+/**
+ * How many meeting windows each of these trips has, in one query.
+ *
+ * The schedule builder needs it to warn before sliding a three-day course as a
+ * block; asking per row would be one round trip per departure on the board.
+ * Trips with no rows at all are simply absent from the map — callers read that
+ * as the single implicit day every trip is created with.
+ */
+export async function tripScheduleDayCounts(
+  db: DbExecutor,
+  tripIds: string[],
+): Promise<Map<string, number>> {
+  if (tripIds.length === 0) return new Map();
+  const rows = await db
+    .select({ tripId: tripScheduleDays.tripId, days: count() })
+    .from(tripScheduleDays)
+    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .groupBy(tripScheduleDays.tripId);
+  return new Map(rows.map((row) => [row.tripId, row.days]));
 }
 
 /**

@@ -51,10 +51,10 @@ export function PackingSection({
       </div>
       <h3 className="mt-5 font-semibold">{t("trip.dockDayRhythm")}</h3>
       <ol className="mt-2 space-y-1 text-sm text-muted">
-        {dockDayTimeline(trip.startsAt, shop.dockCallMinutes, trip.endsAt).map((step) => (
-          <li key={step.label}>
-            {step.label} ·{" "}
-            {step.at.toLocaleTimeString(locale, {
+        {dockDayTimeline(trip.startsAt, shop.dockCallMinutes, trip.endsAt).map((entry) => (
+          <li key={entry.step}>
+            {t(`trip.timeline.${entry.step}`)} ·{" "}
+            {entry.at.toLocaleTimeString(locale, {
               hour: "numeric",
               minute: "2-digit",
               timeZone: shop.timezone,

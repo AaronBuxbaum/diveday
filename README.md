@@ -25,8 +25,7 @@ optional. E2E tests use the sandbox/system Chrome and never download a second br
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests |
 | `pnpm test` | unit tests (Vitest) |
 | `pnpm e2e` | end-to-end tests (Playwright) |
-| `pnpm visual` | compare visual regression captures against committed baselines |
-| `pnpm visual:update` | regenerate and approve visual baseline snapshots |
+| `pnpm visual` | capture the visual surfaces and diff them against the S3 baseline for the parent commit |
 | `pnpm build` | production build |
 
 ## Stack

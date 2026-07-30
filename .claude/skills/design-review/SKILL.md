@@ -10,11 +10,13 @@ Delight is this product's differentiator — this review is where that stops bei
 ## Procedure
 
 1. Read `docs/design/principles.md` (the principles **and** the checklist).
-2. Start the app (`pnpm dev` in background) and capture every changed route:
+2. Capture every changed route. The visual spec asserts nothing — it writes PNGs — so a filtered
+   run of it is the fastest way to get review images:
    ```bash
-   npx playwright test e2e/visual.spec.ts --update-snapshots -g 'about page'
+   pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'about page'
    ```
-   This produces a focused screenshot capture. Inspect the updated files under `e2e/visual.spec.ts-snapshots/`.
+   Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored). `scripts/screenshot.mjs` is the
+   other route in, and uses the same phone/desktop widths.
 3. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)

@@ -37,12 +37,12 @@ test.describe("staff", () => {
       .getByLabel("What kind of dive would make your day?")
       .fill("A relaxed pace and macro photography");
     await page.getByRole("button", { name: "Book these spots" }).click();
-    await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
     // WP-3: the confirmation takes the top — it sits above the pre-trip content
     // (pack list, briefings), not buried at the bottom of a long page.
     const confirmationBox = await page
-      .getByRole("heading", { name: /You're on the boat, Nora/ })
+      .getByRole("heading", { name: /You’re on the boat, Nora/ })
       .boundingBox();
     const packBox = await page.getByRole("heading", { name: "Pack with confidence" }).boundingBox();
     expect(confirmationBox?.y ?? 0).toBeLessThan(packBox?.y ?? Number.POSITIVE_INFINITY);
@@ -97,6 +97,7 @@ test.describe("staff", () => {
     await page.getByLabel("Returns").fill("11:00");
     await page.getByLabel("Capacity").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
     await page.goto("/shop/blue-mantis/schedule");
     const manageLink = page
       .locator('a[href^="/shop/blue-mantis/trips/"]')
@@ -171,14 +172,14 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
     .getByRole("link")
     .click();
-  await expect(page.getByRole("heading", { name: "This boat's full" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
   // The waitlist form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Join the wait list" }).click();
-  await expect(page.getByRole("heading", { name: /You're on the wait list, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the wait list, Nora/ })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
@@ -231,7 +232,7 @@ test("a shared-inbox booking under a different name is held for staff identity c
   await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
   // A different name on the same inbox books trip B — reuses Nora's record.
   await page.goto("/shop/blue-mantis/schedule");
@@ -240,7 +241,7 @@ test("a shared-inbox booking under a different name is held for staff identity c
   await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
 
   // Staff open trip B's roster: the diver is held on identity, not ready.
   await signInAsOwner(page);
@@ -278,7 +279,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   await page.getByLabel("Name").fill("Casey Ford");
   await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You're on the boat, Casey/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Casey/ })).toBeVisible();
 
   const confirmedUrl = new URL(page.url());
   const realToken = confirmedUrl.searchParams.get("booking");
@@ -288,7 +289,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   const tamperedUrl = new URL(confirmedUrl);
   tamperedUrl.searchParams.set("booking", "not-a-real-token");
   await page.goto(tamperedUrl.toString());
-  await expect(page.getByRole("heading", { name: /You're on the boat/ })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
 
   // A real, valid token — but presented on a different trip — must not
   // authorize that trip's confirmation either.
@@ -301,5 +302,5 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   const otherTripUrl = new URL(page.url());
   otherTripUrl.searchParams.set("booking", realToken ?? "");
   await page.goto(otherTripUrl.toString());
-  await expect(page.getByRole("heading", { name: /You're on the boat/ })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
 });

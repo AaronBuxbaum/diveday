@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { JsonLd } from "@/components/JsonLd";
 import { getDb } from "@/db/client";
+import { listCoursePaths } from "@/db/course-paths";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
@@ -23,6 +24,7 @@ import {
   CourseHero,
   CourseIncludes,
   CourseOverview,
+  CoursePathTrail,
   CourseSchedule,
   CourseSessions,
   CourseSpecs,
@@ -73,17 +75,22 @@ export default async function CoursePage({
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
   if (!course.isActive && !staffView) notFound();
 
-  const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
+  const [sessions, paths] = await Promise.all([
+    listUpcomingSessionsForCourse(db, shop.id, course.id),
+    listCoursePaths(db, shop.id, { activeOnly: true }),
+  ]);
   const { locale, t } = await requestTranslator(shop.defaultLocale);
 
   const certificationRequired = course.minimumCertificationLevel
-    ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
+    ? t("course.certificationOrHigher", {
+        level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+      })
     : t("course.noCertification");
   // Logistics only. The cert gate and the minimum age are admission facts and
   // belong to CourseAdmission, which is the one place a diver reads them.
   const specs = [
-    course.durationText ? { label: "Duration", value: course.durationText } : null,
-    course.groupSizeText ? { label: "Group size", value: course.groupSizeText } : null,
+    course.durationText ? { label: t("course.duration"), value: course.durationText } : null,
+    course.groupSizeText ? { label: t("course.groupSize"), value: course.groupSizeText } : null,
   ].filter((spec) => spec !== null);
   const inquiryHref = shop.contactEmail ? "#get-in-touch" : null;
 
@@ -130,25 +137,47 @@ export default async function CoursePage({
         bookHref={sessions.length > 0 ? "#dates" : null}
         inquiryHref={inquiryHref}
         locale={locale}
+        t={t}
       />
-      <CourseSpecs items={specs} />
+      <CourseSpecs items={specs} label={t("course.atAGlance")} />
       <CourseAdmission
         certificationRequired={certificationRequired}
         minimumAge={course.minimumAge}
         shopNote={course.prerequisiteNote}
+        t={t}
+      />
+      <CoursePathTrail
+        paths={paths.map((path) => ({
+          slug: path.slug,
+          title: path.title,
+          summary: path.summary,
+          // A path may outlive a course the shop stopped offering; a diver must
+          // never be pointed at a page that 404s for them.
+          steps: path.steps
+            .filter((step) => step.course.isActive)
+            .map((step) => ({
+              id: step.course.id,
+              title: step.course.title,
+              slug: step.course.slug,
+            })),
+        }))}
+        courseId={course.id}
+        shopSlug={shopSlug}
+        t={t}
       />
       <CourseOverview overview={course.overview} />
-      <CourseGallery imageUrls={course.imageUrls} title={course.title} />
-      <CourseSchedule days={course.scheduleDays} />
-      <CourseIncludes includes={course.includes} excludes={course.excludes} />
+      <CourseGallery imageUrls={course.imageUrls} title={course.title} t={t} />
+      <CourseSchedule days={course.scheduleDays} t={t} />
+      <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
         sessions={sessions}
         shopSlug={shopSlug}
         timezone={shop.timezone}
         locale={locale}
         inquiryHref={inquiryHref}
+        t={t}
       />
-      <CourseFaqs faqs={course.faqs} />
+      <CourseFaqs faqs={course.faqs} t={t} />
       {shop.contactEmail ? (
         <CourseInquiry
           courseTitle={course.title}

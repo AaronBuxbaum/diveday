@@ -48,6 +48,13 @@ export function diverTranslator(locale: string | null | undefined) {
 /** The translator shape a component can accept as a prop. */
 export type DiverTranslator = ReturnType<typeof diverTranslator>;
 
+/**
+ * A key the diver bundle actually holds. Naming it keeps the notice/label maps
+ * that map a query param to its copy readable, and keeps them checked: a typo'd
+ * key is a type error at the map rather than a fallback string at render.
+ */
+export type DiverMessageKey = Parameters<DiverTranslator>[0];
+
 /** The English string for a key, used when a translation is missing entirely. */
 function fallbackMessage(key: string): string {
   const value = key

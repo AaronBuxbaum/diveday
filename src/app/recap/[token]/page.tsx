@@ -11,31 +11,30 @@ import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { getReviewForBooking } from "@/db/reviews";
-import { requestTranslator } from "@/i18n/request";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
+import { requestLocale, requestTranslator } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
-import { MAX_REVIEW_COMMENT_LENGTH } from "@/lib/reviews";
+import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
 import { TipAmountPicker } from "./TipAmountPicker";
 
-const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
-  added: { tone: "success", text: "Added to your recap — thanks for sharing!" },
-  none: { tone: "danger", text: "Pick a photo first, then add it." },
-  limit: {
-    tone: "danger",
-    text: `That’s the most photos one recap holds (${MAX_RECAP_PHOTOS_PER_BOOKING}).`,
-  },
-  unconfigured: {
-    tone: "danger",
-    text: "Photo uploads aren’t set up for this shop yet — no worries, tag them when you post.",
-  },
-  error: { tone: "danger", text: "That photo didn’t upload — try a JPEG or PNG under 5 MB." },
+/**
+ * Notice keys, not sentences — the query string names an outcome and the page
+ * says it in the diver's own language (docs ADR 20260729-diver-copy-localization).
+ */
+const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessageKey }> = {
+  added: { tone: "success", key: "recap.photoAdded" },
+  none: { tone: "danger", key: "recap.photoMissing" },
+  limit: { tone: "danger", key: "recap.photoLimit" },
+  unconfigured: { tone: "danger", key: "recap.photoUnsupported" },
+  error: { tone: "danger", key: "recap.photoFailed" },
 };
 
-const TIP_NOTICES: Record<string, { tone: "success" | "danger"; text: string }> = {
-  cancelled: { tone: "danger", text: "No worries — the tip wasn’t charged." },
-  invalid: { tone: "danger", text: "Enter a tip amount between $1 and $500." },
-  error: { tone: "danger", text: "That didn’t go through — try again in a moment." },
+const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessageKey }> = {
+  cancelled: { tone: "danger", key: "recap.tipCancelled" },
+  invalid: { tone: "danger", key: "recap.tipRange" },
+  error: { tone: "danger", key: "recap.tipFailed" },
 };
 
 const TIP_PRESETS_USD = [5, 10, 20];
@@ -98,13 +97,13 @@ export default async function DiveRecapPage({
   await connection();
   const { token } = await params;
   const { photo, tip: tipParam, review: reviewParam } = await searchParams;
+  // A dead link resolves no shop, so there is no `shops.default_locale` to fall
+  // back to — negotiate from the visitor's own device alone for those branches.
+  const anonT = diverTranslator(await requestLocale());
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
     return (
-      <Notice
-        title="This recap link isn’t available"
-        text="Ask your dive shop for a fresh link — nothing here is private to anyone but you."
-      />
+      <Notice title={anonT("recap.unavailableHeading")} text={anonT("recap.unavailableBody")} />
     );
   }
 
@@ -112,7 +111,7 @@ export default async function DiveRecapPage({
   const data = await getRecapPageData(db, bookingId);
   if (!data) {
     return (
-      <Notice title="This recap link isn’t available" text="Ask your dive shop for a fresh link." />
+      <Notice title={anonT("recap.unavailableHeading")} text={anonT("waiver.unavailableBody")} />
     );
   }
 
@@ -143,12 +142,12 @@ export default async function DiveRecapPage({
   const where = sitesSentence(sites);
   const conditions = [
     trip.waterTemperatureC !== null
-      ? { label: "Water temp", value: `${trip.waterTemperatureC}°C` }
+      ? { label: t("recap.waterTemp"), value: `${trip.waterTemperatureC}°C` }
       : null,
     trip.visibilityMeters !== null
-      ? { label: "Visibility", value: `${trip.visibilityMeters} m` }
+      ? { label: t("trip.visibility"), value: `${trip.visibilityMeters} m` }
       : null,
-    trip.surfaceConditions ? { label: "Surface", value: trip.surfaceConditions } : null,
+    trip.surfaceConditions ? { label: t("trip.surface"), value: trip.surfaceConditions } : null,
   ].filter((tile): tile is { label: string; value: string } => tile !== null);
   const diveCount = Math.max(trip.plannedDives, sites.length);
 
@@ -167,9 +166,9 @@ export default async function DiveRecapPage({
       >
         <p>
           {where
-            ? `You logged ${diveCount === 1 ? "a dive" : `${diveCount} dives`} at ${where}.`
-            : `You logged ${diveCount === 1 ? "a dive" : `${diveCount} dives`} today.`}{" "}
-          We hope the water treated you well.
+            ? t("recap.loggedAt", { count: diveCount, where })
+            : t("recap.loggedToday", { count: diveCount })}{" "}
+          {t("recap.hopeWaterTreatedYou")}
         </p>
       </EarnedMoment>
 
@@ -200,7 +199,9 @@ export default async function DiveRecapPage({
         <form action={submitReviewAction.bind(null, token)} className="mt-3 flex flex-col gap-3">
           <StarRatingInput
             legend={t("reviews.ratingLegend")}
-            optionLabel={(rating) => t("reviews.ratingOption", { rating })}
+            optionLabels={Object.fromEntries(
+              REVIEW_RATINGS.map((rating) => [rating, t("reviews.ratingOption", { rating })]),
+            )}
             defaultValue={ownReview?.rating}
           />
           <label htmlFor="review-comment" className="text-sm font-medium">
@@ -242,7 +243,7 @@ export default async function DiveRecapPage({
 
       {showTipSection ? (
         <section className="mt-8 rounded-xl border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">Tip your crew</h2>
+          <h2 className="text-lg font-semibold">{t("recap.tipCrew")}</h2>
           {tipNotice ? (
             <p
               role={tipNotice.tone === "danger" ? "alert" : "status"}
@@ -252,36 +253,39 @@ export default async function DiveRecapPage({
                   : "border-primary/30 bg-primary/10 text-primary"
               }`}
             >
-              {tipNotice.text}
+              {t(tipNotice.key)}
             </p>
           ) : null}
           {tip?.status === "paid" ? (
-            <p className="mt-1 text-base text-muted">
-              Thanks — your tip goes straight to {shop.name}. They&apos;ll make sure the crew hears
-              about it.
-            </p>
+            <p className="mt-1 text-base text-muted">{t("recap.tipPaid", { shop: shop.name })}</p>
           ) : tip?.status === "pending" && tip.checkoutUrl ? (
             <>
               <p className="mt-1 text-base text-muted">
-                100% goes to {shop.name} — nothing held back, no account needed.
+                {t("recap.tipAllGoes", { shop: shop.name })}
               </p>
               <a href={tip.checkoutUrl} className={buttonClass({ size: "cta", className: "mt-4" })}>
-                Finish your ${(tip.amountCents / 100).toFixed(0)} tip
+                {t("recap.tipFinish", {
+                  amount: new Intl.NumberFormat(locale, {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  }).format(tip.amountCents / 100),
+                })}
               </a>
             </>
           ) : canTip ? (
             <>
               <p className="mt-1 text-base text-muted">
-                100% goes to {shop.name} — nothing held back, no account needed.
+                {t("recap.tipAllGoes", { shop: shop.name })}
               </p>
               <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
                 <TipAmountPicker presets={TIP_PRESETS_USD} defaultPreset={TIP_PRESETS_USD[1]} />
                 <div>
                   <SubmitButton
-                    pendingLabel="Heading to payment…"
+                    pendingLabel={t("booking.headingToPayment")}
                     className={buttonClass({ size: "cta" })}
                   >
-                    Leave a tip
+                    {t("recap.tipLeave")}
                   </SubmitButton>
                 </div>
               </form>
@@ -293,7 +297,7 @@ export default async function DiveRecapPage({
       {shoutout ? (
         <section className="mt-8 rounded-xl border border-primary/25 bg-primary/5 p-5">
           <h2 className="text-sm font-medium tracking-widest text-primary uppercase">
-            From your crew
+            {t("recap.fromYourCrew")}
           </h2>
           <p className="mt-2 text-base text-pretty">{shoutout}</p>
         </section>
@@ -301,7 +305,7 @@ export default async function DiveRecapPage({
 
       {sites.length ? (
         <section className="mt-8">
-          <h2 className="text-lg font-semibold">Where you dived</h2>
+          <h2 className="text-lg font-semibold">{t("recap.whereYouDived")}</h2>
           <RecapMap sites={sites} />
           <ul className="mt-4 space-y-3">
             {sites.map((site) => (
@@ -313,7 +317,7 @@ export default async function DiveRecapPage({
 
       {conditions.length ? (
         <section className="mt-8">
-          <h2 className="text-lg font-semibold">Conditions on the day</h2>
+          <h2 className="text-lg font-semibold">{t("recap.conditionsOnTheDay")}</h2>
           <dl className="mt-3 grid gap-3 sm:grid-cols-3">
             {conditions.map((tile) => (
               <ConditionTile key={tile.label} label={tile.label} value={tile.value} />
@@ -323,10 +327,8 @@ export default async function DiveRecapPage({
       ) : null}
 
       <section className="mt-8 rounded-xl bg-surface-sunken p-5">
-        <h2 className="text-lg font-semibold">Your photos</h2>
-        <p className="mt-1 text-base text-muted">
-          Add the shots from today — they stay on your recap, and {shop.name} may love to see them.
-        </p>
+        <h2 className="text-lg font-semibold">{t("recap.yourPhotos")}</h2>
+        <p className="mt-1 text-base text-muted">{t("recap.photosBody", { shop: shop.name })}</p>
 
         {photoNotice ? (
           <p
@@ -337,7 +339,9 @@ export default async function DiveRecapPage({
                 : "border-primary/30 bg-primary/10 text-primary"
             }`}
           >
-            {photoNotice.text}
+            {photoNotice.key === "recap.photoLimit"
+              ? t(photoNotice.key, { max: MAX_RECAP_PHOTOS_PER_BOOKING })
+              : t(photoNotice.key)}
           </p>
         ) : null}
 
@@ -348,7 +352,7 @@ export default async function DiveRecapPage({
                 {/* biome-ignore lint/performance/noImgElement: diver photos come from the blob store, which no build-time image allowlist can enumerate. */}
                 <img
                   src={image.imageUrl}
-                  alt={image.caption ?? `A photo from ${trip.title}`}
+                  alt={image.caption ?? t("recap.photoAlt", { trip: trip.title })}
                   loading="lazy"
                   className="aspect-square w-full object-cover"
                 />
@@ -361,16 +365,14 @@ export default async function DiveRecapPage({
         ) : null}
 
         {atPhotoLimit ? (
-          <p className="mt-4 text-sm text-muted">
-            You’ve added the most photos one recap holds. Nice haul!
-          </p>
+          <p className="mt-4 text-sm text-muted">{t("recap.photoLimitReached")}</p>
         ) : (
           <form
             action={uploadRecapPhotoAction.bind(null, token)}
             className="mt-4 flex flex-col gap-3"
           >
             <label htmlFor="recap-photo" className="flex flex-col gap-1 text-sm font-medium">
-              Add a photo
+              {t("recap.addAPhoto")}
             </label>
             <ImageFileInput
               id="recap-photo"
@@ -385,25 +387,22 @@ export default async function DiveRecapPage({
               type="text"
               name="caption"
               maxLength={140}
-              placeholder="Add a caption (optional)"
+              placeholder={t("recap.captionLabel")}
               className={controlClass}
             />
             <button type="submit" className={buttonClass({ className: "self-start" })}>
-              Add to my recap
+              {t("recap.addToMyRecap")}
             </button>
           </form>
         )}
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Bring a buddy next time</h2>
-        <p className="mt-1 text-base text-muted">
-          Diving’s better with someone you know. Grab a spot on the next departure and bring them
-          along.
-        </p>
+        <h2 className="text-lg font-semibold">{t("recap.bringABuddy")}</h2>
+        <p className="mt-1 text-base text-muted">{t("recap.buddyBody")}</p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href={`/shop/${shop.slug}/schedule`} className={buttonClass({ size: "cta" })}>
-            See what’s next
+            {t("recap.seeWhatsNext")}
           </Link>
           {shop.contactEmail ? (
             <a
@@ -414,7 +413,7 @@ export default async function DiveRecapPage({
                 className: "text-foreground",
               })}
             >
-              Message the shop
+              {t("recap.messageTheShop")}
             </a>
           ) : null}
         </div>

@@ -5,21 +5,25 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
-import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { ShopReviews } from "@/components/ShopReviews";
-import { StaffScheduleBoard } from "@/components/StaffScheduleBoard";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listActiveCourses } from "@/db/courses";
+import { listDiveSites } from "@/db/dive-sites";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
   pagedUpcomingTripsWithCounts,
+  tripCrewByTrip,
+  tripScheduleDayCounts,
   upcomingScheduleRange,
   upcomingScheduleStats,
-  upcomingStaffSchedule,
   upcomingTripsForCalendar,
 } from "@/db/trips";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
@@ -36,8 +40,15 @@ import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { toDateInputValue, toTimeInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
+import { type BuilderDay, ScheduleBuilder } from "./_components/ScheduleBuilder";
+import {
+  addDepartureAction,
+  duplicateDepartureAction,
+  moveDepartureAction,
+  removeDepartureAction,
+} from "./actions";
 
 /**
  * Per-shop title, description, and canonical URL. The embed surface points its
@@ -67,16 +78,57 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * What the board says after a builder action. Every outcome gets a sentence —
+ * including the refusals, which are the interesting ones: a departure that
+ * won't move or won't delete is protecting a roster or a head count, and the
+ * staff member needs to know which, not just that nothing happened.
+ */
+const BUILDER_NOTICES: Record<string, { tone: "success" | "danger" | "warning"; message: string }> =
+  {
+    added: { tone: "success", message: "It’s on the board." },
+    moved: { tone: "success", message: "Moved." },
+    copied: { tone: "success", message: "Copied — the new departure has no divers or crew yet." },
+    removed: { tone: "success", message: "Taken off the board." },
+    invalid: {
+      tone: "danger",
+      message: "That didn’t save — check the date, times, and seats, then try again.",
+    },
+    "end-before-start": {
+      tone: "danger",
+      message: "The trip has to end after it starts — check the times.",
+    },
+    "not-authorized": {
+      tone: "danger",
+      message: "Building the board is limited to owners, managers, and instructors.",
+    },
+    "not-found": { tone: "danger", message: "That departure is no longer on the board." },
+    "not-scheduled": {
+      tone: "warning",
+      message: "A cancelled trip can’t be moved. Reinstate it from its own page first.",
+    },
+    "already-sailed": {
+      tone: "warning",
+      message:
+        "The crew has already counted heads against this departure, so it stays where it is. Cancel it from its own page if the day is off.",
+    },
+    "has-roster": {
+      tone: "warning",
+      message:
+        "Divers have booked this departure, so it can’t be deleted. Cancel it from its own page — that keeps the roster and the refund story.",
+    },
+  };
+
 export default async function TripsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; after?: string; embed?: string }>;
+  searchParams: Promise<{ month?: string; after?: string; embed?: string; builder?: string }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, embed } = await searchParams;
+  const { month, after, embed, builder } = await searchParams;
   // Embed mode is the compact, chrome-light surface a shop pastes into its own
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
@@ -130,18 +182,61 @@ export default async function TripsPage({
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
 
-  const staffSchedule = staffView
-    ? await upcomingStaffSchedule(
-        db,
-        shop.id,
-        wallTimeToUtc(
-          { year: currentMonth.year, month: currentMonth.month, day: 1, hour: 0, minute: 0 },
-          tz,
+  // The builder works off the same keyset page the list below it renders, so a
+  // shop with hundreds of departures still loads one page of rows — the board is
+  // a working surface for the next few weeks, not an archive.
+  const [canConfigure, dayCounts, crewByTrip, builderCourses, builderDiveSites] = staffView
+    ? await Promise.all([
+        canPersonConfigureTrips(db, shop.id, session?.user?.personId ?? ""),
+        tripScheduleDayCounts(
+          db,
+          upcoming.map((trip) => trip.id),
         ),
-        wallTimeToUtc({ year: next.year, month: next.month, day: 1, hour: 0, minute: 0 }, tz),
-        now,
-      )
-    : [];
+        tripCrewByTrip(
+          db,
+          shop.id,
+          upcoming.map((trip) => trip.id),
+        ),
+        listActiveCourses(db, shop.id).then((rows) =>
+          rows.map((row) => ({ id: row.id, title: row.title })),
+        ),
+        listDiveSites(db, shop.id).then((rows) =>
+          rows.map((row) => ({ id: row.id, title: row.name })),
+        ),
+      ])
+    : [
+        false,
+        new Map<string, number>(),
+        new Map<string, Array<{ id: string; name: string }>>(),
+        [],
+        [],
+      ];
+
+  const builderNotice = builder ? BUILDER_NOTICES[builder] : undefined;
+
+  const builderDays: BuilderDay[] = [];
+  for (const trip of staffView ? upcoming : []) {
+    const wall = utcToWallTime(trip.startsAt, tz);
+    const dateIso = toDateInputValue(wall);
+    let day = builderDays.at(-1);
+    if (day?.dateIso !== dateIso) {
+      day = { dateIso, label: formatShortDate(trip.startsAt, locale, tz), trips: [] };
+      builderDays.push(day);
+    }
+    day.trips.push({
+      id: trip.id,
+      title: trip.title,
+      dateIso,
+      startTime: toTimeInputValue(wall),
+      timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, tz),
+      capacity: trip.capacity,
+      booked: trip.booked,
+      courseTitle: trip.course?.title ?? null,
+      diveSiteName: trip.diveSite?.name ?? null,
+      dayCount: dayCounts.get(trip.id) ?? 1,
+      crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
+    });
+  }
 
   const tripsByDay = new Map<string, CalendarTrip[]>();
   if (!staffView && hasUpcoming) {
@@ -212,7 +307,7 @@ export default async function TripsPage({
                 href={`/shop/${shopSlug}/trips/new`}
                 className={buttonClass({ className: "rounded-xl" })}
               >
-                <span aria-hidden="true">+</span> Schedule a trip
+                Full trip form
               </Link>
             ) : undefined
           }
@@ -244,12 +339,30 @@ export default async function TripsPage({
         </section>
       ) : null}
 
-      {staffView && staffSchedule.length > 0 ? (
-        <StaffScheduleBoard
-          locale={locale}
+      {staffView && builderNotice ? (
+        <ShopNotice
+          tone={builderNotice.tone}
+          role={builderNotice.tone === "danger" ? "alert" : "status"}
+          className="mb-6"
+        >
+          {builderNotice.message}
+        </ShopNotice>
+      ) : null}
+
+      {staffView ? (
+        <ScheduleBuilder
           shopSlug={shopSlug}
-          trips={staffSchedule}
-          timezone={tz}
+          days={builderDays}
+          courses={builderCourses}
+          diveSites={builderDiveSites}
+          defaultDateIso={builderDays[0]?.dateIso ?? todayIso}
+          canConfigure={canConfigure}
+          actions={{
+            add: addDepartureAction.bind(null, shopSlug),
+            move: moveDepartureAction.bind(null, shopSlug),
+            duplicate: duplicateDepartureAction.bind(null, shopSlug),
+            remove: removeDepartureAction.bind(null, shopSlug),
+          }}
         />
       ) : null}
 
@@ -260,6 +373,8 @@ export default async function TripsPage({
           weeks={buildCalendarWeeks(currentMonth)}
           todayIso={todayIso}
           tripsByDay={tripsByDay}
+          locale={locale}
+          t={t}
           prevMonthKey={prevMonthKey}
           nextMonthKey={nextMonthKey}
           embed={isEmbed}
@@ -283,7 +398,7 @@ export default async function TripsPage({
             <p className="mt-1 text-sm text-muted">{t("schedule.noTripsPublic")}</p>
           )}
         </EmptyState>
-      ) : (
+      ) : staffView ? null : (
         <ul className="flex flex-col gap-3">
           {upcoming.map((trip) => {
             const full = isFull(trip);
@@ -380,7 +495,14 @@ export default async function TripsPage({
           t={t}
         />
       ) : null}
-      {!isEmbed && !staffView ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
+      {/* The only Client Component on this page that reads copy, so the
+          provider wraps it alone rather than the whole tree — the diver bundle
+          then crosses to the browser once, on the one surface that needs it. */}
+      {!isEmbed && !staffView ? (
+        <DiverIntlProvider locale={locale} timeZone={tz}>
+          <LastMinuteListForm shopSlug={shopSlug} />
+        </DiverIntlProvider>
+      ) : null}
     </main>
   );
 }

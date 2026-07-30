@@ -175,7 +175,20 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
+      # reg-keygen-git-hash-plugin derives both keys from git: the actual one
+      # from HEAD, the expected one by walking back to this commit's parent and
+      # asking S3 for that snapshot. A default checkout gives it neither — on a
+      # pull_request it lands on a *detached* merge commit ("Can't detect branch
+      # name because HEAD is on detached commit node"), and `fetch-depth: 1`
+      # leaves no parent to walk to. Both keys then come back null, every
+      # screenshot reads as new rather than compared, and the run dies on "Fail
+      # to detect the current branch" — a red job that never looked at a pixel.
+      # Check out the branch by name with full history instead: `head_ref` on a
+      # pull_request, `ref_name` on a push to main.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
