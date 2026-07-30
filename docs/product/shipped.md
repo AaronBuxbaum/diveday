@@ -10,8 +10,8 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 ## List pagination and query bounding (delivered 2026-07-30)
 
 - **Cursor pagination reaches the waiver integrity audit and the staff reviews queue** — both now
-  page with the same opaque keyset cursor (`src/db/cursor.ts`) the diver roster and schedule board
-  already used, showing a "Show more" link instead of either an unbounded fetch or a silent
+  page with the same opaque keyset cursor (`src/db/cursor.ts`) that the diver roster and schedule
+  board already used, showing a "Show more" link instead of either an unbounded fetch or a silent
   truncation. The waivers page previously fetched every signed record a shop ever had and then
   showed only the first 20 with no way to reach the rest; it now pages the same way the other lists
   do.
