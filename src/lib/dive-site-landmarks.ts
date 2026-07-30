@@ -1,50 +1,50 @@
+/**
+ * The categorical "type" of a named landmark — a code, not a rendered word.
+ * `pointOfInterest` is the fallback for a staff-authored landmark with no
+ * seeded editorial copy.
+ */
+export type DiveSiteLandmarkKind =
+  | "navigationMark"
+  | "reefHistory"
+  | "wreckFeature"
+  | "underwaterMonument"
+  | "reefFormation"
+  | "pointOfInterest";
+
+/**
+ * Which specific landmark's editorial description to show, or `generic` for
+ * a staff-authored landmark this module has no copy for. Each seeded value
+ * names exactly one (site, landmark) pair — see `landmarkDetails` below.
+ */
+export type DiveSiteLandmarkDescription =
+  | "molassesReefLight"
+  | "shipsWinch"
+  | "spanishAnchor"
+  | "flightDeckAndCranes"
+  | "wellDeck"
+  | "christOfAbyssStatue"
+  | "dryRocksSandChannels"
+  | "generic";
+
 export type DiveSiteLandmark = {
   name: string;
-  kind: string;
-  description: string;
+  kind: DiveSiteLandmarkKind;
+  description: DiveSiteLandmarkDescription;
 };
 
 const landmarkDetails: Record<string, Record<string, Omit<DiveSiteLandmark, "name">>> = {
   "Molasses Reef": {
-    "Molasses Reef Light": {
-      kind: "Navigation mark",
-      description:
-        "The reef light is the easiest above-water reference and a useful way to stay oriented around the central reef.",
-    },
-    "Historic ship's winch": {
-      kind: "Reef history",
-      description:
-        "A large ship's winch rests near the reef light—a compact piece of maritime history now folded into the reef.",
-    },
-    "Spanish anchor": {
-      kind: "Reef history",
-      description:
-        "An old anchor lies among the coral formations. Let the crew point it out; it can disappear surprisingly well into the reef.",
-    },
+    "Molasses Reef Light": { kind: "navigationMark", description: "molassesReefLight" },
+    "Historic ship's winch": { kind: "reefHistory", description: "shipsWinch" },
+    "Spanish anchor": { kind: "reefHistory", description: "spanishAnchor" },
   },
   "Spiegel Grove": {
-    "Flight deck and cranes": {
-      kind: "Wreck feature",
-      description:
-        "The broad flight deck and paired cranes make the ship's scale click into place. Stay outside the structure and follow the guide's line.",
-    },
-    "Well deck": {
-      kind: "Wreck feature",
-      description:
-        "The open well deck is one of the wreck's most dramatic exterior spaces, with changing light and room for big schools of fish.",
-    },
+    "Flight deck and cranes": { kind: "wreckFeature", description: "flightDeckAndCranes" },
+    "Well deck": { kind: "wreckFeature", description: "wellDeck" },
   },
   "Christ of the Abyss": {
-    "Christ of the Abyss": {
-      kind: "Underwater monument",
-      description:
-        "The 8.6-foot bronze statue stands on a concrete pedestal in shallow water—the unmistakable centrepiece of this dive.",
-    },
-    "Dry Rocks sand channels": {
-      kind: "Reef formation",
-      description:
-        "Bright sand channels weave between coral formations around the statue and are good places to look for rays, grouper, and moray eels.",
-    },
+    "Christ of the Abyss": { kind: "underwaterMonument", description: "christOfAbyssStatue" },
+    "Dry Rocks sand channels": { kind: "reefFormation", description: "dryRocksSandChannels" },
   },
 };
 
@@ -55,9 +55,7 @@ export function buildDiveSiteLandmarks(
   const details = landmarkDetails[siteName] ?? {};
   return names.map((name) => ({
     name,
-    kind: details[name]?.kind ?? "Point of interest",
-    description:
-      details[name]?.description ??
-      "A memorable reference point the crew can identify during the site briefing.",
+    kind: details[name]?.kind ?? "pointOfInterest",
+    description: details[name]?.description ?? "generic",
   }));
 }

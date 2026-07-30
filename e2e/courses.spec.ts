@@ -278,7 +278,10 @@ test("a diver with no workable date gets a written email instead of a dead end",
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("How many divers").fill("3");
   await page.getByLabel("When suits you").fill("the week of 12 August");
-  await page.getByLabel("Where you are up to").selectOption("I have never dived before");
+  // The option's value is now the code ("never"), not its rendered label —
+  // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
+  // the sentence.
+  await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("Anything else").fill("We are ashore only on the Tuesday.");
 
   // The preview is the promise: what the diver reads here is exactly what the

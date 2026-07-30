@@ -48,6 +48,23 @@
     "packRenting": "Renting",
     "packProvided": "We provide",
     "packNothingRequested": "Nothing requested yet",
+    "rentalItems": {
+      "bcd": "BCD",
+      "regulator": "Regulator",
+      "wetsuit": "Wetsuit",
+      "maskFins": "Mask and fins",
+      "weights": "Weights",
+      "diveComputer": "Dive computer",
+      "gopro": "GoPro"
+    },
+    "providedItems": {
+      "tanksAndWeights": "Tanks and weights",
+      "crewBriefing": "Crew briefing"
+    },
+    "temperatureTip": {
+      "cold": "Water is expected around {celsius}°C — ask the shop whether you need extra exposure protection.",
+      "mild": "Water is expected around {celsius}°C — use the shop's wetsuit guidance for comfort."
+    },
     "dockDayRhythm": "Your dock-day rhythm",
     "briefingsEyebrow": "Dive briefings",
     "planTwoTank": "Your two-tank plan",
@@ -426,7 +443,25 @@
     "likelySightings": "{count, plural, one {# likely sighting} other {# likely sightings}}",
     "satelliteViewIllustrative": "Satellite view · illustrative route",
     "openMap": "Open map ↗",
-    "satelliteMapTitle": "Satellite map of {site}"
+    "satelliteMapTitle": "Satellite map of {site}",
+    "landmarkKinds": {
+      "navigationMark": "Navigation mark",
+      "reefHistory": "Reef history",
+      "wreckFeature": "Wreck feature",
+      "underwaterMonument": "Underwater monument",
+      "reefFormation": "Reef formation",
+      "pointOfInterest": "Point of interest"
+    },
+    "landmarkDescriptions": {
+      "molassesReefLight": "The reef light is the easiest above-water reference and a useful way to stay oriented around the central reef.",
+      "shipsWinch": "A large ship's winch rests near the reef light—a compact piece of maritime history now folded into the reef.",
+      "spanishAnchor": "An old anchor lies among the coral formations. Let the crew point it out; it can disappear surprisingly well into the reef.",
+      "flightDeckAndCranes": "The broad flight deck and paired cranes make the ship's scale click into place. Stay outside the structure and follow the guide's line.",
+      "wellDeck": "The open well deck is one of the wreck's most dramatic exterior spaces, with changing light and room for big schools of fish.",
+      "christOfAbyssStatue": "The 8.6-foot bronze statue stands on a concrete pedestal in shallow water—the unmistakable centrepiece of this dive.",
+      "dryRocksSandChannels": "Bright sand channels weave between coral formations around the statue and are good places to look for rays, grouper, and moray eels.",
+      "generic": "A memorable reference point the crew can identify during the site briefing."
+    }
   },
   "inquiry": {
     "yourName": "Your name",
@@ -446,7 +481,16 @@
     "messageSoFar": "Your message so far",
     "openInEmailApp": "Open in your email app",
     "orWriteTo": "Or write to",
-    "callLabel": "call"
+    "callLabel": "call",
+    "notSaid": "Not said",
+    "subject": "Course inquiry: {courseTitle}",
+    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\nWhen: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
+    "experience": {
+      "never": "I have never dived before",
+      "tried": "I have tried scuba once, but I am not certified",
+      "certified": "I am certified, and I have my card",
+      "lapsed": "I am certified, but it has been a while"
+    }
   },
   "account": {
     "common": {

@@ -1,3 +1,5 @@
+import type { RentableItemKind } from "@/lib/rentals";
+
 /** The fixed beats of a dock day; the component looks each one up in `trip.timeline.*`. */
 export type DockDayStep =
   | "arrive"
@@ -70,34 +72,49 @@ export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
   return { tone: "unknown" };
 }
 
+/** What the shop hands every diver regardless of their rental fit — a fixed pair of codes. */
+export type ProvidedItemCode = "tanksAndWeights" | "crewBriefing";
+
+/** Which `rental_fit_profiles` boolean field toggles which rentable kind, in display order. */
+const RENTAL_FIELD_KINDS: ReadonlyArray<readonly [string, RentableItemKind]> = [
+  ["rentsBcd", "bcd"],
+  ["rentsRegulator", "regulator"],
+  ["rentsWetsuit", "wetsuit"],
+  ["rentsMaskFins", "mask_fins"],
+  ["rentsWeights", "weights"],
+  ["rentsDiveComputer", "dive_computer"],
+  ["rentsGopro", "gopro"],
+];
+
+/**
+ * How cold the water reads, for the "pack a little more neoprene" nudge — a
+ * code plus the raw reading, never a rendered sentence: the component
+ * composes the one ICU template (`trip.temperatureTip.<tone>`) with
+ * `{celsius}` itself.
+ */
+export type TemperatureTip = { tone: "cold" | "mild"; celsius: number };
+
 export function packingConfidence(
   shopItems: string[],
   rental: null | Record<string, boolean | string | null>,
   waterTemperatureC: number | null,
-) {
+): {
+  bring: string[];
+  rented: RentableItemKind[];
+  provided: ProvidedItemCode[];
+  temperatureTip: TemperatureTip | null;
+} {
   const rented = rental
-    ? [
-        ["rentsBcd", "BCD"],
-        ["rentsRegulator", "Regulator"],
-        ["rentsWetsuit", "Wetsuit"],
-        ["rentsMaskFins", "Mask and fins"],
-        ["rentsWeights", "Weights"],
-        ["rentsDiveComputer", "Dive computer"],
-        ["rentsGopro", "GoPro"],
-      ]
-        .filter(([field]) => rental[field] === true)
-        .map(([, label]) => label)
+    ? RENTAL_FIELD_KINDS.filter(([field]) => rental[field] === true).map(([, kind]) => kind)
     : [];
-  const temperatureTip =
+  const temperatureTip: TemperatureTip | null =
     waterTemperatureC === null
       ? null
-      : waterTemperatureC < 20
-        ? `Water is expected around ${waterTemperatureC}°C — ask the shop whether you need extra exposure protection.`
-        : `Water is expected around ${waterTemperatureC}°C — use the shop's wetsuit guidance for comfort.`;
+      : { tone: waterTemperatureC < 20 ? "cold" : "mild", celsius: waterTemperatureC };
   return {
     bring: shopItems,
     rented,
-    provided: ["Tanks and weights", "Crew briefing"],
+    provided: ["tanksAndWeights", "crewBriefing"],
     temperatureTip,
   };
 }

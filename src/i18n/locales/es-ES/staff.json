@@ -1105,6 +1105,9 @@
     },
     "series": {
       "heading": "Serie repetida",
+      "cadenceWeekly": "cada semana",
+      "cadenceEveryNWeeks": "cada {weeks} semanas",
+      "summaryLine": "Se repite {cadence} · {trips, plural, one {# salida} other {# salidas}}",
       "summaryWithFuture": "{summary} · {count, plural, one {queda # fecha próxima en el calendario.} other {quedan # fechas próximas en el calendario.}}",
       "summaryAllDone": "{summary} · todas las fechas ya zarparon o se cancelaron.",
       "applying": "Aplicando…",
