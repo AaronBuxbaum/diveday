@@ -189,6 +189,26 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
+      # reg-keygen-git-hash-plugin's expected-key algorithm only works by
+      # triangulating a merge-base against *other* local branches (it's built
+      # for topic-branch-vs-trunk, per the checkout comment above) — it has no
+      # "just diff against the previous commit" mode. A direct push to main
+      # checks out only `main`, so there is no other branch, getBaseCommitHash()
+      # returns null, and every push reports every screenshot as brand new
+      # (confirmed in CI logs: "Failed to detect the previous snapshot key" /
+      # "New items: N" / "Passed items: 0" on every main push — never actually
+      # comparing a pixel). Creating a branch ref at HEAD^ gives the plugin the
+      # second branch its algorithm needs, so it resolves the previous commit's
+      # published S3 snapshot as the baseline instead. If that snapshot was
+      # never published (e.g. the very first run), the S3 fetch just comes back
+      # empty and this degrades to the same all-new behavior as before — it
+      # never turns into a hard failure.
+      - name: Anchor reg-suit's baseline detection to the previous commit (main pushes only)
+        if: github.event_name == 'push'
+        run: |
+          if git rev-parse --verify -q HEAD^ > /dev/null; then
+            git branch reg-suit-baseline-parent HEAD^
+          fi
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:

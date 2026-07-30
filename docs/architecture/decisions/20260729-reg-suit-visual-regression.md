@@ -55,3 +55,15 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   for a commit, decoding gzip by magic number rather than trusting the header, and writes them plus a
   `REPORT.md` summary to `.reg-report/<commit>/` — flat files an agent's `Read` tool can open directly,
   no browser or AWS credentials required. See the **visual-triage** skill.
+- **A direct push to main needs a git branch reg-suit doesn't otherwise have.** `reg-keygen-git-hash-plugin`'s
+  expected-key detection (`getBaseCommitHash()`) only works by computing a merge-base against *other* local
+  branches — it has no "just diff against the previous commit" mode, because it's designed for a topic-branch-vs-trunk
+  PR flow. The `visual` job's checkout puts only `main` in the working copy for a push event, so there is no other
+  branch to triangulate against: the key generator returns null, and every screenshot on every push to main used to
+  report as brand new — "Failed to detect the previous snapshot key" / "New items: N" / "Passed items: 0" in the CI
+  log, every time, without ever actually comparing a pixel. The `visual` job now adds a branch ref at `HEAD^` before
+  running `pnpm visual` (only on `push`, not `pull_request`, where the existing branch-vs-main triangulation already
+  works) — that gives the plugin the second branch its algorithm needs, so it resolves the previous commit's
+  published S3 snapshot as the baseline and only reports a diff when the pixels actually changed. If that previous
+  snapshot was never published, the S3 fetch just comes back empty and the run degrades to the old all-new behavior
+  for that one push, rather than a hard failure.
