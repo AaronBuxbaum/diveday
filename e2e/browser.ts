@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { chromium } from "@playwright/test";
+import { chromium, type LaunchOptions } from "@playwright/test";
 
 /**
  * Which Chromium the e2e fleet runs, and the flags that make it rasterize the
@@ -121,8 +121,14 @@ export const DETERMINISTIC_RENDERING_ARGS = [
   "--disable-checker-imaging",
 ];
 
-/** Launch options every browser in the fleet shares — tests and warm-up alike. */
-export function chromiumLaunchOptions() {
+/**
+ * Launch options every browser in the fleet shares — tests and warm-up alike.
+ *
+ * Annotated with Playwright's own `LaunchOptions` rather than inferred, so a
+ * rename or retype on their side is a typecheck failure here instead of a
+ * silently-ignored option at launch.
+ */
+export function chromiumLaunchOptions(): LaunchOptions {
   const executablePath = chromiumExecutableOverride();
   return {
     args: DETERMINISTIC_RENDERING_ARGS,

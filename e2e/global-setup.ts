@@ -41,8 +41,14 @@ async function warmBrowser() {
   try {
     const page = await browser.newPage();
     // A real navigation, so the renderer process, the compositor, and font
-    // config are all initialized — not just the browser process.
-    await page.goto(e2eBaseURL(0), { timeout: 30_000 }).catch(() => {});
+    // config are all initialized — not just the browser process. Best-effort:
+    // a warm-up that cannot reach the app must not fail the run before the
+    // tests have had their say. But it must not be silent either — an
+    // unreachable server here is the same fault every test is about to hit,
+    // and saying so once up front beats reading it out of 34 timeouts.
+    await page.goto(e2eBaseURL(0), { timeout: 30_000 }).catch((error) => {
+      console.warn(`e2e: browser warm-up could not reach ${e2eBaseURL(0)} — ${error}`);
+    });
     await page.close();
   } finally {
     await browser.close();
