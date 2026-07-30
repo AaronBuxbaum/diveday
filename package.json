@@ -16,6 +16,7 @@
     "e2e:browser-check": "tsx scripts/ensure-playwright-browser.ts",
     "e2e": "pnpm e2e:browser-check && pnpm e2e:build && playwright test",
     "visual": "pnpm e2e:browser-check && pnpm e2e:build && playwright test e2e/visual.spec.ts && dotenv -c -- reg-suit run",
+    "visual:ci": "playwright test e2e/visual.spec.ts && dotenv -c -- reg-suit run",
     "visual:report": "node scripts/visual-report.mjs",
     "infra:bootstrap": "cdk bootstrap",
     "infra:deploy": "cdk deploy",
