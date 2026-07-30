@@ -88,7 +88,15 @@ export default async function Home() {
                 {t("marketing.home.heroDescription")}
               </p>
               <div className="mt-8">
-                <HomeCTA enterDemoAction={enterDemoAction} />
+                <HomeCTA
+                  enterDemoAction={enterDemoAction}
+                  copy={{
+                    gettingReady: t("nav.gettingReady"),
+                    tryDemo: t("nav.tryDemo"),
+                    startTrial: t("nav.startTrial"),
+                    seeLiveSchedule: t("nav.seeLiveSchedule"),
+                  }}
+                />
               </div>
               <p className="mt-4 text-sm text-muted">{t("marketing.home.exploreNote")}</p>
             </div>

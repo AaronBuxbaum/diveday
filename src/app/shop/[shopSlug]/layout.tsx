@@ -9,6 +9,8 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import {
@@ -18,6 +20,48 @@ import {
   isStaff,
 } from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+
+type DemoRoleId = "owner" | "instructor" | "divemaster" | "captain" | "diver";
+
+/** Data (icon/sample name), not copy — the words come from the demo bundle namespace. */
+const DEMO_ROLE_META: { id: DemoRoleId; icon: string; name: string }[] = [
+  { id: "owner", icon: "👑", name: "Dana Reyes" },
+  { id: "instructor", icon: "🎓", name: "Marcus Webb" },
+  { id: "divemaster", icon: "🤿", name: "Keiko Tanaka" },
+  { id: "captain", icon: "⚓", name: "Sal Moretti" },
+  { id: "diver", icon: "🐬", name: "Public Guest" },
+];
+
+const DEMO_ROLE_KEYS: Record<
+  DemoRoleId,
+  { title: DiverMessageKey; desc: DiverMessageKey; tryThis: DiverMessageKey }
+> = {
+  owner: {
+    title: "demo.roles.owner.title",
+    desc: "demo.roles.owner.desc",
+    tryThis: "demo.roles.owner.tryThis",
+  },
+  instructor: {
+    title: "demo.roles.instructor.title",
+    desc: "demo.roles.instructor.desc",
+    tryThis: "demo.roles.instructor.tryThis",
+  },
+  divemaster: {
+    title: "demo.roles.divemaster.title",
+    desc: "demo.roles.divemaster.desc",
+    tryThis: "demo.roles.divemaster.tryThis",
+  },
+  captain: {
+    title: "demo.roles.captain.title",
+    desc: "demo.roles.captain.desc",
+    tryThis: "demo.roles.captain.tryThis",
+  },
+  diver: {
+    title: "demo.roles.diver.title",
+    desc: "demo.roles.diver.desc",
+    tryThis: "demo.roles.diver.tryThis",
+  },
+};
 
 /**
  * Staff-surface shell. If the shop is a demo shop, it hangs the demo banner
@@ -88,14 +132,35 @@ export default async function ShopLayout({
     }
   }
 
+  const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
+
   return (
     <>
-      {showBanner ? (
+      {showBanner && demoT ? (
         <DemoBanner
           currentRole={currentRole}
           currentName={session?.user?.name}
           shopSlug={shopSlug}
-          availableRoles={availableRoles}
+          roles={DEMO_ROLE_META.filter((role) => availableRoles.includes(role.id)).map((role) => ({
+            ...role,
+            title: demoT(DEMO_ROLE_KEYS[role.id].title),
+            desc: demoT(DEMO_ROLE_KEYS[role.id].desc),
+            tryThis: demoT(DEMO_ROLE_KEYS[role.id].tryThis),
+          }))}
+          copy={{
+            shopLabel: demoT("demo.shopLabel"),
+            viewingAs: demoT("demo.viewingAs"),
+            switchRole: demoT("demo.switchRole"),
+            sharedWarning: demoT("demo.sharedWarning"),
+            sessionExpired: demoT("demo.sessionExpired"),
+            withCredentials: demoT("demo.withCredentials"),
+            chooseRole: demoT("demo.chooseRole"),
+            active: demoT("demo.active"),
+            tryLabel: demoT("demo.tryLabel"),
+            current: demoT("demo.current"),
+            switchAction: demoT("demo.switchAction"),
+            switchToAria: (role: string) => demoT("demo.switchToAria", { role }),
+          }}
           // A minted (per-visitor) demo is addressable by its slug and readable
           // by anyone who has it, so warn against entering real customer data;
           // the canonical fixture demo holds only sample data and stays quiet.

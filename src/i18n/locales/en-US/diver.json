@@ -428,6 +428,134 @@
       "submit": "Sign in",
       "needShop": "Need a shop?",
       "createShop": "Create a shop"
+    },
+    "onboard": {
+      "eyebrow": "Founding shop",
+      "title": "Set up your shop",
+      "description": "A few details, and you'll be looking at your own working shop. DiveDay is early, and the first shops steer it.",
+      "shopSectionTitle": "Your shop",
+      "shopNameLabel": "Shop name",
+      "shopNamePlaceholder": "e.g. Green Lagoon Divers",
+      "shopLinkLabel": "Shop link",
+      "shopLinkPlaceholder": "e.g. green-lagoon",
+      "shopLinkTitle": "Lowercase letters, numbers, and hyphens — this becomes your shop's web address",
+      "timezoneLabel": "Timezone",
+      "timezone": {
+        "eastern": "Eastern Time (New York)",
+        "central": "Central Time (Chicago)",
+        "mountain": "Mountain Time (Denver)",
+        "pacific": "Pacific Time (Los Angeles)",
+        "london": "London",
+        "singapore": "Singapore",
+        "sydney": "Sydney",
+        "auckland": "Auckland"
+      },
+      "youSectionTitle": "You",
+      "fullNameLabel": "Full name",
+      "fullNamePlaceholder": "e.g. Dana Reyes",
+      "emailPlaceholder": "e.g. owner@example.com",
+      "passwordPlaceholder": "At least 8 characters",
+      "reassurance": {
+        "noCard": {
+          "lead": "No card, no setup fee.",
+          "body": "Nothing to pay to look around. Put your first trip on the calendar and see how the day runs."
+        },
+        "yourRecords": {
+          "lead": "Your records leave with you.",
+          "body": "Settings hands back one ZIP of your shop's files — divers, bookings, waivers, payments, photos. It works on your first day, not just your last."
+        },
+        "founderLine": {
+          "lead": "You get a founder-direct line.",
+          "body": "Founding shops write in and hear back the same day, and what your crew runs into shapes what ships next."
+        }
+      },
+      "exploreNote": "Your shop starts empty and ready for your own trips and divers. Want to explore a shop that's already full of sample trips first?",
+      "tryLiveDemo": "Try the live demo",
+      "settingUp": "Setting up your shop…",
+      "submit": "Create shop & start trial",
+      "alreadyHaveShop": "Already have a shop?",
+      "signIn": "Sign in"
+    }
+  },
+  "nav": {
+    "product": "Product",
+    "pricing": "Pricing",
+    "switch": "Switch",
+    "about": "About",
+    "signOut": "Sign out",
+    "signIn": "Sign in",
+    "startTrial": "Start a trial",
+    "mainNavigation": "Main navigation",
+    "tagline": "A calmer way to run a dive day.",
+    "sayHello": "Say hello — always welcome",
+    "seeLiveSchedule": "See a live schedule →",
+    "gettingReady": "Getting your shop ready…",
+    "tryDemo": "Try the live demo"
+  },
+  "fallback": {
+    "offlineCopy": "Offline copy · up to date",
+    "tripDetail": "Trip detail",
+    "schedule": "Schedule",
+    "boatManifest": "Boat manifest",
+    "tripName": "Two-Tank Reef",
+    "tripTime": "Today · 7:30–11:00 AM",
+    "diversLabel": "Divers",
+    "readyLabel": "Ready",
+    "boardedLabel": "Boarded",
+    "rollCall": "Roll call",
+    "readyToBoard": "Ready to board",
+    "markBoarded": "Mark boarded",
+    "readiness": "Readiness",
+    "answerBeforeDock": "The answer before the dock",
+    "noDiverClears": "No diver clears until everything checks out.",
+    "waiverNeedsAttention": "Waiver needs attention",
+    "certificationPending": "Certification pending",
+    "upcomingTrips": "Upcoming trips",
+    "findNextDive": "Find your next dive",
+    "nightDive": "Night Dive",
+    "tomorrowTime": "Tomorrow · 7:30 AM",
+    "fridayTime": "Friday · 7:30 PM",
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+  },
+  "demo": {
+    "shopLabel": "Demo shop",
+    "viewingAs": "Viewing as",
+    "switchRole": "Switch role",
+    "sharedWarning": "Shared demo link — don't enter real customer details.",
+    "sessionExpired": "Session expired? Sign back in at",
+    "withCredentials": "with",
+    "chooseRole": "Choose a role to experience DiveDay from different perspectives:",
+    "active": "Active",
+    "tryLabel": "Try:",
+    "current": "Current",
+    "switchAction": "Switch",
+    "switchToAria": "Switch to {role}",
+    "roles": {
+      "owner": {
+        "title": "Admin / Owner",
+        "desc": "Full business control. Create trips, manage staff, and view operational reports.",
+        "tryThis": "Check the Reports dashboard or schedule a trip."
+      },
+      "instructor": {
+        "title": "Instructor",
+        "desc": "Assigned to teach courses. Focuses on student certification safety gating.",
+        "tryThis": "Open a Discover Scuba course trip to see staff assignments."
+      },
+      "divemaster": {
+        "title": "Divemaster",
+        "desc": "Guides divers, verifies waiver paperwork, and keeps rental fit up to date.",
+        "tryThis": "Check Waivers, or open a trip's prep list to see what to pull."
+      },
+      "captain": {
+        "title": "Captain",
+        "desc": "Runs the boat — boarding, the manifest, and the final roll call before departure.",
+        "tryThis": "Open an upcoming trip manifest and run the passenger roll call."
+      },
+      "diver": {
+        "title": "Diver",
+        "desc": "What your customers see — book a trip, sign the waiver, request rental gear.",
+        "tryThis": "Pick a trip on the schedule and book a spot."
+      }
     }
   },
   "marketing": {
@@ -555,6 +683,123 @@
       "whoAnswersValue": "The founder, directly. Founding shops get that in writing on the pricing page.",
       "closingTitle": "The honest way to judge all of this is to go use it.",
       "closingDescription": "No call, no form first. Walk a full sample shop as the owner, the captain, or a diver, and decide whether it feels like something your crew would open on a busy morning."
+    },
+    "product": {
+      "eyebrow": "The product",
+      "heroTitle": "From the first booking to the last head count.",
+      "heroDescription": "DiveDay is organized around the trip itself. Every booking, waiver, certification, payment, packing decision, and roll-call event stays attached to the people going out on the boat.",
+      "readinessEyebrow": "Before departure",
+      "readinessTitle": "One readiness answer, shared everywhere it matters.",
+      "readinessDescription": "The front desk sees why a diver is blocked. The captain sees the same answer on the manifest. No one has to guess whether a missing waiver or pending card is okay to ignore.",
+      "readinessStep1": "The trip and the dive site decide what each diver needs.",
+      "readinessStep2": "If something can't be verified, DiveDay says so plainly — no silent passes.",
+      "readinessStep3": "Staff fix the problem at the desk, not at the dock.",
+      "readinessMockupLabel": "The DiveDay readiness section used by a dive shop's front desk.",
+      "systemEyebrow": "The full system",
+      "systemTitle": "Built around how a dive shop actually works.",
+      "dockEyebrow": "At the dock",
+      "dockTitle": "A manifest that stays useful after the signal disappears.",
+      "dockDescription": "The crew gets big phone controls, head counts for every dive, blockers that can't be ignored, a boarding history that keeps every correction, and a print view straight from the same manifest.",
+      "dockNote": "The crew saves the manifest to their phone before leaving the dock. Anything marked offline stays clearly labeled until DiveDay is back in service and double-checks it against the live manifest — nothing is ever quietly overwritten.",
+      "captainPhoneLabel": "A captain using the mobile roll-call view in DiveDay.",
+      "paymentEyebrow": "Getting paid",
+      "paymentTitle": "The money runs through your Stripe account, not ours.",
+      "paymentDescription": "Divers pay when they book, or leave a deposit and settle the balance at the dock. Staff raise an invoice at the counter for a trip, a course, rentals, nitrox, or a retail line. When a diver cancels inside the window you published, the refund goes back automatically — and when they don't, the page says so before they commit rather than after.",
+      "yourAccountTitle": "Your account, your money",
+      "yourAccountBody": "Payouts, disputes, and history stay in the Stripe account you already control. DiveDay never sits between you and the payment — and there is no per-booking cut on top of the flat price.",
+      "pricedTitle": "Priced before they board",
+      "pricedBody": "Payment is part of the same readiness answer as the waiver and the card, so “are they ready?” means all of it. Nobody boards on an assumption that someone else already settled up.",
+      "recapEyebrow": "After the boat is back",
+      "recapTitle": "The day ends with a recap divers want to share.",
+      "recapDescription": "The paperwork is DiveDay's job; the memory is the diver's. The night before, every diver gets a plain-language brief — dock time, conditions on the water, what to bring, who to text. After the trip, each diver gets their own recap page to keep and share.",
+      "nightBeforeEyebrow": "The night before",
+      "nightBeforeTitle": "A brief in plain words, not a form letter",
+      "nightBeforeBody": "When to be at the dock, what the water looks like, what to pack, and who to text if something changes — written gently enough for someone's first boat dive.",
+      "afterTripEyebrow": "After the trip",
+      "afterTripTitle": "A recap page they'll want to share",
+      "afterTripBody": "The sites they dived, a shout-out from the crew, and room for their own photos — with a nudge to bring a buddy next time. Divers share it; the shop gets remembered.",
+      "boxEyebrow": "Everything in the box",
+      "boxTitle": "The whole list, plainly.",
+      "boxDescription": "No tiers, no add-ons, nothing here held back for a bigger plan. Every line is something you can go and do in the demo right now — open it in another tab and check us on any of them.",
+      "noEyebrow": "An honest no",
+      "noTitle": "What DiveDay doesn't do.",
+      "noDescription": "You're sizing up a vendor you've never heard of; the least we can do is draw our own boundaries before you find them.",
+      "notCovered": {
+        "pos": {
+          "title": "A retail point of sale",
+          "detail": "Keep the register you have. You can put a retail line on a DiveDay order, but there's no barcode scanner or stock count here — DiveDay runs the water side of the shop."
+        },
+        "gearSerials": {
+          "title": "Gear serial numbers",
+          "detail": "DiveDay tracks every diver's sizes and builds the trip's packing list. It doesn't manage individual rigs or service history."
+        },
+        "agencyLine": {
+          "title": "A live line to PADI or SSI",
+          "detail": "No agency offers software a way to verify a C-card automatically, so verification stays honest: staff look the card up with the agency and mark it certified themselves."
+        }
+      },
+      "closingTitle": "Try it as the person doing the work.",
+      "closingDescription": "Walk the live demo as the owner, the captain, or a diver — then start a trial shop of your own.",
+      "spreadsheetLink": "On a spreadsheet today? Bring it across — we'll even do it with you →",
+      "gettingDemoReady": "Getting the demo ready…"
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "heroTitle": "One flat price for the whole shop.",
+      "heroDescription": "No setup fee, no per-seat math, no feature tiers — the safety workflow is never an add-on you have to remember to buy.",
+      "completeAccess": "Complete shop access",
+      "earlyAccessBadge": "Early access",
+      "gettingDemoReady": "Getting the demo ready…",
+      "tryDemoFirst": "Try the live demo first",
+      "feesNote": "Payment-processing fees stay between you and your payment provider. If a future integration ever costs extra, we'll say so clearly before you turn it on.",
+      "includedEyebrow": "Included now",
+      "includedTitle": "Everything needed to run the current DiveDay workflow.",
+      "faqEyebrow": "Questions, answered plainly",
+      "faqTitle": "The questions that actually decide it.",
+      "faq": {
+        "whatIncluded": {
+          "question": "What is included?",
+          "answer": "The founding-shop price covers every currently available DiveDay workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons."
+        },
+        "billing": {
+          "question": "How does billing work?",
+          "answer": "Month to month, per location. Cancel whenever you like and leave with your shop's records through the export button — no setup fee and no annual contract."
+        },
+        "seeBefore": {
+          "question": "Can I see it before I commit?",
+          "answer": "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — it's a shop already full of sample trips. Or start a trial shop of your own: it begins empty, ready for your first trip."
+        },
+        "offline": {
+          "question": "Does the manifest work offline?",
+          "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts."
+        },
+        "dataIfNotWorking": {
+          "question": "DiveDay is new. What happens to my data if this doesn't work out?",
+          "answer": "You leave with your shop's records, whenever you choose. {claim} {terms}"
+        },
+        "switching": {
+          "question": "What does switching to DiveDay actually involve?",
+          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, their rental sizes, and any waivers your old system already had signed — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify; a waiver your old system already had signed comes over marked as imported, so nobody has to sign it again. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver."
+        },
+        "agency": {
+          "question": "Does DiveDay connect to PADI or SSI?",
+          "answer": "No — no agency offers shop software a way to verify a C-card automatically, so DiveDay doesn't pretend. A photo of the card goes on the diver's profile once, your staff confirm the number with the agency and mark it certified, and that card stays with the diver for every future booking. Courses arrive as your shop's copy of the agency catalog, with DiveDay's published page templates as a starting point — you set the prices and choose what's visible."
+        },
+        "pos": {
+          "question": "Does DiveDay replace my POS?",
+          "answer": "No — keep your register. DiveDay runs the water side of the shop: bookings, courses, readiness, trip prep, and the boat, with trip and course payments through your shop's own Stripe account. You can put a retail line on a DiveDay order, but there is no register, barcode scanner, or stock count here, and we'd rather say that plainly than pretend."
+        },
+        "whyFounding": {
+          "question": "Why be a founding shop?",
+          "answer": "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years and get a founder-direct line with same-day responses; every new feature lands in the one plan there is, with no higher tiers to move things into."
+        },
+        "multipleLocations": {
+          "question": "What about multiple locations?",
+          "answer": "Each DiveDay workspace runs one shop today. If you operate more than one location, email aaron@dive.day — we'd rather build that with you than pretend it's already here."
+        }
+      },
+      "stillQuestion": "Still have a question a FAQ can't answer? Founding shops get a founder-direct line — use it, always welcome.",
+      "emailCta": "Email {email}"
     }
   }
 }

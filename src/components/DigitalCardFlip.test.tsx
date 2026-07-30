@@ -2,11 +2,31 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { DigitalCardFlip } from "./DigitalCardFlip";
+import { DigitalCardFlip, type DigitalCardFlipCopy } from "./DigitalCardFlip";
 
 afterEach(() => {
   cleanup();
 });
+
+const copy: DigitalCardFlipCopy = {
+  diverLabel: "Diver",
+  cardNumberPrefix: (id) => `Card #: ${id}`,
+  statusVerified: "DIVEDAY VERIFIED",
+  statusRefresherDue: "REFRESHER DUE",
+  statusPending: "PENDING REVIEW",
+  noPhoto: "NO CARD PHOTO",
+  certifiedByStaff: "Certified by staff",
+  refresherDueVerify: "Refresher due — verify current status with the agency",
+  awaitingVerification: "Awaiting staff verification",
+  idPrefix: (id) => `ID: ${id}`,
+  secureLabel: "DIVEDAY SECURE",
+  openFullSize: "Open full-size card photo ↗",
+  tapToFlip: (target) => `Tap the card to flip and view ${target}`,
+  uploadedPhoto: "the uploaded photo",
+  securityDetails: "security details",
+  flipAriaLabel: (level) => `Digital certification card for ${level}. Press to flip.`,
+  uploadedAlt: "Uploaded certification card",
+};
 
 describe("DigitalCardFlip", () => {
   const props = {
@@ -16,6 +36,7 @@ describe("DigitalCardFlip", () => {
     identifier: "PADI-OW-99887",
     cardImageUrl: "https://example.com/card.jpg",
     verificationStatus: "verified" as const,
+    copy,
   };
 
   it("renders the certification details on the front of the card", () => {

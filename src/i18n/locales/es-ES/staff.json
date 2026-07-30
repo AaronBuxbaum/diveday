@@ -113,5 +113,52 @@
     "crew": "Tripulación",
     "course": "Curso",
     "day": "Día {number}"
+  },
+  "divers": {
+    "certifications": {
+      "heading": "Tarjetas de certificación",
+      "description": "La evidencia empieza pendiente. Busca el número de tarjeta con la agencia emisora y márcala como certificada — solo las tarjetas certificadas afectan a la preparación.",
+      "addCard": "Añadir tarjeta",
+      "agency": "Agencia",
+      "level": "Nivel",
+      "cardNumber": "Número de tarjeta",
+      "refresherDue": "Vencimiento del repaso",
+      "refresherHint": "(opcional; política de la tienda — las tarjetas no caducan)",
+      "cardPhoto": "Foto de la tarjeta",
+      "cardPhotoHint": "(opcional; JPG, PNG o WebP; ≤5 MB)",
+      "capturing": "Capturando…",
+      "captureForReview": "Capturar para revisión",
+      "empty": "Aún no hay tarjetas de nivel — añade su primera tarjeta arriba para que pueda estar lista para el viaje.",
+      "viewDigitalCard": "Ver tarjeta digital",
+      "refresherOverdue": " · repaso vencido {date}",
+      "refresherDueOn": " · repaso vence {date}",
+      "importedLabel": "importado",
+      "importedWithSource": "importado · {source}",
+      "confirming": "Confirmando…",
+      "markingCertified": "Marcando certificado…",
+      "confirmCard": "Confirmar tarjeta",
+      "markCertified": "Marcar certificado",
+      "deleting": "Eliminando…",
+      "delete": "Eliminar",
+      "card": {
+        "diverLabel": "Buceador",
+        "cardNumberPrefix": "Tarjeta n.º: {id}",
+        "statusVerified": "VERIFICADO POR DIVEDAY",
+        "statusRefresherDue": "REPASO PENDIENTE",
+        "statusPending": "PENDIENTE DE REVISIÓN",
+        "noPhoto": "SIN FOTO DE TARJETA",
+        "certifiedByStaff": "Certificado por el personal",
+        "refresherDueVerify": "Repaso pendiente — verifica el estado actual con la agencia",
+        "awaitingVerification": "Pendiente de verificación del personal",
+        "idPrefix": "ID: {id}",
+        "secureLabel": "DIVEDAY SEGURO",
+        "openFullSize": "Abrir foto de la tarjeta a tamaño completo ↗",
+        "tapToFlip": "Toca la tarjeta para girarla y ver {target}",
+        "uploadedPhoto": "la foto subida",
+        "securityDetails": "los detalles de seguridad",
+        "flipAriaLabel": "Tarjeta de certificación digital de {level}. Pulsa para girarla.",
+        "uploadedAlt": "Tarjeta de certificación subida"
+      }
+    }
   }
 }

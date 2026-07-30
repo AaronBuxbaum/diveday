@@ -113,5 +113,52 @@
     "crew": "Crew",
     "course": "Course",
     "day": "Day {number}"
+  },
+  "divers": {
+    "certifications": {
+      "heading": "Certification cards",
+      "description": "Evidence starts pending. Look the card number up with the issuing agency, then mark it certified — only certified cards affect readiness.",
+      "addCard": "Add card",
+      "agency": "Agency",
+      "level": "Level",
+      "cardNumber": "Card number",
+      "refresherDue": "Refresher due",
+      "refresherHint": "(optional; shop policy — cards don't expire)",
+      "cardPhoto": "Card photo",
+      "cardPhotoHint": "(optional; JPG, PNG, or WebP; ≤5 MB)",
+      "capturing": "Capturing…",
+      "captureForReview": "Capture for review",
+      "empty": "No level cards yet — add their first card above so it can make them trip-ready.",
+      "viewDigitalCard": "View digital card",
+      "refresherOverdue": " · refresher overdue {date}",
+      "refresherDueOn": " · refresher due {date}",
+      "importedLabel": "imported",
+      "importedWithSource": "imported · {source}",
+      "confirming": "Confirming…",
+      "markingCertified": "Marking certified…",
+      "confirmCard": "Confirm card",
+      "markCertified": "Mark certified",
+      "deleting": "Deleting…",
+      "delete": "Delete",
+      "card": {
+        "diverLabel": "Diver",
+        "cardNumberPrefix": "Card #: {id}",
+        "statusVerified": "DIVEDAY VERIFIED",
+        "statusRefresherDue": "REFRESHER DUE",
+        "statusPending": "PENDING REVIEW",
+        "noPhoto": "NO CARD PHOTO",
+        "certifiedByStaff": "Certified by staff",
+        "refresherDueVerify": "Refresher due — verify current status with the agency",
+        "awaitingVerification": "Awaiting staff verification",
+        "idPrefix": "ID: {id}",
+        "secureLabel": "DIVEDAY SECURE",
+        "openFullSize": "Open full-size card photo ↗",
+        "tapToFlip": "Tap the card to flip and view {target}",
+        "uploadedPhoto": "the uploaded photo",
+        "securityDetails": "security details",
+        "flipAriaLabel": "Digital certification card for {level}. Press to flip.",
+        "uploadedAlt": "Uploaded certification card"
+      }
+    }
   }
 }

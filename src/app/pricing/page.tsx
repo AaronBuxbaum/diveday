@@ -7,6 +7,8 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { FeatureGroupsGrid } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
@@ -24,69 +26,65 @@ export const metadata: Metadata = {
   },
 };
 
-const faq = [
-  {
-    question: "What is included?",
-    answer:
-      "The founding-shop price covers every currently available DiveDay workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons.",
-  },
-  {
-    question: "How does billing work?",
-    answer:
-      "Month to month, per location. Cancel whenever you like and leave with your shop's records through the export button — no setup fee and no annual contract.",
-  },
-  {
-    question: "Can I see it before I commit?",
-    answer:
-      "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — it's a shop already full of sample trips. Or start a trial shop of your own: it begins empty, ready for your first trip.",
-  },
-  {
-    question: "Does the manifest work offline?",
-    answer:
-      "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts.",
-  },
-  {
-    question: "DiveDay is new. What happens to my data if this doesn't work out?",
-    answer: `You leave with your shop's records, whenever you choose. ${fullShopExport.claim} ${fullShopExport.terms}`,
-  },
-  {
-    question: "What does switching to DiveDay actually involve?",
-    answer:
-      "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, their rental sizes, and any waivers your old system already had signed — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify; a waiver your old system already had signed comes over marked as imported, so nobody has to sign it again. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver.",
-  },
-  {
-    question: "Does DiveDay connect to PADI or SSI?",
-    answer:
-      "No — no agency offers shop software a way to verify a C-card automatically, so DiveDay doesn't pretend. A photo of the card goes on the diver's profile once, your staff confirm the number with the agency and mark it certified, and that card stays with the diver for every future booking. Courses arrive as your shop's copy of the agency catalog, with DiveDay's published page templates as a starting point — you set the prices and choose what's visible.",
-  },
-  {
-    question: "Does DiveDay replace my POS?",
-    answer:
-      "No — keep your register. DiveDay runs the water side of the shop: bookings, courses, readiness, trip prep, and the boat, with trip and course payments through your shop's own Stripe account. You can put a retail line on a DiveDay order, but there is no register, barcode scanner, or stock count here, and we'd rather say that plainly than pretend.",
-  },
-  {
-    question: "Why be a founding shop?",
-    answer:
-      "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years and get a founder-direct line with same-day responses; every new feature lands in the one plan there is, with no higher tiers to move things into.",
-  },
-  {
-    question: "What about multiple locations?",
-    answer:
-      "Each DiveDay workspace runs one shop today. If you operate more than one location, email aaron@dive.day — we'd rather build that with you than pretend it's already here.",
-  },
-] as const;
+export default async function PricingPage() {
+  const t = diverTranslator(await requestLocale());
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faq.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: { "@type": "Answer", text: item.answer },
-  })),
-};
+  const faq = [
+    {
+      question: t("marketing.pricing.faq.whatIncluded.question"),
+      answer: t("marketing.pricing.faq.whatIncluded.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.billing.question"),
+      answer: t("marketing.pricing.faq.billing.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.seeBefore.question"),
+      answer: t("marketing.pricing.faq.seeBefore.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.offline.question"),
+      answer: t("marketing.pricing.faq.offline.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.dataIfNotWorking.question"),
+      answer: t("marketing.pricing.faq.dataIfNotWorking.answer", {
+        claim: fullShopExport.claim,
+        terms: fullShopExport.terms,
+      }),
+    },
+    {
+      question: t("marketing.pricing.faq.switching.question"),
+      answer: t("marketing.pricing.faq.switching.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.agency.question"),
+      answer: t("marketing.pricing.faq.agency.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.pos.question"),
+      answer: t("marketing.pricing.faq.pos.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.whyFounding.question"),
+      answer: t("marketing.pricing.faq.whyFounding.answer"),
+    },
+    {
+      question: t("marketing.pricing.faq.multipleLocations.question"),
+      answer: t("marketing.pricing.faq.multipleLocations.answer"),
+    },
+  ] as const;
 
-export default function PricingPage() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+
   return (
     <div className="flex flex-1 flex-col">
       <script
@@ -100,13 +98,14 @@ export default function PricingPage() {
       <main className="flex-1">
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">Pricing</p>
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              {t("marketing.pricing.eyebrow")}
+            </p>
             <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-              One flat price for the whole shop.
+              {t("marketing.pricing.heroTitle")}
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              No setup fee, no per-seat math, no feature tiers — the safety workflow is never an
-              add-on you have to remember to buy.
+              {t("marketing.pricing.heroDescription")}
             </p>
           </div>
         </section>
@@ -118,10 +117,12 @@ export default function PricingPage() {
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">
                   {earlyAccessPrice.name}
                 </p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight">Complete shop access</h2>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+                  {t("marketing.pricing.completeAccess")}
+                </h2>
               </div>
               <span className="rounded-full border border-border bg-surface-sunken px-3 py-1 text-xs font-semibold text-muted">
-                Early access
+                {t("marketing.pricing.earlyAccessBadge")}
               </span>
             </div>
             <div className="mt-7 flex items-end gap-2">
@@ -146,25 +147,24 @@ export default function PricingPage() {
                 className: "mt-8 w-full",
               })}
             >
-              Start a trial
+              {t("marketing.common.startTrial")}
             </Link>
             <form action={enterDemoAction} className="mt-3">
               <FunnelTag source="pricing" />
               <SubmitButton
-                pendingLabel="Getting the demo ready…"
+                pendingLabel={t("marketing.pricing.gettingDemoReady")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",
                   className: "w-full cursor-pointer border-border-strong disabled:opacity-70",
                 })}
               >
-                Try the live demo first
+                {t("marketing.pricing.tryDemoFirst")}
               </SubmitButton>
             </form>
           </div>
           <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-6 text-muted">
-            Payment-processing fees stay between you and your payment provider. If a future
-            integration ever costs extra, we&apos;ll say so clearly before you turn it on.
+            {t("marketing.pricing.feesNote")}
           </p>
         </section>
 
@@ -172,10 +172,10 @@ export default function PricingPage() {
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <div className="max-w-2xl">
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                Included now
+                {t("marketing.pricing.includedEyebrow")}
               </p>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                Everything needed to run the current DiveDay workflow.
+                {t("marketing.pricing.includedTitle")}
               </h2>
             </div>
             <div className="mt-10">
@@ -186,10 +186,10 @@ export default function PricingPage() {
 
         <section className="mx-auto max-w-4xl px-6 py-20 lg:py-24">
           <p className="text-center text-sm font-semibold tracking-widest text-primary uppercase">
-            Questions, answered plainly
+            {t("marketing.pricing.faqEyebrow")}
           </p>
           <h2 className="mt-3 text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            The questions that actually decide it.
+            {t("marketing.pricing.faqTitle")}
           </h2>
           <div className="mt-10 divide-y divide-border rounded-2xl border border-border bg-surface">
             {faq.map((item) => (
@@ -201,14 +201,13 @@ export default function PricingPage() {
           </div>
           <div className="mt-10 flex flex-col items-center gap-4 text-center">
             <p className="max-w-xl text-lg leading-8 text-muted">
-              Still have a question a FAQ can't answer? Founding shops get a founder-direct line —
-              use it, always welcome.
+              {t("marketing.pricing.stillQuestion")}
             </p>
             <a
               href={`mailto:${FOUNDER_EMAIL}`}
               className={buttonClass({ className: "cursor-pointer" })}
             >
-              Email {FOUNDER_EMAIL}
+              {t("marketing.pricing.emailCta", { email: FOUNDER_EMAIL })}
             </a>
           </div>
         </section>
