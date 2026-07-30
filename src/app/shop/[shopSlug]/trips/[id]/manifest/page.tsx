@@ -27,6 +27,7 @@ import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { trackEvent } from "@/lib/analytics";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   isRollCallCheckpoint,
@@ -117,7 +118,11 @@ export default async function TripManifestPage({
         note: parsed.data.note,
       });
       if (!outcome.ok) {
-        return { ok: false, reason: outcome.reason === "not_ready" ? "not_ready" : "error" };
+        if (outcome.reason === "not_ready") {
+          await trackEvent({ name: "roll_call_blocked", checkpoint });
+          return { ok: false, reason: "not_ready" };
+        }
+        return { ok: false, reason: "error" };
       }
     } catch {
       return { ok: false, reason: "error" };

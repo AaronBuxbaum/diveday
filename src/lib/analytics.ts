@@ -1,5 +1,6 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
 import type { FunnelSource } from "./funnel";
+import type { RollCallCheckpoint } from "./manifests";
 
 /**
  * Custom event instrumentation, one seam. Page-level analytics already ships via
@@ -54,6 +55,78 @@ export type AnalyticsEvent =
        */
       name: "trial_started";
       source: FunnelSource | "unknown";
+    }
+  | {
+      /** A diver or staff member completed a booking — the core conversion moment. */
+      name: "booking_completed";
+      source: "diver" | "staff";
+      partySize: number;
+    }
+  | {
+      /**
+       * A booking attempt was refused — full trip, a cert/nitrox prerequisite,
+       * or a data mismatch. `reason` is the confusion signal: a prerequisite
+       * or age reason recurring on one course means the requirement isn't
+       * clear at the point of booking, not that divers keep failing to meet it.
+       */
+      name: "booking_blocked";
+      source: "diver" | "staff";
+      reason:
+        | "trip_unavailable"
+        | "course_unstaffed"
+        | "person_not_found"
+        | "course_prerequisite"
+        | "course_min_age"
+        | "trip_full"
+        | "course_ratio_full"
+        | "already_booked";
+    }
+  | {
+      /** A diver joined a full trip's wait list instead of booking outright. */
+      name: "waitlist_joined";
+      source: "diver" | "staff";
+    }
+  | {
+      /** A booking was cancelled, by the diver themself or by a staff member. */
+      name: "booking_cancelled";
+      source: "diver" | "staff";
+    }
+  | {
+      /** A diver finished and signed their waiver. */
+      name: "waiver_signed";
+    }
+  | {
+      /**
+       * Staff tried to board a diver at roll call whose readiness gate (cert,
+       * waiver, payment) hadn't cleared. A checkpoint where this recurs is
+       * where readiness work is being left too late, not a boarding bug.
+       */
+      name: "roll_call_blocked";
+      checkpoint: RollCallCheckpoint;
+    }
+  | {
+      /** One of the schedule builder's four departure mutations, and how it landed. */
+      name: "schedule_builder_action";
+      action: "add" | "move" | "copy" | "remove";
+      outcome:
+        | "ok"
+        | "invalid"
+        | "end_before_start"
+        | "not_found"
+        | "not_scheduled"
+        | "already_sailed"
+        | "has_roster";
+    }
+  | {
+      /** A refund was issued after a cancellation, automatically or by a staff member. */
+      name: "refund_issued";
+      auto: boolean;
+      status: "refunded" | "forfeit" | "failed" | "manual";
+    }
+  | {
+      /** A staff sign-in attempt and how it resolved — the friction signal for the sign-in form. */
+      name: "sign_in_attempted";
+      outcome: "success" | "invalid_credentials" | "rate_limited";
     };
 
 type EventProps = Record<string, string | number | boolean | null>;

@@ -19,6 +19,7 @@ import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { toDiverLocale } from "@/i18n/settings";
+import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -188,6 +189,7 @@ export async function bookSpot(
     // before the capacity check, so probing a full trip is free and leaves no
     // booking behind. Staff surfaces keep the specific wording — there the
     // actor is authenticated and entitled to the diver's record.
+    await trackEvent({ name: "booking_blocked", source: "diver", reason: outcome.reason });
     const code: ErrorCode =
       outcome.reason === "trip_full"
         ? "full"
@@ -200,6 +202,7 @@ export async function bookSpot(
               : "unavailable";
     return { error: t(ERROR_MESSAGE_KEYS[code]) };
   }
+  await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
   const primaryBookingId = outcome.bookings[0]?.bookingId;
   if (!primaryBookingId) {
     redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
@@ -404,6 +407,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     phone: parsed.data.phone || undefined,
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
+    await trackEvent({ name: "waitlist_joined", source: "diver" });
     revalidateAndRedirect(
       `/shop/${shopSlug}/schedule/${tripId}`,
       `/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}${embedParam(embed, "&")}`,

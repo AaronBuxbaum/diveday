@@ -417,8 +417,11 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   plus per-shop browser-saved custom views, over a cheap `listDiverSummaries` facet.
 - **Performance budget** — the shared first-load JS is gzip-measured after build and gated in CI
   ([performance-budgets](../architecture/performance-budgets.md)).
-- **Event instrumentation** — a typed `src/lib/analytics.ts` seam for staff recovery, blocker
-  frequency, and checkout abandonment ([event-instrumentation](../architecture/decisions/20260723-event-instrumentation.md)).
+- **Event instrumentation** — a typed `src/lib/analytics.ts` seam over Vercel Analytics' custom
+  events, covering staff recovery, blocker frequency, checkout abandonment, and — as of
+  2026-07-30 — booking outcomes, wait-list joins, cancellations, refunds, waiver signing, roll-call
+  readiness blocks, the schedule builder's four mutations, and staff sign-in
+  ([event-instrumentation](../architecture/decisions/20260723-event-instrumentation.md)).
 - **DAN / dive-insurance field** — `people.dive_insurance`, captured and shown on the diver profile.
 
 ## Owner reporting (delivered 2026-07-23)
