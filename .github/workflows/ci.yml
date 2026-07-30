@@ -75,8 +75,8 @@ jobs:
       # silently runs the full suite instead of its 1/4 slice.
       - run: pnpm exec vitest run --reporter=dot --shard=${{ matrix.shard }}/4
 
-  playwright-build:
-    name: Playwright build
+  build:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -108,7 +108,7 @@ jobs:
       - run: pnpm perf:budget
       - uses: actions/upload-artifact@v7
         with:
-          name: playwright-next-build
+          name: next-build
           path: .next/
           include-hidden-files: true
           if-no-files-found: error
@@ -116,7 +116,7 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/4
-    needs: playwright-build
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -133,7 +133,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v7
         with:
-          name: playwright-next-build
+          name: next-build
           path: .next
       - uses: actions/cache@v4
         with:
@@ -159,7 +159,7 @@ jobs:
 
   visual:
     name: reg-suit visual regression
-    needs: playwright-build
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -185,7 +185,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v7
         with:
-          name: playwright-next-build
+          name: next-build
           path: .next
       - uses: actions/cache@v4
         with:
@@ -193,11 +193,11 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
       # `pnpm visual` (the local/dev script) rebuilds via e2e:build before testing —
-      # this job already downloaded that exact build above, so `visual:ci` skips
-      # straight to the Playwright run instead of discarding the artifact and
-      # recompiling it from scratch.
+      # this job already downloaded that exact build above, so `visual:run` (the
+      # shared tail both scripts call) skips straight to the Playwright run
+      # instead of discarding the artifact and recompiling it from scratch.
       - name: Run reg-suit visual regression
-        run: pnpm visual:ci
+        run: pnpm visual:run
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
