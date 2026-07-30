@@ -21,6 +21,7 @@ test("staff captures and verifies level and specialty cards before either can be
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
 
   // Level card: capture lands as pending, only an explicit verify trusts it.
@@ -73,6 +74,7 @@ test("an oversize card photo is rejected client-side before it ever reaches the 
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
   await page.getByText("Add card", { exact: true }).click();
   const form = levelForm(page);
@@ -98,6 +100,7 @@ test("a real photo passes the server's decode/re-encode pipeline end to end (CR-
     .toBuffer();
 
   await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
   await page.getByText("Add card", { exact: true }).click();
   const form = levelForm(page);
@@ -119,6 +122,7 @@ test("a disguised file is rejected by the server even though it claims an allowe
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
   await page.getByText("Add card", { exact: true }).click();
   const form = levelForm(page);
@@ -141,6 +145,7 @@ test("a certification past its refresher-due date reads as refresher due, not ce
 }) => {
   // Yusuf Demir carries a verified card past its refresher-due date (see the seed).
   await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Yusuf Demir");
   await page.getByRole("link", { name: /Yusuf Demir/ }).click();
   await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
 

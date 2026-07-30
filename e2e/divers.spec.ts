@@ -6,6 +6,9 @@ test("staff opens a diver from their avatar and can reach them from the header",
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
+  // The extended roster is well past one default page, sorted alphabetically —
+  // search for her rather than assume she's on the unfiltered first page.
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
 
   // The whole person cell is one link, so the initials avatar opens the diver
   // just like the name does.
@@ -26,6 +29,7 @@ test.describe("on a phone", () => {
   // the list swaps to stacked cards there — everything readable, no scroll.
   test("the divers list stacks into cards and still opens the diver", async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
 
     const card = page.getByRole("link", { name: /Priya Sharma/ });
     await expect(card).toBeVisible();

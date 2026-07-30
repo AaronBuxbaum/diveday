@@ -3322,8 +3322,12 @@ async function seedMoreTrips(
     {
       title: "Rescue Diver — two-day course",
       description: "Problem prevention and rescue skills for experienced divers.",
-      startsAt: at(9, 8, 0),
-      endsAt: at(10, 17, 0),
+      // Kept clear of the seeded Open Water course (day 9-11) and Deep Diver
+      // (day 20-21) — both also crew Marcus, and overlapping his assignment
+      // window would collide (see the "no seeded course may overlap" rule
+      // near seedMoreTrips's top).
+      startsAt: at(58, 8, 0),
+      endsAt: at(59, 17, 0),
       capacity: 4,
       courseTitle: "Rescue Diver",
       roster: [29, 40, 42],
@@ -3373,7 +3377,8 @@ async function seedMoreTrips(
     },
     {
       title: "Two-Tank Reef — Pickles Reef",
-      description: "The barrel-coral classic — beginner-friendly and nearly full this week.",
+      description:
+        "The barrel-coral classic — beginner-friendly and one of the busiest boats this week.",
       startsAt: at(16, 11, 30),
       endsAt: at(16, 15, 0),
       capacity: 12,
@@ -3392,8 +3397,10 @@ async function seedMoreTrips(
     {
       title: "Try Scuba — SSI first dive",
       description: "A supervised first scuba experience.",
-      startsAt: at(20, 13, 0),
-      endsAt: at(20, 16, 0),
+      // Day 20 is the seeded Deep Diver session's own window (day 20-21) —
+      // kept clear so both keep their own claim on Marcus's crew slot.
+      startsAt: at(61, 13, 0),
+      endsAt: at(61, 16, 0),
       capacity: 4,
       courseTitle: "Try Scuba",
       roster: draw(2),
@@ -3408,10 +3415,13 @@ async function seedMoreTrips(
       roster: draw(4),
     },
     {
-      title: "SSI Open Water Diver — three-day course",
+      title: "Three-Day SSI Certification — Open Water",
       description: "SSI's entry-level autonomous diver certification.",
-      startsAt: at(22, 9, 0),
-      endsAt: at(24, 17, 0),
+      // Days 22 and 24 are reserved by e2e specs that create their own
+      // Marcus-crewed session there (courses.spec.ts, gear-fit-and-age.spec.ts)
+      // — kept clear so setTripCrew's overlap check never collides with them.
+      startsAt: at(63, 9, 0),
+      endsAt: at(65, 17, 0),
       capacity: 4,
       courseTitle: "SSI Open Water Diver",
       // The three previously-uncertified walk-ups — finally taking the class.
@@ -3445,7 +3455,7 @@ async function seedMoreTrips(
       roster: [52, 55, 61],
     },
     {
-      title: "Two-Tank Reef — Christ of the Abyss & Molasses",
+      title: "Two-Site Combo — Statue & Molasses Reef",
       description: "Classic shallow sites, then the outer reef on the second tank.",
       startsAt: at(28, 11, 0),
       endsAt: at(28, 14, 30),
@@ -3455,7 +3465,7 @@ async function seedMoreTrips(
     },
     {
       title: "Two-Tank Reef — French Reef & Molasses",
-      description: "Ledges first, the outer reef second — a full-day two-site charter.",
+      description: "Ledges first, the outer reef second — a two-site charter, dock to dock.",
       startsAt: at(30, 8, 0),
       endsAt: at(30, 11, 30),
       capacity: 12,
