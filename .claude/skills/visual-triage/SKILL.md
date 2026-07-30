@@ -12,6 +12,11 @@ Baselines are captured on CI's `ubuntu-latest` runners (ADR 20260730-linux-ci-ru
 of the suite as changed — that is the platform, not your diff. Triage from the CI report unless you
 are on Linux.
 
+Same trap on Linux in a sandbox: CI renders with the Chromium `@playwright/test` pins, but a sandbox
+that blocks browser downloads falls back to its own pre-installed build, which rasterizes text
+differently (ADR 20260730-pinned-browser-visual-determinism). `pnpm e2e:browser-check` prints which
+browser it resolved — if it says "falling back", your local diff is not comparable to the baseline.
+
 ## Fetching the report as an agent
 
 `reg-suit` prints an `index.html` report link, but that page is a client-rendered SPA — its body is
@@ -49,6 +54,21 @@ published a report for that commit.
 ## Mapping and stability
 
 Visual specs are organized in `e2e/visual.spec.ts`. If a diff appears without a relevant code change, check `DIVEDAY_CLOCK`, browser version, fonts, and the deterministic PGlite reset. Do not mask a moving element to make the diff disappear.
+
+Read the *shape* of a no-code-change diff before assuming a baseline moved:
+
+- **Glyphs everywhere, layout identical** (element positions and image heights unchanged) — a
+  rendering-input change, not a code change. The browser is pinned to the lockfile now, so the
+  suspects are, in order: a `@playwright/test` bump, a change to `DETERMINISTIC_RENDERING_ARGS` in
+  `e2e/browser.ts`, or the runner image's emoji/fallback fonts (Geist is self-hosted and pinned).
+- **Confined to one element, with everything around it identical** — a capture that shot too early.
+  Wait on something the surface only renders when it is done, not a `@media` or a moving element.
+- **Anything reflows** — a real layout change. Read it as a finding even if it arrived inside a
+  larger rebaseline.
+
+`regconfig.json` already discounts antialiasing (`enableAntialias`) and sub-perceptual per-pixel
+noise (`matchingThreshold: 0.05`), so a diff that survives to the report is not "just antialiasing".
+Widening those knobs is not triage — if a diff is noise, the renderer is the thing to fix.
 
 ## Handoff
 

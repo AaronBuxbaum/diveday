@@ -35,6 +35,7 @@ thread instead of pushing a second, competing fix.
 | Playwright failure | `test-results/<spec>/error-context.md` (error + page snapshot) and trace zips |
 | Element found twice (strict mode) | Next's route announcer is also `role="alert"` — filter locators by text |
 | First-navigation timeouts in e2e | The fleet runs precompiled `next start` servers, so slowness isn't compile cost — assert `toHaveURL` first; expect timeout is 8s, test timeout 15s (`playwright.config.ts`) |
+| `Test timeout … exceeded while setting up "<fixture>"` | The named fixture is rarely the slow one — Playwright names whichever is in flight when the budget runs out, and the budget covers **test-scoped** fixture setup but not worker-scoped. Download the run's `playwright-report-<shard>` artifact and read the "Before Hooks" per-fixture durations; that is where the real cost shows (ADR 20260730-pinned-browser-visual-determinism) |
 | Test can't see a new column/table | No migration yet — see the `schema-change` skill |
 | Stale/weird dev data | `pnpm db:reset` (wipes `.pglite/`; next boot re-migrates + re-seeds) — but **kill any running dev server first**: wiping the directory under a live PGlite handle poisons that server (writes start failing with DrizzleQueryError), and Playwright's `reuseExistingServer` will happily run the suite against it |
 | Random e2e write failures, reads fine | A leaked `next dev` from an earlier screenshot/verify session holding a deleted `.pglite` — check `curl localhost:3000`, kill it, rerun |
