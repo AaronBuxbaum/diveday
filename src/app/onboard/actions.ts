@@ -34,6 +34,10 @@ export async function onboardAction(formData: FormData) {
 
   const ip = await clientIp();
   if (!checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard).allowed) {
+    // A code, like every other `backToForm` call below that names a specific
+    // field problem — OnboardPage resolves it through ONBOARD_ERROR_MESSAGES
+    // (falling back to rendering the string as-is for the handful of
+    // business-rule messages here that aren't yet extracted).
     backToForm(RATE_LIMIT_MESSAGE);
   }
 
@@ -41,7 +45,10 @@ export async function onboardAction(formData: FormData) {
   const parsed = onboardSchema.safeParse(rawData);
 
   if (!parsed.success) {
-    const firstError = parsed.error.issues[0]?.message || "Invalid input";
+    // `onboardSchema`'s `.min()`/`.regex()`/`.refine()` messages are codes,
+    // not sentences (src/lib/onboarding.ts) — Zod wants a message at
+    // schema-definition time, before any request-scoped locale is known.
+    const firstError = parsed.error.issues[0]?.message || "invalid_input";
     backToForm(firstError);
   }
 

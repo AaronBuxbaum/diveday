@@ -16,13 +16,15 @@ import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
-import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
-import { ERROR_MESSAGES } from "./_components/types";
+import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 
 /** Absolute readiness link for the confirmation email, or undefined with no origin/booking. */
 async function readinessEmailUrl(
@@ -122,13 +124,19 @@ export async function bookSpot(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
+  // Locale for every error this action can hand back, resolved once up
+  // front — a Client Component reads `state.error` straight from
+  // `useActionState` with no further round trip through a Server Component,
+  // so it has to arrive already translated (unlike the `?error=` codes that
+  // flow back through page.tsx, which resolves them itself).
+  const t = diverTranslator(await requestLocale());
   const ip = await clientIp();
   if (!checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking).allowed) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
   }
 
   const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
-  if (!partySize.success) return { error: ERROR_MESSAGES.invalid };
+  if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
 
   // Validate per field so the form can point at the exact box that is wrong,
   // and keep everything else the diver typed.
@@ -154,7 +162,7 @@ export async function bookSpot(
 
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
-  if (!shopNow) return { error: ERROR_MESSAGES.unavailable };
+  if (!shopNow) return { error: t(ERROR_MESSAGE_KEYS.unavailable) };
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
@@ -179,7 +187,7 @@ export async function bookSpot(
     // before the capacity check, so probing a full trip is free and leaves no
     // booking behind. Staff surfaces keep the specific wording — there the
     // actor is authenticated and entitled to the diver's record.
-    const code =
+    const code: ErrorCode =
       outcome.reason === "trip_full"
         ? "full"
         : outcome.reason === "already_booked"
@@ -189,7 +197,7 @@ export async function bookSpot(
             : outcome.reason === "course_ratio_full"
               ? "course-ratio-full"
               : "unavailable";
-    return { error: ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unavailable };
+    return { error: t(ERROR_MESSAGE_KEYS[code]) };
   }
   const primaryBookingId = outcome.bookings[0]?.bookingId;
   if (!primaryBookingId) {

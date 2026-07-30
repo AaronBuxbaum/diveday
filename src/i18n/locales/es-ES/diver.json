@@ -10,7 +10,8 @@
     "name": "Nombre",
     "email": "Correo electrónico",
     "phone": "Teléfono",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -154,7 +155,18 @@
     "openingPayment": "Abriendo el pago…",
     "shopTakesOver": "Ya tienes tu plaza — el centro se encarga a partir de aquí",
     "shopTakesOverBody": "Estamos revisando un par de cosas por nuestra parte. Ahora mismo no tienes que hacer nada.",
-    "trackReadiness": "Sigue todos los pasos en tu página de preparación →"
+    "trackReadiness": "Sigue todos los pasos en tu página de preparación →",
+    "errors": {
+      "invalid": "Revisa tu nombre y correo electrónico e inténtalo de nuevo.",
+      "full": "Alguien reservó la última plaza justo antes que tú — el barco está completo.",
+      "available": "Buenas noticias — se acaba de liberar una plaza. Resérvala antes de que se agote.",
+      "already": "Ya estás en la lista de esta salida — no hace falta reservar dos veces.",
+      "unavailable": "Esta salida ya no acepta reservas.",
+      "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
+      "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor o ayudante certificado.",
+      "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
+      "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura — inténtalo de nuevo en un momento, o paga en el centro."
+    }
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
@@ -580,7 +592,19 @@
       "settingUp": "Configurando tu tienda…",
       "submit": "Crear tienda y empezar la prueba",
       "alreadyHaveShop": "¿Ya tienes una tienda?",
-      "signIn": "Iniciar sesión"
+      "signIn": "Iniciar sesión",
+      "errors": {
+        "invalidInput": "Revisa el formulario e inténtalo de nuevo",
+        "shopNameRequired": "El nombre de la tienda es obligatorio",
+        "shopSlugRequired": "El enlace de la tienda es obligatorio",
+        "shopSlugInvalid": "El enlace de la tienda solo puede contener letras, números y guiones",
+        "timezoneRequired": "La zona horaria es obligatoria",
+        "timezoneInvalid": "No es una zona horaria reconocida",
+        "ownerNameRequired": "El nombre completo es obligatorio",
+        "ownerEmailInvalid": "Dirección de correo electrónico no válida",
+        "ownerPasswordTooShort": "La contraseña debe tener al menos {min} caracteres",
+        "ownerPasswordTooLong": "La contraseña debe tener como máximo {max} caracteres"
+      }
     }
   },
   "switching": {
