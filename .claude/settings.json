@@ -3,6 +3,7 @@
     "defaultMode": "auto",
     "allow": [
       "ScheduleWakeup",
+      "RemoteTrigger",
       "delete",
       "mcp__Claude_Code_Remote__delete_trigger",
       "mcp__Claude_Code_Remote__update_trigger",
