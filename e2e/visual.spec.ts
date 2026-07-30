@@ -103,34 +103,96 @@ const VIEWPORTS = [
  * leave a capture slightly wrong, never hang the suite. CSS background images
  * are still out of reach; nothing in the DOM exposes their decode state.
  */
-async function paintWholeDocument(page: Page) {
-  await page.evaluate(async () => {
-    const settle = () =>
-      new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    // Re-read scrollHeight each pass: painting a band can add height. The step
-    // cap is a guard against a page that grows forever, not an expected exit.
-    for (let step = 0; step < 100; step += 1) {
-      const y = step * window.innerHeight;
-      if (y >= document.documentElement.scrollHeight) break;
-      window.scrollTo(0, y);
-      await settle();
-    }
-    window.scrollTo(0, 0);
-    await settle();
+/**
+ * Every wait below is bounded, because `requestAnimationFrame` is not a promise
+ * the page owes you.
+ *
+ * `settle()` used to be a bare double-`rAF` with no escape. When the renderer
+ * stops producing frames — it decides the page needs no update, or a raster
+ * stall swallows the frame — that callback simply never runs, and the whole
+ * `page.evaluate` hangs. `page.evaluate` takes no timeout of its own, so the
+ * hang runs out the *test's* budget instead: it surfaced on CI as `Test timeout
+ * of 120000ms exceeded` with the stack pointing here, and it reproduces locally
+ * about once in six runs of the staff captures, with or without the
+ * deterministic rendering flags. It is a wait bug, not a budget that needs
+ * widening (see the note on `test.setTimeout` in the staff test).
+ *
+ * So each frame wait races the frame against `FRAME_WAIT_MS`, and the
+ * scroll-through as a whole gives up after `SCROLL_BUDGET_MS`. The bound is a
+ * real trade, not a free win: a band whose frame never arrived may be captured
+ * unpainted. That is the better failure — it shows up as a solid blank stripe
+ * in the reg-suit diff, which triage reads at a glance, instead of a hang that
+ * costs the run. `settle()` counts the waits that hit the bound and the count
+ * is warned to the run log, so the condition is never silent.
+ */
+const FRAME_WAIT_MS = 500;
+const SCROLL_BUDGET_MS = 20_000;
+const FONTS_WAIT_MS = 5_000;
 
-    await Promise.all(
-      Array.from(document.images).map(
-        (image) =>
-          Promise.race([
-            image.decode().catch(() => undefined),
-            new Promise((resolve) => setTimeout(resolve, 5000)),
-          ]) as Promise<unknown>,
-      ),
+async function paintWholeDocument(page: Page) {
+  const stalledFrames = await page.evaluate(
+    async ({ frameWaitMs, scrollBudgetMs }) => {
+      let stalled = 0;
+      const settle = () =>
+        new Promise<void>((resolve) => {
+          let done = false;
+          const finish = () => {
+            if (done) return;
+            done = true;
+            resolve();
+          };
+          requestAnimationFrame(() => requestAnimationFrame(finish));
+          setTimeout(() => {
+            if (!done) stalled += 1;
+            finish();
+          }, frameWaitMs);
+        });
+      // Real timers, not the frozen clock: e2e/fixtures.ts pins only argless
+      // `new Date()` / `Date.now()`, and `performance.now()` is untouched.
+      const deadline = performance.now() + scrollBudgetMs;
+      // Re-read scrollHeight each pass: painting a band can add height. The step
+      // cap is a guard against a page that grows forever, not an expected exit.
+      for (let step = 0; step < 100; step += 1) {
+        const y = step * window.innerHeight;
+        if (y >= document.documentElement.scrollHeight) break;
+        window.scrollTo(0, y);
+        await settle();
+        if (performance.now() > deadline) break;
+      }
+      window.scrollTo(0, 0);
+      await settle();
+
+      await Promise.all(
+        Array.from(document.images).map(
+          (image) =>
+            Promise.race([
+              image.decode().catch(() => undefined),
+              new Promise((resolve) => setTimeout(resolve, 5000)),
+            ]) as Promise<unknown>,
+        ),
+      );
+      // One more frame so anything decoded above is composited before the shot.
+      await settle();
+      return stalled;
+    },
+    { frameWaitMs: FRAME_WAIT_MS, scrollBudgetMs: SCROLL_BUDGET_MS },
+  );
+  if (stalledFrames > 0) {
+    console.warn(
+      `visual: ${stalledFrames} frame wait(s) hit the ${FRAME_WAIT_MS}ms bound at ${page.url()} — ` +
+        "a band may be captured unpainted; check the diff for a blank stripe.",
     );
-    // One more frame so anything decoded above is composited before the shot.
-    await settle();
-  });
-  await page.evaluate(() => document.fonts.ready.then(() => true));
+  }
+  // Same reasoning as the frame waits: a webfont that never resolves must cost
+  // one capture's sharpness, not the run.
+  await page.evaluate(
+    (ms) =>
+      Promise.race([
+        document.fonts.ready.then(() => true),
+        new Promise((resolve) => setTimeout(() => resolve(true), ms)),
+      ]),
+    FONTS_WAIT_MS,
+  );
 }
 
 async function capture(page: Page, name: string, scheme: "light" | "dark") {

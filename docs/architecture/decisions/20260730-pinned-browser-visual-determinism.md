@@ -74,6 +74,15 @@ leave to Chromium.
 
 **Pin time in a capture.** Both `capture()` and `capturePrint()` pass `animations: "disabled"`.
 
+**Bound every wait in `paintWholeDocument`.** Its `settle()` was a bare double-`requestAnimationFrame`
+with no escape. When the renderer stops producing frames, that callback never runs; `page.evaluate`
+takes no timeout of its own, so the hang runs out the *test's* budget instead and reports as `Test
+timeout of 120000ms exceeded` with the stack pointing at the scroll loop. It reproduces locally about
+once in six runs of the staff captures, with and without the rendering flags — a latent wait bug this
+work surfaced rather than caused. Each frame wait now races the frame against 500 ms, the
+scroll-through gives up after 20 s, and `document.fonts.ready` gets the same 5 s bound the image
+decodes already had. The count of waits that hit the bound is warned to the run log.
+
 **Pay cold start off the clock.** `e2e/global-setup.ts` launches a browser, opens a page, and
 navigates once before any test runs, in parallel with the existing server warm-up. Cold start becomes
 untimed setup instead of a lottery over which test draws it.
@@ -156,6 +165,12 @@ property wanted: sub-perceptual jitter falls under the floor, a real change does
   make both changes unmeasurable. Once a few `main` runs have published stable baselines under the
   pinned browser, the residual changed-pixel rate is measurable, and `thresholdRate` should be
   tightened to sit just above it.
+- **A bounded frame wait can capture an unpainted band.** That is the accepted trade for not hanging:
+  a blank stripe is a diff triage reads at a glance, and the warning line names the URL. If those
+  warnings ever become routine rather than exceptional, the fix is upstream in whatever stops the
+  renderer producing frames — not a larger bound.
+- **The `visual` job now keeps its Playwright report on failure.** It was the only Playwright job
+  that did not, which is why this hang had to be diagnosed from a stack trace instead of timings.
 - **Residual unpinned input: fonts from the runner image.** Geist is self-hosted by
   `next/font/google` at build time, so the body text is pinned; emoji and any fallback glyph still
   come from the image's fontconfig. If a diff ever confines itself to emoji, this is the first

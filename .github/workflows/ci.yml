@@ -211,3 +211,13 @@ jobs:
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
           REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
           REG_SUIT_GITHUB_CLIENT_ID: ${{ secrets.REG_SUIT_GITHUB_CLIENT_ID }}
+      # This was the only Playwright job that kept no report, which is why a
+      # hang inside `paintWholeDocument` had to be read off a stack trace
+      # rather than the per-step timings the sharded jobs hand over.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-visual
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
