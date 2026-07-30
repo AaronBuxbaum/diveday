@@ -477,6 +477,144 @@
       "signIn": "Iniciar sesión"
     }
   },
+  "switching": {
+    "concierge": {
+      "eyebrow": "Una persona, no un asistente automático",
+      "title": "Te ayudamos a cambiarte — y a salir — nosotros mismos.",
+      "description": "Envíanos lo que tengas — una exportación limpia o una década de pestañas desordenadas — y uno de nosotros mapea las columnas y trae a tus buceadores contigo, gratis, en cualquier plan. Y si DiveDay alguna vez no encaja, la puerta se abre igual de personalmente en la otra dirección: tus datos son tuyos, y te ayudamos a llevártelos todos de vuelta. Entrar, y salir, no debería ser la parte difícil.",
+      "emailCta": "Escríbenos a {email}"
+    },
+    "hub": {
+      "eyebrow": "Cambiarte a DiveDay",
+      "title": "La puerta se abre en ambos sentidos.",
+      "description": "La mayoría de las tiendas se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías hacen el cambio concreto: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay, y qué — honestamente — se queda atrás.",
+      "spreadsheetTitle": "Vienes de una hoja de cálculo",
+      "spreadsheetDescription": "¿Llevas el día en una hoja de cálculo y una tablilla? Trae la hoja que ya llevas — y añade los trabajos que una lista no puede hacer, como comprobar cada tarjeta antes de que salga el barco.",
+      "readGuide": "Leer la guía →",
+      "switchingFrom": "Cambiando desde {competitor}",
+      "dontSeeSystem": "¿No ves tu sistema?",
+      "dontSeeSystemBody": "La mayoría de las exportaciones se importan tal cual — una hoja de cálculo de tus buceadores con columnas reconocibles de nombre, tarjeta y talla es todo lo que hace falta. Prueba la demo en vivo, o empieza una prueba y trae un CSV: DiveDay mapea los nombres de columna habituales, previsualiza el archivo y marca lo que no reconoce antes de guardar.",
+      "gettingDemoReady": "Preparando la demo…"
+    },
+    "competitor": {
+      "backToGuides": "← Todas las guías de cambio",
+      "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
+      "step1": "Paso 1",
+      "step2": "Paso 2",
+      "step3": "Paso 3",
+      "scopeTableTitle": "Qué se traslada — y qué no",
+      "scopeTableDescription": "Esta es la misma tabla de alcance que DiveDay muestra antes de importar una sola fila. Una tarjeta que tu sistema ya comprobó se traslada verificada y marcada como importada, lista para usar, con una confirmación de un toque para el personal, y su fecha de vencimiento de repaso llega con ella. Una tarjeta de especialidad es la que espera esa confirmación antes de habilitar la inmersión que autoriza; las respuestas médicas individuales nunca se reconstruyen.",
+      "comesAcross": "Se traslada",
+      "staysBehind": "Se queda atrás",
+      "bringFileTitle": "Trae el archivo a DiveDay",
+      "bringFileIntro": "Con tu exportación guardada, el resto está en DiveDay y lleva minutos.",
+      "openSettingsTitle": "Abre Ajustes → Importar contactos",
+      "openSettingsBody": "En tu tienda de DiveDay, el propietario o gerente abre la página de importación y sube el CSV que exportaste.",
+      "checkPreviewTitle": "Revisa la vista previa",
+      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, qué tarjetas llegarán verificadas y marcadas como importadas, y qué deja atrás. Las filas con un correo coincidente actualizan al buceador existente en vez de duplicarlo; las filas pasan la importación cuando confirmas.",
+      "importReadyTitle": "Importar — tu plantilla está lista",
+      "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato: las tarjetas llegan verificadas y marcadas como importadas, así que los buceadores están listos para el viaje desde la primera reserva. Cada tarjeta importada lleva una confirmación de un toque en el registro del buceador para que el personal le eche un vistazo cuando tenga un momento — nadie espera para embarcar por eso. Lo único que sí espera es una inmersión que requiere una tarjeta de especialidad: esa puerta se abre cuando un miembro del personal confirma la tarjeta, que es un toque en el registro del buceador.",
+      "forExportPrefix": "Para una exportación de {competitor}:",
+      "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
+      "readyToMove": "¿Listo para dejar {competitor}?",
+      "walkDemoFirst": "Recorre primero la demo en vivo como propietario, capitán o buceador — luego empieza una tienda de prueba, trae tu exportación y mira tu plantel llegar a DiveDay con la columna de seguridad intacta.",
+      "gettingDemoReady": "Preparando la demo…",
+      "otherGuides": "Otras guías de cambio →",
+      "sources": "Fuentes"
+    },
+    "spreadsheet": {
+      "backToGuides": "← Todas las guías de cambio",
+      "eyebrow": "Vienes de una hoja de cálculo",
+      "title": "La hoja de cálculo te trajo hasta aquí.",
+      "heroLede": "No marcará al buceador del barco de mañana cuya tarjeta nadie ha verificado, no perseguirá el descargo que nadie firmó, ni dejará que un buceador reserve su propio asiento un domingo por la noche. DiveDay lee la hoja que ya llevas — tus buceadores, sus tarjetas, sus tallas — y se encarga del resto. Ningún sistema que arrancar primero; ya tienes el archivo.",
+      "wedgeIntro1": "Una hoja de cálculo es una buena memoria y un mal compañero de equipo. Guarda nombres y números, pero no puede hacer el trabajo que de verdad mantiene un día de buceo tranquilo y seguro — la parte que estás haciendo a mano ahora mismo, en tu cabeza y en una pila de papeles.",
+      "wedgeIntro2": "Ese es el intercambio que hace que valga la pena DiveDay. No una lista más bonita — los trabajos que una lista no puede sostener:",
+      "wedge": {
+        "cardsChecked": {
+          "title": "Cada tarjeta comprobada antes de que salga el barco",
+          "body": "DiveDay vuelve a leer la certificación de cada buceador frente a lo que exige el viaje y el sitio, y quienes aún no pueden embarcar salen a la luz solos — sin escanear una columna y confiar en la suerte."
+        },
+        "blockersOnePlace": {
+          "title": "Los bloqueos del día en un solo lugar",
+          "body": "Una pantalla muestra quién todavía no puede embarcar y por qué — un descargo que falta, una tarjeta por verificar — así que nada se recuerda en el muelle en vez de en el mostrador."
+        },
+        "diversBookThemselves": {
+          "title": "Los buceadores reservan y firman ellos mismos",
+          "body": "Un buceador elige un asiento y firma el descargo desde un enlace, sin cuenta ni aplicación — la persecución de firmas en el muelle casi desaparece."
+        },
+        "manifestHeadCount": {
+          "title": "Un listado que es un recuento, no una impresión",
+          "body": "El capitán marca a los buceadores inmersión por inmersión en un teléfono — trabajando desde una copia guardada en él antes de salir del muelle, así que el pase de lista sigue funcionando cuando falla la señal, y luego se verifica contra el listado en vivo cuando vuelve el servicio."
+        }
+      },
+      "step1": "Paso 1",
+      "columnsTitle": "¿Tu hoja tiene estas columnas?",
+      "columnsIntro": "Una fila por buceador, y columnas para lo que sabes de ellos. Tus encabezados no tienen que coincidir con nada — DiveDay reconoce los nombres habituales, previsualiza el archivo y marca lo que no reconoce antes de guardar. Si prefieres partir de una hoja limpia, descarga una que ya tenga la forma correcta.",
+      "downloadTemplate": "Descargar la plantilla inicial (CSV)",
+      "columns": {
+        "name": {
+          "column": "Nombre",
+          "detail": "Nombre y apellido en dos columnas, o una columna de nombre completo — cualquiera funciona. Es lo único que una fila realmente necesita."
+        },
+        "email": {
+          "column": "Correo electrónico",
+          "detail": "Cómo DiveDay contacta a un buceador y reconoce a uno recurrente, así una segunda importación lo actualiza en vez de duplicarlo. Una fila sin él igualmente llega como buceador nuevo."
+        },
+        "phone": {
+          "column": "Teléfono",
+          "detail": "Móvil o fijo, como lo hayas escrito."
+        },
+        "emergencyContact": {
+          "column": "Contacto de emergencia",
+          "detail": "Un nombre y un número de teléfono, cuando los tengas, llegan a la tarjeta del buceador."
+        },
+        "diveInsurance": {
+          "column": "Seguro de buceo",
+          "detail": "Como sea que lo lleves — un número DAN, un nombre de proveedor — se traslada tal cual está escrito. Nunca es una barrera; es lo que el equipo quiere tener a mano en un incidente."
+        },
+        "certification": {
+          "column": "Certificación",
+          "detail": "Agencia, nivel y número de tarjeta. El número de tarjeta es lo que permite que una tarjeta se traslade — llega verificada y marcada como importada, lista para usar, con una confirmación de un toque para el personal."
+        },
+        "refresherDue": {
+          "column": "Vencimiento del repaso",
+          "detail": "Si llevas una fecha de repaso en una tarjeta, se traslada con ella — escrita como sea que tu hoja escriba fechas (05/04/2030, 4-may-2030, 2030-05-04). Una fecha ya pasada llega como una tarjeta vencida, que es el objetivo. Una fecha que no podemos leer deja la tarjeta para revisión del personal en vez de verificada: no adivinamos una fecha de la que depende el barco."
+        },
+        "specialty": {
+          "column": "Especialidad",
+          "detail": "Profundidad, naufragios, nocturna o traje seco — una celda puede nombrar varias («Profundidad, Naufragios») y cada una se convierte en su propia tarjeta bajo el número de agencia del buceador. Llegan verificadas y marcadas como importadas, y la inmersión que necesita una se habilita en cuanto un miembro del personal confirma que ha visto esa tarjeta."
+        },
+        "nitrox": {
+          "column": "Nitrox",
+          "detail": "Una columna de sí/no, más el número de tarjeta de nitrox si llevas uno — el número de tarjeta es lo que realmente lo traslada, importado como una tarjeta de nitrox verificada. El llenado de Nitrox da aire normal hasta que un miembro del personal confirma que ha visto esa tarjeta."
+        },
+        "rentalSizes": {
+          "column": "Tallas de alquiler",
+          "detail": "BCD, traje, bota y aleta — las tallas que ya llevas se convierten en un perfil de ajuste."
+        },
+        "pastVisits": {
+          "column": "Visitas pasadas",
+          "detail": "¿Llevas un registro de reservas? Una columna de fecha, más cómo llamaste el viaje y qué cobraste, convierte cada fila en el historial de ese buceador aquí — así un habitual llega como habitual. Repite el correo del buceador en cada una de sus filas; así es como las filas encuentran a la persona correcta. Es historial, no calendario: las visitas importadas nunca se convierten en viajes, y una reserva que diste por cancelada sigue leyéndose cancelada."
+        }
+      },
+      "step2": "Paso 2",
+      "scopeTableTitle": "Qué se traslada — y qué no",
+      "scopeTableDescription": "Esta es la misma tabla de alcance que DiveDay muestra antes de importar una sola fila. Una tarjeta ya en tu hoja fue comprobada por ti, así que DiveDay confía en ella: las tarjetas se trasladan verificadas y marcadas como importadas, con una confirmación de un toque para el personal — y sus fechas de vencimiento de repaso llegan con ellas. Una tarjeta de especialidad es la que espera esa confirmación antes de habilitar la inmersión que autoriza. Las respuestas médicas individuales nunca se reconstruyen.",
+      "step3": "Paso 3",
+      "bringFileTitle": "Trae el archivo a DiveDay",
+      "bringFileIntro": "Guarda tu hoja como CSV, y el resto está en DiveDay y lleva minutos.",
+      "openSettingsTitle": "Abre Ajustes → Importar contactos",
+      "openSettingsBody": "En tu tienda de DiveDay, el propietario o gerente abre la página de importación y sube el CSV.",
+      "checkPreviewTitle": "Revisa la vista previa",
+      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, qué tarjetas llegarán verificadas y marcadas como importadas, y qué deja atrás, incluida cualquier fila que no pueda trasladar (una sin nombre, o un correo repetido). Las filas pasan la importación cuando confirmas.",
+      "importReadyTitle": "Importar — tu plantel está listo",
+      "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato: las tarjetas llegan verificadas y marcadas como importadas, así que los buceadores están listos para el viaje desde la primera reserva. Cada tarjeta importada lleva una confirmación de un toque en el registro del buceador para que el personal le eche un vistazo cuando tenga un momento — nadie espera para embarcar por eso. Lo único que sí espera es una inmersión que requiere una tarjeta de especialidad: esa puerta se abre cuando un miembro del personal confirma la tarjeta, que es un toque en el registro del buceador.",
+      "closingTitle": "Míralo antes de cambiar nada.",
+      "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — sin registro, nada que importar, solo la tienda funcionando. Empieza una prueba cuando encaje.",
+      "gettingDemoReady": "Preparando la demo…",
+      "otherSystems": "Cambiando desde otro software →"
+    }
+  },
   "nav": {
     "product": "Producto",
     "pricing": "Precios",

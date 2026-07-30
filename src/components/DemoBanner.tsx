@@ -13,6 +13,8 @@ interface DemoRoleInfo {
   title: string;
   desc: string;
   tryThis: string;
+  /** "Switch to {title}" pre-formatted server-side — functions can't cross into a Client Component. */
+  switchAriaLabel: string;
 }
 
 interface DemoBannerCopy {
@@ -27,7 +29,6 @@ interface DemoBannerCopy {
   tryLabel: string;
   current: string;
   switchAction: string;
-  switchToAria: (role: string) => string;
 }
 
 interface DemoBannerProps {
@@ -171,7 +172,7 @@ export function DemoBanner({
                     <button
                       type="button"
                       disabled={isActive || isPending}
-                      aria-label={isActive ? undefined : copy.switchToAria(role.title)}
+                      aria-label={isActive ? undefined : role.switchAriaLabel}
                       onClick={() => handleRoleSwitch(role.id)}
                       className={`mt-4 w-full rounded-lg py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${
                         isActive

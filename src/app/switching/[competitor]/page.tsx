@@ -8,6 +8,8 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { guideSource, trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { getMigrationGuide, MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
@@ -30,14 +32,6 @@ export async function generateMetadata({
   return { title: `${guide.metaTitle} — DiveDay`, description: guide.metaDescription };
 }
 
-const scopeChip: Record<
-  (typeof IMPORT_HONESTY_TABLE)[number]["scope"],
-  { label: string; className: string }
-> = {
-  included: { label: "Comes across", className: "bg-success/10 text-success" },
-  "stays-behind": { label: "Stays behind", className: "bg-surface-sunken text-muted" },
-};
-
 export default async function MigrationGuidePage({
   params,
 }: {
@@ -46,6 +40,21 @@ export default async function MigrationGuidePage({
   const { competitor } = await params;
   const guide = getMigrationGuide(competitor);
   if (!guide) notFound();
+  const t = diverTranslator(await requestLocale());
+
+  const scopeChip: Record<
+    (typeof IMPORT_HONESTY_TABLE)[number]["scope"],
+    { label: string; className: string }
+  > = {
+    included: {
+      label: t("switching.competitor.comesAcross"),
+      className: "bg-success/10 text-success",
+    },
+    "stays-behind": {
+      label: t("switching.competitor.staysBehind"),
+      className: "bg-surface-sunken text-muted",
+    },
+  };
 
   return (
     <div className="flex flex-1 flex-col">
@@ -54,7 +63,7 @@ export default async function MigrationGuidePage({
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-24">
             <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
-              ← All switching guides
+              {t("switching.competitor.backToGuides")}
             </Link>
             <p className="mt-6 text-sm font-semibold tracking-widest text-primary uppercase">
               {guide.heroEyebrow}
@@ -84,7 +93,7 @@ export default async function MigrationGuidePage({
           <section className="border-y border-border">
             <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                Keep it, or leave it
+                {t("switching.competitor.keepOrLeaveEyebrow")}
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
                 {guide.coexist.heading}
@@ -115,7 +124,9 @@ export default async function MigrationGuidePage({
         {/* Step 1: export from the incumbent (files the shop makes itself). */}
         <section className="border-y border-border bg-surface">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">Step 1</p>
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              {t("switching.competitor.step1")}
+            </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {guide.exportHeading}
             </h2>
@@ -152,16 +163,14 @@ export default async function MigrationGuidePage({
 
         {/* Step 2: the scope table — the importer's own honesty table, verbatim. */}
         <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">Step 2</p>
+          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+            {t("switching.competitor.step2")}
+          </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            What comes across — and what doesn't
+            {t("switching.competitor.scopeTableTitle")}
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-            This is the same scope table DiveDay shows before it imports a single row. A card your
-            system already checked comes across verified and flagged imported, ready to use, with a
-            one-tap confirm for staff, and its refresher-due date comes with it. A specialty card is
-            the one that waits on that confirm before it clears the dive it authorizes; individual
-            medical answers are never reconstructed.
+            {t("switching.competitor.scopeTableDescription")}
           </p>
 
           <ul className="mt-8 space-y-2">
@@ -187,12 +196,14 @@ export default async function MigrationGuidePage({
         {/* Step 3: bring the file into DiveDay. */}
         <section className="border-y border-border bg-surface">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">Step 3</p>
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              {t("switching.competitor.step3")}
+            </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              Bring the file into DiveDay
+              {t("switching.competitor.bringFileTitle")}
             </h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-              With your export saved, the rest is in DiveDay and takes minutes.
+              {t("switching.competitor.bringFileIntro")}
             </p>
             <ol className="mt-10 space-y-6">
               <li className="flex gap-4">
@@ -200,10 +211,11 @@ export default async function MigrationGuidePage({
                   1
                 </span>
                 <div className="pt-1">
-                  <h3 className="font-semibold leading-6">Open Settings → Import contacts</h3>
+                  <h3 className="font-semibold leading-6">
+                    {t("switching.competitor.openSettingsTitle")}
+                  </h3>
                   <p className="mt-1.5 leading-7 text-muted">
-                    In your DiveDay shop, the owner or manager opens the import page and uploads the
-                    CSV you exported.
+                    {t("switching.competitor.openSettingsBody")}
                   </p>
                 </div>
               </li>
@@ -212,13 +224,11 @@ export default async function MigrationGuidePage({
                   2
                 </span>
                 <div className="pt-1">
-                  <h3 className="font-semibold leading-6">Check the preview</h3>
+                  <h3 className="font-semibold leading-6">
+                    {t("switching.competitor.checkPreviewTitle")}
+                  </h3>
                   <p className="mt-1.5 leading-7 text-muted">
-                    DiveDay maps your columns automatically and previews the file before anything is
-                    saved — how each column landed, which cards will come in verified and flagged
-                    imported, and anything it's leaving behind. Rows with an email match an existing
-                    diver so a re-import updates them instead of duplicating; the rows that pass
-                    import when you confirm.
+                    {t("switching.competitor.checkPreviewBody")}
                   </p>
                 </div>
               </li>
@@ -227,14 +237,11 @@ export default async function MigrationGuidePage({
                   3
                 </span>
                 <div className="pt-1">
-                  <h3 className="font-semibold leading-6">Import — your roster is ready</h3>
+                  <h3 className="font-semibold leading-6">
+                    {t("switching.competitor.importReadyTitle")}
+                  </h3>
                   <p className="mt-1.5 leading-7 text-muted">
-                    Roster, rental sizes, and cards are ready immediately: cards land verified and
-                    flagged imported, so divers are trip-ready from the first booking. Each imported
-                    card carries a one-tap confirm on the diver's record for staff to give it a look
-                    when they get a moment — no boarding waits on it. The one thing that does wait
-                    is a dive that requires a specialty card: that gate opens when a staffer
-                    confirms the card, which is one tap on the diver's record.
+                    {t("switching.competitor.importReadyBody")}
                   </p>
                 </div>
               </li>
@@ -243,7 +250,7 @@ export default async function MigrationGuidePage({
             {guide.importerNote && (
               <p className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 text-sm leading-6 text-muted">
                 <span className="font-semibold text-foreground">
-                  For a {guide.competitor} export:{" "}
+                  {t("switching.competitor.forExportPrefix", { competitor: guide.competitor })}{" "}
                 </span>
                 {guide.importerNote}
               </p>
@@ -258,27 +265,23 @@ export default async function MigrationGuidePage({
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
               {guide.coexist
-                ? `Run the dive day ${guide.competitor} can't.`
-                : `Ready to make the move off ${guide.competitor}?`}
+                ? t("switching.competitor.runTheDay", { competitor: guide.competitor })
+                : t("switching.competitor.readyToMove", { competitor: guide.competitor })}
             </h2>
-            <p className="mt-2 max-w-xl text-muted">
-              Walk the live demo as the owner, the captain, or a diver first — then start a trial
-              shop, bring your export, and see your roster land in DiveDay with the safety spine
-              intact.
-            </p>
+            <p className="mt-2 max-w-xl text-muted">{t("switching.competitor.walkDemoFirst")}</p>
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction} className="contents">
                 <FunnelTag source={guideSource(competitor)} />
                 <SubmitButton
-                  pendingLabel="Getting the demo ready…"
+                  pendingLabel={t("switching.competitor.gettingDemoReady")}
                   className={buttonClass({
                     size: "cta",
                     className: "cursor-pointer disabled:opacity-70",
                   })}
                 >
-                  Try the live demo
+                  {t("marketing.common.tryDemo")}
                 </SubmitButton>
               </form>
               <Link
@@ -289,11 +292,11 @@ export default async function MigrationGuidePage({
                   className: "border-border-strong",
                 })}
               >
-                Start a trial
+                {t("marketing.common.startTrial")}
               </Link>
             </div>
             <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
-              Other switching guides →
+              {t("switching.competitor.otherGuides")}
             </Link>
           </div>
         </section>
@@ -302,7 +305,7 @@ export default async function MigrationGuidePage({
           <section className="border-t border-border">
             <div className="mx-auto max-w-4xl px-6 py-8">
               <h2 className="text-xs font-semibold tracking-widest text-muted uppercase">
-                Sources
+                {t("switching.competitor.sources")}
               </h2>
               <ul className="mt-3 flex flex-col gap-1.5 text-sm text-muted">
                 {guide.sources.map((source) => (

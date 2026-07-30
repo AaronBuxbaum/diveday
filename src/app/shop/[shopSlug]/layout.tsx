@@ -141,12 +141,16 @@ export default async function ShopLayout({
           currentRole={currentRole}
           currentName={session?.user?.name}
           shopSlug={shopSlug}
-          roles={DEMO_ROLE_META.filter((role) => availableRoles.includes(role.id)).map((role) => ({
-            ...role,
-            title: demoT(DEMO_ROLE_KEYS[role.id].title),
-            desc: demoT(DEMO_ROLE_KEYS[role.id].desc),
-            tryThis: demoT(DEMO_ROLE_KEYS[role.id].tryThis),
-          }))}
+          roles={DEMO_ROLE_META.filter((role) => availableRoles.includes(role.id)).map((role) => {
+            const title = demoT(DEMO_ROLE_KEYS[role.id].title);
+            return {
+              ...role,
+              title,
+              desc: demoT(DEMO_ROLE_KEYS[role.id].desc),
+              tryThis: demoT(DEMO_ROLE_KEYS[role.id].tryThis),
+              switchAriaLabel: demoT("demo.switchToAria", { role: title }),
+            };
+          })}
           copy={{
             shopLabel: demoT("demo.shopLabel"),
             viewingAs: demoT("demo.viewingAs"),
@@ -159,7 +163,6 @@ export default async function ShopLayout({
             tryLabel: demoT("demo.tryLabel"),
             current: demoT("demo.current"),
             switchAction: demoT("demo.switchAction"),
-            switchToAria: (role: string) => demoT("demo.switchToAria", { role }),
           }}
           // A minted (per-visitor) demo is addressable by its slug and readable
           // by anyone who has it, so warn against entering real customer data;
