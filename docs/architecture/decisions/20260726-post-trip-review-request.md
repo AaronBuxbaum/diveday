@@ -5,7 +5,7 @@
 
 ## Context
 
-[fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md)
+[fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md)
 flagged that FareHarbor nudges a diver toward a public review right after a great dive — the highest-
 leverage moment a shop has for word-of-mouth, and one DiveDay's recap page (the "word-of-mouth window,
 weaponized" surface from `docs ADR 20260723-post-trip-recap`) wasn't using. The recap page already

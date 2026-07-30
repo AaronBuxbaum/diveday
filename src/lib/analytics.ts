@@ -1,4 +1,5 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
+import type { FunnelSource } from "./funnel";
 
 /**
  * Custom event instrumentation, one seam. Page-level analytics already ships via
@@ -43,7 +44,16 @@ export type AnalyticsEvent =
        * demo-vs-trial story can be read per surface.
        */
       name: "demo_entered";
-      source: string;
+      source: FunnelSource | "unknown";
+    }
+  | {
+      /**
+       * A visitor finished the sign-up form and got a shop of their own — the
+       * other half of the funnel `demo_entered` opens. Same `source` vocabulary,
+       * so demo-vs-trial can be read per marketing surface.
+       */
+      name: "trial_started";
+      source: FunnelSource | "unknown";
     };
 
 type EventProps = Record<string, string | number | boolean | null>;

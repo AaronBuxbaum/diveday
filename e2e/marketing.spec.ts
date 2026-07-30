@@ -53,6 +53,26 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("button", { name: "Try the live demo first" })).toBeVisible();
 });
 
+test("the sign-up form answers the hesitation it creates", async ({ page }) => {
+  // The trial link carries the page that sent it, so demo-vs-trial can be read
+  // per surface; the form hands that tag back to the action.
+  await page.goto("/pricing");
+  await page.getByRole("link", { name: "Start a trial" }).last().click();
+  await expect(page).toHaveURL(/\/onboard\?from=pricing$/);
+  await expect(page.locator('input[name="source"]')).toHaveValue("pricing");
+
+  // Asking for a password is the moment of maximum hesitation, so the three
+  // reassurances sit with the form, not on a page the visitor already left.
+  await expect(page.getByText("No card, no setup fee.")).toBeVisible();
+  await expect(page.getByText("Your records leave with you.")).toBeVisible();
+  await expect(page.getByText("You get a founder-direct line.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
+
+  // An unrecognized tag is bucketed rather than echoed into the funnel.
+  await page.goto("/onboard?from=Not%20A%20Real%20Source");
+  await expect(page.locator('input[name="source"]')).toHaveValue("unknown");
+});
+
 test("the about page says who is behind DiveDay and what it won't pretend", async ({ page }) => {
   // Reachable from the footer on any marketing page — the conventional place a
   // buyer looks for who they're dealing with.

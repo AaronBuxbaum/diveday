@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
+import { trialHref } from "@/lib/funnel";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
 export const metadata: Metadata = {
@@ -85,7 +87,7 @@ export default function SwitchHubPage() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction} className="contents">
-                <input type="hidden" name="source" value="switching-hub" />
+                <FunnelTag source="switching-hub" />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
                   className={buttonClass({
@@ -97,7 +99,7 @@ export default function SwitchHubPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href={trialHref("switching-hub")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

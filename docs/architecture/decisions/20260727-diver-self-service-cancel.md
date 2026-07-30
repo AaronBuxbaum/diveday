@@ -5,7 +5,7 @@
 
 ## Context
 
-[fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md)
+[fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md)
 named diver self-service cancel/reschedule as a real FareHarbor gap, with an explicit caveat: a
 diver-triggered cancel/reschedule mutates manifest and payment/refund state through a new
 diver-facing surface, which AGENTS.md's hard rules place in the same safety-critical/security-

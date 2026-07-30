@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { trialHref } from "@/lib/funnel";
 import { fullShopExport } from "@/lib/marketing";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
@@ -309,7 +311,7 @@ export default function AboutPage() {
           <div className="mt-8 flex flex-col items-center gap-3">
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <form action={enterDemoAction}>
-                <input type="hidden" name="source" value="about-closing" />
+                <FunnelTag source="about-closing" />
                 <SubmitButton
                   pendingLabel="Getting your shop ready…"
                   className={buttonClass({
@@ -321,7 +323,7 @@ export default function AboutPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href={trialHref("about-closing")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

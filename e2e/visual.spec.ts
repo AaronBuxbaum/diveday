@@ -41,12 +41,21 @@ import { openTripFromBoard } from "./helpers";
  * layout shifts (a reordered queue, a trip crossing from upcoming to sailed)
  * that a moving clock actually causes.
  *
- * `capture` also waits on `document.fonts.ready` before every screenshot.
- * The Geist fonts (next/font/google) load asynchronously; without this wait,
- * a capture can land on either side of the fallback→webfont swap and render
- * the same text with different sub-pixel antialiasing, which reads as a false
- * diff (this is what produced the "flaky" schedule/today/divers diffs on
- * builds with no real change).
+ * Before every screenshot, `capture` runs `paintWholeDocument` (see its own
+ * comment): it scrolls the document through to force the compositor to
+ * rasterize every band, then waits on `document.fonts.ready`. The Geist fonts
+ * (next/font/google) load asynchronously; without that wait a capture can land
+ * on either side of the fallback→webfont swap and render the same text with
+ * different sub-pixel antialiasing, which reads as a false diff.
+ *
+ * Every `capture` needs the surface to have finished rendering first — wait for
+ * a heading, a known element, or (for a Client Component) a control it only
+ * renders once mounted. A capture that navigates and shoots immediately
+ * photographs whichever frame the suspense fallback was on, and two runs
+ * disagreeing about that is what "flaky visual diff" has always turned out to
+ * mean here. Waiting on a server-rendered element is not enough when the
+ * interesting part is client-rendered: `course-edit` waited on a <legend> that
+ * precedes its editor's mount.
  */
 
 // Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
@@ -57,11 +66,50 @@ const VIEWPORTS = [
   { width: 1280, height: 800 }, // desktop
 ] as const;
 
+/**
+ * Force Chromium to paint the whole document, then settle fonts, before a
+ * `fullPage` screenshot.
+ *
+ * A full-page capture of a tall page can come back with everything below the
+ * viewport *unpainted*: `recap` at 390 was blank below its first screenful on
+ * one run and fully drawn on the next, at the same 3453px height. Waiting on an
+ * element does not prevent it — Playwright counts an off-screen node as
+ * visible, so the wait resolves while those pixels are still unrasterized. That
+ * is what made the unstable set rotate between runs (recap, manifest,
+ * settings-*, course-edit, schedule-builder, site-briefing — all the tall
+ * ones): each run left a different band unpainted. Scrolling the document
+ * through in viewport-sized steps makes the compositor rasterize every band;
+ * we then return to the top so the screenshot still starts where it always did.
+ *
+ * Fonts are re-awaited here, per viewport, rather than once per `capture`: a
+ * resize relayouts the document and can begin a font load that the other
+ * viewport never needed. `.then(() => true)` keeps the resolved value
+ * serializable — `document.fonts.ready` resolves to a FontFaceSet, which
+ * Playwright cannot return.
+ */
+async function paintWholeDocument(page: Page) {
+  await page.evaluate(async () => {
+    const settle = () =>
+      new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // Re-read scrollHeight each pass: painting a band can add height. The step
+    // cap is a guard against a page that grows forever, not an expected exit.
+    for (let step = 0; step < 100; step += 1) {
+      const y = step * window.innerHeight;
+      if (y >= document.documentElement.scrollHeight) break;
+      window.scrollTo(0, y);
+      await settle();
+    }
+    window.scrollTo(0, 0);
+    await settle();
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+}
+
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
-  await page.evaluate(() => document.fonts.ready);
   const baseViewport = page.viewportSize();
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
+    await paintWholeDocument(page);
     await page.screenshot({
       path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
       fullPage: true,
@@ -85,8 +133,9 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
  * gutter that survives a "None margins" print dialog.
  */
 async function capturePrint(page: Page, name: string) {
-  await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ media: "print" });
+  // After the media switch, so the bands rasterized are the print layout's.
+  await paintWholeDocument(page);
   await page.screenshot({
     path: `e2e/screenshots/${name}-print.png`,
     fullPage: true,
@@ -106,7 +155,7 @@ for (const scheme of ["light", "dark"] as const) {
       ownerStorageState,
       request,
     }) => {
-      // 19 navigate+capture surfaces (38 screenshots) plus a real send-waiver
+      // 20 navigate+capture surfaces (40 screenshots) plus a real send-waiver
       // action and a real booking, all in one test — comfortably past the
       // suite's 15s default, which is sized for a single real flow, not a
       // full site tour. Without this override the run was flaky: whichever
@@ -126,6 +175,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/pricing");
       await capture(page, "pricing", scheme);
 
+      // Where the trial actually starts: the form plus the reassurance block a
+      // skeptical owner reads before typing a password.
+      await page.goto("/onboard");
+      await capture(page, "onboard", scheme);
+
       await page.goto("/sign-in");
       await capture(page, "sign-in", scheme);
 
@@ -141,13 +195,24 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/reset-password/not-a-real-token");
       await capture(page, "reset-password-invalid", scheme);
 
+      // Wait for a real departure card, not the loading skeleton: this capture
+      // used to `goto` and shoot immediately, so it raced the schedule's
+      // suspense fallback and whichever side of that race each run landed on
+      // decided the baseline. Two runs catching *different* skeleton frames is
+      // what produced the schedule-dark diffs on builds with no code change.
       await page.goto("/shop/blue-mantis/schedule");
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
       await capture(page, "schedule", scheme);
 
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
       // no ShopPageHeader chrome, tighter padding — what a shop's own website
       // actually shows inside the iframe.
+      // Same settle wait as the standalone schedule above, and for a sharper
+      // reason: with no wait this capture sometimes shot an empty document, so
+      // `fullPage` measured the viewport (844px tall) instead of the real page
+      // (11802px). A baseline that is a blank viewport asserts nothing.
       await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
       await capture(page, "schedule-embed", scheme);
 
       // Back to the standalone (non-embed) schedule before the trip-detail
@@ -162,7 +227,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByTitle("Satellite map of Molasses Reef").waitFor();
       await capture(page, "site-briefing", scheme);
 
+      // "Upcoming dates" is the last section the public course page streams, so
+      // it is the signal that the whole document has landed — without it this
+      // capture also shot a viewport-tall blank page on some runs.
       await page.goto("/shop/blue-mantis/courses/open-water-diver");
+      await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
       await capture(page, "course-page", scheme);
 
       // Set a review link on a disposable staff context (same CR-019 pattern
@@ -333,7 +402,12 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The roster, then one diver's full profile (certs, specialty cards,
         // contact) — the front desk's densest everyday surfaces.
+        // Wait for the roster itself, not the skeleton: same race as the public
+        // schedule above, and the one that put a half-drawn loading state into
+        // the divers-light baseline.
         await page.goto("/shop/blue-mantis/divers");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.getByRole("searchbox", { name: "Search divers" }).waitFor();
         await capture(page, "divers", scheme);
 
         // Found by search, not by scrolling: the demo shop now has enough
@@ -501,7 +575,11 @@ for (const scheme of ["light", "dark"] as const) {
         // A course's edit page: the Day by day section's real per-day controls
         // (start/end time, time note, item list) replacing the old textarea.
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+        // "Day by day" is a server-rendered <legend>, so it is on screen before
+        // DayByDayEditor (a Client Component) mounts — waiting on it let the
+        // capture land mid-mount. Wait for a control the editor itself renders.
         await page.getByText("Day by day").waitFor();
+        await page.getByRole("button", { name: "Add item" }).first().waitFor();
         await capture(page, "course-edit", scheme);
 
         // The path builder: the ordered rungs with their move/remove controls,

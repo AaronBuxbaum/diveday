@@ -13,6 +13,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them | you introduce or rename a domain concept |
 | [product/roadmap.md](product/roadmap.md) | What is **not** built yet, in priority order | scope shifts; when an item ships, move it to shipped.md |
 | [product/shipped.md](product/shipped.md) | Scannable index of what's already built, ADR-linked | a slice ships (move it here from the roadmap) |
+| [product/future-features.md](product/future-features.md) | Unscheduled revenue-layer candidates (gift cards, buyout charters, checkout upsells) — each closer to a subsystem than a slice, each needing an ADR | a candidate earns a roadmap slot, or a new one is deferred here rather than sequenced |
 | [product/next-steps.md](product/next-steps.md) | Prioritized agent-development enablement plan | priorities ship, architecture direction changes, or parallel-agent needs evolve |
 | [product/human-decisions.md](product/human-decisions.md) | Human-owned decisions, approvals, and verification work, plus the provisional waiver/course/rental-fit/nitrox/hosting baselines awaiting that approval | a human decision is made, assigned, implemented, or validated, or a provisional default needs recording |
 | [product/marketing.md](product/marketing.md) | The public-page rulebook: positioning spine, claims policy, voice, SEO conventions, visuals, and the maintenance loop (price source of truth is `src/lib/marketing.ts`) | product claims, positioning, public visuals, or pricing change |
@@ -40,8 +41,6 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
-| [assessments/fareharbor-feature-gaps-20260726.md](product/assessments/fareharbor-feature-gaps-20260726.md) | 2026-07-26 feature-level audit vs FareHarbor: the schedule/embed gap plus promo codes, gift cards, add-ons, self-service cancel, abandoned-cart recovery, reviews |
-| [assessments/marketing-review.md](product/assessments/marketing-review.md) | 2026-07-23 review of the public pages: the case for repositioning, SEO substrate gaps, and the task breakdown (M1–M8) |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
@@ -51,8 +50,10 @@ rationale. Not open work; do not plan from them.
 | [archive/product-space-investigation.md](product/archive/product-space-investigation.md) | 2026-07-20 breadth→depth assessment; its recommendations shipped |
 | [archive/codebase-review-20260723.md](product/archive/codebase-review-20260723.md) | 2026-07-23 whole-repository review (CR-001–CR-021); all tickets shipped and human-owned decisions resolved 2026-07-24 |
 | [archive/ux-audit-20260721.md](product/archive/ux-audit-20260721.md) | 2026-07-21 UX work plan (WP-1…WP-11); fully delivered 2026-07-23 |
+| [archive/marketing-review-20260723.md](product/archive/marketing-review-20260723.md) | 2026-07-23 review of the public pages (M1–M8); fully delivered 2026-07-30. The live rulebook is [product/marketing.md](product/marketing.md) |
 | [archive/delight-and-experience.md](product/archive/delight-and-experience.md) | Completed delight-and-experience brainstorm; delivered ideas are summarized in shipped.md |
 | [archive/diver-booking-delight-20260729.md](product/archive/diver-booking-delight-20260729.md) | Completed diver-booking-delight follow-on brainstorm; delivered ideas are summarized in shipped.md |
+| [archive/fareharbor-feature-gaps-20260726.md](product/archive/fareharbor-feature-gaps-20260726.md) | 2026-07-26 feature-level audit vs FareHarbor (embed, promo codes, self-service cancel, abandoned cart, reviews, structured data); closed 2026-07-30 — those shipped, and gift cards, charters, and upsells moved to future-features.md |
 
 ## Rules
 

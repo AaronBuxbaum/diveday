@@ -4,6 +4,9 @@ What is **not** built yet, and the order to build it. Sequencing guidance, not a
 ships a usable vertical slice. Re-order only with a note here explaining why.
 
 - What already shipped is indexed in [shipped.md](shipped.md) — check there before assuming a gap.
+- Deferred revenue-layer candidates — gift cards, private/buyout charters, diver-selectable checkout
+  upsells, multi-currency — are in [future-features.md](future-features.md). They are *not* sequenced;
+  an item earns a slot here (with its ADR) before it gets built.
 - Human-owned approvals, provisional defaults, and validation gates are in
   [human-decisions.md](human-decisions.md); the deep buyer/rival analysis is in
   [competitive-analysis.md](assessments/competitive-analysis.md) and
@@ -62,7 +65,9 @@ policy decision — V-05 and H-11 in [human-decisions.md](human-decisions.md).
 
 Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** — a trip is the
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
-provider/policy decisions are open. Deliberately deferred until a real operator needs it.
+provider/policy decisions are open. Deliberately deferred until a real operator needs it. The
+private/buyout charter workflow in [future-features.md](future-features.md#3-private--buyout-charters)
+blocks on this same modeling — design the two together, not separately.
 
 ### 6. Staff-surface copy extraction (finishing localization)
 

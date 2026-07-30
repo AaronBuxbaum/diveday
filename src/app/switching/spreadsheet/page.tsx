@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
+import { trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 
 /**
@@ -313,7 +315,7 @@ export default function SpreadsheetSwitchPage() {
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction} className="contents">
-                <input type="hidden" name="source" value="switching-spreadsheet" />
+                <FunnelTag source="switching-spreadsheet" />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
                   className={buttonClass({
@@ -325,7 +327,7 @@ export default function SpreadsheetSwitchPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href={trialHref("switching-spreadsheet")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

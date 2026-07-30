@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
+import { guideSource, trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { getMigrationGuide, MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 
@@ -268,7 +270,7 @@ export default async function MigrationGuidePage({
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={enterDemoAction} className="contents">
-                <input type="hidden" name="source" value={`switching-${competitor}`} />
+                <FunnelTag source={guideSource(competitor)} />
                 <SubmitButton
                   pendingLabel="Getting the demo ready…"
                   className={buttonClass({
@@ -280,7 +282,7 @@ export default async function MigrationGuidePage({
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href={trialHref(guideSource(competitor))}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

@@ -10,7 +10,9 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
+import { trackEvent } from "@/lib/analytics";
 import { signIn } from "@/lib/auth";
+import { eventSource } from "@/lib/funnel";
 import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
@@ -19,9 +21,20 @@ import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export async function onboardAction(formData: FormData) {
+  // Which marketing page's "Start a trial" sent them here, carried by the form
+  // and preserved across every bounce back to it so a retry doesn't lose the
+  // attribution the funnel event reads.
+  const source = eventSource(formData.get("source"));
+  // Annotated so TypeScript treats the call as never-returning (control-flow
+  // analysis only honours that on an explicitly typed const).
+  const backToForm: (message: string) => never = (message) =>
+    redirect(
+      `/onboard?error=${encodeURIComponent(message)}${source === "unknown" ? "" : `&from=${source}`}`,
+    );
+
   const ip = await clientIp();
   if (!checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard).allowed) {
-    redirect(`/onboard?error=${encodeURIComponent(RATE_LIMIT_MESSAGE)}`);
+    backToForm(RATE_LIMIT_MESSAGE);
   }
 
   const rawData = Object.fromEntries(formData.entries());
@@ -29,7 +42,7 @@ export async function onboardAction(formData: FormData) {
 
   if (!parsed.success) {
     const firstError = parsed.error.issues[0]?.message || "Invalid input";
-    redirect(`/onboard?error=${encodeURIComponent(firstError)}`);
+    backToForm(firstError);
   }
 
   const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword } = parsed.data;
@@ -135,16 +148,14 @@ export async function onboardAction(formData: FormData) {
     });
   } catch (err) {
     if (onboardingError) {
-      redirect(`/onboard?error=${encodeURIComponent(onboardingError)}`);
+      backToForm(onboardingError);
     }
     // Never surface a raw exception to an unauthenticated visitor — it can
     // carry internal detail (a DB driver error, a stack fragment). The real
     // cause goes to the server log, where the shop's technical owner can see
     // it; the visitor gets a generic, actionable message (CR-014).
     console.error("onboardAction: failed to create shop", err);
-    redirect(
-      `/onboard?error=${encodeURIComponent("Something went wrong creating your shop. Please try again.")}`,
-    );
+    backToForm("Something went wrong creating your shop. Please try again.");
   }
 
   // 2. Welcome + verify-email are best-effort — no working link exists
@@ -157,6 +168,12 @@ export async function onboardAction(formData: FormData) {
   if (newAccountId && newShopId) {
     const accountId = newAccountId;
     const shopId = newShopId;
+
+    // The trial half of the marketing funnel: `demo_entered` counts the skeptics
+    // who look, this counts the ones who committed to a shop, both tagged with
+    // the page that sent them. Deferred like the mail below — telemetry never
+    // delays the response the new owner is waiting on.
+    after(() => trackEvent({ name: "trial_started", source }));
 
     // The founder alert needs no link, so it doesn't wait on APP_HOST being
     // configured the way the owner-facing mail below does.
@@ -215,9 +232,7 @@ export async function onboardAction(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect(
-        `/onboard?error=${encodeURIComponent("Your shop was created, but signing you in failed. Try signing in below.")}`,
-      );
+      backToForm("Your shop was created, but signing you in failed. Try signing in below.");
     }
     throw error; // Propagate NEXT_REDIRECT
   }

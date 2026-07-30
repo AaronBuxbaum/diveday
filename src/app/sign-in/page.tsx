@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { signIn } from "@/lib/auth";
+import { trialHref } from "@/lib/funnel";
 
 export const metadata: Metadata = {
   title: "Sign in — DiveDay",
@@ -86,7 +87,7 @@ export default async function SignInPage({
           </form>
           <p className="mt-4 text-center text-sm text-muted">
             Need a shop?{" "}
-            <Link href="/onboard" className="text-primary font-medium hover:underline">
+            <Link href={trialHref("sign-in")} className="text-primary font-medium hover:underline">
               Create a shop
             </Link>
           </p>

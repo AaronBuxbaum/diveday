@@ -36,4 +36,14 @@ describe("trackEvent", () => {
     ).resolves.toBeUndefined();
     expect(rejecting).toHaveBeenCalledWith("checkout_abandoned", { isDeposit: true });
   });
+
+  it("carries the funnel source on both halves of the marketing funnel", async () => {
+    const tracker = vi.fn();
+    await trackEvent({ name: "demo_entered", source: "pricing" }, tracker);
+    await trackEvent({ name: "trial_started", source: "pricing" }, tracker);
+    expect(tracker.mock.calls).toEqual([
+      ["demo_entered", { source: "pricing" }],
+      ["trial_started", { source: "pricing" }],
+    ]);
+  });
 });
