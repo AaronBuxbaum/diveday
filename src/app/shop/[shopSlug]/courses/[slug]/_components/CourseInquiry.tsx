@@ -1,10 +1,13 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
   COURSE_INQUIRY_EXPERIENCE,
+  COURSE_INQUIRY_EXPERIENCE_KEYS,
+  type CourseInquiryExperience,
   courseInquiryBody,
   courseInquiryMailto,
   courseInquirySubject,
@@ -62,10 +65,11 @@ export function CourseInquiry({
   contactPhone: string | null;
   copy: CourseInquiryCopy;
 }) {
+  const t = useTranslations();
   const [name, setName] = useState("");
   const [timing, setTiming] = useState("");
   const [diversInput, setDiversInput] = useState("");
-  const [experience, setExperience] = useState("");
+  const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -73,8 +77,8 @@ export function CourseInquiry({
   // something to snap back to a placeholder count.
   const divers = diversInput === "" ? null : clampDivers(Number(diversInput));
   const inquiry = { courseTitle, shopName, name, timing, divers, experience, message };
-  const subject = courseInquirySubject(inquiry);
-  const body = courseInquiryBody(inquiry);
+  const subject = courseInquirySubject(t, inquiry);
+  const body = courseInquiryBody(t, inquiry);
 
   async function copyMessage() {
     try {
@@ -135,13 +139,15 @@ export function CourseInquiry({
             <select
               name="experience"
               value={experience}
-              onChange={(event) => setExperience(event.target.value)}
+              onChange={(event) =>
+                setExperience(event.target.value as CourseInquiryExperience | "")
+              }
               className={controlClass}
             >
               <option value="">{copy.chooseOne}</option>
               {COURSE_INQUIRY_EXPERIENCE.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {t(COURSE_INQUIRY_EXPERIENCE_KEYS[option])}
                 </option>
               ))}
             </select>
@@ -172,7 +178,7 @@ export function CourseInquiry({
           <p className="mt-3 text-sm font-semibold">{subject}</p>
           <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-muted">{body}</p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <a href={courseInquiryMailto(contactEmail, inquiry)} className={buttonClass()}>
+            <a href={courseInquiryMailto(t, contactEmail, inquiry)} className={buttonClass()}>
               {copy.openInEmailApp}
             </a>
             <button

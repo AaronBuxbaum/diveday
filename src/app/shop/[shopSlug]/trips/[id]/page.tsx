@@ -31,7 +31,7 @@ import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
-import { SeriesSection } from "./_components/SeriesSection";
+import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import {
   applySeriesDetailsAction,
@@ -167,11 +167,14 @@ export default async function ManageTripPage({
             {series ? (
               <p className="text-sm text-muted">
                 {t("trips.detail.seriesPart", {
-                  summary: recurrenceSummary({
-                    frequency: "weekly",
-                    intervalWeeks: series.intervalWeeks,
-                    occurrenceCount: series.occurrenceCount,
-                  }),
+                  summary: recurrenceSummaryText(
+                    t,
+                    recurrenceSummary({
+                      frequency: "weekly",
+                      intervalWeeks: series.intervalWeeks,
+                      occurrenceCount: series.occurrenceCount,
+                    }),
+                  ),
                   count: series.scheduledCount,
                 })}
               </p>

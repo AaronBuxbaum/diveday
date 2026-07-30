@@ -112,10 +112,31 @@ export function weeklyOccurrencesAfter(
   });
 }
 
-/** Staff-facing one-liner, e.g. "Repeats weekly · 8 trips" or "Repeats every 2 weeks · 6 trips". */
-export function recurrenceSummary(recurrence: WeeklyRecurrence): string {
-  const cadence =
-    recurrence.intervalWeeks === 1 ? "weekly" : `every ${recurrence.intervalWeeks} weeks`;
-  const trips = recurrence.occurrenceCount === 1 ? "1 trip" : `${recurrence.occurrenceCount} trips`;
-  return `Repeats ${cadence} · ${trips}`;
+/**
+ * The cadence a `recurrenceSummary` reads as: every week, or every N weeks.
+ * A code, not a sentence — `src/lib` never renders (see `recurrenceSummary`).
+ */
+export type RecurrenceCadence = "weekly" | "everyNWeeks";
+
+export type RecurrenceSummary = {
+  cadence: RecurrenceCadence;
+  /** Only meaningful when `cadence` is `"everyNWeeks"`. */
+  intervalWeeks: number;
+  tripCount: number;
+};
+
+/**
+ * The staff-facing "Repeats weekly · 8 trips" one-liner, as a code rather than
+ * prose: this module is framework- and database-free, so it has no bundle to
+ * render into. The caller (a staff page, under `staffTranslator`) resolves
+ * `cadence` through its own `Record<RecurrenceCadence, StaffMessageKey>` and
+ * composes the final sentence with one ICU template — see
+ * `SeriesSection.tsx`'s `recurrenceSummaryText`.
+ */
+export function recurrenceSummary(recurrence: WeeklyRecurrence): RecurrenceSummary {
+  return {
+    cadence: recurrence.intervalWeeks === 1 ? "weekly" : "everyNWeeks",
+    intervalWeeks: recurrence.intervalWeeks,
+    tripCount: recurrence.occurrenceCount,
+  };
 }

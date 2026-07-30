@@ -1,8 +1,37 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import { staffTranslator } from "@/i18n/staff-messages";
-import { recurrenceSummary } from "@/lib/recurrence";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import {
+  type RecurrenceCadence,
+  type RecurrenceSummary,
+  recurrenceSummary,
+} from "@/lib/recurrence";
+
+/**
+ * `recurrenceSummary` returns a code, not prose (src/lib/recurrence.ts) — this
+ * map is where the cadence half of it becomes a word in the staff bundle.
+ * Shared with `trips/[id]/page.tsx`'s "part of a series" line, which composes
+ * the same summary into a different parent sentence.
+ */
+const RECURRENCE_CADENCE_KEYS: Record<RecurrenceCadence, StaffMessageKey> = {
+  weekly: "trips.series.cadenceWeekly",
+  everyNWeeks: "trips.series.cadenceEveryNWeeks",
+};
+
+/**
+ * The one sentence a `RecurrenceSummary` renders as, e.g. "Repeats weekly ·
+ * 8 trips". One ICU template (`trips.series.summaryLine`) receives the
+ * already-translated cadence word plus the raw trip count, which the template
+ * itself pluralizes — never string concatenation.
+ */
+export function recurrenceSummaryText(t: StaffTranslator, summary: RecurrenceSummary): string {
+  const cadence =
+    summary.cadence === "weekly"
+      ? t(RECURRENCE_CADENCE_KEYS.weekly)
+      : t(RECURRENCE_CADENCE_KEYS.everyNWeeks, { weeks: summary.intervalWeeks });
+  return t("trips.series.summaryLine", { cadence, trips: summary.tripCount });
+}
 
 /**
  * Series-wide controls for a materialized recurring trip: apply this date's
@@ -31,10 +60,10 @@ export function SeriesSection({
   const t = staffTranslator(locale);
   const hasFuture = futureScheduledCount > 0;
   const hasOtherFuture = futureScheduledCount > 1;
-  // `recurrenceSummary` returns an already-composed English phrase from
-  // src/lib (out of scope for a component-level extraction — flagged for the
-  // domain layer to return a code instead); it nests here as one opaque value.
-  const summary = recurrenceSummary({ frequency: "weekly", intervalWeeks, occurrenceCount });
+  const summary = recurrenceSummaryText(
+    t,
+    recurrenceSummary({ frequency: "weekly", intervalWeeks, occurrenceCount }),
+  );
   return (
     <section className="mt-12 rounded-xl border border-border bg-surface p-5">
       <h2 className="text-base font-semibold">{t("trips.series.heading")}</h2>

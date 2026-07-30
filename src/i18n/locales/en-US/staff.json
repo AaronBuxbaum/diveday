@@ -1135,6 +1135,9 @@
     },
     "series": {
       "heading": "Repeating series",
+      "cadenceWeekly": "weekly",
+      "cadenceEveryNWeeks": "every {weeks} weeks",
+      "summaryLine": "Repeats {cadence} · {trips, plural, one {# trip} other {# trips}}",
       "summaryWithFuture": "{summary} · {count, plural, one {# upcoming date still on the board.} other {# upcoming dates still on the board.}}",
       "summaryAllDone": "{summary} · every date has departed or been cancelled.",
       "applying": "Applying…",

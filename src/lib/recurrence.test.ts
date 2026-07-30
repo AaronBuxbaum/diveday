@@ -147,12 +147,23 @@ describe("isValidWeeklyRecurrence", () => {
 });
 
 describe("recurrenceSummary", () => {
-  it("reads naturally for weekly and multi-week cadences", () => {
-    expect(recurrenceSummary({ frequency: "weekly", intervalWeeks: 1, occurrenceCount: 8 })).toBe(
-      "Repeats weekly · 8 trips",
-    );
-    expect(recurrenceSummary({ frequency: "weekly", intervalWeeks: 2, occurrenceCount: 6 })).toBe(
-      "Repeats every 2 weeks · 6 trips",
-    );
+  it("reads a weekly cadence as its own code, not a rendered sentence", () => {
+    expect(
+      recurrenceSummary({ frequency: "weekly", intervalWeeks: 1, occurrenceCount: 8 }),
+    ).toEqual({
+      cadence: "weekly",
+      intervalWeeks: 1,
+      tripCount: 8,
+    });
+  });
+
+  it("reads a multi-week cadence as its own code", () => {
+    expect(
+      recurrenceSummary({ frequency: "weekly", intervalWeeks: 2, occurrenceCount: 6 }),
+    ).toEqual({
+      cadence: "everyNWeeks",
+      intervalWeeks: 2,
+      tripCount: 6,
+    });
   });
 });

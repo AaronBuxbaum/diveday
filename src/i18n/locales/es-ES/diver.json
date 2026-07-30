@@ -49,6 +49,23 @@
     "packRenting": "Alquilas",
     "packProvided": "Lo ponemos nosotros",
     "packNothingRequested": "Aún no has pedido nada",
+    "rentalItems": {
+      "bcd": "Chaleco (BCD)",
+      "regulator": "Regulador",
+      "wetsuit": "Traje de neopreno",
+      "maskFins": "Máscara y aletas",
+      "weights": "Plomos",
+      "diveComputer": "Ordenador de buceo",
+      "gopro": "GoPro"
+    },
+    "providedItems": {
+      "tanksAndWeights": "Botellas y plomos",
+      "crewBriefing": "Briefing de la tripulación"
+    },
+    "temperatureTip": {
+      "cold": "Se espera una temperatura del agua de unos {celsius} °C — pregunta al centro si necesitas protección térmica adicional.",
+      "mild": "Se espera una temperatura del agua de unos {celsius} °C — sigue la recomendación de traje del centro para tu comodidad."
+    },
     "dockDayRhythm": "Cómo será tu día en el muelle",
     "briefingsEyebrow": "Briefings de inmersión",
     "planTwoTank": "Tu plan de dos inmersiones",
@@ -474,7 +491,25 @@
     "likelySightings": "{count, plural, one {# avistamiento probable} other {# avistamientos probables}}",
     "satelliteViewIllustrative": "Vista satelital · ruta ilustrativa",
     "openMap": "Abrir mapa ↗",
-    "satelliteMapTitle": "Mapa satelital de {site}"
+    "satelliteMapTitle": "Mapa satelital de {site}",
+    "landmarkKinds": {
+      "navigationMark": "Marca de navegación",
+      "reefHistory": "Historia del arrecife",
+      "wreckFeature": "Elemento del pecio",
+      "underwaterMonument": "Monumento submarino",
+      "reefFormation": "Formación del arrecife",
+      "pointOfInterest": "Punto de interés"
+    },
+    "landmarkDescriptions": {
+      "molassesReefLight": "El faro del arrecife es la referencia más fácil sobre el agua y una buena forma de orientarte alrededor del arrecife central.",
+      "shipsWinch": "Cerca del faro descansa un gran cabrestante de barco: una pieza compacta de historia marítima ya integrada en el arrecife.",
+      "spanishAnchor": "Entre las formaciones de coral se encuentra un ancla antigua. Deja que la tripulación te la señale; se camufla sorprendentemente bien en el arrecife.",
+      "flightDeckAndCranes": "La amplia cubierta de vuelo y sus dos grúas hacen evidente la escala del barco. Mantente fuera de la estructura y sigue la línea del guía.",
+      "wellDeck": "La cubierta pozo abierta es uno de los espacios exteriores más espectaculares del pecio, con luz cambiante y espacio para grandes bancos de peces.",
+      "christOfAbyssStatue": "La estatua de bronce de 2,6 metros se alza sobre un pedestal de hormigón en aguas poco profundas: la pieza central inconfundible de esta inmersión.",
+      "dryRocksSandChannels": "Canales de arena brillante serpentean entre las formaciones de coral alrededor de la estatua y son buenos lugares para buscar rayas, meros y morenas.",
+      "generic": "Una referencia memorable que la tripulación puede señalar durante el briefing del punto."
+    }
   },
   "inquiry": {
     "yourName": "Tu nombre",
@@ -494,7 +529,16 @@
     "messageSoFar": "Tu mensaje hasta ahora",
     "openInEmailApp": "Abrir en tu aplicación de correo",
     "orWriteTo": "O escribe a",
-    "callLabel": "llama"
+    "callLabel": "llama",
+    "notSaid": "No indicado",
+    "subject": "Consulta sobre el curso: {courseTitle}",
+    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
+    "experience": {
+      "never": "Nunca he buceado",
+      "tried": "He probado el buceo una vez, pero no estoy certificado",
+      "certified": "Estoy certificado y tengo mi tarjeta",
+      "lapsed": "Estoy certificado, pero ha pasado tiempo"
+    }
   },
   "account": {
     "common": {

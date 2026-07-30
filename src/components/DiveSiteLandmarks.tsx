@@ -1,5 +1,33 @@
-import type { DiverTranslator } from "@/i18n/messages";
-import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
+import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import type {
+  DiveSiteLandmark,
+  DiveSiteLandmarkDescription,
+  DiveSiteLandmarkKind,
+} from "@/lib/dive-site-landmarks";
+
+/**
+ * `buildDiveSiteLandmarks` returns codes, not prose (src/lib/dive-site-landmarks.ts) —
+ * these two maps are where each one becomes a word in the diver bundle.
+ */
+const LANDMARK_KIND_KEYS: Record<DiveSiteLandmarkKind, DiverMessageKey> = {
+  navigationMark: "site.landmarkKinds.navigationMark",
+  reefHistory: "site.landmarkKinds.reefHistory",
+  wreckFeature: "site.landmarkKinds.wreckFeature",
+  underwaterMonument: "site.landmarkKinds.underwaterMonument",
+  reefFormation: "site.landmarkKinds.reefFormation",
+  pointOfInterest: "site.landmarkKinds.pointOfInterest",
+};
+
+const LANDMARK_DESCRIPTION_KEYS: Record<DiveSiteLandmarkDescription, DiverMessageKey> = {
+  molassesReefLight: "site.landmarkDescriptions.molassesReefLight",
+  shipsWinch: "site.landmarkDescriptions.shipsWinch",
+  spanishAnchor: "site.landmarkDescriptions.spanishAnchor",
+  flightDeckAndCranes: "site.landmarkDescriptions.flightDeckAndCranes",
+  wellDeck: "site.landmarkDescriptions.wellDeck",
+  christOfAbyssStatue: "site.landmarkDescriptions.christOfAbyssStatue",
+  dryRocksSandChannels: "site.landmarkDescriptions.dryRocksSandChannels",
+  generic: "site.landmarkDescriptions.generic",
+};
 
 export function DiveSiteLandmarks({
   landmarks,
@@ -32,11 +60,11 @@ export function DiveSiteLandmarks({
               {String(index + 1).padStart(2, "0")}
             </span>
             <p className="relative text-xs font-medium tracking-widest text-primary uppercase">
-              {landmark.kind}
+              {t(LANDMARK_KIND_KEYS[landmark.kind])}
             </p>
             <h4 className="relative mt-2 text-lg font-semibold">{landmark.name}</h4>
             <p className="relative mt-2 max-w-prose text-sm leading-relaxed text-muted">
-              {landmark.description}
+              {t(LANDMARK_DESCRIPTION_KEYS[landmark.description])}
             </p>
           </article>
         ))}
