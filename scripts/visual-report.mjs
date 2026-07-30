@@ -88,6 +88,7 @@ async function main() {
   ];
 
   let downloadCount = 0;
+  const skipped = [];
   for (const item of items) {
     item.files = {};
     for (const dirKind of item.want) {
@@ -96,6 +97,7 @@ async function main() {
       const result = await fetchFromBucket(bucket, remote);
       if (!result.ok) {
         console.warn(`  skip ${remote}: HTTP ${result.status}`);
+        skipped.push({ remote, status: result.status });
         continue;
       }
       mkdirSync(path.dirname(local), { recursive: true });
@@ -129,12 +131,27 @@ async function main() {
     );
   }
 
+  if (skipped.length) {
+    lines.push("", "## Skipped downloads", "");
+    lines.push(
+      "The report above may be incomplete — these objects failed to fetch from S3 and are not on disk:",
+    );
+    for (const { remote, status } of skipped) {
+      lines.push(`- ${remote} (HTTP ${status})`);
+    }
+  }
+
   const summaryPath = path.join(outDir, "REPORT.md");
   mkdirSync(outDir, { recursive: true });
   writeFileSync(summaryPath, lines.join("\n"));
 
   console.log(lines.join("\n"));
   console.log(`Wrote ${summaryPath} and ${downloadCount} image(s) under ${outDir}`);
+  if (skipped.length) {
+    console.warn(
+      `${skipped.length} object(s) failed to download — see "Skipped downloads" in REPORT.md`,
+    );
+  }
 }
 
 main().catch((err) => {
