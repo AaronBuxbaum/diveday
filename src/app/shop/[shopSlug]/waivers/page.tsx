@@ -15,6 +15,7 @@ import {
   saveWaiverTemplate,
 } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -44,6 +45,7 @@ export default async function WaiverTemplatesPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
+  const t = staffTranslator(locale);
   // The waiver is the shop's legal instrument; editing it (and the medical
   // jurisdiction it presents) is owner/manager work (H-14, ADR
   // 20260724-role-authorization). Other roles have no use for it, so the
@@ -80,31 +82,34 @@ export default async function WaiverTemplatesPage({
   const banner =
     notice === "saved"
       ? current
-        ? "Saved as a new version."
-        : "Your waiver is saved. Every future edit is kept as a new version."
+        ? t("waiversStaff.banner.savedNew")
+        : t("waiversStaff.banner.savedFirst")
       : notice === "invalid"
-        ? "That didn't save. The release needs to be at least a few sentences long."
+        ? t("waiversStaff.banner.invalid")
         : undefined;
   const bannerIsError = notice === "invalid";
 
   const editForm = (
     <form action={saveWaiverAction} className="flex flex-col gap-5">
       <FieldGrid columns={1} className="gap-y-5">
-        <Field label="Release text">
+        <Field label={t("waiversStaff.fieldLabel")}>
           <textarea
             name="body"
             required
             rows={14}
             maxLength={12_000}
             defaultValue={current?.body ?? DEFAULT_WAIVER_BODY}
-            placeholder="Write the release the diver will read and sign."
+            placeholder={t("waiversStaff.placeholder")}
             className={controlClass}
           />
         </Field>
       </FieldGrid>
       <div>
-        <SubmitButton pendingLabel="Saving…" className={buttonClass({ size: "lg" })}>
-          {current ? "Save new version" : "Save waiver"}
+        <SubmitButton
+          pendingLabel={t("waiversStaff.pendingLabel")}
+          className={buttonClass({ size: "lg" })}
+        >
+          {current ? t("waiversStaff.saveNewVersion") : t("waiversStaff.saveWaiver")}
         </SubmitButton>
       </div>
     </form>
@@ -114,9 +119,9 @@ export default async function WaiverTemplatesPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Settings"
-        title="Waiver"
-        description="Every diver signs this one release. Edit it to fit your shop."
+        eyebrow={t("waiversStaff.eyebrow")}
+        title={t("waiversStaff.title")}
+        description={t("waiversStaff.description")}
       />
 
       {banner ? (
@@ -131,16 +136,18 @@ export default async function WaiverTemplatesPage({
       ) : null}
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Release text</h2>
+        <h2 className="text-lg font-semibold">{t("waiversStaff.releaseTextHeading")}</h2>
         <p className="mt-1 text-sm text-muted">
           {current
-            ? "This is the release every new link sends. Saving replaces it for new links — waivers already signed keep the exact text they were signed against."
-            : "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."}
+            ? t("waiversStaff.releaseDescription.current")
+            : t("waiversStaff.releaseDescription.sample")}
         </p>
         {current ? (
           <p className="mt-2 text-sm text-muted">
-            Version {current.version} · saved{" "}
-            {formatShortDate(current.createdAt, locale, shop.timezone)}
+            {t("waiversStaff.versionInfo", {
+              version: current.version,
+              date: formatShortDate(current.createdAt, locale, shop.timezone),
+            })}
           </p>
         ) : null}
         <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
@@ -150,15 +157,13 @@ export default async function WaiverTemplatesPage({
 
       <section className="mt-10" aria-labelledby="waiver-integrity-heading">
         <h2 id="waiver-integrity-heading" className="text-lg font-semibold">
-          Signed record integrity
+          {t("waiversStaff.integrityHeading")}
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          New signed records carry a server-sealed HMAC over their signed metadata and template
-          snapshot. A mismatch is an audit stop; older imported or legacy records are clearly marked
-          unsealed.
+          {t("waiversStaff.integrityDescription")}
         </p>
         {integrityAudit.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No signed records yet.</p>
+          <p className="mt-4 text-sm text-muted">{t("waiversStaff.noSignedRecords")}</p>
         ) : (
           <>
             <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
@@ -171,8 +176,8 @@ export default async function WaiverTemplatesPage({
                     <span className="font-medium">{entry.personName}</span>
                     <span className="ml-2 text-muted">
                       {entry.signedAt
-                        ? formatShortDate(entry.signedAt, shop.defaultLocale, shop.timezone)
-                        : "No signature date"}
+                        ? formatShortDate(entry.signedAt, locale, shop.timezone)
+                        : t("waiversStaff.noSignatureDate")}
                     </span>
                   </span>
                   <span
@@ -185,19 +190,16 @@ export default async function WaiverTemplatesPage({
                     }
                   >
                     {entry.integrity === "valid"
-                      ? "Integrity verified"
+                      ? t("waiversStaff.integrityValid")
                       : entry.integrity === "invalid"
-                        ? "Integrity mismatch"
-                        : "Unsealed legacy record"}
+                        ? t("waiversStaff.integrityInvalid")
+                        : t("waiversStaff.integrityUnsealed")}
                   </span>
                 </li>
               ))}
             </ul>
             {integrityAudit.length > 20 ? (
-              <p className="mt-2 text-xs text-muted">
-                Showing the 20 most recent signed records. To view the complete history, use the CSV
-                export.
-              </p>
+              <p className="mt-2 text-xs text-muted">{t("waiversStaff.truncatedNotice")}</p>
             ) : null}
           </>
         )}

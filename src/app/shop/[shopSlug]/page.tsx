@@ -12,6 +12,7 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -81,6 +82,7 @@ async function TodayBody({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
+  const t = staffTranslator(locale);
 
   const now = nowDate();
   // The lens (20260721-role-aware-landing): a captain or divemaster's Today
@@ -121,7 +123,10 @@ async function TodayBody({
               departures.reduce((total, departure) => total + departure.blocked, 0),
             )}
             {yourBoat
-              ? ` You’re crewing the ${formatTime(yourBoat.startsAt, locale, shop.timezone)} ${yourBoat.title}.`
+              ? ` ${t("shopHome.crewingBoat", {
+                  time: formatTime(yourBoat.startsAt, locale, shop.timezone),
+                  title: yourBoat.title,
+                })}`
               : ""}
           </p>
         }
@@ -131,22 +136,20 @@ async function TodayBody({
         <div className="mb-6">
           <ShopNotice>
             {seriesCount > 1
-              ? `“${created}” is on the board — ${seriesCount} trips scheduled. 🤙`
-              : `“${created}” is on the board. 🤙`}
+              ? t("shopHome.createdNotice.series", { title: created, count: seriesCount })
+              : t("shopHome.createdNotice.single", { title: created })}
           </ShopNotice>
         </div>
       ) : null}
       {reset ? (
         <div className="mb-6">
-          <ShopNotice tone="neutral">Demo data reset — fresh boat, clean slate. 🤿</ShopNotice>
+          <ShopNotice tone="neutral">{t("shopHome.demoReset")}</ShopNotice>
         </div>
       ) : null}
       {email ? (
         <div className="mb-6">
           <ShopNotice tone={email === "sent" ? "success" : "danger"}>
-            {email === "sent"
-              ? "Confirmation email re-sent."
-              : "That email still couldn’t be sent — check the address and email configuration."}
+            {email === "sent" ? t("shopHome.emailResent") : t("shopHome.emailFailed")}
           </ShopNotice>
         </div>
       ) : null}
@@ -176,31 +179,32 @@ async function TodayBody({
           className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
         >
           <h2 id="no-departures-heading" className="font-semibold">
-            No boats out today
+            {t("shopHome.noDeparturesHeading")}
           </h2>
           {nextDeparture ? (
             <p className="mt-1 text-muted">
-              Next up is{" "}
-              <Link
-                href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
-                className="font-medium text-primary hover:underline"
-              >
-                {nextDeparture.title}
-              </Link>{" "}
-              on {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} at{" "}
-              {formatTime(nextDeparture.startsAt, locale, shop.timezone)}.
+              {t.rich("shopHome.nextDeparture", {
+                link: (chunks) => (
+                  <Link
+                    href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {chunks}
+                  </Link>
+                ),
+                title: nextDeparture.title,
+                date: formatShortDate(nextDeparture.startsAt, locale, shop.timezone),
+                time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
+              })}
             </p>
           ) : (
             <>
-              <p className="mt-1 text-muted">
-                Nothing is on the books yet. Schedule a trip and it will show up here the morning it
-                sails.
-              </p>
+              <p className="mt-1 text-muted">{t("shopHome.noDeparturesEmpty")}</p>
               <Link
                 href={`/shop/${shopSlug}/trips/new`}
                 className={buttonClass({ className: "mt-4" })}
               >
-                Schedule a trip
+                {t("shopHome.scheduleTrip")}
               </Link>
             </>
           )}
