@@ -8,7 +8,7 @@ adapters and must not introduce unique requirements.
 ## Read first
 
 1. This file.
-2. Run `pnpm task:context -- <area>` when the task matches a supported area (run without an
+2. Run `pnpm task:context <area>` when the task matches a supported area (run without an
    argument to list the areas).
 3. Read [docs/README.md](docs/README.md) and only the documents relevant to the task.
 4. Read the Next.js warning at the bottom before framework-touching work.
@@ -28,19 +28,24 @@ adapters and must not introduce unique requirements.
 | Command | What |
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
-| `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
+| `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
 | `pnpm check:repo` | environment, architecture, clock, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
-| `pnpm test -- <file> --reporter=dot` | focused Vitest run with low-noise success output |
-| `pnpm e2e -- <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite |
+| `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
+| `pnpm e2e <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite |
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
 | `pnpm visual` | compare visual regression captures against committed baselines |
 | `pnpm visual:update` | regenerate and approve visual baseline snapshots |
+
+Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`). Unlike npm, pnpm
+forwards that `--` into the underlying command instead of consuming it, so `vitest`/`playwright`
+see their own `--` and silently drop everything after it — the shard/filter/reporter flags are
+ignored and the full suite runs instead. Pass args directly: `pnpm test <file> --reporter=dot`.
 
 ## Route map (don't re-derive this)
 

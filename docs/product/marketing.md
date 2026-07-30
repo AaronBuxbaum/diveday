@@ -217,7 +217,7 @@ at the dock, the blocker queue, the no-login diver arc.
   new-feature skill's definition of done includes this check.
 - **A claim is invalidated** (feature removed, behavior changed) → fix the page in the same PR
   that invalidates it. If code and copy disagree, one of them is the bug.
-- **Verification is the product bar**: `pnpm check` green; `pnpm e2e -- marketing.spec.ts`;
+- **Verification is the product bar**: `pnpm check` green; `pnpm e2e marketing.spec.ts`;
   screenshots of every touched page in light + dark, desktop + phone, actually looked at
   (design-review skill); visual triage after push (visual-triage skill).
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a

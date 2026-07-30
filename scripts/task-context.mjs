@@ -7,9 +7,7 @@ import { areas, shared } from "./task-context-data.mjs";
 const ROOT = process.cwd();
 
 function usage() {
-  console.error(
-    `Usage: pnpm task:context -- <area>\nAreas: ${Object.keys(areas).sort().join(", ")}`,
-  );
+  console.error(`Usage: pnpm task:context <area>\nAreas: ${Object.keys(areas).sort().join(", ")}`);
   process.exit(1);
 }
 
