@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
+  BLOCKER_CATEGORY,
   calculateReadiness,
   higherCertificationLevel,
   unavailableReadiness,
@@ -136,7 +137,11 @@ export async function getTripMaxDepthMeters(
         select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
       )`,
     )
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    // `dive_sites.shop_id` as well as the trip's: the join above reaches sites
+    // through two paths, and proving the row belongs to this shop on the query
+    // beats relying on the invariant that a trip never points at a foreign
+    // site (the CR-007 house rule).
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)));
   return row?.maxDepth ?? null;
 }
 
@@ -527,7 +532,11 @@ export async function listTripReadiness(
     getTripSiteRequirement(db, shopId, tripId),
     listTripWaiverStatuses(db, shopId, tripId),
     getCurrentWaiverTemplate(db, shopId),
-    db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
+    db
+      .select({ timezone: shops.timezone, depthUnit: shops.depthUnit })
+      .from(shops)
+      .where(eq(shops.id, shopId))
+      .limit(1),
     // The course's stated minimum age and the day this session runs — age is
     // measured on the course date, not today (H-08).
     db
@@ -541,6 +550,7 @@ export async function listTripReadiness(
   const [shop] = shopRow;
   if (!shop) throw new Error(`listTripReadiness: shop ${shopId} not found`);
   const timezone = shop.timezone;
+  const depthUnit = shop.depthUnit;
   const courseMinimumAge = courseRow[0]?.minimumAge ?? null;
   // The trip's own shop-local calendar date. `courses` is left-joined, so this
   // is set for every trip, not only course sessions — the minimum-age gate reads
@@ -625,6 +635,39 @@ export async function listTripReadiness(
       currentTemplateVersion,
       now,
     });
+    const readiness = calculateReadiness({
+      requirement,
+      siteRequirement,
+      waiver: effectiveWaiver,
+      certifications: certificationsByPerson.get(row.person.id) ?? [],
+      specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
+      nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
+      paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
+      identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
+      courseMinimumAge,
+      courseDate,
+      dateOfBirth: row.person.dateOfBirth,
+      now,
+      timezone,
+    });
+
+    const depthLimit = diverDepthLimit(
+      certificationsByPerson.get(row.person.id) ?? [],
+      specialtiesByPerson.get(row.person.id) ?? [],
+      todayLocal,
+      row.person.dateOfBirth,
+      tripDate,
+    );
+    // An uncertified diver falls to the entry-level ceiling rather than to
+    // silence — on a trip with no `minimum_certification_level` (a DSD session,
+    // an all-levels charter) nothing else says a word about them. But when a
+    // certification blocker *is* already raised, the depth line would only
+    // repeat it, so it is suppressed: the "no redundant warning" argument holds
+    // exactly where a redundant warning actually exists.
+    const certificationBlocked =
+      depthLimit.basis === "no_card" &&
+      readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification");
+
     return {
       ...row,
       /** The booking's own current record (where the link was issued). */
@@ -646,31 +689,10 @@ export async function listTripReadiness(
        * site's maximum, so this must never be able to flip a `ready` diver to
        * `blocked`. Nothing downstream treats it as a gate.
        */
-      depthAdvisory: checkDepthCeiling(
-        tripMaxDepthMeters,
-        diverDepthLimit(
-          certificationsByPerson.get(row.person.id) ?? [],
-          specialtiesByPerson.get(row.person.id) ?? [],
-          todayLocal,
-          row.person.dateOfBirth,
-          tripDate,
-        ),
-      ),
-      readiness: calculateReadiness({
-        requirement,
-        siteRequirement,
-        waiver: effectiveWaiver,
-        certifications: certificationsByPerson.get(row.person.id) ?? [],
-        specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
-        nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
-        paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
-        identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
-        courseMinimumAge,
-        courseDate,
-        dateOfBirth: row.person.dateOfBirth,
-        now,
-        timezone,
-      }),
+      depthAdvisory: certificationBlocked
+        ? ({ status: "unknown" } as const)
+        : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
+      readiness,
     };
   });
 }

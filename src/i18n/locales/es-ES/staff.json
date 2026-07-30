@@ -1245,10 +1245,9 @@
       "needsAttention": "Necesita atención",
       "ageYears": "{age} años",
       "minorBadge": "Menor",
-      "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su titulación. No es un bloqueo: planifica la inmersión más somera o confirma que el instructor lo mantiene dentro de sus límites.",
-      "depthWarningJunior": "Esta salida llega a {site} {unit} — más de los {limit} {unit} que su titulación júnior permite a su edad. No es un bloqueo: planifica la inmersión más somera o confirma que el instructor lo mantiene dentro de sus límites.",
-      "depthUnitMeters": "m",
-      "depthUnitFeet": "ft",
+      "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su tarjeta. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
+      "depthWarningJunior": "Esta salida llega a {site} {unit} — más de los {limit} {unit} permitidos a su edad. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
+      "depthWarningNoCard": "Esta salida llega a {site} {unit} y no hay ninguna tarjeta registrada con la que compararla — {limit} {unit} es el límite de iniciación. No es un bloqueo: comprueba qué titulación tiene o confirma que el guía lo mantiene dentro de sus límites.",
       "buddyGroupNote": "Nota de grupo de buceo:",
       "confirming": "Confirmando…",
       "confirmIdentityMessage": "¿Confirmar que esta reserva realmente es de {name}? Hazlo solo una vez que hayas comprobado que es la misma persona — no alguien más compartiendo el correo.",
@@ -1929,6 +1928,10 @@
     "scheduleTrip": "Programar una salida"
   },
   "shared": {
+    "depth": {
+      "meters": "m",
+      "feet": "ft"
+    },
     "birthday": {
       "label": "Cumpleaños",
       "today": "hoy",

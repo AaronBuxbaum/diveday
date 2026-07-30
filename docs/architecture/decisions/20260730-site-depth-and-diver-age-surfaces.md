@@ -50,11 +50,22 @@ correct day of diving. Refusing that booking would make DiveDay wrong about the 
 being careful about. The roster says so in warning tone, outside the red blocker list, and the
 crew decides.
 
-Ceilings encoded, all sourced in
-[20260724-course-admission-standards](20260724-course-admission-standards.md): Open Water 18 m,
-Advanced Open Water 30 m, Rescue 30 m (a skills course, not a deeper one), Divemaster and
-Instructor 40 m. A verified **Deep** specialty lifts an Open Water diver to the 40 m recreational
-limit — it can only ever raise a ceiling, never lower one.
+Ceilings are stored as the **metre/foot pairs the agencies publish** — 18 m/60 ft, 30 m/100 ft,
+40 m/130 ft — not as one metric number converted on demand, and the comparison happens in the
+shop's own unit after rounding. Converting instead produced a false warning on the single most
+common recreational dive in the launch jurisdiction: a Florida shop typing the textbook `60` ft
+stores 18.288 m, which is greater than a hard-coded 18, so every Open Water diver on every 60 ft
+reef was told they were over their limit — by a warning citing a ceiling of "59 ft", a number that
+appears in no dive manual anywhere.
+
+Open Water (18 m/60 ft) and Advanced Open Water (30 m/100 ft) are sourced in
+[20260724-course-admission-standards](20260724-course-admission-standards.md). **Rescue, Divemaster,
+Instructor and the Deep-specialty lift are DiveDay's own reading, not rows in that ADR:** Rescue is
+a skills course with no depth component so it inherits AOW's ceiling; the two professional ratings
+sit at the 40 m/130 ft recreational limit; and a verified **Deep** specialty lifts an Open Water
+diver to that limit. The Deep lift is the least conservative of these — under PADI, Deep Diver
+requires Adventure Diver or AOW, so "OW + Deep" only arises cross-agency — and it is recorded here
+as a judgement rather than a citation.
 
 **Junior age bands win outright over the card.** Ages 10–11 are capped at 12 m whatever they hold;
 12–14 reach 18 m, or 21 m on an Advanced card. Modeled on age rather than a `junior_*` enum member
@@ -62,10 +73,18 @@ because that is how the restriction actually works — the same plastic card mea
 on either side of a 15th birthday, and DiveDay stores one ladder with no junior variants. A
 12-year-old with an AOW card is held to 21 m, not AOW's 30 m.
 
-**Two deliberate silences.** No verified card yields *no* advisory rather than a 0 m ceiling — an
-uncertified diver is already `certification_missing`'s problem, and a second redundant warning on
-every un-carded diver would train the crew to ignore the line. No recorded site depth does the
-same. The feature degrades to silence, never to noise or to a refusal.
+**No verified card falls to the entry-level 12 m/40 ft DSD ceiling, not to silence.** The first
+draft said nothing at all, reasoning that an uncertified diver is already `certification_missing`'s
+problem. A `dive-domain-expert` review showed that is only true when the trip or its site sets a
+minimum level — and a DSD session or an "all levels welcome" charter sets none, so *no*
+certification blocker is raised either. The rule inverted the risk gradient: the better-carded the
+diver, the more the software talked, and the DSD participant on a 40 m wreck got total silence.
+The advisory is now suppressed only when a certification blocker is genuinely present, so the "no
+redundant warning" argument applies exactly where a redundant warning exists.
+
+An **absent site depth** still yields silence — there is nothing to compare — and an implausibly
+young date of birth (under the junior floor of 10) falls to the *strictest* band rather than
+through to the adult ladder: a data-quality problem is not a licence.
 
 The trip's depth is the **deepest site it visits**, across the primary site *and* every ordered
 `trip_dives` site — a warning that only read the first would go quiet on precisely the two-tank
@@ -94,6 +113,10 @@ All three are measured on **the trip date in the shop's timezone**, not "today" 
 server is, and all three render nothing when no date of birth is on file — a boat where nobody has
 been asked shows no "unknown age" column at all.
 
+Both the age badge and the depth advisory also render on the **boat manifest**, not only the
+desk-side roster: the plan for dive two is made on the water during the surface interval, from that
+list, which is exactly when a depth advisory is actionable.
+
 The birthday callout uses a **seven-day window in either direction** (product owner's choice) and
 appears in two places: a badge on the roster row and manifest, and a `Celebrations` section above
 the roster that renders nothing when there is nothing to celebrate. H-21 described it as "a section
@@ -116,6 +139,19 @@ reader, which would otherwise hear "in 2d" with no subject.
   has been asked for yet.
 - Depth precision beyond a whole unit is discarded at display. A site is a briefing figure; "18.3
   m" implies a precision no dive site has.
+- **Age, minor status, and birthdays are deliberately absent from the offline manifest snapshot.**
+  They reached it once, silently, because `OfflineManifestPayload`'s diver type was an `Omit<...>`
+  deny-list — so every field added to a manifest diver shipped to every crew phone, persisted up to
+  14 days with no delete button, rendered by nothing, describing children. The type is now an
+  explicit `Pick<...>` allow-list so the next new field fails to compile instead, and
+  `OFFLINE_MANIFEST_RECORD_VERSION` was bumped to 4 so copies already written to devices fail to
+  decrypt and are discarded rather than lingering to natural expiry. Found by a `security-reviewer`
+  pass.
+- **The junior *supervision* rule is documented but not modeled.** The standards require 10–11-year-
+  olds to dive with a professional or certified guardian and 12–14-year-olds with any certified
+  adult. DiveDay enforces and surfaces only the depth half, so a 10-year-old on a 12 m site
+  produces no line at all even though their buddy pairing is constrained. In practice supervision
+  is the junior rule that more often goes wrong; this is a known gap, not an oversight.
 - **Solo waiver signature by a minor remains possible.** H-21 accepted this as-is for now,
   explicitly flagged rather than silently left open, to be revisited with the broader H-01–H-03
   waiver legal review. Surfacing the minor badge is what makes the gap *visible* to staff in the
@@ -130,6 +166,9 @@ reader, which would otherwise hear "in 2d" with no subject.
 - **Store depth in the shop's own unit.** Rejected — two shops' rows would then mean different
   things, and every comparison would need a unit lookup. One canonical unit, converted at the
   edges, is the boring choice.
+- **Comparing depths in stored metres.** Rejected after it produced the 60 ft/59 ft false positive
+  above. A 60 ft site and a 60 ft ceiling are the same depth to a dive professional; 18.288 > 18 is
+  an artefact of the storage unit, not a fact about diving.
 - **A `junior_open_water` certification level.** Rejected: it would double the ladder enum, and the
   restriction is genuinely age-linked, not card-linked. A junior diver's card does not change on
   their 15th birthday, but their limits do.

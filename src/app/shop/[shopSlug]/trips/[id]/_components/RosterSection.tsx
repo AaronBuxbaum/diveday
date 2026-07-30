@@ -5,13 +5,14 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
+import { depthWarningText } from "@/i18n/depth-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
+import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -334,22 +335,7 @@ export function RosterSection({
                 {depth?.status === "exceeds" ? (
                   <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
                     <span aria-hidden="true">▲</span>
-                    <span>
-                      {t(
-                        depth.basis === "junior_age"
-                          ? "trips.roster.depthWarningJunior"
-                          : "trips.roster.depthWarning",
-                        {
-                          site: depthInUnit(depth.siteMaxDepthMeters, depthUnit),
-                          limit: depthInUnit(depth.limitMeters, depthUnit),
-                          unit: t(
-                            depthUnit === "feet"
-                              ? "trips.roster.depthUnitFeet"
-                              : "trips.roster.depthUnitMeters",
-                          ),
-                        },
-                      )}
-                    </span>
+                    <span>{depthWarningText(t, depth)}</span>
                   </p>
                 ) : null}
 

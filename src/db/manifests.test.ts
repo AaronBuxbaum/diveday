@@ -1,12 +1,16 @@
 // @vitest-environment node
+
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { ageOnDate, birthdayCallout } from "@/lib/age";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
 import { getTripManifest, recordRollCall, updateLatestRollCallNote } from "./manifests";
-import { rollCallEvents, waiverRecords } from "./schema";
+import { people, rollCallEvents, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
@@ -508,5 +512,42 @@ describe("age on the crew's boarding list (H-21)", () => {
     for (const diver of manifest.divers.filter((entry) => entry.minor)) {
       expect(diver.readiness.blockers.map((blocker) => blocker.code)).not.toContain("minor");
     }
+  });
+});
+
+describe("age and birthdays are measured on the day of the dive", () => {
+  it("uses the trip date, not the day staff happen to open the page", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    // A trip far enough out that "today" and "the day of the dive" cannot both
+    // fall inside the birthday window — that gap is what makes this discriminating.
+    const far = trips
+      .filter((trip) => trip.startsAt.getTime() - nowMs() > 20 * 24 * 60 * 60 * 1000)
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
+    if (!far) throw new Error("seed should contain a trip more than 20 days out");
+    const [booking] = await getTripRoster(db, shop.id, far.id);
+    if (!booking) throw new Error("expected a booking on that trip");
+
+    // Born so they turn 30 exactly on the day the boat sails.
+    const sailing = calendarDateInTimezone(far.startsAt, shop.timezone);
+    const dateOfBirth = `${Number(sailing.slice(0, 4)) - 30}${sailing.slice(4)}`;
+    await db
+      .update(people)
+      .set({ dateOfBirth })
+      .where(and(eq(people.shopId, shop.id), eq(people.id, booking.person.id)));
+
+    const manifest = await getTripManifest(db, shop.id, far.id, "departure");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    if (!diver) throw new Error("diver missing from manifest");
+
+    // Measured on the trip date: it is their birthday that day, and they are 30.
+    expect(diver.birthday).toEqual({ status: "today" });
+    expect(diver.age).toBe(30);
+    // Measured from "now" it would be weeks away — outside the window entirely,
+    // and they would still be 29. Both would be wrong on the boat.
+    expect(
+      birthdayCallout(dateOfBirth, calendarDateInTimezone(nowDate(), shop.timezone)),
+    ).toBeNull();
+    expect(ageOnDate(dateOfBirth, calendarDateInTimezone(nowDate(), shop.timezone))).toBe(29);
   });
 });

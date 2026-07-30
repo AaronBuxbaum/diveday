@@ -125,6 +125,9 @@ export async function getTripManifests(
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
   );
+  const depthByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.depthAdvisory] as const),
+  );
   // When/how each diver's medical currency was last established, for spotting a
   // stale medical. Digital and staff-attested paper reviews both resolve here;
   // a pending/in-review record resolves to null.
@@ -157,6 +160,7 @@ export async function getTripManifests(
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
       minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
+      depthAdvisory: depthByBooking.get(booking.id),
     };
   });
   // Carry a not-boarded result forward across the ordered checkpoints so an

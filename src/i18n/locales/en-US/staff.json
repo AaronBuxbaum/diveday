@@ -1245,10 +1245,9 @@
       "needsAttention": "Needs attention",
       "ageYears": "Age {age}",
       "minorBadge": "Minor",
-      "depthWarning": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their certification trains for. Not a block: plan the dive shallower, or confirm the instructor is keeping them within limits.",
-      "depthWarningJunior": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their junior certification allows at their age. Not a block: plan the dive shallower, or confirm the instructor is keeping them within limits.",
-      "depthUnitMeters": "m",
-      "depthUnitFeet": "ft",
+      "depthWarning": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their card trains for. Not a block: plan the dive shallower, or confirm the guide is keeping them within limits.",
+      "depthWarningJunior": "This trip reaches {site} {unit} — deeper than the {limit} {unit} allowed at their age. Not a block: plan the dive shallower, or confirm the guide is keeping them within limits.",
+      "depthWarningNoCard": "This trip reaches {site} {unit} and there's no card on file to measure against — {limit} {unit} is the entry-level limit. Not a block: check what they hold, or confirm the guide is keeping them within limits.",
       "buddyGroupNote": "Buddy-group note:",
       "confirming": "Confirming…",
       "confirmIdentityMessage": "Confirm this booking really is {name}? Only do this once you’ve checked it’s the same person — not someone else sharing the email.",
@@ -1929,6 +1928,10 @@
     "scheduleTrip": "Schedule a trip"
   },
   "shared": {
+    "depth": {
+      "meters": "m",
+      "feet": "ft"
+    },
     "birthday": {
       "label": "Birthday",
       "today": "today",

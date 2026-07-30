@@ -135,13 +135,17 @@ and [PADI diver medical questionnaire](https://www.padi.com/sites/default/files/
   `minimum_age`, measured on the day the course runs. Fails open — no date on file, no block
   (H-08 option B). See
   [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).
-- **Depth ceilings (including the Junior age bands): decided 2026-07-30, not yet implemented.**
-  `dive_sites` gains a structured numeric depth field. A site deeper than what a diver's
-  certification level (including the Junior 12 m/18 m/21 m bands) supports shows staff a
-  **warning, not a block** — an instructor may deliberately keep a diver shallower than the site
-  max. Documented standards live in the course-admission ADR and
-  [glossary.md](glossary.md#certification).
-- **Still open:** local regulatory/insurer rules per course/environment.
+- **Depth ceilings (including the Junior age bands): resolved + shipped 2026-07-30.**
+  `dive_sites.max_depth_meters` is compared against the diver's certification ceiling and Junior
+  age band (12 m/18 m/21 m); a deeper site shows staff a **warning, not a block** — an instructor
+  may deliberately keep a diver shallower than the site max. Ceilings are held as published
+  metre/foot pairs and compared in the shop's own unit, so a 60 ft site does not read as
+  over-limit for a 60 ft card. See
+  [20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md).
+- **Still open:** local regulatory/insurer rules per course/environment, and the **junior
+  supervision** half of the Junior rule (10–11 with a professional or certified guardian; 12–14
+  with any certified adult) — documented in the glossary, deliberately not modeled, so DiveDay
+  says nothing about buddy pairing for a junior diver.
 
 ### Rental gear request
 

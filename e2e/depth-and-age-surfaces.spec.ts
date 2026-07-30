@@ -109,7 +109,7 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}/guests`);
 
     // The warning names both numbers and says plainly that it is not a block.
-    const warning = page.getByText(/deeper than the .* their certification trains for/).first();
+    const warning = page.getByText(/deeper than the .* their card trains for/).first();
     await expect(warning).toBeVisible();
     await expect(warning).toContainText("Not a block");
 

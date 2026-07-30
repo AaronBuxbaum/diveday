@@ -23,6 +23,7 @@ import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
+import { depthWarningText } from "@/i18n/depth-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -459,6 +460,16 @@ export default async function TripManifestPage({
                       ) : null}
                       <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
                     </div>
+                    {/* The plan for dive two is made here, on the boat, during
+                        the surface interval — so the depth advisory has to be
+                        here too, not only on the desk-side roster. Warning
+                        tone, never a gate (H-08). */}
+                    {diver.depthAdvisory?.status === "exceeds" ? (
+                      <p className="mt-2 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning">
+                        <span aria-hidden="true">▲</span>
+                        <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+                      </p>
+                    ) : null}
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
                         <span className="font-bold">

@@ -9,8 +9,8 @@ import type { RosterEntry } from "./types";
  * this boat has a birthday today or in the next few days (H-21).
  *
  * Renders nothing at all when there is nothing to celebrate — an empty
- * "no birthdays" panel would be chrome on every other trip, and the whole point
- * of a three-day window is that the callout stays rare enough to notice.
+ * "no birthdays" panel would be chrome on every other trip, and a
+ * window this short is what keeps the callout rare enough to notice.
  */
 export function CelebrationsSection({
   roster,
