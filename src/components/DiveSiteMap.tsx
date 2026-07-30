@@ -1,6 +1,7 @@
+import type { DiverTranslator } from "@/i18n/messages";
 import { getSeedDiveSiteMap, googleMapsUrl, googleSatelliteEmbedUrl } from "@/lib/dive-site-map";
 
-export function DiveSiteMap({ siteName }: { siteName: string }) {
+export function DiveSiteMap({ siteName, t }: { siteName: string; t: DiverTranslator }) {
   const map = getSeedDiveSiteMap(siteName);
   if (!map) return null;
 
@@ -8,7 +9,7 @@ export function DiveSiteMap({ siteName }: { siteName: string }) {
     <figure className="overflow-hidden border-b border-border bg-surface-sunken">
       <div className="relative h-64 overflow-hidden sm:h-80">
         <iframe
-          title={`Satellite map of ${siteName}`}
+          title={t("site.satelliteMapTitle", { site: siteName })}
           src={googleSatelliteEmbedUrl(map.query)}
           className="absolute inset-0 h-full w-full"
           loading="lazy"
@@ -49,7 +50,7 @@ export function DiveSiteMap({ siteName }: { siteName: string }) {
           />
         </svg>
         <div className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
-          Satellite view · illustrative route
+          {t("site.satelliteViewIllustrative")}
         </div>
       </div>
       <figcaption className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 text-sm sm:px-6">
@@ -63,7 +64,7 @@ export function DiveSiteMap({ siteName }: { siteName: string }) {
           rel="noreferrer"
           className="min-h-11 shrink-0 content-center text-sm font-medium text-primary hover:underline"
         >
-          Open map ↗
+          {t("site.openMap")}
         </a>
       </figcaption>
     </figure>

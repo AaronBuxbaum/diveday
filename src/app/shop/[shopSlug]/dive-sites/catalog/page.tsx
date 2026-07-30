@@ -6,6 +6,8 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { importGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
@@ -19,6 +21,7 @@ export default async function CommonDiveSitesPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const templates = await listGlobalDiveSiteTemplates(db);
   const back = `/shop/${shopSlug}/dive-sites`;
   async function importAction(formData: FormData) {
@@ -32,25 +35,30 @@ export default async function CommonDiveSitesPage({
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
-        ← Dive-site library
+        {t("diveSites.backToLibrary")}
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          eyebrow="Catalog"
-          title="DiveDay common dive sites"
-          description="Published, versioned starting points. Importing makes an independent shop briefing; later template updates never overwrite your edits."
+          eyebrow={t("diveSites.catalogEyebrow")}
+          title={t("diveSites.catalog.title")}
+          description={t("diveSites.catalog.description")}
         />
       </div>
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
         {templates.map(({ template, version }) => (
           <li key={template.id} className="rounded-lg border border-border bg-surface p-5">
-            <p className="text-sm font-medium text-primary">Template v{version.version}</p>
+            <p className="text-sm font-medium text-primary">
+              {t("diveSites.catalog.templateVersion", { version: version.version })}
+            </p>
             <h2 className="mt-1 text-xl font-semibold">{version.briefing.name}</h2>
             <p className="mt-2 text-sm text-muted">{version.briefing.description}</p>
             <form action={importAction} className="mt-5">
               <input type="hidden" name="templateId" value={template.id} />
-              <SubmitButton pendingLabel="Importing…" className={buttonClass()}>
-                Import to my library
+              <SubmitButton
+                pendingLabel={t("diveSites.catalog.importing")}
+                className={buttonClass()}
+              >
+                {t("diveSites.catalog.importToLibrary")}
               </SubmitButton>
             </form>
           </li>

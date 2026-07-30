@@ -29,12 +29,16 @@ export function DiveSiteFieldGuide({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">
-            Reef field guide
+            {t("site.fieldGuideEyebrow")}
           </p>
-          <h3 className="mt-2 text-xl font-semibold tracking-tight">A few faces to learn</h3>
+          <h3 className="mt-2 text-xl font-semibold tracking-tight">
+            {t("site.fieldGuideHeading")}
+          </h3>
         </div>
         {creatures.length ? (
-          <p className="text-sm tabular-nums text-muted">{creatures.length} likely sightings</p>
+          <p className="text-sm tabular-nums text-muted">
+            {t("site.likelySightings", { count: creatures.length })}
+          </p>
         ) : null}
       </div>
       {highlights ? (

@@ -9,6 +9,8 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Dive sites — DiveDay" };
@@ -26,6 +28,7 @@ export default async function DiveSitesPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const [sites, templates] = await Promise.all([
     listDiveSites(db, shop.id),
     listGlobalDiveSiteTemplates(db),
@@ -38,63 +41,64 @@ export default async function DiveSitesPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Catalog"
-        title="Dive-site library"
-        description="Build the briefing once, then attach it to any trip. Copy a site before tailoring a special itinerary."
+        eyebrow={t("diveSites.catalogEyebrow")}
+        title={t("diveSites.list.title")}
+        description={t("diveSites.list.description")}
         actions={
           <>
             <Link
               href={`/shop/${shopSlug}/dive-sites/new`}
               className={buttonClass({ className: "rounded-xl" })}
             >
-              <span aria-hidden="true">+</span> Create a site
+              <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
             </Link>
             <Link
               href={`/shop/${shopSlug}/dive-sites/catalog`}
               className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
             >
-              Browse templates
+              {t("diveSites.list.browseTemplates")}
             </Link>
           </>
         }
       />
 
-      <section aria-label="Dive-site overview" className="mb-8 grid gap-3 sm:grid-cols-3">
+      <section
+        aria-label={t("diveSites.list.overviewAriaLabel")}
+        className="mb-8 grid gap-3 sm:grid-cols-3"
+      >
         <ShopStat
-          label="Saved sites"
+          label={t("diveSites.list.savedSites")}
           value={sites.length}
-          detail="Reusable crew briefings"
+          detail={t("diveSites.list.savedSitesDetail")}
           tone="primary"
         />
         <ShopStat
-          label="With forecast points"
+          label={t("diveSites.list.withForecastPoints")}
           value={
             sites.filter(
               (site) => site.forecastLatitude !== null && site.forecastLongitude !== null,
             ).length
           }
-          detail="Ready for marine outlooks"
+          detail={t("diveSites.list.withForecastPointsDetail")}
           tone="success"
         />
         <ShopStat
-          label="From templates"
+          label={t("diveSites.list.fromTemplates")}
           value={sites.filter((site) => site.sourceTemplateId).length}
-          detail="Imported and tailored locally"
+          detail={t("diveSites.list.fromTemplatesDetail")}
         />
       </section>
 
       {notice === "archived" ? (
         <div className="mt-4">
-          <ShopNotice>Site archived. Historical trip briefings are still preserved.</ShopNotice>
+          <ShopNotice>{t("diveSites.list.siteArchivedNotice")}</ShopNotice>
         </div>
       ) : null}
 
       {sites.length === 0 ? (
         <EmptyState className="mt-4">
-          <h2 className="font-semibold">Start with a site your crew knows well</h2>
-          <p className="mt-1 text-sm text-muted">
-            Add a location, a map or route image, and the life divers may encounter.
-          </p>
+          <h2 className="font-semibold">{t("diveSites.list.emptyHeading")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("diveSites.list.emptyBody")}</p>
         </EmptyState>
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -118,8 +122,12 @@ export default async function DiveSitesPage({
                   <p className="mt-2 text-xs font-medium text-primary">
                     {(currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0) >
                     site.sourceTemplateVersion
-                      ? `Template update v${currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? ""} ready — your edits are safe.`
-                      : `DiveDay template v${site.sourceTemplateVersion}`}
+                      ? t("diveSites.list.templateUpdateReady", {
+                          version: currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? "",
+                        })
+                      : t("diveSites.list.diveDayTemplateVersion", {
+                          version: site.sourceTemplateVersion,
+                        })}
                   </p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -130,18 +138,21 @@ export default async function DiveSitesPage({
                   ) : null}
                   {site.requiresNitrox ? (
                     <Badge tone="warning" size="sm">
-                      Nitrox
+                      {t("diveSites.list.nitroxBadge")}
                     </Badge>
                   ) : null}
                   {site.requiredSpecialties.length > 0 ? (
                     <Badge tone="neutral" size="sm">
-                      {site.requiredSpecialties.length} required specialt
-                      {site.requiredSpecialties.length === 1 ? "y" : "ies"}
+                      {site.requiredSpecialties.length === 1
+                        ? t("diveSites.list.oneRequiredSpecialty")
+                        : t("diveSites.list.manyRequiredSpecialties", {
+                            count: site.requiredSpecialties.length,
+                          })}
                     </Badge>
                   ) : null}
                 </div>
                 <p className="mt-4 line-clamp-2 text-sm text-muted">
-                  {site.marineLife || site.description || "Add the briefing your divers will see."}
+                  {site.marineLife || site.description || t("diveSites.list.addBriefingFallback")}
                 </p>
               </Link>
             </li>

@@ -385,7 +385,13 @@
     "seeMoreHeading": "Ve más yendo despacio",
     "landmarksEyebrow": "Busca esto",
     "landmarksHeading": "Referencias que cuentan la historia",
-    "landmarksNote": "La tripulación te indicará la mejor aproximación."
+    "landmarksNote": "La tripulación te indicará la mejor aproximación.",
+    "fieldGuideEyebrow": "Guía de campo del arrecife",
+    "fieldGuideHeading": "Algunas caras que aprender",
+    "likelySightings": "{count, plural, one {# avistamiento probable} other {# avistamientos probables}}",
+    "satelliteViewIllustrative": "Vista satelital · ruta ilustrativa",
+    "openMap": "Abrir mapa ↗",
+    "satelliteMapTitle": "Mapa satelital de {site}"
   },
   "inquiry": {
     "yourName": "Tu nombre",

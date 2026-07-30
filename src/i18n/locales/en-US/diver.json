@@ -385,7 +385,13 @@
     "seeMoreHeading": "See more by slowing down",
     "landmarksEyebrow": "Look for these",
     "landmarksHeading": "Landmarks that tell the story",
-    "landmarksNote": "The crew will point out the best approach."
+    "landmarksNote": "The crew will point out the best approach.",
+    "fieldGuideEyebrow": "Reef field guide",
+    "fieldGuideHeading": "A few faces to learn",
+    "likelySightings": "{count, plural, one {# likely sighting} other {# likely sightings}}",
+    "satelliteViewIllustrative": "Satellite view · illustrative route",
+    "openMap": "Open map ↗",
+    "satelliteMapTitle": "Satellite map of {site}"
   },
   "inquiry": {
     "yourName": "Your name",
@@ -589,7 +595,10 @@
           "column": "Email",
           "detail": "How DiveDay reaches a diver and recognizes a returning one, so a second import updates them instead of making a duplicate. A row without one still comes in as a new diver."
         },
-        "phone": { "column": "Phone", "detail": "Mobile or landline, however you've written it." },
+        "phone": {
+          "column": "Phone",
+          "detail": "Mobile or landline, however you've written it."
+        },
         "emergencyContact": {
           "column": "Emergency contact",
           "detail": "A name and a phone number, when you have them, land on the diver's card."
