@@ -15,6 +15,7 @@ import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
 import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
@@ -75,6 +76,9 @@ export default async function TripGuestsPage({
   const { notice, bid, waiver, diverq, count } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
@@ -170,8 +174,8 @@ export default async function TripGuestsPage({
                 </Badge>
               )}
               <span className="text-muted">
-                {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-                {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+                {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
               </span>
             </div>
             {trip.course ? (
@@ -209,7 +213,7 @@ export default async function TripGuestsPage({
         tripId={tripId}
         shopName={shop.name}
         tripTitle={trip.title}
-        tripWhen={formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+        tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
         inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
       />
 
@@ -242,6 +246,7 @@ export default async function TripGuestsPage({
       )}
 
       <RosterSection
+        locale={locale}
         shopSlug={shopSlug}
         shopTimezone={shop.timezone}
         booked={trip.booked}
@@ -274,7 +279,7 @@ export default async function TripGuestsPage({
               <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
                 <span>{event.message}</span>
                 <span className="ml-2 text-muted">
-                  {formatDateTimeTz(event.occurredAt, "en-US", shop.timezone)}
+                  {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
                 </span>
               </li>
             ))}
@@ -283,6 +288,7 @@ export default async function TripGuestsPage({
       </section>
 
       <LastMinuteDealSection
+        locale={locale}
         eligibleCount={lastMinuteEligibleCount}
         openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
         cancelled={cancelled}

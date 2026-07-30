@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DIVER_MESSAGES, diverTranslator, messagesFor } from "./messages";
-import {
-  DEFAULT_DIVER_LOCALE,
-  DIVER_LOCALE_LABELS,
-  DIVER_LOCALES,
-  isDiverLocale,
-  toDiverLocale,
-} from "./settings";
+import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, isDiverLocale, toDiverLocale } from "./settings";
 
 /** Every leaf as `dotted.path` → message. */
 function flatten(node: Record<string, unknown>, prefix = ""): Record<string, string> {
@@ -46,10 +40,6 @@ describe("message bundles", () => {
         .map((key) => `${locale} has stray ${key}`),
     );
     expect(stray).toEqual([]);
-  });
-
-  it("labels every locale for the settings picker", () => {
-    for (const locale of DIVER_LOCALES) expect(DIVER_LOCALE_LABELS[locale]).toBeTruthy();
   });
 });
 

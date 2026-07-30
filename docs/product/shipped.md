@@ -24,11 +24,13 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   shop's verified rating, plus per-shop titles and canonical URLs. Never emitted in embed mode or on
   a bearer-token page
   ([booking-page-structured-data](../architecture/decisions/20260729-booking-page-structured-data.md)).
-- **The diver-facing app speaks the shop's language** — next-intl with per-locale JSON bundles
-  replaces English compiled into components across the public schedule, trip, course, and recap
-  surfaces; dates, times, and money now follow `shops.default_locale` instead of a hard-coded
-  `en-US`. Spanish ships alongside English and `pnpm check:locale` fails on an untranslated key or a
-  hard-coded locale. Staff screens, the waiver, and the medical questionnaire stay English on purpose
+- **The app speaks the visitor's language** — next-intl with per-locale JSON bundles, and the locale
+  negotiated from `Accept-Language` (falling back to the shop's own default) with no switcher and no
+  `/es/` URL. Every date, time, and money figure in the whole UI now follows that locale — 81
+  compiled-in `en-US` call sites across 32 files are gone, staff screens included. Translated *copy*
+  covers the diver-facing surface (schedule, trip, course, booking form, recap); Spanish ships
+  alongside English. Staff copy is still inline English — a stated gap, not a claim — and the
+  waiver/medical wording stays English pending H-01/H-03. `pnpm check:locale` guards both halves
   ([diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md)).
 
 ## Diver experience and growth completion (delivered 2026-07-29)

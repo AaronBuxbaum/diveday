@@ -13,6 +13,7 @@ import { getDb } from "@/db/client";
 import { listShopPromoCodes } from "@/db/shop-promos";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
@@ -83,7 +84,7 @@ export default async function PromosPage({
   ]);
   const connected = canAcceptPayments(stripeAccount);
   const banner = notice ? NOTICES[notice] : undefined;
-  const locale = shop?.defaultLocale ?? "en-US";
+  const locale = await requestLocale(shop?.defaultLocale);
   const timezone = shop?.timezone ?? "UTC";
   const now = nowDate();
 

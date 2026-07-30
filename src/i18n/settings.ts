@@ -26,12 +26,6 @@ export type DiverLocale = (typeof DIVER_LOCALES)[number];
 
 export const DEFAULT_DIVER_LOCALE: DiverLocale = "en-US";
 
-/** Human labels for the shop-settings picker, each written in its own language. */
-export const DIVER_LOCALE_LABELS: Record<DiverLocale, string> = {
-  "en-US": "English (US)",
-  "es-ES": "Español",
-};
-
 export function isDiverLocale(value: unknown): value is DiverLocale {
   return typeof value === "string" && (DIVER_LOCALES as readonly string[]).includes(value);
 }

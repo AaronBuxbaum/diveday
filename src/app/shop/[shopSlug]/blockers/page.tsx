@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
 import type { BlockerQueueTrip } from "@/lib/blockers";
 import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
 import { formatDateTimeTz } from "@/lib/format";
@@ -66,10 +67,12 @@ function TripGroup({
   trip,
   shopSlug,
   timeZone,
+  locale,
 }: {
   trip: BlockerQueueTrip;
   shopSlug: string;
   timeZone: string;
+  locale: string;
 }) {
   const batchIds = waiverBookingIds(trip);
   return (
@@ -87,7 +90,7 @@ function TripGroup({
               <span className="text-sm font-medium text-primary">· {trip.courseTitle}</span>
             ) : null}
           </div>
-          <p className="text-sm text-muted">{formatDateTimeTz(trip.startsAt, "en-US", timeZone)}</p>
+          <p className="text-sm text-muted">{formatDateTimeTz(trip.startsAt, locale, timeZone)}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
           <span className="rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums">
@@ -124,6 +127,9 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
   const { shopSlug } = await params;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) notFound();
 
   const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug);
@@ -163,7 +169,13 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
       ) : (
         <div className="flex flex-col gap-5">
           {trips.map((trip) => (
-            <TripGroup key={trip.tripId} trip={trip} shopSlug={shopSlug} timeZone={shop.timezone} />
+            <TripGroup
+              key={trip.tripId}
+              trip={trip}
+              shopSlug={shopSlug}
+              timeZone={shop.timezone}
+              locale={locale}
+            />
           ))}
           {truncated ? (
             <p className="text-center text-sm text-muted">

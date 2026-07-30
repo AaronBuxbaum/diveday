@@ -8,7 +8,7 @@ import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
-import { diverTranslator } from "@/i18n/messages";
+import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
@@ -74,8 +74,7 @@ export default async function CoursePage({
   if (!course.isActive && !staffView) notFound();
 
   const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
-  const locale = shop.defaultLocale;
-  const t = diverTranslator(locale);
+  const { locale, t } = await requestTranslator(shop.defaultLocale);
 
   const certificationRequired = course.minimumCertificationLevel
     ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`

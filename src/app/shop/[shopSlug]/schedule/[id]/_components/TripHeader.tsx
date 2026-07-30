@@ -3,10 +3,9 @@ import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
 import type { Shop, Trip } from "./types";
 
-export function TripHeader({ shop, trip }: { shop: Shop; trip: Trip }) {
+export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; locale: string }) {
   const charge = checkoutCharge(trip, trip.course);
   const deadline = cancellationDeadline(trip);
-  const locale = shop.defaultLocale;
   const t = diverTranslator(locale);
   return (
     <header className="mt-4">

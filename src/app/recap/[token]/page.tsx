@@ -11,7 +11,7 @@ import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { getReviewForBooking } from "@/db/reviews";
-import { diverTranslator } from "@/i18n/messages";
+import { requestTranslator } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH } from "@/lib/reviews";
@@ -117,7 +117,7 @@ export default async function DiveRecapPage({
   }
 
   const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
-  const t = diverTranslator(shop.defaultLocale);
+  const { locale, t } = await requestTranslator(shop.defaultLocale);
   // A shop can disconnect Stripe (or lose chargesEnabled) after a tip was
   // already started or paid; canTip alone would then hide the diver's own
   // paid confirmation or an already-open checkout link along with the
@@ -139,7 +139,7 @@ export default async function DiveRecapPage({
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const firstName = diverName.trim().split(/\s+/)[0] || "diver";
-  const when = formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone);
+  const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const where = sitesSentence(sites);
   const conditions = [
     trip.waterTemperatureC !== null

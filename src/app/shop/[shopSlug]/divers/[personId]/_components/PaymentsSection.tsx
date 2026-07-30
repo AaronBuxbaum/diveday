@@ -53,12 +53,14 @@ function RefundButton({
 export function PaymentsSection({
   diver,
   shop,
+  locale,
   shopSlug,
   personId,
   canRefund,
 }: {
   diver: DiverProfile;
   shop: Shop;
+  locale: string;
   shopSlug: string;
   personId: string;
   /** Only owners/managers issue refunds (H-14); others don't see the control. */
@@ -105,7 +107,7 @@ export function PaymentsSection({
                     {trip.title}
                   </Link>
                   <p className="text-sm text-muted">
-                    {formatShortDate(trip.startsAt, "en-US", shop.timezone)} · booking payment
+                    {formatShortDate(trip.startsAt, locale, shop.timezone)} · booking payment
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {bookingPayment

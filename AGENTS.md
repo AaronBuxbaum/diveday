@@ -65,7 +65,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
 | Discount codes | shop-wide in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts` (staff page `shop/[shopSlug]/promos`); one-trip last-minute deals stay in `src/db/trip-promos.ts`. Both resolve in `bookSpot`; Stripe owns the arithmetic |
 | Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule |
-| Diver-facing copy and languages | `src/i18n/` — messages in `locales/<locale>/diver.json`, `diverTranslator()` for Server Components, `DiverIntlProvider` + `useTranslations()` for Client ones. `pnpm check:locale` enforces coverage. Staff screens, the waiver, and `/ready` stay English on purpose |
+| Diver-facing copy and languages | `src/i18n/` — messages in `locales/<locale>/diver.json`; `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language` (falling back to `shops.default_locale`), `DiverIntlProvider` + `useTranslations()` for Client Components. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces coverage |
 | SEO structured data | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; never in `?embed=1` mode or on a bearer-token page |
 | Notifications (email/SMS) | `src/lib/notifications/` (Resend/Twilio adapters); log + resend state in `src/db/notifications.ts` |
 | Data portability (CSV export/import) | `src/db/export.ts` / `src/db/import.ts`; staff UI at `src/app/shop/[shopSlug]/settings/import/` — security-sensitive, see hard rules |
@@ -148,11 +148,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   spec, and every important **surface** they look at gets a screenshot assertion in the visual spec
   `e2e/visual.spec.ts` — especially when introducing a feature. See the **e2e-and-visual** skill;
   if unsure whether something qualifies, it does.
-- **Diver-facing copy is translated, never inlined.** Anything a diver reads on the public schedule,
-  trip, or course pages or the post-trip recap comes from `src/i18n/locales/<locale>/diver.json`, and
-  those pages format dates/money for `shop.defaultLocale` — never a hard-coded `"en-US"`.
-  `pnpm check:locale` enforces both. Staff surfaces are English; the waiver body and medical
-  questionnaire are deliberately excluded pending H-01/H-03.
+- **Never hard-code a locale in the UI.** Every date, time, and money figure under `src/app` or
+  `src/components` formats for the negotiated request locale (`requestLocale`, from
+  `Accept-Language`) — never a literal `"en-US"`. `pnpm check:locale` enforces this app-wide.
+  Diver-facing *copy* additionally comes from `src/i18n/locales/<locale>/diver.json`; staff copy is
+  still inline English (a tracked gap — see the ADR), and the waiver/medical wording stays English
+  pending H-01/H-03.
 - **Read time through the clock.** `src/lib` and `src/db` never call `new Date()` / `Date.now()`
   directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render

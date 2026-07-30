@@ -884,7 +884,13 @@ export const shopPromoRedemptions = pgTable(
     checkoutId: uuid("checkout_id")
       .notNull()
       .references(() => bookingCheckouts.id),
-    /** What the checkout charged after the discount — the discount itself is Stripe's arithmetic. */
+    /**
+     * The checkout's quoted total *before* Stripe applied the discount — i.e.
+     * what DiveDay asked for, not what settled. The discount is Stripe's
+     * arithmetic and lives on its own objects, so recording a post-discount
+     * figure here would be DiveDay re-deriving a number it does not own. Read
+     * it as "the order this code was spent against."
+     */
     amountChargedCents: integer("amount_charged_cents").notNull(),
     redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
   },

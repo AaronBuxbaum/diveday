@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopReviewAggregate, listShopReviewsForStaff } from "@/db/reviews";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { setReviewPublishedAction } from "./actions";
@@ -42,7 +43,7 @@ export default async function ReviewsPage({
   ]);
   const waiting = reviews.filter((review) => !review.isPublished);
   const banner = notice ? NOTICES[notice] : undefined;
-  const locale = shop?.defaultLocale ?? "en-US";
+  const locale = await requestLocale(shop?.defaultLocale);
   const timezone = shop?.timezone ?? "UTC";
 
   return (

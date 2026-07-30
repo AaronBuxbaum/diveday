@@ -39,6 +39,7 @@ function DepartureCard({
   departure,
   shopSlug,
   timeZone,
+  locale,
   crewed = false,
   availableStaff,
   updateCrewAction,
@@ -46,6 +47,7 @@ function DepartureCard({
   departure: DepartureSummary;
   shopSlug: string;
   timeZone: string;
+  locale: string;
   crewed?: boolean;
   availableStaff: { id: string; fullName: string; roles: string[] }[];
   updateCrewAction: (
@@ -103,7 +105,7 @@ function DepartureCard({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
-            {formatTime(departure.startsAt, "en-US", timeZone)}
+            {formatTime(departure.startsAt, locale, timeZone)}
             {crewed ? (
               <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
                 You’re crewing
@@ -117,7 +119,7 @@ function DepartureCard({
             </p>
           ) : null}
           <p className="text-sm text-muted">
-            {formatTimeRange(departure.startsAt, departure.endsAt, "en-US", timeZone)} ·{" "}
+            {formatTimeRange(departure.startsAt, departure.endsAt, locale, timeZone)} ·{" "}
             <span className="tabular-nums">
               {booked} of {capacity} booked
             </span>
@@ -247,6 +249,7 @@ export function DepartureBoard({
   departures,
   shopSlug,
   timeZone,
+  locale,
   crewedTripIds,
   availableStaff,
   updateCrewAction,
@@ -254,6 +257,7 @@ export function DepartureBoard({
   departures: readonly DepartureSummary[];
   shopSlug: string;
   timeZone: string;
+  locale: string;
   /** Trips the signed-in staffer crews — badged so their boat reads first. */
   crewedTripIds?: readonly string[];
   availableStaff: { id: string; fullName: string; roles: string[] }[];
@@ -302,6 +306,7 @@ export function DepartureBoard({
             departure={departure}
             shopSlug={shopSlug}
             timeZone={timeZone}
+            locale={locale}
             crewed={crewed.has(departure.tripId)}
             availableStaff={availableStaff}
             updateCrewAction={updateCrewAction}

@@ -8,12 +8,14 @@ import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 export function BookActivity({
   diver,
   shop,
+  locale,
   upcoming,
   shopSlug,
   personId,
 }: {
   diver: DiverProfile;
   shop: Shop;
+  locale: string;
   upcoming: UpcomingTrip[];
   shopSlug: string;
   personId: string;
@@ -44,7 +46,7 @@ export function BookActivity({
                 {upcoming.map((trip) => (
                   <option key={trip.id} value={trip.id}>
                     {trip.course ? `${trip.course.title} — ` : ""}
-                    {trip.title} · {formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+                    {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)}
                   </option>
                 ))}
               </select>

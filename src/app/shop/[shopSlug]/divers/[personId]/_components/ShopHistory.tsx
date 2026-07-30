@@ -25,10 +25,12 @@ type PriorVisit = DiverProfile["priorVisits"][number];
 function HistoryRow({
   item,
   shop,
+  locale,
   shopSlug,
 }: {
   item: HistoryEntry<Booking, PriorVisit>;
   shop: Shop;
+  locale: string;
   shopSlug: string;
 }) {
   if (item.kind === "booking") {
@@ -43,8 +45,8 @@ function HistoryRow({
             {trip.title}
           </Link>
           <p className="text-sm text-muted">
-            {formatShortDate(trip.startsAt, "en-US", shop.timezone)} ·{" "}
-            {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+            {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+            {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
             {course ? ` · ${course.title}` : ""}
           </p>
         </div>
@@ -92,10 +94,12 @@ function historyKey(item: HistoryEntry<Booking, PriorVisit>): string {
 export function ShopHistory({
   diver,
   shop,
+  locale,
   shopSlug,
 }: {
   diver: DiverProfile;
   shop: Shop;
+  locale: string;
   shopSlug: string;
 }) {
   const history = mergeShopHistory(diver.bookings, diver.priorVisits, {
@@ -129,7 +133,13 @@ export function ShopHistory({
         <>
           <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
             {visible.map((item) => (
-              <HistoryRow key={historyKey(item)} item={item} shop={shop} shopSlug={shopSlug} />
+              <HistoryRow
+                locale={locale}
+                key={historyKey(item)}
+                item={item}
+                shop={shop}
+                shopSlug={shopSlug}
+              />
             ))}
           </ul>
           {rest.length > 0 ? (
@@ -139,7 +149,13 @@ export function ShopHistory({
               </summary>
               <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
                 {rest.map((item) => (
-                  <HistoryRow key={historyKey(item)} item={item} shop={shop} shopSlug={shopSlug} />
+                  <HistoryRow
+                    locale={locale}
+                    key={historyKey(item)}
+                    item={item}
+                    shop={shop}
+                    shopSlug={shopSlug}
+                  />
                 ))}
               </ul>
             </details>

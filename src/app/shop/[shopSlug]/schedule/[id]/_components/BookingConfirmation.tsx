@@ -91,6 +91,7 @@ function PaymentSection({
 export function BookingConfirmation({
   shop,
   shopSlug,
+  locale,
   trip,
   confirmed,
   readiness,
@@ -106,6 +107,8 @@ export function BookingConfirmation({
 }: {
   shop: Shop;
   shopSlug: string;
+  /** The negotiated request locale, not the shop's stored default. */
+  locale: string;
   trip: Trip;
   confirmed: Confirmed;
   readiness: Readiness | null;
@@ -134,9 +137,9 @@ export function BookingConfirmation({
         title={`You're on the boat, ${confirmed.person.fullName.split(" ")[0]}! 🤿`}
       >
         <p>
-          {formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone)},{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, shop.defaultLocale, shop.timezone)} — be at
-          the dock {shop.dockCallMinutes} minutes early and we'll take it from there.
+          {formatShortDate(trip.startsAt, locale, shop.timezone)},{" "}
+          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)} — be at the dock{" "}
+          {shop.dockCallMinutes} minutes early and we'll take it from there.
         </p>
       </EarnedMoment>
 
@@ -144,7 +147,7 @@ export function BookingConfirmation({
         payment={payment}
         payCancelled={payCancelled}
         payRef={fitRef}
-        locale={shop.defaultLocale}
+        locale={locale}
       />
 
       {progressionCourse ? (

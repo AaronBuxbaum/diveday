@@ -19,10 +19,12 @@ import process from "node:process";
  * test id, and a sentence are all string literals), so it stays a review
  * expectation. What *is* decidable is checked here.
  *
- * Scope is the public booking surface and the recap. `/waivers` and `/ready`
- * are excluded on purpose: their copy is legally reviewed, and translating it
- * is a sign-off decision (H-01/H-03 in docs/product/human-decisions.md), so
- * they still format for `en-US` by design until that clears.
+ * Message-bundle coverage is scoped to the diver-facing surface. The waiver
+ * body and the medical questionnaire are excluded from *translation* on
+ * purpose — that wording is legally reviewed, and translating it is a sign-off
+ * decision (H-01/H-03 in docs/product/human-decisions.md) — but their date
+ * formatting is still covered by rule 1 above, which is why `/waivers` and
+ * `/ready` are inside the guarded roots.
  */
 
 const ROOT = process.cwd();
@@ -30,12 +32,18 @@ const LOCALES_DIR = "src/i18n/locales";
 const DEFAULT_LOCALE = "en-US";
 const BUNDLE = "diver.json";
 
-/** Diver-facing files that must never name a locale themselves. */
-const guardedRoots = [
-  "src/app/shop/[shopSlug]/schedule",
-  "src/app/shop/[shopSlug]/courses",
-  "src/app/recap",
-];
+/**
+ * Rendering code that must never name a locale itself. Scope is the whole UI —
+ * `src/app` and `src/components` — not just the public pages: staff read dates
+ * too, and a compiled-in `"en-US"` gives them US date order regardless of what
+ * their device asks for.
+ *
+ * `src/lib` and `src/db` are out of scope by design: they *take* a locale as a
+ * parameter (`formatShortDate(date, locale, tz)`), and a couple of them use a
+ * fixed locale for parsing rather than display (`src/lib/zoned.ts` reads
+ * `formatToParts` output, which must not vary).
+ */
+const guardedRoots = ["src/app", "src/components"];
 
 const sourceExtensions = new Set([".ts", ".tsx"]);
 const localeLiteral = /["'`]en-US["'`]/;

@@ -22,6 +22,7 @@ import {
   saveWaiverDraft,
 } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { emergencyContactSchema } from "@/lib/contact";
 import type { MedicalQuestionnaire } from "@/lib/medical";
@@ -138,7 +139,7 @@ export default async function WaiverPage({
     );
   }
   const shopName = shop.name;
-  const t = diverTranslator(shop.defaultLocale);
+  const t = diverTranslator(await requestLocale(shop.defaultLocale));
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
     const bookingId = requireTokenBookingId(state.record);

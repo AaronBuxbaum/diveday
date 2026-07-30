@@ -12,6 +12,7 @@ import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/ord
 import { orderLineItemKind } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { requestLocale } from "@/i18n/request";
 import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -128,6 +129,7 @@ export default async function NewOrderPage({
     );
   }
 
+  const locale = await requestLocale();
   const [customers, bookingContext, shop] = await Promise.all([
     listOrderableCustomers(db, session.user.shopId),
     prefillBookingId ? getBookingContext(db, session.user.shopId, prefillBookingId) : null,
@@ -176,7 +178,7 @@ export default async function NewOrderPage({
       {bookingContext ? (
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
           Linked to {bookingContext.person.fullName}'s booking on {bookingContext.trip.title} (
-          {formatShortDate(bookingContext.trip.startsAt, "en-US", shop?.timezone)}).{" "}
+          {formatShortDate(bookingContext.trip.startsAt, locale, shop?.timezone)}).{" "}
           {isCourseOrder
             ? "The course's instruction and e-learning lines are pre-filled from your catalog. One invoice, two lines: clear the e-learning line if this student already completed it elsewhere."
             : bookingContext.trip.priceCents === null

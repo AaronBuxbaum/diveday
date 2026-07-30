@@ -20,6 +20,7 @@ import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { requestLocale } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
@@ -67,7 +68,8 @@ export async function generateMetadata({
   if (!shop) return { title: "Trip — DiveDay" };
   const trip = await getTripWithBooked(db, shop.id, id);
   if (!trip) return { title: "Trip — DiveDay" };
-  const when = formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone);
+  const locale = await requestLocale(shop.defaultLocale);
+  const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const title = `${trip.title} — ${when} · ${shop.name}`;
   const description = trip.description ?? `Book ${trip.title} with ${shop.name} on ${when}.`;
   const canonical = `/shop/${shop.slug}/schedule/${trip.id}`;
@@ -110,6 +112,9 @@ export default async function TripDetailPage({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
+  // What this visitor's device asked for, falling back to the shop's own
+  // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop.defaultLocale);
   const session = await auth();
   // The staff-management redirect only makes sense outside embed mode — that
   // destination isn't in the framing allowlist, so sending an embedded staff
@@ -228,7 +233,7 @@ export default async function TripDetailPage({
     // The booking form and its sibling notices are Client Components, so the
     // shop's locale and messages have to cross the boundary explicitly — see
     // src/i18n/settings.ts for why the locale isn't in the URL.
-    <DiverIntlProvider locale={shop.defaultLocale}>
+    <DiverIntlProvider locale={locale}>
       <main
         className={
           isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"
@@ -245,7 +250,7 @@ export default async function TripDetailPage({
           </Link>
         )}
 
-        <TripHeader shop={shop} trip={trip} />
+        <TripHeader shop={shop} trip={trip} locale={locale} />
         {trip.conditionsHold ? (
           <div role="status" className="mt-5 rounded-lg border border-warning/40 bg-warning/10 p-4">
             <h2 className="font-semibold">This trip is on a conditions hold</h2>
@@ -286,6 +291,7 @@ export default async function TripDetailPage({
           <BookingConfirmation
             shop={shop}
             shopSlug={shopSlug}
+            locale={locale}
             trip={trip}
             confirmed={confirmed}
             readiness={readiness}
@@ -334,7 +340,7 @@ export default async function TripDetailPage({
             errorMessage={errorMessage}
             payAtBooking={payAtBooking}
             perDiverPriceCents={perDiverPriceCents}
-            locale={shop.defaultLocale}
+            locale={locale}
           />
         )}
 
@@ -343,6 +349,7 @@ export default async function TripDetailPage({
           trip={trip}
           crewPrediction={crewPrediction}
           automatedForecast={automatedForecast}
+          locale={locale}
         />
         {confirmed &&
         conditionsChangedSinceBooking(
@@ -360,7 +367,7 @@ export default async function TripDetailPage({
             </p>
           </section>
         ) : null}
-        <PackingSection shop={shop} trip={trip} rentalFit={rentalFit} />
+        <PackingSection shop={shop} trip={trip} rentalFit={rentalFit} locale={locale} />
         <DiveBriefingsSection briefings={diveBriefings} trip={trip} />
       </main>
     </DiverIntlProvider>

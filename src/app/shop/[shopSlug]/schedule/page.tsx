@@ -20,7 +20,7 @@ import {
   upcomingStaffSchedule,
   upcomingTripsForCalendar,
 } from "@/db/trips";
-import { diverTranslator } from "@/i18n/messages";
+import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import {
@@ -53,7 +53,7 @@ export async function generateMetadata({
   const { shopSlug } = await params;
   const shop = await getShopBySlug(await getDb(), shopSlug);
   if (!shop) return { title: "Schedule — DiveDay" };
-  const t = diverTranslator(shop.defaultLocale);
+  const { t } = await requestTranslator(shop.defaultLocale);
   const description = t("schedule.diverDescription");
   return {
     title: `Dive schedule — ${shop.name}`,
@@ -96,8 +96,7 @@ export default async function TripsPage({
   // and calendar come from bounded queries — nothing loads every trip at once,
   // so a shop with hundreds of departures on the books stays quick.
   const tz = shop.timezone;
-  const locale = shop.defaultLocale;
-  const t = diverTranslator(locale);
+  const { locale, t } = await requestTranslator(shop.defaultLocale);
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
   const now = nowDate();
   const [range, stats, { trips: upcoming, nextCursor }, reviewAggregate, reviews] =
@@ -246,7 +245,12 @@ export default async function TripsPage({
       ) : null}
 
       {staffView && staffSchedule.length > 0 ? (
-        <StaffScheduleBoard shopSlug={shopSlug} trips={staffSchedule} timezone={tz} />
+        <StaffScheduleBoard
+          locale={locale}
+          shopSlug={shopSlug}
+          trips={staffSchedule}
+          timezone={tz}
+        />
       ) : null}
 
       {!staffView && hasUpcoming ? (

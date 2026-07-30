@@ -6,13 +6,14 @@ export function PackingSection({
   shop,
   trip,
   rentalFit,
+  locale,
 }: {
   shop: Shop;
   trip: Trip;
   rentalFit?: RentalFit;
+  locale: string;
 }) {
   const packing = packingConfidence(shop.packingList, rentalFit ?? null, trip.waterTemperatureC);
-  const locale = shop.defaultLocale;
   const t = diverTranslator(locale);
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5">

@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
 import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
@@ -34,6 +35,7 @@ export default async function DiverDetailPage({
   const { notice, undo, cardType } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  const locale = await requestLocale(shop?.defaultLocale);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
   if (!shop || !diver) notFound();
   // Refunds and diver deletion are owner/manager only (H-14, ADR
@@ -77,6 +79,7 @@ export default async function DiverDetailPage({
         canOverride={canOverrideFit}
       />
       <BookActivity
+        locale={locale}
         diver={diver}
         shop={shop}
         upcoming={upcoming}
@@ -84,13 +87,14 @@ export default async function DiverDetailPage({
         personId={personId}
       />
       <PaymentsSection
+        locale={locale}
         diver={diver}
         shop={shop}
         shopSlug={shopSlug}
         personId={personId}
         canRefund={canRefund}
       />
-      <ShopHistory diver={diver} shop={shop} shopSlug={shopSlug} />
+      <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
       {canDelete ? <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} /> : null}
     </main>
   );

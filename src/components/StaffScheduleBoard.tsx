@@ -11,10 +11,12 @@ export function StaffScheduleBoard({
   shopSlug,
   trips,
   timezone,
+  locale,
 }: {
   shopSlug: string;
   trips: StaffScheduleTrip[];
   timezone: string;
+  locale: string;
 }) {
   return (
     <section aria-label="Staff schedule" className="mb-8">
@@ -44,7 +46,7 @@ export function StaffScheduleBoard({
                   ) : null}
                 </div>
                 <div className="shrink-0 text-sm text-muted">
-                  {formatShortDate(trip.startsAt, "en-US", timezone)}
+                  {formatShortDate(trip.startsAt, locale, timezone)}
                 </div>
               </div>
 
@@ -58,8 +60,8 @@ export function StaffScheduleBoard({
                       {trip.days.length > 1 ? `Day ${day.dayNumber}` : "Schedule"}
                     </p>
                     <p className="mt-1 text-sm font-medium tabular-nums">
-                      {formatShortDate(day.startsAt, "en-US", timezone)} ·{" "}
-                      {formatTimeRange(day.startsAt, day.endsAt, "en-US", timezone)}
+                      {formatShortDate(day.startsAt, locale, timezone)} ·{" "}
+                      {formatTimeRange(day.startsAt, day.endsAt, locale, timezone)}
                     </p>
                   </div>
                 ))}

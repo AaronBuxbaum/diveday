@@ -1,5 +1,4 @@
 import { eq, sql } from "drizzle-orm";
-import type { DiverLocale } from "@/i18n/settings";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
@@ -133,21 +132,6 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
   const [shop] = await db
     .update(shops)
     .set({ reviewUrl: reviewUrl.trim() || null })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * The language every diver-facing page renders in. Validated against
- * `DIVER_LOCALES` by the caller before it reaches here — the value flows into
- * `Intl` formatters and a `lang` attribute, so free text must never land in
- * this column (docs ADR 20260729-diver-copy-localization).
- */
-export async function setShopDefaultLocale(db: AppDb, shopId: string, locale: DiverLocale) {
-  const [shop] = await db
-    .update(shops)
-    .set({ defaultLocale: locale })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
