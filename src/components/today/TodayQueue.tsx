@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { WaitlistInvite } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { buttonClass } from "@/components/ui/button";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
-import { ResendConfirmationControl } from "./ResendConfirmationControl";
+import {
+  ResendConfirmationControl,
+  type ResendConfirmationCopy,
+} from "./ResendConfirmationControl";
 import { WaiverSendControl } from "./WaiverSendControl";
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
@@ -31,11 +35,13 @@ function ActionRow({
   shopSlug,
   shopName,
   inviteAction,
+  resendCopy,
 }: {
   action: TodayAction;
   shopSlug: string;
   shopName: string;
   inviteAction: TodayInviteAction;
+  resendCopy: ResendConfirmationCopy;
 }) {
   return (
     <li className="card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
@@ -60,6 +66,7 @@ function ActionRow({
             shopSlug={shopSlug}
             bookingId={action.resend.bookingId}
             label={action.actionLabel}
+            copy={resendCopy}
           />
         ) : action.invite ? (
           <WaitlistInvite
@@ -96,13 +103,26 @@ export function TodayQueue({
   shopSlug,
   shopName,
   inviteAction,
+  locale,
 }: {
   actions: readonly TodayAction[];
   shopSlug: string;
   shopName: string;
   inviteAction: TodayInviteAction;
+  locale: string;
 }) {
   const groups = groupActions(actions);
+  const t = staffTranslator(locale);
+  const resendCopy: ResendConfirmationCopy = {
+    resending: t("shared.today.resendConfirmation.resending"),
+    confirmationResent: t("shared.today.resendConfirmation.confirmationResent"),
+    errors: {
+      invalid: t("shared.today.resendConfirmation.errors.invalid"),
+      noEmail: t("shared.today.resendConfirmation.errors.noEmail"),
+      notConfigured: t("shared.today.resendConfirmation.errors.notConfigured"),
+      failed: t("shared.today.resendConfirmation.errors.failed"),
+    },
+  };
 
   if (groups.length === 0) {
     return (
@@ -117,11 +137,10 @@ export function TodayQueue({
           🤙
         </div>
         <h2 id="queue-heading" className="mt-4 text-lg font-semibold">
-          Nothing is waiting on you
+          {t("shared.today.todayQueue.emptyHeading")}
         </h2>
         <p className="mx-auto mt-1 max-w-md text-muted">
-          Every diver booked in the next week has their waiver, cards, and payment in order.{" "}
-          {getSeasonalBriefing(nowDate(), shopName)}
+          {t("shared.today.todayQueue.emptyBody")} {getSeasonalBriefing(nowDate(), shopName)}
         </p>
       </section>
     );
@@ -130,11 +149,9 @@ export function TodayQueue({
   return (
     <section aria-labelledby="queue-heading">
       <h2 id="queue-heading" className="text-lg font-semibold">
-        Needs you
+        {t("shared.today.todayQueue.needsYouHeading")}
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        Sorted by the boat each one holds up. Clearing a row takes you straight to the fix.
-      </p>
+      <p className="mt-1 text-sm text-muted">{t("shared.today.todayQueue.needsYouSubtitle")}</p>
       <div className="mt-5 flex flex-col gap-8">
         {groups.map((group) => (
           <div key={group.urgency}>
@@ -154,6 +171,7 @@ export function TodayQueue({
                   shopSlug={shopSlug}
                   shopName={shopName}
                   inviteAction={inviteAction}
+                  resendCopy={resendCopy}
                 />
               ))}
             </ul>

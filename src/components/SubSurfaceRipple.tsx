@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function SubSurfaceRipple({ complete }: { complete: boolean }) {
+export type SubSurfaceRippleCopy = { iconTitle: string; message: string };
+
+export function SubSurfaceRipple({
+  complete,
+  copy,
+}: {
+  complete: boolean;
+  copy: SubSurfaceRippleCopy;
+}) {
   const [active, setActive] = useState(false);
   const prevComplete = useRef(complete);
 
@@ -37,11 +45,11 @@ export function SubSurfaceRipple({ complete }: { complete: boolean }) {
           strokeWidth="3"
           aria-hidden="true"
         >
-          <title>Roll call complete icon</title>
+          <title>{copy.iconTitle}</title>
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <span className="text-lg font-black tracking-wider uppercase text-primary">
-          Roll call complete
+          {copy.message}
         </span>
       </div>
     </div>

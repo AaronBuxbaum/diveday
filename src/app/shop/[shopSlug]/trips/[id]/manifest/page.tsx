@@ -20,6 +20,7 @@ import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   isRollCallCheckpoint,
@@ -69,6 +70,7 @@ export default async function TripManifestPage({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   if (!shop) notFound();
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
@@ -176,7 +178,7 @@ export default async function TripManifestPage({
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-4 print:hidden">
           <AmbientContrastSlider />
-          <PrintButton />
+          <PrintButton label={t("shared.printButton.label")} />
         </div>
       </header>
       <OfflineManifestManager
@@ -430,6 +432,24 @@ export default async function TripManifestPage({
                         initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
                         canAutoSave={!!rc && !rc.implied}
                         saveNote={saveRollCallNoteAction}
+                        copy={{
+                          optionalNote: t("shared.rollCallNote.optionalNote"),
+                          message: {
+                            manualOnly: t("shared.rollCallNote.message.manualOnly"),
+                            saving: t("shared.rollCallNote.message.saving"),
+                            saved: t("shared.rollCallNote.message.saved"),
+                            queued: t("shared.rollCallNote.message.queued"),
+                            error: t("shared.rollCallNote.message.error"),
+                            idle: t("shared.rollCallNote.message.idle"),
+                          },
+                          statusPill: {
+                            saving: t("shared.rollCallNote.statusPill.saving"),
+                            saved: t("shared.rollCallNote.statusPill.saved"),
+                            queued: t("shared.rollCallNote.statusPill.queued"),
+                            error: t("shared.rollCallNote.statusPill.error"),
+                          },
+                          notePlaceholder: t("shared.rollCallNote.notePlaceholder"),
+                        }}
                       />
                     </details>
                     {rc && !rc.implied ? (
@@ -498,9 +518,25 @@ export default async function TripManifestPage({
           }))}
       />
 
-      <WaterLocker />
+      <WaterLocker
+        copy={{
+          rainAlt: t("shared.waterLocker.rainAlt"),
+          heading: t("shared.waterLocker.heading"),
+          body: t("shared.waterLocker.body"),
+          holdLine1: t("shared.waterLocker.holdLine1"),
+          holdLine2: t("shared.waterLocker.holdLine2"),
+          unlockingProgress: t("shared.waterLocker.unlockingProgress"),
+          holdToUnlock: t("shared.waterLocker.holdToUnlock"),
+        }}
+      />
       <MilestoneHaptics total={manifest.summary.totalDivers} boarded={manifest.summary.boarded} />
-      <SubSurfaceRipple complete={rollCallComplete} />
+      <SubSurfaceRipple
+        complete={rollCallComplete}
+        copy={{
+          iconTitle: t("shared.subSurfaceRipple.iconTitle"),
+          message: t("shared.subSurfaceRipple.message"),
+        }}
+      />
     </div>
   );
 }

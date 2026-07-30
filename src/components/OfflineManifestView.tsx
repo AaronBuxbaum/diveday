@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { controlClass } from "@/components/ui/form";
+import { matchLocale } from "@/i18n/negotiate";
+import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   isRollCallCheckpoint,
   type RollCallCheckpoint,
@@ -24,19 +27,6 @@ import {
   offlineManifestFreshness,
 } from "@/lib/offline-manifests";
 
-const FRESHNESS_COPY = {
-  current: "This copy was saved in the last few minutes",
-  aging:
-    "This copy was saved a while ago — check it against the live manifest when you're back in signal",
-  stale: "This copy is old — don't rely on it until you've refreshed it from the live manifest",
-} as const;
-
-const FRESHNESS_PILL = {
-  current: "Fresh copy",
-  aging: "Aging copy",
-  stale: "Stale copy",
-} as const;
-
 /**
  * The device's own language. This is the one surface that cannot use
  * `requestLocale` (src/i18n/request.ts): it renders from an encrypted snapshot
@@ -49,7 +39,34 @@ function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
 }
 
+/**
+ * `staffTranslator` (src/i18n/staff-messages.ts) is documented as
+ * server-side-only for every other staff surface — its words normally reach a
+ * Client Component as a `copy` prop built by a Server Component parent, never
+ * as a function crossing that boundary. This view has no such parent request:
+ * it renders fully offline from an IndexedDB snapshot (see `deviceLocale`
+ * above), so there is no per-request `Accept-Language` header to negotiate
+ * from server-side. `staffTranslator` itself has no server-only dependency —
+ * it is a plain function over a JSON bundle — so it is called directly here,
+ * entirely within this client module, rather than crossing the RSC boundary
+ * (which is the thing that's actually unsafe). `matchLocale` gives it the
+ * same fuzzy `es-MX` → `es-ES` matching every other surface gets, instead of
+ * the exact-tag-only fallback `staffTranslator` uses on its own.
+ */
+function offlineManifestTranslator() {
+  const requested = deviceLocale();
+  const resolved: DiverLocale = requested
+    ? (matchLocale([{ tag: requested, quality: 1 }]) ?? DEFAULT_DIVER_LOCALE)
+    : DEFAULT_DIVER_LOCALE;
+  return staffTranslator(resolved);
+}
+
 export function OfflineManifestView() {
+  // Memoized so `reconcile`/`reconcileList` below (and the effect that reruns
+  // whenever they change) stay referentially stable across renders — the
+  // device's language doesn't change mid-session, so recreating the
+  // translator on every render bought nothing except spurious effect reruns.
+  const t = useMemo(() => offlineManifestTranslator(), []);
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
@@ -69,7 +86,7 @@ export function OfflineManifestView() {
       ? (requested as RollCallCheckpoint)
       : "departure";
   });
-  const [message, setMessage] = useState("Opening the manifest saved on this device…");
+  const [message, setMessage] = useState(t("shared.offlineManifest.loadingMessage"));
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
@@ -96,17 +113,15 @@ export function OfflineManifestView() {
       const pending = next.events.filter((event) => event.syncStatus === "pending").length;
       setMessage(
         rejected > 0
-          ? `${rejected} offline change${rejected === 1 ? " didn't" : "s didn't"} match the live manifest and ${rejected === 1 ? "wasn't" : "weren't"} applied — open the live manifest to sort it out.`
+          ? t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })
           : pending > 0
-            ? `${pending} change${pending === 1 ? " is" : "s are"} still waiting to send.`
-            : "All offline changes are caught up with the live manifest.",
+            ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
+            : t("shared.offlineManifest.reconcile.allCaughtUp"),
       );
     } catch {
-      setMessage(
-        "Couldn't reach DiveDay just now — your changes are still saved on this phone and will try to send again on the next change or reconnect.",
-      );
+      setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId]);
+  }, [tripId, t]);
 
   // Reconciles every saved trip that still has a pending roll-call event, not
   // just the one a captain happens to open next — otherwise a change recorded
@@ -114,72 +129,73 @@ export function OfflineManifestView() {
   // pending forever despite "every change is double-checked... once you're
   // back in service" (see the P1 fix in ADR
   // 20260726-shopwide-offline-manifest-priming's review follow-up).
-  const reconcileList = useCallback(async (saved: OfflineManifestEnvelope[]) => {
-    if (!navigator.onLine) return;
-    const withPending = saved.filter((envelope) =>
-      envelope.events.some((event) => event.syncStatus === "pending"),
-    );
-    if (withPending.length === 0) return;
-    // Only ever sync a trip belonging to whichever shop this browser is
-    // actually authenticated as right now. This view has no session context
-    // of its own (it's designed to work fully offline/unauthenticated), so a
-    // preserved foreign-shop pending event — kept alive specifically because
-    // it can't be reconciled under the wrong tenant, see
-    // purgeOfflineManifestsExceptShop — would otherwise get submitted under
-    // whatever shop *is* currently signed in, rejected for a tenant mismatch
-    // rather than a genuine domain refusal, and then look "resolved" to the
-    // very next purge pass, which would delete it outright. Learn the
-    // server-verified current shop the same way the auto-save does; if that
-    // can't be determined (offline, signed out, request failure), reconcile
-    // nothing rather than guess.
-    let currentShopSlug: string;
-    try {
-      const response = await fetch("/api/offline-manifests/upcoming", {
-        credentials: "same-origin",
-      });
-      if (!response.ok) return;
-      currentShopSlug = ((await response.json()) as { shop: { slug: string } }).shop.slug;
-    } catch {
-      return;
-    }
-    const reconcilable = withPending.filter(
-      (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
-    );
-    if (reconcilable.length === 0) return;
-    const results = await Promise.all(
-      reconcilable.map((envelope) => {
-        const id = envelope.snapshot.manifests[0]?.trip.id;
-        return id ? syncOfflineManifest(id).catch(() => null) : Promise.resolve(null);
-      }),
-    );
-    const byId = new Map(
-      results
-        .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
-        .map((envelope) => [envelope.snapshot.manifests[0]?.trip.id ?? "", envelope] as const),
-    );
-    const merged = saved.map((envelope) => {
-      const id = envelope.snapshot.manifests[0]?.trip.id;
-      return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
-    });
-    setList(merged);
-    const rejected = merged.reduce(
-      (sum, envelope) =>
-        sum + envelope.events.filter((event) => event.syncStatus === "rejected").length,
-      0,
-    );
-    const pending = merged.reduce(
-      (sum, envelope) =>
-        sum + envelope.events.filter((event) => event.syncStatus === "pending").length,
-      0,
-    );
-    if (rejected > 0) {
-      setMessage(
-        `${rejected} offline change${rejected === 1 ? " doesn't" : "s don't"} match the live manifest — open that trip to sort it out.`,
+  const reconcileList = useCallback(
+    async (saved: OfflineManifestEnvelope[]) => {
+      if (!navigator.onLine) return;
+      const withPending = saved.filter((envelope) =>
+        envelope.events.some((event) => event.syncStatus === "pending"),
       );
-    } else if (pending === 0) {
-      setMessage("Every offline change across these trips is caught up with the live manifest.");
-    }
-  }, []);
+      if (withPending.length === 0) return;
+      // Only ever sync a trip belonging to whichever shop this browser is
+      // actually authenticated as right now. This view has no session context
+      // of its own (it's designed to work fully offline/unauthenticated), so a
+      // preserved foreign-shop pending event — kept alive specifically because
+      // it can't be reconciled under the wrong tenant, see
+      // purgeOfflineManifestsExceptShop — would otherwise get submitted under
+      // whatever shop *is* currently signed in, rejected for a tenant mismatch
+      // rather than a genuine domain refusal, and then look "resolved" to the
+      // very next purge pass, which would delete it outright. Learn the
+      // server-verified current shop the same way the auto-save does; if that
+      // can't be determined (offline, signed out, request failure), reconcile
+      // nothing rather than guess.
+      let currentShopSlug: string;
+      try {
+        const response = await fetch("/api/offline-manifests/upcoming", {
+          credentials: "same-origin",
+        });
+        if (!response.ok) return;
+        currentShopSlug = ((await response.json()) as { shop: { slug: string } }).shop.slug;
+      } catch {
+        return;
+      }
+      const reconcilable = withPending.filter(
+        (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
+      );
+      if (reconcilable.length === 0) return;
+      const results = await Promise.all(
+        reconcilable.map((envelope) => {
+          const id = envelope.snapshot.manifests[0]?.trip.id;
+          return id ? syncOfflineManifest(id).catch(() => null) : Promise.resolve(null);
+        }),
+      );
+      const byId = new Map(
+        results
+          .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
+          .map((envelope) => [envelope.snapshot.manifests[0]?.trip.id ?? "", envelope] as const),
+      );
+      const merged = saved.map((envelope) => {
+        const id = envelope.snapshot.manifests[0]?.trip.id;
+        return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
+      });
+      setList(merged);
+      const rejected = merged.reduce(
+        (sum, envelope) =>
+          sum + envelope.events.filter((event) => event.syncStatus === "rejected").length,
+        0,
+      );
+      const pending = merged.reduce(
+        (sum, envelope) =>
+          sum + envelope.events.filter((event) => event.syncStatus === "pending").length,
+        0,
+      );
+      if (rejected > 0) {
+        setMessage(t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected }));
+      } else if (pending === 0) {
+        setMessage(t("shared.offlineManifest.reconcile.listAllCaughtUp"));
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (!tripId) {
@@ -192,16 +208,12 @@ export function OfflineManifestView() {
             setList(saved);
             setMessage(
               saved.length > 0
-                ? `${saved.length} saved ${saved.length === 1 ? "manifest" : "manifests"} on this device.`
-                : "Nothing saved on this device yet.",
+                ? t("shared.offlineManifest.reconcile.savedCount", { count: saved.length })
+                : t("shared.offlineManifest.reconcile.noneSavedYet"),
             );
             void reconcileList(saved);
           })
-          .catch(() =>
-            setMessage(
-              "This device couldn't open its saved manifests. Save a fresh copy while you have signal.",
-            ),
-          );
+          .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")));
       void refreshList();
       window.addEventListener("online", refreshList);
       return () => window.removeEventListener("online", refreshList);
@@ -223,29 +235,27 @@ export function OfflineManifestView() {
         }
         setMessage(
           saved
-            ? "The manifest saved on this device is ready."
-            : "There's no current saved manifest for this trip on this device.",
+            ? t("shared.offlineManifest.reconcile.ready")
+            : t("shared.offlineManifest.reconcile.noneForTrip"),
         );
         if (saved && navigator.onLine) void reconcile();
       })
-      .catch(() =>
-        setMessage(
-          "This device couldn't open its saved manifest. Save a fresh copy while you have signal.",
-        ),
-      );
+      .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")));
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
-  }, [reconcile, reconcileList, tripId]);
+  }, [reconcile, reconcileList, tripId, t]);
 
   if (!tripId) {
     const savedTrips = list ?? [];
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          Offline manifests
+          {t("shared.offlineManifest.list.eyebrow")}
         </p>
         <h1 className="mt-3 text-3xl font-semibold">
-          {savedTrips.length > 0 ? "Saved on this device" : "Nothing saved on this device yet"}
+          {savedTrips.length > 0
+            ? t("shared.offlineManifest.list.headingWithTrips")
+            : t("shared.offlineManifest.list.headingEmpty")}
         </h1>
         <p className="mt-3 text-muted" role="status" aria-live="polite">
           {message}
@@ -279,13 +289,14 @@ export function OfflineManifestView() {
                       <p className="mt-0.5 text-sm text-muted">
                         {saved.snapshot.shop.name} ·{" "}
                         {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
-                        {tripManifest.summary.totalDivers}{" "}
-                        {tripManifest.summary.totalDivers === 1 ? "diver" : "divers"}
+                        {t("shared.offlineManifest.list.diverCount", {
+                          count: tripManifest.summary.totalDivers,
+                        })}
                       </p>
                     </div>
                     {savedExpired ? (
                       <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger">
-                        Expired — view only
+                        {t("shared.offlineManifest.list.expiredViewOnly")}
                       </span>
                     ) : (
                       <span
@@ -297,7 +308,7 @@ export function OfflineManifestView() {
                               : "inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
                         }
                       >
-                        {FRESHNESS_PILL[savedFreshness]}
+                        {t(`shared.offlineManifest.freshnessPill.${savedFreshness}`)}
                       </span>
                     )}
                   </a>
@@ -306,11 +317,7 @@ export function OfflineManifestView() {
             })}
           </ul>
         ) : (
-          <p className="mt-2 text-muted">
-            While you still have signal, open any shop page — DiveDay keeps this device&apos;s copy
-            of the next two days&apos; trips current on its own, so roll call works all the way out
-            to the site.
-          </p>
+          <p className="mt-2 text-muted">{t("shared.offlineManifest.list.emptyHint")}</p>
         )}
       </main>
     );
@@ -320,16 +327,15 @@ export function OfflineManifestView() {
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          Offline manifest
+          {t("shared.offlineManifest.single.eyebrow")}
         </p>
-        <h1 className="mt-3 text-3xl font-semibold">Nothing saved on this phone yet</h1>
+        <h1 className="mt-3 text-3xl font-semibold">
+          {t("shared.offlineManifest.single.emptyHeading")}
+        </h1>
         <p className="mt-3 text-muted" role="status">
           {message}
         </p>
-        <p className="mt-2 text-muted">
-          While you still have signal, open the trip&apos;s live manifest — it keeps this
-          device&apos;s copy current on its own, so roll call works all the way out to the site.
-        </p>
+        <p className="mt-2 text-muted">{t("shared.offlineManifest.single.emptyHint")}</p>
       </main>
     );
   }
@@ -358,7 +364,7 @@ export function OfflineManifestView() {
 
   async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     if (expired) {
-      setMessage("This saved copy has expired — open the live manifest to record roll call.");
+      setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
       return;
     }
     setBusyBooking(bookingId);
@@ -370,13 +376,13 @@ export function OfflineManifestView() {
         note: note.trim() || null,
       });
       setEnvelope(next);
-      setMessage("Saved on this phone — it'll send when you're back in service.");
+      setMessage(t("shared.offlineManifest.single.record.saved"));
       if (navigator.onLine) await reconcile();
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "That change couldn't be saved on this device — try it again.",
+          : t("shared.offlineManifest.single.record.genericError"),
       );
     } finally {
       setBusyBooking(null);
@@ -396,17 +402,19 @@ export function OfflineManifestView() {
         href="#offline-roll-call"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
       >
-        Skip to offline roll call
+        {t("shared.offlineManifest.single.skipLink")}
       </a>
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              Offline manifest
+              {t("shared.offlineManifest.single.eyebrow")}
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h1>
             <p className="mt-1 text-base text-muted">
-              Saved {dateTime.format(new Date(envelope.snapshot.savedAt))}
+              {t("shared.offlineManifest.single.savedAt", {
+                when: dateTime.format(new Date(envelope.snapshot.savedAt)),
+              })}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -423,31 +431,33 @@ export function OfflineManifestView() {
                     : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
               }
             >
-              {FRESHNESS_PILL[freshness]}
+              {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
             </span>
           </div>
         </div>
         {expired ? (
           <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6 font-semibold text-danger">
-            This saved copy has expired and can&apos;t be used to board divers. Any change still
-            waiting to send below will keep trying, but new roll call must be recorded on the live
-            manifest.
+            {t("shared.offlineManifest.single.expiredBanner")}
           </p>
         ) : (
           <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-base leading-6">
-            {FRESHNESS_COPY[freshness]}. Boarding goes by readiness as it stood when this copy was
-            saved — DiveDay checks everything again once you&apos;re back in service.
+            {t("shared.offlineManifest.single.freshnessBanner", {
+              freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
+            })}
           </p>
         )}
         <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
           {message}
         </p>
         <p className="mt-1 text-sm text-muted">
-          {pending} waiting to send · {rejected} need a look
+          {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}
         </p>
       </header>
 
-      <nav className="mt-6 flex gap-2 overflow-x-auto pb-2" aria-label="Roll-call checkpoint">
+      <nav
+        className="mt-6 flex gap-2 overflow-x-auto pb-2"
+        aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
+      >
         {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
           <button
             key={value}
@@ -472,9 +482,9 @@ export function OfflineManifestView() {
         }
       >
         {[
-          ["Divers", manifest.summary.totalDivers],
-          ["Boarded", boarded],
-          ["Awaiting", awaiting],
+          [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
+          [t("shared.offlineManifest.single.statsBoarded"), boarded],
+          [t("shared.offlineManifest.single.statsAwaiting"), awaiting],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-lg border border-border bg-surface p-3">
             <p className="text-xs font-semibold text-muted uppercase">{label}</p>
@@ -486,14 +496,18 @@ export function OfflineManifestView() {
       <section className="mt-8">
         <h2 className="text-xl font-semibold">
           {rollCallComplete
-            ? "Roll call complete ✦"
-            : `${rollCallCheckpointLabel(checkpoint)} roll call`}
+            ? t("shared.offlineManifest.single.rollCallCompleteHeading")
+            : t("shared.offlineManifest.single.checkpointRollCallHeading", {
+                checkpoint: rollCallCheckpointLabel(checkpoint),
+              })}
         </h2>
         {rollCallComplete ? (
           <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
             {boarded === manifest.summary.totalDivers
-              ? "Every diver has a result — everyone's aboard."
-              : `Every diver has a result — ${manifest.summary.totalDivers - boarded} marked not boarded. Confirm they're accounted for before moving on.`}
+              ? t("shared.offlineManifest.single.allAboard")
+              : t("shared.offlineManifest.single.someNotBoarded", {
+                  count: manifest.summary.totalDivers - boarded,
+                })}
           </p>
         ) : null}
         <ul
@@ -534,33 +548,43 @@ export function OfflineManifestView() {
                             : "rounded-full bg-danger/10 px-3 py-1 text-sm font-semibold text-danger"
                         }
                       >
-                        {ready ? "Ready when saved" : "Blocked when saved"}
+                        {ready
+                          ? t("shared.offlineManifest.single.readyBadge")
+                          : t("shared.offlineManifest.single.blockedBadge")}
                       </span>
                       <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold">
                         {state
                           ? state.state === "boarded"
-                            ? "Boarded"
+                            ? t("shared.offlineManifest.single.stateBoarded")
                             : state.implied
-                              ? "Not boarded · carried"
-                              : "Not boarded"
-                          : "Awaiting roll call"}
-                        {state?.pending ? " · waiting to send" : ""}
+                              ? t("shared.offlineManifest.single.stateNotBoardedCarried")
+                              : t("shared.offlineManifest.single.stateNotBoarded")
+                          : t("shared.offlineManifest.single.stateAwaiting")}
+                        {state?.pending
+                          ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
+                          : ""}
                       </span>
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
-                        <span className="font-bold">Emergency contact</span>
+                        <span className="font-bold">
+                          {t("shared.offlineManifest.single.emergencyContact")}
+                        </span>
                         <span className="mt-0.5 block text-muted">
                           {diver.emergencyContactName && diver.emergencyContactPhone
                             ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                            : "Not on file"}
+                            : t("shared.offlineManifest.single.notOnFile")}
                         </span>
                       </p>
                       <p>
-                        <span className="font-bold">Rental fit</span>
+                        <span className="font-bold">
+                          {t("shared.offlineManifest.single.rentalFit")}
+                        </span>
                         <span className="mt-0.5 block text-muted">
                           {diver.rentalFit.text}
-                          {diver.nitroxRequested ? " · Nitrox requested" : ""}
+                          {diver.nitroxRequested
+                            ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
+                            : ""}
                         </span>
                       </p>
                     </div>
@@ -573,14 +597,14 @@ export function OfflineManifestView() {
                     ) : null}
                     <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
                       <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
-                        Add a note to this roll-call record
+                        {t("shared.offlineManifest.single.addNoteSummary")}
                       </summary>
                       <div className="mt-2">
                         <label
                           htmlFor={`offline-roll-call-note-${diver.bookingId}`}
                           className="text-sm font-semibold"
                         >
-                          Optional note
+                          {t("shared.offlineManifest.single.optionalNote")}
                         </label>
                         <input
                           id={`offline-roll-call-note-${diver.bookingId}`}
@@ -592,11 +616,11 @@ export function OfflineManifestView() {
                               [diver.bookingId]: event.target.value,
                             }))
                           }
-                          placeholder="Late to the boat, medical question, kit issue…"
+                          placeholder={t("shared.offlineManifest.single.notePlaceholder")}
                           className={`${controlClass} mt-1`}
                         />
                         <p className="mt-1 text-xs text-muted">
-                          The note travels with this roll-call record.
+                          {t("shared.offlineManifest.single.noteHint")}
                         </p>
                       </div>
                     </details>
@@ -604,7 +628,7 @@ export function OfflineManifestView() {
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                     {expired ? (
                       <p className="text-sm font-semibold text-danger">
-                        Expired — record on the live manifest
+                        {t("shared.offlineManifest.single.record.expiredRecordOnLive")}
                       </p>
                     ) : (
                       <>
@@ -619,10 +643,10 @@ export function OfflineManifestView() {
                             className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                           >
                             {busyBooking === diver.bookingId
-                              ? "Saving…"
+                              ? t("shared.offlineManifest.single.saving")
                               : state?.state === "boarded"
-                                ? "Boarded ✓"
-                                : "Mark boarded"}
+                                ? t("shared.offlineManifest.single.boardedDone")
+                                : t("shared.offlineManifest.single.markBoarded")}
                           </button>
                         ) : null}
                         <button
@@ -635,10 +659,10 @@ export function OfflineManifestView() {
                           className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                         >
                           {busyBooking === diver.bookingId
-                            ? "Saving…"
+                            ? t("shared.offlineManifest.single.saving")
                             : state?.state === "not_boarded"
-                              ? "Not boarded ✓"
-                              : "Mark not boarded"}
+                              ? t("shared.offlineManifest.single.notBoardedDone")
+                              : t("shared.offlineManifest.single.markNotBoarded")}
                         </button>
                       </>
                     )}
@@ -655,7 +679,7 @@ export function OfflineManifestView() {
           href={`/shop/${envelope.snapshot.shop.slug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`}
           className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
         >
-          Open live manifest
+          {t("shared.offlineManifest.single.openLiveManifest")}
         </a>
       </footer>
     </main>

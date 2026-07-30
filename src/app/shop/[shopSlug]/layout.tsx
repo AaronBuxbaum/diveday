@@ -9,6 +9,7 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
+import { requestLocale } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import {
@@ -41,6 +42,9 @@ export default async function ShopLayout({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const showBanner = !isEmbed && (shop?.isDemo ?? false);
+  // Staff read chrome in the language their own device asks for, same
+  // negotiation as every other staff surface.
+  const locale = await requestLocale(shop?.defaultLocale);
 
   async function todayBoatHref(
     dbi: typeof db,
@@ -114,6 +118,7 @@ export default async function ShopLayout({
             reports: canViewShopReports(session.user.roles),
             team: canManageStaffAccounts(session.user.roles),
           }}
+          locale={locale}
         />
       ) : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just

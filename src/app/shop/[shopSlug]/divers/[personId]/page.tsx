@@ -8,6 +8,7 @@ import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
@@ -36,6 +37,7 @@ export default async function DiverDetailPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
   if (!shop || !diver) notFound();
   // Refunds and diver deletion are owner/manager only (H-14, ADR
@@ -64,6 +66,8 @@ export default async function DiverDetailPage({
           message="Card removed."
           action={restoreCardAction.bind(null, shopSlug, personId)}
           fields={{ certificationId: undo, cardType }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
         <NoticeBanner notice={notice} />

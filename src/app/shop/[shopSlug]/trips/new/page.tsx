@@ -12,6 +12,8 @@ import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { createTrip, createTripSeries } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import {
@@ -191,6 +193,10 @@ export default async function NewTripPage({
   ]);
   const selectedCourse = courseList.find((course) => course.id === selectedCourseId);
   const message = error ? ERROR_MESSAGES[error] : undefined;
+  // No shop row is fetched on this GET path, so this negotiates purely from
+  // the visitor's own Accept-Language header rather than a shop default.
+  const locale = await requestLocale();
+  const t = staffTranslator(locale);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -263,6 +269,25 @@ export default async function NewTripPage({
           </FieldGrid>
           <TripDiveFields
             diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
+            copy={{
+              heading: t("shared.tripDiveFields.heading"),
+              description: t("shared.tripDiveFields.description"),
+              twoTankTrip: t("shared.tripDiveFields.twoTankTrip"),
+              diveCountTrip: t("shared.tripDiveFields.diveCountTrip"),
+              numberOfDivesLabel: t("shared.tripDiveFields.numberOfDivesLabel"),
+              diveOptionOne: t("shared.tripDiveFields.diveOptionOne"),
+              diveOptionOther: t("shared.tripDiveFields.diveOptionOther"),
+              diveLegend: t("shared.tripDiveFields.diveLegend"),
+              nameLabel: t("shared.tripDiveFields.nameLabel"),
+              optionalHint: t("shared.tripDiveFields.optionalHint"),
+              namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),
+              namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
+              diveBriefingLabel: t("shared.tripDiveFields.diveBriefingLabel"),
+              noSavedBriefing: t("shared.tripDiveFields.noSavedBriefing"),
+              diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
+              detailsPlaceholder: t("shared.tripDiveFields.detailsPlaceholder"),
+              footerNote: t("shared.tripDiveFields.footerNote"),
+            }}
           />
           <FieldGrid columns={1}>
             <Field label="Description" hint="(optional)">

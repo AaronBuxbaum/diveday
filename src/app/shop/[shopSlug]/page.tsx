@@ -12,6 +12,7 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -80,6 +81,7 @@ async function TodayBody({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   if (!shop) return null;
 
   const now = nowDate();
@@ -168,6 +170,30 @@ async function TodayBody({
         crewedTripIds={crewedTripIds}
         availableStaff={availableStaff}
         updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
+        copy={{
+          crewingBadge: t("shared.today.departureBoard.crewingBadge"),
+          courseSession: t("shared.today.departureBoard.courseSession"),
+          bookedOfCapacity: t("shared.today.departureBoard.bookedOfCapacity"),
+          boarding: t("shared.today.departureBoard.boarding"),
+          openGuests: t("shared.today.departureBoard.openGuests"),
+          crewDropZoneAria: t("shared.today.departureBoard.crewDropZoneAria"),
+          assignCrewMemberAria: t("shared.today.departureBoard.assignCrewMemberAria"),
+          assignedCrewHeading: t("shared.today.departureBoard.assignedCrewHeading"),
+          assignCrewOption: t("shared.today.departureBoard.assignCrewOption"),
+          unassignAria: t("shared.today.departureBoard.unassignAria"),
+          noCrewAssigned: t("shared.today.departureBoard.noCrewAssigned"),
+          countReady: t("shared.today.departureBoard.countReady"),
+          countBlocked: t("shared.today.departureBoard.countBlocked"),
+          countBoarded: t("shared.today.departureBoard.countBoarded"),
+          blockedWarningOne: t("shared.today.departureBoard.blockedWarningOne"),
+          blockedWarningOther: t("shared.today.departureBoard.blockedWarningOther"),
+          noneBooked: t("shared.today.departureBoard.noneBooked"),
+          everyoneAboard: t("shared.today.departureBoard.everyoneAboard"),
+          clearToBoard: t("shared.today.departureBoard.clearToBoard"),
+          sailingToday: t("shared.today.departureBoard.sailingToday"),
+          sailingTodaySubtitle: t("shared.today.departureBoard.sailingTodaySubtitle"),
+          dragStaffLabel: t("shared.today.departureBoard.dragStaffLabel"),
+        }}
       />
 
       {departures.length === 0 ? (
@@ -212,6 +238,7 @@ async function TodayBody({
         shopSlug={shopSlug}
         shopName={shop.name}
         inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
+        locale={locale}
       />
     </>
   );
