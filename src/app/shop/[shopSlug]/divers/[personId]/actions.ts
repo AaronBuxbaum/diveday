@@ -31,6 +31,7 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { isPlausibleDateOfBirth } from "@/lib/age";
+import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -435,6 +436,13 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
     return;
   }
   const refunded = orderId ? await refundOrder(db, staff.user.shopId, orderId) : null;
+  if (orderId) {
+    await trackEvent({
+      name: "refund_issued",
+      auto: false,
+      status: refunded ? "refunded" : "failed",
+    });
+  }
   revalidateAndRedirect(base, `${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
 }
 
@@ -452,6 +460,11 @@ export async function bookActivityAction(shopSlug: string, personId: string, for
     email: current.person.email,
     phone: current.person.phone ?? undefined,
   });
+  await trackEvent(
+    result.ok
+      ? { name: "booking_completed", source: "staff", partySize: 1 }
+      : { name: "booking_blocked", source: "staff", reason: result.reason },
+  );
   revalidateAndRedirect(base, `${base}?notice=${result.ok ? "booked" : result.reason}`);
 }
 

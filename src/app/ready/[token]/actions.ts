@@ -14,6 +14,7 @@ import { saveRentalFit } from "@/db/rental-fit";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
+import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
@@ -196,6 +197,7 @@ export async function cancelMyBookingAction(token: string) {
     bookingId: ctx.bookingId,
   });
   if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
+  await trackEvent({ name: "booking_cancelled", source: "diver" });
 
   // The refund outcome itself is never trusted back from the client for the
   // notice: `?cancelled=1` here is only a trigger telling the page to look,
@@ -213,10 +215,13 @@ export async function cancelMyBookingAction(token: string) {
   // notice. Staff can still see and fix a missed refund from the booking's
   // payment record; the diver just needs the confirmation either way.
   try {
-    await refundBookingOnCancellation(ctx.db, {
+    const refund = await refundBookingOnCancellation(ctx.db, {
       shopId: ctx.data.shop.id,
       bookingId: ctx.bookingId,
     });
+    if (refund.status !== "no_policy" && refund.status !== "unpaid") {
+      await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
+    }
   } catch {
     console.error("Self-cancel refund could not be processed", { bookingId: ctx.bookingId });
   }

@@ -9,6 +9,7 @@ import { getShopById, getShopBySlug } from "@/db/shops";
 import { createTrip, deleteTrip, duplicateTrip, moveTrip } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { trackEvent } from "@/lib/analytics";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -124,16 +125,29 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
   const { db, shop } = await requireBoardAuthor(shopSlug);
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?builder=invalid`);
+  if (!parsed.success) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
   const { title, date, startTime, endTime, capacity, plannedDives, courseId, diveSiteId } =
     parsed.data;
 
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
-  if (!startWall || !endWall) redirect(`${back}?builder=invalid`);
+  if (!startWall || !endWall) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
   const startsAt = wallTimeToUtc(startWall, shop.timezone);
   const endsAt = wallTimeToUtc(endWall, shop.timezone);
-  if (endsAt <= startsAt) redirect(`${back}?builder=end-before-start`);
+  if (endsAt <= startsAt) {
+    await trackEvent({
+      name: "schedule_builder_action",
+      action: "add",
+      outcome: "end_before_start",
+    });
+    redirect(`${back}?builder=end-before-start`);
+  }
 
   const created = await createTrip(db, {
     shopId: shop.id,
@@ -145,7 +159,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     capacity,
     plannedDives,
   });
-  if (!created) redirect(`${back}?builder=invalid`);
+  if (!created) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
+  await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   revalidateAndRedirect(back, `${back}?builder=added`);
 }
 
@@ -159,17 +177,27 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   const back = boardPath(shopSlug);
   const { db, shop } = await requireBoardAuthor(shopSlug);
   const parsed = moveSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?builder=invalid`);
+  if (!parsed.success) {
+    await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
 
   const wall = parseWallTime(parsed.data.date, parsed.data.startTime);
-  if (!wall) redirect(`${back}?builder=invalid`);
+  if (!wall) {
+    await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
   const outcome = await moveTrip(
     db,
     shop.id,
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
   );
-  if (!outcome.ok) redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
+  if (!outcome.ok) {
+    await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });
+    redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
+  }
+  await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
   revalidateAndRedirect(back, `${back}?builder=moved`);
 }
 
@@ -183,17 +211,27 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
   const back = boardPath(shopSlug);
   const { db, shop } = await requireBoardAuthor(shopSlug);
   const parsed = duplicateSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?builder=invalid`);
+  if (!parsed.success) {
+    await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
 
   const wall = parseWallTime(parsed.data.date, parsed.data.startTime);
-  if (!wall) redirect(`${back}?builder=invalid`);
+  if (!wall) {
+    await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
   const copy = await duplicateTrip(
     db,
     shop.id,
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
   );
-  if (!copy) redirect(`${back}?builder=invalid`);
+  if (!copy) {
+    await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
+  await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
   revalidateAndRedirect(back, `${back}?builder=copied`);
 }
 
@@ -201,9 +239,20 @@ export async function removeDepartureAction(shopSlug: string, formData: FormData
   const back = boardPath(shopSlug);
   const { db, shop } = await requireBoardAuthor(shopSlug);
   const tripId = z.uuid().safeParse(formData.get("tripId"));
-  if (!tripId.success) redirect(`${back}?builder=invalid`);
+  if (!tripId.success) {
+    await trackEvent({ name: "schedule_builder_action", action: "remove", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
 
   const outcome = await deleteTrip(db, shop.id, tripId.data);
-  if (!outcome.ok) redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
+  if (!outcome.ok) {
+    await trackEvent({
+      name: "schedule_builder_action",
+      action: "remove",
+      outcome: outcome.reason,
+    });
+    redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
+  }
+  await trackEvent({ name: "schedule_builder_action", action: "remove", outcome: "ok" });
   revalidateAndRedirect(back, `${back}?builder=removed`);
 }

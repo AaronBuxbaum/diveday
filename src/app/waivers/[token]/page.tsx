@@ -23,6 +23,7 @@ import {
 } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { emergencyContactSchema } from "@/lib/contact";
 import type { MedicalQuestionnaire } from "@/lib/medical";
@@ -334,6 +335,7 @@ export default async function WaiverPage({
         `/waivers/${token}?error=${outcome.reason === "invalid_signature" ? "invalid" : "unavailable"}`,
       );
     }
+    await trackEvent({ name: "waiver_signed" });
     revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
   }
 

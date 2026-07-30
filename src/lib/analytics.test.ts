@@ -80,4 +80,38 @@ describe("trackEvent", () => {
       ["trial_started", { source: "pricing" }],
     ]);
   });
+
+  it("carries the refusal reason for a blocked booking, the confusion signal", async () => {
+    const tracker = vi.fn();
+    await trackEvent(
+      { name: "booking_blocked", source: "diver", reason: "course_prerequisite" },
+      tracker,
+    );
+    expect(tracker).toHaveBeenCalledWith("booking_blocked", {
+      source: "diver",
+      reason: "course_prerequisite",
+    });
+  });
+
+  it("carries which schedule builder mutation ran and how it landed", async () => {
+    const tracker = vi.fn();
+    await trackEvent(
+      { name: "schedule_builder_action", action: "move", outcome: "already_sailed" },
+      tracker,
+    );
+    expect(tracker).toHaveBeenCalledWith("schedule_builder_action", {
+      action: "move",
+      outcome: "already_sailed",
+    });
+  });
+
+  it("distinguishes an automatic cancellation refund from a staff-run one", async () => {
+    const tracker = vi.fn();
+    await trackEvent({ name: "refund_issued", auto: true, status: "refunded" }, tracker);
+    await trackEvent({ name: "refund_issued", auto: false, status: "manual" }, tracker);
+    expect(tracker.mock.calls).toEqual([
+      ["refund_issued", { auto: true, status: "refunded" }],
+      ["refund_issued", { auto: false, status: "manual" }],
+    ]);
+  });
 });

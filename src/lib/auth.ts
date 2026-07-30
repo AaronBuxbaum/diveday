@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { trackEvent } from "@/lib/analytics";
 import { authConfig } from "@/lib/auth.config";
 import { verifyCredentials } from "@/lib/credentials";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -32,9 +33,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           rateLimitKey("sign-in-email", parsed.data.email.toLowerCase()),
           RATE_LIMITS.signInByEmail,
         );
-        if (!byIp.allowed || !byEmail.allowed) return null;
+        if (!byIp.allowed || !byEmail.allowed) {
+          // Fire-and-forget: telemetry must never add latency to the sign-in
+          // chokepoint, and trackEvent already swallows its own errors.
+          void trackEvent({ name: "sign_in_attempted", outcome: "rate_limited" });
+          return null;
+        }
         const db = await getDb();
-        return verifyCredentials(db, parsed.data.email, parsed.data.password);
+        const person = await verifyCredentials(db, parsed.data.email, parsed.data.password);
+        void trackEvent({
+          name: "sign_in_attempted",
+          outcome: person ? "success" : "invalid_credentials",
+        });
+        return person;
       },
     }),
   ],

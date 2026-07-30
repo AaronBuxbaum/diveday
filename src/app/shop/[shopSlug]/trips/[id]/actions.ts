@@ -43,6 +43,7 @@ import {
 } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
+import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -470,7 +471,11 @@ export async function addBookingAction(shopSlug: string, tripId: string, formDat
     email: parsed.data.email,
     phone: parsed.data.phone,
   });
-  if (!outcome.ok) redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
+  if (!outcome.ok) {
+    await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
+    redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
+  }
+  await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
   await recordTripActivity(await getDb(), {
     shopId: s.user.shopId,
     tripId,
@@ -504,7 +509,11 @@ export async function addExistingDiverAction(shopSlug: string, tripId: string, f
     tripId,
     personId: parsed.data.personId,
   });
-  if (!outcome.ok) redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
+  if (!outcome.ok) {
+    await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
+    redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
+  }
+  await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
   try {
     await issueWaiverOnJoin(await getDb(), s.user.shopId, outcome.bookingId);
   } catch {
@@ -527,6 +536,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
     phone: parsed.data.phone,
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
+    await trackEvent({ name: "waitlist_joined", source: "staff" });
     revalidateAndRedirect(back, `${back}?notice=diver-waitlisted`);
   }
   const code =
@@ -651,6 +661,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!bookingId) redirect(back);
   const dbi = await getDb();
   await cancelBooking(dbi, s.user.shopId, bookingId);
+  await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Freeing the seat is roster work any staff member does, but moving money is
   // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member
   // can cancel the booking; the auto-refund below only fires when the actor may
@@ -670,6 +681,9 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
     shopId: s.user.shopId,
     bookingId,
   });
+  if (refund.status !== "no_policy" && refund.status !== "unpaid") {
+    await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
+  }
   revalidateAndRedirect(back, `${back}?notice=${refundNotice(refund)}&bid=${bookingId}`);
 }
 
