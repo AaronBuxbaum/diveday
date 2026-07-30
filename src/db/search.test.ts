@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { people, shops, trips } from "./schema";
@@ -18,10 +18,19 @@ describe("searchShop", () => {
 
   it("finds a trip by a substring of its title", async () => {
     const { db, shop } = await seededShopContext();
-    const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
+    // A distinctively-worded seeded trip, not a generic "Two-Tank Reef —"
+    // charter — the extended roster seeds dozens of those, and search caps
+    // results per group, so a common substring can legitimately rank the
+    // soonest (today's) charter outside the top matches once the schedule is
+    // this full. "Spiegel Grove" names exactly one trip.
+    const [trip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, "Wreck Trip — Spiegel Grove")))
+      .limit(1);
     if (!trip) throw new Error("seed trip missing");
 
-    const result = await searchShop(db, shop.id, trip.title.slice(2, 8), "America/New_York");
+    const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York");
     expect(result.trips.map((t) => t.id)).toContain(trip.id);
   });
 

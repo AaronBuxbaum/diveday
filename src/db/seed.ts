@@ -487,6 +487,107 @@ const customerDefs: Array<{ fullName: string; emergencyContact?: [string, string
   { fullName: "Yusuf Demir", emergencyContact: ["Elif Demir (sister)", "+90-212-555-0246"] },
   { fullName: "Clara Nguyen", emergencyContact: ["Binh Nguyen (father)", "+1-305-555-0247"] },
   { fullName: "Theo Lindqvist", emergencyContact: ["Ida Lindqvist (wife)", "+46-8-555-0248"] },
+  // The extended roster: repeat locals, snowbirds, and traveling divers who
+  // fill out the trips beyond today's three headline boats. Most carry an
+  // emergency contact — that's the norm at a real front desk — with a handful
+  // of gaps left deliberately (see customers above) so the manifest gap never
+  // reads as fixed to two specific people.
+  { fullName: "Carmen Ruiz", emergencyContact: ["Alejandro Ruiz (husband)", "+1-786-555-0249"] },
+  { fullName: "Jonas Kallio", emergencyContact: ["Sanna Kallio (wife)", "+358-9-555-0250"] },
+  { fullName: "Beatriz Almeida", emergencyContact: ["Tiago Almeida (brother)", "+55-21-555-0251"] },
+  { fullName: "Malik Johnson", emergencyContact: ["Renee Johnson (mother)", "+1-954-555-0252"] },
+  { fullName: "Siobhan Doyle", emergencyContact: ["Patrick Doyle (father)", "+353-1-555-0253"] },
+  { fullName: "Yuki Tanaka", emergencyContact: ["Sora Tanaka (husband)", "+81-3-555-0254"] },
+  { fullName: "Adaeze Nwosu", emergencyContact: ["Chidi Nwosu (brother)", "+234-1-555-0255"] },
+  { fullName: "Piotr Kowalski", emergencyContact: ["Ewa Kowalski (wife)", "+48-22-555-0256"] },
+  { fullName: "Grace Mensah", emergencyContact: ["Kofi Mensah (father)", "+233-30-555-0257"] },
+  // No contact on file: a second manifest gap, this time a first-time diver
+  // who booked online in a hurry.
+  { fullName: "Connor Blake" },
+  { fullName: "Isabel Moreno", emergencyContact: ["Fernando Moreno (father)", "+34-91-555-0259"] },
+  { fullName: "Niklas Berg", emergencyContact: ["Astrid Berg (wife)", "+47-22-555-0260"] },
+  { fullName: "Rania Youssef", emergencyContact: ["Hassan Youssef (husband)", "+20-2-555-0261"] },
+  { fullName: "Declan Murphy", emergencyContact: ["Maeve Murphy (mother)", "+353-1-555-0262"] },
+  { fullName: "Wan Chen", emergencyContact: ["Li Chen (wife)", "+86-21-555-0263"] },
+  {
+    fullName: "Fatima Al-Rashid",
+    emergencyContact: ["Omar Al-Rashid (brother)", "+971-4-555-0264"],
+  },
+  { fullName: "Tyler Brooks", emergencyContact: ["Karen Brooks (mother)", "+1-305-555-0265"] },
+  { fullName: "Miriam Cohen", emergencyContact: ["David Cohen (husband)", "+972-3-555-0266"] },
+  { fullName: "Josip Horvat", emergencyContact: ["Ana Horvat (wife)", "+385-1-555-0267"] },
+  { fullName: "Aroha Ngata", emergencyContact: ["Manaia Ngata (partner)", "+64-9-555-0268"] },
+  // No contact on file.
+  { fullName: "Julian Marsh" },
+  { fullName: "Chiara Bianchi", emergencyContact: ["Luca Bianchi (husband)", "+39-06-555-0270"] },
+  { fullName: "Efrain Torres", emergencyContact: ["Marisela Torres (wife)", "+52-55-555-0271"] },
+  {
+    fullName: "Anong Suwannee",
+    emergencyContact: ["Somchai Suwannee (husband)", "+66-2-555-0272"],
+  },
+  { fullName: "Bram de Vries", emergencyContact: ["Anna de Vries (wife)", "+31-20-555-0273"] },
+  { fullName: "Naledi Khumalo", emergencyContact: ["Thabo Khumalo (brother)", "+27-11-555-0274"] },
+  { fullName: "Callum Fraser", emergencyContact: ["Morag Fraser (mother)", "+44-131-555-0275"] },
+  { fullName: "Esperanza Cruz", emergencyContact: ["Ramon Cruz (father)", "+1-787-555-0276"] },
+  { fullName: "Henrique Silva", emergencyContact: ["Beatriz Silva (wife)", "+55-11-555-0277"] },
+  { fullName: "Petra Novak", emergencyContact: ["Milan Novak (husband)", "+420-2-555-0278"] },
+  {
+    fullName: "Odalys Fernandez",
+    emergencyContact: ["Julio Fernandez (father)", "+1-305-555-0279"],
+  },
+  { fullName: "Kwame Asante", emergencyContact: ["Abena Asante (wife)", "+233-30-555-0280"] },
+  { fullName: "Ingrid Solberg", emergencyContact: ["Erik Solberg (husband)", "+47-22-555-0281"] },
+  // No contact on file — a walk-up who booked from the dock.
+  { fullName: "Reggie Palmer" },
+  // A second wave: the shop's snowbird regulars, a dive club that books as a
+  // block, and the steady trickle of one-off tourists who fill out the rest
+  // of the month's boats.
+  { fullName: "Harriet Voss", emergencyContact: ["Edwin Voss (husband)", "+1-239-555-0282"] },
+  { fullName: "Rosalind Okoye", emergencyContact: ["Emeka Okoye (husband)", "+234-1-555-0283"] },
+  { fullName: "Lukas Steiner", emergencyContact: ["Nina Steiner (wife)", "+41-22-555-0284"] },
+  {
+    fullName: "Renata Souza",
+    emergencyContact: ["Rafael Souza (brother)", "+55-21-555-0285"],
+  },
+  { fullName: "Dmitri Volkov", emergencyContact: ["Elena Volkov (wife)", "+7-495-555-0286"] },
+  { fullName: "Amina Diallo", emergencyContact: ["Ousmane Diallo (father)", "+221-33-555-0287"] },
+  // No contact on file.
+  { fullName: "Trevor Lang" },
+  { fullName: "Soraya Karimi", emergencyContact: ["Reza Karimi (husband)", "+98-21-555-0289"] },
+  {
+    fullName: "Finn O'Sullivan",
+    emergencyContact: ["Grainne O'Sullivan (mother)", "+353-1-555-0290"],
+  },
+  { fullName: "Ling Zhao", emergencyContact: ["Wei Zhao (husband)", "+86-10-555-0291"] },
+  { fullName: "Pablo Iglesias", emergencyContact: ["Lucia Iglesias (wife)", "+34-91-555-0292"] },
+  { fullName: "Charlotte Reid", emergencyContact: ["William Reid (father)", "+1-770-555-0293"] },
+  { fullName: "Mikael Andersson", emergencyContact: ["Elin Andersson (wife)", "+46-31-555-0294"] },
+  { fullName: "Zara Ahmed", emergencyContact: ["Bilal Ahmed (brother)", "+92-21-555-0295"] },
+  {
+    fullName: "Owen Fitzgerald",
+    emergencyContact: ["Maureen Fitzgerald (mother)", "+1-617-555-0296"],
+  },
+  { fullName: "Valeria Gomez", emergencyContact: ["Hector Gomez (husband)", "+52-33-555-0297"] },
+  // No contact on file.
+  { fullName: "Casey Winters" },
+  { fullName: "Nour Khalil", emergencyContact: ["Samir Khalil (father)", "+961-1-555-0299"] },
+  { fullName: "Bjorn Haugen", emergencyContact: ["Kari Haugen (wife)", "+47-55-555-0300"] },
+  { fullName: "Adaora Chukwu", emergencyContact: ["Emeka Chukwu (husband)", "+234-1-555-0301"] },
+  { fullName: "Tomasz Wojcik", emergencyContact: ["Agnieszka Wojcik (wife)", "+48-12-555-0302"] },
+  { fullName: "Meilin Tan", emergencyContact: ["Wei Tan (father)", "+65-6-555-0303"] },
+  { fullName: "Dario Conti", emergencyContact: ["Giulia Conti (wife)", "+39-02-555-0304"] },
+  { fullName: "Simone Laurent", emergencyContact: ["Pierre Laurent (husband)", "+33-1-555-0305"] },
+  {
+    fullName: "Kiona Blackfeather",
+    emergencyContact: ["Dawn Blackfeather (mother)", "+1-505-555-0306"],
+  },
+  { fullName: "Anders Lindgren", emergencyContact: ["Freja Lindgren (wife)", "+46-8-555-0307"] },
+  // No contact on file — booked same-day, straight from the marina.
+  { fullName: "Blake Sutton" },
+  { fullName: "Meera Iyer", emergencyContact: ["Arjun Iyer (husband)", "+91-22-555-0309"] },
+  { fullName: "Georg Fischer", emergencyContact: ["Hilde Fischer (wife)", "+43-1-555-0310"] },
+  { fullName: "Chinwe Obi", emergencyContact: ["Emeka Obi (brother)", "+234-1-555-0311"] },
+  { fullName: "Sana Malik", emergencyContact: ["Imran Malik (father)", "+92-42-555-0312"] },
 ];
 
 /**
@@ -586,6 +687,89 @@ export async function seedDemoSchedule(
     { index: 15, agency: "naui", level: "open_water", status: "verified", expiresAt: dateAt(-24) },
     { index: 16, agency: "sdi", level: "open_water", status: "verified" },
     { index: 17, agency: "tdi", level: "divemaster", status: "verified" },
+    // The extended roster: the AOW+Deep track for the Duane wreck charter (18-20
+    // ready, once their specialty/nitrox cards below land; 21-23 stay short a
+    // gate each — level, specialty, or nitrox — the way a real wreck roster
+    // never clears in one pass).
+    { index: 18, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 19, agency: "ssi", level: "advanced_open_water", status: "verified" },
+    { index: 20, agency: "naui", level: "advanced_open_water", status: "verified" },
+    { index: 21, agency: "padi", level: "open_water", status: "verified" },
+    { index: 22, agency: "ssi", level: "advanced_open_water", status: "verified" },
+    { index: 23, agency: "sdi", level: "open_water", status: "verified" },
+    // The Night specialty track for the second night dive.
+    { index: 24, agency: "padi", level: "open_water", status: "verified" },
+    { index: 25, agency: "ssi", level: "open_water", status: "verified" },
+    { index: 26, agency: "padi", level: "open_water", status: "pending" },
+    // index 27 (Connor Blake) stays uncertified — a Discover Scuba first-timer.
+    { index: 28, agency: "ssi", level: "open_water", status: "verified" },
+    { index: 29, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 30, agency: "naui", level: "open_water", status: "verified" },
+    // Lapsed a week and a half ago — a second "refresher due" case beyond
+    // Yusuf's, on an agency the shop doesn't teach itself.
+    { index: 31, agency: "tdi", level: "open_water", status: "verified", expiresAt: dateAt(-10) },
+    { index: 32, agency: "padi", level: "open_water", status: "verified" },
+    { index: 33, agency: "sdi", level: "advanced_open_water", status: "verified" },
+    { index: 34, agency: "ssi", level: "open_water", status: "pending" },
+    { index: 35, agency: "padi", level: "rescue", status: "verified" },
+    { index: 36, agency: "naui", level: "open_water", status: "verified" },
+    { index: 37, agency: "padi", level: "open_water", status: "verified" },
+    // index 38 (Julian Marsh) stays uncertified — a walk-up who booked from the dock.
+    { index: 39, agency: "ssi", level: "open_water", status: "verified" },
+    { index: 40, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 41, agency: "sdi", level: "open_water", status: "verified" },
+    { index: 42, agency: "tdi", level: "advanced_open_water", status: "verified" },
+    { index: 43, agency: "padi", level: "open_water", status: "verified" },
+    // Expiring inside the month, same shape as Marcus's Rescue card above.
+    { index: 44, agency: "ssi", level: "open_water", status: "verified", expiresAt: dateAt(12) },
+    { index: 45, agency: "naui", level: "open_water", status: "verified" },
+    { index: 46, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 47, agency: "ssi", level: "open_water", status: "pending" },
+    { index: 48, agency: "padi", level: "open_water", status: "verified" },
+    { index: 49, agency: "sdi", level: "open_water", status: "verified" },
+    { index: 50, agency: "tdi", level: "advanced_open_water", status: "verified" },
+    // A second imported-card case, from a different prior shop than Hana's —
+    // verified but still waiting on the one-tap staff confirm.
+    {
+      index: 51,
+      agency: "padi",
+      level: "open_water",
+      status: "verified",
+      importedFromLabel: "Keys Dive Center",
+    },
+    // The second wave (52-82): the same spread again — mostly verified across
+    // every agency the shop sees, a couple still pending review, one more
+    // lapsed card, one more expiring soon. Indices 58, 68, and 78 (all "no
+    // contact on file" walk-ups above) stay uncertified on purpose.
+    { index: 52, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 53, agency: "ssi", level: "open_water", status: "verified" },
+    { index: 54, agency: "naui", level: "advanced_open_water", status: "verified" },
+    { index: 55, agency: "padi", level: "open_water", status: "verified" },
+    { index: 56, agency: "tdi", level: "advanced_open_water", status: "verified" },
+    { index: 57, agency: "sdi", level: "open_water", status: "verified" },
+    { index: 59, agency: "padi", level: "open_water", status: "pending" },
+    { index: 60, agency: "ssi", level: "advanced_open_water", status: "verified" },
+    { index: 61, agency: "padi", level: "open_water", status: "verified" },
+    { index: 62, agency: "naui", level: "open_water", status: "verified" },
+    { index: 63, agency: "padi", level: "rescue", status: "verified" },
+    { index: 64, agency: "ssi", level: "advanced_open_water", status: "verified" },
+    { index: 65, agency: "sdi", level: "open_water", status: "verified" },
+    // Lapsed two months ago — the oldest of the three "refresher due" cases.
+    { index: 66, agency: "padi", level: "open_water", status: "verified", expiresAt: dateAt(-60) },
+    { index: 67, agency: "tdi", level: "open_water", status: "verified" },
+    { index: 69, agency: "padi", level: "open_water", status: "verified" },
+    { index: 70, agency: "ssi", level: "advanced_open_water", status: "verified" },
+    { index: 71, agency: "padi", level: "open_water", status: "verified" },
+    { index: 72, agency: "naui", level: "open_water", status: "pending" },
+    { index: 73, agency: "sdi", level: "open_water", status: "verified" },
+    { index: 74, agency: "padi", level: "advanced_open_water", status: "verified" },
+    { index: 75, agency: "ssi", level: "open_water", status: "verified" },
+    { index: 76, agency: "padi", level: "divemaster", status: "verified" },
+    { index: 77, agency: "tdi", level: "open_water", status: "verified" },
+    { index: 79, agency: "padi", level: "open_water", status: "verified" },
+    { index: 80, agency: "ssi", level: "advanced_open_water", status: "verified" },
+    { index: 81, agency: "padi", level: "open_water", status: "verified" },
+    { index: 82, agency: "sdi", level: "open_water", status: "verified" },
   ];
   const laterCertRows = laterCerts
     .map((cert) => {
@@ -649,6 +833,42 @@ export async function seedDemoSchedule(
         createdAt: nextCreatedAt(),
       },
     ]);
+  }
+
+  // Extended-roster specialty evidence: the Deep track for the Duane wreck
+  // charter (18-20 verified, 22 still pending — AOW alone never clears a
+  // wreck gate) and the Night track for the second night dive (24-25
+  // verified, 29 pending).
+  const extendedSpecialtyPlan: Array<{
+    index: number;
+    specialty: DiveSpecialty;
+    status: "verified" | "pending";
+  }> = [
+    { index: 18, specialty: "deep", status: "verified" },
+    { index: 19, specialty: "deep", status: "verified" },
+    { index: 20, specialty: "deep", status: "verified" },
+    { index: 22, specialty: "deep", status: "pending" },
+    { index: 24, specialty: "night", status: "verified" },
+    { index: 25, specialty: "night", status: "verified" },
+    { index: 29, specialty: "night", status: "pending" },
+  ];
+  const extendedSpecialtyRows = extendedSpecialtyPlan
+    .map((plan) => {
+      const person = customers[plan.index];
+      if (!person) return null;
+      return {
+        shopId,
+        personId: person.id,
+        agency: "padi" as const,
+        specialty: plan.specialty,
+        identifier: `DEMO-SPEC-${plan.specialty.toUpperCase()}-${plan.index + 1}`,
+        status: plan.status,
+        createdAt: nextCreatedAt(),
+      };
+    })
+    .filter((row) => row !== null);
+  if (extendedSpecialtyRows.length > 0) {
+    await db.insert(specialtyCertifications).values(extendedSpecialtyRows);
   }
 
   // The imported-card states, on customer[12] (Hana Kobayashi) — the diver whose
@@ -1018,6 +1238,53 @@ export async function seedDemoSchedule(
           commonsImage("Stoplight parrotfish Pickles Reef.jpg"),
         ],
       },
+      {
+        shopId,
+        name: "USCGC Duane",
+        locationName: "Key Largo, Florida",
+        // A second deep advanced wreck, gated the same way Spiegel Grove is.
+        minimumCertificationLevel: "advanced_open_water" as const,
+        requiredSpecialties: ["deep"] as DiveSpecialty[],
+        forecastLatitude: 24.9989,
+        forecastLongitude: -80.3903,
+        description:
+          "A decommissioned Coast Guard cutter sunk upright, with a mast and gun mounts still intact.",
+        marineLife: "Goliath grouper · barracuda · amberjack · schooling grunts",
+        marineLifeDescription:
+          "A resident goliath grouper often holds near the wheelhouse; look into the blue for jacks working the current.",
+        difficulty: "advanced",
+        depthRange: "15–37 m",
+        currentNote: "Can run strong on the surface; the crew calls the line and the drop.",
+        divePlan:
+          "Descend the mooring to the deck, tour the superstructure and gun mounts, then ascend on reserve gas with a safety stop.",
+        landmarks: ["Wheelhouse", "Forward gun mount", "Crow's nest"],
+        imageUrls: [
+          commonsImage("AtlanticGoliathGrouper.jpg"),
+          commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+        ],
+      },
+      {
+        shopId,
+        name: "Pickles Reef",
+        locationName: "Key Largo National Marine Sanctuary",
+        forecastLatitude: 24.9928,
+        forecastLongitude: -80.4092,
+        description: "A shallow spur-and-groove reef named for its fossilized-barrel coral heads.",
+        marineLife: "Blue tangs · stoplight parrotfish · French angelfish · sergeant majors",
+        marineLifeDescription:
+          "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
+        difficulty: "beginner",
+        depthRange: "5–12 m",
+        currentNote: "Usually gentle; the crew confirms the final plan.",
+        divePlan:
+          "Drift the coral ridge from the mooring, pause over the barrel-shaped heads, then loop back over the sand.",
+        landmarks: ["Barrel coral heads", "Anchor chain remnant"],
+        imageUrls: [
+          commonsImage("Stoplight parrotfish Pickles Reef.jpg"),
+          commonsImage("Blue Tang Pickles 20080310.jpg"),
+          commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
+        ],
+      },
     ])
     .returning();
   const siteByName = new Map(siteRows.map((site) => [site.name, site]));
@@ -1141,6 +1408,8 @@ export async function seedDemoSchedule(
   const christ = siteByName.get("Christ of the Abyss");
   const benwood = siteByName.get("Benwood Wreck");
   const french = siteByName.get("French Reef");
+  const duane = siteByName.get("USCGC Duane");
+  const pickles = siteByName.get("Pickles Reef");
   const laterCreatures = [
     ...(benwood
       ? [
@@ -1235,6 +1504,46 @@ export async function seedDemoSchedule(
             imageUrl: commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
             description: "Shallow branching coral that catches the light on the way back.",
             preparationTip: "This is the shallowest part of the dive — watch your fins above it.",
+          },
+        ]
+      : []),
+    ...(duane
+      ? [
+          {
+            diveSiteId: duane.id,
+            name: "Goliath grouper",
+            kind: "fish",
+            imageUrl: commonsImage("AtlanticGoliathGrouper.jpg"),
+            description: "A resident that holds near the wheelhouse and rarely moves for divers.",
+            preparationTip: "Approach along the deck, not from above — it reads that as a threat.",
+          },
+          {
+            diveSiteId: duane.id,
+            name: "Amberjack",
+            kind: "schooling fish",
+            imageUrl: commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+            description: "Fast-moving schools that patrol the blue water off the wreck.",
+            preparationTip: "Look up and out past the structure, not only at the hull.",
+          },
+        ]
+      : []),
+    ...(pickles
+      ? [
+          {
+            diveSiteId: pickles.id,
+            name: "Blue tang",
+            kind: "fish",
+            imageUrl: commonsImage("Blue Tang Pickles 20080310.jpg"),
+            description: "Loose, easy groups that move across the coral heads all day.",
+            preparationTip: "Hover rather than chase — the school circles back on its own.",
+          },
+          {
+            diveSiteId: pickles.id,
+            name: "Stoplight parrotfish",
+            kind: "fish",
+            imageUrl: commonsImage("Stoplight parrotfish Pickles Reef.jpg"),
+            description: "The reef's namesake grazer, working the barrel-shaped coral heads.",
+            preparationTip: "Listen for the crunch of a beak on coral before you spot the fish.",
           },
         ]
       : []),
@@ -1830,21 +2139,25 @@ export async function seedDemoSchedule(
   // went out — and it's what keeps the "click Send waiver" flows (staff UI,
   // e2e) demonstrable.
   //
-  // A realistic subset of those waivers is already signed. A signature is
-  // effective for the *person*, not just the one booking (effectiveWaiverForBooking
-  // in src/lib/waivers.ts reuses a diver's latest completed waiver across every
-  // trip they're on), so signing anyone who also sits on today's reef roster
-  // would silently clear their reef booking too — the boat the manifest/roll-
-  // call demo boards from must keep nobody fully cleared (see
-  // e2e/manifest.spec.ts). customers 0-8 crew reef, customers 4-6 also crew
-  // Night, and customers 0-9 crew Wreck, so customer[9] (Wreck only) is the
-  // only "today path" diver safe to sign; a few later-sailing regulars
-  // (customers 10+, never on today's boats) get signed waivers too, so
-  // browsing past today's board doesn't read as universally unsigned.
+  // Most divers fill out their waiver before the boat leaves — that's the
+  // norm at a real front desk, not the exception — so the seed signs it for
+  // the large majority of upcoming bookings. A signature is effective for the
+  // *person*, not just the one booking (effectiveWaiverForBooking in
+  // src/lib/waivers.ts reuses a diver's latest completed waiver across every
+  // trip they're on), so today's reef roster (customers 1-8; customer[0]
+  // Priya is the deliberate holdout above) gets signed too. That still leaves
+  // today's boat with one diver flagged "Readiness needs attention" — a
+  // realistic morning, not an empty one (see e2e/manifest.spec.ts and
+  // e2e/check-in.spec.ts, both keyed on Priya specifically). Wreck and Night
+  // stay genuinely mixed regardless: wreck also gates on AOW + Deep +
+  // verified nitrox + payment, and night on the Night specialty, so signing a
+  // waiver alone clears at most one wreck seat (customer[1], already fully
+  // carded and paid) and never touches night's specialty gate.
   const waiverTemplate = await getCurrentWaiverTemplate(db, shopId);
   if (!waiverTemplate) throw new Error("seed: waiver template missing before upcoming waivers");
   const signedWaiverBookingIds = new Set(
     [
+      ...[1, 2, 3, 4, 5, 6, 7, 8].map((index) => findBooking(reefBookings, index)?.id),
       findBooking(wreckBookings, 9)?.id,
       bookingByTripTitle("Two-Tank Reef — Benwood & Elbow", 10)?.id,
       bookingByTripTitle("Afternoon Two-Tank — French Reef", 13)?.id,
@@ -1887,6 +2200,16 @@ export async function seedDemoSchedule(
       };
     });
   if (upcomingWaiverRows.length > 0) await db.insert(waiverRecords).values(upcomingWaiverRows);
+
+  await seedMoreTrips(db, shopId, {
+    customers,
+    siteByName,
+    courseRows,
+    instructorId: instructor.id,
+    captainId,
+    divemasterId,
+    waiverTemplate,
+  });
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);
@@ -1944,6 +2267,41 @@ async function seedHistory(
     "Tobias Berg",
     "Noor Rahman",
     "Diego Ferreira",
+    // A longer trailing history — nine months of churn, not three weeks —
+    // so the reporting page's older months have real regulars behind them
+    // too, not just the same sixteen names on repeat.
+    "Wendell Frost",
+    "Marguerite Dupont",
+    "Osric Bailey",
+    "Anjali Krishnan",
+    "Fabrizio Colombo",
+    "Ottilie Falk",
+    "Emeka Nnamdi",
+    "Perla Jimenez",
+    "Ragnar Solheim",
+    "Ismene Kostas",
+    "Baldur Magnusson",
+    "Cosima Weber",
+    "Talia Rosen",
+    "Ferdinand Braun",
+    "Winnie Achebe",
+    "Radoslav Petrov",
+    "Elowen Pascoe",
+    "Anzu Yamamoto",
+    "Corvin Albrecht",
+    "Nkechi Eze",
+    "Salome Girard",
+    "Torvald Eide",
+    "Beatrix Salazar",
+    "Jamal Farouk",
+    "Wilhelmina Kruger",
+    "Ottone Ricci",
+    "Marisela Ponce",
+    "Callan Doherty",
+    "Yolanda Marin",
+    "Quintus Herrera",
+    "Ines Beaumont",
+    "Dashiell Moon",
   ];
   const histPeople = await db
     .insert(people)
@@ -2121,6 +2479,225 @@ async function seedHistory(
       capacity: 12,
       priceCents: 12500,
       booked: 9,
+    },
+    // The rest of the trailing nine months — the same weekly rhythm, further
+    // back, so a report run against last quarter (not just last month) still
+    // has real trips and real names behind every number.
+    {
+      daysAgo: 82,
+      hour: 12,
+      title: "Two-Tank Reef — Molasses",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 10,
+    },
+    {
+      daysAgo: 87,
+      hour: 23,
+      title: "Night Dive — French Reef",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 6,
+    },
+    {
+      daysAgo: 92,
+      hour: 12,
+      title: "Wreck Trip — USCGC Duane",
+      capacity: 10,
+      priceCents: 18500,
+      booked: 9,
+    },
+    {
+      daysAgo: 97,
+      hour: 12,
+      title: "Two-Tank Reef — Pickles Reef",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 8,
+    },
+    {
+      daysAgo: 103,
+      hour: 16,
+      title: "Afternoon Two-Tank — French Reef",
+      capacity: 10,
+      priceCents: 13000,
+      booked: 7,
+    },
+    {
+      daysAgo: 109,
+      hour: 12,
+      title: "Reef Day — Molasses & French",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 12,
+    },
+    {
+      daysAgo: 115,
+      hour: 12,
+      title: "Wreck Trip — Spiegel Grove",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 10,
+    },
+    {
+      daysAgo: 121,
+      hour: 12,
+      title: "Two-Tank Reef — Benwood",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 9,
+    },
+    {
+      daysAgo: 127,
+      hour: 23,
+      title: "Night Dive — City of Washington",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 5,
+    },
+    {
+      daysAgo: 133,
+      hour: 12,
+      title: "Reef Day — Christ of the Abyss",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 11,
+    },
+    {
+      daysAgo: 139,
+      hour: 12,
+      title: "Two-Tank Reef — Elbow",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 8,
+    },
+    {
+      daysAgo: 146,
+      hour: 12,
+      title: "Wreck Trip — Bibb",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 7,
+    },
+    {
+      daysAgo: 153,
+      hour: 12,
+      title: "Two-Tank Reef — Molasses & French",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 10,
+    },
+    {
+      daysAgo: 160,
+      hour: 16,
+      title: "Afternoon Two-Tank — Pickles Reef",
+      capacity: 10,
+      priceCents: 13000,
+      booked: 6,
+    },
+    {
+      daysAgo: 167,
+      hour: 12,
+      title: "Reef Day — French Reef",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 9,
+    },
+    {
+      daysAgo: 174,
+      hour: 23,
+      title: "Night Dive — Molasses Reef",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 4,
+    },
+    {
+      daysAgo: 181,
+      hour: 12,
+      title: "Wreck Trip — Duane",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 8,
+    },
+    {
+      daysAgo: 188,
+      hour: 12,
+      title: "Two-Tank Reef — Christ of the Abyss",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 10,
+    },
+    {
+      daysAgo: 196,
+      hour: 12,
+      title: "Reef Day — Benwood & Elbow",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 7,
+    },
+    {
+      daysAgo: 204,
+      hour: 12,
+      title: "Wreck Trip — Spiegel Grove",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 9,
+    },
+    {
+      daysAgo: 212,
+      hour: 16,
+      title: "Afternoon Two-Tank — Molasses",
+      capacity: 10,
+      priceCents: 13000,
+      booked: 5,
+    },
+    {
+      daysAgo: 221,
+      hour: 12,
+      title: "Two-Tank Reef — French & Christ",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 11,
+    },
+    {
+      daysAgo: 230,
+      hour: 23,
+      title: "Night Dive — Benwood Wreck",
+      capacity: 8,
+      priceCents: 14000,
+      booked: 6,
+    },
+    {
+      daysAgo: 239,
+      hour: 12,
+      title: "Wreck Trip — Bibb",
+      capacity: 10,
+      priceCents: 18000,
+      booked: 10,
+    },
+    {
+      daysAgo: 249,
+      hour: 12,
+      title: "Reef Day — Pickles Reef",
+      capacity: 12,
+      priceCents: 12500,
+      booked: 8,
+    },
+    {
+      daysAgo: 259,
+      hour: 12,
+      title: "Two-Tank Reef — Molasses & French",
+      capacity: 12,
+      priceCents: 13000,
+      booked: 9,
+    },
+    {
+      daysAgo: 270,
+      hour: 12,
+      title: "Wreck Trip — USCGC Duane",
+      capacity: 10,
+      priceCents: 18500,
+      booked: 7,
     },
   ];
 
@@ -2577,6 +3154,566 @@ async function seedRentalFit(
 }
 
 /**
+ * A fuller month: charters and course sessions beyond the four headline
+ * boats seeded above, so the schedule reads like a shop that runs most days
+ * of the week — not four trips in a fortnight. Every catalog course gets at
+ * least one dated session somewhere in here (several get two), the two new
+ * dive sites (Duane, Pickles Reef) earn their keep, and a couple of trips
+ * are cancelled outright — the weather does that to a real boat schedule.
+ *
+ * Drawn entirely from the extended roster (customers[10] and up) so nothing
+ * here touches today's three exactly-asserted boats, and Hana (customers[12],
+ * who must stay booked on *nothing*, see the comment at her cert rows above)
+ * never appears. Most bookings get a signed waiver — the same "most people
+ * fill it out" norm as today's reef trip — with a steady ~1-in-7 left
+ * unsigned so a diver profile or a trip's Guests tab still shows the
+ * occasional straggler.
+ */
+async function seedMoreTrips(
+  db: DbExecutor,
+  shopId: string,
+  ctx: {
+    customers: { id: string }[];
+    siteByName: Map<string, { id: string; name: string }>;
+    courseRows: Array<{
+      id: string;
+      title: string;
+      minimumCertificationLevel:
+        | "open_water"
+        | "advanced_open_water"
+        | "rescue"
+        | "divemaster"
+        | "instructor"
+        | null;
+    }>;
+    instructorId: string;
+    captainId: string | undefined;
+    divemasterId: string | undefined;
+    waiverTemplate: { id: string; title: string; version: number; body: string };
+  },
+): Promise<void> {
+  const { customers, siteByName, courseRows, instructorId, captainId, divemasterId } = ctx;
+  const courseByTitle = new Map(courseRows.map((course) => [course.title, course]));
+
+  // Everyone from the extended roster except: Hana (12, must stay unbooked),
+  // and the five deliberately-uncertified walk-ups (27, 38, 58, 68, 78), who
+  // only ever appear on an entry-level session below.
+  const excludedFromPool = new Set([12, 27, 38, 58, 68, 78]);
+  const generalPool = customers
+    .map((_, index) => index)
+    .filter((index) => index >= 10 && index < customers.length && !excludedFromPool.has(index));
+  let poolCursor = 0;
+  const draw = (n: number): number[] => {
+    const picked: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const index = generalPool[poolCursor % generalPool.length];
+      if (index !== undefined) picked.push(index);
+      poolCursor++;
+    }
+    return picked;
+  };
+
+  type ExtraTripDef = {
+    title: string;
+    description: string;
+    startsAt: Date;
+    endsAt: Date;
+    capacity: number;
+    siteName?: string;
+    courseTitle?: string;
+    isNight?: boolean;
+    isWreck?: boolean;
+    status?: "scheduled" | "cancelled";
+    conditionsHold?: boolean;
+    conditionsSummary?: string;
+    roster: number[];
+  };
+
+  // Each capacity/booked pair is chosen so its remaining-seat count never
+  // reads "3 spots left" (the reef trip's exact, asserted text), "Full" (the
+  // wreck charter's alone), or "6 spots left" (reserved for a spec's own
+  // throwaway trip) — see the comment above `laterRosters`.
+  const tripDefs: ExtraTripDef[] = [
+    {
+      title: "Morning Two-Tank — Molasses Reef",
+      description: "An early boat on the outer reef, back at the dock before the wind picks up.",
+      startsAt: at(1, 7, 0),
+      endsAt: at(1, 10, 30),
+      capacity: 12,
+      siteName: "Molasses Reef",
+      roster: draw(8),
+    },
+    {
+      title: "Two-Tank Reef — French Reef",
+      description: "Ledges and swim-throughs — a second boat the same week as the regulars.",
+      startsAt: at(2, 11, 0),
+      endsAt: at(2, 14, 30),
+      capacity: 10,
+      siteName: "French Reef",
+      roster: draw(8),
+    },
+    {
+      title: "Scuba Refresher — half day",
+      description: "A patient skills tune-up before getting back in the water.",
+      startsAt: at(4, 9, 0),
+      endsAt: at(4, 12, 0),
+      capacity: 4,
+      courseTitle: "Scuba Refresher",
+      // Both lapsed-card divers from the roster above — exactly who a
+      // refresher course is for.
+      roster: [31, 66],
+    },
+    {
+      title: "Two-Tank Reef — Benwood & Molasses",
+      description: "Shallow wreck first, coral heads second — a quiet midweek boat.",
+      startsAt: at(6, 8, 0),
+      endsAt: at(6, 11, 30),
+      capacity: 12,
+      siteName: "Benwood Wreck",
+      roster: draw(5),
+    },
+    {
+      title: "Sunset Two-Tank — French Reef",
+      description: "Ledges and swim-throughs with the light coming in low on the second tank.",
+      startsAt: at(8, 16, 0),
+      endsAt: at(8, 19, 30),
+      capacity: 10,
+      siteName: "French Reef",
+      roster: draw(9),
+    },
+    {
+      title: "Rescue Diver — two-day course",
+      description: "Problem prevention and rescue skills for experienced divers.",
+      startsAt: at(9, 8, 0),
+      endsAt: at(10, 17, 0),
+      capacity: 4,
+      courseTitle: "Rescue Diver",
+      roster: [29, 40, 42],
+    },
+    {
+      title: "Sunset Two-Tank — Christ of the Abyss (weather hold)",
+      description: "Cancelled ahead of a small-craft advisory; rescheduling with everyone booked.",
+      startsAt: at(10, 16, 0),
+      endsAt: at(10, 19, 30),
+      capacity: 10,
+      siteName: "Christ of the Abyss",
+      status: "cancelled",
+      conditionsHold: true,
+      conditionsSummary: "Small-craft advisory through the afternoon — the crew called it early.",
+      roster: [],
+    },
+    {
+      title: "Discover Scuba Diving — afternoon",
+      description: "A small, instructor-led first breath underwater. No C-card required.",
+      startsAt: at(12, 13, 0),
+      endsAt: at(12, 16, 0),
+      capacity: 4,
+      courseTitle: "Discover Scuba Diving",
+      roster: [27, ...draw(1)],
+    },
+    {
+      title: "Wreck Trip — USCGC Duane",
+      description: "A second deep advanced wreck. AOW + Deep + nitrox required.",
+      startsAt: at(14, 12, 0),
+      endsAt: at(14, 16, 0),
+      capacity: 10,
+      siteName: "USCGC Duane",
+      isWreck: true,
+      roster: [18, 19, 20, 21, 22, 23],
+    },
+    {
+      title: "Two-Tank Reef — French Reef (small craft advisory)",
+      description: "Cancelled for weather; nobody had booked yet.",
+      startsAt: at(17, 11, 0),
+      endsAt: at(17, 14, 30),
+      capacity: 10,
+      siteName: "French Reef",
+      status: "cancelled",
+      conditionsHold: true,
+      conditionsSummary: "Small-craft advisory — rescheduled for later in the month.",
+      roster: [],
+    },
+    {
+      title: "Two-Tank Reef — Pickles Reef",
+      description: "The barrel-coral classic — beginner-friendly and nearly full this week.",
+      startsAt: at(16, 11, 30),
+      endsAt: at(16, 15, 0),
+      capacity: 12,
+      siteName: "Pickles Reef",
+      roster: draw(11),
+    },
+    {
+      title: "Family Two-Tank — Christ of the Abyss",
+      description: "A gentle, shallow boat — a good first charter for a family diving together.",
+      startsAt: at(19, 10, 0),
+      endsAt: at(19, 13, 30),
+      capacity: 8,
+      siteName: "Christ of the Abyss",
+      roster: draw(6),
+    },
+    {
+      title: "Try Scuba — SSI first dive",
+      description: "A supervised first scuba experience.",
+      startsAt: at(20, 13, 0),
+      endsAt: at(20, 16, 0),
+      capacity: 4,
+      courseTitle: "Try Scuba",
+      roster: draw(2),
+    },
+    {
+      title: "Midweek Two-Tank — Molasses Reef",
+      description: "A quiet boat on the outer reef — plenty of room this week.",
+      startsAt: at(23, 12, 0),
+      endsAt: at(23, 15, 30),
+      capacity: 12,
+      siteName: "Molasses Reef",
+      roster: draw(4),
+    },
+    {
+      title: "SSI Open Water Diver — three-day course",
+      description: "SSI's entry-level autonomous diver certification.",
+      startsAt: at(22, 9, 0),
+      endsAt: at(24, 17, 0),
+      capacity: 4,
+      courseTitle: "SSI Open Water Diver",
+      // The three previously-uncertified walk-ups — finally taking the class.
+      roster: [58, 68, 78],
+    },
+    {
+      title: "Night Dive — French Reef",
+      description: "Torches, tarpon, and bioluminescence. Night specialty required.",
+      startsAt: at(25, 23, 0),
+      endsAt: at(26, 2, 30),
+      capacity: 8,
+      isNight: true,
+      roster: [24, 25, 29],
+    },
+    {
+      title: "Two-Tank Reef — Benwood Wreck",
+      description: "Bow to stern along the sand, then back over the plates.",
+      startsAt: at(26, 9, 0),
+      endsAt: at(26, 12, 30),
+      capacity: 10,
+      siteName: "Benwood Wreck",
+      roster: draw(8),
+    },
+    {
+      title: "Advanced Adventurer — two-day course",
+      description: "Five guided specialty adventure dives.",
+      startsAt: at(26, 13, 0),
+      endsAt: at(27, 17, 0),
+      capacity: 5,
+      courseTitle: "Advanced Adventurer",
+      roster: [52, 55, 61],
+    },
+    {
+      title: "Two-Tank Reef — Christ of the Abyss & Molasses",
+      description: "Classic shallow sites, then the outer reef on the second tank.",
+      startsAt: at(28, 11, 0),
+      endsAt: at(28, 14, 30),
+      capacity: 12,
+      siteName: "Christ of the Abyss",
+      roster: draw(7),
+    },
+    {
+      title: "Two-Tank Reef — French Reef & Molasses",
+      description: "Ledges first, the outer reef second — a full-day two-site charter.",
+      startsAt: at(30, 8, 0),
+      endsAt: at(30, 11, 30),
+      capacity: 12,
+      siteName: "French Reef",
+      roster: draw(8),
+    },
+    {
+      title: "Advanced Wreck — USCGC Duane",
+      description: "A second sailing to the Duane. AOW + Deep + nitrox required.",
+      startsAt: at(33, 12, 0),
+      endsAt: at(33, 16, 0),
+      capacity: 10,
+      siteName: "USCGC Duane",
+      isWreck: true,
+      roster: draw(6),
+    },
+    {
+      title: "Peak Performance Buoyancy — weekend",
+      description: "A real weight check, then two dives spent hovering.",
+      startsAt: at(35, 9, 0),
+      endsAt: at(35, 17, 0),
+      capacity: 4,
+      courseTitle: "Peak Performance Buoyancy",
+      roster: draw(2),
+    },
+    {
+      title: "Two-Tank Reef — Pickles & French",
+      description: "A second sailing to the barrel-coral reef, paired with French Reef.",
+      startsAt: at(36, 11, 30),
+      endsAt: at(36, 15, 0),
+      capacity: 12,
+      siteName: "Pickles Reef",
+      roster: draw(10),
+    },
+    {
+      title: "Diver Stress & Rescue — SSI two-day",
+      description: "Recognize stress and respond to diver emergencies.",
+      startsAt: at(39, 9, 0),
+      endsAt: at(40, 17, 0),
+      capacity: 4,
+      courseTitle: "Diver Stress & Rescue",
+      roster: [64, 70],
+    },
+    {
+      title: "Wreck Diver — PADI four dives",
+      description: "Survey, mapping, and limited penetration on four dives.",
+      startsAt: at(41, 9, 0),
+      endsAt: at(42, 17, 0),
+      capacity: 4,
+      courseTitle: "Wreck Diver",
+      roster: [74, 80],
+    },
+    {
+      title: "Nitrox 40 — SSI one day",
+      description: "Use nitrox mixes up to 40 percent oxygen.",
+      startsAt: at(44, 9, 0),
+      endsAt: at(44, 17, 0),
+      capacity: 5,
+      courseTitle: "Nitrox 40",
+      roster: draw(3),
+    },
+    {
+      title: "Afternoon Two-Tank — Christ of the Abyss",
+      description: "A late boat on the shallow statue site — good light for photos.",
+      startsAt: at(46, 15, 0),
+      endsAt: at(46, 18, 30),
+      capacity: 10,
+      siteName: "Christ of the Abyss",
+      roster: draw(8),
+    },
+    {
+      title: "Two-Tank Reef — Benwood & French",
+      description: "The shallow wreck, then ledges and swim-throughs on the second tank.",
+      startsAt: at(48, 8, 0),
+      endsAt: at(48, 11, 30),
+      capacity: 12,
+      siteName: "Benwood Wreck",
+      roster: draw(10),
+    },
+    {
+      title: "Night Dive — Benwood Wreck",
+      description: "A shallower night charter — good for a diver's first dive after dark.",
+      startsAt: at(50, 22, 30),
+      endsAt: at(51, 2, 0),
+      capacity: 8,
+      isNight: true,
+      roster: draw(4),
+    },
+    {
+      title: "Sunrise Two-Tank — Molasses Reef",
+      description: "First boat out, calm water, and the reef to yourselves for an hour.",
+      startsAt: at(52, 7, 0),
+      endsAt: at(52, 10, 30),
+      capacity: 12,
+      siteName: "Molasses Reef",
+      roster: draw(10),
+    },
+    {
+      title: "Divemaster — PADI internship kickoff",
+      description: "The first professional rating, taught as an internship.",
+      startsAt: at(54, 9, 0),
+      endsAt: at(54, 13, 0),
+      capacity: 2,
+      courseTitle: "Divemaster",
+      // Already Rescue-certified — the internship's actual entry gate.
+      roster: [63],
+    },
+    {
+      title: "Family Two-Tank — Molasses Reef",
+      description: "A relaxed outer-reef boat, good for a family diving together.",
+      startsAt: at(56, 10, 0),
+      endsAt: at(56, 13, 30),
+      capacity: 8,
+      siteName: "Molasses Reef",
+      roster: draw(6),
+    },
+  ];
+
+  const insertedTrips = await db
+    .insert(trips)
+    .values(
+      tripDefs.map((def) => ({
+        shopId,
+        diveSiteId: def.siteName ? siteByName.get(def.siteName)?.id : undefined,
+        courseId: def.courseTitle ? courseByTitle.get(def.courseTitle)?.id : undefined,
+        title: def.title,
+        description: def.description,
+        startsAt: def.startsAt,
+        endsAt: def.endsAt,
+        capacity: def.capacity,
+        status: def.status ?? "scheduled",
+        conditionsHold: def.conditionsHold ?? false,
+        conditionsSummary: def.conditionsSummary,
+      })),
+    )
+    .returning();
+
+  await db.insert(tripScheduleDays).values(
+    insertedTrips.map((trip) => ({
+      tripId: trip.id,
+      dayNumber: 1,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+    })),
+  );
+
+  await db.insert(tripRequirements).values(
+    insertedTrips.map((trip, i) => {
+      const def = tripDefs[i];
+      return {
+        tripId: trip.id,
+        shopId,
+        requiresWaiver: true,
+        // Course sessions gate on their own catalog minimum (Discover Scuba,
+        // SSI Open Water, and Try Scuba all admit an uncertified diver — the
+        // same rule createTrip applies); every other trip takes the shop's
+        // default Open Water gate. The Duane wreck's AOW + Deep comes from
+        // the site row itself and merges in at read time (readiness.ts).
+        minimumCertificationLevel: def.courseTitle
+          ? (courseByTitle.get(def.courseTitle)?.minimumCertificationLevel ?? null)
+          : ("open_water" as const),
+        requiredSpecialties: (def.isNight ? ["night"] : []) as DiveSpecialty[],
+        requiresNitrox: def.isWreck ?? false,
+        requiresPayment: def.isWreck ?? false,
+      };
+    }),
+  );
+
+  await db.insert(tripAssignments).values(
+    insertedTrips.flatMap((trip, i) => {
+      const def = tripDefs[i];
+      if (def.courseTitle) return [{ tripId: trip.id, personId: instructorId }];
+      return [
+        ...(captainId ? [{ tripId: trip.id, personId: captainId }] : []),
+        ...(divemasterId ? [{ tripId: trip.id, personId: divemasterId }] : []),
+      ];
+    }),
+  );
+
+  const insertedBookings = await db
+    .insert(bookings)
+    .values(
+      insertedTrips.flatMap((trip, i) =>
+        tripDefs[i].roster
+          .map((index) => customers[index])
+          .filter((person): person is { id: string } => person !== undefined)
+          .map((person) => ({
+            shopId,
+            tripId: trip.id,
+            personId: person.id,
+            status: "booked" as const,
+            createdAt: nextCreatedAt(),
+          })),
+      ),
+    )
+    .returning();
+
+  // Most divers fill out their waiver before the boat leaves — roughly 6 in
+  // 7 here, the same "most people sign" norm as today's reef trip — leaving
+  // a steady trickle of stragglers so a Guests tab or a diver's profile still
+  // shows the occasional unsigned card.
+  let extraWaiverToken = 0;
+  const extraWaiverRows = insertedBookings.map((booking) => {
+    extraWaiverToken++;
+    const createdAt = nextCreatedAt();
+    const signed = extraWaiverToken % 7 !== 0;
+    return {
+      shopId,
+      bookingId: booking.id,
+      personId: booking.personId,
+      templateId: ctx.waiverTemplate.id,
+      templateTitle: ctx.waiverTemplate.title,
+      templateVersion: ctx.waiverTemplate.version,
+      templateBody: ctx.waiverTemplate.body,
+      tokenHash: `seed-extra-waiver-${shopId}-${extraWaiverToken}`,
+      // Comfortably past the furthest trip seeded here (day 56).
+      expiresAt: at(75, 12),
+      createdAt,
+      ...(signed
+        ? {
+            status: "completed" as const,
+            signedName: "Signed on file",
+            signatureMethod: "in_person" as const,
+            consentedAt: createdAt,
+            signedAt: createdAt,
+            completedAt: createdAt,
+          }
+        : {}),
+    };
+  });
+  if (extraWaiverRows.length > 0) await db.insert(waiverRecords).values(extraWaiverRows);
+
+  // The Duane wreck readiness track: three of the six divers paid or on
+  // deposit — the other three (blocked by cert/specialty/nitrox regardless,
+  // see the extended-roster certs above) still owe nothing on file.
+  const duaneTrip = insertedTrips.find((trip) => trip.title === "Wreck Trip — USCGC Duane");
+  if (duaneTrip) {
+    const duaneBookings = insertedBookings.filter((b) => b.tripId === duaneTrip.id);
+    const findDuaneBooking = (index: number) =>
+      duaneBookings.find((b) => b.personId === customers[index]?.id);
+    const duanePaymentPlan: Array<{
+      booking: { id: string } | undefined;
+      status: "paid" | "deposit_paid";
+      amountCents: number;
+    }> = [
+      { booking: findDuaneBooking(18), status: "paid", amountCents: 18_000 },
+      { booking: findDuaneBooking(19), status: "deposit_paid", amountCents: 6_000 },
+      { booking: findDuaneBooking(20), status: "paid", amountCents: 18_000 },
+    ];
+    const duanePaymentSeed = duanePaymentPlan
+      .filter((row) => row.booking !== undefined)
+      .map((row) => ({
+        shopId,
+        bookingId: (row.booking as { id: string }).id,
+        status: row.status,
+        amountCents: row.amountCents,
+        currency: "usd",
+      }));
+    if (duanePaymentSeed.length > 0) await db.insert(bookingPayments).values(duanePaymentSeed);
+  }
+
+  // A little front-desk texture on the trips this back-fill added: a
+  // wait-list entry on the nearly-full Pickles Reef charter, and a
+  // last-minute promo on the quietest midweek boat.
+  const picklesTrip = insertedTrips.find((trip) => trip.title === "Two-Tank Reef — Pickles Reef");
+  const quietTrip = insertedTrips.find((trip) => trip.title === "Midweek Two-Tank — Molasses Reef");
+  const waitlistCandidate = customers[draw(1)[0] ?? -1];
+  if (picklesTrip && waitlistCandidate) {
+    await db.insert(tripWaitlistEntries).values({
+      shopId,
+      tripId: picklesTrip.id,
+      personId: waitlistCandidate.id,
+      createdAt: nextCreatedAt(),
+    });
+  }
+  if (quietTrip) {
+    await db
+      .insert(tripLastMinutePromos)
+      .values({
+        shopId,
+        tripId: quietTrip.id,
+        status: "sent",
+        discountPercent: 20,
+        code: "DEMO-MIDWEEK-20",
+        stripeCouponId: "coupon_demo_midweek",
+        stripePromotionCodeId: "promo_demo_midweek",
+        expiresAt: at(22, 18),
+        recipientCount: 6,
+        createdByPersonId: null,
+        createdAt: nextCreatedAt(),
+      })
+      .onConflictDoNothing();
+  }
+}
+
+/**
  * Nitrox demo: a couple of verified EANx cards (and one pending), plus an
  * Nitrox request on the wreck charter — so the prep list shows a real
  * mix split and a real card gate the moment a fresh checkout boots.
@@ -2614,6 +3751,31 @@ async function seedNitrox(
       status: "pending" as const,
     },
   ]);
+
+  // The Duane wreck readiness track (see the extended-roster certs/specialty
+  // above): three EANx cards verified, one still pending — the same "almost
+  // ready" spread the rest of the roster gets.
+  const duaneNitroxPlan: Array<[number, "verified" | "pending"]> = [
+    [18, "verified"],
+    [19, "verified"],
+    [20, "verified"],
+    [22, "pending"],
+  ];
+  const duaneNitroxRows = duaneNitroxPlan
+    .map(([index, status]) => {
+      const person = customers[index];
+      if (!person) return null;
+      return {
+        shopId,
+        personId: person.id,
+        agency: "padi" as const,
+        identifier: `EANX-${String(index + 1).padStart(4, "0")}`,
+        status,
+        reviewedAt: status === "verified" ? nowDate() : null,
+      };
+    })
+    .filter((row) => row !== null);
+  if (duaneNitroxRows.length > 0) await db.insert(nitroxCertifications).values(duaneNitroxRows);
 
   // The imported nitrox state, on the same diver as the imported specialty card
   // above: verified so it is never a boarding blocker, unconfirmed so the *fill*

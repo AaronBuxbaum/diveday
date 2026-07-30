@@ -21,7 +21,9 @@ describe("person-first diver records", () => {
   it("composes cards, fit, and history from one diver record", async () => {
     const { db, shop } = await seededShopContext();
 
-    const { divers: summaries } = await listDiverSummaries(db, shop.id);
+    // Search explicitly rather than relying on the default (alphabetically
+    // sorted, page-sized) listing — the extended roster is well past one page.
+    const { divers: summaries } = await listDiverSummaries(db, shop.id, { query: "Priya Sharma" });
     const priya = summaries.find((row) => row.person.fullName === "Priya Sharma");
     expect(priya).toMatchObject({ certificationCount: 1, pendingCertificationCount: 0 });
     if (!priya) throw new Error("seed diver missing");
@@ -199,13 +201,16 @@ describe("roster search and pagination", () => {
   it("pages with a keyset cursor and never repeats or skips a diver", async () => {
     const { db, shop } = await seededShopContext();
 
-    const all = await listDiverSummaries(db, shop.id);
-    expect(all.nextCursor).toBeNull(); // seed fits one default page
+    // The extended roster is well past DIVER_PAGE_SIZE, so fetch a limit large
+    // enough to get every diver back in one page as ground truth.
+    const all = await listDiverSummaries(db, shop.id, { limit: 1000 });
+    expect(all.nextCursor).toBeNull();
     expect(all.total).toBe(all.divers.length);
 
     const seen: string[] = [];
     let cursor: string | undefined;
-    for (let hops = 0; hops < 20; hops++) {
+    const maxHops = Math.ceil(all.divers.length / 3) + 1;
+    for (let hops = 0; hops < maxHops; hops++) {
       const page = await listDiverSummaries(db, shop.id, { cursor, limit: 3 });
       expect(page.divers.length).toBeLessThanOrEqual(3);
       seen.push(...page.divers.map((row) => row.person.id));

@@ -42,9 +42,13 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(page.getByRole("heading", { name: "Readiness needs attention" })).toBeVisible();
   await expect(page.getByText("Priya Sharma")).toBeVisible();
 
-  // At departure the readiness gate hides boarding for blocked divers (the seed
-  // reef trip has none ready), so there is nothing to board.
-  await expect(page.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
+  // At departure the readiness gate hides boarding for blocked divers only —
+  // Priya is the boat's one remaining straggler (the rest of the roster
+  // already signed their waiver), so she alone has no boarding button while
+  // the rest of the roster does.
+  const priyaRow = page.locator("li", { hasText: "Priya Sharma" });
+  await expect(priyaRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
 
   await page.locator("#roll-call-list").scrollIntoViewIfNeeded();
   const checkpointScroll = await page.evaluate(() => window.scrollY);
