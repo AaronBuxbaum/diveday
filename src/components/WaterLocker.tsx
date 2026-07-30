@@ -2,7 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function WaterLocker() {
+export type WaterLockerCopy = {
+  rainAlt: string;
+  heading: string;
+  body: string;
+  holdLine1: string;
+  holdLine2: string;
+  unlockingProgress: string;
+  holdToUnlock: string;
+};
+
+/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    key in values ? String(values[key]) : match,
+  );
+}
+
+export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   const [isLocked, setIsLocked] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const touchHistory = useRef<{ x: number; y: number; time: number }[]>([]);
@@ -88,14 +105,11 @@ export function WaterLocker() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md animate-fade-in">
       <div className="max-w-md text-center">
-        <span className="text-5xl animate-bounce" role="img" aria-label="Rain">
+        <span className="text-5xl animate-bounce" role="img" aria-label={copy.rainAlt}>
           🌧️
         </span>
-        <h2 className="mt-6 text-2xl font-bold tracking-tight">Screen locked — water detected</h2>
-        <p className="mt-3 text-base text-muted">
-          We&apos;re ignoring random taps from water on the screen. Hold to unlock once it&apos;s
-          dry.
-        </p>
+        <h2 className="mt-6 text-2xl font-bold tracking-tight">{copy.heading}</h2>
+        <p className="mt-3 text-base text-muted">{copy.body}</p>
 
         <div className="mt-8 flex flex-col items-center gap-4">
           <button
@@ -125,15 +139,15 @@ export function WaterLocker() {
               style={{ transform: `scaleY(${holdProgress / 100})` }}
             />
             <span className="relative z-10 text-xs text-center font-bold">
-              HOLD
+              {copy.holdLine1}
               <br />
-              2s
+              {copy.holdLine2}
             </span>
           </button>
           <p className="text-xs font-semibold text-primary uppercase tracking-wider">
             {holdProgress > 0
-              ? `Unlocking... ${Math.round(holdProgress)}%`
-              : "Hold button to unlock"}
+              ? fill(copy.unlockingProgress, { percent: Math.round(holdProgress) })
+              : copy.holdToUnlock}
           </p>
         </div>
       </div>

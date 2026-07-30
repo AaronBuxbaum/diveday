@@ -2,6 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
@@ -12,6 +13,7 @@ export function DetailsSection({
   tripDiveList,
   startWall,
   endWall,
+  locale,
 }: {
   action: (formData: FormData) => void;
   trip: Trip;
@@ -19,7 +21,9 @@ export function DetailsSection({
   tripDiveList: TripDiveList;
   startWall: WallTime;
   endWall: WallTime;
+  locale: string;
 }) {
+  const t = staffTranslator(locale);
   return (
     <section className="mt-10">
       <h2 className="text-lg font-semibold">Details</h2>
@@ -53,6 +57,25 @@ export function DetailsSection({
             diveSiteId: dive.diveSiteId,
             description: dive.description,
           }))}
+          copy={{
+            heading: t("shared.tripDiveFields.heading"),
+            description: t("shared.tripDiveFields.description"),
+            twoTankTrip: t("shared.tripDiveFields.twoTankTrip"),
+            diveCountTrip: t("shared.tripDiveFields.diveCountTrip"),
+            numberOfDivesLabel: t("shared.tripDiveFields.numberOfDivesLabel"),
+            diveOptionOne: t("shared.tripDiveFields.diveOptionOne"),
+            diveOptionOther: t("shared.tripDiveFields.diveOptionOther"),
+            diveLegend: t("shared.tripDiveFields.diveLegend"),
+            nameLabel: t("shared.tripDiveFields.nameLabel"),
+            optionalHint: t("shared.tripDiveFields.optionalHint"),
+            namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),
+            namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
+            diveBriefingLabel: t("shared.tripDiveFields.diveBriefingLabel"),
+            noSavedBriefing: t("shared.tripDiveFields.noSavedBriefing"),
+            diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
+            detailsPlaceholder: t("shared.tripDiveFields.detailsPlaceholder"),
+            footerNote: t("shared.tripDiveFields.footerNote"),
+          }}
         />
         <FieldGrid columns={1} className="gap-x-5 gap-y-5 sm:grid-cols-5">
           <Field label="Date">

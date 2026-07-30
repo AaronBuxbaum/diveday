@@ -196,6 +196,7 @@ export default async function ManageTripPage({
           tripDiveList={tripDiveList}
           startWall={startWall}
           endWall={endWall}
+          locale={locale}
         />
       ) : null}
 

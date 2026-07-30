@@ -2,11 +2,37 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DepartureBoard } from "./DepartureBoard";
+import { DepartureBoard, type DepartureBoardCopy } from "./DepartureBoard";
 
 afterEach(() => {
   cleanup();
 });
+
+const COPY: DepartureBoardCopy = {
+  crewingBadge: "You’re crewing",
+  courseSession: "Course session · {title}",
+  bookedOfCapacity: "{booked} of {capacity} booked",
+  boarding: "Boarding",
+  openGuests: "Open guests",
+  crewDropZoneAria: "Crew assignments drop zone",
+  assignCrewMemberAria: "Assign crew member to {title}",
+  assignedCrewHeading: "Assigned Crew (drag staff here to assign)",
+  assignCrewOption: "Assign crew…",
+  unassignAria: "Unassign {name}",
+  noCrewAssigned: "No crew assigned. Drag staff from above here.",
+  countReady: "Ready",
+  countBlocked: "Blocked",
+  countBoarded: "Boarded",
+  blockedWarningOne: "{count} diver cannot board yet — they are in the list below.",
+  blockedWarningOther: "{count} divers cannot board yet — they are in the list below.",
+  noneBooked: "No one’s booked yet — share the trip page and they’ll show up here.",
+  everyoneAboard: "Everyone’s aboard.",
+  clearToBoard: "Everyone aboard this trip is clear to board.",
+  sailingToday: "Sailing today",
+  sailingTodaySubtitle:
+    "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
+  dragStaffLabel: "Drag staff to assign:",
+};
 
 describe("DepartureBoard Drag and Drop Crew Assign", () => {
   const departures = [
@@ -40,6 +66,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
+        copy={COPY}
       />,
     );
 
@@ -57,6 +84,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
+        copy={COPY}
       />,
     );
 
@@ -92,6 +120,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
+        copy={COPY}
       />,
     );
 
@@ -119,6 +148,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
+        copy={COPY}
       />,
     );
 
@@ -149,6 +179,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
+        copy={COPY}
       />,
     );
 
@@ -178,6 +209,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
+        copy={COPY}
       />,
     );
 

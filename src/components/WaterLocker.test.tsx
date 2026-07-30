@@ -2,21 +2,31 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WaterLocker } from "./WaterLocker";
+import { WaterLocker, type WaterLockerCopy } from "./WaterLocker";
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
 
+const COPY: WaterLockerCopy = {
+  rainAlt: "Rain",
+  heading: "Screen locked — water detected",
+  body: "We're ignoring random taps from water on the screen. Hold to unlock once it's dry.",
+  holdLine1: "HOLD",
+  holdLine2: "2s",
+  unlockingProgress: "Unlocking... {percent}%",
+  holdToUnlock: "Hold button to unlock",
+};
+
 describe("WaterLocker", () => {
   it("renders null by default when not locked", () => {
-    const { container } = render(<WaterLocker />);
+    const { container } = render(<WaterLocker copy={COPY} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("activates the lock screen on multi-touch anomalies (touches > 2)", () => {
-    render(<WaterLocker />);
+    render(<WaterLocker copy={COPY} />);
 
     const touchEvent = new TouchEvent("touchstart", {
       touches: [
@@ -34,7 +44,7 @@ describe("WaterLocker", () => {
   });
 
   it("cancels the anomalous touch before it can trigger the underlying page", () => {
-    render(<WaterLocker />);
+    render(<WaterLocker copy={COPY} />);
 
     const touchEvent = new TouchEvent("touchstart", {
       cancelable: true,
@@ -52,7 +62,7 @@ describe("WaterLocker", () => {
 
   it("activates the lock screen on fast consecutive touches at separate coordinates", () => {
     vi.useFakeTimers();
-    render(<WaterLocker />);
+    render(<WaterLocker copy={COPY} />);
 
     act(() => {
       window.dispatchEvent(
@@ -80,7 +90,7 @@ describe("WaterLocker", () => {
 
   it("unlocks when the hold button is pressed and held for 2 seconds", () => {
     vi.useFakeTimers();
-    render(<WaterLocker />);
+    render(<WaterLocker copy={COPY} />);
 
     act(() => {
       window.dispatchEvent(
@@ -116,7 +126,7 @@ describe("WaterLocker", () => {
 
   it("unlocks when the hold button is activated with the keyboard", () => {
     vi.useFakeTimers();
-    render(<WaterLocker />);
+    render(<WaterLocker copy={COPY} />);
 
     act(() => {
       window.dispatchEvent(

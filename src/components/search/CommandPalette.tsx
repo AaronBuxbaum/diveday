@@ -9,17 +9,25 @@ import type { SearchResults } from "@/db/search";
 type PaletteItem = { key: string; label: string; detail?: string; href: string };
 type PaletteGroup = { heading: string; items: PaletteItem[] };
 
-const BASE_GO_TO: { label: string; suffix: string }[] = [
-  { label: "Today", suffix: "" },
-  { label: "Blockers", suffix: "/blockers" },
-  { label: "Schedule", suffix: "/schedule" },
-  { label: "Divers", suffix: "/divers" },
-  { label: "Settings", suffix: "/settings" },
-];
-
-const WAIVERS_GO_TO = { label: "Waivers", suffix: "/waivers" };
-
 const EMPTY: SearchResults = { divers: [], trips: [] };
+
+export type CommandPaletteCopy = {
+  search: string;
+  comboboxAriaLabel: string;
+  placeholder: string;
+  emptyShort: string;
+  emptyNoMatches: string;
+  groupDivers: string;
+  groupTrips: string;
+  groupGoTo: string;
+  goToToday: string;
+  goToBlockers: string;
+  goToSchedule: string;
+  goToDivers: string;
+  goToSettings: string;
+  goToWaivers: string;
+  goToBoarding: string;
+};
 
 /**
  * Global search for the front desk: "pull up Priya" without navigating to a
@@ -32,10 +40,12 @@ export function CommandPalette({
   shopSlug,
   boatBoardingHref,
   canManageWaivers,
+  copy,
 }: {
   shopSlug: string;
   boatBoardingHref?: string;
   canManageWaivers: boolean;
+  copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
   const listId = useId();
@@ -93,9 +103,18 @@ export function CommandPalette({
     const q = query.trim().toLowerCase();
     const goto: PaletteItem[] = [];
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
-      goto.push({ key: "goto:boarding", label: "Boarding — today's boat", href: boatBoardingHref });
+      goto.push({ key: "goto:boarding", label: copy.goToBoarding, href: boatBoardingHref });
     }
-    const goTo = canManageWaivers ? [...BASE_GO_TO, WAIVERS_GO_TO] : BASE_GO_TO;
+    const baseGoTo: { label: string; suffix: string }[] = [
+      { label: copy.goToToday, suffix: "" },
+      { label: copy.goToBlockers, suffix: "/blockers" },
+      { label: copy.goToSchedule, suffix: "/schedule" },
+      { label: copy.goToDivers, suffix: "/divers" },
+      { label: copy.goToSettings, suffix: "/settings" },
+    ];
+    const goTo = canManageWaivers
+      ? [...baseGoTo, { label: copy.goToWaivers, suffix: "/waivers" }]
+      : baseGoTo;
     for (const entry of goTo) {
       if (q === "" || entry.label.toLowerCase().includes(q)) {
         goto.push({
@@ -108,7 +127,7 @@ export function CommandPalette({
     const out: PaletteGroup[] = [];
     if (results.divers.length > 0) {
       out.push({
-        heading: "Divers",
+        heading: copy.groupDivers,
         items: results.divers.map((diver) => ({
           key: `diver:${diver.id}`,
           label: diver.fullName,
@@ -119,7 +138,7 @@ export function CommandPalette({
     }
     if (results.trips.length > 0) {
       out.push({
-        heading: "Trips",
+        heading: copy.groupTrips,
         items: results.trips.map((trip) => ({
           key: `trip:${trip.id}`,
           label: trip.title,
@@ -128,9 +147,9 @@ export function CommandPalette({
         })),
       });
     }
-    if (goto.length > 0) out.push({ heading: "Go to", items: goto });
+    if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
     return out;
-  }, [results, query, boatBoardingHref, root, canManageWaivers]);
+  }, [results, query, boatBoardingHref, root, canManageWaivers, copy]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
@@ -172,7 +191,7 @@ export function CommandPalette({
         type="button"
         onClick={() => setOpen(true)}
         aria-keyshortcuts="Meta+K Control+K"
-        aria-label="Search"
+        aria-label={copy.search}
         className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
       >
         <svg
@@ -188,7 +207,7 @@ export function CommandPalette({
           <circle cx="11" cy="11" r="7" />
           <path d="m21 21-4.3-4.3" />
         </svg>
-        <span className="hidden sm:inline">Search</span>
+        <span className="hidden sm:inline">{copy.search}</span>
         <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
           ⌘K
         </kbd>
@@ -217,9 +236,9 @@ export function CommandPalette({
                   aria-expanded="true"
                   aria-controls={listId}
                   aria-activedescendant={activeKey ? `${listId}-${activeKey}` : undefined}
-                  aria-label="Search divers, trips, and pages"
+                  aria-label={copy.comboboxAriaLabel}
                   autoComplete="off"
-                  placeholder="Search divers, trips, or jump to a page…"
+                  placeholder={copy.placeholder}
                   value={query}
                   onChange={(event) => {
                     setQuery(event.target.value);
@@ -231,9 +250,7 @@ export function CommandPalette({
                 <div id={listId} role="listbox" className="max-h-[60vh] overflow-y-auto py-2">
                   {flat.length === 0 ? (
                     <p className="px-5 py-6 text-center text-sm text-muted">
-                      {query.trim().length < 2
-                        ? "Type to search people and trips, or jump to a page."
-                        : "No matches. Try a name, email, or trip title."}
+                      {query.trim().length < 2 ? copy.emptyShort : copy.emptyNoMatches}
                     </p>
                   ) : (
                     groups.map((group) => (

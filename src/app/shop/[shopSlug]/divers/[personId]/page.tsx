@@ -37,6 +37,7 @@ export default async function DiverDetailPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
   if (!shop || !diver) notFound();
   // Refunds and diver deletion are owner/manager only (H-14, ADR
@@ -65,6 +66,8 @@ export default async function DiverDetailPage({
           message={staffTranslator(locale)("divers.notices.cardRemovedToast")}
           action={restoreCardAction.bind(null, shopSlug, personId)}
           fields={{ certificationId: undo, cardType }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
         <NoticeBanner notice={notice} locale={locale} />

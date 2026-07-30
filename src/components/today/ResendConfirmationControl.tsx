@@ -6,7 +6,18 @@ import { IDLE_RESEND_STATE, type ResendState } from "@/app/actions/notification-
 import { resendConfirmationAction } from "@/app/actions/notifications";
 import { buttonClass } from "@/components/ui/button";
 
-function ResendButton({ label }: { label: string }) {
+export type ResendConfirmationCopy = {
+  resending: string;
+  confirmationResent: string;
+  errors: {
+    invalid: string;
+    noEmail: string;
+    notConfigured: string;
+    failed: string;
+  };
+};
+
+function ResendButton({ label, resending }: { label: string; resending: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -15,20 +26,19 @@ function ResendButton({ label }: { label: string }) {
       aria-busy={pending}
       className={buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })}
     >
-      {pending ? "Resending…" : label}
+      {pending ? resending : label}
     </button>
   );
 }
 
-const ERROR_COPY: Record<Extract<ResendState, { status: "error" }>["reason"], string> = {
-  invalid: "That booking could not be found — open the trip to check it.",
-  no_email: "No email on file — add one from the roster, then resend.",
-  not_configured: "Email isn’t configured for this shop yet.",
-  failed: "Still couldn’t deliver it — open the trip to check the booking.",
-};
-
-function ResultNotice({ state }: { state: ResendState }) {
+function ResultNotice({ state, copy }: { state: ResendState; copy: ResendConfirmationCopy }) {
   if (state.status === "idle") return null;
+  const errorCopy: Record<Extract<ResendState, { status: "error" }>["reason"], string> = {
+    invalid: copy.errors.invalid,
+    no_email: copy.errors.noEmail,
+    not_configured: copy.errors.notConfigured,
+    failed: copy.errors.failed,
+  };
   return (
     <p
       role="status"
@@ -36,10 +46,11 @@ function ResultNotice({ state }: { state: ResendState }) {
     >
       {state.status === "sent" ? (
         <>
-          <span aria-hidden="true">✓ </span>Confirmation resent.
+          <span aria-hidden="true">✓ </span>
+          {copy.confirmationResent}
         </>
       ) : (
-        ERROR_COPY[state.reason]
+        errorCopy[state.reason]
       )}
     </p>
   );
@@ -54,10 +65,12 @@ export function ResendConfirmationControl({
   shopSlug,
   bookingId,
   label,
+  copy,
 }: {
   shopSlug: string;
   bookingId: string;
   label: string;
+  copy: ResendConfirmationCopy;
 }) {
   const [state, formAction] = useActionState(
     resendConfirmationAction.bind(null, shopSlug),
@@ -68,9 +81,9 @@ export function ResendConfirmationControl({
     <div className="sm:text-right">
       <form action={formAction} className="flex sm:inline-flex">
         <input type="hidden" name="bookingId" value={bookingId} />
-        <ResendButton label={label} />
+        <ResendButton label={label} resending={copy.resending} />
       </form>
-      <ResultNotice state={state} />
+      <ResultNotice state={state} copy={copy} />
     </div>
   );
 }

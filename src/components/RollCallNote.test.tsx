@@ -3,9 +3,28 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readNoteDraft, writeNoteDraft } from "@/lib/roll-call-note-draft";
-import { RollCallNote } from "./RollCallNote";
+import { RollCallNote, type RollCallNoteCopy } from "./RollCallNote";
 
 const BOOKING = "00000000-0000-4000-8000-000000000001";
+
+const COPY: RollCallNoteCopy = {
+  optionalNote: "Optional note",
+  message: {
+    manualOnly: "Saved on this device — added to the roll-call record when you set a status.",
+    saving: "Saving…",
+    saved: "Saved to this roll-call record.",
+    queued: "Saved on this device — will send when you’re back online.",
+    error: "Couldn’t save to the record — still saved on this device. Try again.",
+    idle: "Saves automatically — on this device and to the roll-call record.",
+  },
+  statusPill: {
+    saving: "Saving…",
+    saved: "Saved",
+    queued: "Queued offline",
+    error: "Sync error",
+  },
+  notePlaceholder: "Late to the boat, medical question, kit issue…",
+};
 
 function setOnline(online: boolean) {
   Object.defineProperty(navigator, "onLine", { configurable: true, value: online });
@@ -27,6 +46,7 @@ function renderNote(props: Partial<Parameters<typeof RollCallNote>[0]> = {}) {
       initialNote=""
       canAutoSave
       saveNote={saveNote}
+      copy={COPY}
       {...props}
     />,
   );
@@ -60,6 +80,7 @@ describe("RollCallNote", () => {
         initialNote=""
         canAutoSave
         saveNote={saveNote}
+        copy={COPY}
       />,
     );
 

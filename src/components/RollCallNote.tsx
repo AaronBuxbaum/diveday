@@ -12,6 +12,25 @@ type SaveNote = (
 
 type Status = "idle" | "saving" | "saved" | "queued" | "error";
 
+export type RollCallNoteCopy = {
+  optionalNote: string;
+  message: {
+    manualOnly: string;
+    saving: string;
+    saved: string;
+    queued: string;
+    error: string;
+    idle: string;
+  };
+  statusPill: {
+    saving: string;
+    saved: string;
+    queued: string;
+    error: string;
+  };
+  notePlaceholder: string;
+};
+
 function isOnline(): boolean {
   return typeof navigator === "undefined" ? true : navigator.onLine !== false;
 }
@@ -35,6 +54,7 @@ export function RollCallNote({
   initialNote,
   canAutoSave,
   saveNote,
+  copy,
 }: {
   bookingId: string;
   checkpoint: string;
@@ -42,6 +62,7 @@ export function RollCallNote({
   initialNote: string;
   canAutoSave: boolean;
   saveNote: SaveNote;
+  copy: RollCallNoteCopy;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,22 +140,22 @@ export function RollCallNote({
   }
 
   const message = !canAutoSave
-    ? "Saved on this device — added to the roll-call record when you set a status."
+    ? copy.message.manualOnly
     : status === "saving"
-      ? "Saving…"
+      ? copy.message.saving
       : status === "saved"
-        ? "Saved to this roll-call record."
+        ? copy.message.saved
         : status === "queued"
-          ? "Saved on this device — will send when you’re back online."
+          ? copy.message.queued
           : status === "error"
-            ? "Couldn’t save to the record — still saved on this device. Try again."
-            : "Saves automatically — on this device and to the roll-call record.";
+            ? copy.message.error
+            : copy.message.idle;
 
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between">
         <label htmlFor={`roll-call-note-${bookingId}`} className="text-sm font-semibold">
-          Optional note
+          {copy.optionalNote}
         </label>
         {canAutoSave && (
           <div className="flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
@@ -154,13 +175,13 @@ export function RollCallNote({
             />
             <span>
               {status === "saving"
-                ? "Saving…"
+                ? copy.statusPill.saving
                 : status === "saved"
-                  ? "Saved"
+                  ? copy.statusPill.saved
                   : status === "queued"
-                    ? "Queued offline"
+                    ? copy.statusPill.queued
                     : status === "error"
-                      ? "Sync error"
+                      ? copy.statusPill.error
                       : ""}
             </span>
           </div>
@@ -173,7 +194,7 @@ export function RollCallNote({
         form={canAutoSave ? undefined : formId}
         defaultValue={initialNote}
         maxLength={300}
-        placeholder="Late to the boat, medical question, kit issue…"
+        placeholder={copy.notePlaceholder}
         className={`${controlClass} mt-1`}
         onChange={onChange}
         onBlur={

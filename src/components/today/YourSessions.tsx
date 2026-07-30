@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import type { CrewedSessionSummary } from "@/db/today";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 
 /**
@@ -21,14 +22,13 @@ export function YourSessions({
   locale: string;
 }) {
   if (sessions.length === 0) return null;
+  const t = staffTranslator(locale);
   return (
     <section aria-labelledby="your-sessions-heading" className="mb-10">
       <h2 id="your-sessions-heading" className="text-lg font-semibold">
-        Your sessions
+        {t("shared.today.yourSessions.heading")}
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        The classes you teach this week, with where each student stands.
-      </p>
+      <p className="mt-1 text-sm text-muted">{t("shared.today.yourSessions.subtitle")}</p>
       <ul className="mt-4 flex flex-col gap-3">
         {sessions.map((session) => (
           <li
@@ -45,16 +45,16 @@ export function YourSessions({
                 {formatTime(session.startsAt, locale, timeZone)}
               </p>
               <p className="mt-2 text-sm tabular-nums">
-                {session.booked} {session.booked === 1 ? "student" : "students"}
+                {t("shared.today.yourSessions.studentsCount", { count: session.booked })}
                 {session.booked > 0 ? (
                   <>
                     {" · "}
                     <span className={session.ready > 0 ? "font-medium text-success" : ""}>
-                      {session.ready} ready
+                      {t("shared.today.yourSessions.readyCount", { count: session.ready })}
                     </span>
                     {" · "}
                     <span className={session.blocked > 0 ? "font-semibold text-danger" : ""}>
-                      {session.blocked} blocked
+                      {t("shared.today.yourSessions.blockedCount", { count: session.blocked })}
                     </span>
                   </>
                 ) : null}
@@ -65,7 +65,7 @@ export function YourSessions({
                 href={`/shop/${shopSlug}/trips/${session.tripId}`}
                 className={buttonClass({ variant: "secondary" })}
               >
-                Open roster
+                {t("shared.today.yourSessions.openRoster")}
               </Link>
             </div>
           </li>
