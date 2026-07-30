@@ -7,10 +7,11 @@ import process from "node:process";
  *
  * `pnpm check:locale` already guarantees that whatever *has* been extracted
  * into a message bundle is translated into every locale. It cannot see the much
- * larger problem: copy that never made it into a bundle at all. Roughly 700
- * English strings are still compiled into `src/app` and `src/components`, and
- * extracting them is a long mechanical job. Blocking on finishing it would mean
- * either never landing the rule or landing a rule nobody can satisfy.
+ * larger problem: copy that never made it into a bundle at all. Around a
+ * thousand English strings are still compiled into `src/app` and
+ * `src/components` — `copy-baseline.json` holds the exact, current count —
+ * and extracting them is a long mechanical job. Blocking on finishing it would
+ * mean either never landing the rule or landing a rule nobody can satisfy.
  *
  * So this is a **ratchet**, not a gate. `copy-baseline.json` records how much
  * un-extracted copy each file still has. The build fails if a file grows, if a
@@ -236,20 +237,47 @@ const baselineCounts = Object.fromEntries(
   Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
 );
 
-if (process.argv.includes("--write")) {
+/**
+ * `--absorb` is `--write` for one specific situation: merging a branch that was
+ * authored before this check existed on it. Copy that landed on `main` in
+ * parallel is pre-existing debt from the ratchet's point of view, not new debt
+ * — but `--write` cannot tell the two apart, and correctly refuses both.
+ *
+ * So this exists, and it is deliberately loud rather than convenient: it prints
+ * every increase it is about to accept, so the growth appears in the run log
+ * and the reviewer sees it in the diff. It is not a way to land new copy. If
+ * you are reaching for it and you did not just merge, extract the strings.
+ *
+ * Expect this to stop being needed once every branch carries the check.
+ */
+const absorbing = process.argv.includes("--absorb");
+
+if (process.argv.includes("--write") || absorbing) {
   const grew = [...counts.entries()].filter(
     ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
   );
   const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
   if (grew.length > 0 || added.length > 0) {
-    console.error(
-      "Refusing to write a baseline that grows. The ratchet only turns one way — extract the copy instead:",
-    );
-    for (const [file, count] of grew) {
-      console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
+    if (!absorbing) {
+      console.error(
+        "Refusing to write a baseline that grows. The ratchet only turns one way — extract the copy instead:",
+      );
+      for (const [file, count] of grew) {
+        console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
+      }
+      for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
+      console.error(
+        "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
+      );
+      process.exit(1);
     }
-    for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
-    process.exit(1);
+    console.warn("Absorbing copy that grew — this must be merged-in work, not new copy:");
+    for (const [file, count] of grew) {
+      console.warn(
+        `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
+      );
+    }
+    for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
   }
   const next = {
     "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",

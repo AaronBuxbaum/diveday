@@ -102,3 +102,18 @@ everything else, because the count has to be honest.
 | `baseline allows N` | You added copy to a legacy file. Extract the new strings. |
 | `down to N from M` | You improved a file. Run `--write` to bank it. |
 | `fully extracted or gone` | Run `--write` to drop the stale entry. |
+
+### After merging `main`
+
+A merge can raise a count without you writing a word of copy — another branch
+edited a file that is still in the baseline. `--write` refuses that growth (it
+cannot tell whose copy it is), so use:
+
+```bash
+node scripts/check-copy.mjs --absorb
+```
+
+It writes the baseline and **prints every increase it accepted**, so the growth
+shows up in the run log and as a number in the diff. Only reach for it
+immediately after a merge; if you did not just merge, the growth is yours and
+the answer is to extract it.

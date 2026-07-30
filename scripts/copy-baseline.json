@@ -4,7 +4,7 @@
   "src/app/forgot-password/page.tsx": 5,
   "src/app/global-error.tsx": 2,
   "src/app/invite/[token]/page.tsx": 7,
-  "src/app/onboard/page.tsx": 18,
+  "src/app/onboard/page.tsx": 19,
   "src/app/opengraph-image.tsx": 3,
   "src/app/page.tsx": 30,
   "src/app/pricing/page.tsx": 12,

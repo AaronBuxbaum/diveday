@@ -32,7 +32,7 @@ adapters and must not introduce unique requirements.
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
 | `pnpm check:repo` | environment, architecture/feature-module, clock, ADR, doc-link, locale-coverage, hard-coded-copy, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
-| `pnpm check:copy` | find hard-coded user-facing copy; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction |
+| `pnpm check:copy` | find hard-coded user-facing copy; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction, `--absorb` records growth arriving from a merge |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
