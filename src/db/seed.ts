@@ -851,6 +851,10 @@ export async function seedDemoSchedule(
     { index: 24, specialty: "night", status: "verified" },
     { index: 25, specialty: "night", status: "verified" },
     { index: 29, specialty: "night", status: "pending" },
+    // Cold-water visitors — Drysuit never gates a Key Largo trip, but a
+    // traveling diver's card still shows up on their profile.
+    { index: 46, specialty: "drysuit", status: "verified" },
+    { index: 70, specialty: "drysuit", status: "verified" },
   ];
   const extendedSpecialtyRows = extendedSpecialtyPlan
     .map((plan) => {
@@ -2954,7 +2958,9 @@ async function seedFrontDesk(
   // Keep the export useful on a fresh demo: these are the small operational
   // records that otherwise tend to remain empty because they are created by
   // later staff actions in a real shop.
-  const listPeople = customers.slice(9, 13).filter((person) => person !== undefined);
+  const listPeople = [9, 10, 11, 12, 43, 45, 47, 49, 51]
+    .map((index) => customers[index])
+    .filter((person) => person !== undefined);
   if (includeHistoryData && listPeople.length > 0) {
     await db
       .insert(lastMinuteListEntries)
@@ -3127,6 +3133,38 @@ async function seedRentalFit(
     [7, { bcd: "XL", wetsuit: "XL", boot: "12", fin: "L", weights: "10 kg", needsStaffFit: true }],
     // Sizes half-recorded, which is how a fit book actually looks.
     [12, { bcd: null, wetsuit: "M", boot: "7", fin: "M" }],
+    // The extended roster: the fit book a shop actually keeps after a few
+    // seasons — most divers fully recorded, a few with their own regulator,
+    // one more out-of-stock size, and a couple still half-filled in.
+    [18, { bcd: "L", wetsuit: "L", boot: "10", fin: "L", weights: "9 kg" }],
+    [19, { bcd: "M", wetsuit: "M", boot: "9", fin: "M", weights: "7 kg" }],
+    [20, { bcd: "L", wetsuit: "L", boot: "11", fin: "L", weights: "8 kg", ownsRegulator: true }],
+    [21, { bcd: "S", wetsuit: "S", boot: "6", fin: "S", weights: "5 kg" }],
+    [24, { bcd: "M", wetsuit: "M", boot: "8", fin: "M", weights: "6 kg" }],
+    [25, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "6 kg" }],
+    [29, { bcd: "L", wetsuit: "L", boot: "10", fin: "L", weights: "8 kg" }],
+    [31, { bcd: "M", wetsuit: "M", boot: "9", fin: "M", weights: "6 kg" }],
+    [33, { bcd: "L", wetsuit: "L", boot: "11", fin: "L", weights: "9 kg", ownsRegulator: true }],
+    [35, { bcd: "M", wetsuit: "M", boot: "8", fin: "M", weights: "6 kg" }],
+    [40, { bcd: "L", wetsuit: "L", boot: "10", fin: "L", weights: "8 kg" }],
+    // Another out-of-stock size — the second XL the prep list flags today.
+    [
+      42,
+      { bcd: "XL", wetsuit: "XL", boot: "13", fin: "XL", weights: "11 kg", needsStaffFit: true },
+    ],
+    [44, { bcd: "S", wetsuit: "S", boot: "6", fin: "S", weights: "5 kg" }],
+    [46, { bcd: "L", wetsuit: "L", boot: "10", fin: "L", weights: "8 kg" }],
+    [52, { bcd: "M", wetsuit: "M", boot: "9", fin: "M", weights: "7 kg" }],
+    [55, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
+    [61, { bcd: "M", wetsuit: "M", boot: "8", fin: "M", weights: "6 kg", ownsRegulator: true }],
+    [63, { bcd: "L", wetsuit: "L", boot: "11", fin: "L", weights: "9 kg" }],
+    [64, { bcd: "M", wetsuit: "M", boot: "9", fin: "M", weights: "6 kg" }],
+    [70, { bcd: "L", wetsuit: "L", boot: "10", fin: "L", weights: "8 kg" }],
+    [74, { bcd: "M", wetsuit: "M", boot: "9", fin: "M", weights: "7 kg" }],
+    [80, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
+    // Sizes half-recorded — a second version of the gap above.
+    [26, { bcd: "M", wetsuit: null, boot: "8", fin: "M" }],
+    [59, { bcd: null, wetsuit: "S", boot: "6", fin: "S" }],
   ];
   const profiles = fits
     .map(([index, fit]) => {
