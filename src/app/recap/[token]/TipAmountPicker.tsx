@@ -16,9 +16,15 @@ import { useId, useState } from "react";
 export function TipAmountPicker({
   presets,
   defaultPreset,
+  legend,
+  otherPlaceholder,
+  otherAriaLabel,
 }: {
   presets: number[];
   defaultPreset: number;
+  legend: string;
+  otherPlaceholder: string;
+  otherAriaLabel: string;
 }) {
   const [selected, setSelected] = useState<number | "custom">(defaultPreset);
   const [custom, setCustom] = useState("");
@@ -26,7 +32,7 @@ export function TipAmountPicker({
 
   return (
     <fieldset className="flex flex-wrap items-center gap-2">
-      <legend className="sr-only">Tip amount</legend>
+      <legend className="sr-only">{legend}</legend>
       {presets.map((usd) => (
         <label
           key={usd}
@@ -58,8 +64,8 @@ export function TipAmountPicker({
           min={1}
           max={500}
           step={1}
-          placeholder="Other"
-          aria-label="Other tip amount, in dollars"
+          placeholder={otherPlaceholder}
+          aria-label={otherAriaLabel}
           value={custom}
           onChange={(event) => {
             setCustom(event.target.value);

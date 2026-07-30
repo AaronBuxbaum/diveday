@@ -2,7 +2,19 @@
 
 import type { RecapSite } from "@/db/recap";
 
-export function RecapMap({ sites }: { sites: RecapSite[] }) {
+export function RecapMap({
+  sites,
+  copy,
+}: {
+  sites: RecapSite[];
+  copy: {
+    mapAriaLabel: string;
+    charterPath: string;
+    boatTrack: string;
+    theDock: string;
+    reconstructedPath: string;
+  };
+}) {
   if (sites.length === 0) return null;
 
   // A geographic map must never imply a location that the shop did not save.
@@ -57,7 +69,7 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="h-auto w-full select-none rounded-xl bg-surface"
-        aria-label="Stylized recap navigation map of your dive sites"
+        aria-label={copy.mapAriaLabel}
       >
         <pattern id="recap-map-grid" width="40" height="40" patternUnits="userSpaceOnUse">
           <path
@@ -112,7 +124,7 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
             opacity="0.9"
           />
           <text x="8" y="15" className="fill-foreground text-[8px] font-bold tracking-wider">
-            CHARTER PATH
+            {copy.charterPath}
           </text>
           <line
             x1="8"
@@ -124,7 +136,7 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
             strokeDasharray="4,3"
           />
           <text x="42" y="30" className="fill-muted text-[8px]">
-            Boat Track
+            {copy.boatTrack}
           </text>
         </g>
 
@@ -149,7 +161,7 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
             strokeWidth="3"
             paintOrder="stroke"
           >
-            The Dock
+            {copy.theDock}
           </text>
         </g>
 
@@ -173,10 +185,7 @@ export function RecapMap({ sites }: { sites: RecapSite[] }) {
           );
         })}
       </svg>
-      <div className="p-2 text-center text-xs text-muted">
-        📍 Reconstructed boat path visiting {sites.length} dive{" "}
-        {sites.length === 1 ? "site" : "sites"}
-      </div>
+      <div className="p-2 text-center text-xs text-muted">{copy.reconstructedPath}</div>
     </div>
   );
 }

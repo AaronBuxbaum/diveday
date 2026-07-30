@@ -251,7 +251,15 @@
     "addToMyRecap": "Añadir a mi resumen",
     "buddyBody": "Bucear es mejor con alguien conocido. Reserva plaza en la próxima salida y tráetelo.",
     "seeWhatsNext": "Ver la próxima salida",
-    "messageTheShop": "Escribir al centro"
+    "messageTheShop": "Escribir al centro",
+    "tipAmountLegend": "Cantidad de propina",
+    "otherTipPlaceholder": "Otra",
+    "otherTipAriaLabel": "Otra cantidad de propina, en dólares",
+    "mapAriaLabel": "Mapa estilizado del resumen de navegación de tus puntos de buceo",
+    "charterPath": "RUTA DE LA SALIDA",
+    "boatTrack": "Trayecto del barco",
+    "theDock": "El muelle",
+    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# punto de buceo} other {# puntos de buceo}}"
   },
   "ready": {
     "title": "Tu preparación para la salida",
@@ -309,7 +317,8 @@
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelSpot": "Cancelar mi plaza",
     "questionsPrefix": "¿Dudas? Escribe a {shop}",
-    "questionsSuffix": "Ven exactamente lo que hay en esta página."
+    "questionsSuffix": "Ven exactamente lo que hay en esta página.",
+    "gearAndSetup": "Equipo y ajuste"
   },
   "waiver": {
     "title": "Completa tu exención de responsabilidad",
@@ -329,7 +338,18 @@
     "signedBody": "Firmado, guardado y fuera de tu cabeza. Nos vemos en el muelle — tu centro te avisará si hace falta algo más.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
     "sitesPeek": "Aquí tienes un avance de lo que vas a explorar en esta salida:",
-    "signing": "Firmando…"
+    "signing": "Firmando…",
+    "beforeDockTitle": "Un paso rápido antes del muelle",
+    "beforeDockDescription": "Esta exención privada lleva unos dos minutos. Puedes guardar tu progreso y volver a este enlace antes de que caduque.",
+    "progressSaved": "Tu progreso está guardado. Termina cuando quieras.",
+    "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día — opcional, pero es lo que tiene el equipo si pasa algo en el agua.",
+    "agreementCheckbox": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
+    "signatureNote": "Tu nombre escrito, tu conformidad y la hora de finalización se guardan con esta versión exacta de la exención.",
+    "saveForLater": "Guardar y terminar después",
+    "signButton": "Firmar exención",
+    "needHelp": "¿Necesitas ayuda?",
+    "returnToShop": "Volver al centro",
+    "returnToShopSuffix": "y contacta con tu centro de buceo."
   },
   "capability": {
     "waiverReceived": "Exención recibida",

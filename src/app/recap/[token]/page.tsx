@@ -65,14 +65,14 @@ function ConditionTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SiteCard({ site }: { site: RecapSite }) {
+function SiteCard({ site, lookForLabel }: { site: RecapSite; lookForLabel: string }) {
   return (
     <li className="rounded-xl border border-border bg-surface p-5">
       <h3 className="font-semibold">{site.name}</h3>
       {site.locationName ? <p className="mt-0.5 text-sm text-muted">{site.locationName}</p> : null}
       {site.marineLife ? (
         <p className="mt-2 text-base text-muted">
-          <span className="font-medium text-foreground">Look for:</span> {site.marineLife}
+          <span className="font-medium text-foreground">{lookForLabel}</span> {site.marineLife}
         </p>
       ) : null}
     </li>
@@ -279,7 +279,13 @@ export default async function DiveRecapPage({
                 {t("recap.tipAllGoes", { shop: shop.name })}
               </p>
               <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
-                <TipAmountPicker presets={TIP_PRESETS_USD} defaultPreset={TIP_PRESETS_USD[1]} />
+                <TipAmountPicker
+                  presets={TIP_PRESETS_USD}
+                  defaultPreset={TIP_PRESETS_USD[1]}
+                  legend={t("recap.tipAmountLegend")}
+                  otherPlaceholder={t("recap.otherTipPlaceholder")}
+                  otherAriaLabel={t("recap.otherTipAriaLabel")}
+                />
                 <div>
                   <SubmitButton
                     pendingLabel={t("booking.headingToPayment")}
@@ -306,10 +312,19 @@ export default async function DiveRecapPage({
       {sites.length ? (
         <section className="mt-8">
           <h2 className="text-lg font-semibold">{t("recap.whereYouDived")}</h2>
-          <RecapMap sites={sites} />
+          <RecapMap
+            sites={sites}
+            copy={{
+              mapAriaLabel: t("recap.mapAriaLabel"),
+              charterPath: t("recap.charterPath"),
+              boatTrack: t("recap.boatTrack"),
+              theDock: t("recap.theDock"),
+              reconstructedPath: t("recap.reconstructedPath", { count: sites.length }),
+            }}
+          />
           <ul className="mt-4 space-y-3">
             {sites.map((site) => (
-              <SiteCard key={site.name} site={site} />
+              <SiteCard key={site.name} site={site} lookForLabel={t("recap.lookFor")} />
             ))}
           </ul>
         </section>

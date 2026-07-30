@@ -251,7 +251,15 @@
     "addToMyRecap": "Add to my recap",
     "buddyBody": "Diving’s better with someone you know. Grab a spot on the next departure and bring them along.",
     "seeWhatsNext": "See what’s next",
-    "messageTheShop": "Message the shop"
+    "messageTheShop": "Message the shop",
+    "tipAmountLegend": "Tip amount",
+    "otherTipPlaceholder": "Other",
+    "otherTipAriaLabel": "Other tip amount, in dollars",
+    "mapAriaLabel": "Stylized recap navigation map of your dive sites",
+    "charterPath": "CHARTER PATH",
+    "boatTrack": "Boat Track",
+    "theDock": "The Dock",
+    "reconstructedPath": "📍 Reconstructed boat path visiting {count, plural, one {# dive site} other {# dive sites}}"
   },
   "ready": {
     "title": "Your trip readiness",
@@ -309,7 +317,8 @@
     "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
     "cancelSpot": "Cancel my spot",
     "questionsPrefix": "Questions? Reach out to {shop}",
-    "questionsSuffix": "They can see exactly what’s on this page."
+    "questionsSuffix": "They can see exactly what’s on this page.",
+    "gearAndSetup": "Gear and setup"
   },
   "waiver": {
     "title": "Complete your waiver",
@@ -329,7 +338,18 @@
     "signedBody": "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed.",
     "seeWhatsLeft": "See what’s left before you sail",
     "sitesPeek": "Here is a sneak peek at what you will explore on this charter:",
-    "signing": "Signing…"
+    "signing": "Signing…",
+    "beforeDockTitle": "A quick step before the dock",
+    "beforeDockDescription": "This private waiver takes about two minutes. You can save your place and come back on this link before it expires.",
+    "progressSaved": "Your progress is saved. Finish whenever you're ready.",
+    "emergencyContactDescription": "Someone we can reach for you on the day — optional, but it's what the crew has if anything happens on the water.",
+    "agreementCheckbox": "I have read this waiver, understand it, and agree to it.",
+    "signatureNote": "Your typed name, agreement, and completion time are saved with this exact version of the waiver.",
+    "saveForLater": "Save and finish later",
+    "signButton": "Sign waiver",
+    "needHelp": "Need help?",
+    "returnToShop": "Return to the shop",
+    "returnToShopSuffix": "and contact your dive shop."
   },
   "capability": {
     "waiverReceived": "Waiver received",

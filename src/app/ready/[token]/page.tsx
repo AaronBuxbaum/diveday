@@ -425,7 +425,7 @@ export default async function DiverReadinessPage({
             id="setup-heading"
             className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
           >
-            Gear and setup
+            {t("ready.gearAndSetup")}
           </h2>
           <RentalFitForm
             action={saveFitFromReady.bind(null, token)}

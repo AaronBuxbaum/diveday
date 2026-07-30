@@ -2,9 +2,17 @@
 
 import { useState } from "react";
 
+/**
+ * Every value here is a plain, already-composed string — never a function.
+ * This crosses from a Server Component into this Client Component, and React
+ * rejects a function prop at that boundary ("Functions cannot be passed
+ * directly to Client Components"). The caller interpolates card number,
+ * level, and photo-target into the ICU message server-side (so word order
+ * stays correct per locale) and hands down the finished sentence.
+ */
 export interface DigitalCardFlipCopy {
   diverLabel: string;
-  cardNumberPrefix: (id: string) => string;
+  cardNumberText: string;
   statusVerified: string;
   statusRefresherDue: string;
   statusPending: string;
@@ -12,13 +20,11 @@ export interface DigitalCardFlipCopy {
   certifiedByStaff: string;
   refresherDueVerify: string;
   awaitingVerification: string;
-  idPrefix: (id: string) => string;
+  idText: string;
   secureLabel: string;
   openFullSize: string;
-  tapToFlip: (target: string) => string;
-  uploadedPhoto: string;
-  securityDetails: string;
-  flipAriaLabel: (level: string) => string;
+  tapToFlipText: string;
+  flipAriaLabel: string;
   uploadedAlt: string;
 }
 
@@ -26,7 +32,6 @@ export function DigitalCardFlip({
   fullName,
   agencyLabel,
   levelLabel,
-  identifier,
   cardImageUrl,
   verificationStatus,
   copy,
@@ -34,7 +39,6 @@ export function DigitalCardFlip({
   fullName: string;
   agencyLabel: string;
   levelLabel: string;
-  identifier: string;
   cardImageUrl: string | null;
   verificationStatus: "pending" | "verified" | "expired";
   copy: DigitalCardFlipCopy;
@@ -54,7 +58,7 @@ export function DigitalCardFlip({
         className="relative block h-[200px] w-full max-w-[320px] cursor-pointer bg-transparent border-0 p-0 text-left"
         style={{ perspective: "1000px" }}
         onClick={() => setIsFlipped(!isFlipped)}
-        aria-label={copy.flipAriaLabel(levelLabel)}
+        aria-label={copy.flipAriaLabel}
       >
         <div
           className="relative h-full w-full transition-transform duration-500"
@@ -82,7 +86,7 @@ export function DigitalCardFlip({
               <p className="font-semibold text-base">{fullName}</p>
             </div>
             <div className="flex justify-between items-end border-t border-primary-foreground/20 pt-2 text-[10px] opacity-75">
-              <span>{copy.cardNumberPrefix(identifier)}</span>
+              <span>{copy.cardNumberText}</span>
               <span className="font-semibold">{statusLabel}</span>
             </div>
           </div>
@@ -116,7 +120,7 @@ export function DigitalCardFlip({
                   </p>
                 </div>
                 <div className="w-full flex justify-between items-center text-[8px] opacity-50">
-                  <span>{copy.idPrefix(identifier)}</span>
+                  <span>{copy.idText}</span>
                   <span>{copy.secureLabel}</span>
                 </div>
               </div>
@@ -134,9 +138,7 @@ export function DigitalCardFlip({
           {copy.openFullSize}
         </a>
       ) : null}
-      <p className="mt-2 text-xs text-muted text-center">
-        {copy.tapToFlip(cardImageUrl ? copy.uploadedPhoto : copy.securityDetails)}
-      </p>
+      <p className="mt-2 text-xs text-muted text-center">{copy.tapToFlipText}</p>
     </div>
   );
 }

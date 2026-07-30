@@ -10,7 +10,7 @@ afterEach(() => {
 
 const copy: DigitalCardFlipCopy = {
   diverLabel: "Diver",
-  cardNumberPrefix: (id) => `Card #: ${id}`,
+  cardNumberText: "Card #: PADI-OW-99887",
   statusVerified: "DIVEDAY VERIFIED",
   statusRefresherDue: "REFRESHER DUE",
   statusPending: "PENDING REVIEW",
@@ -18,13 +18,11 @@ const copy: DigitalCardFlipCopy = {
   certifiedByStaff: "Certified by staff",
   refresherDueVerify: "Refresher due — verify current status with the agency",
   awaitingVerification: "Awaiting staff verification",
-  idPrefix: (id) => `ID: ${id}`,
+  idText: "ID: PADI-OW-99887",
   secureLabel: "DIVEDAY SECURE",
   openFullSize: "Open full-size card photo ↗",
-  tapToFlip: (target) => `Tap the card to flip and view ${target}`,
-  uploadedPhoto: "the uploaded photo",
-  securityDetails: "security details",
-  flipAriaLabel: (level) => `Digital certification card for ${level}. Press to flip.`,
+  tapToFlipText: "Tap the card to flip and view the uploaded photo",
+  flipAriaLabel: "Digital certification card for Open Water Diver. Press to flip.",
   uploadedAlt: "Uploaded certification card",
 };
 
@@ -33,7 +31,6 @@ describe("DigitalCardFlip", () => {
     fullName: "Maya Álvarez",
     agencyLabel: "PADI",
     levelLabel: "Open Water Diver",
-    identifier: "PADI-OW-99887",
     cardImageUrl: "https://example.com/card.jpg",
     verificationStatus: "verified" as const,
     copy,

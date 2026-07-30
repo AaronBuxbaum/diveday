@@ -343,12 +343,9 @@ export default async function WaiverPage({
       <header>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
-          A quick step before the dock
+          {t("waiver.beforeDockTitle")}
         </h1>
-        <p className="mt-2 text-base text-muted">
-          This private waiver takes about two minutes. You can save your place and come back on this
-          link before it expires.
-        </p>
+        <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
       </header>
 
       {saved ? (
@@ -356,7 +353,7 @@ export default async function WaiverPage({
           role="status"
           className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
         >
-          Your progress is saved. Finish whenever you’re ready.
+          {t("waiver.progressSaved")}
         </p>
       ) : null}
       {errorText ? (
@@ -393,10 +390,7 @@ export default async function WaiverPage({
 
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-lg font-semibold">{t("waiver.emergencyContact")}</h2>
-          <p className="mt-1 text-sm text-muted">
-            Someone we can reach for you on the day — optional, but it’s what the crew has if
-            anything happens on the water.
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
           <FieldGrid columns={2} className="mt-4">
             <Field label={t("waiver.contactName")}>
               <input
@@ -442,12 +436,9 @@ export default async function WaiverPage({
               defaultChecked={record.draftAcknowledged}
               className="size-4 accent-primary"
             />
-            <span>I have read this waiver, understand it, and agree to it.</span>
+            <span>{t("waiver.agreementCheckbox")}</span>
           </label>
-          <p className="mt-3 text-sm text-muted">
-            Your typed name, agreement, and completion time are saved with this exact version of the
-            waiver.
-          </p>
+          <p className="mt-3 text-sm text-muted">{t("waiver.signatureNote")}</p>
         </section>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -459,7 +450,7 @@ export default async function WaiverPage({
               className: `text-(color:--color-foreground) ${labelTextBase}`,
             })}
           >
-            Save and finish later
+            {t("waiver.saveForLater")}
           </button>
           <SubmitButton
             pendingLabel={t("waiver.signing")}
@@ -468,16 +459,16 @@ export default async function WaiverPage({
               className: `disabled:opacity-70 ${labelTextBase}`,
             })}
           >
-            Sign waiver
+            {t("waiver.signButton")}
           </SubmitButton>
         </div>
       </form>
       <p className="mt-8 text-center text-sm text-muted">
-        Need help?{" "}
+        {t("waiver.needHelp")}{" "}
         <Link href="/" className="font-medium text-primary hover:underline">
-          Return to the shop
+          {t("waiver.returnToShop")}
         </Link>{" "}
-        and contact your dive shop.
+        {t("waiver.returnToShopSuffix")}
       </p>
     </main>
   );

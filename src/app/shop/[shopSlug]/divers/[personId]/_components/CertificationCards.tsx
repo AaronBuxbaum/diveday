@@ -34,9 +34,12 @@ export async function CertificationCards({
 }) {
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  // Shared across every card on this diver. Per-card interpolated text (card
+  // number, ID, aria-label) is built fresh per card below, in the .map — ICU
+  // composes those server-side so word order stays correct per locale,
+  // rather than concatenating a prefix/suffix on the client.
   const cardCopy = {
     diverLabel: t("divers.certifications.card.diverLabel"),
-    cardNumberPrefix: (id: string) => t("divers.certifications.card.cardNumberPrefix", { id }),
     statusVerified: t("divers.certifications.card.statusVerified"),
     statusRefresherDue: t("divers.certifications.card.statusRefresherDue"),
     statusPending: t("divers.certifications.card.statusPending"),
@@ -44,15 +47,12 @@ export async function CertificationCards({
     certifiedByStaff: t("divers.certifications.card.certifiedByStaff"),
     refresherDueVerify: t("divers.certifications.card.refresherDueVerify"),
     awaitingVerification: t("divers.certifications.card.awaitingVerification"),
-    idPrefix: (id: string) => t("divers.certifications.card.idPrefix", { id }),
     secureLabel: t("divers.certifications.card.secureLabel"),
     openFullSize: t("divers.certifications.card.openFullSize"),
-    tapToFlip: (target: string) => t("divers.certifications.card.tapToFlip", { target }),
-    uploadedPhoto: t("divers.certifications.card.uploadedPhoto"),
-    securityDetails: t("divers.certifications.card.securityDetails"),
-    flipAriaLabel: (level: string) => t("divers.certifications.card.flipAriaLabel", { level }),
     uploadedAlt: t("divers.certifications.card.uploadedAlt"),
   };
+  const uploadedPhotoText = t("divers.certifications.card.uploadedPhoto");
+  const securityDetailsText = t("divers.certifications.card.securityDetails");
   return (
     <section className="mt-10" aria-labelledby="cards-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -158,10 +158,21 @@ export async function CertificationCards({
                       fullName={diver.person.fullName}
                       agencyLabel={AGENCY_LABELS[card.agency]}
                       levelLabel={CERTIFICATION_LEVEL_LABELS[card.level]}
-                      identifier={card.identifier}
                       cardImageUrl={card.cardImageUrl}
                       verificationStatus={display}
-                      copy={cardCopy}
+                      copy={{
+                        ...cardCopy,
+                        cardNumberText: t("divers.certifications.card.cardNumberText", {
+                          id: card.identifier,
+                        }),
+                        idText: t("divers.certifications.card.idText", { id: card.identifier }),
+                        flipAriaLabel: t("divers.certifications.card.flipAriaLabel", {
+                          level: CERTIFICATION_LEVEL_LABELS[card.level],
+                        }),
+                        tapToFlipText: t("divers.certifications.card.tapToFlipText", {
+                          target: card.cardImageUrl ? uploadedPhotoText : securityDetailsText,
+                        }),
+                      }}
                     />
                   </details>
                 </div>
