@@ -10,6 +10,7 @@ error of its own for a missing key.
 | Variable | Enables | Without it |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry error capture, server and browser | No errors reported anywhere; `Sentry.init` is never called |
+| `SENTRY_AUTH_TOKEN` | Source-map upload + release creation on the production build | Errors still report, but with minified stack traces and no release attached |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | The new-account alert (and every other outbound email) | Nothing sends — see `resend-email-runbook.md` |
 
 ## New-account alerts
@@ -28,6 +29,8 @@ notification. The only new piece is the recipient:
 ## Error monitoring (Sentry)
 
 Wired with `withSentryConfig` in `next.config.ts` and runtime files (`src/app/observability.ts`, `src/instrumentation.ts`, `src/instrumentation-client.ts`, `src/app/global-error.tsx`). This handles automatic source-map uploads on production builds when `SENTRY_AUTH_TOKEN` is present. It does not use performance or replay features; it captures errors and nothing else.
+
+The production build that matters for this is Vercel's own (`scripts/vercel-build.mjs` → `pnpm build`) on merge to `main` — that is the build that actually deploys and is what should upload source maps and create the release. Set `SENTRY_AUTH_TOKEN` as a **Vercel** project environment variable (Production), not a GitHub Actions secret: CI's `next build` (`build` job) always sets `DIVEDAY_E2E=1`, which `next.config.ts` reads to disable Sentry's source-map upload and telemetry outright — CI builds an ephemeral artifact for `perf:budget` and the e2e/visual suites, never something that deploys, so there is nothing for a CI-side Sentry token to usefully upload.
 
 
 1. **Create a free Sentry account and project** at [sentry.io](https://sentry.io) — platform

@@ -90,37 +90,25 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
-      - run: pnpm build
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      # perf:budget reads the build manifest produced immediately above.
-      - run: pnpm perf:budget
-
-  playwright-build:
-    name: Playwright build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/cache@v4
-        with:
-          path: .next/cache
           key: ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-
+      # This is the only `next build` CI runs. Its output serves perf:budget below,
+      # the sharded `playwright` job, and the `visual` job — all three used to pay
+      # for their own separate `next build`, which cost several redundant minutes
+      # of compute per run for builds that differed only in Sentry upload config
+      # (see next.config.ts's isE2EBuild) and a build-time PGlite dir name, neither
+      # of which affects the client bundle perf:budget measures or the app code the
+      # e2e/visual suites exercise. Real production builds (the ones that actually
+      # deploy) run separately through Vercel via scripts/vercel-build.mjs, with
+      # SENTRY_AUTH_TOKEN configured there — that is what uploads source maps and
+      # configures the release, not this job, so no Sentry token is needed here.
       - run: pnpm e2e:build
+      # perf:budget reads the build manifest produced immediately above.
+      - run: pnpm perf:budget
       - uses: actions/upload-artifact@v7
         with:
-          name: playwright-next-build
+          name: next-build
           path: .next/
           include-hidden-files: true
           if-no-files-found: error
@@ -128,7 +116,7 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/4
-    needs: playwright-build
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -145,7 +133,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v7
         with:
-          name: playwright-next-build
+          name: next-build
           path: .next
       - uses: actions/cache@v4
         with:
@@ -179,7 +167,7 @@ jobs:
 
   visual:
     name: reg-suit visual regression
-    needs: playwright-build
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -197,6 +185,26 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
+      # reg-keygen-git-hash-plugin's expected-key algorithm only works by
+      # triangulating a merge-base against *other* local branches (it's built
+      # for topic-branch-vs-trunk, per the checkout comment above) — it has no
+      # "just diff against the previous commit" mode. A direct push to main
+      # checks out only `main`, so there is no other branch, getBaseCommitHash()
+      # returns null, and every push reports every screenshot as brand new
+      # (confirmed in CI logs: "Failed to detect the previous snapshot key" /
+      # "New items: N" / "Passed items: 0" on every main push — never actually
+      # comparing a pixel). Creating a branch ref at HEAD^ gives the plugin the
+      # second branch its algorithm needs, so it resolves the previous commit's
+      # published S3 snapshot as the baseline instead. If that snapshot was
+      # never published (e.g. the very first run), the S3 fetch just comes back
+      # empty and this degrades to the same all-new behavior as before — it
+      # never turns into a hard failure.
+      - name: Anchor reg-suit's baseline detection to the previous commit (main pushes only)
+        if: github.event_name == 'push'
+        run: |
+          if git rev-parse --verify -q HEAD^ > /dev/null; then
+            git branch reg-suit-baseline-parent HEAD^
+          fi
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -205,7 +213,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v7
         with:
-          name: playwright-next-build
+          name: next-build
           path: .next
       - uses: actions/cache@v4
         with:
@@ -220,8 +228,12 @@ jobs:
           # every launch here is headless.
           key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --only-shell chromium
+      # `pnpm visual` (the local/dev script) rebuilds via e2e:build before testing —
+      # this job already downloaded that exact build above, so `visual:run` (the
+      # shared tail both scripts call) skips straight to the Playwright run
+      # instead of discarding the artifact and recompiling it from scratch.
       - name: Run reg-suit visual regression
-        run: pnpm visual
+        run: pnpm visual:run
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
