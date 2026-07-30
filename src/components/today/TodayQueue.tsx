@@ -1,10 +1,36 @@
 import Link from "next/link";
-import { WaitlistInvite } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
+import {
+  WaitlistInvite,
+  type WaitlistInviteCopy,
+} from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { buttonClass } from "@/components/ui/button";
 import { nowDate } from "@/lib/clock";
 import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import { ResendConfirmationControl } from "./ResendConfirmationControl";
 import { WaiverSendControl } from "./WaiverSendControl";
+
+// This surface (src/components/today/) is outside the trips batch's directory
+// scope (docs ADR 20260730-frontend-strings-i18n-extraction) and is not yet on
+// the staff message bundle — see the file's existing hard-coded strings and
+// `scripts/copy-baseline.json` entry. `WaitlistInvite` (owned by the trips
+// batch) now requires a `copy` prop; this preserves this call site's
+// pre-existing English wording unchanged rather than reaching into another
+// surface's un-migrated copy.
+const WAITLIST_INVITE_COPY: WaitlistInviteCopy = {
+  invitedRelative: "Invited {time}",
+  inviteEmailed: "Invite emailed",
+  reSendInvite: "Re-send invite",
+  emailAnInvite: "Email {firstName} an invite",
+  copied: "Copied",
+  copyInviteMessage: "Copy invite message",
+  justNow: "just now",
+  minutesAgo: "{mins}m ago",
+  hoursAgo: "{hours}h ago",
+  daysAgo: "{days}d ago",
+  emailSubject: "A spot opened up on {tripTitle}",
+  emailBody:
+    "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You're next on the wait list — grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!",
+};
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
 export type TodayInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
@@ -72,6 +98,7 @@ function ActionRow({
             tripTitle={action.invite.tripTitle}
             tripWhen={action.invite.tripWhen}
             invite={inviteAction.bind(null, action.invite.tripId)}
+            copy={WAITLIST_INVITE_COPY}
           />
         ) : (
           <Link

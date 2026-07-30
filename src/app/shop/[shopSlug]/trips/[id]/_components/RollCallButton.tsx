@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import { type ReactNode, useActionState, useEffect } from "react";
 
 /**
  * The result a roll-call server action returns instead of redirecting, so the
@@ -12,7 +11,23 @@ export type RollCallResult = { ok: true } | { ok: false; reason: "not_ready" | "
 
 export type RollCallAction = (prev: RollCallResult, formData: FormData) => Promise<RollCallResult>;
 
-const ERROR_REFUSAL = "That didn’t save. Recheck your connection or tap again.";
+/**
+ * Every word this client component renders, resolved on the server — see the
+ * note in src/i18n/staff-messages.ts. Pure text-source extraction: none of the
+ * control flow, gating, or roll-call logic below changed.
+ *
+ * `blockedMessage` is pre-rendered JSX rather than a string: the "not ready"
+ * refusal embeds one rich element (the "Open Guests" link to the specific
+ * booking), and a translated sentence cannot correctly be reassembled here
+ * from separate prefix/link/suffix string fragments — the composed-string
+ * rule this codebase's i18n work follows. Passing already-rendered JSX
+ * (built with `t.rich` in the Server Component caller) across the boundary is
+ * fine; only a function/closure crossing it is not.
+ */
+export type RollCallButtonCopy = {
+  errorRefusal: string;
+  blockedMessage: ReactNode;
+};
 
 /**
  * A boarding control with an instant *pending* state. Tapping shows "Boarding…"
@@ -32,7 +47,7 @@ export function RollCallButton({
   pendingLabel,
   className,
   formId,
-  guestsHref,
+  copy,
 }: {
   action: RollCallAction;
   bookingId: string;
@@ -45,8 +60,7 @@ export function RollCallButton({
    * to auto-save to yet) can ride this submit via its `form=` attribute.
    */
   formId?: string;
-  /** The actual staff control for resolving a readiness refusal. */
-  guestsHref?: string;
+  copy: RollCallButtonCopy;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
 
@@ -76,18 +90,7 @@ export function RollCallButton({
       </form>
       {result && !result.ok ? (
         <p role="alert" className="mt-1 text-sm font-medium text-danger sm:basis-full">
-          {result.reason === "not_ready" ? (
-            guestsHref ? (
-              <>
-                Diver is still blocked.{" "}
-                <Link href={guestsHref}>Open Guests to resolve the blocker</Link>, then try again.
-              </>
-            ) : (
-              "Diver is still blocked. Open Guests to resolve the blocker, then try again."
-            )
-          ) : (
-            ERROR_REFUSAL
-          )}
+          {result.reason === "not_ready" ? copy.blockedMessage : copy.errorRefusal}
         </p>
       ) : null}
     </>

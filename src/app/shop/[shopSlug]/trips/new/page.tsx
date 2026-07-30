@@ -12,6 +12,8 @@ import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { createTrip, createTripSeries } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import {
@@ -167,10 +169,10 @@ async function scheduleTrip(formData: FormData) {
   revalidateAndRedirect(shopHref, `${shopHref}?created=${encodeURIComponent(title)}`);
 }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "That didn't save — check the date, times, and capacity, then try again.",
-  "end-before-start": "The trip has to end after it starts — check the times.",
-  "not-authorized": "Scheduling and editing trips is limited to owners, managers, and instructors.",
+const ERROR_KEYS: Record<string, StaffMessageKey> = {
+  invalid: "trips.new.errorInvalid",
+  "end-before-start": "trips.new.errorEndBeforeStart",
+  "not-authorized": "trips.new.errorNotAuthorized",
 };
 
 export default async function NewTripPage({
@@ -184,20 +186,23 @@ export default async function NewTripPage({
   const { shopSlug } = await params;
   const { error, course: selectedCourseId } = await searchParams;
   const db = await getDb();
-  const [courseList, diveSiteList, canConfigure] = await Promise.all([
+  const [courseList, diveSiteList, canConfigure, shop] = await Promise.all([
     listActiveCourses(db, session.user.shopId),
     listDiveSites(db, session.user.shopId),
     canPersonConfigureTrips(db, session.user.shopId, session.user.personId),
+    getShopById(db, session.user.shopId),
   ]);
+  const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const selectedCourse = courseList.find((course) => course.id === selectedCourseId);
-  const message = error ? ERROR_MESSAGES[error] : undefined;
+  const message = error && Object.hasOwn(ERROR_KEYS, error) ? t(ERROR_KEYS[error]) : undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Trips"
-        title="Schedule a trip or course session"
-        description="Times are local to the shop. Course sessions inherit their admission rules when you put them on the board."
+        eyebrow={t("trips.new.eyebrow")}
+        title={t("trips.new.title")}
+        description={t("trips.new.description")}
       />
 
       {message ? (
@@ -209,9 +214,7 @@ export default async function NewTripPage({
       {canConfigure ? null : (
         <div className="mt-8">
           <ShopNotice tone="neutral" role="status">
-            Scheduling and editing trips is limited to owners, managers, and instructors. The crew
-            runs the day on the water — the roster, check-in, manifest, and roll call — from each
-            trip's own page.
+            {t("trips.new.viewOnlyNotice")}
           </ShopNotice>
         </div>
       )}
@@ -220,17 +223,19 @@ export default async function NewTripPage({
         <form action={scheduleTrip} className="mt-8 flex flex-col gap-5">
           <FieldGrid columns={1} className="gap-y-5">
             <Field
-              label="Course"
-              hint="(optional)"
+              label={t("trips.new.courseLabel")}
+              hint={t("trips.new.optionalHint")}
               description={
-                selectedCourse ? (
-                  <>
-                    {selectedCourse.minimumCertificationLevel
-                      ? `${CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel]} card required at enrollment`
-                      : "No existing C-card required"}
-                    {" · add an instructor before sharing the session"}
-                  </>
-                ) : undefined
+                selectedCourse
+                  ? t("trips.new.courseDescription", {
+                      requirement: selectedCourse.minimumCertificationLevel
+                        ? t("trips.new.courseCertRequired", {
+                            level:
+                              CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel],
+                          })
+                        : t("trips.new.courseNoCardRequired"),
+                    })
+                  : undefined
               }
             >
               <select
@@ -238,7 +243,7 @@ export default async function NewTripPage({
                 defaultValue={selectedCourse?.id ?? ""}
                 className={controlClass}
               >
-                <option value="">Ordinary trip</option>
+                <option value="">{t("trips.new.ordinaryTrip")}</option>
                 {courseList.map((course) => (
                   <option key={course.id} value={course.id}>
                     {course.title}
@@ -246,7 +251,7 @@ export default async function NewTripPage({
                 ))}
               </select>
             </Field>
-            <Field label="Title">
+            <Field label={t("trips.new.titleLabel")}>
               <input
                 name="title"
                 type="text"
@@ -254,8 +259,8 @@ export default async function NewTripPage({
                 maxLength={120}
                 placeholder={
                   selectedCourse
-                    ? `${selectedCourse.title} — Session 1`
-                    : "Two-Tank Reef — Molasses & French"
+                    ? t("trips.new.titlePlaceholderCourse", { courseTitle: selectedCourse.title })
+                    : t("trips.new.titlePlaceholderExample")
                 }
                 className={controlClass}
               />
@@ -265,29 +270,29 @@ export default async function NewTripPage({
             diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
           />
           <FieldGrid columns={1}>
-            <Field label="Description" hint="(optional)">
+            <Field label={t("trips.new.descriptionLabel")} hint={t("trips.new.optionalHint")}>
               <textarea
                 name="description"
                 rows={2}
                 maxLength={500}
-                placeholder="Sites, conditions, who it's for, required certs."
+                placeholder={t("trips.new.descriptionPlaceholder")}
                 className={controlClass}
               />
             </Field>
           </FieldGrid>
           <FieldGrid columns={3} className="gap-y-5">
-            <Field label="Date">
+            <Field label={t("trips.new.dateLabel")}>
               <input name="date" type="date" required className={controlClass} />
             </Field>
-            <Field label="Departs">
+            <Field label={t("trips.new.departsLabel")}>
               <input name="startTime" type="time" required className={controlClass} />
             </Field>
-            <Field label="Returns">
+            <Field label={t("trips.new.returnsLabel")}>
               <input name="endTime" type="time" required className={controlClass} />
             </Field>
           </FieldGrid>
           <FieldGrid columns={1} className="sm:w-40">
-            <Field label="Capacity">
+            <Field label={t("trips.new.capacityLabel")}>
               <input
                 name="capacity"
                 type="number"
@@ -302,9 +307,9 @@ export default async function NewTripPage({
           {/* The field is narrow; its helper text is not, so only the input is capped. */}
           <FieldGrid columns={1}>
             <Field
-              label="Price per diver"
-              hint="(optional)"
-              description="Pre-fills the trip fee when staff invoice a diver from this trip's roster."
+              label={t("trips.new.priceLabel")}
+              hint={t("trips.new.optionalHint")}
+              description={t("trips.new.priceDescription")}
             >
               <input
                 name="priceDollars"
@@ -317,16 +322,15 @@ export default async function NewTripPage({
             </Field>
           </FieldGrid>
           <fieldset className="rounded-lg border border-border bg-surface p-5">
-            <legend className="px-1 text-sm font-medium">Pay at booking</legend>
-            <p className="text-sm text-muted">
-              Optional. When the trip is priced and the shop takes card payments, divers pay online
-              as they book. Leave the deposit blank to charge the full fare up front.
-            </p>
+            <legend className="px-1 text-sm font-medium">
+              {t("trips.new.payAtBookingLegend")}
+            </legend>
+            <p className="text-sm text-muted">{t("trips.new.payAtBookingDescription")}</p>
             <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
               <Field
-                label="Deposit per diver"
-                hint="(optional)"
-                description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare."
+                label={t("trips.new.depositLabel")}
+                hint={t("trips.new.optionalHint")}
+                description={t("trips.new.depositDescription")}
               >
                 <input
                   name="depositDollars"
@@ -338,9 +342,9 @@ export default async function NewTripPage({
                 />
               </Field>
               <Field
-                label="Free cancellation window"
-                hint="(optional)"
-                description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window."
+                label={t("trips.new.cancellationWindowLabel")}
+                hint={t("trips.new.optionalHint")}
+                description={t("trips.new.cancellationWindowDescription")}
               >
                 <div className="flex items-center gap-2">
                   <input
@@ -352,29 +356,28 @@ export default async function NewTripPage({
                     placeholder="48"
                     className={`${controlClass} tabular-nums sm:w-28`}
                   />
-                  <span className="text-sm text-muted">hours</span>
+                  <span className="text-sm text-muted">{t("trips.new.hoursSuffix")}</span>
                 </div>
               </Field>
             </FieldGrid>
           </fieldset>
           <fieldset className="rounded-lg border border-border bg-surface p-5">
-            <legend className="px-1 text-sm font-medium">Repeat</legend>
-            <p className="text-sm text-muted">
-              Put the same trip on the board for several weeks at once. Each date is created as its
-              own trip — book, crew, and edit them one at a time.
-            </p>
+            <legend className="px-1 text-sm font-medium">{t("trips.new.repeatLegend")}</legend>
+            <p className="text-sm text-muted">{t("trips.new.repeatDescription")}</p>
             <FieldGrid columns={2} className="mt-4 gap-y-5">
-              <Field label="How often">
+              <Field label={t("trips.new.howOftenLabel")}>
                 <select name="repeatIntervalWeeks" defaultValue="0" className={controlClass}>
-                  <option value="0">Doesn't repeat</option>
-                  <option value="1">Every week</option>
-                  <option value="2">Every 2 weeks</option>
-                  <option value="4">Every 4 weeks</option>
+                  <option value="0">{t("trips.new.doesntRepeat")}</option>
+                  <option value="1">{t("trips.new.everyWeek")}</option>
+                  <option value="2">{t("trips.new.every2Weeks")}</option>
+                  <option value="4">{t("trips.new.every4Weeks")}</option>
                 </select>
               </Field>
               <Field
-                label="Number of trips"
-                description={`Up to ${MAX_SERIES_OCCURRENCES}, counting the first. Ignored when it doesn't repeat.`}
+                label={t("trips.new.numberOfTripsLabel")}
+                description={t("trips.new.numberOfTripsDescription", {
+                  max: MAX_SERIES_OCCURRENCES,
+                })}
               >
                 <input
                   name="repeatCount"
@@ -392,13 +395,13 @@ export default async function NewTripPage({
               type="submit"
               className={buttonClass({ size: "lg", className: "rounded-xl text-base" })}
             >
-              Put it on the board
+              {t("trips.new.putOnBoard")}
             </button>
             <Link
               href={`/shop/${shopSlug}`}
               className="text-sm font-medium text-muted hover:text-foreground"
             >
-              Cancel
+              {t("trips.new.cancel")}
             </Link>
           </div>
         </form>

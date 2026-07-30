@@ -6,12 +6,13 @@ import { buttonClass } from "@/components/ui/button";
 
 export type PaymentStatus = "unpaid" | "deposit_paid" | "paid" | "waived" | "refunded";
 
-export const PAYMENT_LABELS: Record<PaymentStatus, string> = {
-  unpaid: "Unpaid",
-  deposit_paid: "Deposit paid",
-  paid: "Paid",
-  waived: "Waived",
-  refunded: "Refunded",
+/** Every word this client component renders, resolved on the server — see the
+ * note in src/i18n/staff-messages.ts. */
+export type PaymentStatusControlCopy = {
+  prefix: string;
+  statuses: Record<PaymentStatus, string>;
+  update: string;
+  updating: string;
 };
 
 /**
@@ -27,6 +28,7 @@ export function PaymentStatusControl({
   action,
   sourceNote,
   refundNote,
+  copy,
 }: {
   bookingId: string;
   status: PaymentStatus;
@@ -35,6 +37,7 @@ export function PaymentStatusControl({
   sourceNote: string | null;
   /** e.g. "Refund-eligible until …" — shown only while the status is (deposit) paid. */
   refundNote: string | null;
+  copy: PaymentStatusControlCopy;
 }) {
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
   const showRefund =
@@ -49,7 +52,7 @@ export function PaymentStatusControl({
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <span className="text-sm text-muted">
-        Payment: {PAYMENT_LABELS[optimisticStatus]}
+        {copy.prefix} {copy.statuses[optimisticStatus]}
         {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
         {showRefund ? <span className="text-muted"> · {refundNote}</span> : null}
       </span>
@@ -58,17 +61,17 @@ export function PaymentStatusControl({
         defaultValue={status}
         className="min-h-11 items-center rounded-lg border border-border-strong bg-surface px-2 text-sm"
       >
-        {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
+        {Object.entries(copy.statuses).map(([value, label]) => (
           <option key={value} value={value}>
             {label}
           </option>
         ))}
       </select>
       <SubmitButton
-        pendingLabel="Updating…"
+        pendingLabel={copy.updating}
         className={buttonClass({ variant: "secondary", size: "sm", className: "text-foreground" })}
       >
-        Update
+        {copy.update}
       </SubmitButton>
     </form>
   );
