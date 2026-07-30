@@ -8,7 +8,7 @@ adapters and must not introduce unique requirements.
 ## Read first
 
 1. This file.
-2. Run `pnpm task:context -- <area>` when the task matches a supported area (run without an
+2. Run `pnpm task:context <area>` when the task matches a supported area (run without an
    argument to list the areas).
 3. Read [docs/README.md](docs/README.md) and only the documents relevant to the task.
 4. Read the Next.js warning at the bottom before framework-touching work.
@@ -28,19 +28,24 @@ adapters and must not introduce unique requirements.
 | Command | What |
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000 |
-| `pnpm task:context -- <area>` | bounded paths, invariants, and validation for a task |
+| `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture, clock, ADR, doc-link, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:repo` | environment, architecture, clock, ADR, doc-link, locale-coverage, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
-| `pnpm test -- <file> --reporter=dot` | focused Vitest run with low-noise success output |
-| `pnpm e2e -- <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite |
+| `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
+| `pnpm e2e <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite |
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
 | `pnpm visual` | compare visual regression captures against committed baselines |
 | `pnpm visual:update` | regenerate and approve visual baseline snapshots |
+
+Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`). Unlike npm, pnpm
+forwards that `--` into the underlying command instead of consuming it, so `vitest`/`playwright`
+see their own `--` and silently drop everything after it — the shard/filter/reporter flags are
+ignored and the full suite runs instead. Pass args directly: `pnpm test <file> --reporter=dot`.
 
 ## Route map (don't re-derive this)
 
@@ -57,7 +62,11 @@ adapters and must not introduce unique requirements.
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/trips.ts`, `src/db/shops.ts`, `src/db/seed.ts` |
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
-| Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
+| Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
+| Discount codes | shop-wide in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts` (staff page `shop/[shopSlug]/promos`); one-trip last-minute deals stay in `src/db/trip-promos.ts`. Both resolve in `bookSpot`; Stripe owns the arithmetic |
+| Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule |
+| Diver-facing copy and languages | `src/i18n/` — messages in `locales/<locale>/diver.json`; `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language` (falling back to `shops.default_locale`), `DiverIntlProvider` + `useTranslations()` for Client Components. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces coverage |
+| SEO structured data | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; never in `?embed=1` mode or on a bearer-token page |
 | Notifications (email/SMS) | `src/lib/notifications/` (Resend/Twilio adapters); log + resend state in `src/db/notifications.ts` |
 | Data portability (CSV export/import) | `src/db/export.ts` / `src/db/import.ts`; staff UI at `src/app/shop/[shopSlug]/settings/import/` — security-sensitive, see hard rules |
 | Offline boat manifests | `src/lib/offline-manifests.ts` + `offline-manifest-store.ts` (encrypted IndexedDB); viewer at `src/app/offline-manifest/` |
@@ -139,6 +148,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   spec, and every important **surface** they look at gets a screenshot assertion in the visual spec
   `e2e/visual.spec.ts` — especially when introducing a feature. See the **e2e-and-visual** skill;
   if unsure whether something qualifies, it does.
+- **Never hard-code a locale in the UI.** Every date, time, and money figure under `src/app` or
+  `src/components` formats for the negotiated request locale (`requestLocale`, from
+  `Accept-Language`) — never a literal `"en-US"`. `pnpm check:locale` enforces this app-wide.
+  Diver-facing *copy* additionally comes from `src/i18n/locales/<locale>/diver.json`; staff copy is
+  still inline English (a tracked gap — see the ADR), and the waiver/medical wording stays English
+  pending H-01/H-03.
 - **Read time through the clock.** `src/lib` and `src/db` never call `new Date()` / `Date.now()`
   directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render

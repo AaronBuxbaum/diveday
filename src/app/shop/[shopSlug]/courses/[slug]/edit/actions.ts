@@ -11,7 +11,7 @@ import {
   updateCourseContent,
 } from "@/db/courses";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { parseFaqs, parseLines, parseScheduleDays, splitCourseImageUrls } from "@/lib/courses";
+import { parseFaqs, parseLines, sanitizeScheduleDays, splitCourseImageUrls } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { storeCourseImage } from "@/lib/storage";
@@ -33,7 +33,7 @@ const contentSchema = z.object({
   prerequisiteNote: z.string().trim().max(400),
   includes: z.string().max(2_000),
   excludes: z.string().max(2_000),
-  scheduleDays: z.string().max(8_000),
+  scheduleDaysJson: z.string().max(20_000),
   faqs: z.string().max(12_000),
   price: money,
   eLearningPrice: money,
@@ -89,6 +89,14 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const removeHero = formData.get("removeHero") === "true";
   const heroImageUrl = hero.url ?? (removeHero ? "" : (course.heroImageUrl ?? ""));
 
+  let scheduleDays: ReturnType<typeof sanitizeScheduleDays>;
+  try {
+    scheduleDays = sanitizeScheduleDays(JSON.parse(value.scheduleDaysJson));
+  } catch {
+    scheduleDays = null;
+  }
+  if (scheduleDays === null) redirect(`${base}?error=invalid`);
+
   const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
     summary: value.summary,
     overview: value.overview,
@@ -99,7 +107,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     prerequisiteNote: value.prerequisiteNote,
     includes: parseLines(value.includes),
     excludes: parseLines(value.excludes),
-    scheduleDays: parseScheduleDays(value.scheduleDays),
+    scheduleDays,
     faqs: parseFaqs(value.faqs),
   });
   // Pricing is a separate concern from the marketing copy, but the editor saves

@@ -37,6 +37,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         departures={departures}
         shopSlug="blue-mantis"
         timeZone="America/New_York"
+        locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
       />,
@@ -53,6 +54,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         departures={departures}
         shopSlug="blue-mantis"
         timeZone="America/New_York"
+        locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
       />,
@@ -87,6 +89,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         departures={departures}
         shopSlug="blue-mantis"
         timeZone="America/New_York"
+        locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
       />,
@@ -113,6 +116,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         departures={departures}
         shopSlug="blue-mantis"
         timeZone="America/New_York"
+        locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
       />,
@@ -142,6 +146,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         departures={departures}
         shopSlug="blue-mantis"
         timeZone="America/New_York"
+        locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
       />,
@@ -170,6 +175,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
         departures={departures}
         shopSlug="blue-mantis"
         timeZone="America/New_York"
+        locale="en-US"
         availableStaff={availableStaff}
         updateCrewAction={updateCrewAction}
       />,

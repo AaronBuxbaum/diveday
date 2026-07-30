@@ -802,6 +802,104 @@ export const tripLastMinutePromos = pgTable(
   ],
 );
 
+/** What a shop-wide promo code may be spent on; `all` is both. */
+export const shopPromoScope = pgEnum("shop_promo_scope", ["all", "trips", "courses"]);
+
+export const shopPromoStatus = pgEnum("shop_promo_status", [
+  "pending",
+  "active",
+  "disabled",
+  "failed",
+]);
+
+/**
+ * A shop-wide, staff-authored discount code — the general promotion model
+ * `tripLastMinutePromos` deliberately was not (docs ADR
+ * 20260727-last-minute-fill-promos left it "one narrow producer of Stripe
+ * promotion codes, not the thing it replaces"). Same Stripe-native mechanism:
+ * DiveDay mints a Coupon + PromotionCode on the shop's own connected account
+ * and hands the resolved `promo_...` id to Checkout explicitly, so Stripe
+ * independently enforces expiry and redemption caps while the local row keeps
+ * the scope/window the shop actually configured. Inserted `pending` before
+ * either Stripe call, exactly like a last-minute blast, so a crash mid-create
+ * leaves evidence rather than nothing (docs ADR 20260729-shop-promo-codes).
+ */
+export const shopPromoCodes = pgTable(
+  "shop_promo_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** Normalized upper-case (`normalizePromoCode`, src/lib/promo-codes.ts) — what a diver types. */
+    code: text("code").notNull(),
+    /** Staff's own note about what this code is for; never shown to a diver. */
+    description: text("description"),
+    discountPercent: integer("discount_percent").notNull(),
+    scope: shopPromoScope("scope").notNull().default("all"),
+    status: shopPromoStatus("status").notNull().default("pending"),
+    /** Null means "live now"; null `expiresAt` means the shop set no end date. */
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** Null is unlimited. Stripe enforces the cap at checkout; this is the shop's stated intent. */
+    maxRedemptions: integer("max_redemptions"),
+    stripeCouponId: text("stripe_coupon_id"),
+    stripePromotionCodeId: text("stripe_promotion_code_id"),
+    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("shop_promo_codes_shop_created_idx").on(table.shopId, table.createdAt),
+    uniqueIndex("shop_promo_codes_shop_code_unique").on(table.shopId, table.code),
+    check("shop_promo_codes_discount_range", sql`${table.discountPercent} between 1 and 100`),
+    check(
+      "shop_promo_codes_max_redemptions_positive",
+      sql`${table.maxRedemptions} is null or ${table.maxRedemptions} > 0`,
+    ),
+    check(
+      "shop_promo_codes_window",
+      sql`${table.startsAt} is null or ${table.expiresAt} is null or ${table.startsAt} < ${table.expiresAt}`,
+    ),
+  ],
+);
+
+/**
+ * One paid redemption of a shop-wide code — the "redemption history" half of a
+ * real promotion model. Written inside `markCheckoutPaidBySessionId`'s
+ * transaction and keyed unique on the checkout, so a replayed or duplicated
+ * Stripe webhook can never inflate a code's usage count. Stripe remains the
+ * authority on whether a redemption was *allowed*; this is DiveDay's own audit
+ * trail for reporting and for a later cancellation/refund conversation.
+ */
+export const shopPromoRedemptions = pgTable(
+  "shop_promo_redemptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    promoCodeId: uuid("promo_code_id")
+      .notNull()
+      .references(() => shopPromoCodes.id),
+    checkoutId: uuid("checkout_id")
+      .notNull()
+      .references(() => bookingCheckouts.id),
+    /**
+     * The checkout's quoted total *before* Stripe applied the discount — i.e.
+     * what DiveDay asked for, not what settled. The discount is Stripe's
+     * arithmetic and lives on its own objects, so recording a post-discount
+     * figure here would be DiveDay re-deriving a number it does not own. Read
+     * it as "the order this code was spent against."
+     */
+    amountChargedCents: integer("amount_charged_cents").notNull(),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("shop_promo_redemptions_checkout_unique").on(table.checkoutId),
+    index("shop_promo_redemptions_promo_idx").on(table.promoCodeId, table.redeemedAt),
+  ],
+);
+
 /**
  * A booking's current payment state. deposit_paid, paid, and waived clear the
  * "ready to board" payment gate; unpaid and refunded do not (readiness.ts).
@@ -1138,6 +1236,16 @@ export const bookingCheckouts = pgTable(
     customerEmail: text("customer_email"),
     /** Set once a recovery email has gone out, so a re-run of the recovery scan never double-sends. */
     abandonedRecoverySentAt: timestamp("abandoned_recovery_sent_at", { withTimezone: true }),
+    /**
+     * The shop-wide promo code handed to Stripe on this attempt, if any. The id
+     * is what a completed checkout records a redemption against; the text is a
+     * snapshot so a later edit or delete of the code can't rewrite what the
+     * diver was actually quoted (docs ADR 20260729-shop-promo-codes). Both stay
+     * null for an undiscounted checkout and for a trip-scoped last-minute promo,
+     * which is Stripe's object end to end and has its own row.
+     */
+    promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
+    promoCode: text("promo_code"),
     currency: text("currency").notNull().default("usd"),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -2019,6 +2127,57 @@ export const recapPhotos = pgTable(
   ],
 );
 
+/**
+ * A star rating (and optional words) from a diver who provably dived — the row
+ * is only ever written through that booking's own signed recap link, so unlike
+ * an open web form there is no way to leave one without having been on the
+ * boat. Unique on `booking_id`: a diver revises their own review rather than
+ * stacking several, and a replayed submit can't inflate a shop's average.
+ *
+ * `isPublished` is the moderation seam, same shape as `diveSiteMoments`. A
+ * bare rating carries no text to moderate and publishes immediately; a review
+ * *with* a comment waits for staff, because the comment lands on the shop's
+ * public schedule page. Aggregates are computed over published rows only, so
+ * the number a visitor sees and the reviews under it always describe the same
+ * set (docs ADR 20260729-verified-diver-reviews).
+ */
+export const tripReviews = pgTable(
+  "trip_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    isPublished: boolean("is_published").notNull().default(false),
+    /** Null until published; drives "newest published first" on the public list. */
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_reviews_booking_unique").on(table.bookingId),
+    // The public aggregate and list query verbatim: this shop's published rows,
+    // newest first, so a shop with years of reviews still renders from an index.
+    index("trip_reviews_shop_published_idx")
+      .on(table.shopId, table.publishedAt)
+      .where(sql`${table.isPublished}`),
+    // The staff moderation queue: everything for the shop, newest first.
+    index("trip_reviews_shop_created_idx").on(table.shopId, table.createdAt),
+    check("trip_reviews_rating_range", sql`${table.rating} between 1 and 5`),
+  ],
+);
+
 export const mediaDeletionKind = pgEnum("media_deletion_kind", ["course_photo", "recap_photo"]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [
@@ -2091,6 +2250,11 @@ export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
 export type Tip = typeof tips.$inferSelect;
 export type TipStatus = (typeof tipStatus.enumValues)[number];
 export type RecapPhoto = typeof recapPhotos.$inferSelect;
+export type TripReview = typeof tripReviews.$inferSelect;
+export type ShopPromoCode = typeof shopPromoCodes.$inferSelect;
+export type ShopPromoScope = (typeof shopPromoScope.enumValues)[number];
+export type ShopPromoStatus = (typeof shopPromoStatus.enumValues)[number];
+export type ShopPromoRedemption = typeof shopPromoRedemptions.$inferSelect;
 export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
 export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;
 export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];

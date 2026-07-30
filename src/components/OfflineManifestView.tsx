@@ -37,6 +37,18 @@ const FRESHNESS_PILL = {
   stale: "Stale copy",
 } as const;
 
+/**
+ * The device's own language. This is the one surface that cannot use
+ * `requestLocale` (src/i18n/request.ts): it renders from an encrypted snapshot
+ * in IndexedDB with the radio off, so there is no request and no
+ * `Accept-Language` header to negotiate from. Both call sites run after the
+ * snapshot has loaded from storage, so `navigator` is always defined by then —
+ * the guard is for safety, not for a real server render.
+ */
+function deviceLocale(): string | undefined {
+  return typeof navigator === "undefined" ? undefined : navigator.language;
+}
+
 export function OfflineManifestView() {
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
@@ -251,7 +263,7 @@ export function OfflineManifestView() {
               // own distinct label here (the per-trip view already says this
               // plainly once opened).
               const savedExpired = isOfflineManifestExpired(saved.snapshot);
-              const dateTime = new Intl.DateTimeFormat("en-US", {
+              const dateTime = new Intl.DateTimeFormat(deviceLocale(), {
                 dateStyle: "medium",
                 timeStyle: "short",
                 timeZone: saved.snapshot.shop.timezone,
@@ -371,7 +383,7 @@ export function OfflineManifestView() {
     }
   }
 
-  const dateTime = new Intl.DateTimeFormat("en-US", {
+  const dateTime = new Intl.DateTimeFormat(deviceLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: envelope.snapshot.shop.timezone,

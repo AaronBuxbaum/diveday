@@ -1,16 +1,92 @@
+import { z } from "zod";
 import type { OrderLineItemKind } from "@/db/schema";
 
 /**
- * One block of a course's day-by-day plan: "Day 1 — 8:15am–5:30pm" over a list
- * of what happens in it. `timeRange` is prose, not a parsed clock: a course day
- * runs "8:15am–5:30pm" in one shop and "after the morning boat" in another, and
- * nothing in the app schedules against it — the dated session does that.
+ * One block of a course's day-by-day plan: a title over a list of what
+ * happens in it, with real clock times when the shop runs that day on a fixed
+ * schedule. `startTime`/`endTime` are 24-hour "HH:mm" clock values — nothing
+ * in the app schedules against them (the dated session does that), but they
+ * are real times, not prose. `timeNote` is the escape hatch for a day that
+ * doesn't run on a fixed clock at all (a multi-week internship phase, "about
+ * 3 hours" for a single session) — formatScheduleDayTime prefers the clock
+ * time and falls back to it.
  */
 export type CourseScheduleDay = {
   title: string;
-  timeRange?: string;
+  startTime?: string;
+  endTime?: string;
+  timeNote?: string;
   items: string[];
 };
+
+const CLOCK_TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+function formatClockTime(value: string): string | null {
+  if (!CLOCK_TIME_RE.test(value)) return null;
+  const [hours, minutes] = value.split(":").map(Number);
+  const reference = new Date(Date.UTC(2000, 0, 1, hours, minutes));
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(reference);
+}
+
+/** The day's displayed hours: a real clock range, a single clock time, the free-text note, or nothing. */
+export function formatScheduleDayTime(day: CourseScheduleDay): string | undefined {
+  const start = day.startTime ? formatClockTime(day.startTime) : null;
+  const end = day.endTime ? formatClockTime(day.endTime) : null;
+  if (start && end) return `${start} – ${end}`;
+  if (start) return start;
+  return day.timeNote?.trim() || undefined;
+}
+
+/** Caps enforced both here and by DayByDayEditor's "Add day"/"Add item" buttons, so a save can never build a schedule the server would reject. */
+export const MAX_SCHEDULE_DAYS = 30;
+export const MAX_SCHEDULE_DAY_ITEMS = 20;
+
+const scheduleDayInputSchema = z.object({
+  title: z.string().max(160).optional().default(""),
+  startTime: z.string().max(5).optional().default(""),
+  endTime: z.string().max(5).optional().default(""),
+  timeNote: z.string().max(120).optional().default(""),
+  items: z.array(z.string().max(200)).max(MAX_SCHEDULE_DAY_ITEMS).optional().default([]),
+});
+
+/**
+ * Normalizes the day-by-day editor's serialized state (DayByDayEditor posts
+ * one JSON-encoded array) into `CourseScheduleDay[]`. A day left completely
+ * blank (added, then never filled in) is dropped rather than rejected; a day
+ * with *some* content but no title fails the save outright — the title is
+ * the one thing every day needs. Returns null on malformed input (not an
+ * array of day-shaped objects) or a title-less day with content.
+ */
+export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
+  const parsedArray = z.array(scheduleDayInputSchema).max(MAX_SCHEDULE_DAYS).safeParse(raw);
+  if (!parsedArray.success) return null;
+
+  const days: CourseScheduleDay[] = [];
+  for (const entry of parsedArray.data) {
+    const title = entry.title.trim();
+    const items = entry.items.map((item) => item.trim()).filter(Boolean);
+    const startTime = CLOCK_TIME_RE.test(entry.startTime) ? entry.startTime : undefined;
+    const endTime = CLOCK_TIME_RE.test(entry.endTime) ? entry.endTime : undefined;
+    const timeNote = entry.timeNote.trim();
+
+    const isBlank = !title && !startTime && !endTime && !timeNote && items.length === 0;
+    if (isBlank) continue;
+    if (!title) return null;
+
+    days.push({
+      title,
+      ...(startTime ? { startTime } : {}),
+      ...(endTime ? { endTime } : {}),
+      ...(timeNote ? { timeNote } : {}),
+      items,
+    });
+  }
+  return days;
+}
 
 export type CourseFaq = { question: string; answer: string };
 
@@ -80,30 +156,6 @@ export function parseLines(value: string): string[] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-}
-
-/**
- * Blank-line-separated blocks whose first line is `Day 1 — 8:15am–5:30pm`. The
- * separator is the last em dash or pipe on that line, so a title that contains
- * one ("Day 2 — Confined water — pool") keeps everything before the final
- * separator and reads the time range off the tail.
- */
-export function parseScheduleDays(value: string): CourseScheduleDay[] {
-  return blocks(value).map(([heading, ...items]) => {
-    const separator = Math.max(heading.lastIndexOf("—"), heading.lastIndexOf("|"));
-    if (separator <= 0) return { title: heading, items };
-    const title = heading.slice(0, separator).trim();
-    const timeRange = heading.slice(separator + 1).trim();
-    return title && timeRange ? { title, timeRange, items } : { title: heading, items };
-  });
-}
-
-export function formatScheduleDays(days: CourseScheduleDay[]): string {
-  return days
-    .map((day) =>
-      [day.timeRange ? `${day.title} — ${day.timeRange}` : day.title, ...day.items].join("\n"),
-    )
-    .join("\n\n");
 }
 
 /** Blank-line-separated blocks: first line the question, the rest the answer. */

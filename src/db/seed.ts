@@ -39,6 +39,8 @@ import {
   recapPhotos,
   rentalFitProfiles,
   rollCallEvents,
+  shopPromoCodes,
+  shopPromoRedemptions,
   shopStripeAccounts,
   shops,
   specialtyCertifications,
@@ -48,6 +50,7 @@ import {
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
+  tripReviews,
   tripScheduleDays,
   tripSeries,
   trips,
@@ -2215,6 +2218,43 @@ export async function seedDemoSchedule(
     waiverTemplate,
   });
 
+  // Two shop-wide promo codes, so the staff page and the diver-facing promo
+  // box both have something real behind them. The Stripe ids are fabricated —
+  // the demo never connects an account — the same convention the seeded orders
+  // and tips already use.
+  await db
+    .insert(shopPromoCodes)
+    .values([
+      {
+        shopId,
+        code: "REEF10",
+        description: "Standing returning-diver discount",
+        discountPercent: 10,
+        scope: "all" as const,
+        status: "active" as const,
+        stripeCouponId: "coupon_demo_reef10",
+        stripePromotionCodeId: "promo_demo_reef10",
+        createdAt: at(-30, 9),
+      },
+      {
+        shopId,
+        code: "OPENWATER25",
+        description: "Course push — expired, kept as history",
+        discountPercent: 25,
+        scope: "courses" as const,
+        status: "active" as const,
+        maxRedemptions: 20,
+        expiresAt: at(-1, 12),
+        stripeCouponId: "coupon_demo_ow25",
+        stripePromotionCodeId: "promo_demo_ow25",
+        createdAt: at(-45, 9),
+      },
+    ])
+    // Codes are shop config, not schedule data, so `resetDemoSchedule` leaves
+    // them in place — re-seeding a reset shop must not collide on the
+    // (shop, code) unique index.
+    .onConflictDoNothing();
+
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
   await seedRentalFit(db, shopId, customers);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows_, opts.history !== false);
@@ -2931,6 +2971,47 @@ async function seedHistory(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (tipRows.length > 0) await db.insert(tips).values(tipRows);
+
+  // Reviews from divers who actually sailed. Deterministic by index (never the
+  // clock or randomness) so the frozen-clock e2e fleet renders an identical
+  // rating every run. A couple carry words and are published; one carries words
+  // and is still waiting on staff, so the moderation queue is demonstrable; the
+  // rest are bare ratings, which publish on arrival.
+  const reviewComments = [
+    "Vis was unreal and the crew found us a turtle on the second tank.",
+    "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
+    "Choppy ride out, but the reef more than made up for it.",
+  ];
+  // The written reviews go on three *different* departures, so the public list
+  // reads like a shop's history rather than one memorable boat day.
+  const commentedTrips = new Set<string>();
+  const reviewRows = plans
+    .map((plan, i) => {
+      const booking = bookingRows[i];
+      if (!booking || plan.status !== "checked_in" || i % 4 !== 0) return null;
+      const wantsComment =
+        commentedTrips.size < reviewComments.length && !commentedTrips.has(booking.tripId);
+      if (wantsComment) commentedTrips.add(booking.tripId);
+      const comment = wantsComment ? reviewComments[commentedTrips.size - 1] : null;
+      // The third written review stays unpublished — that is the "waiting on
+      // you" card the staff Reviews page exists to clear.
+      const isPublished = comment === null || commentedTrips.size < 3;
+      const createdAt = new Date(plan.createdAt.getTime() + 6 * 60 * 60 * 1000);
+      return {
+        shopId,
+        bookingId: booking.id,
+        tripId: booking.tripId,
+        personId: plan.personId,
+        rating: i % 3 === 0 ? 5 : 4,
+        comment,
+        isPublished,
+        publishedAt: isPublished ? createdAt : null,
+        createdAt,
+        updatedAt: createdAt,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+  if (reviewRows.length > 0) await db.insert(tripReviews).values(reviewRows);
 }
 
 /**
@@ -3952,6 +4033,8 @@ export async function resetDemoSchedule(
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  // Reviews reference bookings, trips, and people — all three parents below.
+  await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and
@@ -3961,6 +4044,10 @@ export async function resetDemoSchedule(
   // bookings, orders, and booking_checkouts — so both go before booking_checkouts.
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
+  // A redemption points at the checkout that spent the code, so it goes first
+  // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
+  // and survive a schedule reset.
+  await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
   // references trips and people. Both must go before the parents below.
@@ -4086,12 +4173,17 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
+  // Redemptions reference checkouts; the codes themselves are referenced *by*
+  // checkouts, so the codes go after them (docs ADR 20260729-shop-promo-codes).
+  await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
+  await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)

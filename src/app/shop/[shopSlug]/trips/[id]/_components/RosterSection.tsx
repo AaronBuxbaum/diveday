@@ -67,6 +67,7 @@ const WAIVER_CONTROLS: Record<ReturnType<typeof waiverState>, WaiverControl> = {
 export function RosterSection({
   shopSlug,
   shopTimezone,
+  locale,
   booked,
   capacity,
   roster,
@@ -88,6 +89,7 @@ export function RosterSection({
 }: {
   shopSlug: string;
   shopTimezone: string;
+  locale: string;
   booked: number;
   capacity: number;
   roster: RosterEntry[];
@@ -335,7 +337,7 @@ export function RosterSection({
                     ) : null}
                     {currentWaiver?.completedAt && waiverStatus === "complete" ? (
                       <p className="mt-2 text-sm text-muted">
-                        Signed {formatDateTimeTz(currentWaiver.completedAt, "en-US", shopTimezone)}
+                        Signed {formatDateTimeTz(currentWaiver.completedAt, locale, shopTimezone)}
                         {currentWaiver.signatureMethod === "in_person_attested"
                           ? " · recorded from a paper copy"
                           : currentWaiver.signatureMethod === "imported"
@@ -388,7 +390,7 @@ export function RosterSection({
                       sourceNote={paymentSource}
                       refundNote={
                         refundEligible && cancellationDeadline
-                          ? `Refund-eligible until ${formatDateTimeTz(cancellationDeadline, "en-US", shopTimezone)}`
+                          ? `Refund-eligible until ${formatDateTimeTz(cancellationDeadline, locale, shopTimezone)}`
                           : null
                       }
                     />
@@ -427,7 +429,7 @@ export function RosterSection({
                         <div className="min-w-0">
                           <p>{note.body}</p>
                           <p className="mt-1 text-xs text-muted">
-                            {authorName} · {formatDateTimeTz(note.createdAt, "en-US", shopTimezone)}
+                            {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
                           </p>
                         </div>
                         <form action={deleteNoteAction} className="shrink-0">

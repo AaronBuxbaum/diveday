@@ -12,7 +12,7 @@ the workflow for applying it.
 
 ## Before writing
 
-1. Run `pnpm task:context -- brand-voice`.
+1. Run `pnpm task:context brand-voice`.
 2. Read `docs/design/brand.md` end to end.
 3. Read `docs/design/principles.md` and `docs/product/vision.md` for the underlying experience.
 4. For public or sales copy, read `docs/product/marketing.md` and apply its claims policy.

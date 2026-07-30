@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
+import { requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -76,6 +77,9 @@ async function TodayBody({
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
 
   const now = nowDate();
@@ -107,7 +111,7 @@ async function TodayBody({
   return (
     <>
       <ShopPageHeader
-        eyebrow={formatShortDate(now, "en-US", shop.timezone)}
+        eyebrow={formatShortDate(now, locale, shop.timezone)}
         title={getTimeOfDayGreeting(now, shop.timezone, firstName)}
         meta={
           <p className="max-w-2xl text-lg text-muted">
@@ -117,7 +121,7 @@ async function TodayBody({
               departures.reduce((total, departure) => total + departure.blocked, 0),
             )}
             {yourBoat
-              ? ` You’re crewing the ${formatTime(yourBoat.startsAt, "en-US", shop.timezone)} ${yourBoat.title}.`
+              ? ` You’re crewing the ${formatTime(yourBoat.startsAt, locale, shop.timezone)} ${yourBoat.title}.`
               : ""}
           </p>
         }
@@ -148,10 +152,16 @@ async function TodayBody({
       ) : null}
 
       {lens === "sessions" ? (
-        <YourSessions sessions={crewedSessions} shopSlug={shopSlug} timeZone={shop.timezone} />
+        <YourSessions
+          locale={locale}
+          sessions={crewedSessions}
+          shopSlug={shopSlug}
+          timeZone={shop.timezone}
+        />
       ) : null}
 
       <DepartureBoard
+        locale={locale}
         departures={departures}
         shopSlug={shopSlug}
         timeZone={shop.timezone}
@@ -177,8 +187,8 @@ async function TodayBody({
               >
                 {nextDeparture.title}
               </Link>{" "}
-              on {formatShortDate(nextDeparture.startsAt, "en-US", shop.timezone)} at{" "}
-              {formatTime(nextDeparture.startsAt, "en-US", shop.timezone)}.
+              on {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} at{" "}
+              {formatTime(nextDeparture.startsAt, locale, shop.timezone)}.
             </p>
           ) : (
             <>

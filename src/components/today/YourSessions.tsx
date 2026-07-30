@@ -13,10 +13,12 @@ export function YourSessions({
   sessions,
   shopSlug,
   timeZone,
+  locale,
 }: {
   sessions: readonly CrewedSessionSummary[];
   shopSlug: string;
   timeZone: string;
+  locale: string;
 }) {
   if (sessions.length === 0) return null;
   return (
@@ -39,8 +41,8 @@ export function YourSessions({
                 <p className="text-sm font-medium text-primary">{session.courseTitle}</p>
               ) : null}
               <p className="mt-1 text-sm text-muted">
-                {formatShortDate(session.startsAt, "en-US", timeZone)} ·{" "}
-                {formatTime(session.startsAt, "en-US", timeZone)}
+                {formatShortDate(session.startsAt, locale, timeZone)} ·{" "}
+                {formatTime(session.startsAt, locale, timeZone)}
               </p>
               <p className="mt-2 text-sm tabular-nums">
                 {session.booked} {session.booked === 1 ? "student" : "students"}

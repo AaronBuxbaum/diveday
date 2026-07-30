@@ -56,7 +56,11 @@ test.describe("staff", () => {
     // No banner and no navigation — the icon and the "Hidden" badge update in
     // place, which is also what keeps the click from jumping the page.
     await page.goto("/shop/blue-mantis/courses");
-    await page.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
+    await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/courses/discover-scuba-diving",
+    );
+    await row.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
     const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
     await expect(row2.getByText("Hidden")).toBeVisible();
     await expect(row2.getByRole("button", { name: "Show Discover Scuba Diving" })).toBeVisible();
@@ -75,8 +79,12 @@ test.describe("staff", () => {
     await row.getByRole("link", { name: "Edit" }).click();
     await expect(page).toHaveURL(/\/courses\/rescue-diver\/edit/);
 
-    const dayPlan = page.getByLabel("Day plan");
-    await dayPlan.fill(`${await dayPlan.inputValue()}\n\nDay 4 — 9:00am–noon\nScenario retest`);
+    await page.getByRole("button", { name: "Add day" }).click();
+    await page.getByLabel("Day 4 title").fill("Day 4");
+    await page.getByLabel("Day 4 start time").fill("09:00");
+    await page.getByLabel("Day 4 end time").fill("12:00");
+    await page.getByRole("button", { name: "Add item" }).last().click();
+    await page.getByLabel("Day 4 item 1", { exact: true }).fill("Scenario retest");
     await page.getByLabel("FAQ").fill("Do I need my own gear?\nNo — we provide everything.");
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");

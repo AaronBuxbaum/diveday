@@ -7,6 +7,32 @@ lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Growth layer: reviews, discounts, SEO, and languages (delivered 2026-07-29)
+
+- **Verified diver reviews** — a diver rates their day (and optionally writes) from their own
+  post-trip recap link, so every review provably comes from someone who was on the boat. A bare
+  rating publishes immediately; words wait for staff at `/shop/[shopSlug]/reviews`. The shop's
+  rating and its released reviews show on the public schedule
+  ([verified-diver-reviews](../architecture/decisions/20260729-verified-diver-reviews.md)).
+- **Shop-wide promo codes** — staff mint a percent-off code at `/shop/[shopSlug]/promos` with an
+  optional window, scope (trips / courses / both), and redemption cap; DiveDay creates the coupon on
+  the shop's own Stripe account and records each paid redemption. Divers type it in the same box as a
+  trip-scoped last-minute deal, and the trip-scoped code wins
+  ([shop-promo-codes](../architecture/decisions/20260729-shop-promo-codes.md)).
+- **Structured data and real titles on the booking pages** — the public schedule, trip, and course
+  pages emit schema.org `ItemList`/`Event`/`Course` JSON-LD carrying price, remaining seats, and the
+  shop's verified rating, plus per-shop titles and canonical URLs. Never emitted in embed mode or on
+  a bearer-token page
+  ([booking-page-structured-data](../architecture/decisions/20260729-booking-page-structured-data.md)).
+- **The app speaks the visitor's language** — next-intl with per-locale JSON bundles, and the locale
+  negotiated from `Accept-Language` (falling back to the shop's own default) with no switcher and no
+  `/es/` URL. Every date, time, and money figure in the whole UI now follows that locale — 81
+  compiled-in `en-US` call sites across 32 files are gone, staff screens included. Translated *copy*
+  covers the diver-facing surface (schedule, trip, course, booking form, recap); Spanish ships
+  alongside English. Staff copy is still inline English — a stated gap, not a claim — and the
+  waiver/medical wording stays English pending H-01/H-03. `pnpm check:locale` guards both halves
+  ([diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md)).
+
 ## Diver experience and growth completion (delivered 2026-07-29)
 
 - **Plan and share the dive** — every public trip offers a portable `.ics` calendar event, mapped
@@ -28,8 +54,9 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   unsealed records ([staffing, waiver audit, and localized copy](../architecture/decisions/20260729-staffing-waiver-audit-and-localized-copy.md)).
 - **Manifest change ritual** — roster, capacity, checkpoint, instructor, crew, and boarding-gate
   risks are enumerated before crew changes and covered by failure-mode tests.
-- **Localization-ready capability copy** — public and capability-page copy accepts locale-keyed values
-  with English fallback, while existing string data remains compatible.
+- **Localization-ready capability copy** — the `LocalizedCopy` primitive for locale-keyed *data*.
+  Its static-UI half is superseded by
+  [diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md).
 - **Line-busting check-in** — `/shop/[shopSlug]/check-in` is a scanner-compatible counter queue:
   search a booking, recheck readiness, record arrival, and move to the next diver without opening
   the full guest roster.

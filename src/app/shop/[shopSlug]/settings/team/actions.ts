@@ -12,6 +12,7 @@ import {
   inviteStaffMember,
   listShopStaff,
   removeStaffMember,
+  type StaffMutationResult,
   setStaffAccountStatus,
   setStaffRoles,
 } from "@/db/staff-accounts";
@@ -156,56 +157,46 @@ export async function resendInviteAction(formData: FormData) {
   revalidateAndRedirect(path, `${path}?notice=invite_resent`);
 }
 
-export async function setStaffRolesAction(formData: FormData) {
+/**
+ * Every staff card's role checkboxes are associated (via the HTML `form`
+ * attribute, not DOM nesting) to one page-level form, named
+ * `role_<personId>_<role>` per checkbox — see team/page.tsx. This is the
+ * "Save changes" button at the bottom of the page: it walks the shop's whole
+ * roster and applies each member's checked roles in one submit. Enable/
+ * Disable/Delete are separate, immediate actions (setStaffStatusAction,
+ * removeStaffAction below) — they never wait for this button.
+ */
+export async function saveAllStaffRolesAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
-  const personId = String(formData.get("personId") ?? "");
-  const roles = rolesFromFormData(formData);
-  if (!personId || roles.length === 0) redirect(`${path}?notice=roles_invalid`);
+  const db = await getDb();
+  const staff = await listShopStaff(db, session.user.shopId);
 
-  const result = await setStaffRoles(await getDb(), {
-    shopId: session.user.shopId,
-    personId,
-    roles,
-  });
-  const notice = result.ok ? "roles_saved" : result.reason;
-  revalidateAndRedirect(path, `${path}?notice=${notice}`);
-}
-
-export async function saveStaffChangesAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
-
-  const personId = String(formData.get("personId") ?? "");
-  const userAccountId = String(formData.get("userAccountId") ?? "");
-  const roles = rolesFromFormData(formData);
-  const requestedStatus = String(formData.get("status") ?? "active");
-  const status = requestedStatus === "disabled" ? "disabled" : "active";
-  if (!personId || !userAccountId || roles.length === 0) {
+  // Validate every member's checked roles before writing any of them — a
+  // save is all-or-nothing, so one blank row can't leave earlier rows
+  // written but the redirect skipping revalidation (Sourcery review, PR 242).
+  const memberRoles = staff.map((member) => ({
+    member,
+    roles: STAFF_ROLES.filter((role) => formData.get(`role_${member.personId}_${role}`) === "on"),
+  }));
+  if (memberRoles.some(({ roles }) => roles.length === 0)) {
     redirect(`${path}?notice=roles_invalid`);
   }
 
-  const db = await getDb();
-  const roleResult = await setStaffRoles(db, { shopId: session.user.shopId, personId, roles });
-  if (!roleResult.ok) revalidateAndRedirect(path, `${path}?notice=${roleResult.reason}`);
-  const statusResult =
-    requestedStatus === "invited"
-      ? { ok: true as const }
-      : await setStaffAccountStatus(db, {
-          shopId: session.user.shopId,
-          personId,
-          userAccountId,
-          status,
-        });
-  revalidateAndRedirect(
-    path,
-    `${path}?notice=${statusResult.ok ? "changes_saved" : statusResult.reason}`,
-  );
+  let failureReason: Extract<StaffMutationResult, { ok: false }>["reason"] | null = null;
+  for (const { member, roles } of memberRoles) {
+    const result = await setStaffRoles(db, {
+      shopId: session.user.shopId,
+      personId: member.personId,
+      roles,
+    });
+    if (!result.ok) failureReason = result.reason;
+  }
+
+  revalidateAndRedirect(path, `${path}?notice=${failureReason ?? "changes_saved"}`);
 }
 
 export async function setStaffStatusAction(formData: FormData) {

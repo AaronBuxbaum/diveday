@@ -21,6 +21,9 @@ function fakePromotions(): PromotionProvider {
     async createTripPromotion(): Promise<CreateTripPromotionResult> {
       return { status: "created", stripeCouponId: "coupon_1", stripePromotionCodeId: "promo_1" };
     },
+    async createShopPromotion(): Promise<CreateTripPromotionResult> {
+      return { status: "created", stripeCouponId: "coupon_1", stripePromotionCodeId: "promo_1" };
+    },
   };
 }
 

@@ -67,7 +67,7 @@ verified.
 
 ## Verify (in addition to marketing-page's verify steps)
 
-1. `pnpm e2e -- marketing.spec.ts --reporter=line` — covers `/switching`, `/switching/[competitor]`
+1. `pnpm e2e marketing.spec.ts --reporter=line` — covers `/switching`, `/switching/[competitor]`
    routing (including the 404 case for an unregistered slug), and existing guides.
 2. New guide → add its hub-and-detail coverage to `e2e/marketing.spec.ts` and visual snapshots
    (light + dark) to `e2e/visual.spec.ts`, following the existing `switching-*` capture names.

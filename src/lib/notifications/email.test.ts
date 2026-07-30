@@ -33,12 +33,22 @@ describe("bookingConfirmationEmail", () => {
     expect(email.text).not.toContain("30 minutes");
   });
 
-  it("includes the pre-trip gear reminder checklist", () => {
-    const email = bookingConfirmationEmail(base);
+  it("includes the shop's configured packing list as a pre-trip checklist", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      packingList: ["Reef-safe sunscreen", "Your certification card (physical or digital)"],
+    });
     expect(email.text).toContain("Pre-Trip Checklist Reminder:");
     expect(email.text).toContain("Reef-safe sunscreen");
     expect(email.text).toContain("certification card");
     expect(email.html).toContain("Pre-Trip Checklist Reminder:");
+    expect(email.html).toContain("Reef-safe sunscreen");
+  });
+
+  it("omits the checklist entirely when the shop has no packing list (no empty box)", () => {
+    const email = bookingConfirmationEmail(base);
+    expect(email.text).not.toContain("Pre-Trip Checklist Reminder:");
+    expect(email.html).not.toContain("Pre-Trip Checklist Reminder:");
   });
 });
 

@@ -68,7 +68,12 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test -- --reporter=dot --shard=${{ matrix.shard }}/4
+      # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
+      # args when the target script is itself a bare command (`vitest run`),
+      # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
+      # and drops everything after that `--` as unparsed — every shard then
+      # silently runs the full suite instead of its 1/4 slice.
+      - run: pnpm exec vitest run --reporter=dot --shard=${{ matrix.shard }}/4
 
   build:
     name: Build

@@ -14,6 +14,7 @@ import {
   listWaiverIntegrityAudit,
   saveWaiverTemplate,
 } from "@/db/waivers";
+import { requestLocale } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -39,6 +40,9 @@ export default async function WaiverTemplatesPage({
   const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
   // The waiver is the shop's legal instrument; editing it (and the medical
   // jurisdiction it presents) is owner/manager work (H-14, ADR
@@ -136,7 +140,7 @@ export default async function WaiverTemplatesPage({
         {current ? (
           <p className="mt-2 text-sm text-muted">
             Version {current.version} · saved{" "}
-            {formatShortDate(current.createdAt, "en-US", shop.timezone)}
+            {formatShortDate(current.createdAt, locale, shop.timezone)}
           </p>
         ) : null}
         <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">

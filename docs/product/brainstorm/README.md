@@ -57,8 +57,6 @@ single action.
 Lens: help a diver book, prepare, show up confident, return, and bring a buddy without turning DiveDay
 into a social network.
 
-- **Localization-ready copy.** Keep public and capability-page copy ready for multilingual shops
-  without hard-coding English into data models. *(M, cross-cutting, quick win.)*
 - **Group organizer surface.** One organizer holds several seats; invitees claim their own seat, sign
   their own waiver, upload certs, and optionally pay their own share. *(L, bookings/waivers/certs,
   big bet.)*
@@ -136,6 +134,9 @@ Completed work does not live here. Use these records instead:
   intelligence, conflict-safe crew assignment, private booking notes, and operational activity.
 - [shipped.md](../shipped.md#bookings-m2) covers the returning-diver picker; existing people carry
   their certs, waivers, contact details, and rental fit forward instead of being re-entered.
+- [shipped.md](../shipped.md#growth-layer-reviews-discounts-seo-and-languages-delivered-2026-07-29)
+  covers localization-ready copy, which shipped as a real next-intl layer with Spanish alongside
+  English.
 - [shipped.md](../shipped.md#operational-surfaces-m7) covers the automated marine outlook and the
   first-timer night-before brief; [shipped.md](../shipped.md#rental-fit-and-trip-prep-m5) covers the
   rental-fit prep work that the gear-status indicator builds on.

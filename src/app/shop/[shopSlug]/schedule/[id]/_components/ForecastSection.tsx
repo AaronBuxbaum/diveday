@@ -6,11 +6,13 @@ export function ForecastSection({
   trip,
   crewPrediction,
   automatedForecast,
+  locale,
 }: {
   shop: Shop;
   trip: Trip;
   crewPrediction: boolean;
   automatedForecast: AutomatedForecast;
+  locale: string;
 }) {
   if (!crewPrediction && !automatedForecast) return null;
   return (
@@ -50,7 +52,7 @@ export function ForecastSection({
         <p className="mt-4 text-xs text-muted">
           Forecast supplied by the crew; conditions can change. The final call happens at the dock.
           {trip.conditionsUpdatedAt
-            ? ` Updated ${trip.conditionsUpdatedAt.toLocaleString("en-US", { timeZone: shop.timezone, timeZoneName: "short" })}.`
+            ? ` Updated ${trip.conditionsUpdatedAt.toLocaleString(locale, { timeZone: shop.timezone, timeZoneName: "short" })}.`
             : " Update time unavailable."}
         </p>
       ) : automatedForecast ? (
@@ -72,8 +74,8 @@ export function ForecastSection({
           <p className="mt-2 text-xs text-muted">
             Underwater visibility comes from the crew.{" "}
             <time dateTime={automatedForecast.validAt.toISOString()}>
-              For {formatShortDate(automatedForecast.validAt, "en-US", shop.timezone)} ·{" "}
-              {automatedForecast.validAt.toLocaleTimeString("en-US", {
+              For {formatShortDate(automatedForecast.validAt, locale, shop.timezone)} ·{" "}
+              {automatedForecast.validAt.toLocaleTimeString(locale, {
                 timeZone: shop.timezone,
                 hour: "numeric",
                 minute: "2-digit",
