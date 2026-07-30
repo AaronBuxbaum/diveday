@@ -9,7 +9,15 @@ import { buttonClass } from "@/components/ui/button";
  * promise being fulfilled — it deserves a nod. Text-only swap, so it is
  * reduced-motion-safe by construction.
  */
-export function DownloadExportButton({ href }: { href: string }) {
+export function DownloadExportButton({
+  href,
+  idleLabel,
+  acknowledgedLabel,
+}: {
+  href: string;
+  idleLabel: string;
+  acknowledgedLabel: string;
+}) {
   const [acknowledged, setAcknowledged] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -26,7 +34,7 @@ export function DownloadExportButton({ href }: { href: string }) {
         timer.current = window.setTimeout(() => setAcknowledged(false), 2500);
       }}
     >
-      {acknowledged ? "On its way — check your downloads" : "Download export"}
+      {acknowledged ? acknowledgedLabel : idleLabel}
     </a>
   );
 }
