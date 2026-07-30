@@ -8,6 +8,7 @@ import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { BlockerQueueTrip } from "@/lib/blockers";
 import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
 import { formatDateTimeTz } from "@/lib/format";
@@ -20,9 +21,11 @@ export const metadata: Metadata = {
 function DiverRow({
   diver,
   shopSlug,
+  t,
 }: {
   diver: BlockerQueueTrip["divers"][number];
   shopSlug: string;
+  t: ReturnType<typeof staffTranslator>;
 }) {
   return (
     <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5 sm:px-5">
@@ -34,13 +37,14 @@ function DiverRow({
               <span aria-hidden="true" className="text-danger">
                 •
               </span>
+              {/* i18n-exempt: domain-returned sentence from src/lib/readiness.ts, flagged out of scope in report */}
               <span>{blocker.message}</span>
             </li>
           ))}
         </ul>
         {diver.alsoOn.length > 0 ? (
           <p className="mt-1.5 text-sm text-muted">
-            Also blocked on {diver.alsoOn.join(", ")} — same diver, fix once.
+            {t("blockers.alsoBlockedOn", { trips: diver.alsoOn.join(", ") })}
           </p>
         ) : null}
       </div>
@@ -68,11 +72,13 @@ function TripGroup({
   shopSlug,
   timeZone,
   locale,
+  t,
 }: {
   trip: BlockerQueueTrip;
   shopSlug: string;
   timeZone: string;
   locale: string;
+  t: ReturnType<typeof staffTranslator>;
 }) {
   const batchIds = waiverBookingIds(trip);
   return (
@@ -94,22 +100,22 @@ function TripGroup({
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
           <span className="rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums">
-            {trip.divers.length} of {trip.booked} blocked
+            {t("blockers.tripBlockedCount", { blocked: trip.divers.length, booked: trip.booked })}
           </span>
           {batchIds.length > 1 ? (
             <WaiverSendControl
               shopSlug={shopSlug}
               surface="blockers"
               bookingIds={batchIds}
-              label={`Send all ${batchIds.length} waivers`}
-              pendingLabel="Sending all…"
+              label={t("blockers.sendAllWaivers", { count: batchIds.length })}
+              pendingLabel={t("blockers.sendingAll")}
             />
           ) : null}
         </div>
       </header>
       <ul className="divide-y divide-border">
         {trip.divers.map((diver) => (
-          <DiverRow key={diver.bookingId} diver={diver} shopSlug={shopSlug} />
+          <DiverRow key={diver.bookingId} diver={diver} shopSlug={shopSlug} t={t} />
         ))}
       </ul>
     </section>
@@ -132,20 +138,19 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
   const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) notFound();
 
+  const t = staffTranslator(locale);
   const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug);
   const blocked = distinctBlockedDivers(trips);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Front desk"
-        title="Blockers"
+        eyebrow={t("blockers.eyebrow")}
+        title={t("blockers.title")}
         description={
           blocked === 0
-            ? "Everyone booked on an upcoming departure is ready to board."
-            : `${blocked} ${blocked === 1 ? "diver" : "divers"} across ${trips.length} ${
-                trips.length === 1 ? "departure" : "departures"
-              } can't board yet. Clearing a row takes you straight to the fix.`
+            ? t("blockers.description.none")
+            : t("blockers.description.some", { blocked, departures: trips.length })
         }
       />
 
@@ -157,13 +162,10 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
           >
             🤿
           </div>
-          <h2 className="mt-4 text-lg font-semibold">Every boat is boarding-ready</h2>
-          <p className="mx-auto mt-1 max-w-md text-muted">
-            No upcoming diver is waiting on a waiver, a card, or a payment. New bookings show up
-            here the moment something needs a hand.
-          </p>
+          <h2 className="mt-4 text-lg font-semibold">{t("blockers.emptyTitle")}</h2>
+          <p className="mx-auto mt-1 max-w-md text-muted">{t("blockers.emptyDescription")}</p>
           <Link href={`/shop/${shopSlug}/schedule`} className={buttonClass({ className: "mt-5" })}>
-            View the schedule
+            {t("blockers.viewSchedule")}
           </Link>
         </section>
       ) : (
@@ -175,18 +177,21 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
               shopSlug={shopSlug}
               timeZone={shop.timezone}
               locale={locale}
+              t={t}
             />
           ))}
           {truncated ? (
             <p className="text-center text-sm text-muted">
-              Showing the nearest 40 departures. Anything further out lives on the{" "}
-              <Link
-                href={`/shop/${shopSlug}/schedule`}
-                className="font-medium text-primary hover:underline"
-              >
-                schedule
-              </Link>
-              .
+              {t.rich("blockers.truncated", {
+                link: (chunks) => (
+                  <Link
+                    href={`/shop/${shopSlug}/schedule`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           ) : null}
         </div>

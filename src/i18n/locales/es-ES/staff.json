@@ -633,9 +633,96 @@
   "schedule": {},
   "trips": {},
   "settings": {},
-  "blockers": {},
-  "checkIn": {},
-  "waiversStaff": {},
-  "shopHome": {},
+  "blockers": {
+    "eyebrow": "Recepción",
+    "title": "Bloqueos",
+    "description": {
+      "none": "Todos los reservados en una próxima salida están listos para embarcar.",
+      "some": "{blocked, plural, one {# buceador} other {# buceadores}} en {departures, plural, one {# salida} other {# salidas}} no pueden embarcar todavía. Resolver una fila te lleva directo a la solución."
+    },
+    "alsoBlockedOn": "También bloqueado en {trips} — mismo buceador, se resuelve una vez.",
+    "tripBlockedCount": "{blocked} de {booked} bloqueados",
+    "sendAllWaivers": "{count, plural, one {Enviar # descargo} other {Enviar los # descargos}}",
+    "sendingAll": "Enviando todos…",
+    "emptyTitle": "Todos los barcos listos para embarcar",
+    "emptyDescription": "Ningún próximo buceador está esperando un descargo, una tarjeta o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten una mano.",
+    "viewSchedule": "Ver el calendario",
+    "truncated": "Mostrando las 40 salidas más próximas. Lo que quede más lejos está en el <link>calendario</link>."
+  },
+  "checkIn": {
+    "eyebrow": "Modo mostrador",
+    "title": "Check-in sin colas",
+    "description": "Escanea un código de reserva o busca a un buceador, confirma su preparación en tiempo real y mantén la fila en movimiento. El check-in es el estado de llegada; el embarque se confirma aparte en el manifiesto.",
+    "queueAriaLabel": "Cola de check-in",
+    "readyHeading": "Listos en el mostrador",
+    "searchResultsFor": "Resultados de búsqueda para «{query}».",
+    "todaysDepartures": "Las salidas de hoy y el próximo barco.",
+    "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
+    "emptyTitle": "Nadie coincide con ese escaneo",
+    "emptyDescription": "Prueba con el nombre, el correo o el ID de reserva completo del buceador.",
+    "checkedInBadge": "Registrado",
+    "readyBadge": "Listo",
+    "needsAttentionBadge": "Necesita atención",
+    "checkInButton": "Registrar",
+    "checkInAriaLabel": "Registrar a {name}",
+    "search": {
+      "label": "Escanear o buscar buceador",
+      "hint": "Un lector de códigos de barras puede escribir aquí un ID de reserva.",
+      "placeholder": "Nombre, correo o ID de reserva",
+      "submit": "Buscar en la cola"
+    },
+    "notice": {
+      "checkedIn": "Buceador registrado. El siguiente está listo cuando quieras.",
+      "alreadyCheckedIn": "Ese buceador ya está registrado.",
+      "notReady": "La preparación ha cambiado — resuelve el bloqueo antes de registrarlo.",
+      "notBookable": "Esa reserva ya no está disponible para el check-in.",
+      "notFound": "No se encontró esa reserva.",
+      "staffNotFound": "No se pudo confirmar tu acceso de personal.",
+      "invalid": "Elige un buceador de la cola antes de registrarlo."
+    }
+  },
+  "waiversStaff": {
+    "eyebrow": "Ajustes",
+    "title": "Descargo",
+    "description": "Todos los buceadores firman este mismo descargo. Edítalo para que se ajuste a tu centro.",
+    "banner": {
+      "savedNew": "Guardado como nueva versión.",
+      "savedFirst": "Tu descargo está guardado. Cada futura edición se conserva como una nueva versión.",
+      "invalid": "Eso no se guardó. El descargo debe tener al menos unas frases de extensión."
+    },
+    "fieldLabel": "Texto del descargo",
+    "placeholder": "Escribe el descargo que leerá y firmará el buceador.",
+    "pendingLabel": "Guardando…",
+    "saveNewVersion": "Guardar nueva versión",
+    "saveWaiver": "Guardar descargo",
+    "releaseTextHeading": "Texto del descargo",
+    "releaseDescription": {
+      "current": "Este es el descargo que envía cada enlace nuevo. Guardar lo reemplaza para los enlaces nuevos — los descargos ya firmados conservan el texto exacto que firmaron.",
+      "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
+    },
+    "versionInfo": "Versión {version} · guardado el {date}",
+    "integrityHeading": "Integridad de los registros firmados",
+    "integrityDescription": "Los nuevos registros firmados llevan un HMAC sellado por el servidor sobre sus metadatos firmados y la plantilla usada. Un desajuste detiene la auditoría; los registros antiguos importados o heredados aparecen claramente marcados como no sellados.",
+    "noSignedRecords": "Todavía no hay registros firmados.",
+    "noSignatureDate": "Sin fecha de firma",
+    "integrityValid": "Integridad verificada",
+    "integrityInvalid": "Integridad no coincide",
+    "integrityUnsealed": "Registro heredado sin sellar",
+    "truncatedNotice": "Mostrando los 20 registros firmados más recientes. Para ver el historial completo, usa la exportación CSV."
+  },
+  "shopHome": {
+    "createdNotice": {
+      "single": "«{title}» ya está en el calendario. 🤙",
+      "series": "«{title}» ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+    },
+    "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
+    "emailResent": "Correo de confirmación reenviado.",
+    "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",
+    "crewingBoat": "Estás en la tripulación del {title} de las {time}.",
+    "noDeparturesHeading": "Hoy no sale ningún barco",
+    "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
+    "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
+    "scheduleTrip": "Programar una salida"
+  },
   "shared": {}
 }
