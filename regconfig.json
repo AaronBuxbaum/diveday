@@ -2,8 +2,6 @@
   "core": {
     "workingDir": ".reg",
     "actualDir": "e2e/screenshots",
-    "thresholdRate": 0.01,
-    "matchingThreshold": 0.05,
     "enableAntialias": true,
     "addExtraItems": true
   },
