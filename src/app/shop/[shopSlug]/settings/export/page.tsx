@@ -67,7 +67,8 @@ export default async function DataExportPage() {
           and any pasted image URL a CSV references that was never stored through DiveDay. Every
           card photo, dive-site image, and course image DiveDay itself stores comes along as a real
           file in the bundle's <code>photos/</code> folder, so it survives even after this account
-          closes. Sign-in credentials are never exported. The bundle's README lists the same gaps.
+          closes. Sign-in credentials and staff calendar-subscription links are never exported. The
+          bundle's README lists the same gaps.
         </p>
       </section>
     </main>

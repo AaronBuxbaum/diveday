@@ -30,8 +30,9 @@ adapters and must not introduce unique requirements.
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture, clock, ADR, doc-link, locale-coverage, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:repo` | environment, architecture/feature-module, clock, ADR, doc-link, locale-coverage, hard-coded-copy, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
+| `pnpm check:copy` | find hard-coded user-facing copy; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction, `--absorb` records growth arriving from a merge |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
@@ -51,7 +52,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | You need | Go to |
 | --- | --- |
 | Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
-| Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
+| Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`, `src/app/verify/[token]`, `src/app/reset-password/[token]`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; account rows in `src/db/user-accounts.ts` |
 | Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
 | Certification paths (the catalog's progressions) | `src/db/course-paths.ts` + `src/app/shop/[shopSlug]/courses/paths/**`. Guidance, never a gate — admission stays on each course's `minimum_certification_level` |
@@ -66,12 +67,14 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
 | Discount codes | shop-wide in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts` (staff page `shop/[shopSlug]/promos`); one-trip last-minute deals stay in `src/db/trip-promos.ts`. Both resolve in `bookSpot`; Stripe owns the arithmetic |
 | Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule |
-| Diver-facing copy and languages | `src/i18n/` — messages in `locales/<locale>/diver.json`; `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language` (falling back to `shops.default_locale`), `DiverIntlProvider` + `useTranslations()` for Client Components. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces coverage. **Any Client Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the server render and the whole page silently degrades to a blank client-only 200 |
+| Copy and languages | `src/i18n/` — diver messages in `locales/<locale>/diver.json` (`diverTranslator`, `DiverIntlProvider` + `useTranslations()` for Client Components), staff messages in `staff.json` (`staffTranslator`, **server-side only** — staff Client Components take words as props). `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language`, falling back to `shops.default_locale`. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces translation coverage; `pnpm check:copy` blocks new hard-coded copy. **Any diver Client Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the server render and the whole page silently degrades to a blank client-only 200 |
 | SEO structured data | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; never in `?embed=1` mode or on a bearer-token page |
 | Notifications (email/SMS) | `src/lib/notifications/` (Resend/Twilio adapters); log + resend state in `src/db/notifications.ts` |
 | Data portability (CSV export/import) | `src/db/export.ts` / `src/db/import.ts`; staff UI at `src/app/shop/[shopSlug]/settings/import/` — security-sensitive, see hard rules |
 | Offline boat manifests | `src/lib/offline-manifests.ts` + `offline-manifest-store.ts` (encrypted IndexedDB); viewer at `src/app/offline-manifest/` |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
+| Feature modules | `src/features/<feature>/` — one `index.ts` is the whole public surface, `README.md` states what it owns; deep imports fail `pnpm check:architecture`. First one is `calendar-sync` (ADR 20260730-feature-module-contracts) |
+| Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
@@ -81,7 +84,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 ## Skills and providers
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
-in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**,
+in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **i18n-copy**,
 **design-review**, **brand-voice**, **schema-change**, **debug**, **e2e-and-visual**, **visual-triage**, **adr**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
 Other providers
@@ -140,8 +143,11 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   code, failure-path and adversarial tests, and a `dive-domain-expert` review.
 - **Security-sensitive changes** (auth/authz, the public-route allowlist, token flows, rows
   holding personal or medical data, export/import) get a `security-reviewer` review before merge.
-- **Layout**: domain logic in `src/lib/` or an approved feature module; routes in `src/app/` stay
-  thin; e2e specs live in `e2e/`; domain code never imports from `src/app/`. Server actions default
+- **Layout**: domain logic in `src/lib/` or a feature module; routes in `src/app/` stay
+  thin; e2e specs live in `e2e/`. The dependency direction is one way — `app → features → lib/db`,
+  and `pnpm check:architecture` enforces it: `src/lib`/`src/db` may import neither `src/app` nor
+  `src/features`, and a `src/features/<feature>/` module is reachable only through its `index.ts`
+  (it needs a `README.md` too). See the ADR before adding one. Server actions default
   to inline `"use server"` closures for single-page mutations; `src/app/actions/` is only for actions
   shared across pages; a large page colocates its actions/zod schemas in a sibling `actions.ts`.
 - **Tests travel with behavior.** New features include happy-path and important failure-path tests;
@@ -153,10 +159,15 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - **Never hard-code a locale in the UI.** Every date, time, and money figure under `src/app` or
   `src/components` formats for the negotiated request locale (`requestLocale`, from
   `Accept-Language`) — never a literal `"en-US"`. `pnpm check:locale` enforces this app-wide.
-  Diver-facing *copy* additionally comes from `src/i18n/locales/<locale>/diver.json`; staff copy is
-  still inline English (a tracked gap — see the ADR), and the waiver/medical wording stays English
-  pending H-01/H-03.
-- **Read time through the clock.** `src/lib` and `src/db` never call `new Date()` / `Date.now()`
+- **Copy comes from a message bundle, never a component.** Diver copy in
+  `src/i18n/locales/<locale>/diver.json`, staff copy in `staff.json`. `pnpm check:copy` is a
+  **ratchet**: a file with no entry in `scripts/copy-baseline.json` may contain no hard-coded copy
+  at all, an existing file's count may never rise, and a count that falls must be banked in the
+  same change (`node scripts/check-copy.mjs --write`, which refuses to raise anything). ~1,000
+  strings across 110 files are still to extract — that number is the honest state of it. `src/lib`
+  and `src/db` return **codes, not sentences**; the UI picks the words. Waiver/medical wording
+  stays English pending H-01/H-03. See the **i18n-copy** skill.
+- **Read time through the clock.** `src/lib`, `src/db`, and `src/features` never call `new Date()` / `Date.now()`
   directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render
   stay pixel-stable for visual regression; in production the clock is the native call, unchanged.

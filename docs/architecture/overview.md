@@ -34,9 +34,11 @@ before writing framework-touching code (see AGENTS.md).
 ```
 src/
   app/          # routes, layouts — App Router. Keep route files thin.
+  features/     # feature modules: one index.ts is the public surface, README.md the contract
   lib/          # framework-free domain logic and helpers. Most unit tests live here.
   db/           # schema.ts (source of truth), client.ts (getDb seam), queries, seed
   components/   # (when it exists) shared UI components, token-styled
+  i18n/         # locale negotiation and the diver/staff message bundles
   test/         # test setup
 drizzle/        # generated SQL migrations — committed, never hand-edited
 e2e/            # Playwright functional and visual specs
@@ -49,8 +51,18 @@ scripts/        # dev utilities (screenshots, etc.)
 Single app at repo root — no monorepo until a second deployable exists
 ([ADR-0003](decisions/0003-repo-structure.md)).
 
-**Dependency direction:** `app/` may import `lib/` and `components/`; `lib/` imports neither.
-Domain logic goes in `lib/` where Vitest can reach it without a browser.
+**Dependency direction:** one way — `app/ → features/ → lib/`+`db/`. `app/` may import anything
+below it; a feature module may import `lib/` and `db/`; `lib/` and `db/` import none of the three
+above them. Domain logic goes in `lib/` (or a feature module) where Vitest can reach it without a
+browser. `pnpm check:architecture` enforces every arrow.
+
+**Feature modules** ([20260730-feature-module-contracts](decisions/20260730-feature-module-contracts.md)):
+a directory under `src/features/` with a required `index.ts` — its *entire* importable surface,
+deep imports fail the check — and a required `README.md` saying what it owns, what it does not, and
+its invariants. Internals are free to move because nothing outside can name them. Tables still live
+in `src/db/schema.ts` (a feature owns its rows' lifecycle, not their definition), and routes still
+live in `src/app/`. `calendar-sync` is the first one; this is a convention proven on one feature,
+not a migration order.
 
 ## Settled shape decisions
 

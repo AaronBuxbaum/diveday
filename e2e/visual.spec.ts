@@ -5,16 +5,17 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Forty-six key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 184 screenshots per run (see
+ * Visual regression coverage. Forty-eight key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 192 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
+ * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 186 screenshots.
+ * via `capturePrint()`. That brings the run to 194 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -86,6 +87,21 @@ const VIEWPORTS = [
  * viewport never needed. `.then(() => true)` keeps the resolved value
  * serializable — `document.fonts.ready` resolves to a FontFaceSet, which
  * Playwright cannot return.
+ *
+ * **Images are awaited after the scroll, not before.** Forcing layout paint does
+ * not decode images, and `course-page-dark` proved it: its diff was confined
+ * entirely to the hero and exactly one of three gallery thumbnails, every glyph
+ * around them identical — the signature of a decode that had not finished, not
+ * of a code change. The scroll has to come first, because a `loading="lazy"`
+ * image below the fold does not even begin fetching until it is scrolled into
+ * view, so awaiting decode before the scroll would await an empty set.
+ *
+ * `decode()` is called on every image rather than only the ones reporting
+ * `!complete`: `complete` means the bytes arrived, not that a frame is ready to
+ * paint, and on an already-decoded image the promise resolves immediately.
+ * Each is bounded and failure-tolerant — a broken or never-loading `src` must
+ * leave a capture slightly wrong, never hang the suite. CSS background images
+ * are still out of reach; nothing in the DOM exposes their decode state.
  */
 async function paintWholeDocument(page: Page) {
   await page.evaluate(async () => {
@@ -100,6 +116,18 @@ async function paintWholeDocument(page: Page) {
       await settle();
     }
     window.scrollTo(0, 0);
+    await settle();
+
+    await Promise.all(
+      Array.from(document.images).map(
+        (image) =>
+          Promise.race([
+            image.decode().catch(() => undefined),
+            new Promise((resolve) => setTimeout(resolve, 5000)),
+          ]) as Promise<unknown>,
+      ),
+    );
+    // One more frame so anything decoded above is composited before the shot.
     await settle();
   });
   await page.evaluate(() => document.fonts.ready.then(() => true));
@@ -382,10 +410,14 @@ for (const scheme of ["light", "dark"] as const) {
       signedInAsOwner();
 
       test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
-        // 15 navigate+capture surfaces (30 screenshots) in one test — same
+        // 25 navigate+capture surfaces (100 screenshots) in one test — same
         // reasoning as the public-surfaces override above: the suite's 15s
         // default is sized for a single real flow, not a full site tour.
-        test.setTimeout(60_000);
+        // The budget is sized to the surface count *and* to what each capture
+        // now costs — `paintWholeDocument` scrolls the whole document before
+        // every shot, so a tall page is materially slower than it was. This is
+        // not a knob to widen when a capture goes flaky; that is a wait bug.
+        test.setTimeout(120_000);
         await page.goto("/shop/blue-mantis");
         await page
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
@@ -555,6 +587,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
         await capture(page, "settings-team", scheme);
+
+        // Calendar subscriptions, in the un-subscribed state: both scopes
+        // offered to an owner, neither yet minted. Deliberately not the
+        // just-minted state — that panel shows a live feed token, which is
+        // different on every run and would never match a baseline.
+        await page.goto("/shop/blue-mantis/settings/calendar");
+        // Wait on the panel's own button, not the page's <h1>: the panels are
+        // Client Components, and per this file's rule a server-rendered
+        // heading resolves before the interesting part has mounted.
+        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
+        await capture(page, "settings-calendar", scheme);
 
         // The courses catalog: the eye visibility toggle beside the new link
         // icon that jumps to a course's public preview page.
