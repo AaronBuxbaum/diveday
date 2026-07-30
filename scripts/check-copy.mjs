@@ -36,6 +36,26 @@ import process from "node:process";
  * This is a heuristic over source text, not a TypeScript parse. It is tuned to
  * under-report rather than over-report: a missed string is a gap the baseline
  * will surface later, whereas a false positive blocks unrelated work.
+ *
+ * ## The blind spot: copy that originates in src/lib or src/db
+ *
+ * Scope is `.tsx` under the two UI roots. A sentence *returned* from domain or
+ * data code is invisible here, and that is a real hole — `getStaffingView` was
+ * handing the staffing page English gap descriptions that no scanner could see
+ * and no translator could reach (fixed in 20260730-staff-copy-localization).
+ *
+ * Extending the scan there was considered and rejected. Outside JSX there is no
+ * structural signal separating prose from the SQL fragments, enum values, keys,
+ * log lines, and error codes those layers are full of, so the check would be
+ * mostly false positives — and a ratchet whose baseline is padded with noise
+ * stops meaning anything, which is the one property this design depends on.
+ *
+ * The enforced rule instead is architectural, and it is stronger than a scan:
+ * **`src/lib` and `src/db` return codes, `src/app` and `src/components` choose
+ * words.** A union of string-literal codes is a compile-time contract, so a
+ * page that forgets to translate one is a type error at the lookup map rather
+ * than English on screen. That part is a review expectation; see the
+ * `i18n-copy` skill.
  */
 
 const ROOT = process.cwd();
