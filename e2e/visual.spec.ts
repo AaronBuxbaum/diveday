@@ -153,7 +153,12 @@ for (const scheme of ["light", "dark"] as const) {
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
       // no ShopPageHeader chrome, tighter padding — what a shop's own website
       // actually shows inside the iframe.
+      // Same settle wait as the standalone schedule above, and for a sharper
+      // reason: with no wait this capture sometimes shot an empty document, so
+      // `fullPage` measured the viewport (844px tall) instead of the real page
+      // (11802px). A baseline that is a blank viewport asserts nothing.
       await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
       await capture(page, "schedule-embed", scheme);
 
       // Back to the standalone (non-embed) schedule before the trip-detail
@@ -168,7 +173,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByTitle("Satellite map of Molasses Reef").waitFor();
       await capture(page, "site-briefing", scheme);
 
+      // "Upcoming dates" is the last section the public course page streams, so
+      // it is the signal that the whole document has landed — without it this
+      // capture also shot a viewport-tall blank page on some runs.
       await page.goto("/shop/blue-mantis/courses/open-water-diver");
+      await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
       await capture(page, "course-page", scheme);
 
       // Set a review link on a disposable staff context (same CR-019 pattern
@@ -502,7 +511,11 @@ for (const scheme of ["light", "dark"] as const) {
         // A course's edit page: the Day by day section's real per-day controls
         // (start/end time, time note, item list) replacing the old textarea.
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+        // "Day by day" is a server-rendered <legend>, so it is on screen before
+        // DayByDayEditor (a Client Component) mounts — waiting on it let the
+        // capture land mid-mount. Wait for a control the editor itself renders.
         await page.getByText("Day by day").waitFor();
+        await page.getByRole("button", { name: "Add item" }).first().waitFor();
         await capture(page, "course-edit", scheme);
 
         // The path builder: the ordered rungs with their move/remove controls,
