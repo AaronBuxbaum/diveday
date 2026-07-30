@@ -10,6 +10,7 @@ import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
@@ -18,16 +19,16 @@ import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { retryMediaDeletionAction } from "./actions";
 
-const OPERATION_KIND_LABELS = {
-  checkout_session: "Checkout",
-  invoice: "Invoice",
-  refund: "Refund",
-} as const;
+const OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
+  checkout_session: "reports.operationKind.checkout_session",
+  invoice: "reports.operationKind.invoice",
+  refund: "reports.operationKind.refund",
+};
 
-const MEDIA_KIND_LABELS = {
-  course_photo: "Course photo",
-  recap_photo: "Recap photo",
-} as const;
+const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
+  course_photo: "reports.mediaKind.course_photo",
+  recap_photo: "reports.mediaKind.recap_photo",
+};
 
 export const metadata: Metadata = {
   title: "Reports — DiveDay",
@@ -123,6 +124,7 @@ export default async function ReportsPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
+  const t = staffTranslator(locale);
 
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
@@ -163,52 +165,56 @@ export default async function ReportsPage({
   const nextMonthKey = isThisMonth ? null : monthKey(next);
 
   const bookingsDetail = isThisMonth
-    ? `${report.tripCount} ${report.tripCount === 1 ? "trip" : "trips"} on the books so far`
-    : `across ${report.tripCount} ${report.tripCount === 1 ? "trip" : "trips"}`;
+    ? t("reports.metrics.bookingsThisMonth", { count: report.tripCount })
+    : t("reports.metrics.bookingsOther", { count: report.tripCount });
 
   // Honest framing: a past month has fully sailed; the current one is still
   // filling, so it never claims trips have "sailed" when some are still upcoming.
   const description = isThisMonth
-    ? "Bookings, revenue, seat fill, and waivers for this month's trips — so far."
+    ? t("reports.description.thisMonth")
     : isFuture
-      ? "Bookings, revenue, seat fill, and waivers for this month's trips."
-      : "Bookings, revenue, seat fill, and waivers for the trips that sailed.";
+      ? t("reports.description.future")
+      : t("reports.description.past");
 
   const navClass =
     "inline-flex size-11 items-center justify-center rounded-lg border border-border bg-surface text-foreground transition-colors duration-200 hover:bg-surface-sunken";
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader eyebrow="Owner" title="How's your month" description={description} />
+      <ShopPageHeader
+        eyebrow={t("reports.eyebrow")}
+        title={t("reports.title")}
+        description={description}
+      />
 
       {stuckPaymentOperations.length > 0 ? (
-        <section aria-label="Payment operations needing reconciliation" className="mb-8">
+        <section aria-label={t("reports.paymentOps.sectionLabel")} className="mb-8">
           <ShopNotice tone="warning" role="status">
             <p className="font-medium">
-              {stuckPaymentOperations.length}{" "}
-              {stuckPaymentOperations.length === 1 ? "payment attempt" : "payment attempts"} need
-              reconciliation
+              {t("reports.paymentOps.heading", { count: stuckPaymentOperations.length })}
             </p>
-            <p className="mt-1 text-sm">
-              Stripe was asked to do something and the app never confirmed how it went — check each
-              against the Stripe dashboard and finish it by hand.
-            </p>
+            <p className="mt-1 text-sm">{t("reports.paymentOps.detail")}</p>
             <ul className="mt-3 space-y-2 text-sm">
               {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
                 <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-medium">{OPERATION_KIND_LABELS[intent.kind]}</span>
+                  <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
                   {tripTitle ? <span>· {tripTitle}</span> : null}
                   {personName ? <span>· {personName}</span> : null}
                   <span className="text-muted">
-                    · started {formatShortDate(intent.startedAt, locale, tz)}
-                    {intent.stripeObjectId ? ` · Stripe: ${intent.stripeObjectId}` : ""}
+                    ·{" "}
+                    {t("reports.paymentOps.started", {
+                      date: formatShortDate(intent.startedAt, locale, tz),
+                    })}
+                    {intent.stripeObjectId
+                      ? ` · ${t("reports.paymentOps.stripeId", { id: intent.stripeObjectId })}`
+                      : ""}
                   </span>
                   {tripId ? (
                     <Link
                       href={`/shop/${shopSlug}/trips/${tripId}/guests`}
                       className="font-medium text-primary underline underline-offset-2"
                     >
-                      Open trip
+                      {t("reports.paymentOps.openTrip")}
                     </Link>
                   ) : null}
                 </li>
@@ -219,32 +225,30 @@ export default async function ReportsPage({
       ) : null}
 
       {pendingMediaDeletions.length > 0 ? (
-        <section aria-label="Photo deletions needing reconciliation" className="mb-8">
+        <section aria-label={t("reports.mediaDeletions.sectionLabel")} className="mb-8">
           <ShopNotice tone="warning" role="status">
             <p className="font-medium">
-              {pendingMediaDeletions.length}{" "}
-              {pendingMediaDeletions.length === 1 ? "photo" : "photos"} removed but not yet deleted
-              from storage
+              {t("reports.mediaDeletions.heading", { count: pendingMediaDeletions.length })}
             </p>
-            <p className="mt-1 text-sm">
-              The photo is already gone from the app; the stored file wasn't — retry the delete, or
-              leave it for tonight's automatic retry.
-            </p>
+            <p className="mt-1 text-sm">{t("reports.mediaDeletions.detail")}</p>
             <ul className="mt-3 space-y-2 text-sm">
               {pendingMediaDeletions.map((attempt) => (
                 <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium">{MEDIA_KIND_LABELS[attempt.kind]}</span>
+                  <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
                   <span className="text-muted">
-                    · queued {formatShortDate(attempt.createdAt, locale, tz)}
+                    ·{" "}
+                    {t("reports.mediaDeletions.queued", {
+                      date: formatShortDate(attempt.createdAt, locale, tz),
+                    })}
                     {attempt.lastError ? ` · ${attempt.lastError}` : ""}
                   </span>
                   <form action={retryMediaDeletion}>
                     <input type="hidden" name="attemptId" value={attempt.id} />
                     <SubmitButton
-                      pendingLabel="Retrying…"
+                      pendingLabel={t("reports.mediaDeletions.retrying")}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
-                      Retry delete
+                      {t("reports.mediaDeletions.retry")}
                     </SubmitButton>
                   </form>
                 </li>
@@ -258,12 +262,14 @@ export default async function ReportsPage({
       <div className="mb-6 flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">
           {monthLabel(current)}
-          {isThisMonth ? <span className="ml-2 text-sm font-normal text-muted">so far</span> : null}
+          {isThisMonth ? (
+            <span className="ml-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
+          ) : null}
         </h2>
-        <nav aria-label="Choose month" className="flex items-center gap-2">
+        <nav aria-label={t("reports.chooseMonth")} className="flex items-center gap-2">
           <Link
             href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
-            aria-label="Previous month"
+            aria-label={t("reports.previousMonth")}
             className={navClass}
           >
             <span aria-hidden="true">←</span>
@@ -271,7 +277,7 @@ export default async function ReportsPage({
           {nextMonthKey ? (
             <Link
               href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
-              aria-label="Next month"
+              aria-label={t("reports.nextMonth")}
               className={navClass}
             >
               <span aria-hidden="true">→</span>
@@ -279,7 +285,7 @@ export default async function ReportsPage({
           ) : (
             <span
               aria-hidden="true"
-              title="You're viewing the current month"
+              title={t("reports.currentMonthTitle")}
               className={`${navClass} cursor-default text-muted opacity-40`}
             >
               →
@@ -290,58 +296,62 @@ export default async function ReportsPage({
 
       {report.tripCount === 0 ? (
         <ShopNotice tone="neutral" role="status">
-          {isFuture
-            ? "Nothing on the books for this month yet — bookings will show up here as they come in."
-            : "No trips sailed this month. Pick another month to see how it went."}
+          {isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
         </ShopNotice>
       ) : (
         <>
           <section
-            aria-label="This month's numbers"
+            aria-label={t("reports.numbersLabel")}
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
           >
             <Metric
-              label="Revenue collected"
+              label={t("reports.metrics.revenueLabel")}
               value={formatReportMoney(report.revenueCents)}
-              detail="Payments and deposits taken on this month's trips"
+              detail={t("reports.metrics.revenueDetail")}
             />
-            <Metric label="Bookings" value={String(report.seatsBooked)} detail={bookingsDetail} />
             <Metric
-              label="Seat fill"
+              label={t("reports.metrics.bookingsLabel")}
+              value={String(report.seatsBooked)}
+              detail={bookingsDetail}
+            />
+            <Metric
+              label={t("reports.metrics.seatFillLabel")}
               value={formatPercent(report.fillRate)}
-              detail={`${report.seatsBooked} of ${report.seatsOffered} seats · ${report.atCapacityTrips} ${
-                report.atCapacityTrips === 1 ? "boat" : "boats"
-              } full`}
+              detail={t("reports.metrics.seatFillDetail", {
+                booked: report.seatsBooked,
+                offered: report.seatsOffered,
+                count: report.atCapacityTrips,
+              })}
             />
             <Metric
-              label="Waivers signed"
+              label={t("reports.metrics.waiversLabel")}
               value={formatPercent(report.waiverCompletion)}
               celebrate={report.waiverCompletion === 1}
               detail={
                 report.waiverOutstanding > 0
-                  ? `${report.waiverOutstanding} still to collect`
-                  : "Everyone's paperwork is in"
+                  ? t("reports.metrics.waiversOutstanding", { count: report.waiverOutstanding })
+                  : t("reports.metrics.waiversAllIn")
               }
             />
           </section>
 
-          <section aria-label="Trips this month" className="mt-8">
-            <h2 className="mb-3 text-lg font-semibold">Trips this month</h2>
+          <section aria-label={t("reports.tripsThisMonth")} className="mt-8">
+            <h2 className="mb-3 text-lg font-semibold">{t("reports.tripsThisMonth")}</h2>
             <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs tracking-wide text-muted uppercase">
                     <th scope="col" className="px-4 py-3 font-semibold">
-                      Trip
+                      {t("reports.table.trip")}
                     </th>
                     <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
-                      Seats
+                      {t("reports.table.seats")}
                     </th>
                     <th scope="col" className="px-4 py-3 font-semibold">
-                      Fill
+                      {t("reports.table.fill")}
                     </th>
                     <th scope="col" className="px-4 py-3 font-semibold">
-                      Waivers
+                      {t("reports.table.waivers")}
                     </th>
                   </tr>
                 </thead>
@@ -359,7 +369,10 @@ export default async function ReportsPage({
                                 folded in here so a phone never loses "70% of what?". */}
                             <span className="tabular-nums sm:hidden">
                               {" · "}
-                              {trip.activeBookings}/{trip.capacity} seats
+                              {t("reports.seatsMobile", {
+                                booked: trip.activeBookings,
+                                capacity: trip.capacity,
+                              })}
                             </span>
                           </div>
                         </td>
@@ -369,13 +382,19 @@ export default async function ReportsPage({
                         <td className="px-4 py-3">
                           <ShareBar
                             ratio={tripFillRate(trip)}
-                            label={`${trip.activeBookings} of ${trip.capacity} seats booked`}
+                            label={t("reports.fillLabel", {
+                              booked: trip.activeBookings,
+                              capacity: trip.capacity,
+                            })}
                           />
                         </td>
                         <td className="px-4 py-3">
                           <ShareBar
                             ratio={waiverRatio}
-                            label={`${trip.waiverComplete} of ${trip.activeBookings} waivers signed`}
+                            label={t("reports.waiversRowLabel", {
+                              complete: trip.waiverComplete,
+                              total: trip.activeBookings,
+                            })}
                           />
                         </td>
                       </tr>

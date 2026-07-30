@@ -626,10 +626,246 @@
       "saveSiteBriefing": "Save site briefing"
     }
   },
-  "orders": {},
-  "promos": {},
-  "reports": {},
-  "reviews": {},
+  "orders": {
+    "new": {
+      "eyebrow": "Front desk",
+      "title": "New order",
+      "cancel": "Cancel",
+      "notice": {
+        "invalid": "Pick a customer and at least one line item with an amount.",
+        "notConnected": "Connect a Stripe account in Shop settings before creating an order.",
+        "stripeFailed": "Stripe couldn't create that invoice. Try again in a moment.",
+        "fallback": "That order couldn't be created."
+      },
+      "linkedTo": "Linked to {personName}'s booking on {tripTitle} ({date}).",
+      "courseNote": "The course's instruction and e-learning lines are pre-filled from your catalog. One invoice, two lines: clear the e-learning line if this student already completed it elsewhere.",
+      "noPriceNote": "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time.",
+      "priceNote": "The trip fee below is pre-filled from this trip's price.",
+      "customerLabel": "Customer",
+      "chooseCustomer": "Choose a customer",
+      "noteLabel": "Order note",
+      "noteHint": "(optional)",
+      "notePlaceholder": "e.g. Two-tank reef trip + rental set",
+      "lineItemsLegend": "Line items",
+      "lineItemDescriptionPlaceholder": "Description",
+      "quantityLabel": "Quantity",
+      "unitPriceLabel": "Unit price (USD)",
+      "unitPricePlaceholder": "$0.00",
+      "sending": "Sending…",
+      "submit": "Create and send invoice",
+      "kind": {
+        "trip_fee": "Trip fee",
+        "course_fee": "Course fee",
+        "e_learning_fee": "e-Learning fee",
+        "rental": "Rental",
+        "nitrox": "Nitrox (per dive)",
+        "deposit": "Deposit",
+        "merchandise": "Merchandise",
+        "other": "Other"
+      }
+    },
+    "detail": {
+      "eyebrow": "Front desk",
+      "fallbackDescription": "Order",
+      "backToDiver": "Back to diver",
+      "status": {
+        "open": "Open — awaiting payment",
+        "paid": "Paid",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "refunded": "Refunded"
+      },
+      "kind": {
+        "trip_fee": "Trip fee",
+        "course_fee": "Course fee",
+        "rental": "Rental",
+        "nitrox": "Nitrox",
+        "deposit": "Deposit",
+        "merchandise": "Merchandise",
+        "other": "Other"
+      },
+      "openInvoice": "Open the payable invoice",
+      "openInvoiceHint": "— share this link with the customer if Stripe's email didn't reach them.",
+      "demoActionHint": "Demo orders aren't backed by a live Stripe invoice, so this action is disabled.",
+      "refreshStatus": "Refresh status",
+      "refreshing": "Refreshing…",
+      "voidOrder": "Void order",
+      "voiding": "Voiding…",
+      "refundPayment": "Refund payment",
+      "refunding": "Refunding…",
+      "notice": {
+        "refreshed": "Status refreshed from Stripe.",
+        "refreshFailed": "Couldn't reach Stripe to refresh this order.",
+        "voided": "Order voided.",
+        "voidFailed": "Couldn't void this order — it may already be paid or void.",
+        "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
+        "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
+        "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
+        "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed."
+      }
+    }
+  },
+  "promos": {
+    "eyebrow": "Promo codes",
+    "title": "Discounts a diver can type",
+    "description": "A code works across your whole schedule, unlike the one-trip deal you send from a departure's page. DiveDay creates it on your own Stripe account, and Stripe enforces the expiry and the redemption cap when the diver pays.",
+    "notice": {
+      "created": "Code created and live on your Stripe account.",
+      "enabled": "Code switched on.",
+      "disabled": "Code switched off — it stops discounting immediately.",
+      "invalid": "Check the code, discount, and dates and try again.",
+      "invalidCode": "A code can use letters, numbers, hyphens, and underscores only.",
+      "invalidDiscount": "Pick a discount between {min}% and {max}%.",
+      "invalidWindow": "The end date has to come after the start date.",
+      "duplicate": "You already have a code with that text.",
+      "notConnected": "Connect your Stripe account in Settings first — a code is created on your own account.",
+      "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything; try again.",
+      "notAuthorized": "Promo codes discount real money, so they're limited to owners and managers."
+    },
+    "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — the coupon lives on your account, not DiveDay's.",
+    "settingsLink": "Settings",
+    "scope": {
+      "all": "Trips and courses",
+      "trips": "Trips only",
+      "courses": "Courses only"
+    },
+    "newCode": {
+      "heading": "New code",
+      "detail": "Divers type this at checkout. Leave the dates or the cap empty for no limit."
+    },
+    "fields": {
+      "code": "Code",
+      "codeHint": "letters, numbers, - and _",
+      "codePlaceholder": "REEF20",
+      "discount": "Discount",
+      "discountHint": "percent off",
+      "goodFor": "Good for",
+      "redemptionCap": "Redemption cap",
+      "redemptionCapHint": "(optional)",
+      "redemptionCapPlaceholder": "Unlimited",
+      "starts": "Starts",
+      "startsHint": "(optional)",
+      "expires": "Expires",
+      "expiresHint": "(optional)",
+      "whatFor": "What it's for",
+      "whatForHint": "(optional — your note, never shown to divers)",
+      "whatForPlaceholder": "Autumn returning-diver push"
+    },
+    "creating": "Creating…",
+    "createCode": "Create code",
+    "yourCodes": "Your codes",
+    "empty": {
+      "heading": "No codes yet",
+      "detail": "Create one above, or send a one-trip deal from a departure's page when a boat needs filling."
+    },
+    "status": {
+      "failed": "Failed at Stripe",
+      "pending": "Never finished",
+      "live": "Live",
+      "disabled": "Switched off",
+      "notLive": "Not live right now"
+    },
+    "discountOff": "{percent}% off",
+    "fromDate": "from {date}",
+    "liveNow": "live now",
+    "untilDate": "until {date}",
+    "noEndDate": "no end date",
+    "redeemedWithCap": "{count, plural, one {Redeemed # time of {max}} other {Redeemed # times of {max}}}",
+    "redeemedNoCap": "{count, plural, one {Redeemed # time} other {Redeemed # times}}",
+    "switchOff": "Switch off",
+    "switchOn": "Switch on",
+    "saving": "Saving…"
+  },
+  "reports": {
+    "operationKind": {
+      "checkout_session": "Checkout",
+      "invoice": "Invoice",
+      "refund": "Refund"
+    },
+    "mediaKind": {
+      "course_photo": "Course photo",
+      "recap_photo": "Recap photo"
+    },
+    "eyebrow": "Owner",
+    "title": "How's your month",
+    "description": {
+      "thisMonth": "Bookings, revenue, seat fill, and waivers for this month's trips — so far.",
+      "future": "Bookings, revenue, seat fill, and waivers for this month's trips.",
+      "past": "Bookings, revenue, seat fill, and waivers for the trips that sailed."
+    },
+    "paymentOps": {
+      "sectionLabel": "Payment operations needing reconciliation",
+      "heading": "{count, plural, one {# payment attempt} other {# payment attempts}} need reconciliation",
+      "detail": "Stripe was asked to do something and the app never confirmed how it went — check each against the Stripe dashboard and finish it by hand.",
+      "started": "started {date}",
+      "stripeId": "Stripe: {id}",
+      "openTrip": "Open trip"
+    },
+    "mediaDeletions": {
+      "sectionLabel": "Photo deletions needing reconciliation",
+      "heading": "{count, plural, one {# photo} other {# photos}} removed but not yet deleted from storage",
+      "detail": "The photo is already gone from the app; the stored file wasn't — retry the delete, or leave it for tonight's automatic retry.",
+      "queued": "queued {date}",
+      "retry": "Retry delete",
+      "retrying": "Retrying…"
+    },
+    "soFar": "so far",
+    "chooseMonth": "Choose month",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "currentMonthTitle": "You're viewing the current month",
+    "numbersLabel": "This month's numbers",
+    "metrics": {
+      "revenueLabel": "Revenue collected",
+      "revenueDetail": "Payments and deposits taken on this month's trips",
+      "bookingsLabel": "Bookings",
+      "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
+      "bookingsOther": "across {count, plural, one {# trip} other {# trips}}",
+      "seatFillLabel": "Seat fill",
+      "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
+      "waiversLabel": "Waivers signed",
+      "waiversOutstanding": "{count} still to collect",
+      "waiversAllIn": "Everyone's paperwork is in"
+    },
+    "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
+    "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
+    "tripsThisMonth": "Trips this month",
+    "table": {
+      "trip": "Trip",
+      "seats": "Seats",
+      "fill": "Fill",
+      "waivers": "Waivers"
+    },
+    "seatsMobile": "{booked}/{capacity} seats",
+    "fillLabel": "{booked} of {capacity} seats booked",
+    "waiversRowLabel": "{complete} of {total} waivers signed"
+  },
+  "reviews": {
+    "eyebrow": "Reviews",
+    "title": "What divers said",
+    "description": "Every review here was left through a diver's own post-trip recap link, so all of them came from someone who was on the boat. A rating on its own publishes straight away; anything with words waits for you.",
+    "viewPublicPage": "View public page",
+    "notice": {
+      "published": "Review published to your schedule page.",
+      "hidden": "Review hidden — it no longer counts toward your rating.",
+      "error": "That review couldn't be updated. Try again."
+    },
+    "overviewLabel": "Rating overview",
+    "publicRating": "Public rating",
+    "noneYet": "Nothing published yet",
+    "acrossCount": "Across {count, plural, one {# published review} other {# published reviews}}",
+    "published": "Published",
+    "publishedDetail": "Shown on your schedule page",
+    "waitingOnYou": "Waiting on you",
+    "waitingDetail": "Reviews with words to read",
+    "emptyHeading": "No reviews yet",
+    "emptyDetail": "Divers are asked for one on their recap page after a trip sails. The first ones will land here.",
+    "ratingOnly": "Rating only — no words to review.",
+    "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
+    "hide": "Hide",
+    "publish": "Publish",
+    "saving": "Saving…"
+  },
   "schedule": {},
   "trips": {},
   "settings": {},
