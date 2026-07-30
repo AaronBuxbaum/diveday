@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+import { chromiumLaunchOptions } from "./e2e/browser";
 import {
   E2E_FROZEN_CLOCK,
   E2E_WORKER_COUNT,
@@ -7,22 +7,6 @@ import {
   e2ePort,
   e2eWorkerIndexes,
 } from "./e2e/servers";
-
-// Sandboxed agent environments pre-install Chromium (often a different revision
-// than this Playwright version expects) and block browser downloads. Prefer an
-// explicit override, then the sandbox binary, then Playwright's own resolution.
-const browserCandidates = [
-  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
-  process.env.CHROME_PATH,
-  process.env.CHROMIUM_PATH,
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  "/opt/pw-browsers/chromium",
-  "/usr/bin/chromium",
-  "/usr/bin/chromium-browser",
-  "/usr/bin/google-chrome",
-  "/usr/bin/google-chrome-stable",
-];
-const executablePath = browserCandidates.find((candidate) => candidate && fs.existsSync(candidate));
 
 // The worker servers and this runner process must agree on the signing secret:
 // e2e/visual.spec.ts mints a signed recap token in this process (signRecapToken)
@@ -79,6 +63,13 @@ export default defineConfig({
   // the one-time cold render of a heavy [id] page under parallel CPU load, and
   // 15s per test is ~4x the slowest real flow — enough headroom to never bite a
   // passing test, tight enough that a hang surfaces fast.
+  //
+  // The budget also covers the test's own **test-scoped** fixture setup (its
+  // context, its page, the `/api/test/reset` in e2e/fixtures.ts) but not
+  // worker-scoped setup, which is why a slow browser launch used to fail a test
+  // that had not run a line yet. e2e/global-setup.ts pays that cold start up
+  // front; see ADR 20260730-pinned-browser-visual-determinism before widening
+  // this number in response to a setup timeout.
   expect: { timeout: 8_000 },
   timeout: 15_000,
   forbidOnly: !!process.env.CI,
@@ -99,7 +90,9 @@ export default defineConfig({
     // sensible default for any context created outside a worker fixture.
     baseURL: e2eBaseURL(0),
     trace: "on-first-retry",
-    ...(executablePath ? { launchOptions: { executablePath } } : {}),
+    // Which Chromium, and the flags that make it rasterize reproducibly — see
+    // e2e/browser.ts for why each one is there and what it costs.
+    launchOptions: chromiumLaunchOptions(),
   },
   projects: [
     {

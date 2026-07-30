@@ -141,6 +141,13 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
     await page.screenshot({
       path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
       fullPage: true,
+      // Finish every finite CSS animation/transition and pin infinite ones to
+      // their first frame before the shot. `paintWholeDocument` above settles
+      // layout, fonts, and image decode; this settles *time*. A hover lift, a
+      // toast slide-in, or the schedule's skeleton shimmer caught mid-curve is
+      // a different image on every run, and the diff it produces looks exactly
+      // like faint antialiasing noise around the moving element.
+      animations: "disabled",
     });
   }
   // capture() runs mid-flow (navigation and clicks continue after it), so
@@ -181,6 +188,7 @@ async function capturePrint(page: Page, name: string) {
   await page.screenshot({
     path: `e2e/screenshots/${name}-print.png`,
     fullPage: true,
+    animations: "disabled",
   });
   await page.emulateMedia({ media: "screen" });
 }

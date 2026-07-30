@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e:build": "DATABASE_URL= DATABASE_URL_UNPOOLED= PGLITE_DATA_DIR=.pglite-e2e DIVEDAY_E2E=1 next build",
-    "e2e:browser-check": "node scripts/ensure-playwright-browser.mjs",
+    "e2e:browser-check": "tsx scripts/ensure-playwright-browser.ts",
     "e2e": "pnpm e2e:browser-check && pnpm e2e:build && playwright test",
     "visual": "pnpm e2e:browser-check && pnpm e2e:build && playwright test e2e/visual.spec.ts && dotenv -c -- reg-suit run",
     "visual:report": "node scripts/visual-report.mjs",
