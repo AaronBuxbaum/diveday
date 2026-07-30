@@ -1,4 +1,4 @@
-// Data for `pnpm task:context -- <area>`. Paths listed under `docs` must exist —
+// Data for `pnpm task:context <area>`. Paths listed under `docs` must exist —
 // `pnpm check:agents` enforces it; `code`/`tests` entries may be planned.
 
 export const shared = {
@@ -37,9 +37,9 @@ export const areas = {
       "Submission must be idempotent and authorized.",
     ],
     validate: [
-      "pnpm test -- src/db/bookings.test.ts --reporter=dot",
+      "pnpm test src/db/bookings.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- --reporter=line",
+      "pnpm e2e --reporter=line",
     ],
   },
   certifications: {
@@ -66,9 +66,9 @@ export const areas = {
       "Tenant-scope card capture, review, and readiness queries.",
     ],
     validate: [
-      "pnpm test -- src/lib/readiness.test.ts src/db/readiness.test.ts --reporter=dot",
+      "pnpm test src/lib/readiness.test.ts src/db/readiness.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- --reporter=line",
+      "pnpm e2e --reporter=line",
     ],
   },
   "rental-fit": {
@@ -95,9 +95,9 @@ export const areas = {
       "A diver with no fit on file is named on the prep list, never silently omitted.",
     ],
     validate: [
-      "pnpm test -- src/lib/dive-prep.test.ts --reporter=dot",
+      "pnpm test src/lib/dive-prep.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- e2e/nitrox.spec.ts --reporter=line",
+      "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
     ],
   },
   manifests: {
@@ -138,9 +138,9 @@ export const areas = {
       "Phone/sunlight use requires large controls, text labels, and no color-only status.",
     ],
     validate: [
-      "pnpm test -- src/db/readiness.test.ts src/db/manifests.test.ts src/lib/manifests.test.ts src/lib/offline-manifests.test.ts --reporter=dot",
+      "pnpm test src/db/readiness.test.ts src/db/manifests.test.ts src/lib/manifests.test.ts src/lib/offline-manifests.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- --reporter=line",
+      "pnpm e2e --reporter=line",
     ],
   },
   nitrox: {
@@ -167,9 +167,9 @@ export const areas = {
       "Nitrox is a safety-critical surface — it needs a dive-domain-expert review (V-05).",
     ],
     validate: [
-      "pnpm test -- src/lib/nitrox.test.ts src/db/nitrox.test.ts --reporter=dot",
+      "pnpm test src/lib/nitrox.test.ts src/db/nitrox.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- --reporter=line",
+      "pnpm e2e --reporter=line",
     ],
   },
   courses: {
@@ -197,9 +197,9 @@ export const areas = {
       "Content edits never touch pricing, the cert gate, or the agency age baseline.",
     ],
     validate: [
-      "pnpm test -- src/lib/courses.test.ts src/db/courses.test.ts --reporter=dot",
+      "pnpm test src/lib/courses.test.ts src/db/courses.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- e2e/courses.spec.ts --reporter=line",
+      "pnpm e2e e2e/courses.spec.ts --reporter=line",
     ],
   },
   today: {
@@ -220,10 +220,7 @@ export const areas = {
       "A diver who is already clear produces no action.",
       "An action acts in place or points at the record where the work happens — never a dead end.",
     ],
-    validate: [
-      "pnpm test -- src/lib/today.test.ts src/db/today.test.ts --reporter=dot",
-      "pnpm check",
-    ],
+    validate: ["pnpm test src/lib/today.test.ts src/db/today.test.ts --reporter=dot", "pnpm check"],
   },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows DiveDay's semantic design system.",
@@ -241,7 +238,7 @@ export const areas = {
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],
-    validate: ["pnpm lint", "pnpm typecheck", "pnpm visual", "pnpm e2e -- --reporter=line"],
+    validate: ["pnpm lint", "pnpm typecheck", "pnpm visual", "pnpm e2e --reporter=line"],
   },
   "brand-voice": {
     goal: "Create consistent DiveDay brand, voice, visual, merch, and vendor collateral from the current identity.",
@@ -286,7 +283,7 @@ export const areas = {
       "Schema changes include focused PGlite tests and generated migrations.",
     ],
     validate: [
-      "pnpm test -- src/db --reporter=dot",
+      "pnpm test src/db --reporter=dot",
       "pnpm typecheck",
       "pnpm db:generate",
       "pnpm check",
@@ -314,9 +311,9 @@ export const areas = {
       "Tenant and staff authorization checks stay explicit.",
     ],
     validate: [
-      "pnpm test -- src/db/bookings.test.ts --reporter=dot",
+      "pnpm test src/db/bookings.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e -- --reporter=line",
+      "pnpm e2e --reporter=line",
     ],
   },
   auth: {
@@ -339,10 +336,6 @@ export const areas = {
       "Server actions and queries enforce authorization independently of route gating.",
       "Dev credentials never become production behavior.",
     ],
-    validate: [
-      "pnpm test -- src/lib --reporter=dot",
-      "pnpm typecheck",
-      "pnpm e2e -- --reporter=line",
-    ],
+    validate: ["pnpm test src/lib --reporter=dot", "pnpm typecheck", "pnpm e2e --reporter=line"],
   },
 };

@@ -61,7 +61,7 @@ things, `<Field>`/`<FieldGrid>` for forms.
 ## Verify (the definition of done)
 
 1. `pnpm check` green.
-2. `pnpm e2e -- marketing.spec.ts --reporter=line` — update its pinned headline/price assertions
+2. `pnpm e2e marketing.spec.ts --reporter=line` — update its pinned headline/price assertions
    deliberately when copy changes; a red marketing spec on a copy change is the test working.
 3. Screenshot every touched route and **look at the PNGs**, light + dark, desktop + phone:
    `node scripts/screenshot.mjs / /product /pricing`
