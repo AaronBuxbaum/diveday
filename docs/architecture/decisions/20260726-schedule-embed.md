@@ -5,7 +5,7 @@
 
 ## Context
 
-[fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md)
+[fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md)
 verified the gap that triggered this slice: FareHarbor's core distribution mechanic is an embed
 generator that puts a booking calendar or "Book now" button on a shop's *own* website, keeping the
 shop's domain and brand in front of the diver until checkout. DiveDay's public schedule
