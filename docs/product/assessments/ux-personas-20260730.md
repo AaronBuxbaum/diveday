@@ -974,7 +974,160 @@ the import wizard shows ~313 words of preamble before a file is chosen; the expo
 
 ---
 
-## Appendix A — cross-surface consistency debts
+## 17. Lens: redundancy, coupling, and contextual findability
+
+Three questions: where does the same capability exist twice (and is the duplication earning
+its keep), what lives together that shouldn't (and apart that should), and when a user is in
+situation X, can they reach the tool for X without a nav reset?
+
+**Redundancy verdicts.** Deliberate and fine: reviews rendered in three places (public
+schedule, moderation, diver's own echo — different personas, different jobs); the two
+trip-creation forms (quick builder add vs. full form — the split is documented in the code).
+Deliberate but unreconciled: the **two discount systems** (shop promo codes vs. per-trip
+last-minute deals — the model split is intentional, but no single surface lists every live
+code, and their valid ranges differ for no user-visible reason); the **wait list vs.
+last-minute list** (per-trip queue vs. shop-wide deal alerts — neither form mentions the
+other, and a deal blast can give away the seat a wait-lister was queued for). Drift: **crew
+assignment has two write semantics against the same table** (Today's board assigns
+per-person; the trip's CrewSection replaces the whole set — two staff can silently clobber
+each other); **waiver sending exists as two UI generations** (the optimistic in-place
+control vs. the roster's redirect variant — the code itself notes they run the same path);
+**emergency contact is captured by two differently-labeled forms** on `/waivers` and
+`/ready` writing the same columns — while staff, told by Today to "ask at the counter,"
+**have no field anywhere to type it into**; `checked_in` has exactly one reader in the app —
+the manifest never shows counter check-in, and the check-in page never shows boarding;
+"instructor missing" is computed three different ways (only the trip page knows about
+ratios); and the notice-code→copy map is re-implemented in ~11 files with tone drift.
+
+**Coupling.** `/shop/[slug]/schedule` is four products on one 553-line route (staff KPIs +
+builder, public calendar + booking list, reviews, last-minute signup, plus an embed mode) —
+with a provably-dead `staffView` ternary inside the not-staff branch, and the anonymous
+diver's signup action living in the same `"use server"` module as the auth-gated builder
+mutations. The trip Guests tab carries seven jobs including a marketing blast and post-trip
+photo moderation. Settings is an 11-card undifferentiated stack (still internally named
+`PaymentsSettingsPage`). Reports carries two platform-health alert queues (stuck Stripe ops,
+failed photo deletions) that belong on Today.
+
+**Findability dead-ends.** The check-in page — the surface where a diver is standing in
+front of you — contains **zero links**: diver names, trip titles, and blockers are all plain
+text. The prep page (a Today destination) has zero links. Staffing's coverage gaps name a
+trip they can't take you to. The trip Overview can't reach the course it teaches, the dive
+site it visits, or the deal that applies. **No staff surface links to the public booking
+page** — staff cannot preview or share the page divers buy from — and `/reviews`' "View
+public page" button lands staff on the builder, which excludes reviews, so its promise is
+structurally impossible for its only audience. Orders have no index and appear in no nav or
+search — reachable only through a diver's payments section. The command palette can't find
+check-in, staffing, dive sites, courses, reviews, reports, promos, or orders. Import (in
+Settings) and the switching guides that sell it never link to each other in either
+direction.
+
+### Tasks
+
+139. **[M] One write semantics for crew.** Make the trip `CrewSection` use the same
+    per-person assign/unassign action as Today's `DepartureBoard` (replace-whole-set loses
+    concurrent edits), and link each staffing coverage gap (`staffing/page.tsx`) to the
+    trip's crew editor with a `#crew` anchor. Also give Today's `instructor_missing` row
+    that anchor — it currently lands on the bare Overview.
+140. **[M] One waiver-send control.** Extend `WaiverSendSurface` with `"roster"` and mount
+    `WaiverSendControl` in `RosterSection`, deleting the redirect-based
+    `issueWaiverAction`/banner variant so both surfaces share optimistic feedback and the
+    no-email fallback.
+141. **[S] Name the time windows.** Today (7 days), Blockers (next 40 trips), check-in
+    (−6h/+36h) slice the same readiness data with undocumented horizons — a diver "cleared"
+    on one list still shows on another. Say the window in each page's description line.
+142. **[S] Rename the "Waivers" nav item.** It points at the release-template editor, not
+    signature chasing. Rename to "Waiver template" and move it into the admin group in
+    `ShopNavLinks.tsx`; longer term see task 155.
+143. **[S] Deduplicate emergency-contact capture.** `/ready` and `/waivers` both collect it
+    with different labels. Show it read-only with an "already on file" state on whichever
+    surface the diver reaches second (both write through `saveBookingEmergencyContact`).
+144. **[M] Let staff record an emergency contact.** Today tells staff to "ask at the
+    counter" and links to a roster with no field. Add the two fields to the roster's
+    per-diver card and the diver-record edit form (`divers/[personId]/actions.ts`
+    `personSchema` has no contact fields). Prints on the manifest → safety-adjacent,
+    failure-path tests.
+145. **[S] Distinguish the two demo doors.** "Try the live demo" mints a staff demo;
+    "See a live schedule" hard-links the seeded shop's diver view from a presentational
+    component. Relabel ("Try the staff app" / "See a diver's booking page"), source the slug
+    from `DEMO_SHOP_SLUG`, and tag the schedule link for funnel attribution.
+146. **[S] Stop reusing the calendar page's keys in Settings.** The Settings card renders
+    the calendar page's full title/description; add proper `settings.main.calendar.*`
+    teaser keys like every sibling card.
+147. **[M] Reconcile wait list and last-minute list.** Make the deal send offer wait-listed
+    divers first (they hold "a place in line" the deal can currently sell out from under),
+    and cross-reference the two diver forms ("Want any-trip deal alerts instead?"). Read
+    `src/db/trip-promos.ts` + waitlist logic in `src/db/bookings.ts` first; tests on the
+    ordering.
+148. **[S] One page listing every live discount.** Add a read-only "Trip deals" section to
+    `/promos` showing outstanding last-minute codes with links to their trips, and align
+    the two systems' discount ranges (1–100% vs 5–90%) or say why they differ. Also fix
+    `LastMinuteDealSection` rendering the raw status enum (`sent`/`pending`/`failed`) into
+    a Badge — bundle keys.
+149. **[S] Make check-in and boarding visible to each other.** Show a "Checked in ✓" pill
+    on the manifest row and a "Boarded" pill on the check-in row (the check-in page's own
+    description promises this split; the UI doesn't carry it through).
+150. **[S] Flag unpriced builder trips.** A builder-created trip publishes to the public
+    schedule with no price and the builder never says so. Show "No price set" on the
+    builder card, linking to the trip's Details form.
+151. **[M] One "course crew gap" computation.** The trip page, staffing page, and Today
+    each compute "no instructor" differently (only the trip page knows PADI ratios).
+    Extract one helper in `src/lib/` consumed by all three, with the ratio logic; unit
+    tests move with it.
+152. **[S] Shared flash-notice helper.** ~11 files re-implement the `?notice=` →
+    `{tone, copy}` map with tone drift for the same outcomes. One `noticeFromParam` helper
+    + shared banner component.
+153. **[L] Split the schedule route.** `/schedule` becomes the public, canonical,
+    embeddable page (calendar, list, reviews, last-minute form); the staff builder + KPI
+    tiles move to `/schedule/board` (staff-only), which links to the public page as its
+    preview. Delete the dead `staffView` ternary inside the public branch, and move the
+    anonymous `joinLastMinuteListAction` out of the builder's auth-gated action module.
+    Big but high-value: it makes task 160 trivial and un-forks the page nobody can see
+    whole. Route change → check e2e specs, sitemap, canonical metadata.
+154. **[M] Group Settings.** Three labelled groups ("Your shop" / "Money" / "Data &
+    integrations") with anchors, sub-page back-links (`settings/team`, `calendar`,
+    `import`, `export` currently have no route back), and the founder mailto demoted to a
+    footer. Rename the component from its stale `PaymentsSettingsPage`.
+155. **[M] Give `/waivers` two tabs — Template and Signatures.** The template editor,
+    signature chasing (Blockers/Today), and the signed-record evidence are three
+    unconnected places today; a Signatures tab listing signed records (linked from blocker
+    rows) closes the loop. Security-sensitive (waiver records) → reviewer per AGENTS.md.
+156. **[S] Slim the Guests tab.** Move the last-minute deal blast behind a "Promote" card
+    or `/promos` (with trip picker) and recap-photo moderation to the trip Overview beside
+    the crew shoutout — Guests returns to "who is attending."
+157. **[S] Move ops alerts from Reports to Today.** Stuck Stripe operations and failed
+    photo deletions are urgent chores gated behind the owner-only monthly report; surface
+    them as `urgency: "now"` Today rows (Reports keeps the monthly view).
+158. **[M] Give orders an index.** `/orders` with status/date/diver filters, added to nav
+    (or Settings' Money group), command-palette go-tos, and linked from Reports revenue
+    rows and roster payment cells. Today orders are reachable only via a diver's payments
+    section.
+159. **[S] Link the dead-end pages.** Check-in rows: diver name → record, trip →
+    manifest, per-blocker fix buttons (extends task 68). Prep page: every named diver →
+    their record, nitrox rows → their cards. Blockers and Reviews: link the diver name.
+    Reports: link trip rows to their Guests tab. Dive-site page: "Upcoming dives here"
+    list; trip header: link the site and the course title.
+160. **[S] Let staff see and share the diver's booking page.** "View / share booking page"
+    action on `TripHeader` (copy link + open), and fix `/reviews`' "View public page" to
+    show a view that actually contains reviews (`?embed=1` or a diver-preview flag until
+    task 153 lands).
+161. **[S] Show a diver's upcoming trips on their record.** The diver page fetches
+    upcoming trips only to populate the booking dropdown (filtered to trips they're *not*
+    on). Add an "Upcoming" list above the history, each row linking to the manifest —
+    answers "which boats is this person on this week?"
+162. **[M] Widen the command palette.** Add every gated nav destination (check-in,
+    staffing, dive sites, courses, reviews, reports, promos, orders) to the go-to list,
+    and dive sites + courses + orders to `searchShop` in `src/db/search.ts`.
+163. **[S] Connect import and the switching guides.** `settings/import` offers "Coming
+    from EVE / DiveShop360 / a spreadsheet?" links to the matching guide; each guide's CTA
+    deep-links signed-in owners to `/settings/import`. Zero links exist today in either
+    direction.
+164. **[S] Send signed divers back to readiness.** After `completeAction` on
+    `/waivers/[token]`, redirect to the booking's readiness link (when it resolves) so the
+    diver lands on "what's left" instead of the signed-waiver page with no forward path
+    beyond one link.
+165. **[M] Cross-link staffing shifts and trip crew.** A person can crew a boat with no
+    shift or hold a shift with no boat, and neither surface knows. Show assigned trips in
+    each staffing card and shift coverage inside `CrewSection`.
 
 Each of these is a small task ("make X consistent with Y") suitable for a lesser model; file
 refs above.
@@ -1036,11 +1189,16 @@ If handing a lesser model twelve tasks tomorrow, in order of leverage-per-effort
 10. Task 52 + 53 — recap ordering + missing tip-paid notice (revenue-adjacent).
 11. Task 63 — crew assignment unusable on touch (daily staff pain).
 12. Task 96 + 97 — onboard form data loss + timezone list (first-impression funnel).
+13. Task 159 — the zero-link dead-end pages, starting with check-in (a diver is standing
+    at the counter and the page can't take you anywhere).
+14. Task 147 — the last-minute deal can sell a wait-listed diver's seat out from under
+    them (fairness bug, not just polish).
+15. Task 130 — the import contract restated ~19 times (largest single copy cleanup).
 
 ---
 
-*Method note: findings compiled from five parallel code explorations (public diver surfaces;
-token surfaces; staff surfaces; marketing/onboarding; cross-cutting a11y/i18n/states) plus
-live-app screenshot passes (desktop + mobile, signed-out + owner session) against the seeded
-demo shop on this date. File references are anchors, not guarantees — re-verify line positions
-before editing.*
+*Method note: findings compiled from seven parallel code explorations (public diver surfaces;
+token surfaces; staff surfaces; marketing/onboarding; cross-cutting a11y/i18n/states;
+over-explained copy; information architecture and findability) plus live-app screenshot passes
+(desktop + mobile, signed-out + owner session) against the seeded demo shop on this date. File
+references are anchors, not guarantees — re-verify line positions before editing.*

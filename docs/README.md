@@ -41,7 +41,7 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
-| [assessments/ux-personas-20260730.md](product/assessments/ux-personas-20260730.md) | 2026-07-30 fifteen-persona frontend walkthrough with 120+ prompt-ready improvement tasks, tagged by size and ranked by leverage |
+| [assessments/ux-personas-20260730.md](product/assessments/ux-personas-20260730.md) | 2026-07-30 fifteen-persona frontend walkthrough plus two lenses (over-explained copy; redundancy/coupling/findability) — 165 prompt-ready improvement tasks, tagged by size and ranked by leverage |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
