@@ -188,9 +188,7 @@ describe("prepareContactImport — safety rules", () => {
       expiresAt: null,
       status: "verified",
     });
-    expect(
-      row.issues.some((i) => /imported as verified/i.test(i.message) && /confirm/i.test(i.message)),
-    ).toBe(true);
+    expect(row.issues.some((i) => i.code === "cert_imported_verified")).toBe(true);
   });
 
   it("imports a card with a null source label when the row names no prior shop", () => {
@@ -211,9 +209,9 @@ describe("prepareContactImport — safety rules", () => {
     const csv = "full_name,certification_level\nMarie Tharp,Open Water";
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toBeNull();
-    expect(
-      row.issues.some((i) => i.level === "warning" && /no usable card number/i.test(i.message)),
-    ).toBe(true);
+    expect(row.issues.some((i) => i.level === "warning" && i.code === "level_no_card_number")).toBe(
+      true,
+    );
   });
 
   it("declines a technical rating and says why, rather than importing a nearby rung", () => {
@@ -225,16 +223,16 @@ describe("prepareContactImport — safety rules", () => {
     expect(row.action).toBe("import");
     expect(row.cert).toBeNull();
     expect(row.specialties).toEqual([]);
+    expect(row.issues.some((i) => i.level === "warning" && i.code === "level_is_technical")).toBe(
+      true,
+    );
+    // Specifically not the old outcome: no Advanced Open Water card (or any
+    // card) ever got imported for this row.
     expect(
       row.issues.some(
-        (i) =>
-          i.level === "warning" &&
-          /technical or overhead-environment rating/i.test(i.message) &&
-          /not imported/i.test(i.message),
+        (i) => i.code === "cert_imported_verified" || i.code === "cert_imported_pending",
       ),
-    ).toBe(true);
-    // Specifically not the old outcome: no Advanced Open Water card anywhere.
-    expect(row.issues.some((i) => /advanced open water/i.test(i.message))).toBe(false);
+    ).toBe(false);
   });
 
   it("leaves an unrecognized level for a human, importing the person anyway", () => {
@@ -246,7 +244,7 @@ describe("prepareContactImport — safety rules", () => {
     const [row] = prepareContactImport(csv).rows;
     expect(row.action).toBe("import");
     expect(row.cert).toBeNull();
-    expect(row.issues.some((i) => /isn't a level/i.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "level_not_gated")).toBe(true);
   });
 
   it("maps an unknown agency to 'other' rather than dropping the card", () => {
@@ -266,15 +264,11 @@ describe("prepareContactImport — safety rules", () => {
       sourceLabel: null,
       status: "verified",
     });
-    expect(
-      withNumber.issues.some(
-        (i) => /imported as verified/i.test(i.message) && /confirm/i.test(i.message),
-      ),
-    ).toBe(true);
+    expect(withNumber.issues.some((i) => i.code === "nitrox_imported")).toBe(true);
 
     const flagOnly = prepareContactImport("full_name,nitrox_certified\nB Diver,yes").rows[0];
     expect(flagOnly.nitrox).toBeNull();
-    expect(flagOnly.issues.some((i) => /add and verify a nitrox card/i.test(i.message))).toBe(true);
+    expect(flagOnly.issues.some((i) => i.code === "nitrox_no_card_number")).toBe(true);
   });
 
   it("imports a specialty card from an explicit specialty column and its own number", () => {
@@ -295,13 +289,7 @@ describe("prepareContactImport — safety rules", () => {
     ]);
     // The card is verified on arrival, but the gate is not: say both, and say
     // what the confirm asserts rather than that it's one tap (H-24).
-    expect(
-      row.issues.some(
-        (i) =>
-          /imported as verified/i.test(i.message) &&
-          /waits until a staffer confirms they've seen the card/i.test(i.message),
-      ),
-    ).toBe(true);
+    expect(row.issues.some((i) => i.code === "specialty_imported_verified")).toBe(true);
   });
 
   it("reads a specialty out of a certification row that names one, and files no ladder card", () => {
@@ -316,7 +304,7 @@ describe("prepareContactImport — safety rules", () => {
     ]);
     expect(row.cert).toBeNull();
     // Not "isn't a level we gate on" — it *is* a card we gate on, just not a rung.
-    expect(row.issues.some((i) => /isn't a level/i.test(i.message))).toBe(false);
+    expect(row.issues.some((i) => i.code === "level_not_gated")).toBe(false);
   });
 
   it("keeps a real ladder rung out of the specialty path", () => {
@@ -343,7 +331,7 @@ describe("prepareContactImport — safety rules", () => {
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toBeNull();
     expect(row.specialties).toEqual([expect.objectContaining({ specialty: "deep" })]);
-    expect(row.issues.some((i) => /names a specialty, not a level/i.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "level_names_specialty")).toBe(true);
   });
 
   it("imports every specialty a cell names, under the diver's one agency number", () => {
@@ -370,7 +358,7 @@ describe("prepareContactImport — safety rules", () => {
     const noNumber = prepareContactImport("full_name,specialty\nNo Number,Night Diver").rows[0];
     expect(noNumber.specialties).toEqual([]);
     expect(
-      noNumber.issues.some((i) => i.level === "warning" && /no card number/i.test(i.message)),
+      noNumber.issues.some((i) => i.level === "warning" && i.code === "specialty_no_card_number"),
     ).toBe(true);
   });
 
@@ -380,7 +368,7 @@ describe("prepareContactImport — safety rules", () => {
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toBeNull();
     expect(row.action).toBe("import");
-    expect(row.issues.some((i) => /no usable card number/i.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "level_no_card_number")).toBe(true);
   });
 
   it("leaves a specialty it doesn't gate on for a human", () => {
@@ -388,7 +376,7 @@ describe("prepareContactImport — safety rules", () => {
     const [row] = prepareContactImport(csv).rows;
     expect(row.action).toBe("import");
     expect(row.specialties).toEqual([]);
-    expect(row.issues.some((i) => /isn't a specialty we gate on/i.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "specialty_not_gated")).toBe(true);
   });
 
   it("merges a repeated email's cards onto the same diver instead of discarding them", () => {
@@ -447,9 +435,9 @@ describe("prepareContactImport — safety rules", () => {
     // Fails closed: an unreadable gate input must not become a card that never
     // comes due, so the card lands pending for a staffer instead.
     expect(row.cert).toMatchObject({ identifier: "RS-3", expiresAt: null, status: "pending" });
-    expect(
-      row.issues.some((i) => i.level === "warning" && /can't be read as a date/i.test(i.message)),
-    ).toBe(true);
+    expect(row.issues.some((i) => i.level === "warning" && i.code === "expiry_unreadable")).toBe(
+      true,
+    );
   });
 
   it("reads the date formats real exports emit, and refuses a sentinel year", () => {
@@ -478,7 +466,7 @@ describe("prepareContactImport — safety rules", () => {
     // The whole verified-on-import posture rests on the prior system having
     // checked the card. Here it says it didn't.
     expect(row.cert).toMatchObject({ identifier: "OW-11", status: "pending" });
-    expect(row.issues.some((i) => /don't call it checked/i.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "card_marked_unverified")).toBe(true);
   });
 
   it("carries dive insurance across as the free text the file holds", () => {
@@ -489,7 +477,7 @@ describe("prepareContactImport — safety rules", () => {
   it("drops a malformed email so it can't mis-match a diver on dedup", () => {
     const [row] = prepareContactImport("full_name,email\nBad Row,not-an-email").rows;
     expect(row.email).toBeNull();
-    expect(row.issues.some((i) => /doesn't look valid/i.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "email_invalid")).toBe(true);
   });
 
   it("skips a nameless row, and folds a repeated email onto the first row's diver", () => {
@@ -549,11 +537,7 @@ describe("prepareContactImport — safety rules", () => {
       documentUrl: "https://old.example.com/w.jpg",
       medicalDocumentUrl: "https://old.example.com/m.jpg",
     });
-    expect(
-      row.issues.some((i) =>
-        /trusted from the prior shop, including medical clearance/.test(i.message),
-      ),
-    ).toBe(true);
+    expect(row.issues.some((i) => i.code === "waiver_imported")).toBe(true);
   });
 
   it("leaves waiver null when waiver_accepted is absent or falsy", () => {
@@ -567,7 +551,7 @@ describe("prepareContactImport — safety rules", () => {
     const csv = "full_name,waiver_accepted,waiver_signed_at\nBad Date,yes,not-a-real-date";
     const [row] = prepareContactImport(csv).rows;
     expect(row.waiver).toMatchObject({ signedAt: null });
-    expect(row.issues.some((i) => /isn't a real calendar date/.test(i.message))).toBe(true);
+    expect(row.issues.some((i) => i.code === "waiver_date_invalid")).toBe(true);
   });
 
   it("rejects an impossible calendar date the same way a malformed one is rejected", () => {
@@ -645,14 +629,14 @@ describe("prepareContactImport — prior visits", () => {
     expect(row.visit).toBeNull();
     // The diver still imports — one unreadable date is not a reason to drop a person.
     expect(row.action).toBe("import");
-    expect(row.issues.some((issue) => /isn't a date we can read/.test(issue.message))).toBe(true);
+    expect(row.issues.some((issue) => issue.code === "visit_date_unreadable")).toBe(true);
   });
 
   it("says so when a row names a booking but carries no date column at all", () => {
     const csv = ["full_name,email,tour_name,total", "No Date,nd@example.com,Reef,$100"].join("\n");
     const [row] = prepareContactImport(csv).rows;
     expect(row.visit).toBeNull();
-    expect(row.issues.some((issue) => /no date/.test(issue.message))).toBe(true);
+    expect(row.issues.some((issue) => issue.code === "visit_no_date")).toBe(true);
   });
 
   it("never builds a visit from a skipped row", () => {

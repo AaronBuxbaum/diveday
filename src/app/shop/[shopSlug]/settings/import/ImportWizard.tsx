@@ -6,7 +6,12 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { type ImportField, type PreparedImport, prepareContactImport } from "@/lib/import";
+import {
+  type ImportField,
+  type ImportIssueCode,
+  type PreparedImport,
+  prepareContactImport,
+} from "@/lib/import";
 import { type ImportActionState, importContactsAction } from "./actions";
 
 /**
@@ -58,6 +63,10 @@ type ImportWizardCopy = {
   hiddenRowsNotice: string;
   submit: string;
   submitting: string;
+  /** Every `ImportIssueCode` `src/lib/import.ts` can raise, resolved to its raw ICU
+   * template — `fill()` interpolates each issue's `params` once the row is known
+   * (only client-side, since the CSV preview never touches the server). */
+  issues: Record<ImportIssueCode, string>;
   result: {
     summary: string;
     cardsLine: string;
@@ -325,9 +334,21 @@ export function ImportWizard({
                         <span className="text-muted">{copy.table.emptyValue}</span>
                       ) : (
                         <ul className="space-y-0.5">
-                          {row.issues.map((issue) => (
-                            <li key={issue.message} className={`text-xs ${issueTone[issue.level]}`}>
-                              {issue.message}
+                          {/* The issue list is built once per row by prepareContactImport and
+                              never reordered or filtered afterward, so the index is a stable
+                              identity — there's no other natural key, since two issues can
+                              legitimately share the same code and params (e.g. "agency
+                              unrecognized" from both a cert and a specialty column). */}
+                          {row.issues.map((issue, index) => (
+                            <li
+                              // biome-ignore lint/suspicious/noArrayIndexKey: static, unreordered list
+                              key={`${issue.code}-${index}`}
+                              className={`text-xs ${issueTone[issue.level]}`}
+                            >
+                              {fill(
+                                copy.issues[issue.code],
+                                (issue.params ?? {}) as unknown as Record<string, string | number>,
+                              )}
                             </li>
                           ))}
                         </ul>

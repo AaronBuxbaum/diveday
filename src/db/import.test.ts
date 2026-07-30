@@ -419,9 +419,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
       "No Date Dana,dana.import@example.com,yes,not-a-date",
     ].join("\n");
     const prepared = prepareContactImport(csv);
-    expect(prepared.rows[0]?.issues.some((i) => /isn't a real calendar date/.test(i.message))).toBe(
-      true,
-    );
+    expect(prepared.rows[0]?.issues.some((i) => i.code === "waiver_date_invalid")).toBe(true);
     await commitContactImport(db, shop.id, prepared, importer);
     const person = await personByEmail(db, shop.id, "dana.import@example.com");
     if (!person) throw new Error("person not created");

@@ -1713,6 +1713,34 @@
           "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están — volver a ejecutar la misma exportación no duplica el historial de nadie.",
           "seeRoster": "Ver el listado"
         }
+      },
+      "issues": {
+        "emailInvalid": "El correo «{email}» no parece válido — importado sin correo.",
+        "expiryUnreadable": "La fecha de vencimiento «{value}» no se puede leer como fecha — la tarjeta se importa para revisión del personal en lugar de como verificada, para que nadie embarque con una fecha que hemos adivinado.",
+        "expiryAssumedMonthFirst": "La fecha de vencimiento «{value}» se leyó como {parsed} (mes primero). Revísala si tu archivo escribe el día primero.",
+        "cardMarkedUnverified": "Tu archivo marca esta tarjeta como «{status}» — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por comprobada.",
+        "specialtyNotGated": "La especialidad «{specialty}» no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
+        "specialtyNoCardNumber": "La especialidad «{specialty}» no tiene número de tarjeta en la fila — no se importó. Una tarjeta sin número no se puede verificar.",
+        "specialtyImportedVerified": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} como verificadas desde tus registros — marcadas como importadas. Una inmersión que la requiera espera hasta que el personal confirme que ha visto la tarjeta.",
+        "specialtyImportedPending": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} para revisión del personal — ver la nota anterior.",
+        "agencyUnrecognized": "Agencia de certificación no reconocida — importada como «otra».",
+        "levelNamesSpecialty": "La certificación «{level}» nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna tarjeta de nivel. Añade esa tarjeta a mano si es una tarjeta aparte.",
+        "levelIsTechnical": "La certificación «{level}» es una calificación técnica o de entorno cerrado, no un peldaño de la escala recreativa — no se importó, y nunca se lee como un nivel cercano. DiveDay no controla estas; regístrala a mano si tu centro lo hace.",
+        "levelNotGated": "La certificación «{level}» no es un nivel que controlemos — tarjeta no importada. Añádela a mano si es una tarjeta real.",
+        "levelNoCardNumber": "El nivel de certificación «{level}» no tiene un número de tarjeta utilizable — tarjeta no importada. Una tarjeta sin número no se puede verificar.",
+        "certImportedVerified": "Tarjeta importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
+        "certImportedPending": "Tarjeta importada para revisión del personal — ver la nota anterior.",
+        "nitroxImported": "Tarjeta de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
+        "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de tarjeta — añade y verifica una tarjeta de nitrox en DiveDay.",
+        "waiverDateInvalid": "La fecha de aceptación del waiver «{value}» no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
+        "waiverImported": "Waiver importado como aceptado — confiado desde el centro anterior, incluyendo la autorización médica, y marcado «importado» para que nunca se confunda con un waiver firmado en DiveDay.",
+        "dobInvalid": "La fecha de nacimiento «{value}» no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) — importada sin ella.",
+        "visitDateUnreadable": "La fecha de visita «{value}» no es una fecha que podamos leer — el buceador se importa sin esta visita.",
+        "visitNoReference": "Visita importada sin referencia de reserva — una reimportación la relaciona por fecha, nombre e importe, así que dos reservas idénticas en un mismo día llegan como una sola visita.",
+        "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha — el buceador se importa sin esta visita.",
+        "noName": "Sin nombre — fila omitida.",
+        "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las tarjetas, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
+        "noEmailNewRecord": "Sin correo — importado como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo."
       }
     },
     "embed": {
