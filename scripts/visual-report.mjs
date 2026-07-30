@@ -1,0 +1,143 @@
+#!/usr/bin/env node
+// Fetches a reg-suit report straight from S3 and turns it into flat, local
+// files: a markdown summary plus the actual/expected/diff PNGs. This exists
+// because the hosted report (`index.html`) is a client-rendered SPA — its
+// body is just `<div id="app"></div>` until JS runs, so a text-only fetch
+// (an agent's WebFetch, a naive `curl`) sees nothing. `out.json` and the PNGs
+// are flat static files on the same public bucket; this script is the
+// documented way to reach them. See ADR 20260729-reg-suit-visual-regression.
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { gunzipSync } from "node:zlib";
+
+const DEFAULT_BUCKET = "diveday-vrt";
+const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
+
+function parseArgs(argv) {
+  const args = { out: ".reg-report", all: false };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--commit") args.commit = argv[++i];
+    else if (arg === "--bucket") args.bucket = argv[++i];
+    else if (arg === "--out") args.out = argv[++i];
+    else if (arg === "--all") args.all = true;
+    else {
+      console.error(`Unknown argument: ${arg}`);
+      console.error(
+        "Usage: node scripts/visual-report.mjs [--commit <sha>] [--bucket <name>] [--out <dir>] [--all]",
+      );
+      process.exit(1);
+    }
+  }
+  return args;
+}
+
+function currentCommit() {
+  return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+}
+
+// S3 serves these objects with `Content-Encoding: gzip`, but some fetch
+// clients (Node's global fetch among them) already transparently decode that
+// before returning the body, while others (plain `curl`, `https.get`) hand
+// back the raw gzip bytes. Trust the magic number, not the header.
+async function fetchFromBucket(bucket, key) {
+  const url = `https://${bucket}.s3.amazonaws.com/${key}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    return { ok: false, status: res.status, url };
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  const body = buf.subarray(0, 2).equals(GZIP_MAGIC) ? gunzipSync(buf) : buf;
+  return { ok: true, body, url };
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const bucket = args.bucket || process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
+  const commit = args.commit || currentCommit();
+
+  console.log(`Fetching reg-suit report for ${commit} from bucket "${bucket}"...`);
+
+  const manifest = await fetchFromBucket(bucket, `${commit}/out.json`);
+  if (!manifest.ok) {
+    console.error(
+      `No reg-suit report at ${manifest.url} (HTTP ${manifest.status}).\n` +
+        "This usually means the `visual` CI job hasn't finished for this commit yet, this commit was " +
+        "never pushed to CI (e.g. an uncommitted or amended local change), or REG_SUIT_S3_BUCKET_NAME " +
+        "points at a different bucket than CI publishes to.",
+    );
+    process.exit(1);
+  }
+
+  const report = JSON.parse(manifest.body.toString("utf8"));
+  const dirs = { actual: report.actualDir, expected: report.expectedDir, diff: report.diffDir };
+  const outDir = path.resolve(args.out, commit);
+
+  const items = [
+    ...report.failedItems.map((name) => ({
+      name,
+      kind: "changed",
+      want: ["expected", "actual", "diff"],
+    })),
+    ...report.newItems.map((name) => ({ name, kind: "new", want: ["actual"] })),
+    ...report.deletedItems.map((name) => ({ name, kind: "deleted", want: ["expected"] })),
+    ...(args.all
+      ? report.passedItems.map((name) => ({ name, kind: "passed", want: ["expected", "actual"] }))
+      : []),
+  ];
+
+  let downloadCount = 0;
+  for (const item of items) {
+    item.files = {};
+    for (const dirKind of item.want) {
+      const remote = `${commit}/${dirs[dirKind]}/${item.name}`;
+      const local = path.join(outDir, dirKind, item.name);
+      const result = await fetchFromBucket(bucket, remote);
+      if (!result.ok) {
+        console.warn(`  skip ${remote}: HTTP ${result.status}`);
+        continue;
+      }
+      mkdirSync(path.dirname(local), { recursive: true });
+      writeFileSync(local, result.body);
+      item.files[dirKind] = local;
+      downloadCount++;
+    }
+  }
+
+  const lines = [
+    `# reg-suit report — ${commit}`,
+    "",
+    `Changed: ${report.failedItems.length} · New: ${report.newItems.length} · ` +
+      `Deleted: ${report.deletedItems.length} · Passed: ${report.passedItems.length}`,
+    "",
+    `Hosted report (needs a browser, not agent-fetchable): https://${bucket}.s3.amazonaws.com/${commit}/index.html`,
+    "",
+  ];
+
+  for (const item of items) {
+    lines.push(`## ${item.name} (${item.kind})`);
+    for (const [dirKind, local] of Object.entries(item.files)) {
+      lines.push(`- ${dirKind}: ${path.relative(process.cwd(), local)}`);
+    }
+    lines.push("");
+  }
+
+  if (!args.all && report.passedItems.length) {
+    lines.push(
+      `${report.passedItems.length} passed item(s) were not downloaded — pass --all to include them.`,
+    );
+  }
+
+  const summaryPath = path.join(outDir, "REPORT.md");
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(summaryPath, lines.join("\n"));
+
+  console.log(lines.join("\n"));
+  console.log(`Wrote ${summaryPath} and ${downloadCount} image(s) under ${outDir}`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
