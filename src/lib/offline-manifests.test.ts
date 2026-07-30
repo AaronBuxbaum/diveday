@@ -38,7 +38,7 @@ function snapshot(): OfflineManifestSnapshot {
             emergencyContactName: null,
             emergencyContactPhone: null,
             readiness: { status: "ready", blockers: [] },
-            rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+            rentalFit: { state: "not_recorded" as const },
             nitroxRequested: false,
           },
           {
@@ -49,9 +49,9 @@ function snapshot(): OfflineManifestSnapshot {
             emergencyContactPhone: null,
             readiness: {
               status: "blocked",
-              blockers: [{ code: "waiver_pending", message: "Waiver pending." }],
+              blockers: [{ code: "waiver_pending", text: "Waiver pending." }],
             },
-            rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+            rentalFit: { state: "not_recorded" as const },
             nitroxRequested: false,
           },
         ],
@@ -129,7 +129,7 @@ describe("offline manifest policy", () => {
       emergencyContactName: null,
       emergencyContactPhone: null,
       readiness: { status: "ready", blockers: [] },
-      rentalFit: { state: "not_recorded", text: "No fit on file — not asked yet" },
+      rentalFit: { state: "not_recorded" },
       nitroxRequested: false,
       rollCall: {
         state: "not_boarded",
@@ -192,7 +192,7 @@ describe("offline manifest policy", () => {
           emergencyContactName: null,
           emergencyContactPhone: null,
           readiness: { status: "ready", blockers: [] },
-          rentalFit: { state: "own_kit", text: "Own kit" },
+          rentalFit: { state: "own_kit" },
           nitroxRequested: false,
           rollCall: {
             state: "not_boarded",
@@ -206,11 +206,11 @@ describe("offline manifest policy", () => {
       summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 1, awaiting: 0 },
     };
 
-    const payload = serializeManifests([manifest], {
-      slug: "blue-mantis",
-      name: "Blue Mantis",
-      timezone: "America/New_York",
-    });
+    const payload = serializeManifests(
+      [manifest],
+      { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+      (blocker) => blocker.code,
+    );
     expect(payload.manifests[0]?.divers[0]?.rollCall).toEqual({
       state: "not_boarded",
       occurredAt: "2026-07-20T13:30:00.000Z",

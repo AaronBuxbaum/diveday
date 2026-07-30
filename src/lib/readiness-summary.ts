@@ -20,12 +20,26 @@ export type ChecklistState = "done" | "action" | "waiting";
 /** Reuses the engine's canonical blocker families so no view can diverge. */
 export type ChecklistCategory = BlockerCategory;
 
+/**
+ * Every distinct sentence the diver checklist can show. Most are a
+ * `ReadinessBlockerCode` (the engine's own blocker, re-voiced for a diver —
+ * see `src/i18n/readiness-summary-labels.ts`); the rest cover the "nothing
+ * left in this category" and multi-card states that have no blocker of their
+ * own.
+ */
+export type ChecklistDetailCode =
+  | ReadinessBlockerCode
+  | "waiver_done"
+  | "certification_done"
+  | "payment_done"
+  | "certification_multiple_needed"
+  | "setup_generic";
+
 export type DiverChecklistItem = {
   category: ChecklistCategory;
-  label: string;
   state: ChecklistState;
-  /** One warm sentence in the diver's own language. */
-  detail: string;
+  /** Resolved to a sentence via `src/i18n/readiness-summary-labels.ts`, never here. */
+  detailCode: ChecklistDetailCode;
   /**
    * The worst blocker's code, so a transactional surface can offer the exact
    * action it enables (sign the waiver, pay the balance). Absent on a done item.
@@ -39,137 +53,58 @@ export type DiverChecklistItem = {
  * card, and paying are the diver's. Kept honest so the page never nags a diver
  * about something only staff can clear.
  */
-const DIVER_VOICE: Record<ReadinessBlockerCode, { state: "action" | "waiting"; detail: string }> = {
-  requirements_not_configured: {
-    state: "waiting",
-    detail: "Your shop is still finalizing this trip’s details.",
-  },
-  readiness_unavailable: {
-    state: "waiting",
-    detail: "Your shop is confirming your readiness. Check back shortly.",
-  },
-  identity_unconfirmed: {
-    // Gentle and non-accusatory: this often just means a family sharing one
-    // inbox. The shop clears it; there is nothing for the diver to do.
-    state: "waiting",
-    detail:
-      "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
-  },
-  under_minimum_age: {
-    // Names the real reason (H-22, product-owner decision 2026-07-25). This
-    // was word-for-word the `identity_unconfirmed` line until then, on the
-    // reasoning that a `course_min_age` disclosure lets anyone who can guess
-    // an email learn whether that email belongs to a child under a course's
-    // minimum age (10/12/15/18) — the same oracle the public booking refusal
-    // was pulled for, one step later.
-    //
-    // Naming it here is a *known, accepted* narrowing of that protection, not
-    // a closure of it: `identity_unconfirmed` only flags a submitted name that
-    // doesn't match the name already on file (H-13, `!nameMatches`), so an
-    // attacker who already knows the child's real name — arguably the more
-    // concerning, targeted case — gets `nameMatches: true` on the very first
-    // request and never trips it. `buildDiverChecklist` picks the setup
-    // bucket's *first* blocker, and `calculateReadiness` always pushes
-    // `identity_unconfirmed` before `under_minimum_age` (src/lib/readiness.ts)
-    // — so this copy is only ever shown when no identity mismatch is present,
-    // and the mismatched-name case still gets the generic line above. The
-    // known-name case does not. The product owner chose
-    // this trade for the common case's clarity, with the gap written down
-    // rather than silently accepted. See H-22, docs/product/human-decisions.md.
-    state: "waiting",
-    detail:
-      "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, reach out to the shop and they’ll sort it out.",
-  },
-  waiver_not_sent: {
-    // A waiver goes out the moment a diver joins, so this state is the rare
-    // leftover — a link that never issued (a delivery hiccup, or a waiver turned
-    // on after booking). Stay honest: don't claim an email is coming; the shop
-    // can hand over the link on arrival.
-    state: "waiting",
-    detail:
-      "The shop hasn’t sent your waiver yet — you can ask for it when you arrive, or reach them below.",
-  },
-  waiver_pending: {
-    // No email claim: in a no-email deployment the link was issued but never
-    // sent, and on the readiness page the button hands it over in place.
-    state: "action",
-    detail: "Sign your waiver — it only takes about two minutes.",
-  },
-  waiver_expired: {
-    // Don't promise an outbound send the shop may never make.
-    state: "waiting",
-    detail: "Your waiver link expired — ask the shop for a fresh one.",
-  },
-  medical_review: {
-    state: "waiting",
-    detail:
-      "Thanks for signing. One medical answer needs a closer look — a doctor’s sign-off may be required, and your shop will be in touch about next steps.",
-  },
-  certification_missing: {
-    state: "action",
-    detail:
-      "Get your certification card to the shop — upload a photo or get in touch — so they can add it to your file.",
-  },
-  certification_pending: {
-    state: "waiting",
-    detail: "Your certification card is with the shop for verification.",
-  },
-  certification_expired: {
-    state: "action",
-    detail:
-      "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
-  },
-  certification_insufficient: {
-    state: "action",
-    detail: "This trip needs a higher certification level. Your shop can talk through the options.",
-  },
-  specialty_missing: {
-    state: "action",
-    detail:
-      "This dive needs a specialty card — send the shop a photo or get in touch so they can add it.",
-  },
-  specialty_pending: {
-    state: "waiting",
-    detail: "Your specialty card is with the shop for verification.",
-  },
-  specialty_expired: {
-    state: "action",
-    detail:
-      "Your specialty card on file is past the refresher date your shop set — check with them about it before you dive.",
-  },
+const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
+  requirements_not_configured: "waiting",
+  readiness_unavailable: "waiting",
+  // Gentle and non-accusatory: this often just means a family sharing one
+  // inbox. The shop clears it; there is nothing for the diver to do.
+  identity_unconfirmed: "waiting",
+  // Names the real reason (H-22, product-owner decision 2026-07-25). This
+  // was word-for-word the `identity_unconfirmed` line until then, on the
+  // reasoning that a `course_min_age` disclosure lets anyone who can guess
+  // an email learn whether that email belongs to a child under a course's
+  // minimum age (10/12/15/18) — the same oracle the public booking refusal
+  // was pulled for, one step later.
+  //
+  // Naming it here is a *known, accepted* narrowing of that protection, not
+  // a closure of it: `identity_unconfirmed` only flags a submitted name that
+  // doesn't match the name already on file (H-13, `!nameMatches`), so an
+  // attacker who already knows the child's real name — arguably the more
+  // concerning, targeted case — gets `nameMatches: true` on the very first
+  // request and never trips it. `buildDiverChecklist` picks the setup
+  // bucket's *first* blocker, and `calculateReadiness` always pushes
+  // `identity_unconfirmed` before `under_minimum_age` (src/lib/readiness.ts)
+  // — so this copy is only ever shown when no identity mismatch is present,
+  // and the mismatched-name case still gets the generic line above. The
+  // known-name case does not. The product owner chose
+  // this trade for the common case's clarity, with the gap written down
+  // rather than silently accepted. See H-22, docs/product/human-decisions.md.
+  under_minimum_age: "waiting",
+  // A waiver goes out the moment a diver joins, so this state is the rare
+  // leftover — a link that never issued (a delivery hiccup, or a waiver turned
+  // on after booking). Stay honest: don't claim an email is coming; the shop
+  // can hand over the link on arrival.
+  waiver_not_sent: "waiting",
+  // No email claim: in a no-email deployment the link was issued but never
+  // sent, and on the readiness page the button hands it over in place.
+  waiver_pending: "action",
+  // Don't promise an outbound send the shop may never make.
+  waiver_expired: "waiting",
+  medical_review: "waiting",
+  certification_missing: "action",
+  certification_pending: "waiting",
+  certification_expired: "action",
+  certification_insufficient: "action",
+  specialty_missing: "action",
+  specialty_pending: "waiting",
+  specialty_expired: "action",
   // "waiting", not "action": the card is on file and came across in the shop's
   // migration — there is nothing for the diver to send, only a staff confirm.
-  specialty_import_unconfirmed: {
-    state: "waiting",
-    detail:
-      "Your specialty card came across from your shop’s old system and is with them to confirm.",
-  },
-  nitrox_missing: {
-    state: "action",
-    detail:
-      "This dive uses Nitrox — send the shop a photo of your Nitrox card or get in touch so they can add it.",
-  },
-  nitrox_pending: {
-    state: "waiting",
-    detail: "Your nitrox card is with the shop for verification.",
-  },
-  payment_due: {
-    state: "action",
-    detail: "There’s a balance to settle. Your shop can take payment before the trip.",
-  },
-};
-
-const DONE_DETAIL: Record<Exclude<ChecklistCategory, "setup">, string> = {
-  waiver: "Signed and on file.",
-  certification: "Verified and on file.",
-  payment: "Paid up — thank you.",
-};
-
-const CATEGORY_LABEL: Record<ChecklistCategory, string> = {
-  waiver: "Waiver",
-  certification: "Certification",
-  payment: "Payment",
-  setup: "Trip setup",
+  specialty_import_unconfirmed: "waiting",
+  nitrox_missing: "action",
+  nitrox_pending: "waiting",
+  payment_due: "action",
+  payment_refunded: "action",
 };
 
 /** The strongest blocker in a category wins the item's state and copy. */
@@ -181,10 +116,7 @@ function worstBlocker(blockers: readonly ReadinessBlocker[]): ReadinessBlocker |
       best = blocker;
       continue;
     }
-    if (
-      DIVER_VOICE[blocker.code].state === "action" &&
-      DIVER_VOICE[best.code].state === "waiting"
-    ) {
+    if (BLOCKER_STATE[blocker.code] === "action" && BLOCKER_STATE[best.code] === "waiting") {
       best = blocker;
     }
   }
@@ -216,11 +148,8 @@ export function buildDiverChecklist(
     return [
       {
         category: "setup",
-        label: CATEGORY_LABEL.setup,
         state: "waiting",
-        detail: blocker
-          ? DIVER_VOICE[blocker.code].detail
-          : "Your shop is still finalizing this trip’s details.",
+        detailCode: blocker ? blocker.code : "setup_generic",
       },
     ];
   }
@@ -244,29 +173,30 @@ export function buildDiverChecklist(
     if (category !== "setup") gated.add(category);
   }
 
+  const DONE_DETAIL_CODE: Record<Exclude<ChecklistCategory, "setup">, ChecklistDetailCode> = {
+    waiver: "waiver_done",
+    certification: "certification_done",
+    payment: "payment_done",
+  };
+
   const items: DiverChecklistItem[] = [];
   for (const category of ["waiver", "certification", "payment"] as const) {
     if (!gated.has(category)) continue;
     const blockers = byCategory.get(category) ?? [];
     const blocker = worstBlocker(blockers);
     if (!blocker) {
-      items.push({
-        category,
-        label: CATEGORY_LABEL[category],
-        state: "done",
-        detail: DONE_DETAIL[category],
-      });
+      items.push({ category, state: "done", detailCode: DONE_DETAIL_CODE[category] });
       continue;
     }
-    const { state } = DIVER_VOICE[blocker.code];
+    const state = BLOCKER_STATE[blocker.code];
     // A diver short several cards needs to know it's more than one thing — one
     // generic "share your card" line would leave them thinking a single card clears it.
-    const actionable = blockers.filter((b) => DIVER_VOICE[b.code].state === "action").length;
-    const detail =
+    const actionable = blockers.filter((b) => BLOCKER_STATE[b.code] === "action").length;
+    const detailCode: ChecklistDetailCode =
       category === "certification" && actionable > 1
-        ? "This dive needs more than one certification on file — share every card it calls for (a photo or a quick message works), and your shop will confirm you’re set."
-        : DIVER_VOICE[blocker.code].detail;
-    items.push({ category, label: CATEGORY_LABEL[category], state, detail, code: blocker.code });
+        ? "certification_multiple_needed"
+        : blocker.code;
+    items.push({ category, state, detailCode, code: blocker.code });
   }
   return items;
 }
@@ -284,6 +214,13 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
  * Terse imperatives for a reminder — only the codes a diver can act on before
  * the dock. A "waiting" blocker (verification, medical review) is the shop's to
  * finish, so it never appears here as a to-do the diver can't complete.
+ *
+ * English on purpose, for now: the only consumer is `src/db/reminders.ts`'s
+ * SMS/email composition, a surface with no request-scoped locale to negotiate
+ * from (a cron job, not a page render) and no translator wired to it yet.
+ * Localizing transactional SMS/email is real, separate work — tracked, not
+ * silently included in the src/app/src/components sweep this map's siblings
+ * (`BLOCKER_STATE`, `CHECKLIST_DETAIL_KEYS`) were fixed as part of.
  */
 const REMINDER_ACTION: Partial<Record<ReadinessBlockerCode, string>> = {
   waiver_pending: "sign your waiver",

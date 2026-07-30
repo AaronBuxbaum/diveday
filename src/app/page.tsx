@@ -54,12 +54,14 @@ export default async function Home() {
       role: t("marketing.home.moments.diver.role"),
       title: t("marketing.home.moments.diver.title"),
       description: t("marketing.home.moments.diver.description"),
+      mockupLabel: t("marketing.home.moments.diver.mockupLabel"),
       mockup: marketingMockups.diverBooking,
     },
     {
       role: t("marketing.home.moments.frontDesk.role"),
       title: t("marketing.home.moments.frontDesk.title"),
       description: t("marketing.home.moments.frontDesk.description"),
+      mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
       mockup: marketingMockups.frontDeskReadiness,
     },
   ] as const;
@@ -134,7 +136,7 @@ export default async function Home() {
                 title={moment.title}
                 description={moment.description}
               >
-                <MarketingMockup label={moment.mockup.label}>
+                <MarketingMockup label={moment.mockupLabel}>
                   {moment.mockup.render()}
                 </MarketingMockup>
               </MarketingMomentCard>

@@ -1,5 +1,7 @@
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { blockerActionLabelText, pointingLabelText } from "@/i18n/today-labels";
 import type { ReadinessBlocker } from "./readiness";
-import { BLOCKER_ACTIONS, isWaiverCode, pointingLabel, primaryBlocker } from "./today";
+import { BLOCKER_ACTIONS, isWaiverCode, primaryBlocker } from "./today";
 
 /**
  * The blocker queue is the front desk's whole day as one list: every diver who
@@ -30,18 +32,24 @@ export type BlockerFix = {
  * waiver sends from here; card evidence lives on the person record; payment and
  * setup work lives on the trip roster (anchored to the diver's booking).
  * Waiver-code and label rules come from `today.ts` — one blocker→fix rule.
+ *
+ * `t` defaults to English so every existing call site keeps working unchanged;
+ * a locale-aware caller passes its own (`src/db/blockers.ts`).
  */
 export function blockerFixFor(
   blockers: readonly ReadinessBlocker[],
   ctx: { shopSlug: string; tripId: string; personId: string; bookingId: string; fullName: string },
+  t: StaffTranslator = staffTranslator("en-US"),
 ): BlockerFix | null {
   const blocker = primaryBlocker(blockers);
   if (!blocker) return null;
-  const { actionLabel, target } = BLOCKER_ACTIONS[blocker.code];
+  const { target } = BLOCKER_ACTIONS[blocker.code];
   const sendsWaiver = isWaiverCode(blocker.code);
   const rosterRow = `/shop/${ctx.shopSlug}/trips/${ctx.tripId}/guests#booking-${ctx.bookingId}`;
   return {
-    label: sendsWaiver ? actionLabel : pointingLabel(target, ctx.fullName),
+    label: sendsWaiver
+      ? blockerActionLabelText(t, blocker.code, false)
+      : pointingLabelText(t, target, ctx.fullName),
     href: target === "diver" ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}` : rosterRow,
     sendsWaiver,
     bookingId: ctx.bookingId,

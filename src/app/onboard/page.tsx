@@ -5,10 +5,49 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
 import { onboardAction } from "./actions";
+
+/**
+ * Every code `onboardAction`'s `backToForm` can hand back, resolved to a
+ * diver-bundle message right here — never earlier. `onboardSchema`'s
+ * validation messages are codes for exactly this reason (Zod has no
+ * request-scoped locale to translate with at schema-definition time; see
+ * src/lib/onboarding.ts), and the rate limiter's rejection is the same kind
+ * of code (src/lib/rate-limit.ts). A `?error=` value this map doesn't
+ * recognize is one of the handful of business-rule messages in
+ * `onboardAction` not yet extracted (shop link taken, email taken, sign-in
+ * failure) — those still arrive as plain English and render as-is.
+ */
+const ONBOARD_ERROR_MESSAGES: Record<
+  OnboardErrorCode | "rate_limited" | "invalid_input",
+  (t: DiverTranslator) => string
+> = {
+  rate_limited: (t) => t("common.rateLimited"),
+  invalid_input: (t) => t("account.onboard.errors.invalidInput"),
+  shop_name_required: (t) => t("account.onboard.errors.shopNameRequired"),
+  shop_slug_required: (t) => t("account.onboard.errors.shopSlugRequired"),
+  shop_slug_invalid: (t) => t("account.onboard.errors.shopSlugInvalid"),
+  timezone_required: (t) => t("account.onboard.errors.timezoneRequired"),
+  timezone_invalid: (t) => t("account.onboard.errors.timezoneInvalid"),
+  owner_name_required: (t) => t("account.onboard.errors.ownerNameRequired"),
+  owner_email_invalid: (t) => t("account.onboard.errors.ownerEmailInvalid"),
+  owner_password_too_short: (t) =>
+    t("account.onboard.errors.ownerPasswordTooShort", { min: MIN_PASSWORD_LENGTH }),
+  owner_password_too_long: (t) =>
+    t("account.onboard.errors.ownerPasswordTooLong", { max: MAX_PASSWORD_LENGTH }),
+};
+
+/** Resolves a known `?error=` code, or falls back to the raw (English) text of an
+ * `onboardAction` message not yet converted to a code. */
+function onboardErrorMessage(t: DiverTranslator, error: string): string {
+  return Object.hasOwn(ONBOARD_ERROR_MESSAGES, error)
+    ? ONBOARD_ERROR_MESSAGES[error as keyof typeof ONBOARD_ERROR_MESSAGES](t)
+    : decodeURIComponent(error);
+}
 
 export const metadata: Metadata = {
   title: "Start a dive shop trial — DiveDay",
@@ -72,7 +111,7 @@ export default async function OnboardPage({
 
           {error ? (
             <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-              {decodeURIComponent(error)}
+              {onboardErrorMessage(t, error)}
             </p>
           ) : null}
 

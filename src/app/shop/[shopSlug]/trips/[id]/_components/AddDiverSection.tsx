@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { BookableDiver } from "@/db/divers";
+import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 
@@ -91,7 +92,9 @@ export function AddDiverSection({
                             onto the trip, so staff confirm rather than re-enter. */}
                         <p className="mt-0.5 text-xs text-muted">
                           {rentalFit
-                            ? t("trips.addDiver.rentalFitOnFile", { fit: fit.text })
+                            ? t("trips.addDiver.rentalFitOnFile", {
+                                fit: rentalFitLineText(t, locale, fit),
+                              })
                             : t("trips.addDiver.noRentalFitYet")}
                         </p>
                       </div>

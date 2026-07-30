@@ -566,7 +566,64 @@ function unguardCell(value: string): string {
   return /^'[=+\-@\t\r]/.test(value) ? value.slice(1) : value;
 }
 
-export type ImportIssue = { level: "error" | "warning" | "info"; message: string };
+/**
+ * Every distinct shape an import-row issue can take. `src/app` looks each
+ * code up in the staff bundle (`settings.import.issues.*`) and interpolates
+ * `ImportIssue.params` — this file never renders English, only says which
+ * situation happened and with what values (same pattern as
+ * `ReadinessBlockerCode` in `src/lib/readiness.ts`).
+ */
+export type ImportIssueCode =
+  | "email_invalid"
+  | "expiry_unreadable"
+  | "expiry_assumed_month_first"
+  | "card_marked_unverified"
+  | "specialty_not_gated"
+  | "specialty_no_card_number"
+  | "specialty_imported_verified"
+  | "specialty_imported_pending"
+  | "agency_unrecognized"
+  | "level_names_specialty"
+  | "level_is_technical"
+  | "level_not_gated"
+  | "level_no_card_number"
+  | "cert_imported_verified"
+  | "cert_imported_pending"
+  | "nitrox_imported"
+  | "nitrox_no_card_number"
+  | "waiver_date_invalid"
+  | "waiver_imported"
+  | "dob_invalid"
+  | "visit_date_unreadable"
+  | "visit_no_reference"
+  | "visit_no_date"
+  | "no_name"
+  | "merged_duplicate"
+  | "no_email_new_record";
+
+/**
+ * The data a translated message needs to fill in its placeholders. Which
+ * fields are set depends on `code` — a flat bag (the same shape as
+ * `ReadinessBlockerParams`) rather than a one-off type per code, since a
+ * field name (`value`, `level`, `specialty`) is reused across the codes that
+ * need it.
+ */
+export type ImportIssueParams = {
+  email?: string;
+  value?: string;
+  parsed?: string;
+  status?: string;
+  specialty?: string;
+  level?: string;
+  count?: number;
+  row?: number;
+};
+
+export type ImportIssue = {
+  level: "error" | "warning" | "info";
+  code: ImportIssueCode;
+  params?: ImportIssueParams;
+};
 
 /**
  * A migrated card. `sourceLabel` is the optional prior-shop/system name the row
@@ -738,6 +795,29 @@ export type PreparedRow = {
 
 export type ColumnMapping = { field: ImportField; header: string; columnIndex: number };
 
+/**
+ * Every reason a file can't be prepared at all, before any row is read — the
+ * same code/params pattern as `ImportIssueCode`, so a caller resolves it
+ * through the staff bundle rather than this file ever building a sentence.
+ */
+export type ImportFatalCode =
+  | "file_too_large"
+  | "file_empty"
+  | "too_many_columns"
+  | "too_many_rows"
+  | "cell_too_long_header"
+  | "cell_too_long_row"
+  | "no_name_column";
+
+export type ImportFatalParams = {
+  limitMb?: string;
+  count?: number;
+  limit?: number;
+  row?: number;
+};
+
+export type ImportFatal = { code: ImportFatalCode; params?: ImportFatalParams };
+
 export type PreparedImport = {
   mapping: ColumnMapping[];
   unmappedColumns: string[];
@@ -759,7 +839,7 @@ export type PreparedImport = {
     withVisit: number;
   };
   /** Set when the file has no header row, or no recognizable identity column. */
-  fatal: string | null;
+  fatal: ImportFatal | null;
 };
 
 function normalizeAgency(raw: string | undefined): { agency: ImportAgency; recognized: boolean } {
@@ -1035,31 +1115,39 @@ export function prepareContactImport(text: string): PreparedImport {
   const byteLength = new TextEncoder().encode(text).length;
   if (byteLength > MAX_IMPORT_BYTES) {
     const limitMb = (MAX_IMPORT_BYTES / (1024 * 1024)).toFixed(0);
-    return { ...empty, fatal: `The file is too large — the limit is ${limitMb} MB.` };
+    return { ...empty, fatal: { code: "file_too_large", params: { limitMb } } };
   }
-  if (grid.length === 0) return { ...empty, fatal: "The file is empty." };
+  if (grid.length === 0) return { ...empty, fatal: { code: "file_empty" } };
 
   const headers = grid[0];
   const bodyRows = grid.slice(1);
   if (headers.length > MAX_IMPORT_COLUMNS) {
     return {
       ...empty,
-      fatal: `Too many columns (${headers.length}) — the limit is ${MAX_IMPORT_COLUMNS}.`,
+      fatal: {
+        code: "too_many_columns",
+        params: { count: headers.length, limit: MAX_IMPORT_COLUMNS },
+      },
     };
   }
   if (bodyRows.length > MAX_IMPORT_ROWS) {
     return {
       ...empty,
-      fatal: `Too many rows (${bodyRows.length}) — the limit is ${MAX_IMPORT_ROWS} per import. Split the file and import it in batches.`,
+      fatal: {
+        code: "too_many_rows",
+        params: { count: bodyRows.length, limit: MAX_IMPORT_ROWS },
+      },
     };
   }
   for (let r = 0; r < grid.length; r++) {
     const row = grid[r];
     if (row?.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)) {
-      const where = r === 0 ? "the header row" : `row ${r}`;
       return {
         ...empty,
-        fatal: `A cell in ${where} is longer than ${MAX_IMPORT_CELL_LENGTH} characters — check for a pasted document instead of a spreadsheet.`,
+        fatal:
+          r === 0
+            ? { code: "cell_too_long_header", params: { limit: MAX_IMPORT_CELL_LENGTH } }
+            : { code: "cell_too_long_row", params: { row: r, limit: MAX_IMPORT_CELL_LENGTH } },
       };
     }
   }
@@ -1103,8 +1191,7 @@ export function prepareContactImport(text: string): PreparedImport {
       mapping,
       unmappedColumns,
       ignoredMedicalColumns,
-      fatal:
-        "No name column found. The file needs a full name, or first and last name, to import people.",
+      fatal: { code: "no_name_column" },
     };
   }
 
@@ -1126,7 +1213,8 @@ export function prepareContactImport(text: string): PreparedImport {
       if (!EMAIL_SHAPE.test(email)) {
         issues.push({
           level: "warning",
-          message: `Email "${email}" doesn't look valid — imported without an email.`,
+          code: "email_invalid",
+          params: { email },
         });
         email = null;
       }
@@ -1158,14 +1246,16 @@ export function prepareContactImport(text: string): PreparedImport {
         expiryUnreadable = true;
         issues.push({
           level: "warning",
-          message: `Refresher-due date "${expiresRaw}" can't be read as a date — the card imports for staff review instead of as verified, so nobody boards on a date we guessed.`,
+          code: "expiry_unreadable",
+          params: { value: expiresRaw },
         });
       } else {
         cardExpiresAt = parsed.date;
         if (parsed.assumedMonthFirst && expiresRaw !== parsed.date) {
           issues.push({
             level: "info",
-            message: `Refresher-due date "${expiresRaw}" read as ${parsed.date} (month first). Check it if your file writes day first.`,
+            code: "expiry_assumed_month_first",
+            params: { value: expiresRaw, parsed: parsed.date },
           });
         }
       }
@@ -1180,7 +1270,8 @@ export function prepareContactImport(text: string): PreparedImport {
     if (sourceSaysUnverified) {
       issues.push({
         level: "warning",
-        message: `Your file marks this card "${clean(statusRaw)}" — imported for staff review rather than as verified, since your own records don't call it checked.`,
+        code: "card_marked_unverified",
+        params: { status: clean(statusRaw) ?? "" },
       });
     }
     const cardStatus: PreparedCardStatus =
@@ -1210,13 +1301,15 @@ export function prepareContactImport(text: string): PreparedImport {
     if (specialtySource && namedSpecialties.length === 0) {
       issues.push({
         level: "warning",
-        message: `Specialty "${specialtySource}" isn't a specialty we gate on (deep, wreck, night, drysuit) — nothing imported for it.`,
+        code: "specialty_not_gated",
+        params: { specialty: specialtySource ?? undefined },
       });
     } else if (namedSpecialties.length > 0) {
       if (!specialtyNumber) {
         issues.push({
           level: "warning",
-          message: `Specialty "${specialtySource}" has no card number on the row — not imported. A card without a number can't be verified.`,
+          code: "specialty_no_card_number",
+          params: { specialty: specialtySource ?? undefined },
         });
       } else {
         for (const named of namedSpecialties) {
@@ -1231,15 +1324,16 @@ export function prepareContactImport(text: string): PreparedImport {
         }
         issues.push({
           level: "info",
-          message:
+          code:
             cardStatus === "verified"
-              ? `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported as verified from your records — flagged imported. A dive that requires one waits until a staffer confirms they've seen the card.`
-              : `${namedSpecialties.length === 1 ? "Specialty card" : `${namedSpecialties.length} specialty cards`} imported for staff review — see the note above.`,
+              ? "specialty_imported_verified"
+              : "specialty_imported_pending",
+          params: { count: namedSpecialties.length },
         });
         if (!agencyKnown) {
           issues.push({
             level: "info",
-            message: "Certification agency unrecognized — imported as “other”.",
+            code: "agency_unrecognized",
           });
         }
       }
@@ -1260,7 +1354,8 @@ export function prepareContactImport(text: string): PreparedImport {
     if (levelRaw && levelNamesSpecialty && specialtySource !== levelRaw) {
       issues.push({
         level: "warning",
-        message: `Certification "${levelRaw}" names a specialty, not a level, and this row's specialty column was used instead — no level card imported. Add that card by hand if it's a separate one.`,
+        code: "level_names_specialty",
+        params: { level: levelRaw },
       });
     }
     if (levelRaw && !levelNamesSpecialty) {
@@ -1271,17 +1366,20 @@ export function prepareContactImport(text: string): PreparedImport {
         // rung ("Advanced Nitrox"), and it used to import as one.
         issues.push({
           level: "warning",
-          message: `Certification "${levelRaw}" is a technical or overhead-environment rating, not a rung on the recreational ladder — not imported, and never read as a nearby level. DiveDay doesn't gate on these; record it by hand if your shop does.`,
+          code: "level_is_technical",
+          params: { level: levelRaw },
         });
       } else if (!level) {
         issues.push({
           level: "warning",
-          message: `Certification "${levelRaw}" isn't a level we gate on — card not imported. Add it by hand if it's a real card.`,
+          code: "level_not_gated",
+          params: { level: levelRaw },
         });
       } else if (!certNumber) {
         issues.push({
           level: "warning",
-          message: `Certification level "${levelRaw}" has no usable card number — card not imported. A card without a number can't be verified.`,
+          code: "level_no_card_number",
+          params: { level: levelRaw },
         });
       } else {
         cert = {
@@ -1294,15 +1392,12 @@ export function prepareContactImport(text: string): PreparedImport {
         };
         issues.push({
           level: "info",
-          message:
-            cardStatus === "verified"
-              ? "Card imported as verified from your records — flagged imported, with a one-tap confirm for staff."
-              : "Card imported for staff review — see the note above.",
+          code: cardStatus === "verified" ? "cert_imported_verified" : "cert_imported_pending",
         });
         if (!agencyKnown) {
           issues.push({
             level: "info",
-            message: "Certification agency unrecognized — imported as “other”.",
+            code: "agency_unrecognized",
           });
         }
       }
@@ -1321,14 +1416,12 @@ export function prepareContactImport(text: string): PreparedImport {
         nitrox = { agency, identifier: nitroxNumber, sourceLabel, status: nitroxStatus };
         issues.push({
           level: "info",
-          message:
-            "Nitrox card imported as verified from your records — flagged imported. Fills give plain air until a staffer taps confirm.",
+          code: "nitrox_imported",
         });
       } else if (flagged) {
         issues.push({
           level: "info",
-          message:
-            "Nitrox marked on the source with no card number — add and verify a nitrox card in DiveDay.",
+          code: "nitrox_no_card_number",
         });
       }
     }
@@ -1355,7 +1448,8 @@ export function prepareContactImport(text: string): PreparedImport {
         } else {
           issues.push({
             level: "warning",
-            message: `Waiver accepted date "${signedAtRaw}" isn't a real calendar date (expected YYYY-MM-DD) — imported dated to today instead.`,
+            code: "waiver_date_invalid",
+            params: { value: signedAtRaw },
           });
         }
       }
@@ -1367,8 +1461,7 @@ export function prepareContactImport(text: string): PreparedImport {
       };
       issues.push({
         level: "info",
-        message:
-          "Waiver imported as accepted — trusted from the prior shop, including medical clearance, and marked “imported” so it's never confused with a release signed in DiveDay.",
+        code: "waiver_imported",
       });
     }
 
@@ -1384,7 +1477,8 @@ export function prepareContactImport(text: string): PreparedImport {
       } else {
         issues.push({
           level: "warning",
-          message: `Date of birth "${dobRaw}" isn't a plausible calendar date (expected YYYY-MM-DD, 1900 or later, not in the future) — imported without it.`,
+          code: "dob_invalid",
+          params: { value: dobRaw },
         });
       }
     }
@@ -1410,7 +1504,8 @@ export function prepareContactImport(text: string): PreparedImport {
       if (!parsed) {
         issues.push({
           level: "warning",
-          message: `Visit date "${visitDateRaw}" isn't a date we can read — the diver imports without this visit.`,
+          code: "visit_date_unreadable",
+          params: { value: visitDateRaw },
         });
       } else {
         const visitedOn = parsed.date;
@@ -1431,23 +1526,21 @@ export function prepareContactImport(text: string): PreparedImport {
         if (!visitReference) {
           issues.push({
             level: "info",
-            message:
-              "Visit imported without a booking reference — a re-import matches it on date, name, and amount, so two identical bookings on one day come in as one visit.",
+            code: "visit_no_reference",
           });
         }
       }
     } else if (namesAVisit) {
       issues.push({
         level: "warning",
-        message:
-          "This row names a past booking but carries no date — the diver imports without this visit.",
+        code: "visit_no_date",
       });
     }
 
     let action: PreparedRow["action"] = "import";
     let mergedIntoRow: number | null = null;
     if (!fullName) {
-      issues.push({ level: "error", message: "No name — row skipped." });
+      issues.push({ level: "error", code: "no_name" });
       action = "skip";
     } else if (email && seenEmails.has(email)) {
       // The same diver, not a duplicate to throw away: a certification export
@@ -1458,7 +1551,8 @@ export function prepareContactImport(text: string): PreparedImport {
       mergedIntoRow = seenEmails.get(email) ?? null;
       issues.push({
         level: "info",
-        message: `Same diver as row ${mergedIntoRow} (${email}) — this row's cards, waiver, and past visit are added to them, contact details left as the earlier row has them.`,
+        code: "merged_duplicate",
+        params: { row: mergedIntoRow ?? undefined, email },
       });
     }
     if (action === "import" && email) seenEmails.set(email, rowNumber);
@@ -1468,7 +1562,7 @@ export function prepareContactImport(text: string): PreparedImport {
       // so rather than let the "matched by email" promise overstate the case.
       issues.push({
         level: "info",
-        message: "No email — imported as a new record; a re-import can't match it to update.",
+        code: "no_email_new_record",
       });
     }
 

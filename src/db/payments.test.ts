@@ -52,7 +52,7 @@ describe("booking payments", () => {
       status: "refunded",
     });
     expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
-      expect.objectContaining({ code: "payment_due" }),
+      expect.objectContaining({ code: "payment_refunded" }),
     );
   });
 

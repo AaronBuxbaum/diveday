@@ -10,10 +10,10 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopById } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatFaqs } from "@/lib/courses";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
@@ -69,7 +69,7 @@ export default async function EditCoursePage({
   const levelAge =
     (course.minimumCertificationLevel
       ? t("courses.edit.orHigher", {
-          level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+          level: t(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
         })
       : t("courses.edit.openToUncertified")) +
     (course.minimumAge ? t("courses.edit.ageSuffix", { age: course.minimumAge }) : "");

@@ -9,12 +9,13 @@ import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
@@ -83,7 +84,7 @@ export default async function CoursePage({
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {
-        level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
       })
     : t("course.noCertification");
   // Logistics only. The cert gate and the minimum age are admission facts and
@@ -179,33 +180,38 @@ export default async function CoursePage({
       />
       <CourseFaqs faqs={course.faqs} t={t} />
       {shop.contactEmail ? (
-        <CourseInquiry
-          courseTitle={course.title}
-          shopName={shop.name}
-          contactEmail={shop.contactEmail}
-          contactPhone={shop.contactPhone}
-          copy={{
-            getInTouch: t("inquiry.getInTouch"),
-            noDateBody: t("inquiry.noDateBody"),
-            yourName: t("inquiry.yourName"),
-            namePlaceholder: t("inquiry.namePlaceholder"),
-            howManyDivers: t("inquiry.howManyDivers"),
-            optional: t("common.optional"),
-            whenSuits: t("inquiry.whenSuits"),
-            whenSuitsHint: t("inquiry.whenSuitsHint"),
-            whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
-            whereYouAreUpTo: t("inquiry.whereYouAreUpTo"),
-            chooseOne: t("inquiry.chooseOne"),
-            anythingElse: t("inquiry.anythingElse"),
-            messagePlaceholder: t("inquiry.messagePlaceholder"),
-            messageSoFar: t("inquiry.messageSoFar"),
-            openInEmailApp: t("inquiry.openInEmailApp"),
-            copyMessage: t("inquiry.copy"),
-            copied: t("inquiry.copied"),
-            orWriteTo: t("inquiry.orWriteTo"),
-            callLabel: t("inquiry.callLabel"),
-          }}
-        />
+        // The subject/body preview recomposes on every keystroke, so it needs
+        // its own translator on the client — DiverIntlProvider is what makes
+        // useTranslations() inside CourseInquiry work rather than throw.
+        <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
+          <CourseInquiry
+            courseTitle={course.title}
+            shopName={shop.name}
+            contactEmail={shop.contactEmail}
+            contactPhone={shop.contactPhone}
+            copy={{
+              getInTouch: t("inquiry.getInTouch"),
+              noDateBody: t("inquiry.noDateBody"),
+              yourName: t("inquiry.yourName"),
+              namePlaceholder: t("inquiry.namePlaceholder"),
+              howManyDivers: t("inquiry.howManyDivers"),
+              optional: t("common.optional"),
+              whenSuits: t("inquiry.whenSuits"),
+              whenSuitsHint: t("inquiry.whenSuitsHint"),
+              whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
+              whereYouAreUpTo: t("inquiry.whereYouAreUpTo"),
+              chooseOne: t("inquiry.chooseOne"),
+              anythingElse: t("inquiry.anythingElse"),
+              messagePlaceholder: t("inquiry.messagePlaceholder"),
+              messageSoFar: t("inquiry.messageSoFar"),
+              openInEmailApp: t("inquiry.openInEmailApp"),
+              copyMessage: t("inquiry.copy"),
+              copied: t("inquiry.copied"),
+              orWriteTo: t("inquiry.orWriteTo"),
+              callLabel: t("inquiry.callLabel"),
+            }}
+          />
+        </DiverIntlProvider>
       ) : null}
     </main>
   );

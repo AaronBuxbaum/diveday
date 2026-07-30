@@ -4,7 +4,6 @@ import { hash } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { AuthError } from "next-auth";
-import { z } from "zod";
 import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
@@ -12,22 +11,9 @@ import { getAccountContact, setAccountPassword } from "@/db/user-accounts";
 import { signIn } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/onboarding";
+import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-
-const resetSchema = z
-  .object({
-    password: z
-      .string()
-      .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
-      .max(MAX_PASSWORD_LENGTH, `Password must be at most ${MAX_PASSWORD_LENGTH} characters`),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
 
 /**
  * Consumes the token and sets the new password atomically — a failure
@@ -44,11 +30,11 @@ export async function submitPasswordReset(token: string, formData: FormData) {
     redirect(base);
   }
 
-  const parsed = resetSchema.safeParse(Object.fromEntries(formData));
+  const parsed = passwordConfirmSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    redirect(
-      `${base}?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Invalid input")}`,
-    );
+    const code: PasswordConfirmErrorCode | "invalid_input" =
+      (parsed.error.issues[0]?.message as PasswordConfirmErrorCode | undefined) ?? "invalid_input";
+    redirect(`${base}?error=${encodeURIComponent(code)}`);
   }
 
   const db = await getDb();

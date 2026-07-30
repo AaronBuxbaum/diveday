@@ -1,3 +1,4 @@
+// i18n-exempt-file: shop-editable starter course content, not app UI copy — see CourseContent's doc comment
 import type { CourseContent } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 

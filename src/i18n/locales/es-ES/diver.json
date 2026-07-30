@@ -10,7 +10,8 @@
     "name": "Nombre",
     "email": "Correo electrónico",
     "phone": "Teléfono",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -48,6 +49,23 @@
     "packRenting": "Alquilas",
     "packProvided": "Lo ponemos nosotros",
     "packNothingRequested": "Aún no has pedido nada",
+    "rentalItems": {
+      "bcd": "Chaleco (BCD)",
+      "regulator": "Regulador",
+      "wetsuit": "Traje de neopreno",
+      "maskFins": "Máscara y aletas",
+      "weights": "Plomos",
+      "diveComputer": "Ordenador de buceo",
+      "gopro": "GoPro"
+    },
+    "providedItems": {
+      "tanksAndWeights": "Botellas y plomos",
+      "crewBriefing": "Briefing de la tripulación"
+    },
+    "temperatureTip": {
+      "cold": "Se espera una temperatura del agua de unos {celsius} °C — pregunta al centro si necesitas protección térmica adicional.",
+      "mild": "Se espera una temperatura del agua de unos {celsius} °C — sigue la recomendación de traje del centro para tu comodidad."
+    },
     "dockDayRhythm": "Cómo será tu día en el muelle",
     "briefingsEyebrow": "Briefings de inmersión",
     "planTwoTank": "Tu plan de dos inmersiones",
@@ -154,7 +172,18 @@
     "openingPayment": "Abriendo el pago…",
     "shopTakesOver": "Ya tienes tu plaza — el centro se encarga a partir de aquí",
     "shopTakesOverBody": "Estamos revisando un par de cosas por nuestra parte. Ahora mismo no tienes que hacer nada.",
-    "trackReadiness": "Sigue todos los pasos en tu página de preparación →"
+    "trackReadiness": "Sigue todos los pasos en tu página de preparación →",
+    "errors": {
+      "invalid": "Revisa tu nombre y correo electrónico e inténtalo de nuevo.",
+      "full": "Alguien reservó la última plaza justo antes que tú — el barco está completo.",
+      "available": "Buenas noticias — se acaba de liberar una plaza. Resérvala antes de que se agote.",
+      "already": "Ya estás en la lista de esta salida — no hace falta reservar dos veces.",
+      "unavailable": "Esta salida ya no acepta reservas.",
+      "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
+      "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor o ayudante certificado.",
+      "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
+      "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura — inténtalo de nuevo en un momento, o paga en el centro."
+    }
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
@@ -194,7 +223,14 @@
     "atAGlance": "De un vistazo",
     "duration": "Duración",
     "groupSize": "Tamaño del grupo",
-    "certificationOrHigher": "{level} o superior"
+    "certificationOrHigher": "{level} o superior",
+    "certificationLevels": {
+      "openWater": "Open Water",
+      "advancedOpenWater": "Advanced Open Water",
+      "rescue": "Buceador de Rescate",
+      "divemaster": "Divemaster",
+      "instructor": "Instructor"
+    }
   },
   "path": {
     "sectionTitle": "Dónde encaja este curso",
@@ -309,6 +345,35 @@
     "almostThere": "Ya casi está, {name}.",
     "nextDetail": "Siguiente: {detail}",
     "checklistHeading": "Tu lista antes de la salida",
+    "checklistCategoryWaiver": "Exención",
+    "checklistCategoryCertification": "Certificación",
+    "checklistCategoryPayment": "Pago",
+    "checklistCategorySetup": "Preparación de la salida",
+    "checklistDetail": {
+      "setupGeneric": "Tu tienda todavía está finalizando los detalles de esta salida.",
+      "readinessUnavailable": "Tu tienda está confirmando tu preparación. Vuelve a comprobarlo en breve.",
+      "identityUnconfirmed": "Tu tienda necesita confirmar tus datos antes de darte luz verde — se pondrán en contacto si hace falta algo.",
+      "underMinimumAge": "Este curso tiene una edad mínima que la fecha de nacimiento registrada no cumple para esta sesión. Si esto es un error, contacta con la tienda y lo resolverán.",
+      "waiverNotSent": "La tienda aún no ha enviado tu exención — puedes pedirla al llegar, o contactar con ellos más abajo.",
+      "waiverPending": "Firma tu exención — solo lleva unos dos minutos.",
+      "waiverExpired": "El enlace de tu exención caducó — pide uno nuevo a la tienda.",
+      "medicalReview": "Gracias por firmar. Una respuesta médica necesita una revisión más de cerca — puede requerirse el visto bueno de un médico, y tu tienda se pondrá en contacto sobre los siguientes pasos.",
+      "certificationMissing": "Haz llegar tu tarjeta de certificación a la tienda — sube una foto o ponte en contacto — para que puedan añadirla a tu ficha.",
+      "certificationPending": "Tu tarjeta de certificación está con la tienda para verificación.",
+      "certificationExpired": "Tu certificación registrada ha superado la fecha de actualización que fijó tu tienda — consulta con ellos sobre una actualización antes de bucear.",
+      "certificationInsufficient": "Esta salida requiere un nivel de certificación superior. Tu tienda puede hablar contigo sobre las opciones.",
+      "specialtyMissing": "Esta inmersión necesita una tarjeta de especialidad — envía una foto a la tienda o ponte en contacto para que puedan añadirla.",
+      "specialtyPending": "Tu tarjeta de especialidad está con la tienda para verificación.",
+      "specialtyExpired": "Tu tarjeta de especialidad registrada ha superado la fecha de actualización que fijó tu tienda — consulta con ellos antes de bucear.",
+      "specialtyImportUnconfirmed": "Tu tarjeta de especialidad llegó del sistema anterior de tu tienda y está pendiente de que la confirmen.",
+      "nitroxMissing": "Esta inmersión usa nitrox — envía una foto de tu tarjeta de nitrox a la tienda o ponte en contacto para que puedan añadirla.",
+      "nitroxPending": "Tu tarjeta de nitrox está con la tienda para verificación.",
+      "paymentDue": "Hay un saldo pendiente. Tu tienda puede cobrarlo antes de la salida.",
+      "waiverDone": "Firmada y registrada.",
+      "certificationDone": "Verificada y registrada.",
+      "paymentDone": "Pagado — gracias.",
+      "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada — comparte cada tarjeta que se requiera (una foto o un mensaje rápido sirve), y tu tienda confirmará que estás listo."
+    },
     "emergencyOnFile": "Registrado — {name}. Actualízalo abajo si ha cambiado.",
     "changePlans": "¿Necesitas cambiar tus planes?",
     "reschedulePitch": "Elige otra salida y te movemos — tu plaza actual solo se libera cuando la nueva queda confirmada, así que nunca te quedas sin ninguna.",
@@ -400,7 +465,16 @@
     "weightPlaceholder": "p. ej. 7 kg con un traje de 3 mm",
     "saveFit": "Guardar equipo de alquiler",
     "bcdIconLabel": "Chaleco",
-    "finIconLabel": "Aleta"
+    "finIconLabel": "Aleta",
+    "itemLabels": {
+      "bcd": "Chaleco",
+      "regulator": "Regulador",
+      "wetsuit": "Traje",
+      "maskFins": "Máscara y aletas",
+      "weights": "Lastre",
+      "diveComputer": "Ordenador de buceo",
+      "gopro": "GoPro"
+    }
   },
   "party": {
     "numberOfDivers": "Número de buceadores",
@@ -426,7 +500,25 @@
     "likelySightings": "{count, plural, one {# avistamiento probable} other {# avistamientos probables}}",
     "satelliteViewIllustrative": "Vista satelital · ruta ilustrativa",
     "openMap": "Abrir mapa ↗",
-    "satelliteMapTitle": "Mapa satelital de {site}"
+    "satelliteMapTitle": "Mapa satelital de {site}",
+    "landmarkKinds": {
+      "navigationMark": "Marca de navegación",
+      "reefHistory": "Historia del arrecife",
+      "wreckFeature": "Elemento del pecio",
+      "underwaterMonument": "Monumento submarino",
+      "reefFormation": "Formación del arrecife",
+      "pointOfInterest": "Punto de interés"
+    },
+    "landmarkDescriptions": {
+      "molassesReefLight": "El faro del arrecife es la referencia más fácil sobre el agua y una buena forma de orientarte alrededor del arrecife central.",
+      "shipsWinch": "Cerca del faro descansa un gran cabrestante de barco: una pieza compacta de historia marítima ya integrada en el arrecife.",
+      "spanishAnchor": "Entre las formaciones de coral se encuentra un ancla antigua. Deja que la tripulación te la señale; se camufla sorprendentemente bien en el arrecife.",
+      "flightDeckAndCranes": "La amplia cubierta de vuelo y sus dos grúas hacen evidente la escala del barco. Mantente fuera de la estructura y sigue la línea del guía.",
+      "wellDeck": "La cubierta pozo abierta es uno de los espacios exteriores más espectaculares del pecio, con luz cambiante y espacio para grandes bancos de peces.",
+      "christOfAbyssStatue": "La estatua de bronce de 2,6 metros se alza sobre un pedestal de hormigón en aguas poco profundas: la pieza central inconfundible de esta inmersión.",
+      "dryRocksSandChannels": "Canales de arena brillante serpentean entre las formaciones de coral alrededor de la estatua y son buenos lugares para buscar rayas, meros y morenas.",
+      "generic": "Una referencia memorable que la tripulación puede señalar durante el briefing del punto."
+    }
   },
   "inquiry": {
     "yourName": "Tu nombre",
@@ -446,14 +538,29 @@
     "messageSoFar": "Tu mensaje hasta ahora",
     "openInEmailApp": "Abrir en tu aplicación de correo",
     "orWriteTo": "O escribe a",
-    "callLabel": "llama"
+    "callLabel": "llama",
+    "notSaid": "No indicado",
+    "subject": "Consulta sobre el curso: {courseTitle}",
+    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
+    "experience": {
+      "never": "Nunca he buceado",
+      "tried": "He probado el buceo una vez, pero no estoy certificado",
+      "certified": "Estoy certificado y tengo mi tarjeta",
+      "lapsed": "Estoy certificado, pero ha pasado tiempo"
+    }
   },
   "account": {
     "common": {
       "backToSignIn": "Volver a iniciar sesión",
       "email": "Correo electrónico",
       "password": "Contraseña",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "passwordErrors": {
+        "tooShort": "La contraseña debe tener al menos {min} caracteres",
+        "tooLong": "La contraseña debe tener como máximo {max} caracteres",
+        "mismatch": "Las contraseñas no coinciden",
+        "invalid": "Datos no válidos"
+      }
     },
     "forgotPassword": {
       "title": "Restablece tu contraseña",
@@ -544,7 +651,19 @@
       "settingUp": "Configurando tu tienda…",
       "submit": "Crear tienda y empezar la prueba",
       "alreadyHaveShop": "¿Ya tienes una tienda?",
-      "signIn": "Iniciar sesión"
+      "signIn": "Iniciar sesión",
+      "errors": {
+        "invalidInput": "Revisa el formulario e inténtalo de nuevo",
+        "shopNameRequired": "El nombre de la tienda es obligatorio",
+        "shopSlugRequired": "El enlace de la tienda es obligatorio",
+        "shopSlugInvalid": "El enlace de la tienda solo puede contener letras, números y guiones",
+        "timezoneRequired": "La zona horaria es obligatoria",
+        "timezoneInvalid": "No es una zona horaria reconocida",
+        "ownerNameRequired": "El nombre completo es obligatorio",
+        "ownerEmailInvalid": "Dirección de correo electrónico no válida",
+        "ownerPasswordTooShort": "La contraseña debe tener al menos {min} caracteres",
+        "ownerPasswordTooLong": "La contraseña debe tener como máximo {max} caracteres"
+      }
     }
   },
   "switching": {
@@ -782,12 +901,14 @@
         "diver": {
           "role": "Para el buceador",
           "title": "Una forma clara de subir al barco",
-          "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con la tienda."
+          "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con la tienda.",
+          "mockupLabel": "El horario público de Blue Mantis con próximas salidas de buceo y plazas disponibles."
         },
         "frontDesk": {
           "role": "Para la recepción",
           "title": "Una sola respuesta a «¿están listos?»",
-          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar en silencio."
+          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar en silencio.",
+          "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
       "productEyebrow": "En vez de tres aplicaciones",

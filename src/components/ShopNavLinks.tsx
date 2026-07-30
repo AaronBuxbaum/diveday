@@ -7,22 +7,46 @@ import { useRef } from "react";
 const linkClass =
   "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
-const primaryLinks: { label: string; suffix: string; alsoMatch?: string }[] = [
-  { label: "Today", suffix: "" },
-  { label: "Check-in", suffix: "/check-in" },
-  { label: "Blockers", suffix: "/blockers" },
-  { label: "Divers", suffix: "/divers" },
-  // Staff work a trip on /trips/[id], which is the Schedule surface's detail
-  // view — keep the Schedule tab lit so they don't lose their place.
-  { label: "Schedule", suffix: "/schedule", alsoMatch: "/trips" },
-];
-
 /** Owner/manager surfaces (H-14) carry a gate key; everyone else always sees the link. */
 export type ShopNavGates = {
   waivers: boolean;
   reports: boolean;
   team: boolean;
 };
+
+/** Every word this component renders, resolved server-side. */
+export interface ShopNavLinksCopy {
+  primaryNavAriaLabel: string;
+  more: string;
+  today: string;
+  checkIn: string;
+  blockers: string;
+  divers: string;
+  schedule: string;
+  staffing: string;
+  diveSites: string;
+  courses: string;
+  reviews: string;
+  waivers: string;
+  reports: string;
+  promoCodes: string;
+  settings: string;
+  team: string;
+}
+
+function primaryLinks(
+  copy: ShopNavLinksCopy,
+): { label: string; suffix: string; alsoMatch?: string }[] {
+  return [
+    { label: copy.today, suffix: "" },
+    { label: copy.checkIn, suffix: "/check-in" },
+    { label: copy.blockers, suffix: "/blockers" },
+    { label: copy.divers, suffix: "/divers" },
+    // Staff work a trip on /trips/[id], which is the Schedule surface's detail
+    // view — keep the Schedule tab lit so they don't lose their place.
+    { label: copy.schedule, suffix: "/schedule", alsoMatch: "/trips" },
+  ];
+}
 
 /**
  * Two rows in one dropdown: day-to-day reference surfaces, then a divider,
@@ -31,22 +55,30 @@ export type ShopNavGates = {
  * Settings itself (src/app/shop/[shopSlug]/settings/SettingsPage.tsx) rather
  * than earning their own top-level "More" row.
  */
-const moreLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
-  { label: "Staffing", suffix: "/staffing" },
-  { label: "Dive sites", suffix: "/dive-sites" },
-  { label: "Courses", suffix: "/courses" },
-  { label: "Reviews", suffix: "/reviews" },
-  { label: "Waivers", suffix: "/waivers", gate: "waivers" },
-  { label: "Reports", suffix: "/reports", gate: "reports" },
-];
+function moreLinks(
+  copy: ShopNavLinksCopy,
+): { label: string; suffix: string; gate?: keyof ShopNavGates }[] {
+  return [
+    { label: copy.staffing, suffix: "/staffing" },
+    { label: copy.diveSites, suffix: "/dive-sites" },
+    { label: copy.courses, suffix: "/courses" },
+    { label: copy.reviews, suffix: "/reviews" },
+    { label: copy.waivers, suffix: "/waivers", gate: "waivers" },
+    { label: copy.reports, suffix: "/reports", gate: "reports" },
+  ];
+}
 
-const moreAdminLinks: { label: string; suffix: string; gate?: keyof ShopNavGates }[] = [
-  // Promo codes move money, so they sit with the other owner/manager payment
-  // settings rather than in the day-to-day row (H-14).
-  { label: "Promo codes", suffix: "/promos", gate: "reports" },
-  { label: "Settings", suffix: "/settings" },
-  { label: "Team", suffix: "/settings/team", gate: "team" },
-];
+function moreAdminLinks(
+  copy: ShopNavLinksCopy,
+): { label: string; suffix: string; gate?: keyof ShopNavGates }[] {
+  return [
+    // Promo codes move money, so they sit with the other owner/manager payment
+    // settings rather than in the day-to-day row (H-14).
+    { label: copy.promoCodes, suffix: "/promos", gate: "reports" },
+    { label: copy.settings, suffix: "/settings" },
+    { label: copy.team, suffix: "/settings/team", gate: "team" },
+  ];
+}
 
 function isCurrent(pathname: string, href: string, root: string) {
   return href === root ? pathname === root : pathname === href || pathname.startsWith(`${href}/`);
@@ -59,16 +91,20 @@ function navClass(active: boolean) {
 export function ShopNavLinks({
   root,
   gates,
+  copy,
   className = "",
 }: {
   root: string;
   gates: ShopNavGates;
+  copy: ShopNavLinksCopy;
   className?: string;
 }) {
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const visibleMoreLinks = moreLinks.filter((link) => !link.gate || gates[link.gate]);
-  const visibleMoreAdminLinks = moreAdminLinks.filter((link) => !link.gate || gates[link.gate]);
+  const visibleMoreLinks = moreLinks(copy).filter((link) => !link.gate || gates[link.gate]);
+  const visibleMoreAdminLinks = moreAdminLinks(copy).filter(
+    (link) => !link.gate || gates[link.gate],
+  );
   const moreIsActive = [...visibleMoreLinks, ...visibleMoreAdminLinks].some((link) =>
     isCurrent(pathname, `${root}${link.suffix}`, root),
   );
@@ -81,10 +117,10 @@ export function ShopNavLinks({
   return (
     <div className={`flex min-w-0 items-center gap-2 ${className}`}>
       <nav
-        aria-label="Primary"
+        aria-label={copy.primaryNavAriaLabel}
         className="flex min-w-0 flex-1 snap-x items-center gap-0.5 overflow-x-auto scroll-px-1 pr-2 sm:gap-1 sm:pr-3"
       >
-        {primaryLinks.map(({ label, suffix, alsoMatch }) => {
+        {primaryLinks(copy).map(({ label, suffix, alsoMatch }) => {
           const href = `${root}${suffix}`;
           const active =
             isCurrent(pathname, href, root) ||
@@ -106,7 +142,7 @@ export function ShopNavLinks({
         <summary
           className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
         >
-          More
+          {copy.more}
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"

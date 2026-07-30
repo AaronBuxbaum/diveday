@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
+import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
@@ -192,10 +193,12 @@ export default async function TripPrepPage({
                     {/* What they asked for. The captain doing the fit can't edit
                         the profile and sees no size on the packing line, so
                         without this there is nothing to bring a range around. */}
-                    {diver.statedSizes ? (
+                    {diver.statedSizes.length > 0 ? (
                       <span className="text-muted">
                         {" "}
-                        {t("trips.prep.askedFor", { sizes: diver.statedSizes })}
+                        {t("trips.prep.askedFor", {
+                          sizes: statedSizesText(t, locale, diver.statedSizes),
+                        })}
                       </span>
                     ) : (
                       <span className="text-muted"> {t("trips.prep.noSizesOnFile")}</span>
@@ -254,7 +257,9 @@ export default async function TripPrepPage({
                         key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
                         className="border-b border-border last:border-0"
                       >
-                        <td className="px-3 py-3 font-medium sm:px-4">{line.label}</td>
+                        <td className="px-3 py-3 font-medium sm:px-4">
+                          {rentalItemLabel(t, line.kind)}
+                        </td>
                         <td className="px-3 py-3 sm:px-4">
                           {line.fitAtCheckIn ? (
                             // The count is real; the size deliberately isn't.

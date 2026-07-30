@@ -1,22 +1,42 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
 import {
   CORE_RENTAL_KINDS,
   hasAnyRentalPricing,
   offeredRentableItems,
   quoteRentalFit,
+  type RentableItemKind,
   type RentalPricing,
   shopOffersNitrox,
 } from "@/lib/rentals";
 import type { RentalFit } from "./types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+
+/**
+ * `src/lib/rentals.ts` returns item codes, never rendered words (see the
+ * domain-strings-common notes on a domain function rendered on both a staff
+ * and a diver page) — `SettingsPage.tsx`/`RentalFit.tsx` resolve the same
+ * codes against staff.json (`src/i18n/rental-labels.ts`). This is the
+ * diver-facing counterpart, kept local rather than shared with that staff
+ * resolver so a diver's client bundle never pulls in staff.json.
+ */
+const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey> = {
+  bcd: "rental.itemLabels.bcd",
+  regulator: "rental.itemLabels.regulator",
+  wetsuit: "rental.itemLabels.wetsuit",
+  mask_fins: "rental.itemLabels.maskFins",
+  weights: "rental.itemLabels.weights",
+  dive_computer: "rental.itemLabels.diveComputer",
+  gopro: "rental.itemLabels.gopro",
+};
 
 /**
  * The diver's rental-fit capture, reused by the booking confirmation and the
@@ -46,6 +66,7 @@ export function RentalFitForm({
   saved: boolean;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
   const nitroxOffered = shopOffersNitrox(rentalItems);
@@ -81,14 +102,16 @@ export function RentalFitForm({
   // computer joined the core kit).
   const coreSetLabels = offered
     .filter((item) => (CORE_RENTAL_KINDS as readonly string[]).includes(item.kind))
+    .map((item) => t(RENTABLE_ITEM_LABEL_KEYS[item.kind]))
     // Lower-case mid-sentence, but keep all-caps acronyms like "BCD" intact.
-    .map((item) =>
-      item.label === item.label.toUpperCase() ? item.label : item.label.toLowerCase(),
-    );
-  const coreSetSentence =
-    coreSetLabels.length > 1
-      ? `${coreSetLabels.slice(0, -1).join(", ")}, and ${coreSetLabels[coreSetLabels.length - 1]}`
-      : (coreSetLabels[0] ?? "");
+    .map((label) => (label === label.toUpperCase() ? label : label.toLowerCase()));
+  // Locale-appropriate list punctuation ("a, b, and c" / "a, b y c"), not an
+  // English-only comma join — same approach as RequirementsSection.tsx's
+  // site-requirement list.
+  const coreSetSentence = new Intl.ListFormat(locale, {
+    style: "long",
+    type: "conjunction",
+  }).format(coreSetLabels);
   return (
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">{t("rental.heading")}</h3>
@@ -144,7 +167,7 @@ export function RentalFitForm({
           <fieldset>
             <legend className="text-sm font-medium">{t("rental.whatToPlan")}</legend>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {offered.map(({ kind, name, label }) => {
+              {offered.map(({ kind, name }) => {
                 const priceCents = pricing.perItemCents[kind];
                 return (
                   <label
@@ -165,7 +188,7 @@ export function RentalFitForm({
                       }}
                       className="size-4 accent-primary"
                     />
-                    <span className="flex-1">{label}</span>
+                    <span className="flex-1">{t(RENTABLE_ITEM_LABEL_KEYS[kind])}</span>
                     {showPricing && priceCents !== undefined ? (
                       <span className="text-muted">{formatMoneyCents(priceCents)}</span>
                     ) : null}

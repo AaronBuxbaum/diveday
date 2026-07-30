@@ -2,6 +2,9 @@ import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -32,6 +35,9 @@ export async function GET() {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return Response.json({ error: "not_found" }, { status: 404 });
 
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
+
   const now = nowDate();
   const windowEnd = new Date(now.getTime() + AUTO_SAVE_WINDOW_MS);
   const tripIds = await listTripIdsInOfflineManifestWindow(db, shop.id, now, windowEnd);
@@ -41,7 +47,9 @@ export async function GET() {
     tripIds.map(async (tripId): Promise<OfflineManifestPayload | null> => {
       const manifests = await getTripManifests(db, shop.id, tripId);
       if (!manifests) return null;
-      return serializeManifests(manifests, shopIdentity);
+      return serializeManifests(manifests, shopIdentity, (blocker) =>
+        readinessBlockerText(t, blocker),
+      );
     }),
   );
 

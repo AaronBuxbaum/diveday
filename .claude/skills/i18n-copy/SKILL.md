@@ -15,8 +15,16 @@ Every word a person reads comes from `src/i18n/locales/<locale>/*.json`. Two bun
 Decisions: [20260729-diver-copy-localization](../../../docs/architecture/decisions/20260729-diver-copy-localization.md),
 [20260730-staff-copy-localization](../../../docs/architecture/decisions/20260730-staff-copy-localization.md).
 
-`pnpm check:copy` enforces this. It is a **ratchet**: `scripts/copy-baseline.json` holds the
-~1,000 strings not yet extracted, and that number may only go down.
+`pnpm check:copy` enforces this for `src/app`/`src/components` (`.tsx` and colocated `.ts`).
+`pnpm check:domain-strings` enforces the same rule for `src/lib`/`src/db` — see
+[Copy that is not in a component](#copy-that-is-not-in-a-component) below. Both are ratchets over
+`scripts/copy-baseline.json` / `scripts/domain-strings-baseline.json`: each currently sits at zero
+(the full-app and full-domain-layer extractions are both done — ADRs
+[20260730-frontend-strings-i18n-extraction](../../../docs/architecture/decisions/20260730-frontend-strings-i18n-extraction.md)
+and
+[20260731-domain-layer-copy-leaks](../../../docs/architecture/decisions/20260731-domain-layer-copy-leaks.md)),
+so in practice both checks are plain gates today: a file with hard-coded copy fails outright, with
+no allowance to add some and extract later.
 
 ## Adding a new surface
 
@@ -60,8 +68,13 @@ which does not survive translation.
 ## Copy that is not in a component
 
 **A domain layer must return codes, not sentences.** `src/lib` and `src/db` state facts; `src/app`
-and `src/components` choose words. An English string returned from a query is copy no scanner sees
-and no translator reaches.
+and `src/components` choose words. An English string returned from a query is copy the JSX scanner
+never sees — it reaches a page through a variable reference (`{blocker.message}`), not a string
+literal — and `pnpm check:domain-strings` is what catches it instead
+(`node scripts/check-domain-strings.mjs --report src/lib` to see what it sees, same workflow as
+`check-copy.mjs`). This was a real, previously-silent gap — see ADR
+[20260731-domain-layer-copy-leaks](../../../docs/architecture/decisions/20260731-domain-layer-copy-leaks.md)
+for the fourteen files it found on first run.
 
 ```ts
 // src/db/staffing.ts
@@ -73,8 +86,23 @@ export type StaffingGapCode = "no_crew" | "course_needs_instructor" | "no_shift_
 <li>{t(GAP_KEYS[gap])}</li>
 ```
 
-This is the scanner's known blind spot — it only reads `.tsx` under `src/app` and `src/components`
-— so it is on you in review.
+When the same code renders on both a staff and a diver surface, each caller gets its **own**
+`Record<Code, MessageKey>` against its own bundle — the domain function never imports from
+`src/i18n` or picks a bundle itself (see `src/i18n/readiness-labels.ts`'s
+`CERTIFICATION_LEVEL_KEYS` vs `DIVER_CERTIFICATION_LEVEL_KEYS` for the worked example). A param
+that needs interpolation and is itself a word, not a raw number (a certification-level name, an
+agency name), gets resolved through its own key-map *before* being interpolated into the parent
+template — never a raw code passed into `t()`.
+
+`check-domain-strings.mjs` only flags object-literal properties named `message`, `label`, `text`,
+`reason`, or `summary` holding a string-literal sentence — the same narrow discipline
+`check-copy.mjs` uses for its `.ts` label-map scan. It will not catch every shape (a template
+literal with `${}` interpolation reads as code and is skipped on purpose, to avoid false-positiving
+on ordinary expressions), so a `_LABELS`-suffixed const or a new `.message` field is still on you in
+review even when the scanner stays quiet. Content data that a shop or DiveDay authors directly as
+data — course template `summary`/`overview` text, seeded course-path descriptions, migration-guide
+marketing prose — is not this bug class; it's exempt the same way the waiver body is, with a stated
+reason.
 
 ## Genuinely exempt
 
@@ -91,10 +119,14 @@ convention and needing no marker:
   sign-off decision (H-01/H-03 in [human-decisions.md](../../../docs/product/human-decisions.md)),
   not an engineering one.
 
-Not exempt: marketing pages. They are English-by-design today and sit in the baseline like
-everything else, because the count has to be honest.
+Not exempt: marketing pages under `src/app`/`src/components`. They go through `diver.json` like
+everything else on those routes. `src/lib/migration-guides.ts`'s long-form guide content is
+different — it's data, not JSX, and is file-exempt for that reason (see above).
 
-## When `pnpm check:copy` fails
+## When `pnpm check:copy` or `pnpm check:domain-strings` fails
+
+Both scripts share the same messages and flags; substitute `check-domain-strings.mjs` and
+`domain-strings-baseline.json` for `src/lib`/`src/db` work.
 
 | Message | What to do |
 | --- | --- |
@@ -110,7 +142,7 @@ edited a file that is still in the baseline. `--write` refuses that growth (it
 cannot tell whose copy it is), so use:
 
 ```bash
-node scripts/check-copy.mjs --absorb
+node scripts/check-copy.mjs --absorb            # or check-domain-strings.mjs --absorb
 ```
 
 It writes the baseline and **prints every increase it accepted**, so the growth

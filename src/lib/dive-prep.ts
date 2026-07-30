@@ -70,7 +70,6 @@ export type PrepDiver = {
 /** One row of the packing list: N of this item in this size, and who they're for. */
 export type PrepLine = {
   kind: RentalItemKind;
-  label: string;
   /** Null when the item is rented but no size was ever recorded. */
   size: string | null;
   count: number;
@@ -118,13 +117,14 @@ export type DivePrepChecklist = {
     fullName: string;
     note: string | null;
     /**
-     * What they asked for, e.g. "BCD L, wetsuit M". The person doing the
-     * check-in fit is usually the captain, who can't edit the fit and now
-     * sees no size anywhere on the packing line — without this, "bring a
-     * range in their band" means starting from scratch on a moving dock.
-     * It is a starting point, not an allocation.
+     * What they asked for, e.g. BCD L, wetsuit M — a code per piece, never a
+     * rendered word (`src/i18n/rental-labels.ts` resolves `kind`). The person
+     * doing the check-in fit is usually the captain, who can't edit the fit
+     * and now sees no size anywhere on the packing line — without this,
+     * "bring a range in their band" means starting from scratch on a moving
+     * dock. It is a starting point, not an allocation.
      */
-    statedSizes: string | null;
+    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[];
     /**
      * Whole days since the flag was raised. A shortage is a fact about one
      * day, so an old flag is a prompt to re-ask the diver rather than a
@@ -133,17 +133,6 @@ export type DivePrepChecklist = {
      */
     flaggedDaysAgo: number;
   }[];
-};
-
-export const RENTAL_ITEM_LABELS: Record<RentalItemKind, string> = {
-  bcd: "BCD",
-  regulator: "Regulator",
-  wetsuit: "Wetsuit",
-  boots: "Boots",
-  mask_fins: "Mask & fins",
-  weights: "Weights",
-  dive_computer: "Dive computer",
-  gopro: "GoPro",
 };
 
 /** Kit that has no size to record, so a blank is expected rather than a gap. */
@@ -222,20 +211,26 @@ function rentedItems(fit: RentalFit): PrepItem[] {
 }
 
 /**
- * The sizes a flagged diver asked for, as one line: "BCD L, wetsuit M, boots 10".
- * Only the pieces whose size the flag blanks on the packing line — the fitter
- * already sees everything else there. Null when nothing sized was recorded,
- * which is its own useful signal: there is no starting point to work from.
+ * The sizes a flagged diver asked for, as one piece per stated size. Only the
+ * pieces whose size the flag blanks on the packing line — the fitter already
+ * sees everything else there. Empty when nothing sized was recorded, which is
+ * its own useful signal: there is no starting point to work from.
  */
-function statedSizeSummary(fit: RentalFit): string | null {
-  const parts: string[] = [];
-  if (fit.rentsBcd && size(fit.bcdSize)) parts.push(`BCD ${size(fit.bcdSize)}`);
+function statedSizeItems(
+  fit: RentalFit,
+): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[] {
+  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[] = [];
+  const bcdSize = size(fit.bcdSize);
+  if (fit.rentsBcd && bcdSize) items.push({ kind: "bcd", size: bcdSize });
   if (fit.rentsWetsuit) {
-    if (size(fit.wetsuitSize)) parts.push(`wetsuit ${size(fit.wetsuitSize)}`);
-    if (size(fit.bootSize)) parts.push(`boots ${size(fit.bootSize)}`);
+    const wetsuitSize = size(fit.wetsuitSize);
+    if (wetsuitSize) items.push({ kind: "wetsuit", size: wetsuitSize });
+    const bootSize = size(fit.bootSize);
+    if (bootSize) items.push({ kind: "boots", size: bootSize });
   }
-  if (fit.rentsMaskFins && size(fit.finSize)) parts.push(`fins ${size(fit.finSize)}`);
-  return parts.length > 0 ? parts.join(", ") : null;
+  const finSize = size(fit.finSize);
+  if (fit.rentsMaskFins && finSize) items.push({ kind: "mask_fins", size: finSize });
+  return items;
 }
 
 /** A diver breathes enriched air only while their card is verified. */
@@ -285,7 +280,7 @@ export function buildDivePrepChecklist(input: {
       diversNeedingStaffFit.push({
         fullName: diver.fullName,
         note: diver.fit.needsStaffFitNote?.trim() || null,
-        statedSizes: statedSizeSummary(diver.fit),
+        statedSizes: statedSizeItems(diver.fit),
         flaggedDaysAgo: Math.max(
           0,
           Math.floor((now.getTime() - diver.fit.needsStaffFitAt.getTime()) / DAY_MS),
@@ -302,7 +297,6 @@ export function buildDivePrepChecklist(input: {
       }
       grouped.set(key, {
         kind: item.kind,
-        label: RENTAL_ITEM_LABELS[item.kind],
         size: item.size,
         count: 1,
         divers: [diver.fullName],
@@ -347,32 +341,32 @@ export function buildDivePrepChecklist(input: {
 /**
  * One-line fit for a manifest, boarding, or roster row.
  *
- * The three states are deliberately distinct. "Own kit" is something a diver
+ * The four states are deliberately distinct. "Own kit" is something a diver
  * told us; "not asked" is something nobody has done yet. Collapsing them reads
  * as reassurance the shop has not earned — the walk-up who was never asked
  * turns up at the dock in booties expecting a BCD.
+ *
+ * A code + params, never a rendered sentence: this is read from a staff page
+ * *and* passed through `src/db/manifests.ts` into the offline manifest
+ * snapshot, so it must stay renderable against whichever staff bundle the
+ * reader resolves it in (src/i18n/rental-labels.ts's `rentalFitLineText`).
  */
-export type RentalFitLine = {
-  state: "not_recorded" | "own_kit" | "rents" | "needs_staff_fit";
-  text: string;
-};
+export type RentalFitLine =
+  | { state: "not_recorded" }
+  | { state: "own_kit" }
+  | { state: "needs_staff_fit"; note: string | null }
+  | { state: "rents"; items: { kind: RentalItemKind; size: string | null }[] };
 
 export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
-  if (!fit) return { state: "not_recorded", text: "No fit on file — not asked yet" };
+  if (!fit) return { state: "not_recorded" };
   // A fourth state on purpose: "needs staff fit" is neither a size to hand over
   // nor a diver nobody asked. It is an open job at the dock, and reading it as
   // either of the others is how a diver ends up kitted from a size the shop
   // does not have.
   if (fit.needsStaffFitAt) {
-    const note = fit.needsStaffFitNote?.trim();
-    return {
-      state: "needs_staff_fit",
-      text: note ? `Needs staff fit — ${note}` : "Needs staff fit at check-in",
-    };
+    return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const parts = rentedItems(fit).map((item) =>
-    item.size ? `${RENTAL_ITEM_LABELS[item.kind]} ${item.size}` : RENTAL_ITEM_LABELS[item.kind],
-  );
-  if (parts.length === 0) return { state: "own_kit", text: "Own kit" };
-  return { state: "rents", text: parts.join(", ") };
+  const items = rentedItems(fit).map((item) => ({ kind: item.kind, size: item.size }));
+  if (items.length === 0) return { state: "own_kit" };
+  return { state: "rents", items };
 }

@@ -1,3 +1,11 @@
+import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import {
+  blockerActionLabelText,
+  blockerDetailGroupText,
+  blockerDetailWithRemainingText,
+  pointingLabelText,
+} from "@/i18n/today-labels";
 import type { Role } from "./authz";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import { utcToWallTime } from "./zoned";
@@ -11,16 +19,22 @@ import { utcToWallTime } from "./zoned";
  * This module is the framework-free half: it turns source-of-truth evidence
  * into ranked, human-readable actions. It never queries; `src/db/today.ts`
  * gathers the facts and calls in here.
+ *
+ * Words live in the message bundles, not here — `src/i18n/today-labels.ts`
+ * maps every code this file produces to its staff-bundle key, and the
+ * `src/app`/`src/components` caller does the `t()` call. The one exception is
+ * `diverBlockerAction`/`collapseDiverActions` below: they compose a single
+ * rendered `TodayAction.detail`/`actionLabel` string, a field several other
+ * call sites (`src/db/today.ts`) also fill with a plain string, so it stays
+ * `string` rather than forking into a second, code-carrying shape. Those two
+ * take a `StaffTranslator`, defaulted to English, and resolve through the same
+ * `src/i18n/today-labels.ts` helpers (and `src/i18n/readiness-labels.ts`'s
+ * `readinessBlockerText` for the blocker's own sentence) rather than calling
+ * `t()` inline.
  */
 
 /** How soon the work has to be done, derived from the departure it belongs to. */
 export type TodayUrgency = "now" | "soon" | "later";
-
-export const URGENCY_LABELS = {
-  now: "Before today’s boats",
-  soon: "Next 3 days",
-  later: "This week",
-} as const satisfies Record<TodayUrgency, string>;
 
 const URGENCY_RANK: Record<TodayUrgency, number> = { now: 0, soon: 1, later: 2 };
 
@@ -75,29 +89,27 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
 };
 
 /**
- * The chip that labels each row. Tone is supplementary: the label always names
- * the state in words, so colour never carries the meaning on its own
- * (design/principles.md #6).
+ * The chip that labels each row. Tone only — the word itself lives in
+ * `src/i18n/today-labels.ts`'s `ACTION_KIND_KEYS`, so colour never carries the
+ * meaning on its own (design/principles.md #6) and the label always comes
+ * through `t()`.
  */
 export const ACTION_KIND_META = {
-  medical_review: { label: "Medical", tone: "danger" },
-  readiness_unavailable: { label: "Readiness", tone: "danger" },
-  identity: { label: "Identity", tone: "danger" },
-  certification: { label: "Cards", tone: "warning" },
-  requirements: { label: "Setup", tone: "warning" },
-  waiver: { label: "Waiver", tone: "warning" },
-  instructor_missing: { label: "Crew", tone: "warning" },
-  nitrox_gate: { label: "Nitrox", tone: "warning" },
-  dive_prep: { label: "Prep", tone: "neutral" },
-  payment: { label: "Payment", tone: "neutral" },
-  email_delivery: { label: "Email", tone: "neutral" },
-  waitlist_seat: { label: "Wait list", tone: "neutral" },
-  last_minute_fill: { label: "Fill seats", tone: "neutral" },
-  emergency_contact: { label: "Contact", tone: "neutral" },
-} as const satisfies Record<
-  TodayActionKind,
-  { label: string; tone: "danger" | "warning" | "neutral" }
->;
+  medical_review: { tone: "danger" },
+  readiness_unavailable: { tone: "danger" },
+  identity: { tone: "danger" },
+  certification: { tone: "warning" },
+  requirements: { tone: "warning" },
+  waiver: { tone: "warning" },
+  instructor_missing: { tone: "warning" },
+  nitrox_gate: { tone: "warning" },
+  dive_prep: { tone: "neutral" },
+  payment: { tone: "neutral" },
+  email_delivery: { tone: "neutral" },
+  waitlist_seat: { tone: "neutral" },
+  last_minute_fill: { tone: "neutral" },
+  emergency_contact: { tone: "neutral" },
+} as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 export type TodayAction = {
   /** Stable across renders so the list can be diffed and tested. */
@@ -157,151 +169,52 @@ export function isWaiverCode(code: ReadinessBlockerCode): boolean {
   return WAIVER_CODES.has(code);
 }
 
-function firstNameOf(fullName: string): string {
-  return fullName.split(" ")[0] || fullName;
-}
-
 /**
- * A label for a row whose fix lives on another screen: it points, it does not
- * command. Card work waits on the person record; everything else on the roster.
+ * The first token of a full name — used for a pointing label ("Open Priya’s
+ * record"), never for anything shown as the diver's name of record. Exported
+ * so `src/i18n/today-labels.ts` can build the same label without duplicating
+ * the split rule.
  */
-export function pointingLabel(target: "trip" | "diver", fullName: string): string {
-  return target === "diver" ? `Open ${firstNameOf(fullName)}’s record` : "Open roster";
+export function firstNameOf(fullName: string): string {
+  return fullName.split(" ")[0] || fullName;
 }
 
 /**
  * Blocked divers are the reason this page exists, so each blocker resolves to
  * the one surface that actually fixes it. Card evidence lives on the person
- * record; waiver, payment, and requirement work lives on the trip roster.
+ * record; waiver, payment, and requirement work lives on the trip roster. The
+ * words for `actionLabel`/`groupLabel` live in `src/i18n/today-labels.ts`
+ * (`BLOCKER_ACTION_LABEL_KEYS`/`BLOCKER_GROUP_LABEL_KEYS`), keyed by the same
+ * `ReadinessBlockerCode` — this map only states kind and target.
  */
 export const BLOCKER_ACTIONS: Record<
   ReadinessBlockerCode,
-  {
-    kind: TodayActionKind;
-    actionLabel: string;
-    /** The verb when one row stands for several divers on the same boat. */
-    groupLabel: string;
-    target: "trip" | "diver";
-  }
+  { kind: TodayActionKind; target: "trip" | "diver" }
 > = {
-  requirements_not_configured: {
-    kind: "requirements",
-    actionLabel: "Set requirements",
-    groupLabel: "Set requirements",
-    target: "trip",
-  },
-  identity_unconfirmed: {
-    kind: "identity",
-    actionLabel: "Confirm identity",
-    groupLabel: "Confirm identities",
-    target: "trip",
-  },
-  under_minimum_age: {
-    // Targets the diver: the fix is either a corrected date of birth on their
-    // record or a conversation with the family, never a change to the trip.
-    kind: "certification",
-    actionLabel: "Check date of birth",
-    groupLabel: "Check dates of birth",
-    target: "diver",
-  },
-  waiver_not_sent: {
-    kind: "waiver",
-    actionLabel: "Send waiver",
-    groupLabel: "Send waivers",
-    target: "trip",
-  },
-  waiver_pending: {
-    kind: "waiver",
-    actionLabel: "Nudge waiver",
-    groupLabel: "Nudge waivers",
-    target: "trip",
-  },
-  waiver_expired: {
-    kind: "waiver",
-    actionLabel: "Reissue waiver",
-    groupLabel: "Reissue waivers",
-    target: "trip",
-  },
-  medical_review: {
-    kind: "medical_review",
-    actionLabel: "Review medical",
-    groupLabel: "Review medicals",
-    target: "trip",
-  },
-  certification_missing: {
-    kind: "certification",
-    actionLabel: "Add card",
-    groupLabel: "Review cards",
-    target: "diver",
-  },
-  certification_pending: {
-    kind: "certification",
-    actionLabel: "Verify card",
-    groupLabel: "Verify cards",
-    target: "diver",
-  },
-  certification_expired: {
-    kind: "certification",
-    actionLabel: "Update card",
-    groupLabel: "Update cards",
-    target: "diver",
-  },
-  certification_insufficient: {
-    kind: "certification",
-    actionLabel: "Review card",
-    groupLabel: "Review cards",
-    target: "diver",
-  },
-  specialty_missing: {
-    kind: "certification",
-    actionLabel: "Add specialty",
-    groupLabel: "Review specialties",
-    target: "diver",
-  },
-  specialty_pending: {
-    kind: "certification",
-    actionLabel: "Verify specialty",
-    groupLabel: "Verify specialties",
-    target: "diver",
-  },
-  specialty_expired: {
-    kind: "certification",
-    actionLabel: "Update specialty",
-    groupLabel: "Update specialties",
-    target: "diver",
-  },
+  requirements_not_configured: { kind: "requirements", target: "trip" },
+  identity_unconfirmed: { kind: "identity", target: "trip" },
+  // Targets the diver: the fix is either a corrected date of birth on their
+  // record or a conversation with the family, never a change to the trip.
+  under_minimum_age: { kind: "certification", target: "diver" },
+  waiver_not_sent: { kind: "waiver", target: "trip" },
+  waiver_pending: { kind: "waiver", target: "trip" },
+  waiver_expired: { kind: "waiver", target: "trip" },
+  medical_review: { kind: "medical_review", target: "trip" },
+  certification_missing: { kind: "certification", target: "diver" },
+  certification_pending: { kind: "certification", target: "diver" },
+  certification_expired: { kind: "certification", target: "diver" },
+  certification_insufficient: { kind: "certification", target: "diver" },
+  specialty_missing: { kind: "certification", target: "diver" },
+  specialty_pending: { kind: "certification", target: "diver" },
+  specialty_expired: { kind: "certification", target: "diver" },
   // An imported specialty card is one tap from clearing its gate, so this reads
   // as a confirmation, not a card to chase (ADR 20260725-import-specialty-cards).
-  specialty_import_unconfirmed: {
-    kind: "certification",
-    actionLabel: "Confirm specialty",
-    groupLabel: "Confirm imported specialties",
-    target: "diver",
-  },
-  nitrox_missing: {
-    kind: "certification",
-    actionLabel: "Add nitrox card",
-    groupLabel: "Review nitrox cards",
-    target: "diver",
-  },
-  nitrox_pending: {
-    kind: "certification",
-    actionLabel: "Verify nitrox card",
-    groupLabel: "Verify nitrox cards",
-    target: "diver",
-  },
-  payment_due: {
-    kind: "payment",
-    actionLabel: "Take payment",
-    groupLabel: "Take payments",
-    target: "trip",
-  },
-  readiness_unavailable: {
-    kind: "readiness_unavailable",
-    actionLabel: "Check readiness",
-    groupLabel: "Check readiness",
-    target: "trip",
-  },
+  specialty_import_unconfirmed: { kind: "certification", target: "diver" },
+  nitrox_missing: { kind: "certification", target: "diver" },
+  nitrox_pending: { kind: "certification", target: "diver" },
+  payment_due: { kind: "payment", target: "trip" },
+  payment_refunded: { kind: "payment", target: "trip" },
+  readiness_unavailable: { kind: "readiness_unavailable", target: "trip" },
 };
 
 export function urgencyFor(dueAt: Date | null, now: Date): TodayUrgency {
@@ -344,31 +257,36 @@ export type DiverBlockerInput = {
  * One action per blocked diver, pointed at the surface that clears the
  * headline blocker. Extra blockers ride along in the detail line so staff know
  * whether one tap finishes the person or only starts them.
+ *
+ * `t` defaults to English so every existing call site (tests, and any caller
+ * that hasn't threaded a request-locale translator through yet) keeps working
+ * unchanged; a locale-aware caller passes its own.
  */
 export function diverBlockerAction(
   input: DiverBlockerInput,
   shopSlug: string,
   now: Date,
+  t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction | null {
   const blocker = primaryBlocker(input.blockers);
   if (!blocker) return null;
-  const { kind, actionLabel, target } = BLOCKER_ACTIONS[blocker.code];
+  const { kind, target } = BLOCKER_ACTIONS[blocker.code];
   const remaining = input.blockers.length - 1;
   const rosterRow = `/shop/${shopSlug}/trips/${input.tripId}/guests#booking-${input.bookingId}`;
   const waiver = isWaiverCode(blocker.code);
+  const blockerText = readinessBlockerText(t, blocker);
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,
     kind,
     urgency: urgencyFor(input.startsAt, now),
     subject: input.fullName,
     context: input.tripTitle,
-    detail:
-      remaining > 0
-        ? `${blocker.message} ${remaining} other ${remaining === 1 ? "blocker" : "blockers"} to clear too.`
-        : blocker.message,
+    detail: remaining > 0 ? blockerDetailWithRemainingText(t, blockerText, remaining) : blockerText,
     // Waiver rows send in place, so they keep the verb; a card row only opens
     // the person record, so it points instead of pretending to act.
-    actionLabel: waiver ? actionLabel : pointingLabel(target, input.fullName),
+    actionLabel: waiver
+      ? blockerActionLabelText(t, blocker.code, false)
+      : pointingLabelText(t, target, input.fullName),
     href: target === "diver" ? `/shop/${shopSlug}/divers/${input.personId}` : rosterRow,
     ...(waiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     dueAt: input.startsAt,
@@ -397,6 +315,7 @@ export function collapseDiverActions(
   divers: readonly DiverBlockerInput[],
   shopSlug: string,
   now: Date,
+  t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction[] {
   const byTripAndCode = new Map<string, { blocker: ReadinessBlocker; rows: DiverBlockerInput[] }>();
   for (const diver of divers) {
@@ -413,11 +332,11 @@ export function collapseDiverActions(
     const first = rows[0];
     if (!first) continue;
     if (rows.length === 1) {
-      const action = diverBlockerAction(first, shopSlug, now);
+      const action = diverBlockerAction(first, shopSlug, now, t);
       if (action) actions.push(action);
       continue;
     }
-    const { kind, groupLabel } = BLOCKER_ACTIONS[blocker.code];
+    const { kind } = BLOCKER_ACTIONS[blocker.code];
     const names = rows.map((row) => row.fullName).sort((a, b) => a.localeCompare(b));
     const waiver = isWaiverCode(blocker.code);
     actions.push({
@@ -426,10 +345,12 @@ export function collapseDiverActions(
       urgency: urgencyFor(first.startsAt, now),
       subject: `${rows.length} divers`,
       context: first.tripTitle,
-      detail: `${blocker.message} ${nameList(names)}.`,
+      detail: blockerDetailGroupText(t, readinessBlockerText(t, blocker), nameList(names)),
       // A batch waiver send keeps the verb ("Send waivers"); any other grouped
       // fix only opens the roster, the one screen that shows all of them.
-      actionLabel: waiver ? groupLabel : "Open roster",
+      actionLabel: waiver
+        ? blockerActionLabelText(t, blocker.code, true)
+        : pointingLabelText(t, "trip", first.fullName),
       // Always the roster: it is the one screen that shows all of them at once.
       href: `/shop/${shopSlug}/trips/${first.tripId}`,
       ...(waiver ? { waiver: { bookingIds: rows.map((row) => row.bookingId) } } : {}),
@@ -457,9 +378,12 @@ export function sortActions(actions: readonly TodayAction[]): TodayAction[] {
   });
 }
 
+/**
+ * `urgency` is the code the caller looks up in `src/i18n/today-labels.ts`'s
+ * `URGENCY_KEYS` for the section heading; this module never renders the word.
+ */
 export type TodayActionGroup = {
   urgency: TodayUrgency;
-  label: string;
   actions: TodayAction[];
 };
 
@@ -469,37 +393,36 @@ export function groupActions(actions: readonly TodayAction[]): TodayActionGroup[
   return (["now", "soon", "later"] as const)
     .map((urgency) => ({
       urgency,
-      label: URGENCY_LABELS[urgency],
       actions: sorted.filter((action) => action.urgency === urgency),
     }))
     .filter((group) => group.actions.length > 0);
 }
 
 /**
- * The one-line answer to "how's my day?". Deliberately not a stat grid: it
- * reads as a sentence above the queue instead of four tiles beside it.
+ * The one-line answer to "how's my day?", as a code: which of the day's four
+ * shapes it is, plus the numbers that fill it in. Deliberately not a stat
+ * grid: the caller renders it as a sentence above the queue instead of four
+ * tiles beside it (`src/i18n/today-labels.ts`'s `summarizeDayText`).
  *
  * It leads with people, not rows. Nine divers collapsed into one row is still
  * nine divers who cannot board, and the headline must not shrink that to "1".
  */
+export type DaySummary =
+  | { code: "blocked"; departures: number; blockedToday: number }
+  | { code: "clear"; departures: number }
+  | { code: "urgent"; departures: number; urgent: number }
+  | { code: "ahead"; departures: number; jobs: number };
+
 export function summarizeDay(
   actions: readonly TodayAction[],
   departures: number,
   blockedToday = 0,
-): string {
-  const boats =
-    departures === 0
-      ? "No boats out today"
-      : `${departures} ${departures === 1 ? "departure" : "departures"} today`;
-  if (blockedToday > 0) {
-    return `${boats}. ${blockedToday} ${blockedToday === 1 ? "diver" : "divers"} still can’t board.`;
-  }
-  if (actions.length === 0) return `${boats} — and nothing is waiting on you.`;
+): DaySummary {
+  if (blockedToday > 0) return { code: "blocked", departures, blockedToday };
+  if (actions.length === 0) return { code: "clear", departures };
   const urgent = actions.filter((action) => action.urgency === "now").length;
-  if (urgent > 0) {
-    return `${boats}. ${urgent} ${urgent === 1 ? "job" : "jobs"} to clear before they sail.`;
-  }
-  return `${boats}. Nothing is urgent; ${actions.length} ${actions.length === 1 ? "job" : "jobs"} to work ahead.`;
+  if (urgent > 0) return { code: "urgent", departures, urgent };
+  return { code: "ahead", departures, jobs: actions.length };
 }
 
 export type RoleLens = "boat" | "sessions" | null;
@@ -529,46 +452,37 @@ export function leadWithCrewed<T extends { tripId: string }>(
   ];
 }
 
-/**
- * Returns a warm, authentic seasonal briefing message based on the month of the date.
- * Keep it rationed like --accent, reading like a briefing, not filler.
- */
-export function getSeasonalBriefing(date: Date, shopName?: string): string {
-  const month = date.getMonth(); // 0-indexed (0 = Jan, 11 = Dec)
-  const localSuffix = shopName ? ` at ${shopName}` : "";
+/** Which seasonal-briefing sentence today's date falls into. */
+export type TodaySeason = "summer" | "autumn" | "winter" | "spring";
 
-  if (month >= 5 && month <= 7) {
-    // Summer (June, July, August)
-    return `Enjoy the surface interval — grab some shade${localSuffix}, drink some water, and we'll see you on the next boat.`;
-  }
-  if (month >= 8 && month <= 10) {
-    // Autumn (September, October, November)
-    return `Enjoy the surface interval — grab a warm towel${localSuffix}, check the breeze, and we'll see you on the next boat.`;
-  }
-  if (month === 11 || month === 0 || month === 1) {
-    // Winter (December, January, February)
-    return `Enjoy the surface interval — warm up with a dry coat${localSuffix}, and we'll see you on the next boat.`;
-  }
-  // Spring (March, April, May)
-  return `Enjoy the surface interval — catch some sun${localSuffix}, check your gear, and we'll see you on the next boat.`;
+/**
+ * Which seasonal briefing variant the date falls into, based on its month.
+ * The sentence itself — kept rationed like --accent, reading like a
+ * briefing, not filler — lives in `src/i18n/today-labels.ts`'s
+ * `seasonalBriefingText`.
+ */
+export function getSeasonalBriefing(date: Date): TodaySeason {
+  const month = date.getMonth(); // 0-indexed (0 = Jan, 11 = Dec)
+  if (month >= 5 && month <= 7) return "summer"; // June, July, August
+  if (month >= 8 && month <= 10) return "autumn"; // September, October, November
+  if (month === 11 || month === 0 || month === 1) return "winter"; // December, January, February
+  return "spring"; // March, April, May
 }
 
+/** Which time-of-day greeting band the shop's local hour falls into. */
+export type TodayGreetingBand = "morning" | "afternoon" | "evening" | "night";
+
 /**
- * Returns a warm, time-of-day aware briefing greeting using the shop's local timezone.
- * Reads like a dive briefing copy rather than cutesy filler.
+ * Which time-of-day-aware greeting band a moment falls into, in the shop's
+ * local timezone. The greeting itself — reading like dive briefing copy
+ * rather than cutesy filler — lives in `src/i18n/today-labels.ts`'s
+ * `GREETING_KEYS`.
  */
-export function getTimeOfDayGreeting(date: Date, timezone: string, firstName: string): string {
+export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetingBand {
   const wall = utcToWallTime(date, timezone);
   const hour = wall.hour;
-
-  if (hour >= 5 && hour < 12) {
-    return `Good morning, ${firstName} ☕`;
-  }
-  if (hour >= 12 && hour < 17) {
-    return `Good afternoon, ${firstName} ☀️`;
-  }
-  if (hour >= 17 && hour < 22) {
-    return `Good evening, ${firstName} 🌙`;
-  }
-  return `Good night, ${firstName} 🌌`;
+  if (hour >= 5 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 22) return "evening";
+  return "night";
 }

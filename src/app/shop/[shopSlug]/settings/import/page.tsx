@@ -6,8 +6,9 @@ import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { IMPORT_HONESTY_TABLE, type ImportField } from "@/lib/import";
+import { IMPORT_HONESTY_TABLE, type ImportField, type ImportIssueCode } from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
+import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
 /**
@@ -55,6 +56,48 @@ function importWizardCopy(t: StaffTranslator) {
     visit_reference: t("settings.import.wizard.fieldLabels.visit_reference"),
   };
 
+  const issues: Record<ImportIssueCode, string> = {
+    email_invalid: t("settings.import.issues.emailInvalid"),
+    expiry_unreadable: t("settings.import.issues.expiryUnreadable"),
+    expiry_assumed_month_first: t("settings.import.issues.expiryAssumedMonthFirst"),
+    card_marked_unverified: t("settings.import.issues.cardMarkedUnverified"),
+    specialty_not_gated: t("settings.import.issues.specialtyNotGated"),
+    specialty_no_card_number: t("settings.import.issues.specialtyNoCardNumber"),
+    specialty_imported_verified: t("settings.import.issues.specialtyImportedVerified"),
+    specialty_imported_pending: t("settings.import.issues.specialtyImportedPending"),
+    agency_unrecognized: t("settings.import.issues.agencyUnrecognized"),
+    level_names_specialty: t("settings.import.issues.levelNamesSpecialty"),
+    level_is_technical: t("settings.import.issues.levelIsTechnical"),
+    level_not_gated: t("settings.import.issues.levelNotGated"),
+    level_no_card_number: t("settings.import.issues.levelNoCardNumber"),
+    cert_imported_verified: t("settings.import.issues.certImportedVerified"),
+    cert_imported_pending: t("settings.import.issues.certImportedPending"),
+    nitrox_imported: t("settings.import.issues.nitroxImported"),
+    nitrox_no_card_number: t("settings.import.issues.nitroxNoCardNumber"),
+    waiver_date_invalid: t("settings.import.issues.waiverDateInvalid"),
+    waiver_imported: t("settings.import.issues.waiverImported"),
+    dob_invalid: t("settings.import.issues.dobInvalid"),
+    visit_date_unreadable: t("settings.import.issues.visitDateUnreadable"),
+    visit_no_reference: t("settings.import.issues.visitNoReference"),
+    visit_no_date: t("settings.import.issues.visitNoDate"),
+    no_name: t("settings.import.issues.noName"),
+    merged_duplicate: t("settings.import.issues.mergedDuplicate"),
+    no_email_new_record: t("settings.import.issues.noEmailNewRecord"),
+  };
+
+  const errors: Record<ImportActionErrorCode, string> = {
+    not_owner_or_manager: t("settings.import.errors.notOwnerOrManager"),
+    csv_required: t("settings.import.errors.csvRequired"),
+    no_importable_rows: t("settings.import.errors.noImportableRows"),
+    file_too_large: t("settings.import.errors.fileTooLarge"),
+    file_empty: t("settings.import.errors.fileEmpty"),
+    too_many_columns: t("settings.import.errors.tooManyColumns"),
+    too_many_rows: t("settings.import.errors.tooManyRows"),
+    cell_too_long_header: t("settings.import.errors.cellTooLongHeader"),
+    cell_too_long_row: t("settings.import.errors.cellTooLongRow"),
+    no_name_column: t("settings.import.errors.noNameColumn"),
+  };
+
   return {
     heading: t("settings.import.wizard.heading"),
     chooseFile: t("settings.import.wizard.chooseFile"),
@@ -95,6 +138,8 @@ function importWizardCopy(t: StaffTranslator) {
     hiddenRowsNotice: t("settings.import.wizard.hiddenRowsNotice"),
     submit: t("settings.import.wizard.submit"),
     submitting: t("settings.import.wizard.submitting"),
+    issues,
+    errors,
     result: {
       summary: t("settings.import.wizard.result.summary"),
       cardsLine: t("settings.import.wizard.result.cardsLine"),

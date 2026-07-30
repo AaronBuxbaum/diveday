@@ -411,7 +411,6 @@ describe("calculateReadiness", () => {
   it.each([
     ["unpaid", "unpaid"],
     ["absent payment", undefined],
-    ["refunded", "refunded"],
   ] as const)("blocks payment for %s when the trip requires it", (_name, status) => {
     expect(
       calculateReadiness({
@@ -423,6 +422,19 @@ describe("calculateReadiness", () => {
         timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code: "payment_due" }));
+  });
+
+  it("blocks payment as refunded, distinct from an outstanding balance, when the trip requires it", () => {
+    expect(
+      calculateReadiness({
+        requirement: paymentRequirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        paymentStatus: "refunded",
+        now,
+        timezone: "UTC",
+      }).blockers,
+    ).toContainEqual(expect.objectContaining({ code: "payment_refunded" }));
   });
 
   it.each(["paid", "deposit_paid", "waived"] as const)("clears payment when %s", (status) => {

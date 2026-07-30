@@ -50,8 +50,19 @@ describe("booking delight planning", () => {
       18,
     );
     expect(plan.bring).toContain("Swimsuit");
-    expect(plan.rented).toEqual(["BCD"]);
-    expect(plan.temperatureTip).toContain("18°C");
+    expect(plan.rented).toEqual(["bcd"]);
+    expect(plan.temperatureTip).toEqual({ tone: "cold", celsius: 18 });
+  });
+
+  it("reads warmer water as the mild tone", () => {
+    const plan = packingConfidence([], null, 27);
+    expect(plan.temperatureTip).toEqual({ tone: "mild", celsius: 27 });
+  });
+
+  it("gives every diver the same fixed provided-item codes", () => {
+    const plan = packingConfidence([], null, null);
+    expect(plan.provided).toEqual(["tanksAndWeights", "crewBriefing"]);
+    expect(plan.temperatureTip).toBeNull();
   });
 
   it("only calls a newer crew briefing a change", () => {

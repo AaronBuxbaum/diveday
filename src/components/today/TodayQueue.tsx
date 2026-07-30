@@ -4,7 +4,8 @@ import {
   type WaitlistInviteCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { buttonClass } from "@/components/ui/button";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { ACTION_KIND_KEYS, seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import {
@@ -22,13 +23,13 @@ const CHIP_TONES = {
   neutral: "border-border bg-surface-sunken text-muted",
 } as const;
 
-function KindChip({ kind }: { kind: TodayAction["kind"] }) {
-  const { label, tone } = ACTION_KIND_META[kind];
+function KindChip({ kind, t }: { kind: TodayAction["kind"]; t: StaffTranslator }) {
+  const { tone } = ACTION_KIND_META[kind];
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
     >
-      {label}
+      {t(ACTION_KIND_KEYS[kind])}
     </span>
   );
 }
@@ -40,6 +41,7 @@ function ActionRow({
   inviteAction,
   resendCopy,
   inviteCopy,
+  t,
 }: {
   action: TodayAction;
   shopSlug: string;
@@ -47,13 +49,14 @@ function ActionRow({
   inviteAction: TodayInviteAction;
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
+  t: StaffTranslator;
 }) {
   return (
     <li className="card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <KindChip kind={action.kind} />
+            <KindChip kind={action.kind} t={t} />
             <p className="font-semibold">{action.subject}</p>
             {action.context ? <p className="text-sm text-muted">{action.context}</p> : null}
           </div>
@@ -163,7 +166,8 @@ export function TodayQueue({
           {t("shared.today.todayQueue.emptyHeading")}
         </h2>
         <p className="mx-auto mt-1 max-w-md text-muted">
-          {t("shared.today.todayQueue.emptyBody")} {getSeasonalBriefing(nowDate(), shopName)}
+          {t("shared.today.todayQueue.emptyBody")}{" "}
+          {seasonalBriefingText(t, getSeasonalBriefing(nowDate()), shopName)}
         </p>
       </section>
     );
@@ -180,7 +184,7 @@ export function TodayQueue({
           <div key={group.urgency}>
             <div className="flex items-baseline justify-between gap-3">
               <h3 className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
-                {group.label}
+                {t(URGENCY_KEYS[group.urgency])}
               </h3>
               <span className="text-xs font-semibold text-muted tabular-nums">
                 {group.actions.length}
@@ -196,6 +200,7 @@ export function TodayQueue({
                   inviteAction={inviteAction}
                   resendCopy={resendCopy}
                   inviteCopy={inviteCopy}
+                  t={t}
                 />
               ))}
             </ul>

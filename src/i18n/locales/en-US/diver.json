@@ -10,7 +10,8 @@
     "name": "Name",
     "email": "Email",
     "phone": "Phone",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again."
   },
   "schedule": {
     "eyebrow": "Trips",
@@ -48,6 +49,23 @@
     "packRenting": "Renting",
     "packProvided": "We provide",
     "packNothingRequested": "Nothing requested yet",
+    "rentalItems": {
+      "bcd": "BCD",
+      "regulator": "Regulator",
+      "wetsuit": "Wetsuit",
+      "maskFins": "Mask and fins",
+      "weights": "Weights",
+      "diveComputer": "Dive computer",
+      "gopro": "GoPro"
+    },
+    "providedItems": {
+      "tanksAndWeights": "Tanks and weights",
+      "crewBriefing": "Crew briefing"
+    },
+    "temperatureTip": {
+      "cold": "Water is expected around {celsius}°C — ask the shop whether you need extra exposure protection.",
+      "mild": "Water is expected around {celsius}°C — use the shop's wetsuit guidance for comfort."
+    },
     "dockDayRhythm": "Your dock-day rhythm",
     "briefingsEyebrow": "Dive briefings",
     "planTwoTank": "Your two-tank plan",
@@ -154,7 +172,18 @@
     "openingPayment": "Opening payment…",
     "shopTakesOver": "You’re booked — the shop takes it from here",
     "shopTakesOverBody": "We’re double-checking a couple of things on our side. Nothing you need to do right now.",
-    "trackReadiness": "Track everything on your readiness page →"
+    "trackReadiness": "Track everything on your readiness page →",
+    "errors": {
+      "invalid": "Check your name and email and give it another go.",
+      "full": "Someone grabbed the last spot just before you — the boat's full.",
+      "available": "Good news — a spot just opened. Book it before it goes.",
+      "already": "You're already on this trip's list — no need to book twice.",
+      "unavailable": "This trip isn't taking bookings anymore.",
+      "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
+      "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
+      "fit": "We couldn't save that rental fit. Please check the details and try again.",
+      "pay": "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop."
+    }
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
@@ -194,7 +223,14 @@
     "atAGlance": "At a glance",
     "duration": "Duration",
     "groupSize": "Group size",
-    "certificationOrHigher": "{level} or higher"
+    "certificationOrHigher": "{level} or higher",
+    "certificationLevels": {
+      "openWater": "Open Water",
+      "advancedOpenWater": "Advanced Open Water",
+      "rescue": "Rescue Diver",
+      "divemaster": "Divemaster",
+      "instructor": "Instructor"
+    }
   },
   "path": {
     "sectionTitle": "Where this fits",
@@ -309,6 +345,35 @@
     "almostThere": "Almost there, {name}.",
     "nextDetail": "Next: {detail}",
     "checklistHeading": "Your pre-trip checklist",
+    "checklistCategoryWaiver": "Waiver",
+    "checklistCategoryCertification": "Certification",
+    "checklistCategoryPayment": "Payment",
+    "checklistCategorySetup": "Trip setup",
+    "checklistDetail": {
+      "setupGeneric": "Your shop is still finalizing this trip’s details.",
+      "readinessUnavailable": "Your shop is confirming your readiness. Check back shortly.",
+      "identityUnconfirmed": "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
+      "underMinimumAge": "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, reach out to the shop and they’ll sort it out.",
+      "waiverNotSent": "The shop hasn’t sent your waiver yet — you can ask for it when you arrive, or reach them below.",
+      "waiverPending": "Sign your waiver — it only takes about two minutes.",
+      "waiverExpired": "Your waiver link expired — ask the shop for a fresh one.",
+      "medicalReview": "Thanks for signing. One medical answer needs a closer look — a doctor’s sign-off may be required, and your shop will be in touch about next steps.",
+      "certificationMissing": "Get your certification card to the shop — upload a photo or get in touch — so they can add it to your file.",
+      "certificationPending": "Your certification card is with the shop for verification.",
+      "certificationExpired": "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
+      "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
+      "specialtyMissing": "This dive needs a specialty card — send the shop a photo or get in touch so they can add it.",
+      "specialtyPending": "Your specialty card is with the shop for verification.",
+      "specialtyExpired": "Your specialty card on file is past the refresher date your shop set — check with them about it before you dive.",
+      "specialtyImportUnconfirmed": "Your specialty card came across from your shop’s old system and is with them to confirm.",
+      "nitroxMissing": "This dive uses Nitrox — send the shop a photo of your Nitrox card or get in touch so they can add it.",
+      "nitroxPending": "Your nitrox card is with the shop for verification.",
+      "paymentDue": "There’s a balance to settle. Your shop can take payment before the trip.",
+      "waiverDone": "Signed and on file.",
+      "certificationDone": "Verified and on file.",
+      "paymentDone": "Paid up — thank you.",
+      "certificationMultipleNeeded": "This dive needs more than one certification on file — share every card it calls for (a photo or a quick message works), and your shop will confirm you’re set."
+    },
     "emergencyOnFile": "On file — {name}. Update it below if it’s changed.",
     "changePlans": "Need to change your plans?",
     "reschedulePitch": "Pick a different trip and we’ll move you — your current spot only releases once the new one’s confirmed, so you’re never left without one.",
@@ -400,7 +465,16 @@
     "weightPlaceholder": "e.g. 16 lb with a 3 mm suit",
     "saveFit": "Save rental fit",
     "bcdIconLabel": "BCD",
-    "finIconLabel": "Fin"
+    "finIconLabel": "Fin",
+    "itemLabels": {
+      "bcd": "BCD",
+      "regulator": "Regulator",
+      "wetsuit": "Wetsuit",
+      "maskFins": "Mask & fins",
+      "weights": "Weights",
+      "diveComputer": "Dive computer",
+      "gopro": "GoPro"
+    }
   },
   "party": {
     "numberOfDivers": "Number of divers",
@@ -426,7 +500,25 @@
     "likelySightings": "{count, plural, one {# likely sighting} other {# likely sightings}}",
     "satelliteViewIllustrative": "Satellite view · illustrative route",
     "openMap": "Open map ↗",
-    "satelliteMapTitle": "Satellite map of {site}"
+    "satelliteMapTitle": "Satellite map of {site}",
+    "landmarkKinds": {
+      "navigationMark": "Navigation mark",
+      "reefHistory": "Reef history",
+      "wreckFeature": "Wreck feature",
+      "underwaterMonument": "Underwater monument",
+      "reefFormation": "Reef formation",
+      "pointOfInterest": "Point of interest"
+    },
+    "landmarkDescriptions": {
+      "molassesReefLight": "The reef light is the easiest above-water reference and a useful way to stay oriented around the central reef.",
+      "shipsWinch": "A large ship's winch rests near the reef light—a compact piece of maritime history now folded into the reef.",
+      "spanishAnchor": "An old anchor lies among the coral formations. Let the crew point it out; it can disappear surprisingly well into the reef.",
+      "flightDeckAndCranes": "The broad flight deck and paired cranes make the ship's scale click into place. Stay outside the structure and follow the guide's line.",
+      "wellDeck": "The open well deck is one of the wreck's most dramatic exterior spaces, with changing light and room for big schools of fish.",
+      "christOfAbyssStatue": "The 8.6-foot bronze statue stands on a concrete pedestal in shallow water—the unmistakable centrepiece of this dive.",
+      "dryRocksSandChannels": "Bright sand channels weave between coral formations around the statue and are good places to look for rays, grouper, and moray eels.",
+      "generic": "A memorable reference point the crew can identify during the site briefing."
+    }
   },
   "inquiry": {
     "yourName": "Your name",
@@ -446,14 +538,29 @@
     "messageSoFar": "Your message so far",
     "openInEmailApp": "Open in your email app",
     "orWriteTo": "Or write to",
-    "callLabel": "call"
+    "callLabel": "call",
+    "notSaid": "Not said",
+    "subject": "Course inquiry: {courseTitle}",
+    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\nWhen: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
+    "experience": {
+      "never": "I have never dived before",
+      "tried": "I have tried scuba once, but I am not certified",
+      "certified": "I am certified, and I have my card",
+      "lapsed": "I am certified, but it has been a while"
+    }
   },
   "account": {
     "common": {
       "backToSignIn": "Back to sign in",
       "email": "Email",
       "password": "Password",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "passwordErrors": {
+        "tooShort": "Password must be at least {min} characters",
+        "tooLong": "Password must be at most {max} characters",
+        "mismatch": "Passwords don't match",
+        "invalid": "Invalid input"
+      }
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -544,7 +651,19 @@
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
       "alreadyHaveShop": "Already have a shop?",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "errors": {
+        "invalidInput": "Check the form and try again",
+        "shopNameRequired": "Shop name is required",
+        "shopSlugRequired": "Shop link is required",
+        "shopSlugInvalid": "Shop link must only contain letters, numbers, and hyphens",
+        "timezoneRequired": "Timezone is required",
+        "timezoneInvalid": "Not a recognized timezone",
+        "ownerNameRequired": "Full name is required",
+        "ownerEmailInvalid": "Invalid email address",
+        "ownerPasswordTooShort": "Password must be at least {min} characters",
+        "ownerPasswordTooLong": "Password must be at most {max} characters"
+      }
     }
   },
   "switching": {
@@ -782,12 +901,14 @@
         "diver": {
           "role": "For the diver",
           "title": "A clear way onto the boat",
-          "description": "A live schedule, a calm booking flow, and one obvious next step instead of a back-and-forth with the shop."
+          "description": "A live schedule, a calm booking flow, and one obvious next step instead of a back-and-forth with the shop.",
+          "mockupLabel": "The Blue Mantis public schedule with upcoming dive trips and available places."
         },
         "frontDesk": {
           "role": "For the front desk",
           "title": "One answer to “are they ready?”",
-          "description": "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of quietly waving it through."
+          "description": "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of quietly waving it through.",
+          "mockupLabel": "The trip readiness section showing clear diver-ready and diver-blocked states."
         }
       },
       "productEyebrow": "Instead of three apps",

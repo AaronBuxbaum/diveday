@@ -7,9 +7,9 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listCourses, setCourseVisibility } from "@/db/courses";
 import { getShopById } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Courses — DiveDay" };
@@ -132,7 +132,7 @@ export default async function CoursesPage() {
               <p className="mt-1 text-sm text-muted">
                 {course.minimumCertificationLevel
                   ? t("courses.list.orHigher", {
-                      level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+                      level: t(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
                     })
                   : t("courses.list.openToUncertified")}
               </p>

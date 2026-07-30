@@ -1,8 +1,8 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import type { Requirement, SiteRequirement, Trip } from "./types";
 
 export function RequirementsSection({
@@ -24,11 +24,11 @@ export function RequirementsSection({
   const siteRequirementParts = [
     siteRequirement?.minimumCertificationLevel
       ? t("trips.requirements.certOrHigher", {
-          level: CERTIFICATION_LEVEL_LABELS[siteRequirement.minimumCertificationLevel],
+          level: t(CERTIFICATION_LEVEL_KEYS[siteRequirement.minimumCertificationLevel]),
         })
       : null,
     ...(siteRequirement?.requiredSpecialties.map((specialty) =>
-      t("trips.requirements.specialtyRequired", { specialty: SPECIALTY_LABELS[specialty] }),
+      t("trips.requirements.specialtyRequired", { specialty: t(SPECIALTY_KEYS[specialty]) }),
     ) ?? []),
     siteRequirement?.requiresNitrox ? t("trips.requirements.nitroxCardRequired") : null,
   ].filter((part): part is string => Boolean(part));
@@ -56,7 +56,7 @@ export function RequirementsSection({
             <strong>{t("trips.requirements.certificationLabel")}</strong>{" "}
             {requirement?.minimumCertificationLevel
               ? t("trips.requirements.certOrHigher", {
-                  level: CERTIFICATION_LEVEL_LABELS[requirement.minimumCertificationLevel],
+                  level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
                 })
               : t("trips.requirements.notRequiredForEnrollment")}
           </p>
@@ -90,9 +90,9 @@ export function RequirementsSection({
                   className={controlClass}
                 >
                   <option value="">{t("trips.requirements.noCardRequired")}</option>
-                  {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                  {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t(key)}
                     </option>
                   ))}
                 </select>
@@ -107,18 +107,18 @@ export function RequirementsSection({
               {t("trips.requirements.requiredSpecialtiesDescription")}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
+              {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
                 <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
                   <input
                     name="specialty"
                     type="checkbox"
                     value={value}
                     defaultChecked={requirement?.requiredSpecialties?.includes(
-                      value as keyof typeof SPECIALTY_LABELS,
+                      value as keyof typeof SPECIALTY_KEYS,
                     )}
                     className="size-4 accent-primary"
                   />
-                  {label}
+                  {t(key)}
                 </label>
               ))}
               <label className="flex min-h-11 items-center gap-2 text-sm font-medium">

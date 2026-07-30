@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { refundPaymentAction } from "../actions";
-import { type DiverProfile, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type Shop } from "./shared";
+import { type DiverProfile, ORDER_STATUS_KEYS, PAYMENT_STATUS_KEYS, type Shop } from "./shared";
+
+/** A status this shop's data predates the known set for reads back as itself, not blank. */
+function statusLabel(
+  t: StaffTranslator,
+  keys: Record<string, StaffMessageKey>,
+  status: string,
+): string {
+  const key = keys[status];
+  return key ? t(key) : status;
+}
 
 /** The refund control — a live form on a real shop, disabled with a reason on the demo. */
 function RefundButton({
@@ -111,9 +121,11 @@ export function PaymentsSection({
                   <p className="mt-1 text-sm text-muted">
                     {bookingPayment
                       ? t("divers.payments.paymentStatusText", {
-                          status:
-                            PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ??
+                          status: statusLabel(
+                            t,
+                            PAYMENT_STATUS_KEYS,
                             bookingPayment.payment.status,
+                          ),
                         })
                       : t("divers.payments.paymentNotRecorded")}
                   </p>
@@ -145,10 +157,9 @@ export function PaymentsSection({
                   ) : null}
                   <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
                     {orderRow
-                      ? (ORDER_STATUS_LABELS[orderRow.order.status] ?? orderRow.order.status)
+                      ? statusLabel(t, ORDER_STATUS_KEYS, orderRow.order.status)
                       : bookingPayment
-                        ? (PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ??
-                          bookingPayment.payment.status)
+                        ? statusLabel(t, PAYMENT_STATUS_KEYS, bookingPayment.payment.status)
                         : t("divers.payments.noInvoice")}
                   </span>
                 </div>
@@ -188,7 +199,7 @@ export function PaymentsSection({
                     />
                   ) : null}
                   <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
-                    {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                    {statusLabel(t, ORDER_STATUS_KEYS, order.status)}
                   </span>
                 </div>
               </li>

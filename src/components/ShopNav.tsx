@@ -3,7 +3,7 @@ import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/Keyb
 import { LogoMark } from "@/components/Logo";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
-import { type ShopNavGates, ShopNavLinks } from "./ShopNavLinks";
+import { type ShopNavGates, ShopNavLinks, type ShopNavLinksCopy } from "./ShopNavLinks";
 import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
 
@@ -114,6 +114,26 @@ export function ShopNav({
         <ShopNavLinks
           root={root}
           gates={navGates}
+          copy={
+            {
+              primaryNavAriaLabel: t("shared.shopNavLinks.primaryNavAriaLabel"),
+              more: t("shared.shopNavLinks.more"),
+              today: t("shared.shopNavLinks.today"),
+              checkIn: t("shared.shopNavLinks.checkIn"),
+              blockers: t("shared.shopNavLinks.blockers"),
+              divers: t("shared.shopNavLinks.divers"),
+              schedule: t("shared.shopNavLinks.schedule"),
+              staffing: t("shared.shopNavLinks.staffing"),
+              diveSites: t("shared.shopNavLinks.diveSites"),
+              courses: t("shared.shopNavLinks.courses"),
+              reviews: t("shared.shopNavLinks.reviews"),
+              waivers: t("shared.shopNavLinks.waivers"),
+              reports: t("shared.shopNavLinks.reports"),
+              promoCodes: t("shared.shopNavLinks.promoCodes"),
+              settings: t("shared.shopNavLinks.settings"),
+              team: t("shared.shopNavLinks.team"),
+            } satisfies ShopNavLinksCopy
+          }
           className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"
         />
       </div>

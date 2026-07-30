@@ -25,6 +25,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { canExportShopData, canImportShopData } from "@/lib/authz";
@@ -534,7 +535,7 @@ export default async function PaymentsSettingsPage({
                         defaultChecked={offeredKinds.has(item.kind)}
                         className="size-4 accent-primary"
                       />
-                      {item.label}
+                      {catalogItemLabel(t, item.kind)}
                     </label>
                   ))}
                 </div>
@@ -565,7 +566,7 @@ export default async function PaymentsSettingsPage({
                   <PriceField
                     key={item.kind}
                     name={`price_${item.name}`}
-                    label={item.label}
+                    label={rentableItemLabel(t, item.kind)}
                     cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
                   />
                 ))}

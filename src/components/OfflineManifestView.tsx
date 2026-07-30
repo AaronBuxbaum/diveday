@@ -5,13 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { controlClass } from "@/components/ui/form";
+import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
+import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
   isRollCallCheckpoint,
   type RollCallCheckpoint,
-  rollCallCheckpointLabel,
   rollCallCheckpoints,
 } from "@/lib/manifests";
 import {
@@ -58,7 +59,7 @@ function offlineManifestTranslator() {
   const resolved: DiverLocale = requested
     ? (matchLocale([{ tag: requested, quality: 1 }]) ?? DEFAULT_DIVER_LOCALE)
     : DEFAULT_DIVER_LOCALE;
-  return staffTranslator(resolved);
+  return { t: staffTranslator(resolved), locale: resolved };
 }
 
 export function OfflineManifestView() {
@@ -66,7 +67,7 @@ export function OfflineManifestView() {
   // whenever they change) stay referentially stable across renders — the
   // device's language doesn't change mid-session, so recreating the
   // translator on every render bought nothing except spurious effect reruns.
-  const t = useMemo(() => offlineManifestTranslator(), []);
+  const { t, locale } = useMemo(() => offlineManifestTranslator(), []);
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
@@ -481,7 +482,7 @@ export function OfflineManifestView() {
                 : "inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-border-strong px-4 font-semibold"
             }
           >
-            {rollCallCheckpointLabel(value)}
+            {rollCallCheckpointText(t, value)}
           </button>
         ))}
       </nav>
@@ -510,7 +511,7 @@ export function OfflineManifestView() {
           {rollCallComplete
             ? t("shared.offlineManifest.single.rollCallCompleteHeading")
             : t("shared.offlineManifest.single.checkpointRollCallHeading", {
-                checkpoint: rollCallCheckpointLabel(checkpoint),
+                checkpoint: rollCallCheckpointText(t, checkpoint),
               })}
         </h2>
         {rollCallComplete ? (
@@ -593,7 +594,7 @@ export function OfflineManifestView() {
                           {t("shared.offlineManifest.single.rentalFit")}
                         </span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.rentalFit.text}
+                          {rentalFitLineText(t, locale, diver.rentalFit)}
                           {diver.nitroxRequested
                             ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
                             : ""}
@@ -603,7 +604,7 @@ export function OfflineManifestView() {
                     {!ready ? (
                       <ul className="mt-2 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
-                          <li key={blocker.message}>• {blocker.message}</li>
+                          <li key={blocker.code}>• {blocker.text}</li>
                         ))}
                       </ul>
                     ) : null}

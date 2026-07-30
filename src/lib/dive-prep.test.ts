@@ -57,12 +57,11 @@ describe("rented add-ons on the prep list", () => {
   });
 
   it("reads the add-ons in the one-line fit summary", () => {
-    expect(rentalFitLine({ ...fullFit, rentsDiveComputer: true, rentsGopro: true }).text).toContain(
-      "Dive computer",
-    );
-    expect(rentalFitLine({ ...fullFit, rentsDiveComputer: true, rentsGopro: true }).text).toContain(
-      "GoPro",
-    );
+    const line = rentalFitLine({ ...fullFit, rentsDiveComputer: true, rentsGopro: true });
+    expect(line.state).toBe("rents");
+    const kinds = line.state === "rents" ? line.items.map((item) => item.kind) : [];
+    expect(kinds).toContain("dive_computer");
+    expect(kinds).toContain("gopro");
   });
 });
 
@@ -265,7 +264,12 @@ describe("needs-staff-fit fallback (H-06)", () => {
       {
         fullName: "Ben",
         note: "No L BCD",
-        statedSizes: "BCD M, wetsuit 5mm M, boots 9, fins M",
+        statedSizes: [
+          { kind: "bcd", size: "M" },
+          { kind: "wetsuit", size: "5mm M" },
+          { kind: "boots", size: "9" },
+          { kind: "mask_fins", size: "M" },
+        ],
         flaggedDaysAgo: 0,
       },
     ]);
@@ -351,7 +355,12 @@ describe("needs-staff-fit fallback (H-06)", () => {
       {
         fullName: "Ada",
         note: null,
-        statedSizes: "BCD M, wetsuit 5mm M, boots 9, fins M",
+        statedSizes: [
+          { kind: "bcd", size: "M" },
+          { kind: "wetsuit", size: "5mm M" },
+          { kind: "boots", size: "9" },
+          { kind: "mask_fins", size: "M" },
+        ],
         flaggedDaysAgo: 0,
       },
     ]);
@@ -375,16 +384,25 @@ describe("needs-staff-fit fallback (H-06)", () => {
 
 describe("rentalFitLine", () => {
   it("reads as a packing line for one diver", () => {
+    // A code + params (item kinds and sizes), never a rendered sentence — the
+    // caller resolves each item's word through its own bundle
+    // (src/i18n/rental-labels.ts's `rentalFitLineText` for staff surfaces).
     expect(rentalFitLine(fullFit)).toEqual({
       state: "rents",
-      text: "BCD M, Regulator, Wetsuit 5mm M, Boots 9, Mask & fins M, Weights 6 kg",
+      items: [
+        { kind: "bcd", size: "M" },
+        { kind: "regulator", size: null },
+        { kind: "wetsuit", size: "5mm M" },
+        { kind: "boots", size: "9" },
+        { kind: "mask_fins", size: "M" },
+        { kind: "weights", size: "6 kg" },
+      ],
     });
   });
 
   it("distinguishes a diver who brings their own kit from one nobody asked", () => {
     // Collapsing these two reads as reassurance the shop has not earned.
-    expect(rentalFitLine(null).state).toBe("not_recorded");
-    expect(rentalFitLine(null).text).toContain("not asked");
+    expect(rentalFitLine(null)).toEqual({ state: "not_recorded" });
     expect(
       rentalFitLine({
         ...fullFit,
@@ -394,18 +412,18 @@ describe("rentalFitLine", () => {
         rentsMaskFins: false,
         rentsWeights: false,
       }),
-    ).toEqual({ state: "own_kit", text: "Own kit" });
+    ).toEqual({ state: "own_kit" });
   });
 
   it("reads a flagged diver as an open job, not a size to hand over", () => {
     const flaggedAt = new Date("2026-07-24T12:00:00Z");
     expect(rentalFitLine({ ...fullFit, needsStaffFitAt: flaggedAt })).toEqual({
       state: "needs_staff_fit",
-      text: "Needs staff fit at check-in",
+      note: null,
     });
     // The note rides along so the dock knows what's short without a click.
     expect(
       rentalFitLine({ ...fullFit, needsStaffFitAt: flaggedAt, needsStaffFitNote: "No L BCD" }),
-    ).toEqual({ state: "needs_staff_fit", text: "Needs staff fit — No L BCD" });
+    ).toEqual({ state: "needs_staff_fit", note: "No L BCD" });
   });
 });

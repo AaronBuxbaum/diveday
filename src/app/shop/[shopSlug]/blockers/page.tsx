@@ -7,10 +7,12 @@ import { buttonClass } from "@/components/ui/button";
 import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { BlockerQueueTrip } from "@/lib/blockers";
 import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
+import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 
@@ -37,8 +39,7 @@ function DiverRow({
               <span aria-hidden="true" className="text-danger">
                 •
               </span>
-              {/* i18n-exempt: domain-returned sentence from src/lib/readiness.ts, flagged out of scope in report */}
-              <span>{blocker.message}</span>
+              <span>{readinessBlockerText(t, blocker)}</span>
             </li>
           ))}
         </ul>
@@ -139,7 +140,7 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
   if (!shop) notFound();
 
   const t = staffTranslator(locale);
-  const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug);
+  const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug, nowDate(), t);
   const blocked = distinctBlockedDivers(trips);
 
   return (

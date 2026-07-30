@@ -13,6 +13,11 @@ vi.mock("@/db/client", async (importOriginal) => {
 // See the sync route's test for why `auth` is mocked bare instead of via
 // importOriginal (ADR 20260719-msw-offline-sync-only).
 vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+// `requestLocale` reads `next/headers`' `headers()`, which only resolves
+// inside a real Next request scope — absent here since the route is invoked
+// directly. An empty header set negotiates down to the shop's default
+// locale, same as a real request that sends no Accept-Language.
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
