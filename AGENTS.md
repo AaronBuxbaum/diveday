@@ -40,7 +40,7 @@ adapters and must not introduce unique requirements.
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
-| `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit |
+| `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners — on macOS nearly everything reads as changed; triage from the CI report) |
 
 Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`). Unlike npm, pnpm
 forwards that `--` into the underlying command instead of consuming it, so `vitest`/`playwright`
