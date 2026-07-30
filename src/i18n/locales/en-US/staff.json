@@ -941,7 +941,327 @@
     }
   },
   "trips": {},
-  "settings": {},
+  "settings": {
+    "main": {
+      "eyebrow": "Settings",
+      "title": "Shop settings",
+      "description": "One-time and occasional shop configuration lives here, including the Stripe account that receives invoices and payments.",
+      "notice": {
+        "packingSaved": "Packing checklist saved for every trip.",
+        "packingInvalid": "Add between one and twelve packing items.",
+        "dockSaved": "Dock call time saved for every confirmation and reminder.",
+        "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
+        "rentalsSaved": "Rental catalog saved.",
+        "rentalPricesSaved": "Rental prices saved.",
+        "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
+        "contactSaved": "Contact details saved.",
+        "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
+        "reviewUrlSaved": "Review link saved.",
+        "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
+        "connected": "Stripe account connected.",
+        "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
+        "notConfigured": "Online payments aren't switched on for this DiveDay setup yet. Whoever runs your DiveDay hosting needs to finish the Stripe configuration first.",
+        "disconnected": "Stripe account disconnected.",
+        "refreshed": "Payment status refreshed from Stripe.",
+        "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers."
+      },
+      "contact": {
+        "heading": "Public contact details",
+        "description": "Printed on your course pages, where a diver who cannot find a date gets a ready-written email to send you. Use a front-desk address the whole team reads, not a personal one. Empty the email box to take the form down.",
+        "emailLabel": "Contact email",
+        "phoneLabel": "Contact phone",
+        "phoneHint": "(optional)",
+        "submit": "Save contact details",
+        "submitting": "Saving…"
+      },
+      "reviewLink": {
+        "heading": "Review link",
+        "description": "Your Google Business, TripAdvisor, or Facebook review page. When set, a diver's post-trip recap invites them to leave one — empty the box to stop asking.",
+        "label": "Review link",
+        "hint": "(optional)",
+        "submit": "Save review link",
+        "submitting": "Saving…"
+      },
+      "packing": {
+        "heading": "Trip packing checklist",
+        "description": "One item per line. Divers see this same concise list on every trip.",
+        "submit": "Save packing checklist",
+        "submitting": "Saving…"
+      },
+      "dockCall": {
+        "heading": "Dock call time",
+        "description": "How early divers are asked to arrive before departure — for gear setup, cert checks, and the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip reminder.",
+        "label": "Minutes before departure",
+        "submit": "Save dock call time",
+        "submitting": "Saving…"
+      },
+      "paymentsGate": {
+        "notice": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers. The contact, packing, and dock-call settings above are open to all staff."
+      },
+      "rentals": {
+        "heading": "What we rent",
+        "description": "The gear and services divers can ask for when they set their rental fit. Untick anything you don't offer — a shop that doesn't stock GoPros never offers one, and it drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts unticked.",
+        "legend": "Rentable gear and services",
+        "submit": "Save rental catalog",
+        "submitting": "Saving…"
+      },
+      "rentalPricing": {
+        "heading": "Rental prices",
+        "description": "What a diver is quoted when they set their rental fit. Price the full set for the diver who takes everything (usually cheaper than the pieces), and per-piece for a partial kit — a diver renting all five core items is quoted the set, anyone renting fewer pays per piece. Leave a box blank to settle that item at the shop.",
+        "fullSetLabel": "Full set",
+        "fullSetHint": "(BCD, reg, wetsuit, mask & fins, weights, dive computer)",
+        "nitroxLabel": "Nitrox",
+        "nitroxHint": "(per dive)",
+        "submit": "Save rental prices",
+        "submitting": "Saving…"
+      },
+      "stripe": {
+        "notConnectedHeading": "No Stripe account connected",
+        "notConnectedDescription": "Connect a Stripe account you own — DiveDay never holds your money, and payments for orders and invoices go straight into your own Stripe balance.",
+        "connect": "Connect Stripe",
+        "notConfiguredWarning": "Online payments aren't switched on for this DiveDay setup yet — ask whoever runs your hosting to finish the Stripe configuration.",
+        "connectedHeading": "Stripe account connected",
+        "disconnectedHeading": "Stripe account disconnected",
+        "readyBadge": "Ready for payments",
+        "notReadyBadge": "Not ready yet",
+        "accountEnding": "Account ending in {last6}",
+        "chargesEnabled": "Charges enabled",
+        "payoutsEnabled": "Payouts enabled",
+        "onboardingSubmitted": "Onboarding details submitted",
+        "statusYes": "Yes",
+        "statusNotYet": "Not yet",
+        "reconnect": "Reconnect Stripe",
+        "refresh": "Refresh status",
+        "refreshing": "Refreshing…",
+        "disconnect": "Disconnect",
+        "disconnecting": "Disconnecting…"
+      },
+      "embed": {
+        "heading": "Website embed",
+        "description": "Copy-paste snippets that put your live booking calendar on your own website.",
+        "cta": "Get embed code"
+      },
+      "data": {
+        "heading": "Data",
+        "description": "Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs — neither one touches the settings above.",
+        "importCta": "Import contacts",
+        "exportCta": "Data export"
+      },
+      "founder": {
+        "heading": "Talk to the founder",
+        "description": "A bad morning at the counter, a feature you're missing, a bug — write in any time. It reaches Aaron directly, not a ticket queue, and reaching out is always welcome.",
+        "emailCta": "Email {email}"
+      }
+    },
+    "team": {
+      "eyebrow": "Settings",
+      "title": "Team",
+      "description": "Invite staff, set what each person can do, and manage who still has access.",
+      "notice": {
+        "invited": "Invite sent.",
+        "inviteResent": "Invite resent.",
+        "changesSaved": "Team changes saved.",
+        "reactivated": "Account re-enabled.",
+        "disabled": "Account disabled — they can no longer sign in.",
+        "removed": "Removed from the team.",
+        "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
+        "rolesInvalid": "Check at least one role before saving.",
+        "inviteAlreadyOnTeam": "That person already has an account here.",
+        "inviteEmailTaken": "That email is already registered to a different shop.",
+        "lastOwner": "Can't do that — the shop needs at least one owner. Make someone else an owner first.",
+        "notFound": "That person isn't on this shop's team.",
+        "notAuthorized": "Team management is limited to owners and managers."
+      },
+      "statusBadge": {
+        "invited": "Invited",
+        "active": "Active",
+        "disabled": "Disabled"
+      },
+      "rolesLegend": "Roles",
+      "roleLabels": {
+        "owner": "Owner",
+        "manager": "Manager",
+        "instructor": "Instructor",
+        "divemaster": "Divemaster",
+        "captain": "Captain",
+        "crew": "Crew",
+        "diver": "Diver"
+      },
+      "invite": {
+        "heading": "Invite someone",
+        "description": "They'll get an email to set their own password. If they're already a diver at your shop, inviting them by the same email adds staff access to their existing record instead of creating a second one.",
+        "fullNameLabel": "Full name",
+        "emailLabel": "Email",
+        "submit": "Send invite",
+        "submitting": "Sending…"
+      },
+      "current": {
+        "heading": "Current team",
+        "description": "Enable, disable, and delete take effect immediately. Role changes below wait for Save changes.",
+        "empty": "No staff invited yet.",
+        "save": "Save changes",
+        "saving": "Saving…"
+      },
+      "staffRow": {
+        "resendInvite": "Resend invite",
+        "sending": "Sending…",
+        "enable": "Enable",
+        "disable": "Disable",
+        "enabling": "Enabling…",
+        "disabling": "Disabling…",
+        "delete": "Delete",
+        "deleting": "Deleting…",
+        "enableAriaLabel": "Enable {name}",
+        "disableAriaLabel": "Disable {name}",
+        "deleteAriaLabel": "Delete {name}",
+        "deleteConfirm": "Delete {name} from the team? This can't be undone."
+      }
+    },
+    "export": {
+      "eyebrow": "Settings",
+      "title": "Data export",
+      "description": "Download everything this shop keeps in DiveDay as plain CSV files — divers, cards, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Yours to keep, whenever you want it — including a ready-to-import contacts file another system's import wizard can map directly.",
+      "downloadButton": {
+        "idle": "Download export",
+        "acknowledged": "On its way — check your downloads"
+      },
+      "bundle": {
+        "heading": "What's in the bundle",
+        "description": "One ZIP with a README and a CSV for each kind of record. Every date and time carries its timezone, money is in cents, and your archived history comes along too — nothing is lost if you ever move on."
+      },
+      "rowCount": "{count, plural, one {# row} other {# rows}}",
+      "notIncluded": {
+        "label": "Not included, on purpose:",
+        "text": "offline manifest copies saved on staff phones, private staff notes and activity, notification logs, Stripe checkout attempts (every money outcome is in the bookings and orders files), and any pasted image URL a CSV references that was never stored through DiveDay. Every card photo, dive-site image, and course image DiveDay itself stores comes along as a real file in the bundle's <mono>photos/</mono> folder, so it survives even after this account closes. Sign-in credentials and staff calendar-subscription links are never exported. The bundle's README lists the same gaps."
+      }
+    },
+    "import": {
+      "eyebrow": "Settings",
+      "title": "Import contacts",
+      "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land verified and flagged imported, with a one-tap confirm on each diver's record, and a row claiming a waiver was already accepted is trusted and marked imported.",
+      "comesAcross": {
+        "heading": "What comes across",
+        "description": "A card already in your system was checked there, so DiveDay trusts it: imported cards land verified and flagged imported, ready from the first trip, with a one-tap confirm for staff, and their refresher-due dates come across too. A specialty card waits on that confirm before it clears the dive it authorizes. Individual medical answers are never reconstructed."
+      },
+      "scopeChip": {
+        "included": "Comes across",
+        "staysBehind": "Stays behind"
+      },
+      "wizard": {
+        "heading": "Upload a contacts file",
+        "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono> from the data export. Rows with an email are matched to your existing divers, so re-importing one updates that diver instead of duplicating them; rows without an email always come in as new records. Nothing is written until you review the preview and confirm.",
+        "chooseFile": "Choose CSV file",
+        "chooseDifferentFile": "Choose a different file",
+        "columnTitle": "Column “{header}”",
+        "fieldLabels": {
+          "first_name": "First name",
+          "last_name": "Last name",
+          "full_name": "Full name",
+          "email": "Email",
+          "phone": "Phone",
+          "date_of_birth": "Date of birth",
+          "emergency_contact_name": "Emergency contact",
+          "emergency_contact_phone": "Emergency phone",
+          "dive_insurance": "Dive insurance",
+          "certification_agency": "Cert agency",
+          "certification_level": "Cert level",
+          "certification_number": "Cert number",
+          "certification_status": "Cert status",
+          "certification_expires_at": "Refresher due",
+          "specialty": "Specialty",
+          "specialty_certification_number": "Specialty number",
+          "nitrox_certified": "Nitrox",
+          "nitrox_certification_number": "Nitrox number",
+          "bcd_size": "BCD size",
+          "wetsuit_size": "Wetsuit size",
+          "boot_size": "Boot size",
+          "fin_size": "Fin size",
+          "waiver_accepted": "Waiver accepted",
+          "waiver_signed_at": "Waiver signed",
+          "waiver_source_name": "Waiver source",
+          "waiver_document_url": "Waiver document",
+          "medical_document_url": "Medical document",
+          "visit_date": "Past visit date",
+          "visit_title": "Past visit",
+          "visit_status": "Past visit status",
+          "visit_amount": "Past visit amount",
+          "visit_reference": "Booking reference"
+        },
+        "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren't recognized as a waiver column, so their contents never import — individual medical answers are never reconstructed from another system. A recognized “waiver accepted” column is trusted instead; see below.",
+        "unmappedColumns": "Not recognized, so ignored: {columns}.",
+        "waiverRowsNotice": "{count, plural, one {# row claims} other {# rows claim}} a waiver already accepted at a prior shop. DiveDay trusts that — including its medical clearance — and marks the record “imported” so it's never confused with a release signed here. See “What comes across” above.",
+        "visitRowsNotice": "{count, plural, one {# row records} other {# rows record}} a past visit. Those come across as history on the diver's profile — what was booked, when, and what your old system called it — and nothing more: they never become trips on your schedule, never count toward capacity or reporting, and a booking is not proof anyone dived.",
+        "stats": {
+          "diversInFile": "Divers in file",
+          "extraCardRows": "Extra card rows",
+          "skipped": "Skipped",
+          "cards": "Cards",
+          "specialties": "Specialties",
+          "nitroxCards": "Nitrox cards",
+          "waivers": "Waivers",
+          "pastVisits": "Past visits"
+        },
+        "table": {
+          "rowNumber": "#",
+          "name": "Name",
+          "email": "Email",
+          "card": "Card",
+          "waiver": "Waiver",
+          "notes": "Notes",
+          "noName": "— no name —",
+          "skippedBadge": "skipped",
+          "mergedBadge": "same diver as row {row}",
+          "certImported": "imported",
+          "certForReview": "for review",
+          "certLine": "{level} · {status}",
+          "specialtyLine": "{specialty} specialty · {status}",
+          "waiverAcceptedImported": "accepted · imported",
+          "emptyValue": "—"
+        },
+        "hiddenRowsNotice": "Showing the first {limit} rows. All {total} are imported on confirm.",
+        "submit": "{count, plural, one {Import 1 contact} other {Import # contacts}}",
+        "submitting": "Importing…",
+        "result": {
+          "summary": "Imported. {added} added, {updated} updated.",
+          "cardsLine": "{cardsAdded, plural, one {# card} other {# cards}}, {specialtyAdded, plural, one {# specialty card} other {# specialty cards}}, and {nitroxAdded, plural, one {# nitrox card} other {# nitrox cards}} imported and flagged imported, with a one-tap confirm on each diver's record.",
+          "rowsMergedNote": " {count} row(s) added cards to a diver an earlier row brought in.",
+          "cardsSkippedNote": " {count} card(s) already on those divers' records were left untouched.",
+          "rowsSkippedNote": " {count} row(s) skipped.",
+          "cardsHeldByAnother": "{count} card number(s) in the file are already on a different diver in your shop, so those cards were not added to anyone. Check the file for a repeated number, then enter those cards by hand.",
+          "specialtyGateNote": "A dive that requires one of those specialties waits on that confirm — tap it on the diver's record and the gate opens.",
+          "waiversLine": "{count, plural, one {# waiver} other {# waivers}} imported as accepted, marked “imported” on the diver's profile.",
+          "waiversSkippedExistingNote": " {count} diver(s) already had a current waiver on file, left untouched.",
+          "waiversSkippedNoTemplateNote": " {count} skipped — set up a waiver template first.",
+          "waiverDocumentsFailedNote": " {count} document link(s) didn't fetch and were left off the record.",
+          "visitsLine": "{count, plural, one {# past visit} other {# past visits}} added to divers' shop history.",
+          "visitsSkippedNote": " {count} were already imported and were left as they are — re-running the same export doesn't double anyone's history.",
+          "seeRoster": "See the roster"
+        }
+      }
+    },
+    "embed": {
+      "eyebrow": "Settings",
+      "title": "Website embed",
+      "description": "Paste one of these into your own website so divers can browse and book without leaving your site. Both point at the same live schedule — no separate setup, no sync to keep working.",
+      "notConfigured": "Embed links need a configured public hosting address — ask whoever runs your DiveDay hosting to finish setup before these snippets can be generated.",
+      "calendarEmbed": {
+        "heading": "Calendar embed",
+        "description": "A full booking calendar, sized to fit wherever you place it on your page. Best for a dedicated \"Book now\" page on your site.",
+        "fieldLabel": "Embed code"
+      },
+      "bookButton": {
+        "heading": "\"Book a dive\" button",
+        "description": "A plain link styled as a button, no iframe. Opens your DiveDay schedule in a new tab — the simplest option, and the one to use if you take online payment, since a checkout page may refuse to open inside another site's frame.",
+        "fieldLabel": "Button code",
+        "buttonText": "Book a dive"
+      },
+      "footer": "Both snippets point at <link>your public schedule</link>. Editing a trip, adding a departure, or changing your rental prices shows up the moment a diver loads the embed — nothing to republish.",
+      "snippetField": {
+        "copy": "Copy",
+        "copied": "Copied"
+      }
+    }
+  },
   "blockers": {
     "eyebrow": "Front desk",
     "title": "Blockers",

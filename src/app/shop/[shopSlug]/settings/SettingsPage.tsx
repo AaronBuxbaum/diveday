@@ -26,7 +26,7 @@ import {
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { canExportShopData, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -42,46 +42,37 @@ import { requireStaffSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
-const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
-  packing_saved: { tone: "success", text: "Packing checklist saved for every trip." },
-  packing_invalid: { tone: "danger", text: "Add between one and twelve packing items." },
-  dock_saved: {
-    tone: "success",
-    text: "Dock call time saved for every confirmation and reminder.",
-  },
-  dock_invalid: { tone: "danger", text: "Enter a dock call time between 5 and 180 minutes." },
-  rentals_saved: { tone: "success", text: "Rental catalog saved." },
-  rental_prices_saved: { tone: "success", text: "Rental prices saved." },
-  rental_prices_invalid: {
-    tone: "danger",
-    text: "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
-  },
-  contact_saved: { tone: "success", text: "Contact details saved." },
-  contact_invalid: {
-    tone: "danger",
-    text: "Use a complete email address, or empty the box to take it off your public pages.",
-  },
-  review_url_saved: { tone: "success", text: "Review link saved." },
-  review_url_invalid: {
-    tone: "danger",
-    text: "Enter a full https:// link, or empty the box to stop asking for reviews.",
-  },
-  connected: { tone: "success", text: "Stripe account connected." },
-  connect_failed: {
-    tone: "danger",
-    text: "The Stripe connection didn't complete. Try connecting again.",
-  },
-  not_configured: {
-    tone: "warning",
-    text: "Online payments aren't switched on for this DiveDay setup yet. Whoever runs your DiveDay hosting needs to finish the Stripe configuration first.",
-  },
-  disconnected: { tone: "success", text: "Stripe account disconnected." },
-  refreshed: { tone: "success", text: "Payment status refreshed from Stripe." },
-  not_authorized: {
-    tone: "danger",
-    text: "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
-  },
-};
+/**
+ * Built inside the request (not at module scope) because the notice text is
+ * translated against the negotiated locale — a module-level constant would
+ * freeze it to whichever locale first imported this file.
+ */
+function noticeMessages(
+  t: StaffTranslator,
+): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {
+  return {
+    packing_saved: { tone: "success", text: t("settings.main.notice.packingSaved") },
+    packing_invalid: { tone: "danger", text: t("settings.main.notice.packingInvalid") },
+    dock_saved: { tone: "success", text: t("settings.main.notice.dockSaved") },
+    dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    rentals_saved: { tone: "success", text: t("settings.main.notice.rentalsSaved") },
+    rental_prices_saved: { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
+    rental_prices_invalid: {
+      tone: "danger",
+      text: t("settings.main.notice.rentalPricesInvalid"),
+    },
+    contact_saved: { tone: "success", text: t("settings.main.notice.contactSaved") },
+    contact_invalid: { tone: "danger", text: t("settings.main.notice.contactInvalid") },
+    review_url_saved: { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
+    review_url_invalid: { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
+    connected: { tone: "success", text: t("settings.main.notice.connected") },
+    connect_failed: { tone: "danger", text: t("settings.main.notice.connectFailed") },
+    not_configured: { tone: "warning", text: t("settings.main.notice.notConfigured") },
+    disconnected: { tone: "success", text: t("settings.main.notice.disconnected") },
+    refreshed: { tone: "success", text: t("settings.main.notice.refreshed") },
+    not_authorized: { tone: "danger", text: t("settings.main.notice.notAuthorized") },
+  };
+}
 
 /**
  * Payment settings (Stripe Connect and the rental catalog/prices) are
@@ -335,11 +326,21 @@ function PriceField({
   );
 }
 
-function StatusRow({ label, ok }: { label: string; ok: boolean }) {
+function StatusRow({
+  label,
+  ok,
+  yesLabel,
+  notYetLabel,
+}: {
+  label: string;
+  ok: boolean;
+  yesLabel: string;
+  notYetLabel: string;
+}) {
   return (
     <li className="flex items-center justify-between gap-3 py-1.5 text-sm">
       <span>{label}</span>
-      <Badge tone={ok ? "success" : "warning"}>{ok ? "Yes" : "Not yet"}</Badge>
+      <Badge tone={ok ? "success" : "warning"}>{ok ? yesLabel : notYetLabel}</Badge>
     </li>
   );
 }
@@ -370,19 +371,16 @@ export default async function PaymentsSettingsPage({
   );
   const canImport = canImportShopData(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
-  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
-  // Only the calendar-subscriptions section below reads from this translator so
-  // far; the rest of this page is still inline English and is counted in
-  // scripts/copy-baseline.json until it is extracted.
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const banner = notice ? noticeMessages(t)[notice] : undefined;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Settings"
-        title="Shop settings"
-        description="One-time and occasional shop configuration lives here, including the Stripe account that receives invoices and payments."
+        eyebrow={t("settings.main.eyebrow")}
+        title={t("settings.main.title")}
+        description={t("settings.main.description")}
       />
 
       {banner ? (
@@ -394,14 +392,10 @@ export default async function PaymentsSettingsPage({
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Public contact details</h2>
-        <p className="mt-1 text-sm text-muted">
-          Printed on your course pages, where a diver who cannot find a date gets a ready-written
-          email to send you. Use a front-desk address the whole team reads, not a personal one.
-          Empty the email box to take the form down.
-        </p>
+        <h2 className="font-medium">{t("settings.main.contact.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.contact.description")}</p>
         <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
-          <Field label="Contact email">
+          <Field label={t("settings.main.contact.emailLabel")}>
             <input
               name="contactEmail"
               type="email"
@@ -412,7 +406,10 @@ export default async function PaymentsSettingsPage({
               className={controlClass}
             />
           </Field>
-          <Field label="Contact phone" hint="(optional)">
+          <Field
+            label={t("settings.main.contact.phoneLabel")}
+            hint={t("settings.main.contact.phoneHint")}
+          >
             <input
               name="contactPhone"
               type="tel"
@@ -424,21 +421,24 @@ export default async function PaymentsSettingsPage({
             />
           </Field>
           <FieldActions>
-            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
-              Save contact details
+            <SubmitButton
+              pendingLabel={t("settings.main.contact.submitting")}
+              className={buttonClass()}
+            >
+              {t("settings.main.contact.submit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Review link</h2>
-        <p className="mt-1 text-sm text-muted">
-          Your Google Business, TripAdvisor, or Facebook review page. When set, a diver's post-trip
-          recap invites them to leave one — empty the box to stop asking.
-        </p>
+        <h2 className="font-medium">{t("settings.main.reviewLink.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.reviewLink.description")}</p>
         <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
-          <Field label="Review link" hint="(optional)">
+          <Field
+            label={t("settings.main.reviewLink.label")}
+            hint={t("settings.main.reviewLink.hint")}
+          >
             <input
               name="reviewUrl"
               type="url"
@@ -449,18 +449,19 @@ export default async function PaymentsSettingsPage({
             />
           </Field>
           <FieldActions>
-            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
-              Save review link
+            <SubmitButton
+              pendingLabel={t("settings.main.reviewLink.submitting")}
+              className={buttonClass()}
+            >
+              {t("settings.main.reviewLink.submit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Trip packing checklist</h2>
-        <p className="mt-1 text-sm text-muted">
-          One item per line. Divers see this same concise list on every trip.
-        </p>
+        <h2 className="font-medium">{t("settings.main.packing.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.packing.description")}</p>
         <form action={savePackingAction} className="mt-4">
           <textarea
             name="packingList"
@@ -469,21 +470,20 @@ export default async function PaymentsSettingsPage({
             defaultValue={shop.packingList.join("\n")}
             className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
           />
-          <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
-            Save packing checklist
+          <SubmitButton
+            pendingLabel={t("settings.main.packing.submitting")}
+            className={buttonClass({ className: "mt-3" })}
+          >
+            {t("settings.main.packing.submit")}
           </SubmitButton>
         </form>
       </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Dock call time</h2>
-        <p className="mt-1 text-sm text-muted">
-          How early divers are asked to arrive before departure — for gear setup, cert checks, and
-          the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip
-          reminder.
-        </p>
+        <h2 className="font-medium">{t("settings.main.dockCall.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.dockCall.description")}</p>
         <FieldGrid as="form" action={saveDockCallAction} columns={2} className="mt-4">
-          <Field label="Minutes before departure">
+          <Field label={t("settings.main.dockCall.label")}>
             <input
               name="dockCallMinutes"
               type="number"
@@ -496,8 +496,11 @@ export default async function PaymentsSettingsPage({
             />
           </Field>
           <FieldActions>
-            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
-              Save dock call time
+            <SubmitButton
+              pendingLabel={t("settings.main.dockCall.submitting")}
+              className={buttonClass()}
+            >
+              {t("settings.main.dockCall.submit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
@@ -506,9 +509,7 @@ export default async function PaymentsSettingsPage({
       {canPayments ? null : (
         <div className="mt-6">
           <ShopNotice tone="neutral" role="status">
-            The rental catalog, rental prices, and Stripe connection are payment settings, limited
-            to owners and managers. The contact, packing, and dock-call settings above are open to
-            all staff.
+            {t("settings.main.paymentsGate.notice")}
           </ShopNotice>
         </div>
       )}
@@ -516,16 +517,11 @@ export default async function PaymentsSettingsPage({
       {canPayments ? (
         <>
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <h2 className="font-medium">What we rent</h2>
-            <p className="mt-1 text-sm text-muted">
-              The gear and services divers can ask for when they set their rental fit. Untick
-              anything you don't offer — a shop that doesn't stock GoPros never offers one, and it
-              drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts
-              unticked.
-            </p>
+            <h2 className="font-medium">{t("settings.main.rentals.heading")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("settings.main.rentals.description")}</p>
             <form action={saveRentalItemsAction} className="mt-4">
               <fieldset>
-                <legend className="sr-only">Rentable gear and services</legend>
+                <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {SHOP_CATALOG_ITEMS.map((item) => (
                     <label
@@ -543,26 +539,26 @@ export default async function PaymentsSettingsPage({
                   ))}
                 </div>
               </fieldset>
-              <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-3" })}>
-                Save rental catalog
+              <SubmitButton
+                pendingLabel={t("settings.main.rentals.submitting")}
+                className={buttonClass({ className: "mt-3" })}
+              >
+                {t("settings.main.rentals.submit")}
               </SubmitButton>
             </form>
           </section>
 
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <h2 className="font-medium">Rental prices</h2>
+            <h2 className="font-medium">{t("settings.main.rentalPricing.heading")}</h2>
             <p className="mt-1 text-sm text-muted">
-              What a diver is quoted when they set their rental fit. Price the full set for the
-              diver who takes everything (usually cheaper than the pieces), and per-piece for a
-              partial kit — a diver renting all five core items is quoted the set, anyone renting
-              fewer pays per piece. Leave a box blank to settle that item at the shop.
+              {t("settings.main.rentalPricing.description")}
             </p>
             <form action={saveRentalPricingAction} className="mt-4">
               <FieldGrid columns={2}>
                 <PriceField
                   name="setPrice"
-                  label="Full set"
-                  hint="(BCD, reg, wetsuit, mask & fins, weights, dive computer)"
+                  label={t("settings.main.rentalPricing.fullSetLabel")}
+                  hint={t("settings.main.rentalPricing.fullSetHint")}
                   cents={shop.rentalPricing.setCents}
                 />
                 {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
@@ -576,14 +572,17 @@ export default async function PaymentsSettingsPage({
                 {offeredKinds.has("nitrox") ? (
                   <PriceField
                     name="nitroxPrice"
-                    label="Nitrox"
-                    hint="(per dive)"
+                    label={t("settings.main.rentalPricing.nitroxLabel")}
+                    hint={t("settings.main.rentalPricing.nitroxHint")}
                     cents={shop.rentalPricing.nitroxCents}
                   />
                 ) : null}
               </FieldGrid>
-              <SubmitButton pendingLabel="Saving…" className={buttonClass({ className: "mt-4" })}>
-                Save rental prices
+              <SubmitButton
+                pendingLabel={t("settings.main.rentalPricing.submitting")}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {t("settings.main.rentalPricing.submit")}
               </SubmitButton>
             </form>
           </section>
@@ -591,22 +590,20 @@ export default async function PaymentsSettingsPage({
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
             {!account ? (
               <div>
-                <h2 className="font-medium">No Stripe account connected</h2>
+                <h2 className="font-medium">{t("settings.main.stripe.notConnectedHeading")}</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Connect a Stripe account you own — DiveDay never holds your money, and payments
-                  for orders and invoices go straight into your own Stripe balance.
+                  {t("settings.main.stripe.notConnectedDescription")}
                 </p>
                 {connectConfigured ? (
                   <Link
                     href={`/shop/${shopSlug}/settings/connect`}
                     className={buttonClass({ className: "mt-4" })}
                   >
-                    Connect Stripe
+                    {t("settings.main.stripe.connect")}
                   </Link>
                 ) : (
                   <p className="mt-4 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-                    Online payments aren't switched on for this DiveDay setup yet — ask whoever runs
-                    your hosting to finish the Stripe configuration.
+                    {t("settings.main.stripe.notConfiguredWarning")}
                   </p>
                 )}
               </div>
@@ -615,47 +612,66 @@ export default async function PaymentsSettingsPage({
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-medium">
                     {account.disconnectedAt
-                      ? "Stripe account disconnected"
-                      : "Stripe account connected"}
+                      ? t("settings.main.stripe.disconnectedHeading")
+                      : t("settings.main.stripe.connectedHeading")}
                   </h2>
                   <Badge tone={ready ? "success" : "warning"}>
-                    {ready ? "Ready for payments" : "Not ready yet"}
+                    {ready
+                      ? t("settings.main.stripe.readyBadge")
+                      : t("settings.main.stripe.notReadyBadge")}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted">
-                  Account ending in {account.stripeAccountId.slice(-6)}
+                  {t("settings.main.stripe.accountEnding", {
+                    last6: account.stripeAccountId.slice(-6),
+                  })}
                 </p>
                 <ul className="mt-4 divide-y divide-border">
-                  <StatusRow label="Charges enabled" ok={account.chargesEnabled} />
-                  <StatusRow label="Payouts enabled" ok={account.payoutsEnabled} />
-                  <StatusRow label="Onboarding details submitted" ok={account.detailsSubmitted} />
+                  <StatusRow
+                    label={t("settings.main.stripe.chargesEnabled")}
+                    ok={account.chargesEnabled}
+                    yesLabel={t("settings.main.stripe.statusYes")}
+                    notYetLabel={t("settings.main.stripe.statusNotYet")}
+                  />
+                  <StatusRow
+                    label={t("settings.main.stripe.payoutsEnabled")}
+                    ok={account.payoutsEnabled}
+                    yesLabel={t("settings.main.stripe.statusYes")}
+                    notYetLabel={t("settings.main.stripe.statusNotYet")}
+                  />
+                  <StatusRow
+                    label={t("settings.main.stripe.onboardingSubmitted")}
+                    ok={account.detailsSubmitted}
+                    yesLabel={t("settings.main.stripe.statusYes")}
+                    notYetLabel={t("settings.main.stripe.statusNotYet")}
+                  />
                 </ul>
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   {account.disconnectedAt ? (
                     connectConfigured ? (
                       <Link href={`/shop/${shopSlug}/settings/connect`} className={buttonClass()}>
-                        Reconnect Stripe
-                      </Link>
+                        {t("settings.main.stripe.reconnect")}
+                      </Link> // i18n-exempt: JSX ternary punctuation below, not copy — scanner false positive.
                     ) : null
                   ) : (
                     <>
                       <form action={refreshAction}>
                         <SubmitButton
-                          pendingLabel="Refreshing…"
+                          pendingLabel={t("settings.main.stripe.refreshing")}
                           className={buttonClass({
                             variant: "secondary",
                             className: "text-foreground",
                           })}
                         >
-                          Refresh status
+                          {t("settings.main.stripe.refresh")}
                         </SubmitButton>
                       </form>
                       <form action={disconnectAction}>
                         <SubmitButton
-                          pendingLabel="Disconnecting…"
+                          pendingLabel={t("settings.main.stripe.disconnecting")}
                           className={buttonClass({ variant: "danger" })}
                         >
-                          Disconnect
+                          {t("settings.main.stripe.disconnect")}
                         </SubmitButton>
                       </form>
                     </>
@@ -668,16 +684,14 @@ export default async function PaymentsSettingsPage({
       ) : null}
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Website embed</h2>
-        <p className="mt-1 text-sm text-muted">
-          Copy-paste snippets that put your live booking calendar on your own website.
-        </p>
+        <h2 className="font-medium">{t("settings.main.embed.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.embed.description")}</p>
         <div className="mt-4">
           <Link
             href={`/shop/${shopSlug}/settings/embed`}
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            Get embed code
+            {t("settings.main.embed.cta")}
           </Link>
         </div>
       </section>
@@ -697,18 +711,15 @@ export default async function PaymentsSettingsPage({
 
       {canImport || canExport ? (
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h2 className="font-medium">Data</h2>
-          <p className="mt-1 text-sm text-muted">
-            Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs — neither one
-            touches the settings above.
-          </p>
+          <h2 className="font-medium">{t("settings.main.data.heading")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("settings.main.data.description")}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {canImport ? (
               <Link
                 href={`/shop/${shopSlug}/settings/import`}
                 className={buttonClass({ variant: "secondary", className: "text-foreground" })}
               >
-                Import contacts
+                {t("settings.main.data.importCta")}
               </Link>
             ) : null}
             {canExport ? (
@@ -716,7 +727,7 @@ export default async function PaymentsSettingsPage({
                 href={`/shop/${shopSlug}/settings/export`}
                 className={buttonClass({ variant: "secondary", className: "text-foreground" })}
               >
-                Data export
+                {t("settings.main.data.exportCta")}
               </Link>
             ) : null}
           </div>
@@ -724,17 +735,14 @@ export default async function PaymentsSettingsPage({
       ) : null}
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Talk to the founder</h2>
-        <p className="mt-1 text-sm text-muted">
-          A bad morning at the counter, a feature you're missing, a bug — write in any time. It
-          reaches Aaron directly, not a ticket queue, and reaching out is always welcome.
-        </p>
+        <h2 className="font-medium">{t("settings.main.founder.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.founder.description")}</p>
         <div className="mt-4">
           <a
             href={`mailto:${FOUNDER_EMAIL}`}
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            Email {FOUNDER_EMAIL}
+            {t("settings.main.founder.emailCta", { email: FOUNDER_EMAIL })}
           </a>
         </div>
       </section>

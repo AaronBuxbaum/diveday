@@ -941,7 +941,327 @@
     }
   },
   "trips": {},
-  "settings": {},
+  "settings": {
+    "main": {
+      "eyebrow": "Ajustes",
+      "title": "Ajustes del centro",
+      "description": "La configuración puntual u ocasional del centro está aquí, incluida la cuenta de Stripe que recibe facturas y pagos.",
+      "notice": {
+        "packingSaved": "Lista de equipo guardada para todas las salidas.",
+        "packingInvalid": "Añade entre uno y doce artículos a la lista.",
+        "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+        "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
+        "rentalsSaved": "Catálogo de alquiler guardado.",
+        "rentalPricesSaved": "Precios de alquiler guardados.",
+        "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
+        "contactSaved": "Datos de contacto guardados.",
+        "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
+        "reviewUrlSaved": "Enlace de reseñas guardado.",
+        "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
+        "connected": "Cuenta de Stripe conectada.",
+        "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
+        "notConfigured": "Los pagos en línea aún no están activados en esta instalación de DiveDay. Quien administre tu alojamiento de DiveDay debe terminar la configuración de Stripe primero.",
+        "disconnected": "Cuenta de Stripe desconectada.",
+        "refreshed": "Estado de pagos actualizado desde Stripe.",
+        "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes."
+      },
+      "contact": {
+        "heading": "Datos de contacto públicos",
+        "description": "Se imprimen en tus páginas de cursos, donde un buceador que no encuentra una fecha recibe un correo ya redactado para escribirte. Usa una dirección de recepción que lea todo el equipo, no una personal. Vacía el campo de correo para retirar el formulario.",
+        "emailLabel": "Correo de contacto",
+        "phoneLabel": "Teléfono de contacto",
+        "phoneHint": "(opcional)",
+        "submit": "Guardar datos de contacto",
+        "submitting": "Guardando…"
+      },
+      "reviewLink": {
+        "heading": "Enlace de reseñas",
+        "description": "Tu página de reseñas de Google Business, TripAdvisor o Facebook. Cuando está configurada, el recap posterior al viaje invita al buceador a dejar una reseña — vacía el campo para dejar de pedirlas.",
+        "label": "Enlace de reseñas",
+        "hint": "(opcional)",
+        "submit": "Guardar enlace de reseñas",
+        "submitting": "Guardando…"
+      },
+      "packing": {
+        "heading": "Lista de equipo del viaje",
+        "description": "Un artículo por línea. Los buceadores ven esta misma lista concisa en cada salida.",
+        "submit": "Guardar lista de equipo",
+        "submitting": "Guardando…"
+      },
+      "dockCall": {
+        "heading": "Hora de presentación en el muelle",
+        "description": "Con cuánta antelación se pide a los buceadores que lleguen antes de zarpar — para preparar el equipo, revisar certificaciones y hacer el briefing. Aparece en las confirmaciones de reserva, el ritmo del día de muelle y todos los recordatorios previos al viaje.",
+        "label": "Minutos antes de zarpar",
+        "submit": "Guardar hora de presentación",
+        "submitting": "Guardando…"
+      },
+      "paymentsGate": {
+        "notice": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes. Los ajustes de contacto, equipo y hora de muelle de arriba están abiertos a todo el personal."
+      },
+      "rentals": {
+        "heading": "Qué alquilamos",
+        "description": "El equipo y los servicios que los buceadores pueden pedir al configurar su equipo de alquiler. Desmarca lo que no ofrezcas — un centro que no tiene GoPros nunca ofrece una, y desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no llenan nitrox, así que empieza desmarcado.",
+        "legend": "Equipo y servicios de alquiler",
+        "submit": "Guardar catálogo de alquiler",
+        "submitting": "Guardando…"
+      },
+      "rentalPricing": {
+        "heading": "Precios de alquiler",
+        "description": "Lo que se cotiza a un buceador al configurar su equipo de alquiler. Pon precio al equipo completo para quien lo lleva todo (normalmente más barato que por piezas), y precio por pieza para un equipo parcial — un buceador que alquila los cinco artículos principales paga el precio del equipo completo, quien alquila menos paga por pieza. Deja un campo en blanco para resolver ese artículo en el mostrador.",
+        "fullSetLabel": "Equipo completo",
+        "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, ordenador de buceo)",
+        "nitroxLabel": "Nitrox",
+        "nitroxHint": "(por inmersión)",
+        "submit": "Guardar precios de alquiler",
+        "submitting": "Guardando…"
+      },
+      "stripe": {
+        "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
+        "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad — DiveDay nunca retiene tu dinero, y los pagos de pedidos y facturas van directo a tu propio saldo de Stripe.",
+        "connect": "Conectar Stripe",
+        "notConfiguredWarning": "Los pagos en línea aún no están activados en esta instalación de DiveDay — pide a quien administre tu alojamiento que termine la configuración de Stripe.",
+        "connectedHeading": "Cuenta de Stripe conectada",
+        "disconnectedHeading": "Cuenta de Stripe desconectada",
+        "readyBadge": "Lista para pagos",
+        "notReadyBadge": "Todavía no está lista",
+        "accountEnding": "Cuenta terminada en {last6}",
+        "chargesEnabled": "Cobros habilitados",
+        "payoutsEnabled": "Pagos habilitados",
+        "onboardingSubmitted": "Datos de incorporación enviados",
+        "statusYes": "Sí",
+        "statusNotYet": "Todavía no",
+        "reconnect": "Reconectar Stripe",
+        "refresh": "Actualizar estado",
+        "refreshing": "Actualizando…",
+        "disconnect": "Desconectar",
+        "disconnecting": "Desconectando…"
+      },
+      "embed": {
+        "heading": "Widget para tu web",
+        "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web.",
+        "cta": "Obtener código del widget"
+      },
+      "data": {
+        "heading": "Datos",
+        "description": "Trae contactos desde un CSV, o llévate todo en un ZIP de CSV — ninguna de las dos toca los ajustes de arriba.",
+        "importCta": "Importar contactos",
+        "exportCta": "Exportar datos"
+      },
+      "founder": {
+        "heading": "Habla con el fundador",
+        "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo — escribe cuando quieras. Llega directo a Aaron, no a una cola de tickets, y siempre es bienvenido.",
+        "emailCta": "Escribir a {email}"
+      }
+    },
+    "team": {
+      "eyebrow": "Ajustes",
+      "title": "Equipo",
+      "description": "Invita personal, define qué puede hacer cada persona y gestiona quién sigue teniendo acceso.",
+      "notice": {
+        "invited": "Invitación enviada.",
+        "inviteResent": "Invitación reenviada.",
+        "changesSaved": "Cambios del equipo guardados.",
+        "reactivated": "Cuenta reactivada.",
+        "disabled": "Cuenta deshabilitada — ya no puede iniciar sesión.",
+        "removed": "Eliminado del equipo.",
+        "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
+        "rolesInvalid": "Marca al menos un rol antes de guardar.",
+        "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
+        "inviteEmailTaken": "Ese correo ya está registrado en otro centro.",
+        "lastOwner": "No se puede hacer eso — el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
+        "notFound": "Esa persona no está en el equipo de este centro.",
+        "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes."
+      },
+      "statusBadge": {
+        "invited": "Invitado",
+        "active": "Activo",
+        "disabled": "Deshabilitado"
+      },
+      "rolesLegend": "Roles",
+      "roleLabels": {
+        "owner": "Propietario",
+        "manager": "Gerente",
+        "instructor": "Instructor",
+        "divemaster": "Divemaster",
+        "captain": "Patrón",
+        "crew": "Tripulación",
+        "diver": "Buceador"
+      },
+      "invite": {
+        "heading": "Invitar a alguien",
+        "description": "Recibirá un correo para crear su propia contraseña. Si ya es un buceador de tu centro, invitarlo con el mismo correo añade acceso de personal a su registro existente en lugar de crear uno nuevo.",
+        "fullNameLabel": "Nombre completo",
+        "emailLabel": "Correo",
+        "submit": "Enviar invitación",
+        "submitting": "Enviando…"
+      },
+      "current": {
+        "heading": "Equipo actual",
+        "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
+        "empty": "Todavía no se ha invitado a nadie.",
+        "save": "Guardar cambios",
+        "saving": "Guardando…"
+      },
+      "staffRow": {
+        "resendInvite": "Reenviar invitación",
+        "sending": "Enviando…",
+        "enable": "Habilitar",
+        "disable": "Deshabilitar",
+        "enabling": "Habilitando…",
+        "disabling": "Deshabilitando…",
+        "delete": "Eliminar",
+        "deleting": "Eliminando…",
+        "enableAriaLabel": "Habilitar a {name}",
+        "disableAriaLabel": "Deshabilitar a {name}",
+        "deleteAriaLabel": "Eliminar a {name}",
+        "deleteConfirm": "¿Eliminar a {name} del equipo? Esto no se puede deshacer."
+      }
+    },
+    "export": {
+      "eyebrow": "Ajustes",
+      "title": "Exportar datos",
+      "description": "Descarga todo lo que este centro guarda en DiveDay como archivos CSV planos — buceadores, tarjetas, salidas, reservas, waivers firmados, tallas de alquiler, pedidos, listas de espera, puntos de inmersión y cursos. Es tuyo, cuando lo quieras — incluye un archivo de contactos listo para importar que el asistente de importación de otro sistema puede mapear directamente.",
+      "downloadButton": {
+        "idle": "Descargar exportación",
+        "acknowledged": "En camino — revisa tus descargas"
+      },
+      "bundle": {
+        "heading": "Qué contiene el paquete",
+        "description": "Un ZIP con un README y un CSV para cada tipo de registro. Cada fecha y hora lleva su zona horaria, el dinero está en centavos, y tu historial archivado también viene incluido — nada se pierde si alguna vez te vas."
+      },
+      "rowCount": "{count, plural, one {# fila} other {# filas}}",
+      "notIncluded": {
+        "label": "No incluido, a propósito:",
+        "text": "las copias de manifiestos sin conexión guardadas en los teléfonos del personal, notas y actividad privadas del personal, registros de notificaciones, intentos de pago de Stripe (todo resultado de dinero está en los archivos de reservas y pedidos), y cualquier URL de imagen pegada que un CSV referencie pero que nunca se haya guardado a través de DiveDay. Cada foto de tarjeta, imagen de punto de inmersión e imagen de curso que DiveDay guarda directamente viene incluida como archivo real en la carpeta <mono>photos/</mono> del paquete, así que sobrevive incluso después de cerrar esta cuenta. Las credenciales de inicio de sesión y los enlaces de suscripción de calendario del personal nunca se exportan. El README del paquete enumera los mismos límites."
+      }
+    },
+    "import": {
+      "eyebrow": "Ajustes",
+      "title": "Importar contactos",
+      "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Somos claros sobre qué se importa: las tarjetas importadas llegan verificadas y marcadas como importadas, con una confirmación de un toque en el registro de cada buceador, y una fila que declara un waiver ya aceptado se confía y se marca como importada.",
+      "comesAcross": {
+        "heading": "Qué se importa",
+        "description": "Una tarjeta ya presente en tu sistema fue verificada allí, así que DiveDay confía en ella: las tarjetas importadas llegan verificadas y marcadas como importadas, listas desde la primera salida, con una confirmación de un toque para el personal, y sus fechas de renovación también se importan. Una tarjeta de especialidad espera esa confirmación antes de habilitar la inmersión que autoriza. Las respuestas médicas individuales nunca se reconstruyen."
+      },
+      "scopeChip": {
+        "included": "Se importa",
+        "staysBehind": "Se queda fuera"
+      },
+      "wizard": {
+        "heading": "Subir un archivo de contactos",
+        "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de la exportación de datos. Las filas con correo se emparejan con tus buceadores existentes, así que reimportar una actualiza a ese buceador en lugar de duplicarlo; las filas sin correo siempre entran como registros nuevos. No se escribe nada hasta que revisas la vista previa y confirmas.",
+        "chooseFile": "Elegir archivo CSV",
+        "chooseDifferentFile": "Elegir otro archivo",
+        "columnTitle": "Columna «{header}»",
+        "fieldLabels": {
+          "first_name": "Nombre",
+          "last_name": "Apellido",
+          "full_name": "Nombre completo",
+          "email": "Correo",
+          "phone": "Teléfono",
+          "date_of_birth": "Fecha de nacimiento",
+          "emergency_contact_name": "Contacto de emergencia",
+          "emergency_contact_phone": "Teléfono de emergencia",
+          "dive_insurance": "Seguro de buceo",
+          "certification_agency": "Agencia certificadora",
+          "certification_level": "Nivel de certificación",
+          "certification_number": "Número de certificación",
+          "certification_status": "Estado de la certificación",
+          "certification_expires_at": "Renovación pendiente",
+          "specialty": "Especialidad",
+          "specialty_certification_number": "Número de especialidad",
+          "nitrox_certified": "Nitrox",
+          "nitrox_certification_number": "Número de nitrox",
+          "bcd_size": "Talla de BCD",
+          "wetsuit_size": "Talla de traje",
+          "boot_size": "Talla de botas",
+          "fin_size": "Talla de aletas",
+          "waiver_accepted": "Waiver aceptado",
+          "waiver_signed_at": "Waiver firmado",
+          "waiver_source_name": "Origen del waiver",
+          "waiver_document_url": "Documento del waiver",
+          "medical_document_url": "Documento médico",
+          "visit_date": "Fecha de visita anterior",
+          "visit_title": "Visita anterior",
+          "visit_status": "Estado de la visita anterior",
+          "visit_amount": "Importe de la visita anterior",
+          "visit_reference": "Referencia de reserva"
+        },
+        "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa — las respuestas médicas individuales nunca se reconstruyen a partir de otro sistema. En su lugar se confía en una columna «waiver aceptado» reconocida; ver más abajo.",
+        "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
+        "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} un waiver ya aceptado en un centro anterior. DiveDay confía en eso — incluida su exención médica — y marca el registro como «importado» para que nunca se confunda con una firma hecha aquí. Ver «Qué se importa» arriba.",
+        "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Eso se importa como historial en el perfil del buceador — qué se reservó, cuándo, y cómo lo llamaba tu antiguo sistema — y nada más: nunca se convierten en salidas de tu calendario, nunca cuentan para la capacidad ni los informes, y una reserva no es prueba de que alguien buceó.",
+        "stats": {
+          "diversInFile": "Buceadores en el archivo",
+          "extraCardRows": "Filas de tarjetas extra",
+          "skipped": "Omitidas",
+          "cards": "Tarjetas",
+          "specialties": "Especialidades",
+          "nitroxCards": "Tarjetas de nitrox",
+          "waivers": "Waivers",
+          "pastVisits": "Visitas anteriores"
+        },
+        "table": {
+          "rowNumber": "#",
+          "name": "Nombre",
+          "email": "Correo",
+          "card": "Tarjeta",
+          "waiver": "Waiver",
+          "notes": "Notas",
+          "noName": "— sin nombre —",
+          "skippedBadge": "omitida",
+          "mergedBadge": "mismo buceador que la fila {row}",
+          "certImported": "importada",
+          "certForReview": "por revisar",
+          "certLine": "{level} · {status}",
+          "specialtyLine": "especialidad {specialty} · {status}",
+          "waiverAcceptedImported": "aceptado · importado",
+          "emptyValue": "—"
+        },
+        "hiddenRowsNotice": "Mostrando las primeras {limit} filas. Las {total} se importan al confirmar.",
+        "submit": "{count, plural, one {Importar 1 contacto} other {Importar # contactos}}",
+        "submitting": "Importando…",
+        "result": {
+          "summary": "Importado. {added} añadidos, {updated} actualizados.",
+          "cardsLine": "{cardsAdded, plural, one {# tarjeta} other {# tarjetas}}, {specialtyAdded, plural, one {# tarjeta de especialidad} other {# tarjetas de especialidad}} y {nitroxAdded, plural, one {# tarjeta de nitrox} other {# tarjetas de nitrox}} importadas y marcadas como importadas, con una confirmación de un toque en el registro de cada buceador.",
+          "rowsMergedNote": " {count} fila(s) añadieron tarjetas a un buceador que trajo una fila anterior.",
+          "cardsSkippedNote": " {count} tarjeta(s) ya presentes en esos registros se dejaron sin tocar.",
+          "rowsSkippedNote": " {count} fila(s) omitidas.",
+          "cardsHeldByAnother": "{count} número(s) de tarjeta del archivo ya están en otro buceador de tu centro, así que esas tarjetas no se añadieron a nadie. Revisa el archivo por si hay un número repetido, y luego introduce esas tarjetas a mano.",
+          "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación — tócala en el registro del buceador y la puerta se abre.",
+          "waiversLine": "{count, plural, one {# waiver} other {# waivers}} importados como aceptados, marcados «importado» en el perfil del buceador.",
+          "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
+          "waiversSkippedNoTemplateNote": " {count} omitidos — configura primero una plantilla de waiver.",
+          "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
+          "visitsLine": "{count, plural, one {# visita anterior añadida} other {# visitas anteriores añadidas}} al historial del centro de los buceadores.",
+          "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están — volver a ejecutar la misma exportación no duplica el historial de nadie.",
+          "seeRoster": "Ver el listado"
+        }
+      }
+    },
+    "embed": {
+      "eyebrow": "Ajustes",
+      "title": "Widget para tu web",
+      "description": "Pega uno de estos en tu propia web para que los buceadores puedan explorar y reservar sin salir de tu sitio. Ambos apuntan al mismo calendario en directo — sin configuración aparte, sin sincronización que mantener.",
+      "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada — pide a quien administre tu alojamiento de DiveDay que termine la configuración antes de generar estos fragmentos.",
+      "calendarEmbed": {
+        "heading": "Widget de calendario",
+        "description": "Un calendario de reservas completo, ajustado al tamaño donde lo coloques en tu página. Ideal para una página dedicada de \"Reservar ahora\" en tu web.",
+        "fieldLabel": "Código del widget"
+      },
+      "bookButton": {
+        "heading": "Botón \"Reservar inmersión\"",
+        "description": "Un enlace sencillo con estilo de botón, sin iframe. Abre tu calendario de DiveDay en una pestaña nueva — la opción más simple, y la que conviene usar si cobras en línea, ya que una página de pago puede negarse a abrirse dentro del marco de otro sitio.",
+        "fieldLabel": "Código del botón",
+        "buttonText": "Reservar inmersión"
+      },
+      "footer": "Ambos fragmentos apuntan a <link>tu calendario público</link>. Editar una salida, añadir una fecha o cambiar tus precios de alquiler se refleja en el momento en que un buceador carga el widget — nada que volver a publicar.",
+      "snippetField": {
+        "copy": "Copiar",
+        "copied": "Copiado"
+      }
+    }
+  },
   "blockers": {
     "eyebrow": "Recepción",
     "title": "Bloqueos",

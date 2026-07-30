@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { escapeHtml } from "@/lib/html";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
@@ -25,16 +27,17 @@ export default async function EmbedSettingsPage() {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect("/");
 
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+
   const origin = publicAppUrl();
   const scheduleUrl = origin ? `${origin}/shop/${shop.slug}/schedule` : null;
 
   if (!scheduleUrl) {
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader eyebrow="Settings" title="Website embed" />
+        <ShopPageHeader eyebrow={t("settings.embed.eyebrow")} title={t("settings.embed.title")} />
         <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-          Embed links need a configured public hosting address — ask whoever runs your DiveDay
-          hosting to finish setup before these snippets can be generated.
+          {t("settings.embed.notConfigured")}
         </p>
       </main>
     );
@@ -42,51 +45,58 @@ export default async function EmbedSettingsPage() {
 
   const embedUrl = `${scheduleUrl}?embed=1`;
   const shopNameAttr = escapeHtml(shop.name);
-  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — book a dive" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>`;
+  const bookButtonText = t("settings.embed.bookButton.buttonText");
+  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — ${escapeHtml(bookButtonText)}" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>`;
   // Deliberately the plain schedule URL, not the embed one: this is a link a
   // browser navigates to directly, never a frame, so it should land on the
   // full page — including for a shop that takes online payment, where a
   // hosted Stripe Checkout may refuse to render inside someone else's iframe.
-  const buttonSnippet = `<a href="${scheduleUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#fff;font:600 15px/1 system-ui,sans-serif;text-decoration:none;border-radius:10px">Book a dive</a>`;
+  const buttonSnippet = `<a href="${scheduleUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#fff;font:600 15px/1 system-ui,sans-serif;text-decoration:none;border-radius:10px">${escapeHtml(bookButtonText)}</a>`;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Settings"
-        title="Website embed"
-        description="Paste one of these into your own website so divers can browse and book without leaving your site. Both point at the same live schedule — no separate setup, no sync to keep working."
+        eyebrow={t("settings.embed.eyebrow")}
+        title={t("settings.embed.title")}
+        description={t("settings.embed.description")}
       />
 
       <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Calendar embed</h2>
-        <p className="mt-1 text-sm text-muted">
-          A full booking calendar, sized to fit wherever you place it on your page. Best for a
-          dedicated "Book now" page on your site.
-        </p>
+        <h2 className="font-medium">{t("settings.embed.calendarEmbed.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.embed.calendarEmbed.description")}</p>
         <div className="mt-4">
-          <SnippetField label="Embed code" rows={3} snippet={iframeSnippet} />
+          <SnippetField
+            label={t("settings.embed.calendarEmbed.fieldLabel")}
+            rows={3}
+            snippet={iframeSnippet}
+            copyLabel={t("settings.embed.snippetField.copy")}
+            copiedLabel={t("settings.embed.snippetField.copied")}
+          />
         </div>
       </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">"Book a dive" button</h2>
-        <p className="mt-1 text-sm text-muted">
-          A plain link styled as a button, no iframe. Opens your DiveDay schedule in a new tab — the
-          simplest option, and the one to use if you take online payment, since a checkout page may
-          refuse to open inside another site's frame.
-        </p>
+        <h2 className="font-medium">{t("settings.embed.bookButton.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.embed.bookButton.description")}</p>
         <div className="mt-4">
-          <SnippetField label="Button code" rows={2} snippet={buttonSnippet} />
+          <SnippetField
+            label={t("settings.embed.bookButton.fieldLabel")}
+            rows={2}
+            snippet={buttonSnippet}
+            copyLabel={t("settings.embed.snippetField.copy")}
+            copiedLabel={t("settings.embed.snippetField.copied")}
+          />
         </div>
       </section>
 
       <p className="mt-6 text-sm text-muted">
-        Both snippets point at{" "}
-        <a href={scheduleUrl} target="_blank" rel="noopener" className="text-primary underline">
-          your public schedule
-        </a>
-        . Editing a trip, adding a departure, or changing your rental prices shows up the moment a
-        diver loads the embed — nothing to republish.
+        {t.rich("settings.embed.footer", {
+          link: (chunks) => (
+            <a href={scheduleUrl} target="_blank" rel="noopener" className="text-primary underline">
+              {chunks}
+            </a>
+          ),
+        })}
       </p>
     </main>
   );

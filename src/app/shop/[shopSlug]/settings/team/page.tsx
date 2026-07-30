@@ -8,8 +8,11 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { getShopById } from "@/db/shops";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
-import { STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
+import { requestLocale } from "@/i18n/request";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { requireStaffSession } from "@/lib/session";
 import {
   inviteStaffAction,
@@ -23,44 +26,67 @@ const ROLES_FORM_ID = "team-roles-form";
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
 
-const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
-  invited: { tone: "success", text: "Invite sent." },
-  invite_resent: { tone: "success", text: "Invite resent." },
-  changes_saved: { tone: "success", text: "Team changes saved." },
-  reactivated: { tone: "success", text: "Account re-enabled." },
-  disabled: { tone: "success", text: "Account disabled — they can no longer sign in." },
-  removed: { tone: "success", text: "Removed from the team." },
-  invite_invalid: {
-    tone: "danger",
-    text: "Enter a name, a valid email, and check at least one role.",
-  },
-  roles_invalid: { tone: "danger", text: "Check at least one role before saving." },
-  invite_already_on_team: { tone: "danger", text: "That person already has an account here." },
-  invite_email_taken: {
-    tone: "danger",
-    text: "That email is already registered to a different shop.",
-  },
-  last_owner: {
-    tone: "danger",
-    text: "Can't do that — the shop needs at least one owner. Make someone else an owner first.",
-  },
-  not_found: { tone: "danger", text: "That person isn't on this shop's team." },
-  not_authorized: {
-    tone: "danger",
-    text: "Team management is limited to owners and managers.",
-  },
-};
+/**
+ * Built inside the request, not at module scope, so the notice text tracks
+ * the negotiated locale rather than freezing to whichever locale first
+ * imported this file.
+ */
+function noticeMessages(
+  t: StaffTranslator,
+): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {
+  return {
+    invited: { tone: "success", text: t("settings.team.notice.invited") },
+    invite_resent: { tone: "success", text: t("settings.team.notice.inviteResent") },
+    changes_saved: { tone: "success", text: t("settings.team.notice.changesSaved") },
+    reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
+    disabled: { tone: "success", text: t("settings.team.notice.disabled") },
+    removed: { tone: "success", text: t("settings.team.notice.removed") },
+    invite_invalid: { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
+    roles_invalid: { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
+    invite_already_on_team: {
+      tone: "danger",
+      text: t("settings.team.notice.inviteAlreadyOnTeam"),
+    },
+    invite_email_taken: { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
+    last_owner: { tone: "danger", text: t("settings.team.notice.lastOwner") },
+    not_found: { tone: "danger", text: t("settings.team.notice.notFound") },
+    not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
+  };
+}
 
-const STATUS_BADGE: Record<StaffMember["accountStatus"], { label: string; tone: BadgeTone }> = {
-  invited: { label: "Invited", tone: "warning" },
-  active: { label: "Active", tone: "success" },
-  disabled: { label: "Disabled", tone: "neutral" },
-};
+function statusBadge(
+  t: StaffTranslator,
+): Record<StaffMember["accountStatus"], { label: string; tone: BadgeTone }> {
+  return {
+    invited: { label: t("settings.team.statusBadge.invited"), tone: "warning" },
+    active: { label: t("settings.team.statusBadge.active"), tone: "success" },
+    disabled: { label: t("settings.team.statusBadge.disabled"), tone: "neutral" },
+  };
+}
+
+/**
+ * Display labels for every staff role, translated for this page only.
+ * `STAFF_ROLE_LABELS` in `src/lib/authz.ts` also holds English role labels
+ * (used by the invite email in `./actions.ts`) — out of this batch's scope,
+ * flagged in the extraction report rather than changed here.
+ */
+function roleLabels(t: StaffTranslator): Record<Role, string> {
+  return {
+    owner: t("settings.team.roleLabels.owner"),
+    manager: t("settings.team.roleLabels.manager"),
+    instructor: t("settings.team.roleLabels.instructor"),
+    divemaster: t("settings.team.roleLabels.divemaster"),
+    captain: t("settings.team.roleLabels.captain"),
+    crew: t("settings.team.roleLabels.crew"),
+    diver: t("settings.team.roleLabels.diver"),
+  };
+}
 
 function RoleCheckboxes({
   name,
   defaultRoles,
   formId,
+  t,
 }: {
   name: string;
   defaultRoles: readonly string[];
@@ -68,10 +94,12 @@ function RoleCheckboxes({
    * attribute) instead of nesting — lets a per-member Disable/Delete form
    * sit right below without ever nesting one <form> inside another. */
   formId?: string;
+  t: StaffTranslator;
 }) {
+  const labels = roleLabels(t);
   return (
     <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <legend className="sr-only">Roles</legend>
+      <legend className="sr-only">{t("settings.team.rolesLegend")}</legend>
       {STAFF_ROLES.map((role) => (
         <label
           key={role}
@@ -84,15 +112,15 @@ function RoleCheckboxes({
             form={formId}
             className="size-4 accent-primary"
           />
-          {STAFF_ROLE_LABELS[role]}
+          {labels[role]}
         </label>
       ))}
     </fieldset>
   );
 }
 
-function StaffRow({ member }: { member: StaffMember }) {
-  const status = STATUS_BADGE[member.accountStatus];
+function StaffRow({ member, t }: { member: StaffMember; t: StaffTranslator }) {
+  const status = statusBadge(t)[member.accountStatus];
   const isDisabled = member.accountStatus === "disabled";
   return (
     <li className="rounded-lg border border-border bg-surface p-4">
@@ -109,6 +137,7 @@ function StaffRow({ member }: { member: StaffMember }) {
           name={`role_${member.personId}`}
           defaultRoles={member.roles}
           formId={ROLES_FORM_ID}
+          t={t}
         />
       </div>
 
@@ -118,14 +147,14 @@ function StaffRow({ member }: { member: StaffMember }) {
             <form action={resendInviteAction}>
               <input type="hidden" name="userAccountId" value={member.userAccountId} />
               <SubmitButton
-                pendingLabel="Sending…"
+                pendingLabel={t("settings.team.staffRow.sending")}
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
                   className: "w-full text-foreground sm:w-auto",
                 })}
               >
-                Resend invite
+                {t("settings.team.staffRow.resendInvite")}
               </SubmitButton>
             </form>
           ) : null}
@@ -137,11 +166,21 @@ function StaffRow({ member }: { member: StaffMember }) {
               <input type="hidden" name="userAccountId" value={member.userAccountId} />
               <input type="hidden" name="status" value={isDisabled ? "active" : "disabled"} />
               <SubmitButton
-                pendingLabel={isDisabled ? "Enabling…" : "Disabling…"}
-                ariaLabel={`${isDisabled ? "Enable" : "Disable"} ${member.fullName}`}
+                pendingLabel={
+                  isDisabled
+                    ? t("settings.team.staffRow.enabling")
+                    : t("settings.team.staffRow.disabling")
+                }
+                ariaLabel={
+                  isDisabled
+                    ? t("settings.team.staffRow.enableAriaLabel", { name: member.fullName })
+                    : t("settings.team.staffRow.disableAriaLabel", { name: member.fullName })
+                }
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                {isDisabled ? "Enable" : "Disable"}
+                {isDisabled
+                  ? t("settings.team.staffRow.enable")
+                  : t("settings.team.staffRow.disable")}
               </SubmitButton>
             </form>
             {isDisabled ? (
@@ -149,12 +188,16 @@ function StaffRow({ member }: { member: StaffMember }) {
                 <input type="hidden" name="personId" value={member.personId} />
                 <input type="hidden" name="userAccountId" value={member.userAccountId} />
                 <SubmitButton
-                  pendingLabel="Deleting…"
-                  ariaLabel={`Delete ${member.fullName}`}
-                  confirmMessage={`Delete ${member.fullName} from the team? This can't be undone.`}
+                  pendingLabel={t("settings.team.staffRow.deleting")}
+                  ariaLabel={t("settings.team.staffRow.deleteAriaLabel", {
+                    name: member.fullName,
+                  })}
+                  confirmMessage={t("settings.team.staffRow.deleteConfirm", {
+                    name: member.fullName,
+                  })}
                   className={buttonClass({ variant: "danger", size: "sm" })}
                 >
-                  Delete
+                  {t("settings.team.staffRow.delete")}
                 </SubmitButton>
               </form>
             ) : null}
@@ -185,15 +228,17 @@ export default async function TeamSettingsPage({
   if (!canManage) redirect(`/shop/${shopSlug}`);
 
   const staff = await listShopStaff(db, session.user.shopId);
-  const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
+  const shop = await getShopById(db, session.user.shopId);
+  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  const banner = notice ? noticeMessages(t)[notice] : undefined;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Settings"
-        title="Team"
-        description="Invite staff, set what each person can do, and manage who still has access."
+        eyebrow={t("settings.team.eyebrow")}
+        title={t("settings.team.title")}
+        description={t("settings.team.description")}
       />
 
       {banner ? (
@@ -205,14 +250,10 @@ export default async function TeamSettingsPage({
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">Invite someone</h2>
-        <p className="mt-1 text-sm text-muted">
-          They'll get an email to set their own password. If they're already a diver at your shop,
-          inviting them by the same email adds staff access to their existing record instead of
-          creating a second one.
-        </p>
+        <h2 className="font-medium">{t("settings.team.invite.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.team.invite.description")}</p>
         <FieldGrid as="form" action={inviteStaffAction} columns={2} className="mt-4">
-          <Field label="Full name">
+          <Field label={t("settings.team.invite.fullNameLabel")}>
             <input
               name="fullName"
               type="text"
@@ -222,7 +263,7 @@ export default async function TeamSettingsPage({
               className={controlClass}
             />
           </Field>
-          <Field label="Email">
+          <Field label={t("settings.team.invite.emailLabel")}>
             <input
               name="email"
               type="email"
@@ -233,29 +274,29 @@ export default async function TeamSettingsPage({
             />
           </Field>
           <div className="sm:col-span-2">
-            <RoleCheckboxes name="role" defaultRoles={[]} />
+            <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
           </div>
           <FieldActions>
-            <SubmitButton pendingLabel="Sending…" className={buttonClass()}>
-              Send invite
+            <SubmitButton
+              pendingLabel={t("settings.team.invite.submitting")}
+              className={buttonClass()}
+            >
+              {t("settings.team.invite.submit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
       </section>
 
       <section className="mt-6">
-        <h2 className="font-medium">Current team</h2>
-        <p className="mt-1 text-sm text-muted">
-          Enable, disable, and delete take effect immediately. Role changes below wait for Save
-          changes.
-        </p>
+        <h2 className="font-medium">{t("settings.team.current.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.team.current.description")}</p>
         {staff.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No staff invited yet.</p>
+          <p className="mt-2 text-sm text-muted">{t("settings.team.current.empty")}</p>
         ) : (
           <>
             <ul className="mt-3 flex flex-col gap-3">
               {staff.map((member) => (
-                <StaffRow key={member.personId} member={member} />
+                <StaffRow key={member.personId} member={member} t={t} />
               ))}
             </ul>
             {/* Every card's role checkboxes are associated to this form via the
@@ -267,8 +308,11 @@ export default async function TeamSettingsPage({
               action={saveAllStaffRolesAction}
               className="mt-4 flex justify-end"
             >
-              <SubmitButton pendingLabel="Saving…" className={buttonClass({ variant: "primary" })}>
-                Save changes
+              <SubmitButton
+                pendingLabel={t("settings.team.current.saving")}
+                className={buttonClass({ variant: "primary" })}
+              >
+                {t("settings.team.current.save")}
               </SubmitButton>
             </form>
           </>
