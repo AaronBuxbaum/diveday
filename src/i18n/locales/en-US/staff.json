@@ -2175,6 +2175,28 @@
       "modeAuto": "Auto ☀",
       "modeStandard": "Standard",
       "modeFullAaa": "Full AAA ☀"
+    },
+    "rentalFit": {
+      "itemLabels": {
+        "bcd": "BCD",
+        "regulator": "Regulator",
+        "wetsuit": "Wetsuit",
+        "boots": "Boots",
+        "maskFins": "Mask & fins",
+        "weights": "Weights",
+        "diveComputer": "Dive computer",
+        "gopro": "GoPro"
+      },
+      "nitroxFillsLabel": "Nitrox fills",
+      "itemWithSize": "{item} {size}",
+      "notRecorded": "No fit on file — not asked yet",
+      "ownKit": "Own kit",
+      "needsStaffFit": "Needs staff fit at check-in",
+      "needsStaffFitWithNote": "Needs staff fit — {note}"
+    },
+    "rollCallCheckpoint": {
+      "departure": "Before departure",
+      "afterDive": "After dive {n}"
     }
   }
 }

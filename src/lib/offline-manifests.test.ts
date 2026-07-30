@@ -38,7 +38,7 @@ function snapshot(): OfflineManifestSnapshot {
             emergencyContactName: null,
             emergencyContactPhone: null,
             readiness: { status: "ready", blockers: [] },
-            rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+            rentalFit: { state: "not_recorded" as const },
             nitroxRequested: false,
           },
           {
@@ -51,7 +51,7 @@ function snapshot(): OfflineManifestSnapshot {
               status: "blocked",
               blockers: [{ code: "waiver_pending", text: "Waiver pending." }],
             },
-            rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+            rentalFit: { state: "not_recorded" as const },
             nitroxRequested: false,
           },
         ],
@@ -129,7 +129,7 @@ describe("offline manifest policy", () => {
       emergencyContactName: null,
       emergencyContactPhone: null,
       readiness: { status: "ready", blockers: [] },
-      rentalFit: { state: "not_recorded", text: "No fit on file — not asked yet" },
+      rentalFit: { state: "not_recorded" },
       nitroxRequested: false,
       rollCall: {
         state: "not_boarded",
@@ -192,7 +192,7 @@ describe("offline manifest policy", () => {
           emergencyContactName: null,
           emergencyContactPhone: null,
           readiness: { status: "ready", blockers: [] },
-          rentalFit: { state: "own_kit", text: "Own kit" },
+          rentalFit: { state: "own_kit" },
           nitroxRequested: false,
           rollCall: {
             state: "not_boarded",

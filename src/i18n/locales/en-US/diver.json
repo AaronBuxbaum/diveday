@@ -465,7 +465,16 @@
     "weightPlaceholder": "e.g. 16 lb with a 3 mm suit",
     "saveFit": "Save rental fit",
     "bcdIconLabel": "BCD",
-    "finIconLabel": "Fin"
+    "finIconLabel": "Fin",
+    "itemLabels": {
+      "bcd": "BCD",
+      "regulator": "Regulator",
+      "wetsuit": "Wetsuit",
+      "maskFins": "Mask & fins",
+      "weights": "Weights",
+      "diveComputer": "Dive computer",
+      "gopro": "GoPro"
+    }
   },
   "party": {
     "numberOfDivers": "Number of divers",

@@ -79,7 +79,7 @@ const payload: OfflineManifestPayload = {
           emergencyContactName: "Sam Quinn",
           emergencyContactPhone: "+1-305-555-0100",
           readiness: { status: "ready", blockers: [] },
-          rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+          rentalFit: { state: "not_recorded" as const },
           nitroxRequested: false,
           rollCall: undefined,
         },

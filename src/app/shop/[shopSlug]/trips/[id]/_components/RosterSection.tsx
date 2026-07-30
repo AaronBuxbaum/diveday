@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
@@ -427,7 +428,11 @@ export function RosterSection({
                       {t("trips.roster.rentalFitColumnHeading")}
                     </p>
                     <p className="mt-2 text-sm text-muted">
-                      {rentalFitLine(rentalFitByBooking.get(booking.id) ?? null).text}
+                      {rentalFitLineText(
+                        t,
+                        locale,
+                        rentalFitLine(rentalFitByBooking.get(booking.id) ?? null),
+                      )}
                     </p>
                     {nitrox ? (
                       <p className="mt-2 text-sm font-medium text-primary">

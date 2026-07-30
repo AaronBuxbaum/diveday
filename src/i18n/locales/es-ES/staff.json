@@ -2175,6 +2175,28 @@
       "modeAuto": "Automático ☀",
       "modeStandard": "Estándar",
       "modeFullAaa": "AAA completo ☀"
+    },
+    "rentalFit": {
+      "itemLabels": {
+        "bcd": "Chaleco",
+        "regulator": "Regulador",
+        "wetsuit": "Traje",
+        "boots": "Escarpines",
+        "maskFins": "Máscara y aletas",
+        "weights": "Lastre",
+        "diveComputer": "Ordenador de buceo",
+        "gopro": "GoPro"
+      },
+      "nitroxFillsLabel": "Llenados de nitrox",
+      "itemWithSize": "{item} {size}",
+      "notRecorded": "No hay equipo registrado — aún no se ha preguntado",
+      "ownKit": "Trae su propio equipo",
+      "needsStaffFit": "Necesita ajuste del personal en el check-in",
+      "needsStaffFitWithNote": "Necesita ajuste del personal — {note}"
+    },
+    "rollCallCheckpoint": {
+      "departure": "Antes de zarpar",
+      "afterDive": "Después de la inmersión {n}"
     }
   }
 }

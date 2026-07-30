@@ -5,7 +5,6 @@ import {
   isRollCallCheckpoint,
   maxRecordedDiveNumber,
   type RollCallRecord,
-  rollCallCheckpointLabel,
   rollCallCheckpoints,
   rollCallLabel,
 } from "./manifests";
@@ -44,7 +43,13 @@ describe("buildTripManifest", () => {
           emergencyContactName: "Asha Sharma",
           emergencyContactPhone: "+1-305-555-0101",
           readiness: { status: "ready", blockers: [] },
-          rentalFit: { state: "rents" as const, text: "BCD M, Wetsuit 5mm M" },
+          rentalFit: {
+            state: "rents" as const,
+            items: [
+              { kind: "bcd" as const, size: "M" },
+              { kind: "wetsuit" as const, size: "5mm M" },
+            ],
+          },
           nitroxRequested: true,
           rollCall: {
             state: "boarded",
@@ -59,7 +64,7 @@ describe("buildTripManifest", () => {
           email: null,
           emergencyContactName: null,
           emergencyContactPhone: null,
-          rentalFit: { state: "not_recorded" as const, text: "No fit on file — not asked yet" },
+          rentalFit: { state: "not_recorded" as const },
           nitroxRequested: false,
         },
       ],
@@ -112,7 +117,10 @@ describe("buildTripManifest", () => {
     expect(rollCallCheckpoints(2)).toEqual(["departure", "after_dive_1", "after_dive_2"]);
     expect(isRollCallCheckpoint("after_dive_2", 2)).toBe(true);
     expect(isRollCallCheckpoint("after_dive_3", 2)).toBe(false);
-    expect(rollCallCheckpointLabel("after_dive_2")).toBe("After dive 2");
+    // A checkpoint's word ("Before departure" / "After dive N") is resolved
+    // against a message bundle by the caller — see
+    // src/i18n/manifest-labels.test.ts's `rollCallCheckpointText` coverage —
+    // `RollCallCheckpoint` itself is already the code.
   });
 
   it("finds the highest recorded dive number, or 0 with no after-dive history", () => {

@@ -22,14 +22,15 @@ import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
+import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { rentalFitLineText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   isRollCallCheckpoint,
   type RollCallCheckpoint,
-  rollCallCheckpointLabel,
   rollCallCheckpoints,
   rollCallLabel,
 } from "@/lib/manifests";
@@ -283,7 +284,7 @@ export default async function TripManifestPage({
                 : "inline-flex min-h-11 shrink-0 items-center rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
             }
           >
-            {rollCallCheckpointLabel(value)}
+            {rollCallCheckpointText(t, value)}
           </Link>
         ))}
       </nav>
@@ -304,7 +305,7 @@ export default async function TripManifestPage({
             <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
               {rollCallComplete
                 ? t("trips.manifest.rollCallComplete")
-                : rollCallCheckpointLabel(checkpoint)}
+                : rollCallCheckpointText(t, checkpoint)}
             </h2>
           </div>
           <p className="text-base font-bold tabular-nums">
@@ -379,7 +380,7 @@ export default async function TripManifestPage({
           <div>
             <h2 className="text-lg font-semibold">
               {t("trips.manifest.checkpointRollCallHeading", {
-                checkpoint: rollCallCheckpointLabel(checkpoint),
+                checkpoint: rollCallCheckpointText(t, checkpoint),
               })}
             </h2>
             <p className="mt-1 text-sm text-muted">
@@ -454,7 +455,7 @@ export default async function TripManifestPage({
                       <p>
                         <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
                         <span className="mt-0.5 block text-muted">
-                          {diver.rentalFit.text}
+                          {rentalFitLineText(t, locale, diver.rentalFit)}
                           {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
                         </span>
                       </p>
