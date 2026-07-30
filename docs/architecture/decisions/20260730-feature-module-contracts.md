@@ -25,7 +25,7 @@ has pure domain logic, its own queries, a route, and UI, so it exercises every b
 A feature module is a directory under `src/features/` with a **published surface and an enforced
 boundary**:
 
-```
+```text
 src/features/<feature>/
   index.ts     # required — the only thing other code may import
   README.md    # required — what it owns, what it does not, its invariants

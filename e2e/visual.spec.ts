@@ -87,6 +87,21 @@ const VIEWPORTS = [
  * viewport never needed. `.then(() => true)` keeps the resolved value
  * serializable — `document.fonts.ready` resolves to a FontFaceSet, which
  * Playwright cannot return.
+ *
+ * **Images are awaited after the scroll, not before.** Forcing layout paint does
+ * not decode images, and `course-page-dark` proved it: its diff was confined
+ * entirely to the hero and exactly one of three gallery thumbnails, every glyph
+ * around them identical — the signature of a decode that had not finished, not
+ * of a code change. The scroll has to come first, because a `loading="lazy"`
+ * image below the fold does not even begin fetching until it is scrolled into
+ * view, so awaiting decode before the scroll would await an empty set.
+ *
+ * `decode()` is called on every image rather than only the ones reporting
+ * `!complete`: `complete` means the bytes arrived, not that a frame is ready to
+ * paint, and on an already-decoded image the promise resolves immediately.
+ * Each is bounded and failure-tolerant — a broken or never-loading `src` must
+ * leave a capture slightly wrong, never hang the suite. CSS background images
+ * are still out of reach; nothing in the DOM exposes their decode state.
  */
 async function paintWholeDocument(page: Page) {
   await page.evaluate(async () => {
@@ -101,6 +116,18 @@ async function paintWholeDocument(page: Page) {
       await settle();
     }
     window.scrollTo(0, 0);
+    await settle();
+
+    await Promise.all(
+      Array.from(document.images).map(
+        (image) =>
+          Promise.race([
+            image.decode().catch(() => undefined),
+            new Promise((resolve) => setTimeout(resolve, 5000)),
+          ]) as Promise<unknown>,
+      ),
+    );
+    // One more frame so anything decoded above is composited before the shot.
     await settle();
   });
   await page.evaluate(() => document.fonts.ready.then(() => true));

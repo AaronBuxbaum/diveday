@@ -112,8 +112,11 @@ for (const feature of features) {
   }
 }
 
-// Nothing outside a feature module may reach past its index.
-for (const root of ["src/app", "src/lib", "src/db", "src/components", "src/features", "e2e"]) {
+// Nothing outside a feature module may reach past its index. Scanning whole
+// roots rather than a hand-listed set of subtrees: an enumerated list silently
+// stops covering `src/i18n`, `src/test`, and any directory added later, and a
+// boundary with unwatched gaps is not a boundary.
+for (const root of ["src", "e2e", "scripts"]) {
   for (const file of await walk(root)) {
     const importerFeature = featureOf(path.normalize(file));
     const contents = await readFile(path.join(ROOT, file), "utf8");

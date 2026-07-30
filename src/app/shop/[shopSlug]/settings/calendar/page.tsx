@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -26,7 +27,8 @@ export default async function CalendarSubscriptionsPage() {
   const session = await requireStaffSession();
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return null;
+  // Matches the sibling settings pages: a blank 200 tells the reader nothing.
+  if (!shop) redirect("/");
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);

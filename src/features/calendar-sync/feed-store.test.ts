@@ -65,6 +65,47 @@ describe("issueCalendarFeed", () => {
     expect(await listCalendarFeeds(db, { shopId: shop.id, personId })).toHaveLength(2);
   });
 
+  it("cannot leave two live feeds for one person and scope, even by direct insert", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const issued = await issueCalendarFeed(db, {
+      shopId: shop.id,
+      personId,
+      scope: "assignments",
+    });
+    if (!issued) throw new Error("issue failed");
+
+    // The database, not `issueCalendarFeed`'s care, is what holds this line.
+    // Two concurrent issues could otherwise each find nothing to revoke and
+    // both insert — breaking the promise that minting a link retires the
+    // previous one. Writing the second row directly is the only way to reach
+    // that state here, since PGlite serializes connections.
+    await expect(
+      db.insert(calendarFeeds).values({
+        shopId: shop.id,
+        personId,
+        scope: "assignments",
+        tokenHash: "a".repeat(64),
+      }),
+    ).rejects.toThrow();
+
+    expect(await listCalendarFeeds(db, { shopId: shop.id, personId })).toHaveLength(1);
+  });
+
+  it("still allows a fresh feed once the previous one is revoked", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    // The uniqueness is partial — on live rows only — so a revoked row must
+    // never block re-subscribing, which is the whole rotation path.
+    for (let i = 0; i < 3; i += 1) {
+      const issued = await issueCalendarFeed(db, {
+        shopId: shop.id,
+        personId,
+        scope: "assignments",
+      });
+      expect(issued).not.toBeNull();
+    }
+    expect(await listCalendarFeeds(db, { shopId: shop.id, personId })).toHaveLength(1);
+  });
+
   it("refuses a shop-wide feed to a role that may not see the whole operation", async () => {
     const { db, shop } = await seededShopContext();
     const staff = await listStaff(db, shop.id);

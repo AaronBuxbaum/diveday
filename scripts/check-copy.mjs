@@ -93,8 +93,17 @@ const attributePattern = new RegExp(
 const textNodePattern = />([^<>{}]+)</g;
 const bracedStringPattern = /[>\s]\{\s*(?:"([^"]{2,})"|'([^']{2,})')\s*\}/g;
 
-const EXEMPT_LINE = /i18n-exempt:\s*\S/;
-const EXEMPT_FILE = /i18n-exempt-file:\s*\S/;
+/**
+ * Exemption markers, anchored to real comment syntax.
+ *
+ * Matching the bare words anywhere in the source would let a plain string —
+ * `<p>Write i18n-exempt-file: reason to skip</p>`, or a message in this very
+ * repo's docs — switch the whole check off for a file. An escape hatch that can
+ * be triggered by prose is not an escape hatch, it is a hole, so both forms
+ * must appear as `// …` or `{/* … *\/}`.
+ */
+const EXEMPT_LINE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt:\s*\S/;
+const EXEMPT_FILE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt-file:\s*\S/;
 
 /** Strips comments so their prose never reads as copy — but keeps line count. */
 function stripComments(source) {

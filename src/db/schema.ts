@@ -1821,6 +1821,22 @@ export const calendarFeeds = pgTable(
     // "Does this person already have a live feed for this scope?" — the
     // issue/rotate path and the staff settings panel both ask exactly this.
     index("calendar_feeds_person_scope_idx").on(table.personId, table.scope, table.revokedAt),
+    /**
+     * At most one *live* feed per person and scope, enforced by the database
+     * rather than by `issueCalendarFeed`'s revoke-then-insert being careful.
+     *
+     * Under READ COMMITTED, two concurrent issues for the same person+scope
+     * can each find nothing to revoke and both insert, leaving two live
+     * tokens — which quietly breaks the promise this feature is built on,
+     * that minting a link is what retires the previous one. The old token
+     * does still get revoked in every interleaving, so this is not a way to
+     * keep a leaked URL alive; it is the "issue == rotate" invariant that
+     * fails, and the settings panel would then show two subscriptions where
+     * the model says there is one.
+     */
+    uniqueIndex("calendar_feeds_live_person_scope_idx")
+      .on(table.personId, table.scope)
+      .where(sql`${table.revokedAt} IS NULL`),
   ],
 );
 

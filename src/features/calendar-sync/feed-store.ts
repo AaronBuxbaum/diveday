@@ -52,6 +52,23 @@ export async function issueCalendarFeed(
       .limit(1);
     if (!shop) return null;
 
+    // Serialize issuance for this person before reading anything else.
+    //
+    // The revoke-then-insert below is not atomic on its own: under READ
+    // COMMITTED two concurrent issues can each see nothing to revoke and both
+    // insert, leaving two live feeds where the model promises one. Locking
+    // the person row closes that window even in the common case where there
+    // is no existing feed row to lock. The partial unique index on
+    // (person_id, scope) WHERE revoked_at IS NULL is the backstop if this is
+    // ever bypassed; this lock is what keeps it from being reached.
+    const [locked] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!locked) return null;
+
     const roles = await rolesFor(tx, input.shopId, input.personId);
     const permitted = SCOPE_ROLES[input.scope];
     if (!roles.some((role) => permitted.includes(role))) return null;

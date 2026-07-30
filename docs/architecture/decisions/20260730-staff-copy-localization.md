@@ -78,7 +78,8 @@ while describing nothing.
 
 ## Consequences
 
-- The remaining debt is **1,000 strings across 110 files**, recorded in `scripts/copy-baseline.json`.
+- The remaining debt is recorded in `scripts/copy-baseline.json`, which is the source of truth
+  for the figure — **1,001 strings across 110 files** as this lands.
   That number is the honest status of "no hard-coded English", and it is now impossible to increase.
 - Marketing pages (`/`, `/product`, `/about`, `/switching/*`) are in the baseline like everything
   else. They are English-by-design today, but that is a decision to record, not a reason to hide
