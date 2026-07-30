@@ -1,7 +1,9 @@
 {
   "permissions": {
+    "defaultMode": "auto",
     "allow": [
       "ScheduleWakeup",
+      "delete",
       "mcp__Claude_Code_Remote__delete_trigger",
       "mcp__Claude_Code_Remote__update_trigger",
       "mcp__Claude_Code_Remote__create_trigger",

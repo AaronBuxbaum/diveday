@@ -29,6 +29,13 @@ export class InfraStack extends cdk.Stack {
       ],
       websiteIndexDocument: "index.html",
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      lifecycleRules: [
+        {
+          id: "expire-old-visual-snapshots",
+          enabled: true,
+          expiration: cdk.Duration.days(7),
+        },
+      ],
     });
 
     // 2. Create IAM User for reg-suit
