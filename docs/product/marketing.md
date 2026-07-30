@@ -7,8 +7,9 @@ exists today.
 
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
-current direction is [assessments/marketing-review.md](assessments/marketing-review.md); the
-step-by-step editing procedure is the `marketing-page` skill.
+current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
+(fully delivered, kept for rationale); the step-by-step editing procedure is the `marketing-page`
+skill.
 
 **These pages are product surface.** DiveDay is developed exclusively by AI sessions, so marketing
 has no separate team, tooling, or CMS: copy is code, reviewed like code, tested like code
@@ -57,7 +58,9 @@ chosen battlegrounds — and re-read it before changing the spine.
   line, routed to the `aaron@dive.day` inbox — the same promise the "You can reach the founder"
   section on `/about` already made in prose, now with a real `mailto:` CTA. It appears on `/about`,
   the marketing footer, `/pricing`, and the signed-in shop settings page, always framed as a person
-  who wants to hear from you, never a support ticket queue.
+  who wants to hear from you, never a support ticket queue. `/onboard` states the same promise as a
+  founding-shop reassurance without its own `mailto:` — the sign-up form is not the place to offer
+  an exit from the form.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
@@ -146,6 +149,24 @@ substrate:
 - Before touching metadata APIs, read the bundled Next docs (`node_modules/next/dist/docs/`) — this
   Next version's conventions differ from training data.
 
+## Measuring which story converts
+
+Page views alone can't tell us whether a page persuaded anyone, so both marketing conversions are
+typed events in `src/lib/analytics.ts`, each carrying the same short `source` slug naming the page
+that sent the visitor:
+
+| Event | Fired by | Meaning |
+| --- | --- | --- |
+| `demo_entered` | `src/app/actions/demo.ts` | A skeptic chose to look — the low-commitment half |
+| `trial_started` | `src/app/onboard/actions.ts` | A shop of their own now exists — the committed half |
+
+Every demo form carries a hidden `source`; every "Start a trial" link carries the same slug as
+`/onboard?from=<slug>`, which the sign-up form hands back to the action. The slug is
+visitor-supplied, so it passes through `eventSource()` and anything outside the short slug shape
+becomes `unknown` rather than entering the event stream. **Adding a marketing CTA means tagging
+it** — an untagged link is a conversion we can't attribute. Read the pair per surface: a page with
+demo entries and no trials is telling you something different from a page with neither.
+
 ## Product visuals
 
 The public pages ship deterministic illustrated mockups as the design — not captured screenshots.
@@ -172,6 +193,7 @@ them) is a deliberate, ADR-gated decision if the mockups ever stop being enough.
 | Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`) |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the only place |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) |
+| Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` |
 | Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx` |
 | Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` |

@@ -86,7 +86,7 @@ export default async function SignInPage({
           </form>
           <p className="mt-4 text-center text-sm text-muted">
             Need a shop?{" "}
-            <Link href="/onboard" className="text-primary font-medium hover:underline">
+            <Link href="/onboard?from=sign-in" className="text-primary font-medium hover:underline">
               Create a shop
             </Link>
           </p>

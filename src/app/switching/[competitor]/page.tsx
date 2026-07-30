@@ -280,7 +280,7 @@ export default async function MigrationGuidePage({
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href={`/onboard?from=switching-${competitor}`}
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

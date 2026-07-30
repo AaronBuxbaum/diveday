@@ -52,7 +52,7 @@ export async function MarketingNav() {
             </Link>
           )}
           <Link
-            href="/onboard"
+            href="/onboard?from=nav"
             className={buttonClass({ className: "font-semibold whitespace-nowrap" })}
           >
             Start a trial

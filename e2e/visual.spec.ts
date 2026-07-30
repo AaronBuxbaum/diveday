@@ -106,7 +106,7 @@ for (const scheme of ["light", "dark"] as const) {
       ownerStorageState,
       request,
     }) => {
-      // 19 navigate+capture surfaces (38 screenshots) plus a real send-waiver
+      // 20 navigate+capture surfaces (40 screenshots) plus a real send-waiver
       // action and a real booking, all in one test — comfortably past the
       // suite's 15s default, which is sized for a single real flow, not a
       // full site tour. Without this override the run was flaky: whichever
@@ -125,6 +125,11 @@ for (const scheme of ["light", "dark"] as const) {
 
       await page.goto("/pricing");
       await capture(page, "pricing", scheme);
+
+      // Where the trial actually starts: the form plus the reassurance block a
+      // skeptical owner reads before typing a password.
+      await page.goto("/onboard");
+      await capture(page, "onboard", scheme);
 
       await page.goto("/sign-in");
       await capture(page, "sign-in", scheme);

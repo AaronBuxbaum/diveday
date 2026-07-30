@@ -321,7 +321,7 @@ export default function AboutPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href="/onboard?from=about-closing"
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

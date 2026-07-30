@@ -7,7 +7,7 @@ import { getDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
-import { trackEvent } from "@/lib/analytics";
+import { eventSource, trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -23,11 +23,7 @@ import { requireStaffSession } from "@/lib/session";
  * from.
  */
 export async function enterDemoAction(formData?: FormData) {
-  const sourceField = formData?.get("source");
-  await trackEvent({
-    name: "demo_entered",
-    source: typeof sourceField === "string" && sourceField !== "" ? sourceField : "unknown",
-  });
+  await trackEvent({ name: "demo_entered", source: eventSource(formData?.get("source")) });
 
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
   // total growth, this bounds the burst one visitor can drive.

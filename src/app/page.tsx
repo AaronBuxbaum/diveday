@@ -252,7 +252,7 @@ export default function Home() {
                   </SubmitButton>
                 </form>
                 <Link
-                  href="/onboard"
+                  href="/onboard?from=home-closing"
                   className={buttonClass({
                     variant: "secondary",
                     size: "cta",

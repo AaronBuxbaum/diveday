@@ -15,8 +15,9 @@ Delight is this product's differentiator — this review is where that stops bei
    ```bash
    pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'about page'
    ```
-   Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored). `scripts/screenshot.mjs` is the
-   other route in, and uses the same phone/desktop widths.
+   Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored) — every capture is written at
+   both the phone and desktop widths in `VIEWPORTS`. A surface with no capture group yet needs one
+   adding (see `e2e-and-visual`) before it can be reviewed this way.
 3. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)

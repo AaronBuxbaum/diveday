@@ -97,7 +97,7 @@ export default function SwitchHubPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href="/onboard?from=switching-hub"
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

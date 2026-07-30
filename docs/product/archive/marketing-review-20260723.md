@@ -1,5 +1,13 @@
 # Marketing review — the case for repositioning the public pages
 
+> ## 📦 Archived — delivered, retained for rationale
+>
+> Every task in the breakdown below (M1–M8) shipped; the last of them, M8, landed 2026-07-30. The
+> positioning this review argued for — *easy to try, safe to run the boat on, safe to leave* — is now
+> the live rulebook in [marketing.md](../marketing.md), which is where a session editing the public
+> pages should go. This file is kept for the reasoning behind the spine, not as a task list. The
+> conditions for revisiting it are unchanged and restated under **Measure** at the bottom.
+
 > A full review of the public marketing surfaces (`/`, `/product`, `/pricing`, `/onboard`) from the
 > chair of a skeptical shop owner, written 2026-07-23 against the live pages (screenshots, light +
 > dark, desktop + phone), the codebase, and the two competitive assessments. An assessment, not a
@@ -36,7 +44,7 @@ shops"). They have to win the only three ways available to an unproven vendor:
 
 "Run the whole dive day, from booking to head count" and "everything the shop needs" are sentences
 DiveAdmin and DiveShop360 can (and do) also say. Meanwhile the things
-[competitive-strategy.md](competitive-strategy.md) verified we *actually win on* are absent or
+[competitive-strategy.md](../assessments/competitive-strategy.md) verified we *actually win on* are absent or
 buried:
 
 - **Boat-day depth** — roll-call checkpoints, append-only history, an offline manifest that keeps
@@ -70,7 +78,7 @@ For a no-brand entrant, search and shared links are the only free inbound channe
 ### 3. The objection layer answers easy questions, not deal-killers
 
 The pricing FAQ (4 items) answers "what's included" and "does the manifest work offline". The
-questions that actually kill the deal, per [competitive-analysis.md](competitive-analysis.md#what-blocks-the-purchase),
+questions that actually kill the deal, per [competitive-analysis.md](../assessments/competitive-analysis.md#what-blocks-the-purchase),
 go unanswered:
 
 - **"You're new and unproven — what happens to my data if you fold?"** We have the best possible
@@ -134,13 +142,13 @@ push). Copy touching safety claims (readiness, manifest, medical) gets `dive-dom
 | # | Task | Size | Notes |
 | --- | --- | --- | --- |
 | M1 | ✅ *(shipped 2026-07-24)* **SEO substrate**: `metadataBase` + canonicals; page-level metadata for `/` (title leads with "dive shop software"); OG/Twitter images (generated, on-brand, both modes considered); `robots.ts` + `sitemap.ts`; `FAQPage` JSON-LD on `/pricing`, `SoftwareApplication` on `/` | S | Read the bundled Next docs (`node_modules/next/dist/docs/`) before touching metadata APIs — conventions differ from training data. Price in JSON-LD must read from `src/lib/marketing.ts` |
-| M2 | ✅ *(shipped 2026-07-24; trial-start event deferred — `src/app/onboard` was owned by a parallel PR)* **Demo CTA parity + funnel events**: demo CTA on `/product` and `/pricing`; Vercel Analytics custom events on demo entry, trial start, pricing view | S | Defines the measurement baseline before any copy changes, so Move 2 is testable |
+| M2 | ✅ *(shipped 2026-07-24; the deferred trial-start event landed with M8 on 2026-07-30)* **Demo CTA parity + funnel events**: demo CTA on `/product` and `/pricing`; Vercel Analytics custom events on demo entry, trial start, pricing view | S | Defines the measurement baseline before any copy changes, so Move 2 is testable |
 | M3 | ✅ *(shipped 2026-07-24)* **Home repositioning**: hero + section order tell try/run/leave; add a "Your data leaves with you" band (export ZIP + importer, factual); convert "early access" badge into the founding-shop offer | M | Claims limited to shipped behavior; price still only from `src/lib/marketing.ts` (H-12 gate) |
 | M4 | ✅ *(shipped 2026-07-24)* **Objection FAQ**: add the deal-killer questions (new-vendor/data exit, PADI, POS concession, switching cost, founding-shop terms) to `/pricing`; concede POS and agency sync plainly | S | The honest-no answers are the trust device; `dive-domain-expert` for cert/medical wording |
 | M5 | ✅ *(shipped 2026-07-24)* **Product page truth pass**: scope the hero claim to booking→head-count; add the diver arc (night-before brief, recap) as a marketing moment; demo CTA | S | |
 | M6 | ✅ *(shipped earlier — see shipped.md)* **"Switching from EVE" guide** at `/switching/eve`: incumbent export click-path, honesty table from the importer ADR, importer walkthrough, demo CTA; sitemap + metadata | M | Template for the series; factual, sourced, no disparagement beyond documented fact |
 | M7 | ✅ *(shipped earlier — see shipped.md)* **Remaining switching guides**: DiveShop360, DiveAdmin, Smartwaiver | M | Page-by-page, reusing the M6 template |
-| M8 | **Onboard reassurance**: no-card/leave-anytime line on `/onboard`; carry the founding-shop framing through | S | Still open; `src/app/onboard` was owned by a parallel PR when M1–M5 shipped |
+| M8 | ✅ *(shipped 2026-07-30)* **Onboard reassurance**: three checkable reassurances beside the sign-up form (no card/no setup fee, the day-one export, the founder-direct line), a founding-shop eyebrow, and the page's own metadata/canonical. Also closed M2's deferred half: a typed `trial_started` event, with every "Start a trial" link now carrying `?from=<page>` so demo-vs-trial reads per surface | S | |
 
 **Human gate (not an agent task):** the price number and terms remain provisional until H-12 is
 decided ([human-decisions.md](../human-decisions.md)); nothing above publishes the price anywhere

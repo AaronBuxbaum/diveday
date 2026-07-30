@@ -25,7 +25,7 @@ export function HomeCTA({ enterDemoAction }: HomeCTAProps) {
           </SubmitButton>
         </form>
         <Link
-          href="/onboard"
+          href="/onboard?from=home-hero"
           className={buttonClass({
             variant: "secondary",
             size: "cta",

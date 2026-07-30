@@ -325,7 +325,7 @@ export default function SpreadsheetSwitchPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href="/onboard?from=switching-spreadsheet"
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

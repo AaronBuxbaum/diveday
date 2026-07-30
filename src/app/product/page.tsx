@@ -328,7 +328,7 @@ export default function ProductPage() {
                 </SubmitButton>
               </form>
               <Link
-                href="/onboard"
+                href="/onboard?from=product"
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",

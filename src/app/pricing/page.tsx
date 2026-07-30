@@ -138,7 +138,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <Link
-              href="/onboard"
+              href="/onboard?from=pricing"
               className={buttonClass({
                 size: "cta",
                 className: "mt-8 w-full",

@@ -324,8 +324,18 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   cost); demo CTA on every sales page with a typed `demo_entered` funnel event; sitewide
   `metadataBase`/canonicals/OG card image, `robots.ts` + `sitemap.ts`, and `FAQPage` +
   `SoftwareApplication` JSON-LD reading price from `src/lib/marketing.ts`
-  ([marketing.md](marketing.md), [assessments/marketing-review.md](assessments/marketing-review.md)
-  M1–M5).
+  ([marketing.md](marketing.md),
+  [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md) M1–M5).
+- **Sign-up reassurance + the trial half of the funnel** (2026-07-30) — `/onboard` stops asking for
+  a password cold: a founding-shop eyebrow and three checkable reassurances beside the form (no
+  card and no setup fee, the one-ZIP export that works on day one rather than only on the last, the
+  founder-direct line), plus the page-level description/canonical/OG card every other public page
+  already had. The funnel now measures both halves: a typed `trial_started` event fires when a shop
+  is actually created, every "Start a trial" link carries `?from=<page>`, and the visitor-supplied
+  tag passes through `eventSource()` so only the slug vocabulary our pages emit reaches the event
+  stream. Closes the last two items of the 2026-07-23 marketing review
+  ([archive/marketing-review-20260723.md](archive/marketing-review-20260723.md) M8 and M2's deferred
+  trial-start event), which is now fully delivered and archived.
 - **Night-before brief + post-trip recap** — the 24-hour reminder becomes a plain-language
   night-before brief (conditions, what to bring, dock time, who to text; softer first-timer voice),
   and after departure an automatic `/recap/[token]` gives each diver a shareable page of the sites
