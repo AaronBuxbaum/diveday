@@ -57,20 +57,52 @@ export class InfraStack extends cdk.Stack {
       userName: user.userName,
     });
 
-    // 5. Create a dedicated CDK Deployer user for managing all future infrastructure
+    // 5. Create a dedicated CDK Deployer user for managing all future infrastructure.
+    //
+    // This user holds no direct AWS permissions of its own. `cdk bootstrap`
+    // provisions deploy-role/file-publishing-role/image-publishing-role/lookup-role
+    // in this account, each already scoped to exactly what CDK deploys need;
+    // the deployer just needs to assume them. That keeps a compromised or
+    // leaked deployer credential bounded by those roles instead of by
+    // AdministratorAccess.
     const deployerUser = new iam.User(this, "CdkDeployerUser", {
       userName: "cdk-deployer",
     });
 
-    // Attach AdministratorAccess managed policy to the deployer user
-    deployerUser.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess"),
+    // Read the qualifier the exact same way the stack's own synthesizer
+    // resolves it, so this can never drift from what `cdk bootstrap` /
+    // `cdk deploy` actually use — no hardcoded "hnb659fds" to fall out of
+    // sync if someone later sets the context override or bootstraps with
+    // `--qualifier`.
+    const bootstrapQualifier: string =
+      this.node.tryGetContext("@aws-cdk/core:bootstrapQualifier") ??
+      cdk.DefaultStackSynthesizer.DEFAULT_QUALIFIER;
+    const bootstrapRoleArn = (roleName: string) =>
+      `arn:${this.partition}:iam::${this.account}:role/cdk-${bootstrapQualifier}-${roleName}-${this.account}-${this.region}`;
+
+    deployerUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "AssumeCdkBootstrapRoles",
+        actions: ["sts:AssumeRole"],
+        resources: [
+          bootstrapRoleArn("deploy-role"),
+          bootstrapRoleArn("file-publishing-role"),
+          bootstrapRoleArn("image-publishing-role"),
+          bootstrapRoleArn("lookup-role"),
+        ],
+      }),
     );
 
-    // Create Access Key for the deployer user
-    const deployerAccessKey = new iam.CfnAccessKey(this, "CdkDeployerAccessKey", {
-      userName: deployerUser.userName,
-    });
+    deployerUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadStackStatusAndBootstrapVersion",
+        actions: ["cloudformation:DescribeStacks", "ssm:GetParameter"],
+        resources: [
+          `arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/*/*`,
+          `arn:${this.partition}:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/${bootstrapQualifier}/version`,
+        ],
+      }),
+    );
 
     // Outputs for reg-suit
     new cdk.CfnOutput(this, "S3BucketName", {
@@ -93,15 +125,10 @@ export class InfraStack extends cdk.Stack {
       description: "AWS Secret Access Key for the reg-suit IAM user",
     });
 
-    // Outputs for CDK Deployer
-    new cdk.CfnOutput(this, "CdkDeployerAccessKeyId", {
-      value: deployerAccessKey.ref,
-      description: "AWS Access Key ID for the cdk-deployer IAM user",
-    });
-
-    new cdk.CfnOutput(this, "CdkDeployerSecretAccessKey", {
-      value: deployerAccessKey.attrSecretAccessKey,
-      description: "AWS Secret Access Key for the cdk-deployer IAM user",
+    new cdk.CfnOutput(this, "CdkDeployerAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${deployerUser.userName}`,
+      description:
+        "Instructions for generating the access key for the cdk-deployer IAM user. Do not store in plaintext!",
     });
   }
 }

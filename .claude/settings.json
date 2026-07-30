@@ -13,6 +13,7 @@
       "mcp__Claude_Code_Remote__subscribe_pr_activity",
       "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
       "mcp__Claude_Code_Remote__send_later",
+      "mcp__Claude_Code_Remote__:*",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
       "Bash(pnpm format)",
@@ -47,7 +48,10 @@
       "mcp__github__get_file_contents",
       "mcp__github__list_commits",
       "mcp__github__get_commit",
-      "mcp__github__subscribe_pr_activity"
-    ]
+      "mcp__github__subscribe_pr_activity",
+      "mcp__github__unsubscribe_pr_activity",
+      "mcp__github__:*"
+    ],
+    "deny": ["Bash(pnpm infra:*)", "Bash(cdk:*)", "Bash(aws:*)"]
   }
 }
