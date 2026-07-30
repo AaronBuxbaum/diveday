@@ -10,9 +10,12 @@
     "reg-publish-s3-plugin": {
       "bucketName": "$REG_SUIT_S3_BUCKET_NAME",
       "enableACL": false,
-      "credentials": {
-        "accessKeyId": "$REG_SUIT_AWS_ACCESS_KEY_ID",
-        "secretAccessKey": "$REG_SUIT_AWS_SECRET_ACCESS_KEY"
+      "sdkOptions": {
+        "region": "us-east-1",
+        "credentials": {
+          "accessKeyId": "$REG_SUIT_AWS_ACCESS_KEY_ID",
+          "secretAccessKey": "$REG_SUIT_AWS_SECRET_ACCESS_KEY"
+        }
       }
     },
     "reg-notify-github-plugin": {
