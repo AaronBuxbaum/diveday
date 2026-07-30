@@ -96,7 +96,13 @@
     "siteFitWelcomingLabel": "Welcoming dive",
     "siteFitWelcomingDetail": "The published depth and water movement make this an approachable crew-led day.",
     "siteFitUnknownLabel": "Ask the crew about fit",
-    "siteFitUnknownDetail": "The crew adapts the route to the group and the day. The facts below are the useful starting point."
+    "siteFitUnknownDetail": "The crew adapts the route to the group and the day. The facts below are the useful starting point.",
+    "backToAllTrips": "All trips",
+    "conditionsHoldHeading": "This trip is on a conditions hold",
+    "conditionsHoldBody": "The crew is watching the weather and will make the final call. Existing seats stay held; new bookings are paused for now.",
+    "conditionsChangedHeading": "Conditions changed since you booked",
+    "conditionsChangedBody": "The crew has published a newer read for this day. Review it below; the final route and go/no-go call still happen at the dock.",
+    "bookAndSpotsLeft": "Book · {count} left"
   },
   "booking": {
     "heading": "Grab a spot",
@@ -374,7 +380,27 @@
     "finSize": "Fin size",
     "weightSetup": "Usual weight setup",
     "anythingElse": "Anything else the crew should know?",
-    "savingFit": "Saving fit…"
+    "savingFit": "Saving fit…",
+    "introBody": "Tell the crew what you'd like to rent and roughly what size. We keep it on file for next time, and they'll confirm fit and weighting with you at the dock.",
+    "savedNote": "Saved. The crew will see this when they pack, and check the fit with you at the dock.",
+    "tankPlan": "{count, plural, one {We plan one tank per dive, so # tank for this trip.} other {We plan one tank per dive, so # tanks for this trip.}}",
+    "fullSetOffer": "A full set includes {set}. Take it for {price}, or pick pieces above.",
+    "estimatedRental": "Estimated rental: {price} per person.",
+    "estimatedRentalWithExtras": "Estimated rental: {price} per person — plus a few items settled at the shop.",
+    "confirmAtDock": "We'll confirm at the dock.",
+    "nitroxLegend": "Nitrox",
+    "nitroxReserveWithPrice": "Reserve nitrox-compatible tanks for me — {price} per dive",
+    "nitroxReserveNoPrice": "Reserve nitrox-compatible tanks for me — charged per dive",
+    "nitroxVerifiedNote": "The crew will set aside nitrox-compatible tanks. You'll analyze your own tanks and sign for the mix at the fill station, as always.",
+    "nitroxNeedsVerification": "We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send the shop a photo of your card or get in touch and they'll add it. Until then, the crew will plan standard air tanks.",
+    "nitroxVerificationRequired": "A verified nitrox card is needed before the crew can reserve nitrox-compatible tanks.",
+    "bcdSize": "BCD size",
+    "bootSizePlaceholder": "US 9 / EU 42",
+    "finSizePlaceholder": "M/L",
+    "weightPlaceholder": "e.g. 16 lb with a 3 mm suit",
+    "saveFit": "Save rental fit",
+    "bcdIconLabel": "BCD",
+    "finIconLabel": "Fin"
   },
   "party": {
     "numberOfDivers": "Number of divers",

@@ -25,6 +25,7 @@ import {
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestTranslator } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import {
@@ -42,7 +43,7 @@ import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, toTimeInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
-import { type BuilderDay, ScheduleBuilder } from "./_components/ScheduleBuilder";
+import { type BuilderCopy, type BuilderDay, ScheduleBuilder } from "./_components/ScheduleBuilder";
 import {
   addDepartureAction,
   duplicateDepartureAction,
@@ -79,45 +80,30 @@ export async function generateMetadata({
 }
 
 /**
- * What the board says after a builder action. Every outcome gets a sentence —
- * including the refusals, which are the interesting ones: a departure that
- * won't move or won't delete is protecting a roster or a head count, and the
- * staff member needs to know which, not just that nothing happened.
+ * What the board says after a builder action, keyed by the `outcome.reason`
+ * code the mutation returns (see `moveTrip`/`duplicateTrip`/`deleteTrip` in
+ * src/db/trips.ts). Every outcome gets a sentence — including the refusals,
+ * which are the interesting ones: a departure that won't move or won't delete
+ * is protecting a roster or a head count, and the staff member needs to know
+ * which, not just that nothing happened. The message itself is a lookup into
+ * the staff bundle, never English baked into this map (docs `i18n-copy` skill).
  */
-const BUILDER_NOTICES: Record<string, { tone: "success" | "danger" | "warning"; message: string }> =
-  {
-    added: { tone: "success", message: "It’s on the board." },
-    moved: { tone: "success", message: "Moved." },
-    copied: { tone: "success", message: "Copied — the new departure has no divers or crew yet." },
-    removed: { tone: "success", message: "Taken off the board." },
-    invalid: {
-      tone: "danger",
-      message: "That didn’t save — check the date, times, and seats, then try again.",
-    },
-    "end-before-start": {
-      tone: "danger",
-      message: "The trip has to end after it starts — check the times.",
-    },
-    "not-authorized": {
-      tone: "danger",
-      message: "Building the board is limited to owners, managers, and instructors.",
-    },
-    "not-found": { tone: "danger", message: "That departure is no longer on the board." },
-    "not-scheduled": {
-      tone: "warning",
-      message: "A cancelled trip can’t be moved. Reinstate it from its own page first.",
-    },
-    "already-sailed": {
-      tone: "warning",
-      message:
-        "The crew has already counted heads against this departure, so it stays where it is. Cancel it from its own page if the day is off.",
-    },
-    "has-roster": {
-      tone: "warning",
-      message:
-        "Divers have booked this departure, so it can’t be deleted. Cancel it from its own page — that keeps the roster and the refund story.",
-    },
-  };
+const BUILDER_NOTICE_KEYS: Record<
+  string,
+  { tone: "success" | "danger" | "warning"; key: StaffMessageKey }
+> = {
+  added: { tone: "success", key: "schedule.notices.added" },
+  moved: { tone: "success", key: "schedule.notices.moved" },
+  copied: { tone: "success", key: "schedule.notices.copied" },
+  removed: { tone: "success", key: "schedule.notices.removed" },
+  invalid: { tone: "danger", key: "schedule.notices.invalid" },
+  "end-before-start": { tone: "danger", key: "schedule.notices.endBeforeStart" },
+  "not-authorized": { tone: "danger", key: "schedule.notices.notAuthorized" },
+  "not-found": { tone: "danger", key: "schedule.notices.notFound" },
+  "not-scheduled": { tone: "warning", key: "schedule.notices.notScheduled" },
+  "already-sailed": { tone: "warning", key: "schedule.notices.alreadySailed" },
+  "has-roster": { tone: "warning", key: "schedule.notices.hasRoster" },
+};
 
 export default async function TripsPage({
   params,
@@ -149,6 +135,10 @@ export default async function TripsPage({
   // so a shop with hundreds of departures on the books stays quick.
   const tz = shop.timezone;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
+  // The staff board is the only staff-only content on this otherwise
+  // diver-facing page (see route map): its copy comes from the staff bundle,
+  // never the diver `t` above, even though both share the same negotiated locale.
+  const st = staffTranslator(locale);
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
   const now = nowDate();
   const [range, stats, { trips: upcoming, nextCursor }, reviewAggregate, reviews] =
@@ -206,13 +196,63 @@ export default async function TripsPage({
       ])
     : [
         false,
+        // i18n-exempt: generic-type literal, not copy — scanner false positive.
         new Map<string, number>(),
         new Map<string, Array<{ id: string; name: string }>>(),
         [],
         [],
       ];
 
-  const builderNotice = builder ? BUILDER_NOTICES[builder] : undefined;
+  const builderNoticeEntry = builder ? BUILDER_NOTICE_KEYS[builder] : undefined;
+  const builderNotice = builderNoticeEntry
+    ? { tone: builderNoticeEntry.tone, message: st(builderNoticeEntry.key) }
+    : undefined;
+  const builderCopy: BuilderCopy = {
+    heading: st("schedule.builder.heading"),
+    description: st("schedule.builder.description"),
+    ariaLabel: st("schedule.builder.ariaLabel"),
+    addDeparture: st("schedule.builder.addDeparture"),
+    addDepartureOnDay: st("schedule.builder.addDepartureOnDay"),
+    add: st("schedule.builder.add"),
+    cancel: st("schedule.builder.cancel"),
+    noSiteSetYet: st("schedule.builder.noSiteSetYet"),
+    courseLabel: st("schedule.builder.courseLabel"),
+    dayCountLabel: st("schedule.builder.dayCountLabel"),
+    crewLabel: st("schedule.builder.crewLabel"),
+    crewNobodyYet: st("schedule.builder.crewNobodyYet"),
+    move: st("schedule.builder.move"),
+    moveAria: st("schedule.builder.moveAria"),
+    copy: st("schedule.builder.copy"),
+    copyAria: st("schedule.builder.copyAria"),
+    remove: st("schedule.builder.remove"),
+    removeAria: st("schedule.builder.removeAria"),
+    removeConfirm: st("schedule.builder.removeConfirm"),
+    removePending: st("schedule.builder.removePending"),
+    whatIsIt: st("schedule.builder.whatIsIt"),
+    titlePlaceholder: st("schedule.builder.titlePlaceholder"),
+    date: st("schedule.builder.date"),
+    departs: st("schedule.builder.departs"),
+    returns: st("schedule.builder.returns"),
+    seats: st("schedule.builder.seats"),
+    dives: st("schedule.builder.dives"),
+    course: st("schedule.builder.course"),
+    optional: st("schedule.builder.optional"),
+    diveSite: st("schedule.builder.diveSite"),
+    ordinaryTrip: st("schedule.builder.ordinaryTrip"),
+    decideLater: st("schedule.builder.decideLater"),
+    adding: st("schedule.builder.adding"),
+    putOnBoard: st("schedule.builder.putOnBoard"),
+    newDate: st("schedule.builder.newDate"),
+    multiDayNote: st("schedule.builder.multiDayNote"),
+    newDepartureTime: st("schedule.builder.newDepartureTime"),
+    moving: st("schedule.builder.moving"),
+    moveIt: st("schedule.builder.moveIt"),
+    copyTo: st("schedule.builder.copyTo"),
+    copyDescription: st("schedule.builder.copyDescription"),
+    departureTime: st("schedule.builder.departureTime"),
+    copying: st("schedule.builder.copying"),
+    copyIt: st("schedule.builder.copyIt"),
+  };
 
   const builderDays: BuilderDay[] = [];
   for (const trip of staffView ? upcoming : []) {
@@ -307,7 +347,7 @@ export default async function TripsPage({
                 href={`/shop/${shopSlug}/trips/new`}
                 className={buttonClass({ className: "rounded-xl" })}
               >
-                Full trip form
+                {st("schedule.fullTripForm")}
               </Link>
             ) : undefined
           }
@@ -315,26 +355,30 @@ export default async function TripsPage({
       )}
       {staffView && stats ? (
         <section
-          aria-label="Schedule overview"
+          aria-label={st("schedule.overview.ariaLabel")}
           className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
           <ShopStat
-            label="Departures"
+            label={st("schedule.overview.departures")}
             value={stats.departures}
-            detail="Upcoming trips and sessions"
+            detail={st("schedule.overview.departuresDetail")}
             tone="primary"
           />
-          <ShopStat label="Booked" value={stats.booked} detail="Divers across all departures" />
           <ShopStat
-            label="Open seats"
+            label={st("schedule.overview.booked")}
+            value={stats.booked}
+            detail={st("schedule.overview.bookedDetail")}
+          />
+          <ShopStat
+            label={st("schedule.overview.openSeats")}
             value={stats.openSeats}
-            detail="Available across the board"
+            detail={st("schedule.overview.openSeatsDetail")}
             tone="success"
           />
           <ShopStat
-            label="At capacity"
+            label={st("schedule.overview.atCapacity")}
             value={stats.atCapacity}
-            detail="Trips with no open seats"
+            detail={st("schedule.overview.atCapacityDetail")}
           />
         </section>
       ) : null}
@@ -357,6 +401,7 @@ export default async function TripsPage({
           diveSites={builderDiveSites}
           defaultDateIso={builderDays[0]?.dateIso ?? todayIso}
           canConfigure={canConfigure}
+          copy={builderCopy}
           actions={{
             add: addDepartureAction.bind(null, shopSlug),
             move: moveDepartureAction.bind(null, shopSlug),
@@ -391,7 +436,7 @@ export default async function TripsPage({
                 href={`/shop/${shopSlug}/trips/new`}
                 className={buttonClass({ className: "mt-4 rounded-xl" })}
               >
-                Schedule a trip
+                {st("schedule.scheduleTrip")}
               </Link>
             </>
           ) : (

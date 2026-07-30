@@ -96,7 +96,13 @@
     "siteFitWelcomingLabel": "Inmersión acogedora",
     "siteFitWelcomingDetail": "La profundidad y la corriente publicadas hacen de esta una jornada asequible guiada por la tripulación.",
     "siteFitUnknownLabel": "Consulta a la tripulación",
-    "siteFitUnknownDetail": "La tripulación adapta la ruta al grupo y al día. Los datos de abajo son un buen punto de partida."
+    "siteFitUnknownDetail": "La tripulación adapta la ruta al grupo y al día. Los datos de abajo son un buen punto de partida.",
+    "backToAllTrips": "Todas las salidas",
+    "conditionsHoldHeading": "Esta salida está en espera por las condiciones",
+    "conditionsHoldBody": "La tripulación está siguiendo el tiempo y dará la decisión final. Las plazas ya reservadas se mantienen; las nuevas reservas están pausadas por ahora.",
+    "conditionsChangedHeading": "Las condiciones cambiaron desde que reservaste",
+    "conditionsChangedBody": "La tripulación ha publicado una lectura más reciente para este día. Revísala abajo; la ruta final y la decisión de salir o no se confirman igualmente en el muelle.",
+    "bookAndSpotsLeft": "Reservar · quedan {count}"
   },
   "booking": {
     "heading": "Reserva tu plaza",
@@ -374,7 +380,27 @@
     "finSize": "Talla de aletas",
     "weightSetup": "Lastre habitual",
     "anythingElse": "¿Algo más que deba saber la tripulación?",
-    "savingFit": "Guardando…"
+    "savingFit": "Guardando…",
+    "introBody": "Dile a la tripulación qué te gustaría alquilar y más o menos qué talla. Lo guardamos para la próxima vez, y confirmarán el ajuste y el lastre contigo en el muelle.",
+    "savedNote": "Guardado. La tripulación lo verá al preparar el equipo y confirmará el ajuste contigo en el muelle.",
+    "tankPlan": "{count, plural, one {Planeamos un tanque por inmersión, así que # tanque para esta salida.} other {Planeamos un tanque por inmersión, así que # tanques para esta salida.}}",
+    "fullSetOffer": "Un equipo completo incluye {set}. Llévatelo por {price}, o elige piezas sueltas arriba.",
+    "estimatedRental": "Alquiler estimado: {price} por persona.",
+    "estimatedRentalWithExtras": "Alquiler estimado: {price} por persona — más algunas piezas que se acuerdan en el centro.",
+    "confirmAtDock": "Lo confirmaremos en el muelle.",
+    "nitroxLegend": "Nitrox",
+    "nitroxReserveWithPrice": "Reservar tanques compatibles con nitrox para mí — {price} por inmersión",
+    "nitroxReserveNoPrice": "Reservar tanques compatibles con nitrox para mí — se cobra por inmersión",
+    "nitroxVerifiedNote": "La tripulación reservará tanques compatibles con nitrox. Analizarás tus propios tanques y firmarás la mezcla en la estación de llenado, como siempre.",
+    "nitroxNeedsVerification": "Necesitamos una tarjeta de nitrox verificada antes de poder reservar tanques compatibles con nitrox. Envía al centro una foto de tu tarjeta o contacta con ellos para que la añadan. Mientras tanto, la tripulación planeará tanques de aire estándar.",
+    "nitroxVerificationRequired": "Se necesita una tarjeta de nitrox verificada antes de que la tripulación pueda reservar tanques compatibles con nitrox.",
+    "bcdSize": "Talla de chaleco",
+    "bootSizePlaceholder": "US 9 / EU 42",
+    "finSizePlaceholder": "M/L",
+    "weightPlaceholder": "p. ej. 7 kg con un traje de 3 mm",
+    "saveFit": "Guardar equipo de alquiler",
+    "bcdIconLabel": "Chaleco",
+    "finIconLabel": "Aleta"
   },
   "party": {
     "numberOfDivers": "Número de buceadores",
