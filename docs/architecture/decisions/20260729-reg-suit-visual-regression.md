@@ -34,3 +34,14 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
 - **Git repository clean:** Visual baselines are stored externally in S3, avoiding repository size growth.
 - **AWS S3 dependency:** Running the visual regression suite requires `$REG_SUIT_AWS_ACCESS_KEY_ID`, `$REG_SUIT_AWS_SECRET_ACCESS_KEY`, and an S3 bucket named by `$REG_SUIT_S3_BUCKET_NAME` (all set from repository secrets in `.github/workflows/ci.yml`). Without them `pnpm visual` still captures the screenshots; only the comparison step needs the bucket.
 - **Fast runtimes:** Parallel screenshot capture in Playwright coupled with `reg-suit`'s fast image comparison engine ensures quick feedback loops.
+- **The CI job needs a real branch and real history.** Keys come from git, not from
+  the CI event: `reg-keygen-git-hash-plugin` reads HEAD for the actual key and walks
+  back to this commit's *parent* for the expected one. A default `actions/checkout`
+  breaks both — on a `pull_request` it lands on a detached merge commit, and
+  `fetch-depth: 1` leaves no parent to reach. The failure is loud but misleading:
+  every screenshot reports as *new* rather than compared (so the diff count is a
+  reassuring zero) and the job then dies on "Fail to detect the current branch"
+  without having looked at a pixel. The `visual` job therefore checks out
+  `${{ github.head_ref || github.ref_name }}` at `fetch-depth: 0`. If this job ever
+  goes red with zero changed items and a git error, this is why — read the log
+  before assuming the baseline moved.
