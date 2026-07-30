@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { SPECIALTY_LABELS } from "@/lib/readiness";
@@ -23,29 +24,28 @@ export function SpecialtyCards({
   shopSlug,
   personId,
   shop,
+  locale,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
   shop: Shop;
+  locale: string;
 }) {
+  const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="specialty-heading" className="text-lg font-semibold">
-            Specialty cards
+            {t("divers.specialty.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            Specialty cards live with the diver. A verified Nitrox card — confirmed here if it was
-            imported — is required before an EANx fill or tank handoff. An imported card clears the
-            dive or fill it allows once you confirm you&apos;ve seen it.
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
         <details>
           <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
-            Add specialty
+            {t("divers.specialty.addSpecialty")}
           </summary>
           <FieldGrid
             as="form"
@@ -54,7 +54,7 @@ export function SpecialtyCards({
             columns={2}
             className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
           >
-            <Field label="Agency">
+            <Field label={t("divers.certifications.agency")}>
               <select name="agency" className={controlClass}>
                 {Object.entries(AGENCY_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -63,36 +63,40 @@ export function SpecialtyCards({
                 ))}
               </select>
             </Field>
-            <Field label="Specialty">
+            <Field label={t("divers.specialty.specialtyLabel")}>
               <select name="specialty" className={controlClass}>
-                {[...Object.entries(SPECIALTY_LABELS), ["nitrox", "Nitrox"]].map(
-                  ([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ),
-                )}
+                {[
+                  ...Object.entries(SPECIALTY_LABELS),
+                  ["nitrox", t("divers.specialty.nitroxOption")],
+                ].map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </Field>
-            <Field label="Card number">
+            <Field label={t("divers.certifications.cardNumber")}>
               <input name="identifier" required className={controlClass} />
             </Field>
-            <Field label="Refresher due" hint="(optional; shop policy — cards don’t expire)">
+            <Field
+              label={t("divers.certifications.refresherDue")}
+              hint={t("divers.certifications.refresherHint")}
+            >
               <input name="expiresOn" type="date" className={controlClass} />
             </Field>
             <Field
-              label="Card photo"
-              hint="(optional; JPG, PNG, or WebP; ≤5 MB)"
+              label={t("divers.certifications.cardPhoto")}
+              hint={t("divers.certifications.cardPhotoHint")}
               className="sm:col-span-2"
             >
               <ImageFileInput name="cardImage" />
             </Field>
             <FieldActions>
               <SubmitButton
-                pendingLabel="Capturing…"
+                pendingLabel={t("divers.certifications.capturing")}
                 className={buttonClass({ variant: "secondary" })}
               >
-                Capture specialty for review
+                {t("divers.specialty.captureForReview")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
@@ -100,9 +104,7 @@ export function SpecialtyCards({
       </div>
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
         {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
-          <li className="px-4 py-5 text-sm text-muted">
-            No specialty or nitrox cards yet — add one above when they earn it.
-          </li>
+          <li className="px-4 py-5 text-sm text-muted">{t("divers.specialty.emptyState")}</li>
         ) : (
           <>
             {diver.specialtyCertifications.map((card) => {
@@ -119,7 +121,13 @@ export function SpecialtyCards({
                         {card.identifier}
                         {card.expiresAt ? (
                           <span className={expired ? "font-medium text-danger" : undefined}>
-                            {` · refresher ${expired ? "overdue" : "due"} ${formatCalendarDate(card.expiresAt)}`}
+                            {expired
+                              ? t("divers.certifications.refresherOverdue", {
+                                  date: formatCalendarDate(card.expiresAt),
+                                })
+                              : t("divers.certifications.refresherDueOn", {
+                                  date: formatCalendarDate(card.expiresAt),
+                                })}
                           </span>
                         ) : null}
                       </p>
@@ -130,7 +138,7 @@ export function SpecialtyCards({
                           rel="noreferrer"
                           className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
                         >
-                          View card photo
+                          {t("divers.specialty.viewCardPhoto")}
                         </a>
                       ) : null}
                     </div>
@@ -141,18 +149,20 @@ export function SpecialtyCards({
                       {isImportedCard(card) ? (
                         <Badge tone="neutral">
                           {card.importedFromLabel
-                            ? `imported · ${card.importedFromLabel}`
-                            : "imported"}
+                            ? t("divers.certifications.importedWithSource", {
+                                source: card.importedFromLabel,
+                              })
+                            : t("divers.certifications.importedLabel")}
                         </Badge>
                       ) : null}
                       {card.status === "pending" && !needsImportConfirm(card) ? (
                         <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                           <input type="hidden" name="certificationId" value={card.id} />
                           <SubmitButton
-                            pendingLabel="Marking certified…"
+                            pendingLabel={t("divers.certifications.markingCertified")}
                             className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
-                            Mark certified
+                            {t("divers.certifications.markCertified")}
                           </SubmitButton>
                         </form>
                       ) : null}
@@ -160,10 +170,10 @@ export function SpecialtyCards({
                         <input type="hidden" name="certificationId" value={card.id} />
                         {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                         <SubmitButton
-                          pendingLabel="Deleting…"
+                          pendingLabel={t("divers.certifications.deleting")}
                           className={buttonClass({ variant: "danger", size: "sm" })}
                         >
-                          Delete
+                          {t("divers.certifications.delete")}
                         </SubmitButton>
                       </form>
                     </div>
@@ -175,7 +185,12 @@ export function SpecialtyCards({
                     <ConfirmImportedCard
                       action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                       certificationId={card.id}
-                      what={`the ${SPECIALTY_LABELS[card.specialty]} specialty dive this card allows`}
+                      confirmationText={t("divers.specialty.confirmDisclosure", {
+                        what: t("divers.specialty.whatSpecialtyDive", {
+                          specialty: SPECIALTY_LABELS[card.specialty],
+                        }),
+                      })}
+                      t={t}
                     />
                   ) : null}
                 </li>
@@ -187,7 +202,11 @@ export function SpecialtyCards({
                 <li key={card.id} className="px-4 py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="font-medium">{AGENCY_LABELS[card.agency]} · Nitrox</p>
+                      <p className="font-medium">
+                        {t("divers.specialty.nitroxAgencyLine", {
+                          agency: AGENCY_LABELS[card.agency],
+                        })}
+                      </p>
                       <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -197,8 +216,10 @@ export function SpecialtyCards({
                       {isImportedCard(card) ? (
                         <Badge tone="neutral">
                           {card.importedFromLabel
-                            ? `imported · ${card.importedFromLabel}`
-                            : "imported"}
+                            ? t("divers.certifications.importedWithSource", {
+                                source: card.importedFromLabel,
+                              })
+                            : t("divers.certifications.importedLabel")}
                         </Badge>
                       ) : null}
                       {card.status === "pending" && !needsImportConfirm(card) ? (
@@ -206,10 +227,10 @@ export function SpecialtyCards({
                           <input type="hidden" name="certificationId" value={card.id} />
                           <input type="hidden" name="cardType" value="nitrox" />
                           <SubmitButton
-                            pendingLabel="Marking certified…"
+                            pendingLabel={t("divers.certifications.markingCertified")}
                             className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
-                            Mark certified
+                            {t("divers.certifications.markCertified")}
                           </SubmitButton>
                         </form>
                       ) : null}
@@ -218,10 +239,10 @@ export function SpecialtyCards({
                         <input type="hidden" name="cardType" value="nitrox" />
                         {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                         <SubmitButton
-                          pendingLabel="Deleting…"
+                          pendingLabel={t("divers.certifications.deleting")}
                           className={buttonClass({ variant: "danger", size: "sm" })}
                         >
-                          Delete
+                          {t("divers.certifications.delete")}
                         </SubmitButton>
                       </form>
                     </div>
@@ -231,7 +252,10 @@ export function SpecialtyCards({
                       action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                       certificationId={card.id}
                       cardType="nitrox"
-                      what="the Nitrox fill this card allows"
+                      confirmationText={t("divers.specialty.confirmDisclosure", {
+                        what: t("divers.specialty.whatNitroxFill"),
+                      })}
+                      t={t}
                     />
                   ) : null}
                 </li>
@@ -261,12 +285,15 @@ function ConfirmImportedCard({
   action,
   certificationId,
   cardType,
-  what,
+  confirmationText,
+  t,
 }: {
+  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   action: (formData: FormData) => void | Promise<void>;
   certificationId: string;
   cardType?: "nitrox";
-  what: string;
+  confirmationText: string;
+  t: StaffTranslator;
 }) {
   return (
     <details>
@@ -277,7 +304,7 @@ function ConfirmImportedCard({
           className: "cursor-pointer list-none",
         })}
       >
-        Confirm card
+        {t("divers.certifications.confirmCard")}
       </summary>
       <form
         action={action}
@@ -287,16 +314,13 @@ function ConfirmImportedCard({
         {cardType ? <input type="hidden" name="cardType" value={cardType} /> : null}
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="cardSighted" required className="mt-1 size-4 shrink-0" />
-          <span>
-            I&apos;ve seen this diver&apos;s card, or checked the number with the issuing agency.
-            Confirming clears {what}.
-          </span>
+          <span>{confirmationText}</span>
         </label>
         <SubmitButton
-          pendingLabel="Confirming…"
+          pendingLabel={t("divers.certifications.confirming")}
           className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
         >
-          Confirm card
+          {t("divers.certifications.confirmCard")}
         </SubmitButton>
       </form>
     </details>

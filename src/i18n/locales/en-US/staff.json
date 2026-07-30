@@ -186,6 +186,7 @@
       "viewAllDivers": "All divers",
       "viewMissingContact": "Missing contact",
       "viewInsured": "Has insurance",
+      "savedViewsAriaLabel": "Saved views",
       "namePromptText": "Name this view",
       "removeSavedViewAriaLabel": "Remove saved view {name}",
       "saveThisView": "+ Save this view",
@@ -328,6 +329,39 @@
       "shopHistory": "Shop history",
       "bookingsText": "{count, plural, one {# booking} other {# bookings}}",
       "importedSuffix": " · {count} imported"
+    },
+    "notices": {
+      "captured": "Card captured as pending. Look the number up with the agency, then mark it certified before it can make this diver ready.",
+      "capturedNoPhoto": "Card captured as pending. Photo storage isn't set up for this shop, so no photo was attached.",
+      "verified": "Card marked certified. It now counts toward readiness.",
+      "cardDeleted": "Card removed. It no longer counts toward readiness; its history is kept for records.",
+      "cardRestored": "Card restored. It counts toward readiness again.",
+      "cardRestoreConflict": "Couldn't restore that card — another card now uses its number. Re-add it if you still need it.",
+      "personSaved": "Diver details updated.",
+      "profileSaved": "Rental fit profile saved.",
+      "fitFlagged": "Flagged for hands-on fitting. The prep list will show this diver needs staff sizing at check-in.",
+      "fitCleared": "Fit flag cleared — this diver packs from their stated sizes again.",
+      "image": "That photo could not be used. Upload a JPG, PNG, or WebP under 5 MB.",
+      "duplicate": "Another diver already uses that email in this shop.",
+      "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
+      "booked": "Activity booked. Review it below, then create and send the invoice.",
+      "tripFull": "That activity just filled up. Choose another.",
+      "alreadyBooked": "This diver is already booked on that activity.",
+      "courseUnstaffed": "Assign an instructor before booking this course.",
+      "coursePrerequisite": "Mark the required certification as certified before booking this course.",
+      "courseRatioFull": "This session is at its instructor-to-student ratio limit. Assign another instructor or certified assistant, or choose another activity.",
+      "courseMinAge": "This diver is under that course's minimum age on the day it runs, going by the date of birth on file. Correct the date of birth if it's wrong.",
+      "tripUnavailable": "Add an email and choose an available activity.",
+      "bookingInvalid": "Add an email and choose an available activity.",
+      "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
+      "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be refunded.",
+      "deleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
+      "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
+      "notAuthorizedDelete": "Removing a diver is limited to owners and managers — ask one of them to do it.",
+      "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
+      "cardSightingRequired": "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
+      "invalid": "Check the details and try again.",
+      "cardRemovedToast": "Card removed."
     }
   },
   "courses": {
@@ -591,5 +625,17 @@
       "certificationDescription": "These requirements travel with the site into every new trip that uses it.",
       "saveSiteBriefing": "Save site briefing"
     }
-  }
+  },
+  "orders": {},
+  "promos": {},
+  "reports": {},
+  "reviews": {},
+  "schedule": {},
+  "trips": {},
+  "settings": {},
+  "blockers": {},
+  "checkIn": {},
+  "waiversStaff": {},
+  "shopHome": {},
+  "shared": {}
 }

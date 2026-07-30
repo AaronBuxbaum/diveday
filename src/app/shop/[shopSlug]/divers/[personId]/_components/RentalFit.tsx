@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { offeredRentableItems } from "@/lib/rentals";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
@@ -12,6 +13,7 @@ export function RentalFit({
   personId,
   rentalItems,
   canOverride,
+  locale,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -19,7 +21,9 @@ export function RentalFit({
   rentalItems: string[];
   /** Instructor/divemaster/manager may rewrite the diver's stated fit (H-06). */
   canOverride: boolean;
+  locale: string;
 }) {
+  const t = staffTranslator(locale);
   const profile = diver.rentalFit;
   // Recording a first fit is data entry, open to any staff member; only
   // rewriting one already on file is the gated override (H-06).
@@ -30,19 +34,15 @@ export function RentalFit({
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="rental-fit-heading">
       <div>
         <h2 id="rental-fit-heading" className="text-lg font-semibold">
-          Rental fit
+          {t("divers.rentalFit.heading")}
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          What this diver takes from the shop, and in what size. It is what the trip prep list is
-          built from — never an equipment reservation or a substitute for a dock-side fit check.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t("divers.rentalFit.description")}</p>
       </div>
       {mayEdit ? null : (
         <p className="mt-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
           <span className="font-medium text-foreground">{rentalFitLine(profile ?? null).text}</span>
           <br />
-          Changing what this diver asked for is limited to owners, managers, instructors, and
-          divemasters. If a size isn’t available, flag them for hands-on fitting below.
+          {t("divers.rentalFit.changeRestricted")}
         </p>
       )}
 
@@ -55,7 +55,7 @@ export function RentalFit({
         >
           {offered.length > 0 ? (
             <fieldset className="sm:col-span-2">
-              <legend className="text-sm font-medium">Rents from the shop</legend>
+              <legend className="text-sm font-medium">{t("divers.rentalFit.rentsFromShop")}</legend>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {offered.map(({ name, field, label, defaultRented }) => (
                   <label
@@ -75,58 +75,61 @@ export function RentalFit({
             </fieldset>
           ) : null}
           {offers.has("bcd") ? (
-            <Field label="BCD size">
+            <Field label={t("divers.rentalFit.bcdSizeLabel")}>
               <input
                 name="bcdSize"
                 defaultValue={profile?.bcdSize ?? ""}
-                placeholder="M"
+                placeholder={t("divers.rentalFit.bcdSizePlaceholder")}
                 className={controlClass}
               />
             </Field>
           ) : null}
           {offers.has("wetsuit") ? (
-            <Field label="Wetsuit size">
+            <Field label={t("divers.rentalFit.wetsuitSizeLabel")}>
               <input
                 name="wetsuitSize"
                 defaultValue={profile?.wetsuitSize ?? ""}
-                placeholder="3 mm / M"
+                placeholder={t("divers.rentalFit.wetsuitSizePlaceholder")}
                 className={controlClass}
               />
             </Field>
           ) : null}
           {offers.has("wetsuit") ? (
-            <Field label="Boot size">
+            <Field label={t("divers.rentalFit.bootSizeLabel")}>
               <input
                 name="bootSize"
                 defaultValue={profile?.bootSize ?? ""}
-                placeholder="9"
+                placeholder={t("divers.rentalFit.bootSizePlaceholder")}
                 className={controlClass}
               />
             </Field>
           ) : null}
           {offers.has("mask_fins") ? (
-            <Field label="Fin size">
+            <Field label={t("divers.rentalFit.finSizeLabel")}>
               <input
                 name="finSize"
                 defaultValue={profile?.finSize ?? ""}
-                placeholder="L"
+                placeholder={t("divers.rentalFit.finSizePlaceholder")}
                 className={controlClass}
               />
             </Field>
           ) : null}
           {offers.has("weights") ? (
-            <Field label="Weight preference" className="sm:col-span-2">
+            <Field label={t("divers.rentalFit.weightPreferenceLabel")} className="sm:col-span-2">
               <input
                 name="weightPreference"
                 defaultValue={profile?.weightPreference ?? ""}
-                placeholder="Usually 12 lb with 3 mm suit"
+                placeholder={t("divers.rentalFit.weightPreferencePlaceholder")}
                 className={controlClass}
               />
             </Field>
           ) : null}
           <FieldActions>
-            <SubmitButton pendingLabel="Saving…" className={buttonClass({ size: "lg" })}>
-              Save rental fit
+            <SubmitButton
+              pendingLabel={t("divers.rentalFit.saving")}
+              className={buttonClass({ size: "lg" })}
+            >
+              {t("divers.rentalFit.saveRentalFit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
@@ -138,6 +141,7 @@ export function RentalFit({
         personId={personId}
         hasFit={Boolean(profile)}
         canResolve={canOverride}
+        t={t}
       />
     </section>
   );
@@ -160,12 +164,14 @@ function StaffFitFallback({
   personId,
   hasFit,
   canResolve,
+  t,
 }: {
   profile: DiverProfile["rentalFit"];
   shopSlug: string;
   personId: string;
   hasFit: boolean;
   canResolve: boolean;
+  t: StaffTranslator;
 }) {
   const flagged = Boolean(profile?.needsStaffFitAt);
   if (!hasFit) return null;
@@ -175,12 +181,10 @@ function StaffFitFallback({
       className={`mt-4 rounded-lg border p-5 ${flagged ? "border-warning/40 bg-warning/5" : "border-border bg-surface"}`}
     >
       <h3 className="text-sm font-medium">
-        {flagged ? "Flagged for hands-on fitting" : "Can’t fill one of these sizes?"}
+        {flagged ? t("divers.rentalFit.flaggedHeading") : t("divers.rentalFit.cantFillHeading")}
       </h3>
       <p className="mt-1 text-sm text-muted">
-        {flagged
-          ? "Flagged for hands-on fitting — they still count on the prep list, but without a size, and the crew fits them from what’s aboard at check-in."
-          : "Flag them for hands-on fitting at check-in. Their count stays on the packing list but the size comes off, so nobody lays out a size the shop is short of — better than quietly substituting one."}
+        {flagged ? t("divers.rentalFit.flaggedBody") : t("divers.rentalFit.cantFillBody")}
       </p>
       {flagged ? (
         <>
@@ -189,25 +193,25 @@ function StaffFitFallback({
           ) : null}
           {canResolve ? (
             <SubmitButton
-              pendingLabel="Clearing…"
+              pendingLabel={t("divers.rentalFit.clearing")}
               className={buttonClass({ variant: "secondary", className: "mt-4 text-foreground" })}
             >
-              Fit resolved — pack their sizes again
+              {t("divers.rentalFit.fitResolved")}
             </SubmitButton>
           ) : (
-            <p className="mt-3 text-sm text-muted">
-              Clearing this is limited to owners, managers, instructors, and divemasters — they
-              confirm the diver can be packed to their stated sizes again.
-            </p>
+            <p className="mt-3 text-sm text-muted">{t("divers.rentalFit.clearingRestricted")}</p>
           )}
         </>
       ) : (
         <FieldGrid columns={1} className="mt-3">
-          <Field label="What’s short" hint="(optional)">
+          <Field
+            label={t("divers.rentalFit.whatsShortLabel")}
+            hint={t("divers.rentalFit.optionalHint")}
+          >
             <input
               name="needsStaffFitNote"
               maxLength={200}
-              placeholder="No L BCD in stock"
+              placeholder={t("divers.rentalFit.whatsShortPlaceholder")}
               className={controlClass}
             />
           </Field>
@@ -215,10 +219,10 @@ function StaffFitFallback({
             {/* The checkbox the action reads; checked because this form only sets the flag. */}
             <input type="hidden" name="needed" value="on" />
             <SubmitButton
-              pendingLabel="Flagging…"
+              pendingLabel={t("divers.rentalFit.flagging")}
               className={buttonClass({ variant: "secondary", className: "text-foreground" })}
             >
-              Flag for staff fit
+              {t("divers.rentalFit.flagForStaffFit")}
             </SubmitButton>
           </FieldActions>
         </FieldGrid>

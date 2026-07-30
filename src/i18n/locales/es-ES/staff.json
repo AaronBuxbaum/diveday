@@ -186,6 +186,7 @@
       "viewAllDivers": "Todos los buceadores",
       "viewMissingContact": "Sin contacto",
       "viewInsured": "Con seguro",
+      "savedViewsAriaLabel": "Vistas guardadas",
       "namePromptText": "Nombra esta vista",
       "removeSavedViewAriaLabel": "Eliminar vista guardada {name}",
       "saveThisView": "+ Guardar esta vista",
@@ -328,6 +329,39 @@
       "shopHistory": "Historial en la tienda",
       "bookingsText": "{count, plural, one {# reserva} other {# reservas}}",
       "importedSuffix": " · {count} importadas"
+    },
+    "notices": {
+      "captured": "Tarjeta capturada como pendiente. Busca el número con la agencia, luego márcala como certificada antes de que pueda dejar listo a este buceador.",
+      "capturedNoPhoto": "Tarjeta capturada como pendiente. El almacenamiento de fotos no está configurado para esta tienda, así que no se adjuntó ninguna foto.",
+      "verified": "Tarjeta marcada como certificada. Ahora cuenta para la disposición.",
+      "cardDeleted": "Tarjeta eliminada. Ya no cuenta para la disposición; su historial se conserva para los registros.",
+      "cardRestored": "Tarjeta restaurada. Vuelve a contar para la disposición.",
+      "cardRestoreConflict": "No se pudo restaurar esa tarjeta — otra tarjeta ahora usa su número. Vuelve a añadirla si aún la necesitas.",
+      "personSaved": "Datos del buceador actualizados.",
+      "profileSaved": "Perfil de ajuste de alquiler guardado.",
+      "fitFlagged": "Marcado para ajuste manual. La lista de preparación mostrará que este buceador necesita ajuste del personal en el check-in.",
+      "fitCleared": "Marca de ajuste despejada — este buceador vuelve a prepararse con sus tallas indicadas.",
+      "image": "Esa foto no se pudo usar. Sube un JPG, PNG o WebP de menos de 5 MB.",
+      "duplicate": "Otro buceador ya usa ese correo en esta tienda.",
+      "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
+      "booked": "Actividad reservada. Revísala abajo, luego crea y envía la factura.",
+      "tripFull": "Esa actividad acaba de llenarse. Elige otra.",
+      "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
+      "courseUnstaffed": "Asigna un instructor antes de reservar este curso.",
+      "coursePrerequisite": "Marca la certificación requerida como certificada antes de reservar este curso.",
+      "courseRatioFull": "Esta sesión está en su límite de proporción instructor-estudiante. Asigna otro instructor o asistente certificado, o elige otra actividad.",
+      "courseMinAge": "Este buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada. Corrige la fecha de nacimiento si es incorrecta.",
+      "tripUnavailable": "Añade un correo electrónico y elige una actividad disponible.",
+      "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
+      "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
+      "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede reembolsar.",
+      "deleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
+      "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
+      "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",
+      "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
+      "cardSightingRequired": "Confirmar una tarjeta importada requiere la casilla: abre la inmersión o la carga que esa tarjeta permite, así que un miembro del personal debe declarar que realmente la ha visto o ha verificado el número con la agencia.",
+      "invalid": "Revisa los datos e inténtalo de nuevo.",
+      "cardRemovedToast": "Tarjeta eliminada."
     }
   },
   "courses": {
@@ -591,5 +625,17 @@
       "certificationDescription": "Estos requisitos viajan con el sitio a cada nueva salida que lo use.",
       "saveSiteBriefing": "Guardar ficha del sitio"
     }
-  }
+  },
+  "orders": {},
+  "promos": {},
+  "reports": {},
+  "reviews": {},
+  "schedule": {},
+  "trips": {},
+  "settings": {},
+  "blockers": {},
+  "checkIn": {},
+  "waiversStaff": {},
+  "shopHome": {},
+  "shared": {}
 }

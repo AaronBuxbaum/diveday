@@ -3,6 +3,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import { savePersonAction } from "../actions";
 import type { DiverProfile } from "./shared";
@@ -11,22 +12,25 @@ export function DiverHeader({
   diver,
   shopSlug,
   personId,
+  locale,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
+  locale: string;
 }) {
+  const t = staffTranslator(locale);
   return (
     <>
       <Link
         href={`/shop/${shopSlug}/divers`}
         className="text-sm font-medium text-primary hover:underline"
       >
-        ← All divers
+        {t("divers.header.backToAllDivers")}
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          eyebrow="Front desk"
+          eyebrow={t("divers.header.eyebrow")}
           title={diver.person.fullName}
           align="start"
           meta={
@@ -50,13 +54,13 @@ export function DiverHeader({
                 </a>
               ) : null}
               {!diver.person.email && !diver.person.phone ? (
-                <span>No contact details yet</span>
+                <span>{t("divers.header.noContactDetails")}</span>
               ) : null}
               {diver.person.diveInsurance ? (
                 <span className="inline-flex min-h-11 items-center gap-2 px-2">
                   <span aria-hidden="true">🛟</span>
                   <span>
-                    <span className="sr-only">Dive insurance: </span>
+                    <span className="sr-only">{t("divers.header.diveInsurancePrefix")}</span>
                     {diver.person.diveInsurance}
                   </span>
                 </span>
@@ -66,7 +70,7 @@ export function DiverHeader({
           actions={
             <details className="rounded-lg border border-border bg-surface px-4 py-3">
               <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-                Edit details
+                {t("divers.header.editDetails")}
               </summary>
               <FieldGrid
                 as="form"
@@ -74,7 +78,7 @@ export function DiverHeader({
                 columns={1}
                 className="mt-4 gap-y-3 sm:w-80"
               >
-                <Field label="Full name">
+                <Field label={t("divers.header.fullNameLabel")}>
                   <input
                     name="fullName"
                     required
@@ -82,7 +86,7 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
-                <Field label="Email">
+                <Field label={t("divers.header.emailLabel")}>
                   <input
                     name="email"
                     type="email"
@@ -90,7 +94,7 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
-                <Field label="Phone">
+                <Field label={t("divers.header.phoneLabel")}>
                   <input
                     name="phone"
                     type="tel"
@@ -99,9 +103,9 @@ export function DiverHeader({
                   />
                 </Field>
                 <Field
-                  label="Date of birth"
-                  hint="(optional)"
-                  description="Used to check a course's minimum age on the day it runs. Leave it blank and courses book as they always have."
+                  label={t("divers.header.dateOfBirthLabel")}
+                  hint={t("divers.header.optionalHint")}
+                  description={t("divers.header.dateOfBirthDescription")}
                 >
                   <input
                     name="dateOfBirth"
@@ -115,17 +119,20 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
-                <Field label="Dive insurance" hint="(DAN or other, optional)">
+                <Field
+                  label={t("divers.header.diveInsuranceFieldLabel")}
+                  hint={t("divers.header.diveInsuranceHint")}
+                >
                   <input
                     name="diveInsurance"
                     defaultValue={diver.person.diveInsurance ?? ""}
-                    placeholder="DAN #12345"
+                    placeholder={t("divers.header.diveInsurancePlaceholder")}
                     className={controlClass}
                   />
                 </Field>
                 <FieldActions>
-                  <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
-                    Save details
+                  <SubmitButton pendingLabel={t("divers.header.saving")} className={buttonClass()}>
+                    {t("divers.header.saveDetails")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

@@ -12,12 +12,52 @@ import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
 
-/** Role-shaped default views, offered to every shop. */
-const BUILT_IN_VIEWS: { label: string; filter: DiverFilter }[] = [
-  { label: "All divers", filter: "all" },
-  { label: "Missing contact", filter: "missing_contact" },
-  { label: "Has insurance", filter: "insured" },
-];
+/**
+ * Every value is a plain string (or, for count-driven text, an ICU-style
+ * template substituted locally by `fill()`) — never a function. This is a
+ * client component with its own client-side-only state (search text, saved
+ * views), so the translated copy is fully resolved server-side and handed
+ * down as plain data; no translator ever crosses the Server->Client boundary.
+ */
+export interface DiverListCopy {
+  viewAllDivers: string;
+  viewMissingContact: string;
+  viewInsured: string;
+  savedViewsAriaLabel: string;
+  namePromptText: string;
+  removeSavedViewAriaLabel: string;
+  saveThisView: string;
+  peopleHeading: string;
+  matchesText: string;
+  onFileShowingText: string;
+  searchHintText: string;
+  searchDiversLabel: string;
+  searchPlaceholder: string;
+  noDiversMatchView: string;
+  noDiversOnFile: string;
+  tryDifferentSearch: string;
+  addOneHere: string;
+  noContactDetails: string;
+  cardCountText: string;
+  fitSaved: string;
+  noFitOnFile: string;
+  pendingReviewText: string;
+  toConfirmText: string;
+  noneText: string;
+  tableHeaderPerson: string;
+  tableHeaderCards: string;
+  tableHeaderRentalFit: string;
+  tableHeaderAttention: string;
+  showMoreDivers: string;
+  backToTop: string;
+}
+
+/** One-level `{token}` substitution — not a translator, just string.replace. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    key in values ? String(values[key]) : match,
+  );
+}
 
 /** A staffer's own pinned view — a name over a search + filter, stored per shop. */
 type SavedView = { name: string; query: string; filter: DiverFilter };
@@ -71,13 +111,20 @@ export function DiverList({
   query,
   filter,
   cursorActive,
+  copy,
 }: {
   page: DiverPage;
   shopSlug: string;
   query: string;
   filter: DiverFilter;
   cursorActive: boolean;
+  copy: DiverListCopy;
 }) {
+  const BUILT_IN_VIEWS: { label: string; filter: DiverFilter }[] = [
+    { label: copy.viewAllDivers, filter: "all" },
+    { label: copy.viewMissingContact, filter: "missing_contact" },
+    { label: copy.viewInsured, filter: "insured" },
+  ];
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
@@ -111,7 +158,7 @@ export function DiverList({
   };
 
   const saveCurrentView = () => {
-    const name = window.prompt("Name this view")?.trim();
+    const name = window.prompt(copy.namePromptText)?.trim();
     if (!name) return;
     const next = [...savedViews.filter((view) => view.name !== name), { name, query, filter }];
     window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
@@ -136,7 +183,7 @@ export function DiverList({
 
   return (
     <section className="mt-10" aria-labelledby="diver-list-heading">
-      <nav aria-label="Saved views" className="mb-4 flex flex-wrap items-center gap-2">
+      <nav aria-label={copy.savedViewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
         {BUILT_IN_VIEWS.map((view) => (
           <Link
             key={view.filter}
@@ -161,7 +208,7 @@ export function DiverList({
               <button
                 type="button"
                 onClick={() => removeSavedView(view.name)}
-                aria-label={`Remove saved view ${view.name}`}
+                aria-label={fill(copy.removeSavedViewAriaLabel, { name: view.name })}
                 className="ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-muted hover:text-danger"
               >
                 ×
@@ -174,32 +221,32 @@ export function DiverList({
           onClick={saveCurrentView}
           className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
         >
-          + Save this view
+          {copy.saveThisView}
         </button>
       </nav>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="diver-list-heading" className="text-lg font-semibold">
-            People
+            {copy.peopleHeading}
           </h2>
           <p className="mt-1 text-sm text-muted">
             {query
-              ? `${total} ${total === 1 ? "match" : "matches"}`
+              ? fill(copy.matchesText, { count: total })
               : total > divers.length || cursorActive
-                ? `${total} on file — showing ${divers.length} at a time`
-                : "Search by name, email, or phone."}
+                ? fill(copy.onFileShowingText, { total, shown: divers.length })
+                : copy.searchHintText}
           </p>
         </div>
         <div className="w-full sm:w-80">
           <label className="sr-only" htmlFor="diver-search">
-            Search divers
+            {copy.searchDiversLabel}
           </label>
           <input
             id="diver-search"
             type="search"
             value={typed}
             onChange={(event) => search(event.target.value)}
-            placeholder="Search people"
+            placeholder={copy.searchPlaceholder}
             className={`${controlClass} min-w-0`}
           />
         </div>
@@ -207,12 +254,10 @@ export function DiverList({
       {divers.length === 0 ? (
         <EmptyState className="mt-4">
           <p className="font-medium">
-            {query || filter !== "all" ? "No divers match this view." : "No divers on file yet."}
+            {query || filter !== "all" ? copy.noDiversMatchView : copy.noDiversOnFile}
           </p>
           <p className="mt-1 text-sm text-muted">
-            {query || filter !== "all"
-              ? "Try a different search or view, or add a new diver above."
-              : "Add one here or accept a booking to create their person record."}
+            {query || filter !== "all" ? copy.tryDifferentSearch : copy.addOneHere}
           </p>
         </EmptyState>
       ) : (
@@ -235,22 +280,26 @@ export function DiverList({
                     <span className="min-w-0">
                       <span className="block truncate font-semibold">{diver.person.fullName}</span>
                       <span className="block truncate text-sm text-muted">
-                        {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
+                        {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
                       </span>
                     </span>
                   </span>
                   <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                     <Badge tone="primary" className="whitespace-nowrap">
-                      {cardCount(diver)} card{cardCount(diver) === 1 ? "" : "s"}
+                      {fill(copy.cardCountText, { count: cardCount(diver) })}
                     </Badge>
                     <span className="text-muted">
-                      {diver.rentalFit ? "Fit saved" : "No fit on file"}
+                      {diver.rentalFit ? copy.fitSaved : copy.noFitOnFile}
                     </span>
                     {pendingCount(diver) > 0 ? (
-                      <Badge tone="warning">{pendingCount(diver)} pending review</Badge>
+                      <Badge tone="warning">
+                        {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
+                      </Badge>
                     ) : null}
                     {confirmCount(diver) > 0 ? (
-                      <Badge tone="neutral">{confirmCount(diver)} to confirm</Badge>
+                      <Badge tone="neutral">
+                        {fill(copy.toConfirmText, { count: confirmCount(diver) })}
+                      </Badge>
                     ) : null}
                   </span>
                 </Link>
@@ -262,16 +311,16 @@ export function DiverList({
               <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Person
+                    {copy.tableHeaderPerson}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Cards
+                    {copy.tableHeaderCards}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Rental fit
+                    {copy.tableHeaderRentalFit}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Attention
+                    {copy.tableHeaderAttention}
                   </th>
                 </tr>
               </thead>
@@ -303,29 +352,33 @@ export function DiverList({
                             </span>
                           </p>
                           <p className="truncate text-sm font-normal text-muted">
-                            {diver.person.email ?? diver.person.phone ?? "No contact details yet"}
+                            {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
                           </p>
                         </div>
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <Badge tone="primary" className="whitespace-nowrap">
-                        {cardCount(diver)} card{cardCount(diver) === 1 ? "" : "s"}
+                        {fill(copy.cardCountText, { count: cardCount(diver) })}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-sm text-muted">
-                      {diver.rentalFit ? "Fit saved" : "No fit on file"}
+                      {diver.rentalFit ? copy.fitSaved : copy.noFitOnFile}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex flex-wrap gap-2">
                         {pendingCount(diver) > 0 ? (
-                          <Badge tone="warning">{pendingCount(diver)} pending review</Badge>
+                          <Badge tone="warning">
+                            {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
+                          </Badge>
                         ) : null}
                         {confirmCount(diver) > 0 ? (
-                          <Badge tone="neutral">{confirmCount(diver)} to confirm</Badge>
+                          <Badge tone="neutral">
+                            {fill(copy.toConfirmText, { count: confirmCount(diver) })}
+                          </Badge>
                         ) : null}
                         {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
-                          <span className="text-muted">None</span>
+                          <span className="text-muted">{copy.noneText}</span>
                         ) : null}
                       </div>
                     </td>
@@ -340,12 +393,12 @@ export function DiverList({
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {nextHref ? (
             <Link href={nextHref} className={buttonClass({ variant: "secondary" })}>
-              Show more divers
+              {copy.showMoreDivers}
             </Link>
           ) : null}
           {cursorActive ? (
             <Link href={topHref} className="text-sm font-medium text-primary hover:underline">
-              ← Back to the top of the list
+              {copy.backToTop}
             </Link>
           ) : null}
         </div>

@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { refundPaymentAction } from "../actions";
 import { type DiverProfile, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type Shop } from "./shared";
-
-const DEMO_REFUND_HINT =
-  "Demo orders aren’t backed by a live Stripe invoice, so refunds are disabled here.";
 
 /** The refund control — a live form on a real shop, disabled with a reason on the demo. */
 function RefundButton({
@@ -14,11 +12,13 @@ function RefundButton({
   shopSlug,
   personId,
   demo,
+  t,
 }: {
   orderId: string;
   shopSlug: string;
   personId: string;
   demo: boolean;
+  t: StaffTranslator;
 }) {
   if (demo) {
     return (
@@ -26,14 +26,14 @@ function RefundButton({
         type="button"
         disabled
         aria-disabled="true"
-        title={DEMO_REFUND_HINT}
+        title={t("divers.payments.demoRefundHint")}
         className={buttonClass({
           variant: "danger",
           size: "sm",
           className: "cursor-not-allowed opacity-50",
         })}
       >
-        Refund
+        {t("divers.payments.refund")}
       </button>
     );
   }
@@ -41,10 +41,10 @@ function RefundButton({
     <form action={refundPaymentAction.bind(null, shopSlug, personId)}>
       <input type="hidden" name="orderId" value={orderId} />
       <SubmitButton
-        pendingLabel="Refunding…"
+        pendingLabel={t("divers.payments.refunding")}
         className={buttonClass({ variant: "danger", size: "sm" })}
       >
-        Refund
+        {t("divers.payments.refund")}
       </SubmitButton>
     </form>
   );
@@ -66,26 +66,24 @@ export function PaymentsSection({
   /** Only owners/managers issue refunds (H-14); others don't see the control. */
   canRefund: boolean;
 }) {
+  const t = staffTranslator(locale);
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="payments-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="payments-heading" className="text-lg font-semibold">
-            Payments
+            {t("divers.payments.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            Payment status, invoices, and refunds stay with the diver so the next action is easy to
-            find.
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("divers.payments.description")}</p>
         </div>
         <Link href={`/shop/${shopSlug}/orders/new?personId=${personId}`} className={buttonClass()}>
-          New payment
+          {t("divers.payments.newPayment")}
         </Link>
       </div>
 
       {diver.bookings.length === 0 && diver.orders.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
-          No payments yet — they’ll appear here once this diver books a trip or you send an invoice.
+          {t("divers.payments.noPaymentsYet")}
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
@@ -107,12 +105,17 @@ export function PaymentsSection({
                     {trip.title}
                   </Link>
                   <p className="text-sm text-muted">
-                    {formatShortDate(trip.startsAt, locale, shop.timezone)} · booking payment
+                    {formatShortDate(trip.startsAt, locale, shop.timezone)}
+                    {t("divers.payments.bookingPaymentSuffix")}
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {bookingPayment
-                      ? `Payment: ${PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ?? bookingPayment.payment.status}`
-                      : "Payment: not recorded"}
+                      ? t("divers.payments.paymentStatusText", {
+                          status:
+                            PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ??
+                            bookingPayment.payment.status,
+                        })
+                      : t("divers.payments.paymentNotRecorded")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -121,14 +124,14 @@ export function PaymentsSection({
                       href={`/shop/${shopSlug}/orders/${orderRow.order.id}`}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
-                      Open payment
+                      {t("divers.payments.openPayment")}
                     </Link>
                   ) : (
                     <Link
                       href={`/shop/${shopSlug}/orders/new?personId=${personId}&bookingId=${booking.id}`}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
-                      Create invoice
+                      {t("divers.payments.createInvoice")}
                     </Link>
                   )}
                   {canRefund && orderRow?.order.status === "paid" ? (
@@ -137,6 +140,7 @@ export function PaymentsSection({
                       shopSlug={shopSlug}
                       personId={personId}
                       demo={shop.isDemo}
+                      t={t}
                     />
                   ) : null}
                   <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
@@ -145,7 +149,7 @@ export function PaymentsSection({
                       : bookingPayment
                         ? (PAYMENT_STATUS_LABELS[bookingPayment.payment.status] ??
                           bookingPayment.payment.status)
-                        : "No invoice"}
+                        : t("divers.payments.noInvoice")}
                   </span>
                 </div>
               </li>
@@ -159,10 +163,12 @@ export function PaymentsSection({
                 className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="font-medium">{order.description || "Shop payment"}</p>
+                  <p className="font-medium">
+                    {order.description || t("divers.payments.shopPaymentFallback")}
+                  </p>
                   <p className="text-sm text-muted">
-                    ${(order.totalCents / 100).toFixed(2)} {order.currency.toUpperCase()} · no trip
-                    attached
+                    ${(order.totalCents / 100).toFixed(2)} {order.currency.toUpperCase()}
+                    {t("divers.payments.noTripAttached")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -170,7 +176,7 @@ export function PaymentsSection({
                     href={`/shop/${shopSlug}/orders/${order.id}`}
                     className={buttonClass({ variant: "secondary", size: "sm" })}
                   >
-                    Open payment
+                    {t("divers.payments.openPayment")}
                   </Link>
                   {canRefund && order.status === "paid" ? (
                     <RefundButton
@@ -178,6 +184,7 @@ export function PaymentsSection({
                       shopSlug={shopSlug}
                       personId={personId}
                       demo={shop.isDemo}
+                      t={t}
                     />
                   ) : null}
                   <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">

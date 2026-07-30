@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import {
@@ -27,11 +28,13 @@ function HistoryRow({
   shop,
   locale,
   shopSlug,
+  t,
 }: {
   item: HistoryEntry<Booking, PriorVisit>;
   shop: Shop;
   locale: string;
   shopSlug: string;
+  t: StaffTranslator;
 }) {
   if (item.kind === "booking") {
     const { booking, trip, course } = item.entry;
@@ -63,7 +66,7 @@ function HistoryRow({
     <li className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className={`font-medium ${cancelled ? "text-muted line-through" : ""}`}>
-          {visit.title ?? "Booking"}
+          {visit.title ?? t("divers.history.bookingFallback")}
         </p>
         <p className="text-sm text-muted">
           {formatCalendarDate(visit.visitedOn)}
@@ -80,7 +83,7 @@ function HistoryRow({
           </span>
         ) : null}
         <Badge tone="neutral" size="sm">
-          Imported
+          {t("divers.history.imported")}
         </Badge>
       </div>
     </li>
@@ -102,6 +105,7 @@ export function ShopHistory({
   locale: string;
   shopSlug: string;
 }) {
+  const t = staffTranslator(locale);
   const history = mergeShopHistory(diver.bookings, diver.priorVisits, {
     bookingStartsAt: (booking) => booking.trip.startsAt,
     visitedOn: (visit) => visit.visitedOn,
@@ -116,18 +120,16 @@ export function ShopHistory({
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="history-heading">
       <h2 id="history-heading" className="text-lg font-semibold">
-        Shop history
+        {t("divers.history.heading")}
       </h2>
       {imported > 0 ? (
         <p className="mt-2 max-w-prose text-sm text-muted">
-          {imported} {imported === 1 ? "visit" : "visits"} came across from your previous system.
-          Those lines are booking records, not dive records — they say what was booked and what your
-          old software called it.
+          {t("divers.history.importedVisitsText", { count: imported })}
         </p>
       ) : null}
       {history.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
-          No trips yet — book them onto an open trip and it’ll show up here.
+          {t("divers.history.noTripsYet")}
         </p>
       ) : (
         <>
@@ -139,13 +141,14 @@ export function ShopHistory({
                 item={item}
                 shop={shop}
                 shopSlug={shopSlug}
+                t={t}
               />
             ))}
           </ul>
           {rest.length > 0 ? (
             <details className="mt-3">
               <summary className="cursor-pointer text-sm text-primary hover:underline">
-                Show {rest.length} older {rest.length === 1 ? "entry" : "entries"}
+                {t("divers.history.showOlderEntries", { count: rest.length })}
               </summary>
               <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
                 {rest.map((item) => (
@@ -155,6 +158,7 @@ export function ShopHistory({
                     item={item}
                     shop={shop}
                     shopSlug={shopSlug}
+                    t={t}
                   />
                 ))}
               </ul>
