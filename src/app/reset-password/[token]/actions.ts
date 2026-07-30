@@ -8,6 +8,7 @@ import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getAccountContact, setAccountPassword } from "@/db/user-accounts";
+import { toDiverLocale } from "@/i18n/settings";
 import { signIn } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
@@ -63,6 +64,7 @@ export async function submitPasswordReset(token: string, formData: FormData) {
       userAccountId: claimed.userAccountId,
       shopId: account.shopId,
       to: account.email,
+      locale: toDiverLocale(account.defaultLocale),
       ownerName: account.ownerName,
       forgotPasswordUrl: origin ? new URL("/forgot-password", `${origin}/`).toString() : undefined,
       changedAt: nowDate(),

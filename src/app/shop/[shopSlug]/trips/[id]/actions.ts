@@ -42,6 +42,7 @@ import {
   issueWaiversForBookings,
 } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
+import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -244,6 +245,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
                   tripId,
                   shopId: shop.id,
                   to: contact.email,
+                  locale: toDiverLocale(shop.defaultLocale),
                   diverName: contact.fullName,
                   shopName: shop.name,
                   tripTitle: saved.title,

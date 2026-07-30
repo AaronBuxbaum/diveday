@@ -18,6 +18,7 @@ import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { toDiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -214,6 +215,7 @@ export async function bookSpot(
         bookingId: primaryBookingId,
         shopId: shopNow.id,
         to: confirmedBooking.person.email,
+        locale: toDiverLocale(shopNow.defaultLocale),
         diverName: confirmedBooking.person.fullName,
         shopName: shopNow.name,
         tripTitle: tripNow.title,

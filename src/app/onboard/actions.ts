@@ -9,6 +9,7 @@ import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
+import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { trackEvent } from "@/lib/analytics";
 import { signIn } from "@/lib/auth";
@@ -58,6 +59,7 @@ export async function onboardAction(formData: FormData) {
   let onboardingError: string | null = null;
   let newAccountId: string | null = null;
   let newShopId: string | null = null;
+  let newShopLocale: string | null = null;
 
   try {
     await db.transaction(async (tx) => {
@@ -102,6 +104,7 @@ export async function onboardAction(formData: FormData) {
         throw new Error("Failed to create shop");
       }
       newShopId = newShop.id;
+      newShopLocale = newShop.defaultLocale;
 
       // Create owner person
       const [newPerson] = await tx
@@ -175,6 +178,7 @@ export async function onboardAction(formData: FormData) {
   if (newAccountId && newShopId) {
     const accountId = newAccountId;
     const shopId = newShopId;
+    const locale = toDiverLocale(newShopLocale);
 
     // The trial half of the marketing funnel: `demo_entered` counts the skeptics
     // who look, this counts the ones who committed to a shop, both tagged with
@@ -209,6 +213,7 @@ export async function onboardAction(formData: FormData) {
           userAccountId: accountId,
           shopId,
           to: ownerEmail.toLowerCase(),
+          locale,
           ownerName,
           shopName,
           signInUrl: new URL("/sign-in", `${origin}/`).toString(),
@@ -220,6 +225,7 @@ export async function onboardAction(formData: FormData) {
             tokenId: issued.tokenId,
             shopId,
             to: ownerEmail.toLowerCase(),
+            locale,
             ownerName,
             verifyUrl: new URL(verifyAccountLinkPath(issued.token), `${origin}/`).toString(),
             expiresAt: issued.expiresAt,

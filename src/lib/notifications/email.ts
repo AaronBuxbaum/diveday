@@ -1,7 +1,20 @@
+import type { DiverTranslator } from "@/i18n/messages";
+import { diverTranslator } from "@/i18n/messages";
+import { reminderActionText } from "@/i18n/reminder-labels";
+import type { DiverLocale } from "@/i18n/settings";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
+import type { ReminderActionCode } from "@/lib/readiness-summary";
+
+// i18n-exempt-file: the terminal renderer for outbound email — no downstream
+// React component picks words for a sent message, so this file resolves its
+// own text via diverTranslator against the recipient shop's locale rather
+// than returning a code (docs ADR 20260731-notification-locale). Every
+// dynamic value (names, titles, free text) is still escaped for the html
+// body exactly as before; only the surrounding words are now translated.
 
 type BookingConfirmationEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -17,6 +30,7 @@ type BookingConfirmationEmailInput = {
 };
 
 type WaiverRequestEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -26,6 +40,7 @@ type WaiverRequestEmailInput = {
 };
 
 type WaitlistInviteEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -37,6 +52,7 @@ type WaitlistInviteEmailInput = {
 };
 
 type LastMinuteDealEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -52,6 +68,7 @@ type LastMinuteDealEmailInput = {
 };
 
 type CheckoutRecoveryEmailInput = {
+  locale: DiverLocale;
   shopName: string;
   tripTitle: string;
   startsAt: Date;
@@ -74,11 +91,12 @@ type NightBeforeBriefInput = {
   bring?: string[];
   /** The shop's number for day-of questions, already E.164-validated. */
   whoToText?: string | null;
-  /** Extra "what happens on the boat" reassurance for a first-timer. */
+  /** Extra "what happens on the boat" reassurance for a first-timer, pre-resolved by the caller. */
   firstTimerNote?: string | null;
 };
 
 type TripReminderEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -89,11 +107,8 @@ type TripReminderEmailInput = {
   lead: "week" | "day";
   /** Minutes before departure to be at the dock; the shop's call, default 30. */
   dockCallMinutes?: number;
-  /**
-   * The diver's own outstanding items, as short imperatives ("sign your
-   * waiver"), so the reminder names what's left rather than a generic nudge.
-   */
-  outstanding?: string[];
+  /** The diver's own outstanding items, as codes — resolved via `reminderActionText`. */
+  outstanding?: ReminderActionCode[];
   /** True when a medical answer may need a doctor's sign-off before boarding. */
   medicalReview?: boolean;
   /** The diver's readiness page, so they can finish what's outstanding. */
@@ -103,6 +118,7 @@ type TripReminderEmailInput = {
 };
 
 export type TripConditionsHoldEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -112,39 +128,55 @@ export type TripConditionsHoldEmailInput = {
   tripUrl: string;
 };
 
+function firstNameOf(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] || "there";
+}
+
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const detail = input.conditionsSummary?.trim();
-  const detailText = detail ? `\n\nCrew note: ${detail}` : "";
-  const detailHtml = detail ? `<p><strong>Crew note:</strong> ${escapeHtml(detail)}</p>` : "";
+  const body = t("notifications.tripConditionsHold.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+    date,
+  });
+  const bodyHtml = t("notifications.tripConditionsHold.body", {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+    date: escapeHtml(date),
+  });
+  const crewNoteLabel = t("notifications.tripConditionsHold.crewNoteLabel");
+  const detailText = detail ? `\n\n${crewNoteLabel} ${detail}` : "";
+  const detailHtml = detail ? `<p><strong>${crewNoteLabel}</strong> ${escapeHtml(detail)}</p>` : "";
+  const seeUpdate = t("notifications.tripConditionsHold.seeUpdate");
+
   return {
-    subject: `Conditions hold — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\n${input.shopName} has placed ${input.tripTitle} on a conditions hold for ${date}. Your seat is still held while the crew makes the final weather call.${detailText}\n\nSee the live trip update:\n${input.tripUrl}\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${escapeHtml(input.shopName)} has placed <strong>${escapeHtml(input.tripTitle)}</strong> on a conditions hold for ${escapeHtml(date)}. Your seat is still held while the crew makes the final weather call.</p>${detailHtml}<p><a href="${escapeHtml(input.tripUrl)}">See the live trip update</a></p>`,
+    subject: t("notifications.tripConditionsHold.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}${detailText}\n\n${seeUpdate}:\n${input.tripUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${detailHtml}<p><a href="${escapeHtml(input.tripUrl)}">${seeUpdate}</a></p>`,
   };
 }
 
 /** "30 minutes" today, whatever the shop set otherwise. */
-function dockCallPhrase(dockCallMinutes: number | undefined): string {
-  return `${dockCallMinutes ?? 30} minutes`;
+function dockCallPhrase(t: DiverTranslator, dockCallMinutes: number | undefined): string {
+  return t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes ?? 30 });
 }
 
 /** The diver's outstanding items as one bullet list, or empty when nothing's left. */
-function outstandingLines(outstanding: string[] | undefined, medicalReview: boolean | undefined) {
-  const todo = [...(outstanding ?? [])];
-  if (medicalReview) {
-    todo.push("check whether a medical answer needs a doctor's sign-off before you travel");
-  }
-  const capitalized = todo.map((item) => item.charAt(0).toUpperCase() + item.slice(1));
+function outstandingLines(
+  t: DiverTranslator,
+  outstanding: ReminderActionCode[] | undefined,
+  medicalReview: boolean | undefined,
+) {
+  const todo = (outstanding ?? []).map((code) => reminderActionText(t, code));
+  if (medicalReview) todo.push(t("notifications.common.medicalReviewNote"));
+  const heading = t("notifications.common.outstandingHeading");
   return {
-    text: capitalized.length
-      ? `\n\nStill to sort before you board:\n${capitalized.map((t) => `- ${t}`).join("\n")}\n`
-      : "",
-    html: capitalized.length
-      ? `<p>Still to sort before you board:</p><ul>${capitalized
-          .map((t) => `<li>${escapeHtml(t)}</li>`)
-          .join("")}</ul>`
+    text: todo.length ? `\n\n${heading}\n${todo.map((item) => `- ${item}`).join("\n")}\n` : "",
+    html: todo.length
+      ? `<p>${heading}</p><ul>${todo.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
       : "",
   };
 }
@@ -155,7 +187,11 @@ function outstandingLines(outstanding: string[] | undefined, medicalReview: bool
  * outstanding-items list. Empty strings when the brief carries nothing, so the
  * reminder degrades to the plain "you sail tomorrow" note.
  */
-function briefSections(brief: NightBeforeBriefInput | undefined, arrivalLine: string) {
+function briefSections(
+  t: DiverTranslator,
+  brief: NightBeforeBriefInput | undefined,
+  arrivalLine: string,
+) {
   const forecast = brief?.forecast?.trim();
   const bring = (brief?.bring ?? []).map((item) => item.trim()).filter(Boolean);
   const whoToText = brief?.whoToText?.trim();
@@ -168,13 +204,15 @@ function briefSections(brief: NightBeforeBriefInput | undefined, arrivalLine: st
     htmlParts.push(`<p>${escapeHtml(firstTimer)}</p>`);
   }
   if (forecast) {
-    textParts.push(`Conditions: ${forecast}`);
-    htmlParts.push(`<p><strong>Conditions:</strong> ${escapeHtml(forecast)}</p>`);
+    const label = t("notifications.brief.conditionsLabel");
+    textParts.push(`${label} ${forecast}`);
+    htmlParts.push(`<p><strong>${label}</strong> ${escapeHtml(forecast)}</p>`);
   }
   if (bring.length) {
-    textParts.push(`What to bring:\n${bring.map((item) => `- ${item}`).join("\n")}`);
+    const label = t("notifications.brief.bringLabel");
+    textParts.push(`${label}\n${bring.map((item) => `- ${item}`).join("\n")}`);
     htmlParts.push(
-      `<p>What to bring:</p><ul>${bring.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
+      `<p>${label}</p><ul>${bring.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
     );
   }
   // Arrival always renders on the brief — the concrete clock time is the
@@ -182,7 +220,7 @@ function briefSections(brief: NightBeforeBriefInput | undefined, arrivalLine: st
   textParts.push(arrivalLine);
   htmlParts.push(`<p>${escapeHtml(arrivalLine)}</p>`);
   if (whoToText) {
-    const line = `Questions on the day? Text the shop at ${whoToText}.`;
+    const line = t("notifications.brief.whoToText", { phone: whoToText });
     textParts.push(line);
     htmlParts.push(`<p>${escapeHtml(line)}</p>`);
   }
@@ -199,46 +237,70 @@ export type NotificationEmail = {
 };
 
 export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
-  const readyText = input.readinessUrl
-    ? `\n\nTrack what's left before you sail:\n${input.readinessUrl}\n`
-    : "\n";
+  const trackWhatsLeft = t("notifications.common.trackWhatsLeft");
+  const readyText = input.readinessUrl ? `\n\n${trackWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
   const readyHtml = input.readinessUrl
-    ? `<p><a href="${escapeHtml(input.readinessUrl)}">Track what's left before you sail</a>.</p>`
+    ? `<p><a href="${escapeHtml(input.readinessUrl)}">${trackWhatsLeft}</a>.</p>`
     : "";
 
-  const dock = dockCallPhrase(input.dockCallMinutes);
+  const dock = dockCallPhrase(t, input.dockCallMinutes);
   const packingItems = (input.packingList ?? []).map((item) => item.trim()).filter(Boolean);
+  const packingHeading = t("notifications.bookingConfirmation.packingHeading");
   const reminderText = packingItems.length
-    ? `\n\nPre-Trip Checklist Reminder:\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
+    ? `\n\n${packingHeading}\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
     : "";
   const reminderHtml = packingItems.length
-    ? `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f3f4f6; border-radius: 8px;"><strong>Pre-Trip Checklist Reminder:</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+    ? `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
     : "";
 
+  const confirmed = t("notifications.bookingConfirmation.confirmed", {
+    tripTitle: input.tripTitle,
+  });
+  const confirmedHtml = t("notifications.bookingConfirmation.confirmed", {
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const dockNote = t("notifications.bookingConfirmation.dockNote", {
+    dock,
+    shopName: input.shopName,
+  });
+  const dockNoteHtml = t("notifications.bookingConfirmation.dockNote", { dock, shopName: shop });
+
   return {
-    subject: `You're on the boat — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nYour spot on ${input.tripTitle} is confirmed.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early. ${input.shopName} will take it from there.${readyText}${reminderText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Your spot on <strong>${title}</strong> is confirmed.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early. ${shop} will take it from there.</p>${readyHtml}${reminderHtml}`,
+    subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}\n\n${dockNote}${readyText}${reminderText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNoteHtml}</p>${readyHtml}${reminderHtml}`,
   };
 }
 
 export function waitlistInviteEmail(input: WaitlistInviteEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.bookingUrl);
 
+  const body = t("notifications.waitlistInvite.body", {
+    tripTitle: input.tripTitle,
+    shopName: input.shopName,
+  });
+  const bodyHtml = t("notifications.waitlistInvite.body", {
+    tripTitle: `<strong>${title}</strong>`,
+    shopName: escapeHtml(input.shopName),
+  });
+  const claim = t("notifications.waitlistInvite.claim");
+  const footer = t("notifications.waitlistInvite.footer");
+
   return {
-    subject: `A spot opened up on ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nA seat just opened on ${input.tripTitle} with ${input.shopName}, and you're next on the wait list.\n\n${date}\n${time}\n\nClaim it before it's gone:\n${input.bookingUrl}\n\nSeats go first-come, so don't wait too long. See you on the boat!\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A seat just opened on <strong>${title}</strong> with ${shop}, and you're next on the wait list.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Claim your spot</a></p><p>Seats go first-come, so don't wait too long. See you on the boat!</p>`,
+    subject: t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.waitlistInvite.claimLink")}</a></p><p>${footer}</p>`,
   };
 }
 
@@ -248,19 +310,38 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
  * need to know the trip is under capacity to want a good price on a dive.
  */
 export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
-  const expires = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
+  const expires = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.bookingUrl);
   const code = escapeHtml(input.code);
 
+  const body = t("notifications.lastMinuteDeal.body", {
+    shopName: input.shopName,
+    discountPercent: input.discountPercent,
+    tripTitle: input.tripTitle,
+  });
+  const bodyHtml = t("notifications.lastMinuteDeal.body", {
+    shopName: escapeHtml(input.shopName),
+    discountPercent: `<strong>${input.discountPercent}% off</strong>`,
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const useCode = t("notifications.lastMinuteDeal.useCode", { code: input.code });
+  const useCodeHtml = t("notifications.lastMinuteDeal.useCode", {
+    code: `<strong>${code}</strong>`,
+  });
+  const expiry = t("notifications.lastMinuteDeal.expiry", { expires });
+
   return {
-    subject: `${input.discountPercent}% off ${input.tripTitle} — last-minute deal`,
-    text: `Hi ${firstName},\n\n${input.shopName} just opened up ${input.discountPercent}% off ${input.tripTitle}.\n\n${date}\n${time}\n\nUse code ${input.code} at booking:\n${input.bookingUrl}\n\nThe code expires ${expires} (departure) or once seats run out, whichever comes first.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${shop} just opened up <strong>${input.discountPercent}% off</strong> <strong>${title}</strong>.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Use code <strong>${code}</strong> at booking:</p><p><a href="${url}">Book ${title}</a></p><p>The code expires ${escapeHtml(expires)} (departure) or once seats run out, whichever comes first.</p>`,
+    subject: t("notifications.lastMinuteDeal.subject", {
+      discountPercent: input.discountPercent,
+      tripTitle: input.tripTitle,
+    }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p><p><a href="${url}">${t("notifications.lastMinuteDeal.bookLink", { tripTitle: title })}</a></p><p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p>`,
   };
 }
 
@@ -270,36 +351,45 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
  * threat, since that would be false.
  */
 export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): NotificationEmail {
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.checkoutUrl);
 
+  const body = t("notifications.checkoutRecovery.body", {
+    tripTitle: input.tripTitle,
+    shopName: input.shopName,
+  });
+  const bodyHtml = t("notifications.checkoutRecovery.body", {
+    tripTitle: `<strong>${title}</strong>`,
+    shopName: escapeHtml(input.shopName),
+  });
+  const pickUp = t("notifications.checkoutRecovery.pickUp");
+
   return {
-    subject: `Finish booking ${input.tripTitle}?`,
-    text: `Hi,\n\nYour spot on ${input.tripTitle} with ${input.shopName} is still held — you just haven't finished paying.\n\n${date}\n${time}\n\nPick up right where you left off:\n${input.checkoutUrl}\n`,
-    html: `<p>Hi,</p><p>Your spot on <strong>${title}</strong> with ${shop} is still held — you just haven't finished paying.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">Finish paying</a></p>`,
+    subject: t("notifications.checkoutRecovery.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greetingGeneric")}\n\n${body}\n\n${date}\n${time}\n\n${pickUp}:\n${input.checkoutUrl}\n`,
+    html: `<p>${t("notifications.common.greetingGeneric")}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.checkoutRecovery.finishPaying")}</a></p>`,
   };
 }
 
 export function tripReminderEmail(input: TripReminderEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
-  const when = input.lead === "week" ? "this week" : "tomorrow";
-  const readyText = input.readinessUrl
-    ? `\n\nSee what's left before you sail:\n${input.readinessUrl}\n`
-    : "\n";
+  const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
+  const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
   const readyHtml = input.readinessUrl
-    ? `<p><a href="${escapeHtml(input.readinessUrl)}">See what's left before you sail</a>.</p>`
+    ? `<p><a href="${escapeHtml(input.readinessUrl)}">${seeWhatsLeft}</a>.</p>`
     : "";
   // Name the diver's own outstanding items — the last automated chance to clear
   // a waiver or medical that would keep them off the boat (dive-domain review).
-  const todo = outstandingLines(input.outstanding, input.medicalReview);
-  const dock = dockCallPhrase(input.dockCallMinutes);
+  const todo = outstandingLines(t, input.outstanding, input.medicalReview);
+  const dock = dockCallPhrase(t, input.dockCallMinutes);
 
   // The 7-day reminder stays a light nudge. The night-before (day) lead becomes
   // the full brief: conditions, what to bring, a concrete arrival time, and who
@@ -307,30 +397,47 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   if (input.lead === "day") {
     const dockMinutes = input.dockCallMinutes ?? 30;
     const arriveBy = new Date(input.startsAt.getTime() - dockMinutes * 60_000);
-    const arrivalClock = formatTime(arriveBy, "en-US", input.timezone);
-    const arrivalLine = `Aim to be at the dock by ${arrivalClock} — ${dock} before we sail.`;
-    const brief = briefSections(input.brief, arrivalLine);
+    const arrivalClock = formatTime(arriveBy, input.locale, input.timezone);
+    const arrivalLine = t("notifications.tripReminder.arrival", { time: arrivalClock, dock });
+    const brief = briefSections(t, input.brief, arrivalLine);
     const opener = input.brief?.firstTimerNote
-      ? `You dive with ${input.shopName} tomorrow — here's everything you need for the day.`
-      : `A quick reminder that ${input.tripTitle} with ${input.shopName} sails tomorrow.`;
+      ? t("notifications.tripReminder.dayOpenerFirstTimer", { shopName: input.shopName })
+      : t("notifications.tripReminder.dayOpenerReturning", {
+          tripTitle: input.tripTitle,
+          shopName: input.shopName,
+        });
     const openerHtml = input.brief?.firstTimerNote
-      ? `You dive with ${shop} tomorrow — here's everything you need for the day.`
-      : `A quick reminder that <strong>${title}</strong> with ${shop} sails tomorrow.`;
+      ? t("notifications.tripReminder.dayOpenerFirstTimer", { shopName: shop })
+      : t("notifications.tripReminder.dayOpenerReturning", {
+          tripTitle: `<strong>${title}</strong>`,
+          shopName: shop,
+        });
     return {
-      subject: `You sail tomorrow — ${input.tripTitle}`,
-      text: `Hi ${firstName},\n\n${opener}\n\n${date}\n${time}${brief.text}${todo.text}${readyText}`,
-      html: `<p>Hi ${escapeHtml(firstName)},</p><p>${openerHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${brief.html}${todo.html}${readyHtml}`,
+      subject: t("notifications.tripReminder.daySubject", { tripTitle: input.tripTitle }),
+      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${date}\n${time}${brief.text}${todo.text}${readyText}`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${brief.html}${todo.html}${readyHtml}`,
     };
   }
 
+  const weekBody = t("notifications.tripReminder.weekBody", {
+    tripTitle: input.tripTitle,
+    shopName: input.shopName,
+  });
+  const weekBodyHtml = t("notifications.tripReminder.weekBody", {
+    tripTitle: `<strong>${title}</strong>`,
+    shopName: shop,
+  });
+  const dockNote = t("notifications.tripReminder.dockNote", { dock });
+
   return {
-    subject: `You sail ${when} — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nA quick reminder that ${input.tripTitle} with ${input.shopName} sails ${when}.\n\n${date}\n${time}\n\nPlease be at the dock ${dock} early.${todo.text}${readyText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>A quick reminder that <strong>${title}</strong> with ${shop} sails ${when}.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>Please be at the dock ${dock} early.</p>${todo.html}${readyHtml}`,
+    subject: t("notifications.tripReminder.weekSubject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${date}\n${time}\n\n${dockNote}${todo.text}${readyText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNote}</p>${todo.html}${readyHtml}`,
   };
 }
 
 type TripRecapEmailInput = {
+  locale: DiverLocale;
   diverName: string;
   shopName: string;
   tripTitle: string;
@@ -343,26 +450,48 @@ type TripRecapEmailInput = {
 };
 
 export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.recapUrl);
   const sites = (input.sites ?? []).map((site) => site.trim()).filter(Boolean);
   // Name the sites they dived when we know them — the recap is warmer when it
   // remembers the day rather than nudging generically.
-  const where = sites.length
-    ? ` You dived ${sites.length === 1 ? sites[0] : `${sites.slice(0, -1).join(", ")} and ${sites[sites.length - 1]}`}.`
+  const siteList = sites.length
+    ? new Intl.ListFormat(input.locale, { style: "long", type: "conjunction" }).format(sites)
+    : "";
+  const where = sites.length ? ` ${t("notifications.tripRecap.dived", { sites: siteList })}` : "";
+  const whereHtml = sites.length
+    ? ` ${t("notifications.tripRecap.dived", { sites: escapeHtml(siteList) })}`
     : "";
 
+  const thanks = t("notifications.tripRecap.thanks", {
+    tripTitle: input.tripTitle,
+    shopName: input.shopName,
+    date,
+  });
+  const thanksHtml = t("notifications.tripRecap.thanks", {
+    tripTitle: `<strong>${title}</strong>`,
+    shopName: shop,
+    date: escapeHtml(date),
+  });
+  const seeRecap = t("notifications.tripRecap.seeRecap");
+  const footer = t("notifications.tripRecap.footer");
+
   return {
-    subject: `Your dive with ${input.shopName} — ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\nThanks for diving ${input.tripTitle} with ${input.shopName} on ${date}.${where}\n\nWe put together a recap of your day — see it here:\n${input.recapUrl}\n\nIf you loved it, the best thing you can do is bring a buddy next time. See you in the water!\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Thanks for diving <strong>${title}</strong> with ${shop} on ${escapeHtml(date)}.${escapeHtml(where)}</p><p><a href="${url}">See the recap of your day</a>.</p><p>If you loved it, the best thing you can do is bring a buddy next time. See you in the water!</p>`,
+    subject: t("notifications.tripRecap.subject", {
+      shopName: input.shopName,
+      tripTitle: input.tripTitle,
+    }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p><p><a href="${url}">${seeRecap}</a>.</p><p>${footer}</p>`,
   };
 }
 
 type WelcomeEmailInput = {
+  locale: DiverLocale;
   ownerName: string;
   shopName: string;
   signInUrl: string;
@@ -373,14 +502,20 @@ type WelcomeEmailInput = {
  * a sign-in nudge, since onboarding already signs the owner in immediately.
  */
 export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
-  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.ownerName);
   const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.signInUrl);
 
+  const body = t("notifications.welcome.body", { shopName: input.shopName });
+  const bodyHtml = t("notifications.welcome.body", { shopName: `<strong>${shop}</strong>` });
+  const signIn = t("notifications.welcome.signIn");
+  const footer = t("notifications.welcome.footer");
+
   return {
-    subject: `Welcome to DiveDay, ${input.shopName}`,
-    text: `Hi ${firstName},\n\n${input.shopName} is live on DiveDay. Add your first trip, invite a diver, and the dock is one step closer.\n\nSign in any time:\n${input.signInUrl}\n\nGlad you're here.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${shop}</strong> is live on DiveDay. Add your first trip, invite a diver, and the dock is one step closer.</p><p><a href="${url}">Sign in any time</a>.</p><p>Glad you're here.</p>`,
+    subject: t("notifications.welcome.subject", { shopName: input.shopName }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${signIn}:\n${input.signInUrl}\n\n${footer}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${signIn}</a>.</p><p>${footer}</p>`,
   };
 }
 
@@ -391,7 +526,12 @@ type NewAccountAlertEmailInput = {
   shopSlug: string;
 };
 
-/** Internal — lands in the founder's alert inbox, not a diver's or shop's. */
+/**
+ * Internal — lands in the founder's alert inbox, not a diver's or shop's, so
+ * it stays English on purpose rather than following the shop's locale (docs
+ * ADR 20260731-notification-locale): there is no shop-owner or diver
+ * recipient here to speak to in their own language.
+ */
 export function newAccountAlertEmail(input: NewAccountAlertEmailInput): NotificationEmail {
   const owner = escapeHtml(input.ownerName);
   const email = escapeHtml(input.ownerEmail);
@@ -406,6 +546,7 @@ export function newAccountAlertEmail(input: NewAccountAlertEmailInput): Notifica
 }
 
 type VerifyAccountEmailInput = {
+  locale: DiverLocale;
   ownerName: string;
   verifyUrl: string;
   expiresAt: Date;
@@ -413,18 +554,22 @@ type VerifyAccountEmailInput = {
 };
 
 export function verifyAccountEmail(input: VerifyAccountEmailInput): NotificationEmail {
-  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
-  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.ownerName);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const url = escapeHtml(input.verifyUrl);
+  const confirm = t("notifications.verifyAccount.confirm");
+  const expiry = t("notifications.verifyAccount.expiry", { expiresAt });
 
   return {
-    subject: "Confirm your email for DiveDay",
-    text: `Hi ${firstName},\n\nConfirm this is your email address:\n${input.verifyUrl}\n\nThis link expires ${expiresAt}. If you didn't create a DiveDay account, you can ignore this.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p><a href="${url}">Confirm this is your email address</a>.</p><p>This link expires ${escapeHtml(expiresAt)}. If you didn't create a DiveDay account, you can ignore this.</p>`,
+    subject: t("notifications.verifyAccount.subject"),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirm}:\n${input.verifyUrl}\n\n${expiry}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p><a href="${url}">${confirm}</a>.</p><p>${t("notifications.verifyAccount.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
 type StaffInviteEmailInput = {
+  locale: DiverLocale;
   inviteeName: string;
   shopName: string;
   inviterName: string;
@@ -435,20 +580,40 @@ type StaffInviteEmailInput = {
 };
 
 export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmail {
-  const firstName = input.inviteeName.trim().split(/\s+/)[0] || "there";
-  const roles = input.roleLabels.join(", ");
-  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.inviteeName);
+  const roles = new Intl.ListFormat(input.locale, { style: "long", type: "conjunction" }).format(
+    input.roleLabels,
+  );
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.inviteUrl);
 
+  const body = t("notifications.staffInvite.body", {
+    inviterName: input.inviterName,
+    shopName: input.shopName,
+    roles,
+  });
+  const bodyHtml = t("notifications.staffInvite.body", {
+    inviterName: escapeHtml(input.inviterName),
+    shopName: `<strong>${shop}</strong>`,
+    roles: escapeHtml(roles),
+  });
+  const setPassword = t("notifications.staffInvite.setPassword");
+  const expiry = t("notifications.staffInvite.expiry", { expiresAt });
+
   return {
-    subject: `${input.inviterName} invited you to ${input.shopName} on DiveDay`,
-    text: `Hi ${firstName},\n\n${input.inviterName} added you to ${input.shopName} on DiveDay as ${roles}.\n\nSet your password to get started:\n${input.inviteUrl}\n\nThis link expires ${expiresAt}. If you weren't expecting this, you can ignore it.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${escapeHtml(input.inviterName)} added you to <strong>${shop}</strong> on DiveDay as ${escapeHtml(roles)}.</p><p><a href="${url}">Set your password to get started</a>.</p><p>This link expires ${escapeHtml(expiresAt)}. If you weren't expecting this, you can ignore it.</p>`,
+    subject: t("notifications.staffInvite.subject", {
+      inviterName: input.inviterName,
+      shopName: input.shopName,
+    }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${setPassword}:\n${input.inviteUrl}\n\n${expiry}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${setPassword}</a>.</p><p>${t("notifications.staffInvite.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
 type PasswordResetEmailInput = {
+  locale: DiverLocale;
   ownerName: string;
   resetUrl: string;
   expiresAt: Date;
@@ -456,18 +621,23 @@ type PasswordResetEmailInput = {
 };
 
 export function passwordResetEmail(input: PasswordResetEmailInput): NotificationEmail {
-  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
-  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.ownerName);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const url = escapeHtml(input.resetUrl);
+  const body = t("notifications.passwordReset.body");
+  const choose = t("notifications.passwordReset.choose");
+  const expiry = t("notifications.passwordReset.expiry", { expiresAt });
 
   return {
-    subject: "Reset your DiveDay password",
-    text: `Hi ${firstName},\n\nSomeone asked to reset the password on this DiveDay account. Choose a new one here:\n${input.resetUrl}\n\nThis link expires ${expiresAt} and works once. If this wasn't you, your password hasn't changed — you can ignore this.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>Someone asked to reset the password on this DiveDay account. <a href="${url}">Choose a new one here</a>.</p><p>This link expires ${escapeHtml(expiresAt)} and works once. If this wasn't you, your password hasn't changed — you can ignore this.</p>`,
+    subject: t("notifications.passwordReset.subject"),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${choose}:\n${input.resetUrl}\n\n${expiry}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${body} <a href="${url}">${choose}</a>.</p><p>${t("notifications.passwordReset.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
 type PasswordChangedEmailInput = {
+  locale: DiverLocale;
   ownerName: string;
   /**
    * The recovery link for someone this *wasn't* — omitted only when
@@ -480,31 +650,45 @@ type PasswordChangedEmailInput = {
 };
 
 export function passwordChangedEmail(input: PasswordChangedEmailInput): NotificationEmail {
-  const firstName = input.ownerName.trim().split(/\s+/)[0] || "there";
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.ownerName);
   const recoveryText = input.forgotPasswordUrl
-    ? `If it wasn't, request a new password here right away:\n${input.forgotPasswordUrl}\n`
-    : "If it wasn't, request a new password from the sign-in page right away.\n";
+    ? `${t("notifications.passwordChanged.recoveryWithLink")}:\n${input.forgotPasswordUrl}\n`
+    : `${t("notifications.passwordChanged.recoveryNoLink")}\n`;
   const recoveryHtml = input.forgotPasswordUrl
-    ? `<p>If it wasn't, <a href="${escapeHtml(input.forgotPasswordUrl)}">request a new password here</a> right away.</p>`
-    : "<p>If it wasn't, request a new password from the sign-in page right away.</p>";
+    ? `<p>${t("notifications.passwordChanged.recoveryWithLinkHtml", { link: `<a href="${escapeHtml(input.forgotPasswordUrl)}">${t("notifications.passwordChanged.recoveryLinkText")}</a>` })}</p>`
+    : `<p>${t("notifications.passwordChanged.recoveryNoLink")}</p>`;
 
   return {
-    subject: "Your DiveDay password was changed",
-    text: `Hi ${firstName},\n\nThe password on this DiveDay account was just changed. If that was you, there's nothing else to do.\n\n${recoveryText}`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>The password on this DiveDay account was just changed. If that was you, there's nothing else to do.</p>${recoveryHtml}`,
+    subject: t("notifications.passwordChanged.subject"),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${t("notifications.passwordChanged.body")}\n\n${recoveryText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${t("notifications.passwordChanged.body")}</p>${recoveryHtml}`,
   };
 }
 
 export function waiverRequestEmail(input: WaiverRequestEmailInput): NotificationEmail {
-  const firstName = input.diverName.trim().split(/\s+/)[0] || "there";
-  const expiresAt = formatDateTimeTz(input.expiresAt, "en-US", input.timezone);
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.completionUrl);
 
+  const body = t("notifications.waiverRequest.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+  });
+  const bodyHtml = t("notifications.waiverRequest.body", {
+    shopName: shop,
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const completeText = t("notifications.waiverRequest.completeText");
+  const completeLink = t("notifications.waiverRequest.completeLink");
+  const expiry = t("notifications.waiverRequest.expiry", { expiresAt });
+
   return {
-    subject: `Complete your waiver for ${input.tripTitle}`,
-    text: `Hi ${firstName},\n\n${input.shopName} needs your waiver for ${input.tripTitle}. Complete it here:\n${input.completionUrl}\n\nThis private link expires ${expiresAt}.\n`,
-    html: `<p>Hi ${escapeHtml(firstName)},</p><p>${shop} needs your waiver for <strong>${title}</strong>.</p><p><a href="${url}">Complete your waiver</a></p><p>This private link expires ${escapeHtml(expiresAt)}.</p>`,
+    subject: t("notifications.waiverRequest.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${completeLink}</a></p><p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }

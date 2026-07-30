@@ -195,7 +195,7 @@ describe("reminderReadiness", () => {
       status: "blocked",
       blockers: [{ code: "waiver_pending" }, { code: "payment_due" }],
     });
-    expect(outstanding).toEqual(["sign your waiver", "settle your balance"]);
+    expect(outstanding).toEqual(["waiver_pending", "payment_due"]);
     expect(medicalReview).toBe(false);
   });
 

@@ -1,8 +1,11 @@
 import { and, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { reminderActionText } from "@/i18n/reminder-labels";
+import { type DiverLocale, toDiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { firstTimerReassurance, forecastLine } from "@/lib/night-before-brief";
+import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import { type Notification, type NotificationProvider, publicAppUrl } from "@/lib/notifications";
 import {
   notifySms,
@@ -10,7 +13,11 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { buildDiverChecklist, reminderReadiness } from "@/lib/readiness-summary";
+import {
+  buildDiverChecklist,
+  type ReminderActionCode,
+  reminderReadiness,
+} from "@/lib/readiness-summary";
 import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
@@ -77,31 +84,55 @@ export type SendDueRemindersOptions = {
  * A short text; the email carries the full detail and the link. The night-before
  * (day) lead adds the plain-language conditions line and who to text, the SMS
  * half of the confidence arc — kept compact so it stays a single readable text.
+ * Resolved against the recipient shop's locale, the same as the email
+ * (docs ADR 20260731-notification-locale) — no downstream renderer picks
+ * words for a sent text, so this composes its own via `t()` rather than
+ * returning a code.
  */
-function reminderSmsBody(input: {
-  shopName: string;
-  tripTitle: string;
-  startsAt: Date;
-  endsAt: Date;
-  timezone: string;
-  lead: "week" | "day";
-  dockCallMinutes: number;
-  outstanding: string[];
-  medicalReview: boolean;
-  forecast?: string | null;
-  whoToText?: string | null;
-}): string {
-  const when = input.lead === "week" ? "this week" : "tomorrow";
-  const date = formatShortDate(input.startsAt, "en-US", input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, "en-US", input.timezone);
-  const conditions = input.lead === "day" && input.forecast ? ` Conditions: ${input.forecast}` : "";
+function reminderSmsBody(
+  t: DiverTranslator,
+  locale: DiverLocale,
+  input: {
+    shopName: string;
+    tripTitle: string;
+    startsAt: Date;
+    endsAt: Date;
+    timezone: string;
+    lead: "week" | "day";
+    dockCallMinutes: number;
+    outstanding: ReminderActionCode[];
+    medicalReview: boolean;
+    forecast?: string | null;
+    whoToText?: string | null;
+  },
+): string {
+  const when =
+    input.lead === "week" ? t("notifications.sms.whenWeek") : t("notifications.sms.whenDay");
+  const date = formatShortDate(input.startsAt, locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, locale, input.timezone);
+  const conditions =
+    input.lead === "day" && input.forecast
+      ? ` ${t("notifications.brief.conditionsLabel")} ${input.forecast}`
+      : "";
   // Name the diver's own outstanding items rather than a generic nudge.
-  const todo = [...input.outstanding];
-  if (input.medicalReview) todo.push("check if a medical answer needs a doctor's sign-off");
-  const todoText = todo.length ? ` Still to sort before you board: ${todo.join("; ")}.` : "";
+  const todo = input.outstanding.map((code) => reminderActionText(t, code));
+  if (input.medicalReview) todo.push(t("notifications.sms.medicalReviewNote"));
+  const todoText = todo.length
+    ? ` ${t("notifications.common.outstandingHeading")} ${todo.join("; ")}.`
+    : "";
   const contact =
-    input.lead === "day" && input.whoToText ? ` Questions? Text us at ${input.whoToText}.` : "";
-  return `${input.shopName}: ${input.tripTitle} sails ${when} — ${date}, ${time}. Please be at the dock ${input.dockCallMinutes} min early.${conditions}${todoText}${contact}`;
+    input.lead === "day" && input.whoToText
+      ? ` ${t("notifications.sms.contact", { phone: input.whoToText })}`
+      : "";
+  const body = t("notifications.sms.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+    when,
+    date,
+    time,
+    minutes: input.dockCallMinutes,
+  });
+  return `${body}${conditions}${todoText}${contact}`;
 }
 
 /**
@@ -198,6 +229,11 @@ export async function sendDueReminders(
     }
 
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
+    // No request to negotiate Accept-Language from at a cron fire — the shop's
+    // own stored locale is the signal, same as the calendar feed (docs ADR
+    // 20260731-notification-locale).
+    const locale = toDiverLocale(shop.defaultLocale);
+    const t = diverTranslator(locale);
     const readinessCapability = origin
       ? await issueBookingCapability(db, {
           shopId: shop.id,
@@ -223,7 +259,7 @@ export async function sendDueReminders(
     // for a first-timer. The 7-day nudge carries none of it.
     const isDay = cadence.kind === "trip_reminder_24h";
     const forecast = isDay
-      ? forecastLine({
+      ? forecastText(t, locale, {
           conditionsSummary: trip.conditionsSummary,
           waterTemperatureC: trip.waterTemperatureC,
           visibilityMeters: trip.visibilityMeters,
@@ -236,11 +272,11 @@ export async function sendDueReminders(
           forecast,
           bring: shop.packingList,
           whoToText,
-          firstTimerNote: firstTimerReassurance(!returning.has(person.id)),
+          firstTimerNote: firstTimerReassuranceText(t, !returning.has(person.id)),
         }
       : undefined;
 
-    const smsBody = reminderSmsBody({
+    const smsBody = reminderSmsBody(t, locale, {
       shopName: shop.name,
       tripTitle: trip.title,
       startsAt: trip.startsAt,
@@ -266,6 +302,7 @@ export async function sendDueReminders(
           bookingId: booking.id,
           shopId: shop.id,
           to: person.email,
+          locale,
           diverName: person.fullName,
           shopName: shop.name,
           tripTitle: trip.title,

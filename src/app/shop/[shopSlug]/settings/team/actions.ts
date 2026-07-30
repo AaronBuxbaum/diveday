@@ -17,6 +17,7 @@ import {
   setStaffRoles,
 } from "@/db/staff-accounts";
 import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
+import { toDiverLocale } from "@/i18n/settings";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -52,6 +53,7 @@ async function sendInviteEmail(input: {
   shopId: string;
   shopName: string;
   to: string;
+  locale: string;
   inviteeName: string;
   inviterName: string;
   roles: Role[];
@@ -71,6 +73,7 @@ async function sendInviteEmail(input: {
       tokenId: issued.tokenId,
       shopId: input.shopId,
       to: input.to,
+      locale: toDiverLocale(input.locale),
       inviteeName: input.inviteeName,
       shopName: input.shopName,
       inviterName: input.inviterName,
@@ -115,6 +118,7 @@ export async function inviteStaffAction(formData: FormData) {
     userAccountId: result.userAccountId,
     shopId: session.user.shopId,
     shopName: shop.name,
+    locale: shop.defaultLocale,
     to: parsed.data.email,
     inviteeName: parsed.data.fullName,
     inviterName: session.user.name ?? "A teammate",
@@ -148,6 +152,7 @@ export async function resendInviteAction(formData: FormData) {
     userAccountId: member.userAccountId,
     shopId: session.user.shopId,
     shopName: shop.name,
+    locale: shop.defaultLocale,
     to: member.email,
     inviteeName: member.fullName,
     inviterName: session.user.name ?? "A teammate",

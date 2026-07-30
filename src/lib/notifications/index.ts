@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowMs } from "@/lib/clock";
 import {
   bookingConfirmationEmail,
@@ -20,11 +21,32 @@ import {
 
 const emailAddressSchema = z.email().max(200);
 
+/**
+ * The recipient shop's own locale — no per-person preference is stored, so
+ * this is the only signal available at send time (docs ADR
+ * 20260731-notification-locale). Every `Notification` kind carries one except
+ * `new_account_alert`, which lands in the founder's own inbox rather than a
+ * shop's or diver's.
+ */
+const localeSchema = z.enum(DIVER_LOCALES);
+
+const reminderActionCodeSchema = z.enum([
+  "waiver_pending",
+  "certification_missing",
+  "certification_expired",
+  "certification_insufficient",
+  "specialty_missing",
+  "specialty_expired",
+  "nitrox_missing",
+  "payment_due",
+]);
+
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),
   bookingId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -52,6 +74,7 @@ const waiverRequestSchema = z.object({
   bookingId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -65,6 +88,7 @@ const waitlistInviteSchema = z.object({
   waitlistEntryId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -84,6 +108,7 @@ const lastMinuteDealSchema = z.object({
   kind: z.literal("last_minute_deal"),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -108,6 +133,7 @@ const checkoutRecoverySchema = z.object({
   checkoutId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
   startsAt: z.date(),
@@ -120,6 +146,7 @@ const tripReminderFields = {
   bookingId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -127,7 +154,7 @@ const tripReminderFields = {
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
-  outstanding: z.array(z.string().trim().min(1).max(120)).max(8).optional(),
+  outstanding: z.array(reminderActionCodeSchema).max(8).optional(),
   medicalReview: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),
 };
@@ -159,6 +186,7 @@ const tripRecapSchema = z.object({
   bookingId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -173,6 +201,7 @@ const tripConditionsHoldSchema = z.object({
   tripId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: z.string().trim().min(1).max(200),
@@ -193,6 +222,7 @@ const welcomeSchema = z.object({
   userAccountId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   ownerName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   signInUrl: z.url().max(2_000),
@@ -204,6 +234,7 @@ const emailVerificationSchema = z.object({
   tokenId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   ownerName: z.string().trim().min(1).max(120),
   verifyUrl: z.url().max(2_000),
   expiresAt: z.date(),
@@ -216,6 +247,7 @@ const passwordResetRequestSchema = z.object({
   tokenId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   ownerName: z.string().trim().min(1).max(120),
   resetUrl: z.url().max(2_000),
   expiresAt: z.date(),
@@ -230,6 +262,7 @@ const staffInviteSchema = z.object({
   tokenId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   inviteeName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   inviterName: z.string().trim().min(1).max(120),
@@ -258,6 +291,7 @@ const passwordChangedSchema = z.object({
   userAccountId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
+  locale: localeSchema,
   ownerName: z.string().trim().min(1).max(120),
   forgotPasswordUrl: z.url().max(2_000).optional(),
   /** Distinguishes each change as its own send — a second reset is a fresh event, not a duplicate. */

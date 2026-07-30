@@ -1,4 +1,5 @@
 import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import {
   generateLastMinutePromoCode,
@@ -125,6 +126,7 @@ export async function sendLastMinuteDealBlast(
                 kind: "last_minute_deal" as const,
                 shopId: input.shopId,
                 to: person.email,
+                locale: toDiverLocale(shop.defaultLocale),
                 diverName: person.fullName,
                 shopName: shop.name,
                 tripTitle: tripRow.title,

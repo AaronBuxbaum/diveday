@@ -1,4 +1,6 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
+import { diverTranslator } from "@/i18n/messages";
+import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { type Notification, type NotificationProvider, publicAppUrl } from "@/lib/notifications";
 import {
@@ -492,18 +494,26 @@ export async function sendDueRecaps(
     const recapUrl = origin ? new URL(recapLinkPath(booking.id), `${origin}/`).toString() : null;
     const phone = smsRecipient(person.phone);
     const sites = siteNamesByTrip.get(trip.id) ?? [];
+    // No request to negotiate Accept-Language from at a cron fire — the shop's
+    // own stored locale is the signal (docs ADR 20260731-notification-locale).
+    const locale = toDiverLocale(shop.defaultLocale);
+    const t = diverTranslator(locale);
+    const smsBody = recapUrl
+      ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
+      : "";
 
     if (recapUrl && person.email) {
       emailWork.push({
         bookingId: booking.id,
         shopId: shop.id,
         phone,
-        smsBody: `${shop.name}: thanks for diving ${trip.title}! Your recap: ${recapUrl}`,
+        smsBody,
         notification: {
           kind: "trip_recap",
           bookingId: booking.id,
           shopId: shop.id,
           to: person.email,
+          locale,
           diverName: person.fullName,
           shopName: shop.name,
           tripTitle: trip.title,
@@ -518,7 +528,7 @@ export async function sendDueRecaps(
         bookingId: booking.id,
         shopId: shop.id,
         phone,
-        smsBody: `${shop.name}: thanks for diving ${trip.title}! Your recap: ${recapUrl}`,
+        smsBody,
       });
     } else {
       // No app origin (no link to send) or no reachable channel — record the gap.

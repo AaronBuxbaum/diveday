@@ -211,31 +211,41 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
 }
 
 /**
- * Terse imperatives for a reminder — only the codes a diver can act on before
- * the dock. A "waiting" blocker (verification, medical review) is the shop's to
- * finish, so it never appears here as a to-do the diver can't complete.
- *
- * English on purpose, for now: the only consumer is `src/db/reminders.ts`'s
- * SMS/email composition, a surface with no request-scoped locale to negotiate
- * from (a cron job, not a page render) and no translator wired to it yet.
- * Localizing transactional SMS/email is real, separate work — tracked, not
- * silently included in the src/app/src/components sweep this map's siblings
- * (`BLOCKER_STATE`, `CHECKLIST_DETAIL_KEYS`) were fixed as part of.
+ * Only the codes a diver can act on before the dock — a "waiting" blocker
+ * (verification, medical review) is the shop's to finish, so it never appears
+ * here as a to-do the diver can't complete. A code, never a phrase: the
+ * caller (`src/db/reminders.ts`'s SMS/email composition) resolves each one
+ * through `src/i18n/reminder-labels.ts` against the recipient shop's locale
+ * (docs ADR 20260731-notification-locale).
  */
-const REMINDER_ACTION: Partial<Record<ReadinessBlockerCode, string>> = {
-  waiver_pending: "sign your waiver",
-  certification_missing: "send your shop your certification card",
-  certification_expired: "check on your shop's refresher date for your certification",
-  certification_insufficient: "check your certification level with the shop",
-  specialty_missing: "send your shop your specialty card",
-  specialty_expired: "update your specialty card with the shop",
-  nitrox_missing: "send your shop your nitrox card",
-  payment_due: "settle your balance",
-};
+export type ReminderActionCode =
+  | "waiver_pending"
+  | "certification_missing"
+  | "certification_expired"
+  | "certification_insufficient"
+  | "specialty_missing"
+  | "specialty_expired"
+  | "nitrox_missing"
+  | "payment_due";
+
+const REMINDER_ACTIONABLE_CODES: ReadonlySet<ReminderActionCode> = new Set([
+  "waiver_pending",
+  "certification_missing",
+  "certification_expired",
+  "certification_insufficient",
+  "specialty_missing",
+  "specialty_expired",
+  "nitrox_missing",
+  "payment_due",
+]);
+
+function isReminderActionCode(code: ReadinessBlockerCode): code is ReminderActionCode {
+  return REMINDER_ACTIONABLE_CODES.has(code as ReminderActionCode);
+}
 
 export type ReminderReadiness = {
-  /** Short imperatives for what's still on the diver, e.g. "sign your waiver". */
-  outstanding: string[];
+  /** What's still on the diver, as codes — resolve via `reminderActionText`. */
+  outstanding: ReminderActionCode[];
   /** True when a medical answer needs review — a doctor's sign-off may block boarding. */
   medicalReview: boolean;
 };
@@ -248,12 +258,13 @@ export type ReminderReadiness = {
  * flag, so the reminder stays a warm nudge instead of a false to-do.
  */
 export function reminderReadiness(items: readonly DiverChecklistItem[]): ReminderReadiness {
-  const outstanding: string[] = [];
+  const outstanding: ReminderActionCode[] = [];
   let medicalReview = false;
   for (const item of items) {
     if (item.code === "medical_review") medicalReview = true;
-    const phrase = item.state === "action" && item.code ? REMINDER_ACTION[item.code] : undefined;
-    if (phrase) outstanding.push(phrase);
+    if (item.state === "action" && item.code && isReminderActionCode(item.code)) {
+      outstanding.push(item.code);
+    }
   }
   return { outstanding, medicalReview };
 }

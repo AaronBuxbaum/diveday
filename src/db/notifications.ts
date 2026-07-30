@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { toDiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
@@ -470,6 +471,7 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
       bookingId: row.booking.id,
       shopId,
       to: row.person.email,
+      locale: toDiverLocale(row.shop.defaultLocale),
       diverName: row.person.fullName,
       shopName: row.shop.name,
       tripTitle: row.trip.title,
