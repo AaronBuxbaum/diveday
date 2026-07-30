@@ -114,7 +114,16 @@ export default defineConfig({
   webServer: e2eWorkerIndexes.map((i) => {
     const port = e2ePort(i);
     return {
-      command: `./node_modules/.bin/next start --hostname 127.0.0.1 --port ${port}`,
+      // `--keepAliveTimeout` well above Node's 5s default, because the request
+      // fixture is long-lived and pools its sockets. Every test opens one for
+      // the `/api/test/reset` in fixtures.ts, then the body runs — an onboarding
+      // flow or a booking journey, comfortably past five seconds — and a later
+      // `request.post` to a test endpoint reuses that idle socket. If the server
+      // has closed it in the meantime the POST lands on a dead connection and
+      // fails with ECONNRESET, in whichever spec happened to pause longest
+      // between two API calls. Widening the server's idle window closes the
+      // whole class rather than retrying at each call site.
+      command: `./node_modules/.bin/next start --hostname 127.0.0.1 --port ${port} --keepAliveTimeout 120000`,
       url: e2eBaseURL(i),
       env: { ...serverEnv, PORT: String(port) },
       reuseExistingServer: !process.env.CI,
