@@ -4,21 +4,55 @@ import { useMemo, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { MAX_PATH_STEPS } from "@/lib/courses";
-import { CERTIFICATION_LEVEL_LABELS, type CertificationLevel } from "@/lib/readiness";
 
-/** A catalog course as the picker offers it. */
+/** A catalog course as the picker offers it — `gateLabel` arrives pre-composed from the server. */
 export type PathBuilderCourse = {
   id: string;
   title: string;
   agency: string;
   isActive: boolean;
-  minimumCertificationLevel: CertificationLevel | null;
+  gateLabel: string;
 };
 
 export type PathBuilderStep = { courseId: string; note: string };
 
-function gateLabel(level: CertificationLevel | null): string {
-  return level ? `${CERTIFICATION_LEVEL_LABELS[level]} or higher` : "Open to uncertified divers";
+/**
+ * Every value is a plain ICU-style template string, never a function — see
+ * the identical note on `DayByDayEditorCopy` (DayByDayEditor.tsx): step count
+ * and course selection are unbounded, purely client-side state, so there is
+ * no fixed set of server-rendered strings to hand down. `fill()` below does
+ * the one-level `{token}` substitution locally.
+ */
+export interface PathBuilderCopy {
+  noSteps: string;
+  stepLabel: string;
+  courseGoneFromCatalog: string;
+  hidden: string;
+  moveEarlier: string;
+  moveLater: string;
+  removeFromPath: string;
+  step: string;
+  remove: string;
+  stepNoteLabel: string;
+  optionalHint: string;
+  stepNotePlaceholder: string;
+  addACourse: string;
+  atCapDescription: string;
+  notOnPathDescription: string;
+  chooseACourse: string;
+  hiddenSuffix: string;
+  addToPath: string;
+  allCoursesOnPath: string;
+  pathPreviewLabel: string;
+  whatADiverSees: string;
+  addACourseToSee: string;
+}
+
+/** One-level `{token}` substitution — not a translator, just string.replace. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    key in values ? String(values[key]) : match,
+  );
 }
 
 /**
@@ -36,9 +70,11 @@ function gateLabel(level: CertificationLevel | null): string {
 export function PathBuilder({
   courses,
   initialSteps,
+  copy,
 }: {
   courses: PathBuilderCourse[];
   initialSteps: PathBuilderStep[];
+  copy: PathBuilderCopy;
 }) {
   const [steps, setSteps] = useState<PathBuilderStep[]>(initialSteps);
   const [picked, setPicked] = useState("");
@@ -79,7 +115,7 @@ export function PathBuilder({
 
       {steps.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border-strong px-4 py-6 text-center text-sm text-muted">
-          No courses on this path yet. Add the first one a diver would take, then build upward.
+          {copy.noSteps}
         </p>
       ) : (
         <ol className="flex flex-col gap-3">
@@ -100,24 +136,22 @@ export function PathBuilder({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
-                      <span className="sr-only">{`Step ${position}: `}</span>
-                      {course?.title ?? "Course no longer in the catalog"}
+                      <span className="sr-only">{fill(copy.stepLabel, { position })}</span>
+                      {course?.title ?? copy.courseGoneFromCatalog}
                       {course && !course.isActive ? (
                         <span className="ml-2 rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
-                          Hidden
+                          {copy.hidden}
                         </span>
                       ) : null}
                     </p>
-                    <p className="mt-0.5 text-sm text-muted">
-                      {course ? gateLabel(course.minimumCertificationLevel) : null}
-                    </p>
+                    <p className="mt-0.5 text-sm text-muted">{course ? course.gateLabel : null}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       onClick={() => moveStep(index, -1)}
                       disabled={index === 0}
-                      aria-label={`Move ${course?.title ?? "step"} earlier`}
+                      aria-label={fill(copy.moveEarlier, { course: course?.title ?? copy.step })}
                       className={buttonClass({ variant: "ghost", size: "sm", className: "px-3" })}
                     >
                       <span aria-hidden="true">↑</span>
@@ -126,7 +160,7 @@ export function PathBuilder({
                       type="button"
                       onClick={() => moveStep(index, 1)}
                       disabled={index === steps.length - 1}
-                      aria-label={`Move ${course?.title ?? "step"} later`}
+                      aria-label={fill(copy.moveLater, { course: course?.title ?? copy.step })}
                       className={buttonClass({ variant: "ghost", size: "sm", className: "px-3" })}
                     >
                       <span aria-hidden="true">↓</span>
@@ -134,21 +168,23 @@ export function PathBuilder({
                     <button
                       type="button"
                       onClick={() => removeStep(index)}
-                      aria-label={`Remove ${course?.title ?? "step"} from this path`}
+                      aria-label={fill(copy.removeFromPath, {
+                        course: course?.title ?? copy.step,
+                      })}
                       className={buttonClass({ variant: "danger", size: "sm" })}
                     >
-                      Remove
+                      {copy.remove}
                     </button>
                   </div>
                 </div>
                 <div className="mt-3">
                   <FieldGrid columns={1}>
-                    <Field label={`Step ${position} note`} hint="(optional)">
+                    <Field label={fill(copy.stepNoteLabel, { position })} hint={copy.optionalHint}>
                       <input
                         value={step.note}
                         onChange={(event) => setNote(index, event.target.value)}
                         maxLength={200}
-                        placeholder="Most divers wait a season before this one"
+                        placeholder={copy.stepNotePlaceholder}
                         className={controlClass}
                       />
                     </Field>
@@ -163,12 +199,8 @@ export function PathBuilder({
       <div className="rounded-xl border border-border bg-surface-sunken/40 p-4">
         <FieldGrid columns={1} className="gap-y-3">
           <Field
-            label="Add a course"
-            description={
-              atCap
-                ? `A path holds up to ${MAX_PATH_STEPS} courses.`
-                : "Only courses that aren’t already on this path are listed."
-            }
+            label={copy.addACourse}
+            description={atCap ? copy.atCapDescription : copy.notOnPathDescription}
           >
             <div className="flex flex-wrap items-center gap-2">
               <select
@@ -177,11 +209,11 @@ export function PathBuilder({
                 disabled={available.length === 0 || atCap}
                 className={`${controlClass} sm:max-w-sm`}
               >
-                <option value="">Choose a course…</option>
+                <option value="">{copy.chooseACourse}</option>
                 {available.map((course) => (
                   <option key={course.id} value={course.id}>
                     {course.title} · {course.agency.toUpperCase()}
-                    {course.isActive ? "" : " (hidden)"}
+                    {course.isActive ? "" : copy.hiddenSuffix}
                   </option>
                 ))}
               </select>
@@ -191,24 +223,22 @@ export function PathBuilder({
                 disabled={!picked || atCap}
                 className={buttonClass({ variant: "secondary" })}
               >
-                Add to path
+                {copy.addToPath}
               </button>
             </div>
           </Field>
         </FieldGrid>
         {available.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
-            Every course in your catalog is already on this path.
-          </p>
+          <p className="mt-2 text-sm text-muted">{copy.allCoursesOnPath}</p>
         ) : null}
       </div>
 
-      <section aria-label="Path preview" className="rounded-xl border border-border p-4">
+      <section aria-label={copy.pathPreviewLabel} className="rounded-xl border border-border p-4">
         <h3 className="text-xs font-semibold tracking-widest text-primary uppercase">
-          What a diver sees
+          {copy.whatADiverSees}
         </h3>
         {steps.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">Add a course to see the progression.</p>
+          <p className="mt-2 text-sm text-muted">{copy.addACourseToSee}</p>
         ) : (
           <p className="mt-2 text-sm leading-6">
             {steps.map((step, index) => (

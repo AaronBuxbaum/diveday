@@ -396,7 +396,16 @@
     "chooseOne": "Choose one",
     "anythingElse": "Anything else",
     "copy": "Copy message",
-    "copied": "Copied"
+    "copied": "Copied",
+    "getInTouch": "Get in touch",
+    "noDateBody": "No date that works, or a question first? Answer what you can and we will write the email for you — it sends from your own mail app, so our reply lands where you expect it.",
+    "namePlaceholder": "Priya Sharma",
+    "whenSuitsPlaceholder": "The week of 12 August",
+    "messagePlaceholder": "We are on a cruise and only ashore on Tuesday.",
+    "messageSoFar": "Your message so far",
+    "openInEmailApp": "Open in your email app",
+    "orWriteTo": "Or write to",
+    "callLabel": "call"
   },
   "account": {
     "common": {

@@ -73,7 +73,7 @@ export function CourseHero({
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
               {usd.format(totalCents / 100)}
-              <span className="ml-2 text-sm font-normal text-muted">per diver</span>
+              <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
           )}
           {bookHref ? (

@@ -8,16 +8,13 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listCoursePaths } from "@/db/course-paths";
+import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
 import { createPathAction, deletePathAction, setPathVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Certification paths — DiveDay" };
-
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "That didn’t save — give the path a name and try again.",
-  duplicate: "You already have a path with that name.",
-  "not-authorized": "Building paths is limited to owners, managers, and instructors.",
-};
 
 export default async function CoursePathsPage({
   params,
@@ -30,10 +27,18 @@ export default async function CoursePathsPage({
   const { shopSlug } = await params;
   const { error } = await searchParams;
   const db = await getDb();
-  const [paths, canConfigure] = await Promise.all([
+  const [paths, canConfigure, shop] = await Promise.all([
     listCoursePaths(db, session.user.shopId),
     canPersonConfigureTrips(db, session.user.shopId, session.user.personId),
+    getShopById(db, session.user.shopId),
   ]);
+  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+
+  const ERROR_MESSAGES: Record<string, string> = {
+    invalid: t("courses.pathsList.errorInvalid"),
+    duplicate: t("courses.pathsList.errorDuplicate"),
+    "not-authorized": t("courses.pathsList.errorNotAuthorized"),
+  };
   const message = error ? ERROR_MESSAGES[error] : undefined;
 
   const create = createPathAction.bind(null, shopSlug);
@@ -43,15 +48,15 @@ export default async function CoursePathsPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Catalog"
-        title="Certification paths"
-        description="The order you’d walk a diver through your courses. A path is guidance, not a gate — it never changes who may enrol in anything."
+        eyebrow={t("courses.pathsList.eyebrow")}
+        title={t("courses.pathsList.title")}
+        description={t("courses.pathsList.description")}
         actions={
           <Link
             href={`/shop/${shopSlug}/courses`}
             className={buttonClass({ variant: "secondary" })}
           >
-            Back to courses
+            {t("courses.pathsList.backToCourses")}
           </Link>
         }
       />
@@ -64,11 +69,8 @@ export default async function CoursePathsPage({
 
       {paths.length === 0 ? (
         <EmptyState>
-          <h2 className="font-medium">No paths yet</h2>
-          <p className="mt-1 text-sm text-muted">
-            Most shops start with the one every diver asks about: Open Water, then Advanced, then
-            Rescue.
-          </p>
+          <h2 className="font-medium">{t("courses.pathsList.noPathsHeading")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("courses.pathsList.noPathsBody")}</p>
         </EmptyState>
       ) : (
         <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
@@ -86,18 +88,20 @@ export default async function CoursePathsPage({
                     {path.title}
                   </Link>
                   <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">
-                    {path.steps.length === 1 ? "1 course" : `${path.steps.length} courses`}
+                    {path.steps.length === 1
+                      ? t("courses.pathsList.oneCourse")
+                      : t("courses.pathsList.manyCourses", { count: path.steps.length })}
                   </span>
                   {path.isActive ? null : (
                     <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
-                      Hidden
+                      {t("courses.pathsList.hidden")}
                     </span>
                   )}
                 </span>
                 <p className="mt-1 text-sm text-muted">
                   {path.steps.length > 0
                     ? path.steps.map((step) => step.course.title).join(" → ")
-                    : "No courses on this path yet."}
+                    : t("courses.pathsList.noCoursesYet")}
                 </p>
               </div>
               {canConfigure ? (
@@ -106,7 +110,7 @@ export default async function CoursePathsPage({
                     href={`/shop/${shopSlug}/courses/paths/${path.slug}`}
                     className={buttonClass({ variant: "secondary", size: "sm" })}
                   >
-                    Edit
+                    {t("courses.pathsList.edit")}
                   </Link>
                   <form action={toggle}>
                     <input type="hidden" name="pathId" value={path.id} />
@@ -115,7 +119,7 @@ export default async function CoursePathsPage({
                       pendingLabel="…"
                       className={buttonClass({ variant: "ghost", size: "sm" })}
                     >
-                      {path.isActive ? "Hide" : "Show"}
+                      {path.isActive ? t("courses.pathsList.hide") : t("courses.pathsList.show")}
                       <span className="sr-only"> {path.title}</span>
                     </SubmitButton>
                   </form>
@@ -125,7 +129,7 @@ export default async function CoursePathsPage({
                       pendingLabel="…"
                       className={buttonClass({ variant: "danger", size: "sm" })}
                     >
-                      Delete
+                      {t("courses.pathsList.delete")}
                       <span className="sr-only"> {path.title}</span>
                     </SubmitButton>
                   </form>
@@ -138,33 +142,37 @@ export default async function CoursePathsPage({
 
       {canConfigure ? (
         <section className="mt-8 rounded-2xl border border-border bg-surface p-5 shadow-sm">
-          <h2 className="font-semibold">Start a new path</h2>
-          <p className="mt-1 text-sm text-muted">
-            Name it the way a diver would ask for it. You’ll add the courses next.
-          </p>
+          <h2 className="font-semibold">{t("courses.pathsList.startNewPath")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("courses.pathsList.startNewPathBody")}</p>
           <FieldGrid as="form" action={create} columns={1} className="mt-4 gap-y-4">
-            <Field label="Path name">
+            <Field label={t("courses.pathsList.pathNameLabel")}>
               <input
                 name="title"
                 type="text"
                 required
                 maxLength={120}
-                placeholder="From first breath to Rescue Diver"
+                placeholder={t("courses.pathsList.pathNamePlaceholder")}
                 className={controlClass}
               />
             </Field>
-            <Field label="One-line summary" hint="(optional)">
+            <Field
+              label={t("courses.pathsList.summaryLabel")}
+              hint={t("courses.edit.optionalHint")}
+            >
               <input
                 name="summary"
                 type="text"
                 maxLength={240}
-                placeholder="Three courses and a season of diving between them."
+                placeholder={t("courses.pathsList.summaryPlaceholder")}
                 className={controlClass}
               />
             </Field>
             <div>
-              <SubmitButton pendingLabel="Creating…" className={buttonClass()}>
-                Create path
+              <SubmitButton
+                pendingLabel={t("courses.pathsList.creating")}
+                className={buttonClass()}
+              >
+                {t("courses.pathsList.createPath")}
               </SubmitButton>
             </div>
           </FieldGrid>
@@ -172,7 +180,7 @@ export default async function CoursePathsPage({
       ) : (
         <div className="mt-8">
           <ShopNotice tone="neutral" role="status">
-            Building paths is limited to owners, managers, and instructors.
+            {t("courses.pathsList.notAuthorizedNotice")}
           </ShopNotice>
         </div>
       )}

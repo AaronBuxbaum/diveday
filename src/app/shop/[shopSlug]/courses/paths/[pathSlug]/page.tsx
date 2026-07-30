@@ -9,17 +9,16 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getCoursePathBySlug } from "@/db/course-paths";
 import { listCourses } from "@/db/courses";
+import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { MAX_PATH_STEPS } from "@/lib/courses";
+import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { PathBuilder } from "../_components/PathBuilder";
 import { savePathAction } from "../actions";
 
 export const metadata: Metadata = { title: "Edit a path — DiveDay" };
-
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "That didn’t save — give the path a name and try again.",
-  duplicate: "You already have a path with that name.",
-  "not-authorized": "Building paths is limited to owners, managers, and instructors.",
-};
 
 export default async function EditCoursePathPage({
   params,
@@ -32,12 +31,20 @@ export default async function EditCoursePathPage({
   const { shopSlug, pathSlug } = await params;
   const { error, saved } = await searchParams;
   const db = await getDb();
-  const [path, courseList, canConfigure] = await Promise.all([
+  const [path, courseList, canConfigure, shop] = await Promise.all([
     getCoursePathBySlug(db, session.user.shopId, pathSlug),
     listCourses(db, session.user.shopId),
     canPersonConfigureTrips(db, session.user.shopId, session.user.personId),
+    getShopById(db, session.user.shopId),
   ]);
-  if (!path) notFound();
+  if (!path || !shop) notFound();
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+
+  const ERROR_MESSAGES: Record<string, string> = {
+    invalid: t("courses.pathEdit.errorInvalid"),
+    duplicate: t("courses.pathEdit.errorDuplicate"),
+    "not-authorized": t("courses.pathEdit.errorNotAuthorized"),
+  };
 
   const message = error ? ERROR_MESSAGES[error] : undefined;
   const save = savePathAction.bind(null, shopSlug, pathSlug);
@@ -46,15 +53,15 @@ export default async function EditCoursePathPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow="Catalog"
+        eyebrow={t("courses.pathEdit.eyebrow")}
         title={path.title}
-        description="Drop courses in the order a diver would take them. Nothing here decides who may enrol — that stays with each course’s own certification requirement."
+        description={t("courses.pathEdit.description")}
         actions={
           <Link
             href={`/shop/${shopSlug}/courses/paths`}
             className={buttonClass({ variant: "secondary" })}
           >
-            All paths
+            {t("courses.pathEdit.allPaths")}
           </Link>
         }
       />
@@ -66,21 +73,21 @@ export default async function EditCoursePathPage({
       ) : null}
       {saved ? (
         <ShopNotice tone="success" className="mb-6">
-          Path saved.
+          {t("courses.pathEdit.pathSaved")}
         </ShopNotice>
       ) : null}
       {hiddenSteps.length > 0 ? (
         <ShopNotice tone="warning" className="mb-6">
           {hiddenSteps.length === 1
-            ? `${hiddenSteps[0].course.title} is hidden in your catalog, so divers won’t be shown that step.`
-            : `${hiddenSteps.length} courses on this path are hidden in your catalog, so divers won’t be shown those steps.`}
+            ? t("courses.pathEdit.oneHiddenStep", { course: hiddenSteps[0].course.title })
+            : t("courses.pathEdit.manyHiddenSteps", { count: hiddenSteps.length })}
         </ShopNotice>
       ) : null}
 
       {canConfigure ? (
         <form action={save} className="flex flex-col gap-6">
           <FieldGrid columns={1} className="gap-y-4">
-            <Field label="Path name">
+            <Field label={t("courses.pathEdit.pathNameLabel")}>
               <input
                 name="title"
                 type="text"
@@ -90,13 +97,13 @@ export default async function EditCoursePathPage({
                 className={controlClass}
               />
             </Field>
-            <Field label="One-line summary" hint="(optional)">
+            <Field label={t("courses.pathEdit.summaryLabel")} hint={t("courses.edit.optionalHint")}>
               <input
                 name="summary"
                 type="text"
                 maxLength={240}
                 defaultValue={path.summary ?? ""}
-                placeholder="Three courses and a season of diving between them."
+                placeholder={t("courses.pathEdit.summaryPlaceholder")}
                 className={controlClass}
               />
             </Field>
@@ -108,12 +115,42 @@ export default async function EditCoursePathPage({
               title: course.title,
               agency: course.agency,
               isActive: course.isActive,
-              minimumCertificationLevel: course.minimumCertificationLevel,
+              gateLabel: course.minimumCertificationLevel
+                ? t("courses.pathBuilder.orHigher", {
+                    level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+                  })
+                : t("courses.pathBuilder.openToUncertified"),
             }))}
             initialSteps={path.steps.map((step) => ({
               courseId: step.course.id,
               note: step.note ?? "",
             }))}
+            copy={{
+              noSteps: t("courses.pathBuilder.noSteps"),
+              stepLabel: t("courses.pathBuilder.stepLabel"),
+              courseGoneFromCatalog: t("courses.pathBuilder.courseGoneFromCatalog"),
+              hidden: t("courses.pathBuilder.hidden"),
+              moveEarlier: t("courses.pathBuilder.moveEarlier"),
+              moveLater: t("courses.pathBuilder.moveLater"),
+              removeFromPath: t("courses.pathBuilder.removeFromPath"),
+              step: t("courses.pathBuilder.step"),
+              remove: t("courses.pathBuilder.remove"),
+              stepNoteLabel: t("courses.pathBuilder.stepNoteLabel"),
+              optionalHint: t("courses.edit.optionalHint"),
+              stepNotePlaceholder: t("courses.pathBuilder.stepNotePlaceholder"),
+              addACourse: t("courses.pathBuilder.addACourse"),
+              atCapDescription: t("courses.pathBuilder.atCapDescription", {
+                max: MAX_PATH_STEPS,
+              }),
+              notOnPathDescription: t("courses.pathBuilder.notOnPathDescription"),
+              chooseACourse: t("courses.pathBuilder.chooseACourse"),
+              hiddenSuffix: t("courses.pathBuilder.hiddenSuffix"),
+              addToPath: t("courses.pathBuilder.addToPath"),
+              allCoursesOnPath: t("courses.pathBuilder.allCoursesOnPath"),
+              pathPreviewLabel: t("courses.pathBuilder.pathPreviewLabel"),
+              whatADiverSees: t("courses.pathBuilder.whatADiverSees"),
+              addACourseToSee: t("courses.pathBuilder.addACourseToSee"),
+            }}
           />
 
           <label className="flex min-h-11 items-center gap-3 text-sm">
@@ -124,31 +161,29 @@ export default async function EditCoursePathPage({
               className="size-5 rounded border-border-strong"
             />
             <span>
-              <span className="font-medium">Offer this path to divers</span>
-              <span className="block text-muted">
-                Hidden paths stay here for you and never suggest a next course.
-              </span>
+              <span className="font-medium">{t("courses.pathEdit.offerToDivers")}</span>
+              <span className="block text-muted">{t("courses.pathEdit.hiddenPathsNote")}</span>
             </span>
           </label>
 
           <div className="flex items-center gap-3">
             <SubmitButton
-              pendingLabel="Saving…"
+              pendingLabel={t("courses.pathEdit.saving")}
               className={buttonClass({ size: "lg", className: "rounded-xl text-base" })}
             >
-              Save path
+              {t("courses.pathEdit.savePath")}
             </SubmitButton>
             <Link
               href={`/shop/${shopSlug}/courses/paths`}
               className="text-sm font-medium text-muted hover:text-foreground"
             >
-              Cancel
+              {t("courses.pathEdit.cancel")}
             </Link>
           </div>
         </form>
       ) : (
         <ShopNotice tone="neutral" role="status">
-          Building paths is limited to owners, managers, and instructors.
+          {t("courses.pathEdit.notAuthorizedNotice")}
         </ShopNotice>
       )}
     </main>

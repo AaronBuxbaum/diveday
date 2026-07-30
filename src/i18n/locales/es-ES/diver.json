@@ -396,7 +396,16 @@
     "chooseOne": "Elige una opción",
     "anythingElse": "Algo más",
     "copy": "Copiar mensaje",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "getInTouch": "Ponte en contacto",
+    "noDateBody": "¿Ninguna fecha te viene bien, o tienes una pregunta primero? Responde lo que puedas y escribiremos el correo por ti — se envía desde tu propia aplicación de correo, así que nuestra respuesta llega donde la esperas.",
+    "namePlaceholder": "Priya Sharma",
+    "whenSuitsPlaceholder": "La semana del 12 de agosto",
+    "messagePlaceholder": "Estamos en un crucero y solo bajamos a tierra los martes.",
+    "messageSoFar": "Tu mensaje hasta ahora",
+    "openInEmailApp": "Abrir en tu aplicación de correo",
+    "orWriteTo": "O escribe a",
+    "callLabel": "llama"
   },
   "account": {
     "common": {
