@@ -24,6 +24,7 @@ import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
@@ -119,6 +120,7 @@ export default async function TripDetailPage({
   // What this visitor's device asked for, falling back to the shop's own
   // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
+  const t = diverTranslator(locale);
   const session = await auth();
   // The staff-management redirect only makes sense outside embed mode — that
   // destination isn't in the framing allowlist, so sending an embedded staff
@@ -259,18 +261,15 @@ export default async function TripDetailPage({
             href={`/shop/${shopSlug}/schedule`}
             className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
           >
-            ← All trips
+            ← {t("trip.backToAllTrips")}
           </Link>
         )}
 
         <TripHeader shop={shop} trip={trip} locale={locale} />
         {trip.conditionsHold ? (
           <div role="status" className="mt-5 rounded-lg border border-warning/40 bg-warning/10 p-4">
-            <h2 className="font-semibold">This trip is on a conditions hold</h2>
-            <p className="mt-1 text-sm text-muted">
-              The crew is watching the weather and will make the final call. Existing seats stay
-              held; new bookings are paused for now.
-            </p>
+            <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
           </div>
         ) : null}
         {!isEmbed ? (
@@ -289,7 +288,7 @@ export default async function TripDetailPage({
               className: "fixed right-4 bottom-4 z-20 rounded-full shadow-lg sm:hidden",
             })}
           >
-            Book · {remaining} left
+            {t("trip.bookAndSpotsLeft", { count: remaining })}
           </a>
         ) : null}
 
@@ -373,11 +372,8 @@ export default async function TripDetailPage({
             className="mt-6 rounded-xl border border-warning bg-warning/10 p-5"
             role="status"
           >
-            <h2 className="font-semibold">Conditions changed since you booked</h2>
-            <p className="mt-1 text-sm text-muted">
-              The crew has published a newer read for this day. Review it below; the final route and
-              go/no-go call still happen at the dock.
-            </p>
+            <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
           </section>
         ) : null}
         <PackingSection shop={shop} trip={trip} rentalFit={rentalFit} locale={locale} />

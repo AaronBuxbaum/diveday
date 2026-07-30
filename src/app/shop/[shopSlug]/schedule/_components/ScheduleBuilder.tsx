@@ -43,11 +43,73 @@ type BuilderActions = {
   remove: (formData: FormData) => void | Promise<void>;
 };
 
+/**
+ * Every word the builder shows, resolved server-side from the staff bundle
+ * (`staffTranslator`, since this is a Client Component and cannot translate
+ * itself). Values that vary per day or per trip stay as `{placeholder}`
+ * templates and are filled in at render time with `fill` below — the
+ * template text itself is still a fully-translated, complete sentence, never
+ * a prefix/suffix pair assembled from parts.
+ */
+export type BuilderCopy = {
+  heading: string;
+  description: string;
+  ariaLabel: string;
+  addDeparture: string;
+  addDepartureOnDay: string;
+  add: string;
+  cancel: string;
+  noSiteSetYet: string;
+  courseLabel: string;
+  dayCountLabel: string;
+  crewLabel: string;
+  crewNobodyYet: string;
+  move: string;
+  moveAria: string;
+  copy: string;
+  copyAria: string;
+  remove: string;
+  removeAria: string;
+  removeConfirm: string;
+  removePending: string;
+  whatIsIt: string;
+  titlePlaceholder: string;
+  date: string;
+  departs: string;
+  returns: string;
+  seats: string;
+  dives: string;
+  course: string;
+  optional: string;
+  diveSite: string;
+  ordinaryTrip: string;
+  decideLater: string;
+  adding: string;
+  putOnBoard: string;
+  newDate: string;
+  multiDayNote: string;
+  newDepartureTime: string;
+  moving: string;
+  moveIt: string;
+  copyTo: string;
+  copyDescription: string;
+  departureTime: string;
+  copying: string;
+  copyIt: string;
+};
+
 /** `YYYY-MM-DD`, `offsetDays` from the given ISO day, without touching the clock. */
 function shiftIsoDay(dateIso: string, offsetDays: number): string {
   const shifted = new Date(`${dateIso}T00:00:00Z`);
   shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
   return shifted.toISOString().slice(0, 10);
+}
+
+/** Fills `{placeholder}` tokens in a server-supplied template with per-row values. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? String(values[key]) : match,
+  );
 }
 
 /**
@@ -75,6 +137,7 @@ export function ScheduleBuilder({
   actions,
   defaultDateIso,
   canConfigure,
+  copy,
 }: {
   shopSlug: string;
   days: BuilderDay[];
@@ -84,6 +147,7 @@ export function ScheduleBuilder({
   /** The soonest day on the board, for the "Add a departure" button in the header. */
   defaultDateIso: string;
   canConfigure: boolean;
+  copy: BuilderCopy;
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(null);
@@ -97,18 +161,18 @@ export function ScheduleBuilder({
         columns={1}
         className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
       >
-        <Field label="What is it">
+        <Field label={copy.whatIsIt}>
           <input
             name="title"
             type="text"
             required
             maxLength={120}
-            placeholder="Two-Tank Reef — Molasses & French"
+            placeholder={copy.titlePlaceholder}
             className={controlClass}
           />
         </Field>
         <FieldGrid columns={3} className="gap-y-4">
-          <Field label="Date">
+          <Field label={copy.date}>
             <input
               name="date"
               type="date"
@@ -117,7 +181,7 @@ export function ScheduleBuilder({
               className={controlClass}
             />
           </Field>
-          <Field label="Departs">
+          <Field label={copy.departs}>
             <input
               name="startTime"
               type="time"
@@ -126,7 +190,7 @@ export function ScheduleBuilder({
               className={controlClass}
             />
           </Field>
-          <Field label="Returns">
+          <Field label={copy.returns}>
             <input
               name="endTime"
               type="time"
@@ -137,7 +201,7 @@ export function ScheduleBuilder({
           </Field>
         </FieldGrid>
         <FieldGrid columns={2} className="gap-y-4">
-          <Field label="Seats">
+          <Field label={copy.seats}>
             <input
               name="capacity"
               type="number"
@@ -148,7 +212,7 @@ export function ScheduleBuilder({
               className={`${controlClass} tabular-nums`}
             />
           </Field>
-          <Field label="Dives">
+          <Field label={copy.dives}>
             <input
               name="plannedDives"
               type="number"
@@ -161,9 +225,9 @@ export function ScheduleBuilder({
           </Field>
         </FieldGrid>
         <FieldGrid columns={2} className="gap-y-4">
-          <Field label="Course" hint="(optional)">
+          <Field label={copy.course} hint={copy.optional}>
             <select name="courseId" defaultValue="" className={controlClass}>
-              <option value="">Ordinary trip</option>
+              <option value="">{copy.ordinaryTrip}</option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>
                   {course.title}
@@ -171,9 +235,9 @@ export function ScheduleBuilder({
               ))}
             </select>
           </Field>
-          <Field label="Dive site" hint="(optional)">
+          <Field label={copy.diveSite} hint={copy.optional}>
             <select name="diveSiteId" defaultValue="" className={controlClass}>
-              <option value="">Decide later</option>
+              <option value="">{copy.decideLater}</option>
               {diveSites.map((site) => (
                 <option key={site.id} value={site.id}>
                   {site.title}
@@ -183,15 +247,15 @@ export function ScheduleBuilder({
           </Field>
         </FieldGrid>
         <div className="flex items-center gap-3">
-          <SubmitButton pendingLabel="Adding…" className={buttonClass()}>
-            Put it on the board
+          <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>
+            {copy.putOnBoard}
           </SubmitButton>
           <button
             type="button"
             onClick={() => setOpen(null)}
             className="text-sm font-medium text-muted hover:text-foreground"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
       </FieldGrid>
@@ -199,14 +263,11 @@ export function ScheduleBuilder({
   }
 
   return (
-    <section aria-label="Schedule builder" className="mb-8">
+    <section aria-label={copy.ariaLabel} className="mb-8">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">The board</h2>
-          <p className="mt-1 text-sm text-muted">
-            Add a departure, slide one to another day, copy it forward, or take it off. Open a trip
-            for its dives, crew, and roster.
-          </p>
+          <h2 className="text-lg font-semibold">{copy.heading}</h2>
+          <p className="mt-1 text-sm text-muted">{copy.description}</p>
         </div>
         {canConfigure ? (
           <button
@@ -215,7 +276,7 @@ export function ScheduleBuilder({
             aria-expanded={open === "add:top"}
             className={buttonClass({ className: "rounded-xl" })}
           >
-            <span aria-hidden="true">+</span> Add a departure
+            <span aria-hidden="true">+</span> {copy.addDeparture}
           </button>
         ) : null}
       </div>
@@ -237,10 +298,10 @@ export function ScheduleBuilder({
                   type="button"
                   onClick={() => toggle(`add:${day.dateIso}`)}
                   aria-expanded={open === `add:${day.dateIso}`}
-                  aria-label={`Add a departure on ${day.label}`}
+                  aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
                   className={buttonClass({ variant: "ghost", size: "sm" })}
                 >
-                  <span aria-hidden="true">+</span> Add
+                  <span aria-hidden="true">+</span> {copy.add}
                 </button>
               ) : null}
             </div>
@@ -273,19 +334,23 @@ export function ScheduleBuilder({
                         </Link>
                         <p className="mt-0.5 text-sm text-muted">
                           {[
-                            trip.courseTitle ? `Course · ${trip.courseTitle}` : null,
+                            trip.courseTitle
+                              ? fill(copy.courseLabel, { title: trip.courseTitle })
+                              : null,
                             trip.diveSiteName,
-                            trip.dayCount > 1 ? `${trip.dayCount} days` : null,
+                            trip.dayCount > 1
+                              ? fill(copy.dayCountLabel, { count: trip.dayCount })
+                              : null,
                           ]
                             .filter(Boolean)
-                            .join(" · ") || "No site set yet"}
+                            .join(" · ") || copy.noSiteSetYet}
                         </p>
                         <p className="mt-1 text-sm">
-                          <span className="text-muted">Crew: </span>
+                          <span className="text-muted">{copy.crewLabel} </span>
                           {trip.crew.length > 0 ? (
                             trip.crew.join(", ")
                           ) : (
-                            <span className="font-medium text-warning">nobody yet</span>
+                            <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
                           )}
                         </p>
                       </div>
@@ -298,29 +363,29 @@ export function ScheduleBuilder({
                             type="button"
                             onClick={() => toggle(`move:${trip.id}`)}
                             aria-expanded={open === `move:${trip.id}`}
-                            aria-label={`Move ${ref}`}
+                            aria-label={fill(copy.moveAria, { ref })}
                             className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
-                            Move
+                            {copy.move}
                           </button>
                           <button
                             type="button"
                             onClick={() => toggle(`copy:${trip.id}`)}
                             aria-expanded={open === `copy:${trip.id}`}
-                            aria-label={`Copy ${ref}`}
+                            aria-label={fill(copy.copyAria, { ref })}
                             className={buttonClass({ variant: "secondary", size: "sm" })}
                           >
-                            Copy
+                            {copy.copy}
                           </button>
                           <form action={actions.remove}>
                             <input type="hidden" name="tripId" value={trip.id} />
                             <SubmitButton
-                              pendingLabel="…"
-                              ariaLabel={`Remove ${ref}`}
-                              confirmMessage={`Take “${trip.title}” off the board for good?`}
+                              pendingLabel={copy.removePending}
+                              ariaLabel={fill(copy.removeAria, { ref })}
+                              confirmMessage={fill(copy.removeConfirm, { title: trip.title })}
                               className={buttonClass({ variant: "danger", size: "sm" })}
                             >
-                              Remove
+                              {copy.remove}
                             </SubmitButton>
                           </form>
                         </div>
@@ -336,10 +401,10 @@ export function ScheduleBuilder({
                       >
                         <input type="hidden" name="tripId" value={trip.id} />
                         <Field
-                          label="New date"
+                          label={copy.newDate}
                           description={
                             trip.dayCount > 1
-                              ? `All ${trip.dayCount} days move together, keeping their gaps.`
+                              ? fill(copy.multiDayNote, { count: trip.dayCount })
                               : undefined
                           }
                         >
@@ -351,7 +416,7 @@ export function ScheduleBuilder({
                             className={controlClass}
                           />
                         </Field>
-                        <Field label="New departure time">
+                        <Field label={copy.newDepartureTime}>
                           <input
                             name="startTime"
                             type="time"
@@ -361,15 +426,15 @@ export function ScheduleBuilder({
                           />
                         </Field>
                         <div className="flex items-center gap-3 sm:col-span-2">
-                          <SubmitButton pendingLabel="Moving…" className={buttonClass()}>
-                            Move it
+                          <SubmitButton pendingLabel={copy.moving} className={buttonClass()}>
+                            {copy.moveIt}
                           </SubmitButton>
                           <button
                             type="button"
                             onClick={() => setOpen(null)}
                             className="text-sm font-medium text-muted hover:text-foreground"
                           >
-                            Cancel
+                            {copy.cancel}
                           </button>
                         </div>
                       </FieldGrid>
@@ -383,10 +448,7 @@ export function ScheduleBuilder({
                         className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
                       >
                         <input type="hidden" name="tripId" value={trip.id} />
-                        <Field
-                          label="Copy to"
-                          description="Same dive, same seats, same price — no divers and no crew."
-                        >
+                        <Field label={copy.copyTo} description={copy.copyDescription}>
                           <input
                             name="date"
                             type="date"
@@ -395,7 +457,7 @@ export function ScheduleBuilder({
                             className={controlClass}
                           />
                         </Field>
-                        <Field label="Departure time">
+                        <Field label={copy.departureTime}>
                           <input
                             name="startTime"
                             type="time"
@@ -405,15 +467,15 @@ export function ScheduleBuilder({
                           />
                         </Field>
                         <div className="flex items-center gap-3 sm:col-span-2">
-                          <SubmitButton pendingLabel="Copying…" className={buttonClass()}>
-                            Copy it
+                          <SubmitButton pendingLabel={copy.copying} className={buttonClass()}>
+                            {copy.copyIt}
                           </SubmitButton>
                           <button
                             type="button"
                             onClick={() => setOpen(null)}
                             className="text-sm font-medium text-muted hover:text-foreground"
                           >
-                            Cancel
+                            {copy.cancel}
                           </button>
                         </div>
                       </FieldGrid>

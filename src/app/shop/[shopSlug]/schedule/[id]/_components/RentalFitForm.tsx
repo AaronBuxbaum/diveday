@@ -92,10 +92,7 @@ export function RentalFitForm({
   return (
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">{t("rental.heading")}</h3>
-      <p className="mt-1 text-sm text-muted">
-        Tell the crew what you'd like to rent and roughly what size. We keep it on file for next
-        time, and they'll confirm fit and weighting with you at the dock.
-      </p>
+      <p className="mt-1 text-sm text-muted">{t("rental.introBody")}</p>
 
       {/* Gear-Status Light-up Indicator */}
       <div
@@ -109,8 +106,8 @@ export function RentalFitForm({
         }`}
       >
         <div className="flex gap-2">
-          <BcdIcon active={isConfirmed} />
-          <FinIcon active={isConfirmed} />
+          <BcdIcon active={isConfirmed} label={t("rental.bcdIconLabel")} />
+          <FinIcon active={isConfirmed} label={t("rental.finIconLabel")} />
         </div>
         <div>
           <p
@@ -139,7 +136,7 @@ export function RentalFitForm({
           role="status"
           className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
         >
-          Saved. The crew will see this when they pack, and check the fit with you at the dock.
+          {t("rental.savedNote")}
         </p>
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
@@ -177,21 +174,28 @@ export function RentalFitForm({
               })}
             </div>
             <p className="mt-2 text-sm text-muted">
-              We plan one tank per dive, so {plannedDives} {plannedDives === 1 ? "tank" : "tanks"}{" "}
-              for this trip.{" "}
+              {t("rental.tankPlan", { count: plannedDives })}{" "}
               {showPricing
                 ? pricing.setCents !== null && coreSetSentence
-                  ? `A full set includes ${coreSetSentence}. Take it for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
+                  ? t("rental.fullSetOffer", {
+                      set: coreSetSentence,
+                      price: formatMoneyCents(pricing.setCents),
+                    })
                   : t("rental.perPiece")
                 : t("rental.askWhatsIncluded")}
             </p>
             {showPricing && quote.subtotalCents > 0 ? (
               <p className="mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
                 <span className="font-medium">
-                  Estimated rental: {formatMoneyCents(quote.subtotalCents)} per person
-                </span>
-                {quote.unpricedKinds.length > 0 ? " — plus a few items settled at the shop" : ""}.
-                We'll confirm at the dock.
+                  {quote.unpricedKinds.length > 0
+                    ? t("rental.estimatedRentalWithExtras", {
+                        price: formatMoneyCents(quote.subtotalCents),
+                      })
+                    : t("rental.estimatedRental", {
+                        price: formatMoneyCents(quote.subtotalCents),
+                      })}
+                </span>{" "}
+                {t("rental.confirmAtDock")}
               </p>
             ) : null}
           </fieldset>
@@ -199,7 +203,7 @@ export function RentalFitForm({
 
         {nitroxOffered ? (
           <fieldset>
-            <legend className="text-sm font-medium">Nitrox</legend>
+            <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
             <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
               <input
                 name="nitrox"
@@ -209,29 +213,22 @@ export function RentalFitForm({
                 className="size-4 accent-primary"
               />
               <span className="flex-1">
-                Reserve nitrox-compatible tanks for me —{" "}
                 {showPricing && pricing.nitroxCents !== null
-                  ? `${formatMoneyCents(pricing.nitroxCents)} per dive`
-                  : "charged per dive"}
+                  ? t("rental.nitroxReserveWithPrice", {
+                      price: formatMoneyCents(pricing.nitroxCents),
+                    })
+                  : t("rental.nitroxReserveNoPrice")}
               </span>
             </label>
             {nitroxCardVerified ? (
-              <p className="mt-2 text-sm text-muted">
-                The crew will set aside nitrox-compatible tanks. You'll analyze your own tanks and
-                sign for the mix at the fill station, as always.
-              </p>
+              <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
             ) : nitroxRequested ? (
               <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
                 {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
-                We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send
-                the shop a photo of your card or get in touch and they'll add it. Until then, the
-                crew will plan standard air tanks.
+                {t("rental.nitroxNeedsVerification")}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-muted">
-                A verified nitrox card is needed before the crew can reserve nitrox-compatible
-                tanks.
-              </p>
+              <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerificationRequired")}</p>
             )}
           </fieldset>
         ) : null}
@@ -239,7 +236,7 @@ export function RentalFitForm({
         {offers.has("bcd") || offers.has("wetsuit") || offers.has("mask_fins") ? (
           <FieldGrid columns={2}>
             {offers.has("bcd") ? (
-              <Field label="BCD size">
+              <Field label={t("rental.bcdSize")}>
                 <select
                   name="bcdSize"
                   value={bcdSize}
@@ -274,7 +271,7 @@ export function RentalFitForm({
                   name="bootSize"
                   maxLength={20}
                   defaultValue={rentalFit?.bootSize ?? ""}
-                  placeholder="US 9 / EU 42"
+                  placeholder={t("rental.bootSizePlaceholder")}
                   className={controlClass}
                 />
               </Field>
@@ -286,7 +283,7 @@ export function RentalFitForm({
                   maxLength={20}
                   value={finSize}
                   onChange={(e) => setFinSize(e.target.value)}
-                  placeholder="M/L"
+                  placeholder={t("rental.finSizePlaceholder")}
                   className={controlClass}
                 />
               </Field>
@@ -300,7 +297,7 @@ export function RentalFitForm({
                 name="weightPreference"
                 maxLength={80}
                 defaultValue={rentalFit?.weightPreference ?? ""}
-                placeholder="e.g. 16 lb with a 3 mm suit"
+                placeholder={t("rental.weightPlaceholder")}
                 className={controlClass}
               />
             </Field>
@@ -324,7 +321,7 @@ export function RentalFitForm({
               className: "px-4 text-foreground",
             })}
           >
-            Save rental fit
+            {t("rental.saveFit")}
           </SubmitButton>
         </div>
       </form>
@@ -332,7 +329,7 @@ export function RentalFitForm({
   );
 }
 
-function BcdIcon({ active }: { active: boolean }) {
+function BcdIcon({ active, label }: { active: boolean; label: string }) {
   return (
     <svg
       aria-hidden="true"
@@ -346,7 +343,7 @@ function BcdIcon({ active }: { active: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>BCD Icon</title>
+      <title>{label}</title>
       <path d="M5 3h4l1 6-1 5H5V3z" />
       <path d="M19 3h-4l-1 6 1 5h4V3z" />
       <path d="M9 5h6" />
@@ -357,7 +354,7 @@ function BcdIcon({ active }: { active: boolean }) {
   );
 }
 
-function FinIcon({ active }: { active: boolean }) {
+function FinIcon({ active, label }: { active: boolean; label: string }) {
   return (
     <svg
       aria-hidden="true"
@@ -371,7 +368,7 @@ function FinIcon({ active }: { active: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>Fin Icon</title>
+      <title>{label}</title>
       <path d="M5 4s1 4 0 9L3 20h4l1-7c-1-5 1-9 1-9H5z" />
       <path d="M15 4s1 4 0 9l-2 7h4l1-7c-1-5 1-9 1-9h-3z" />
     </svg>
