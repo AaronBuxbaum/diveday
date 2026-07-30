@@ -22,6 +22,7 @@ test.describe("staff", () => {
 
     // Nitrox evidence is handled with the diver's other cards, then verified there.
     await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("June Park");
     await page.getByRole("link", { name: /June Park/ }).click();
     await page.getByText("Add specialty", { exact: true }).click();
     // The diver page has two capture forms (level card, specialty card), both

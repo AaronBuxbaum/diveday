@@ -27,9 +27,16 @@ async function manifestContext() {
 
 describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("derives every active booking into the manifest, including blocked divers", async () => {
-    const { db, shop, reef } = await manifestContext();
-    const roster = await getTripRoster(db, shop.id, reef.id);
-    const manifest = await getTripManifest(db, shop.id, reef.id);
+    // The reef trip (manifestContext's fixture) is mostly ready these days —
+    // most divers sign their waiver before the boat leaves. The night dive
+    // stays universally blocked instead: none of its divers carry the Night
+    // specialty the trip requires, regardless of waiver status.
+    const { db, shop } = await manifestContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const night = trips.find((trip) => trip.title.startsWith("Night Dive — City of Washington"));
+    if (!night) throw new Error("demo night trip missing");
+    const roster = await getTripRoster(db, shop.id, night.id);
+    const manifest = await getTripManifest(db, shop.id, night.id);
 
     expect(manifest?.divers).toHaveLength(roster.length);
     expect(manifest?.summary.blocked).toBe(roster.length);

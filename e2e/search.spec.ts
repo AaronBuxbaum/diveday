@@ -33,7 +33,11 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
 test("the divers list filters live as you type, no submit", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers");
   const search = page.getByRole("searchbox", { name: "Search divers" });
-  await expect(page.getByRole("cell", { name: /Priya Sharma/ })).toBeVisible();
+  // The extended roster is well past one default page, sorted alphabetically —
+  // Priya isn't on it unsearched. Confirm the unfiltered roster loaded at all
+  // (the first alphabetical name is a stable enough proxy), then exercise the
+  // live filter that actually finds her.
+  await expect(page.getByRole("cell", { name: "Adaeze Nwosu" })).toBeVisible();
 
   await search.fill("zzz-no-such-diver");
   await expect(page.getByText("No divers match this view.")).toBeVisible();

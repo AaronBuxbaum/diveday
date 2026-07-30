@@ -5,7 +5,7 @@ import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payment
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
-import { recordRollCall } from "./manifests";
+import { getTripManifest, recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
 import { saveRentalFit } from "./rental-fit";
@@ -40,9 +40,10 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(departure?.title).toBe("Two-Tank Reef — Molasses & French");
     expect(departure?.booked).toBe(9);
     expect(departure?.capacity).toBe(12);
-    // Nobody has signed a waiver in the fresh seed, so nobody is clear yet.
-    expect(departure?.ready).toBe(0);
-    expect(departure?.blocked).toBe(9);
+    // Most divers have already signed their waiver in the fresh seed — only
+    // the first-booked diver (the deliberate straggler) is still blocked.
+    expect(departure?.ready).toBe(8);
+    expect(departure?.blocked).toBe(1);
     expect(departure?.boarded).toBe(0);
     expect(work.nextDeparture).toBeNull();
   });
@@ -50,22 +51,30 @@ describe("today's work queue (in-memory PGlite)", () => {
   it("collapses a boat's identical blockers so one busy trip cannot bury the rest", async () => {
     const { db, shop } = await seededShopContext();
 
+    // Today's reef trip is mostly ready these days (only one straggler left);
+    // the wreck charter five days out is the boat still carrying a pile of
+    // divers who share the same blocker (short of the AOW + Deep + nitrox the
+    // charter requires) — exactly the "one busy trip" scenario this collapses.
     const trips = await upcomingTripsWithCounts(db, shop.id);
-    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
-    if (!reef) throw new Error("demo reef trip missing");
+    const wreck = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
+    if (!wreck) throw new Error("demo wreck trip missing");
+    const manifest = await getTripManifest(db, shop.id, wreck.id);
+    if (!manifest) throw new Error("expected wreck manifest");
+    const wreckBlocked = manifest.divers.filter(
+      (diver) => diver.readiness.status !== "ready",
+    ).length;
+
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const [departure] = work.departures;
-    if (!departure) throw new Error("expected today's departure");
-    // Scoped to today's boat: the shop has other trips on the books, and their
-    // blockers are their own rows. What must not happen is this boat's nine
+    // Scoped to the wreck boat: the shop has other trips on the books, and
+    // their blockers are their own rows. What must not happen is this boat's
     // blocked divers each claiming a line of the queue.
     const blockerRows = work.actions.filter((action) =>
-      action.id.startsWith(`blockers:${reef.id}:`),
+      action.id.startsWith(`blockers:${wreck.id}:`),
     );
 
-    expect(departure.blocked).toBe(9);
+    expect(wreckBlocked).toBeGreaterThan(1);
     expect(blockerRows.length).toBeGreaterThan(0);
-    expect(blockerRows.length).toBeLessThan(departure.blocked);
+    expect(blockerRows.length).toBeLessThan(wreckBlocked);
     expect(new Set(blockerRows.map((action) => action.id)).size).toBe(blockerRows.length);
   });
 
@@ -97,8 +106,10 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(waiverRow(after)).toBeUndefined();
-    expect(after.departures[0]?.ready).toBe(1);
-    expect(after.departures[0]?.blocked).toBe(8);
+    // She was the boat's one remaining straggler — clearing her leaves the
+    // whole roster ready.
+    expect(after.departures[0]?.ready).toBe(9);
+    expect(after.departures[0]?.blocked).toBe(0);
   });
 
   it("counts a boarded diver on today's board", async () => {
