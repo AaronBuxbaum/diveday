@@ -41,12 +41,16 @@ export function formatScheduleDayTime(day: CourseScheduleDay): string | undefine
   return day.timeNote?.trim() || undefined;
 }
 
+/** Caps enforced both here and by DayByDayEditor's "Add day"/"Add item" buttons, so a save can never build a schedule the server would reject. */
+export const MAX_SCHEDULE_DAYS = 30;
+export const MAX_SCHEDULE_DAY_ITEMS = 20;
+
 const scheduleDayInputSchema = z.object({
   title: z.string().max(160).optional().default(""),
   startTime: z.string().max(5).optional().default(""),
   endTime: z.string().max(5).optional().default(""),
   timeNote: z.string().max(120).optional().default(""),
-  items: z.array(z.string().max(200)).max(20).optional().default([]),
+  items: z.array(z.string().max(200)).max(MAX_SCHEDULE_DAY_ITEMS).optional().default([]),
 });
 
 /**
@@ -58,7 +62,7 @@ const scheduleDayInputSchema = z.object({
  * array of day-shaped objects) or a title-less day with content.
  */
 export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
-  const parsedArray = z.array(scheduleDayInputSchema).max(30).safeParse(raw);
+  const parsedArray = z.array(scheduleDayInputSchema).max(MAX_SCHEDULE_DAYS).safeParse(raw);
   if (!parsedArray.success) return null;
 
   const days: CourseScheduleDay[] = [];

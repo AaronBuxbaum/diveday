@@ -175,16 +175,19 @@ export async function saveAllStaffRolesAction(formData: FormData) {
   const db = await getDb();
   const staff = await listShopStaff(db, session.user.shopId);
 
-  let hasInvalidRoles = false;
+  // Validate every member's checked roles before writing any of them — a
+  // save is all-or-nothing, so one blank row can't leave earlier rows
+  // written but the redirect skipping revalidation (Sourcery review, PR 242).
+  const memberRoles = staff.map((member) => ({
+    member,
+    roles: STAFF_ROLES.filter((role) => formData.get(`role_${member.personId}_${role}`) === "on"),
+  }));
+  if (memberRoles.some(({ roles }) => roles.length === 0)) {
+    redirect(`${path}?notice=roles_invalid`);
+  }
+
   let failureReason: Extract<StaffMutationResult, { ok: false }>["reason"] | null = null;
-  for (const member of staff) {
-    const roles = STAFF_ROLES.filter(
-      (role) => formData.get(`role_${member.personId}_${role}`) === "on",
-    );
-    if (roles.length === 0) {
-      hasInvalidRoles = true;
-      continue;
-    }
+  for (const { member, roles } of memberRoles) {
     const result = await setStaffRoles(db, {
       shopId: session.user.shopId,
       personId: member.personId,
@@ -193,7 +196,6 @@ export async function saveAllStaffRolesAction(formData: FormData) {
     if (!result.ok) failureReason = result.reason;
   }
 
-  if (hasInvalidRoles) redirect(`${path}?notice=roles_invalid`);
   revalidateAndRedirect(path, `${path}?notice=${failureReason ?? "changes_saved"}`);
 }
 

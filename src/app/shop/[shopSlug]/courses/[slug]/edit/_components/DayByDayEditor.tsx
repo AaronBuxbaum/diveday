@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import type { CourseScheduleDay } from "@/lib/courses";
+import { type CourseScheduleDay, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/courses";
 
 /**
  * Real per-day controls instead of one textarea round-tripped through an
@@ -149,9 +149,12 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
               <button
                 type="button"
                 onClick={() => addItem(dayIndex)}
+                disabled={day.items.length >= MAX_SCHEDULE_DAY_ITEMS}
                 className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
               >
-                Add item
+                {day.items.length >= MAX_SCHEDULE_DAY_ITEMS
+                  ? `${MAX_SCHEDULE_DAY_ITEMS} items max`
+                  : "Add item"}
               </button>
             </div>
           </div>
@@ -160,9 +163,10 @@ export function DayByDayEditor({ initialDays }: { initialDays: CourseScheduleDay
       <button
         type="button"
         onClick={addDay}
+        disabled={days.length >= MAX_SCHEDULE_DAYS}
         className={buttonClass({ variant: "secondary", className: "self-start" })}
       >
-        Add day
+        {days.length >= MAX_SCHEDULE_DAYS ? `${MAX_SCHEDULE_DAYS} days max` : "Add day"}
       </button>
     </div>
   );
