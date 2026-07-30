@@ -22,11 +22,6 @@ export function isRollCallCheckpoint(
   return rollCallCheckpoints(plannedDives).some((checkpoint) => checkpoint === value);
 }
 
-export function rollCallCheckpointLabel(checkpoint: RollCallCheckpoint): string {
-  if (checkpoint === "departure") return "Before departure";
-  return `After dive ${checkpoint.slice("after_dive_".length)}`;
-}
-
 /**
  * The highest dive number any *currently live* recorded roll-call checkpoint
  * for a trip refers to — 0 when history only ever touched "departure" or

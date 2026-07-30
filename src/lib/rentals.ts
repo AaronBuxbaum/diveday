@@ -40,7 +40,6 @@ export type RentableItem = {
   field: RentalFitField;
   /** The HTML checkbox `name` the capture forms and actions agree on. */
   name: string;
-  label: string;
   /**
    * Whether a diver with no fit on file defaults to renting this. Core gear a
    * shop stocks for everyone defaults on, as does the dive computer (safety kit
@@ -50,44 +49,48 @@ export type RentableItem = {
   defaultRented: boolean;
 };
 
+/**
+ * `kind` is the only code a caller needs — this file returns codes, never
+ * rendered words. A staff surface resolves a word through
+ * `src/i18n/rental-labels.ts`'s `rentableItemLabel` (staff.json); the diver
+ * rental-fit form (`RentalFitForm.tsx`, the only diver-facing caller of this
+ * list) resolves its own words against diver.json, since a shared label here
+ * would tie one bundle to the other (see the domain-strings-common notes on a
+ * function rendered on both a staff and a diver page).
+ */
 export const RENTABLE_ITEMS: readonly RentableItem[] = [
-  { kind: "bcd", field: "rentsBcd", name: "bcd", label: "BCD", defaultRented: true },
+  { kind: "bcd", field: "rentsBcd", name: "bcd", defaultRented: true },
   {
     kind: "regulator",
     field: "rentsRegulator",
     name: "regulator",
-    label: "Regulator",
     defaultRented: true,
   },
   {
     kind: "wetsuit",
     field: "rentsWetsuit",
     name: "wetsuit",
-    label: "Wetsuit",
     defaultRented: true,
   },
   {
     kind: "mask_fins",
     field: "rentsMaskFins",
     name: "maskFins",
-    label: "Mask & fins",
     defaultRented: true,
   },
   {
     kind: "weights",
     field: "rentsWeights",
     name: "weights",
-    label: "Weights",
     defaultRented: true,
   },
   {
     kind: "dive_computer",
     field: "rentsDiveComputer",
     name: "diveComputer",
-    label: "Dive computer",
     defaultRented: true,
   },
-  { kind: "gopro", field: "rentsGopro", name: "gopro", label: "GoPro", defaultRented: false },
+  { kind: "gopro", field: "rentsGopro", name: "gopro", defaultRented: false },
 ] as const;
 
 /**
@@ -99,9 +102,8 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
 export const NITROX_CATALOG_ITEM = {
   kind: "nitrox",
   name: "nitrox",
-  label: "Nitrox fills",
   defaultRented: false,
-} as const satisfies { kind: ShopCatalogKind; name: string; label: string; defaultRented: boolean };
+} as const satisfies { kind: ShopCatalogKind; name: string; defaultRented: boolean };
 
 /** Every entry a shop's "what we rent" settings can show and save. */
 export const SHOP_CATALOG_ITEMS = [...RENTABLE_ITEMS, NITROX_CATALOG_ITEM] as const;

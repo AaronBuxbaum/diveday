@@ -400,7 +400,16 @@
     "weightPlaceholder": "p. ej. 7 kg con un traje de 3 mm",
     "saveFit": "Guardar equipo de alquiler",
     "bcdIconLabel": "Chaleco",
-    "finIconLabel": "Aleta"
+    "finIconLabel": "Aleta",
+    "itemLabels": {
+      "bcd": "Chaleco",
+      "regulator": "Regulador",
+      "wetsuit": "Traje",
+      "maskFins": "Máscara y aletas",
+      "weights": "Lastre",
+      "diveComputer": "Ordenador de buceo",
+      "gopro": "GoPro"
+    }
   },
   "party": {
     "numberOfDivers": "Número de buceadores",

@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { rentableItemLabel, rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { offeredRentableItems } from "@/lib/rentals";
@@ -40,7 +41,9 @@ export function RentalFit({
       </div>
       {mayEdit ? null : (
         <p className="mt-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
-          <span className="font-medium text-foreground">{rentalFitLine(profile ?? null).text}</span>
+          <span className="font-medium text-foreground">
+            {rentalFitLineText(t, locale, rentalFitLine(profile ?? null))}
+          </span>
           <br />
           {t("divers.rentalFit.changeRestricted")}
         </p>
@@ -57,7 +60,7 @@ export function RentalFit({
             <fieldset className="sm:col-span-2">
               <legend className="text-sm font-medium">{t("divers.rentalFit.rentsFromShop")}</legend>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {offered.map(({ name, field, label, defaultRented }) => (
+                {offered.map(({ kind, name, field, defaultRented }) => (
                   <label
                     key={name}
                     className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
@@ -68,7 +71,7 @@ export function RentalFit({
                       defaultChecked={profile?.[field] ?? defaultRented}
                       className="size-4 accent-primary"
                     />
-                    {label}
+                    {rentableItemLabel(t, kind)}
                   </label>
                 ))}
               </div>

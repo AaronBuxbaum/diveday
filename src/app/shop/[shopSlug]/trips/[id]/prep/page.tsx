@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
+import { rentalItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
@@ -254,7 +255,9 @@ export default async function TripPrepPage({
                         key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
                         className="border-b border-border last:border-0"
                       >
-                        <td className="px-3 py-3 font-medium sm:px-4">{line.label}</td>
+                        <td className="px-3 py-3 font-medium sm:px-4">
+                          {rentalItemLabel(t, line.kind)}
+                        </td>
                         <td className="px-3 py-3 sm:px-4">
                           {line.fitAtCheckIn ? (
                             // The count is real; the size deliberately isn't.
