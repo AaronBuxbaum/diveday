@@ -113,5 +113,245 @@
     "crew": "Tripulación",
     "course": "Curso",
     "day": "Día {number}"
+  },
+  "orders": {
+    "new": {
+      "eyebrow": "Recepción",
+      "title": "Nuevo pedido",
+      "cancel": "Cancelar",
+      "notice": {
+        "invalid": "Elige un cliente y al menos una línea con un importe.",
+        "notConnected": "Conecta una cuenta de Stripe en los ajustes del centro antes de crear un pedido.",
+        "stripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
+        "fallback": "No se pudo crear ese pedido."
+      },
+      "linkedTo": "Vinculado a la reserva de {personName} en {tripTitle} ({date}).",
+      "courseNote": "Las líneas de instrucción y e-learning del curso vienen rellenas de tu catálogo. Una factura, dos líneas: borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
+      "noPriceNote": "Esta salida no tiene precio, así que la línea de la salida está en blanco — añade uno en la página de la salida para saltarte este paso la próxima vez.",
+      "priceNote": "La línea de la salida viene rellena con el precio de esta salida.",
+      "customerLabel": "Cliente",
+      "chooseCustomer": "Elige un cliente",
+      "noteLabel": "Nota del pedido",
+      "noteHint": "(opcional)",
+      "notePlaceholder": "p. ej. Salida de dos inmersiones + equipo de alquiler",
+      "lineItemsLegend": "Líneas del pedido",
+      "lineItemDescriptionPlaceholder": "Descripción",
+      "quantityLabel": "Cantidad",
+      "unitPriceLabel": "Precio unitario (USD)",
+      "unitPricePlaceholder": "$0.00",
+      "sending": "Enviando…",
+      "submit": "Crear y enviar factura",
+      "kind": {
+        "trip_fee": "Tarifa de la salida",
+        "course_fee": "Tarifa del curso",
+        "e_learning_fee": "Tarifa de e-learning",
+        "rental": "Alquiler",
+        "nitrox": "Nitrox (por inmersión)",
+        "deposit": "Depósito",
+        "merchandise": "Merchandising",
+        "other": "Otro"
+      }
+    },
+    "detail": {
+      "eyebrow": "Recepción",
+      "fallbackDescription": "Pedido",
+      "backToDiver": "Volver al buceador",
+      "status": {
+        "open": "Abierto — pendiente de pago",
+        "paid": "Pagado",
+        "void": "Anulado",
+        "uncollectible": "Incobrable",
+        "refunded": "Reembolsado"
+      },
+      "kind": {
+        "trip_fee": "Tarifa de la salida",
+        "course_fee": "Tarifa del curso",
+        "rental": "Alquiler",
+        "nitrox": "Nitrox",
+        "deposit": "Depósito",
+        "merchandise": "Merchandising",
+        "other": "Otro"
+      },
+      "openInvoice": "Abrir la factura para pagar",
+      "openInvoiceHint": "— comparte este enlace con el cliente si el correo de Stripe no le llegó.",
+      "demoActionHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que esta acción está desactivada.",
+      "refreshStatus": "Actualizar estado",
+      "refreshing": "Actualizando…",
+      "voidOrder": "Anular pedido",
+      "voiding": "Anulando…",
+      "refundPayment": "Reembolsar pago",
+      "refunding": "Reembolsando…",
+      "notice": {
+        "refreshed": "Estado actualizado desde Stripe.",
+        "refreshFailed": "No se pudo contactar con Stripe para actualizar este pedido.",
+        "voided": "Pedido anulado.",
+        "voidFailed": "No se pudo anular este pedido — puede que ya esté pagado o anulado.",
+        "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
+        "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
+        "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
+        "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar."
+      }
+    }
+  },
+  "promos": {
+    "eyebrow": "Códigos promocionales",
+    "title": "Descuentos que un buceador puede escribir",
+    "description": "Un código funciona en todo tu calendario, a diferencia de la oferta de última hora que envías desde la página de una salida. DiveDay lo crea en tu propia cuenta de Stripe, y Stripe aplica la caducidad y el límite de canjes cuando el buceador paga.",
+    "notice": {
+      "created": "Código creado y activo en tu cuenta de Stripe.",
+      "enabled": "Código activado.",
+      "disabled": "Código desactivado — deja de aplicar el descuento de inmediato.",
+      "invalid": "Revisa el código, el descuento y las fechas e inténtalo de nuevo.",
+      "invalidCode": "Un código solo puede usar letras, números, guiones y guiones bajos.",
+      "invalidDiscount": "Elige un descuento entre el {min}% y el {max}%.",
+      "invalidWindow": "La fecha de fin tiene que ser posterior a la de inicio.",
+      "duplicate": "Ya tienes un código con ese texto.",
+      "notConnected": "Conecta tu cuenta de Stripe en Ajustes primero — un código se crea en tu propia cuenta.",
+      "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento; inténtalo de nuevo.",
+      "notAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes."
+    },
+    "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — el cupón vive en tu cuenta, no en la de DiveDay.",
+    "settingsLink": "Ajustes",
+    "scope": {
+      "all": "Salidas y cursos",
+      "trips": "Solo salidas",
+      "courses": "Solo cursos"
+    },
+    "newCode": {
+      "heading": "Nuevo código",
+      "detail": "Los buceadores lo escriben al pagar. Deja las fechas o el límite vacíos para que no tenga límite."
+    },
+    "fields": {
+      "code": "Código",
+      "codeHint": "letras, números, - y _",
+      "codePlaceholder": "REEF20",
+      "discount": "Descuento",
+      "discountHint": "porcentaje de descuento",
+      "goodFor": "Válido para",
+      "redemptionCap": "Límite de canjes",
+      "redemptionCapHint": "(opcional)",
+      "redemptionCapPlaceholder": "Sin límite",
+      "starts": "Empieza",
+      "startsHint": "(opcional)",
+      "expires": "Caduca",
+      "expiresHint": "(opcional)",
+      "whatFor": "Para qué es",
+      "whatForHint": "(opcional — tu nota, nunca se muestra a los buceadores)",
+      "whatForPlaceholder": "Impulso de otoño para buceadores recurrentes"
+    },
+    "creating": "Creando…",
+    "createCode": "Crear código",
+    "yourCodes": "Tus códigos",
+    "empty": {
+      "heading": "Todavía no hay códigos",
+      "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse."
+    },
+    "status": {
+      "failed": "Falló en Stripe",
+      "pending": "Nunca se terminó",
+      "live": "Activo",
+      "disabled": "Desactivado",
+      "notLive": "No activo ahora mismo"
+    },
+    "discountOff": "{percent}% de descuento",
+    "fromDate": "desde {date}",
+    "liveNow": "activo ya",
+    "untilDate": "hasta {date}",
+    "noEndDate": "sin fecha de fin",
+    "redeemedWithCap": "{count, plural, one {Canjeado # vez de {max}} other {Canjeado # veces de {max}}}",
+    "redeemedNoCap": "{count, plural, one {Canjeado # vez} other {Canjeado # veces}}",
+    "switchOff": "Desactivar",
+    "switchOn": "Activar",
+    "saving": "Guardando…"
+  },
+  "reports": {
+    "operationKind": {
+      "checkout_session": "Pago",
+      "invoice": "Factura",
+      "refund": "Reembolso"
+    },
+    "mediaKind": {
+      "course_photo": "Foto del curso",
+      "recap_photo": "Foto del resumen"
+    },
+    "eyebrow": "Propietario",
+    "title": "Cómo va tu mes",
+    "description": {
+      "thisMonth": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes — hasta ahora.",
+      "future": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes.",
+      "past": "Reservas, ingresos, ocupación y hojas de exención de las salidas que zarparon."
+    },
+    "paymentOps": {
+      "sectionLabel": "Operaciones de pago pendientes de conciliar",
+      "heading": "{count, plural, one {# intento de pago necesita} other {# intentos de pago necesitan}} conciliación",
+      "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió — revisa cada uno en el panel de Stripe y termínalo a mano.",
+      "started": "iniciado {date}",
+      "stripeId": "Stripe: {id}",
+      "openTrip": "Abrir salida"
+    },
+    "mediaDeletions": {
+      "sectionLabel": "Fotos pendientes de eliminar por conciliar",
+      "heading": "{count, plural, one {# foto eliminada} other {# fotos eliminadas}} pero todavía no borrada del almacenamiento",
+      "detail": "La foto ya no está en la aplicación; el archivo guardado no se borró — reintenta la eliminación, o déjalo para el reintento automático de esta noche.",
+      "queued": "en cola desde {date}",
+      "retry": "Reintentar eliminación",
+      "retrying": "Reintentando…"
+    },
+    "soFar": "hasta ahora",
+    "chooseMonth": "Elegir mes",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "currentMonthTitle": "Estás viendo el mes actual",
+    "numbersLabel": "Los números de este mes",
+    "metrics": {
+      "revenueLabel": "Ingresos cobrados",
+      "revenueDetail": "Pagos y depósitos cobrados en las salidas de este mes",
+      "bookingsLabel": "Reservas",
+      "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
+      "bookingsOther": "en {count, plural, one {# salida} other {# salidas}}",
+      "seatFillLabel": "Ocupación",
+      "seatFillDetail": "{booked} de {offered} plazas · {count, plural, one {# barco completo} other {# barcos completos}}",
+      "waiversLabel": "Hojas de exención firmadas",
+      "waiversOutstanding": "quedan {count} por recoger",
+      "waiversAllIn": "Toda la documentación está en regla"
+    },
+    "noTripsFuture": "Todavía no hay nada reservado para este mes — las reservas aparecerán aquí a medida que lleguen.",
+    "noTripsPast": "Ninguna salida zarpó este mes. Elige otro mes para ver cómo fue.",
+    "tripsThisMonth": "Salidas de este mes",
+    "table": {
+      "trip": "Salida",
+      "seats": "Plazas",
+      "fill": "Ocupación",
+      "waivers": "Exenciones"
+    },
+    "seatsMobile": "{booked}/{capacity} plazas",
+    "fillLabel": "{booked} de {capacity} plazas reservadas",
+    "waiversRowLabel": "{complete} de {total} hojas de exención firmadas"
+  },
+  "reviews": {
+    "eyebrow": "Reseñas",
+    "title": "Lo que dicen los buceadores",
+    "description": "Cada reseña aquí se dejó a través del enlace de resumen posterior a la salida del propio buceador, así que todas vienen de alguien que estuvo en el barco. Una valoración sola se publica de inmediato; cualquiera con palabras espera tu revisión.",
+    "viewPublicPage": "Ver página pública",
+    "notice": {
+      "published": "Reseña publicada en tu página de calendario.",
+      "hidden": "Reseña oculta — ya no cuenta para tu valoración.",
+      "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo."
+    },
+    "overviewLabel": "Resumen de valoraciones",
+    "publicRating": "Valoración pública",
+    "noneYet": "Nada publicado todavía",
+    "acrossCount": "En {count, plural, one {# reseña publicada} other {# reseñas publicadas}}",
+    "published": "Publicado",
+    "publishedDetail": "Se muestra en tu página de calendario",
+    "waitingOnYou": "Esperando tu revisión",
+    "waitingDetail": "Reseñas con palabras por leer",
+    "emptyHeading": "Todavía no hay reseñas",
+    "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida. Las primeras aparecerán aquí.",
+    "ratingOnly": "Solo valoración — sin palabras que revisar.",
+    "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
+    "hide": "Ocultar",
+    "publish": "Publicar",
+    "saving": "Guardando…"
   }
 }

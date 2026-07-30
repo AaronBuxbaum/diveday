@@ -13,6 +13,7 @@ import { orderLineItemKind } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -21,15 +22,15 @@ import { requireStaffSession } from "@/lib/session";
 export const metadata: Metadata = { title: "New order — DiveDay" };
 
 const LINE_ITEM_KINDS = [
-  { value: "trip_fee", label: "Trip fee" },
-  { value: "course_fee", label: "Course fee" },
-  { value: "e_learning_fee", label: "e-Learning fee" },
-  { value: "rental", label: "Rental" },
-  { value: "nitrox", label: "Nitrox (per dive)" },
-  { value: "deposit", label: "Deposit" },
-  { value: "merchandise", label: "Merchandise" },
-  { value: "other", label: "Other" },
-] as const;
+  { value: "trip_fee", key: "orders.new.kind.trip_fee" },
+  { value: "course_fee", key: "orders.new.kind.course_fee" },
+  { value: "e_learning_fee", key: "orders.new.kind.e_learning_fee" },
+  { value: "rental", key: "orders.new.kind.rental" },
+  { value: "nitrox", key: "orders.new.kind.nitrox" },
+  { value: "deposit", key: "orders.new.kind.deposit" },
+  { value: "merchandise", key: "orders.new.kind.merchandise" },
+  { value: "other", key: "orders.new.kind.other" },
+] as const satisfies { value: string; key: StaffMessageKey }[];
 
 const LINE_ITEM_ROWS = 4;
 
@@ -102,10 +103,12 @@ async function createOrderAction(formData: FormData) {
   );
 }
 
-const NOTICE_MESSAGES: Record<string, string> = {
-  invalid: "Pick a customer and at least one line item with an amount.",
-  not_connected: "Connect a Stripe account in Shop settings before creating an order.",
-  stripe_failed: "Stripe couldn't create that invoice. Try again in a moment.",
+// A notice query param maps to a message key, never to a sentence — the words
+// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
+const NOTICE_KEYS: Record<string, StaffMessageKey> = {
+  invalid: "orders.new.notice.invalid",
+  not_connected: "orders.new.notice.notConnected",
+  stripe_failed: "orders.new.notice.stripeFailed",
 };
 
 export default async function NewOrderPage({
@@ -130,6 +133,7 @@ export default async function NewOrderPage({
   }
 
   const locale = await requestLocale();
+  const t = staffTranslator(locale);
   const [customers, bookingContext, shop] = await Promise.all([
     listOrderableCustomers(db, session.user.shopId),
     prefillBookingId ? getBookingContext(db, session.user.shopId, prefillBookingId) : null,
@@ -151,8 +155,8 @@ export default async function NewOrderPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow="Front desk"
-        title="New order"
+        eyebrow={t("orders.new.eyebrow")}
+        title={t("orders.new.title")}
         actions={
           <Link
             href={
@@ -162,7 +166,7 @@ export default async function NewOrderPage({
             }
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            Cancel
+            {t("orders.new.cancel")}
           </Link>
         }
       />
@@ -170,20 +174,23 @@ export default async function NewOrderPage({
       {notice ? (
         <div className="mb-6">
           <ShopNotice tone="danger" role="alert">
-            {NOTICE_MESSAGES[notice] ?? "That order couldn't be created."}
+            {NOTICE_KEYS[notice] ? t(NOTICE_KEYS[notice]) : t("orders.new.notice.fallback")}
           </ShopNotice>
         </div>
       ) : null}
 
       {bookingContext ? (
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
-          Linked to {bookingContext.person.fullName}'s booking on {bookingContext.trip.title} (
-          {formatShortDate(bookingContext.trip.startsAt, locale, shop?.timezone)}).{" "}
+          {t("orders.new.linkedTo", {
+            personName: bookingContext.person.fullName,
+            tripTitle: bookingContext.trip.title,
+            date: formatShortDate(bookingContext.trip.startsAt, locale, shop?.timezone),
+          })}{" "}
           {isCourseOrder
-            ? "The course's instruction and e-learning lines are pre-filled from your catalog. One invoice, two lines: clear the e-learning line if this student already completed it elsewhere."
+            ? t("orders.new.courseNote")
             : bookingContext.trip.priceCents === null
-              ? "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time."
-              : "The trip fee below is pre-filled from this trip's price."}
+              ? t("orders.new.noPriceNote")
+              : t("orders.new.priceNote")}
         </p>
       ) : null}
 
@@ -193,7 +200,7 @@ export default async function NewOrderPage({
         ) : null}
 
         <FieldGrid columns={1} className="gap-y-6">
-          <Field label="Customer">
+          <Field label={t("orders.new.customerLabel")}>
             <select
               name="personId"
               required
@@ -201,7 +208,7 @@ export default async function NewOrderPage({
               className={controlClass}
             >
               <option value="" disabled>
-                Choose a customer
+                {t("orders.new.chooseCustomer")}
               </option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
@@ -211,19 +218,19 @@ export default async function NewOrderPage({
               ))}
             </select>
           </Field>
-          <Field label="Order note" hint="(optional)">
+          <Field label={t("orders.new.noteLabel")} hint={t("orders.new.noteHint")}>
             <input
               type="text"
               name="description"
               maxLength={200}
-              placeholder="e.g. Two-tank reef trip + rental set"
+              placeholder={t("orders.new.notePlaceholder")}
               className={controlClass}
             />
           </Field>
         </FieldGrid>
 
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-medium">Line items</legend>
+          <legend className="text-sm font-medium">{t("orders.new.lineItemsLegend")}</legend>
           {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
             const rowDefault = lineDefaults[i] ?? null;
             return (
@@ -239,7 +246,7 @@ export default async function NewOrderPage({
                 >
                   {LINE_ITEM_KINDS.map((kind) => (
                     <option key={kind.value} value={kind.value}>
-                      {kind.label}
+                      {t(kind.key)}
                     </option>
                   ))}
                 </select>
@@ -247,7 +254,7 @@ export default async function NewOrderPage({
                   type="text"
                   name={`description-${i}`}
                   defaultValue={rowDefault?.description}
-                  placeholder="Description"
+                  placeholder={t("orders.new.lineItemDescriptionPlaceholder")}
                   maxLength={200}
                   className={controlClass}
                 />
@@ -256,7 +263,7 @@ export default async function NewOrderPage({
                   name={`quantity-${i}`}
                   defaultValue={1}
                   min={1}
-                  aria-label="Quantity"
+                  aria-label={t("orders.new.quantityLabel")}
                   className={controlClass}
                 />
                 <input
@@ -265,8 +272,8 @@ export default async function NewOrderPage({
                   step="0.01"
                   min={0}
                   defaultValue={rowDefault?.unitAmount}
-                  aria-label="Unit price (USD)"
-                  placeholder="$0.00"
+                  aria-label={t("orders.new.unitPriceLabel")}
+                  placeholder={t("orders.new.unitPricePlaceholder")}
                   className={controlClass}
                 />
               </div>
@@ -275,10 +282,10 @@ export default async function NewOrderPage({
         </fieldset>
 
         <SubmitButton
-          pendingLabel="Sending…"
+          pendingLabel={t("orders.new.sending")}
           className={buttonClass({ size: "lg", className: "self-start" })}
         >
-          Create and send invoice
+          {t("orders.new.submit")}
         </SubmitButton>
       </form>
     </main>
