@@ -128,13 +128,19 @@ export type TripConditionsHoldEmailInput = {
   tripUrl: string;
 };
 
-function firstNameOf(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] || "there";
+/**
+ * Every `*Name` field notifications carry is Zod-validated non-empty
+ * (`.trim().min(1)`), so `fallback` never actually renders — kept only as a
+ * defensive, still-localized value rather than a bare English word, in case
+ * that invariant is ever loosened.
+ */
+function firstNameOf(fullName: string, fallback: string): string {
+  return fullName.trim().split(/\s+/)[0] || fallback;
 }
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const detail = input.conditionsSummary?.trim();
   const body = t("notifications.tripConditionsHold.body", {
@@ -238,7 +244,7 @@ export type NotificationEmail = {
 
 export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
@@ -280,7 +286,7 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
 
 export function waitlistInviteEmail(input: WaitlistInviteEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
@@ -311,7 +317,7 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
  */
 export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const expires = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
@@ -376,7 +382,7 @@ export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): Notifi
 
 export function tripReminderEmail(input: TripReminderEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
@@ -451,7 +457,7 @@ type TripRecapEmailInput = {
 
 export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
@@ -503,7 +509,7 @@ type WelcomeEmailInput = {
  */
 export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName);
+  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.signInUrl);
 
@@ -555,7 +561,7 @@ type VerifyAccountEmailInput = {
 
 export function verifyAccountEmail(input: VerifyAccountEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName);
+  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const url = escapeHtml(input.verifyUrl);
   const confirm = t("notifications.verifyAccount.confirm");
@@ -581,7 +587,7 @@ type StaffInviteEmailInput = {
 
 export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.inviteeName);
+  const firstName = firstNameOf(input.inviteeName, t("notifications.common.genericName"));
   const roles = new Intl.ListFormat(input.locale, { style: "long", type: "conjunction" }).format(
     input.roleLabels,
   );
@@ -622,7 +628,7 @@ type PasswordResetEmailInput = {
 
 export function passwordResetEmail(input: PasswordResetEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName);
+  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const url = escapeHtml(input.resetUrl);
   const body = t("notifications.passwordReset.body");
@@ -651,7 +657,7 @@ type PasswordChangedEmailInput = {
 
 export function passwordChangedEmail(input: PasswordChangedEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName);
+  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const recoveryText = input.forgotPasswordUrl
     ? `${t("notifications.passwordChanged.recoveryWithLink")}:\n${input.forgotPasswordUrl}\n`
     : `${t("notifications.passwordChanged.recoveryNoLink")}\n`;
@@ -668,7 +674,7 @@ export function passwordChangedEmail(input: PasswordChangedEmailInput): Notifica
 
 export function waiverRequestEmail(input: WaiverRequestEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);

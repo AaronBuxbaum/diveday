@@ -1154,6 +1154,7 @@
     "common": {
       "greeting": "Hi {firstName},",
       "greetingGeneric": "Hi,",
+      "genericName": "there",
       "dockCallMinutes": "{minutes} minutes",
       "trackWhatsLeft": "Track what's left before you sail",
       "seeWhatsLeft": "See what's left before you sail",

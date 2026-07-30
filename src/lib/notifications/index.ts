@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowMs } from "@/lib/clock";
+import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import {
   bookingConfirmationEmail,
   checkoutRecoveryEmail,
@@ -30,16 +31,7 @@ const emailAddressSchema = z.email().max(200);
  */
 const localeSchema = z.enum(DIVER_LOCALES);
 
-const reminderActionCodeSchema = z.enum([
-  "waiver_pending",
-  "certification_missing",
-  "certification_expired",
-  "certification_insufficient",
-  "specialty_missing",
-  "specialty_expired",
-  "nitrox_missing",
-  "payment_due",
-]);
+const reminderActionCodeSchema = z.enum(REMINDER_ACTION_CODES);
 
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),

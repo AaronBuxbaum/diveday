@@ -217,18 +217,13 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
  * caller (`src/db/reminders.ts`'s SMS/email composition) resolves each one
  * through `src/i18n/reminder-labels.ts` against the recipient shop's locale
  * (docs ADR 20260731-notification-locale).
+ *
+ * The single source of truth for this set — `notificationSchema`
+ * (`src/lib/notifications/index.ts`) derives its runtime-validated
+ * `reminderActionCodeSchema` from this same array, so the type-level and
+ * Zod-level lists can't drift apart.
  */
-export type ReminderActionCode =
-  | "waiver_pending"
-  | "certification_missing"
-  | "certification_expired"
-  | "certification_insufficient"
-  | "specialty_missing"
-  | "specialty_expired"
-  | "nitrox_missing"
-  | "payment_due";
-
-const REMINDER_ACTIONABLE_CODES: ReadonlySet<ReminderActionCode> = new Set([
+export const REMINDER_ACTION_CODES = [
   "waiver_pending",
   "certification_missing",
   "certification_expired",
@@ -237,7 +232,11 @@ const REMINDER_ACTIONABLE_CODES: ReadonlySet<ReminderActionCode> = new Set([
   "specialty_expired",
   "nitrox_missing",
   "payment_due",
-]);
+] as const;
+
+export type ReminderActionCode = (typeof REMINDER_ACTION_CODES)[number];
+
+const REMINDER_ACTIONABLE_CODES: ReadonlySet<ReminderActionCode> = new Set(REMINDER_ACTION_CODES);
 
 function isReminderActionCode(code: ReadinessBlockerCode): code is ReminderActionCode {
   return REMINDER_ACTIONABLE_CODES.has(code as ReminderActionCode);

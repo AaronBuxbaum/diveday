@@ -1154,6 +1154,7 @@
     "common": {
       "greeting": "Hola, {firstName}:",
       "greetingGeneric": "Hola:",
+      "genericName": "amigo",
       "dockCallMinutes": "{minutes} minutos",
       "trackWhatsLeft": "Sigue lo que te falta antes de salir",
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
