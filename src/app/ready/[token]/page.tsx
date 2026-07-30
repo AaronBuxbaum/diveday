@@ -15,7 +15,7 @@ import { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 
 const STATE_STYLE: Record<
   ChecklistState,
-  { glyph: string; word: Parameters<DiverTranslator>[0]; box: string; text: string }
+  { glyph: string; word: DiverMessageKey; box: string; text: string }
 > = {
   done: {
     glyph: "✓",
@@ -147,7 +147,7 @@ function itemAction(
  */
 const READY_NOTICES: Record<
   string,
-  { tone: "success" | "danger" | "neutral"; key: Parameters<DiverTranslator>[0] }
+  { tone: "success" | "danger" | "neutral"; key: DiverMessageKey }
 > = {
   "saved-contact": { tone: "success", key: "ready.contactSaved" },
   "saved-contact-empty": { tone: "neutral", key: "ready.contactIncomplete" },
@@ -174,19 +174,14 @@ const READY_NOTICES: Record<
  * against — only whether the payment row currently reads `refunded` or
  * still `paid`/`deposit_paid` does.
  */
-function verifiedCancelNotice(
-  paymentStatus: string | null | undefined,
-): Parameters<DiverTranslator>[0] | null {
+function verifiedCancelNotice(paymentStatus: string | null | undefined): DiverMessageKey | null {
   if (paymentStatus === "refunded") return "ready.refundIssued";
   if (paymentStatus === "paid" || paymentStatus === "deposit_paid") return "ready.refundManual";
   return null;
 }
 
 /** What cancelling right now would mean for money already paid — shown before the diver commits. */
-const CANCEL_PREVIEW_KEY: Record<
-  ReadyPageData["cancelPreview"],
-  Parameters<DiverTranslator>[0] | null
-> = {
+const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey | null> = {
   refund: "ready.cancelPreviewRefund",
   forfeit: "ready.cancelPreviewForfeit",
   // Genuinely paid — this trip just has no stated cancellation window, so

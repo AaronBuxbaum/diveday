@@ -11,7 +11,7 @@ import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { getReviewForBooking } from "@/db/reviews";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
@@ -23,10 +23,7 @@ import { TipAmountPicker } from "./TipAmountPicker";
  * Notice keys, not sentences — the query string names an outcome and the page
  * says it in the diver's own language (docs ADR 20260729-diver-copy-localization).
  */
-const PHOTO_NOTICES: Record<
-  string,
-  { tone: "success" | "danger"; key: Parameters<DiverTranslator>[0] }
-> = {
+const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessageKey }> = {
   added: { tone: "success", key: "recap.photoAdded" },
   none: { tone: "danger", key: "recap.photoMissing" },
   limit: { tone: "danger", key: "recap.photoLimit" },
@@ -34,10 +31,7 @@ const PHOTO_NOTICES: Record<
   error: { tone: "danger", key: "recap.photoFailed" },
 };
 
-const TIP_NOTICES: Record<
-  string,
-  { tone: "success" | "danger"; key: Parameters<DiverTranslator>[0] }
-> = {
+const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessageKey }> = {
   cancelled: { tone: "danger", key: "recap.tipCancelled" },
   invalid: { tone: "danger", key: "recap.tipRange" },
   error: { tone: "danger", key: "recap.tipFailed" },
@@ -259,9 +253,7 @@ export default async function DiveRecapPage({
                   : "border-primary/30 bg-primary/10 text-primary"
               }`}
             >
-              {tipNotice.key === "recap.photoLimit"
-                ? t(tipNotice.key, { max: MAX_RECAP_PHOTOS_PER_BOOKING })
-                : t(tipNotice.key)}
+              {t(tipNotice.key)}
             </p>
           ) : null}
           {tip?.status === "paid" ? (
