@@ -20,7 +20,7 @@ const env = process.env.AWS_ACCOUNT_ID
     }
   : undefined;
 
-new InfraStack(app, "InfraStack", {
+new InfraStack(app, "DiveDay", {
   env,
   stackName: "diveday-infra",
   tags: {

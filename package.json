@@ -17,7 +17,7 @@
     "e2e": "pnpm e2e:browser-check && pnpm e2e:build && playwright test",
     "visual": "pnpm e2e:browser-check && pnpm e2e:build && playwright test e2e/visual.spec.ts && dotenv -c -- reg-suit run",
     "infra:bootstrap": "cdk bootstrap",
-    "infra:deploy": "cdk deploy --require-approval never",
+    "infra:deploy": "cdk deploy",
     "infra:synth": "cdk synth",
     "infra:diff": "cdk diff",
     "check:architecture": "node scripts/check-architecture.mjs",

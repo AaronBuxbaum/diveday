@@ -8,7 +8,7 @@ All infrastructure is defined as code under the [infra/](../../infra/) directory
 
 ## Overview
 
-We use AWS CDK to model, deploy, and update our cloud resources. Currently, the infrastructure consists of the `InfraStack` stack, which provisions:
+We use AWS CDK to model, deploy, and update our cloud resources. Currently, the infrastructure consists of the `DiveDay` stack, which provisions:
 - An S3 bucket for storing visual regression testing (VRT) baselines and HTML reports.
 - A `reg-suit-bot` IAM user with specific S3 read/write permissions.
 - A dedicated `cdk-deployer` IAM user with `AdministratorAccess` intended to manage all future CDK deployments.
