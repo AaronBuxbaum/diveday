@@ -472,11 +472,24 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Website embed" }).waitFor();
         await capture(page, "settings-embed", scheme);
 
-        // The team surface: inviting staff and the current roster with its
-        // role checkboxes and status badges (20260726-staff-invite-accounts).
+        // The team surface: inviting staff and the current roster, each card's
+        // Enable/Disable/Delete immediate-action buttons and its role
+        // checkboxes batched into the page's single "Save changes".
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
         await capture(page, "settings-team", scheme);
+
+        // The courses catalog: the eye visibility toggle beside the new link
+        // icon that jumps to a course's public preview page.
+        await page.goto("/shop/blue-mantis/courses");
+        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await capture(page, "courses-list", scheme);
+
+        // A course's edit page: the Day by day section's real per-day controls
+        // (start/end time, time note, item list) replacing the old textarea.
+        await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+        await page.getByText("Day by day").waitFor();
+        await capture(page, "course-edit", scheme);
 
         // Owner reporting: "how's my month" over the seeded back-fill — the KPI
         // row and the per-trip breakdown that answer the buyer's revenue question.

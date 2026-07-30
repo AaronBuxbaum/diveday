@@ -33,6 +33,7 @@ const bookingConfirmationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
   readinessUrl: z.url().max(2_000).optional(),
+  packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
   /**
    * Set only by a caller sending a *second* confirmation for the same
    * `bookingId` — a reschedule reactivating a previously-cancelled row, or a
