@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { chromium, type LaunchOptions } from "@playwright/test";
 
 /**
@@ -80,23 +81,39 @@ function headlessShellExecutablePath(): string | undefined {
   };
   const parts = segments[`${process.platform}-${process.arch}`];
   if (!parts) return undefined;
-  return [root, shellDir, ...parts].join("/");
+  return path.join(root, shellDir, ...parts);
 }
 
 /**
  * True when the exact Chromium this fleet will actually launch — the shell
  * binary `chromium-headless-shell`, since every launch here is headless — is
  * present on disk. Falls back to the headed `chromium` path so a plain
- * `playwright install chromium` (no `--only-shell`) still resolves correctly.
+ * `playwright install chromium` (no `--only-shell`) still resolves correctly
+ * — but warns when that fallback is the reason, since it means the shell this
+ * fleet actually launches is missing even though a browser is technically
+ * "installed"; the loud failure that mismatch produces is a Playwright launch
+ * error at test time ("executable doesn't exist"), which is a confusing place
+ * to first learn a preflight check upstream said everything was fine.
  */
 export function pinnedChromiumInstalled(): boolean {
   const shellPath = headlessShellExecutablePath();
   if (shellPath && fs.existsSync(shellPath)) return true;
+  let headedPath: string | undefined;
   try {
-    return fs.existsSync(chromium.executablePath());
+    headedPath = chromium.executablePath();
   } catch {
     return false;
   }
+  const headedExists = fs.existsSync(headedPath);
+  if (headedExists) {
+    console.warn(
+      `e2e: found the headed Chromium at ${headedPath} but not its chromium-headless-shell ` +
+        "sibling. This fleet always launches headless, so it will target the shell at test " +
+        "time and fail there instead of here. Run `pnpm exec playwright install --only-shell " +
+        "chromium` (or a plain `playwright install chromium` for both) to fix the mismatch.",
+    );
+  }
+  return headedExists;
 }
 
 /**
