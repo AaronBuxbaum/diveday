@@ -141,7 +141,13 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/reset-password/not-a-real-token");
       await capture(page, "reset-password-invalid", scheme);
 
+      // Wait for a real departure card, not the loading skeleton: this capture
+      // used to `goto` and shoot immediately, so it raced the schedule's
+      // suspense fallback and whichever side of that race each run landed on
+      // decided the baseline. Two runs catching *different* skeleton frames is
+      // what produced the schedule-dark diffs on builds with no code change.
       await page.goto("/shop/blue-mantis/schedule");
+      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
       await capture(page, "schedule", scheme);
 
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
@@ -331,7 +337,12 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The roster, then one diver's full profile (certs, specialty cards,
         // contact) — the front desk's densest everyday surfaces.
+        // Wait for the roster itself, not the skeleton: same race as the public
+        // schedule above, and the one that put a half-drawn loading state into
+        // the divers-light baseline.
         await page.goto("/shop/blue-mantis/divers");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.getByRole("searchbox", { name: "Search divers" }).waitFor();
         await capture(page, "divers", scheme);
 
         // Found by search, not by scrolling: the demo shop now has enough
