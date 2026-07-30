@@ -9,11 +9,11 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { splitMediaUrls } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
 
@@ -281,16 +281,16 @@ function SiteForm({
           <Field label={t("diveSites.form.minimumCertificationLabel")}>
             <select name="minimumCertificationLevel" defaultValue="" className={controlClass}>
               <option value="">{t("diveSites.form.noLevelRequired")}</option>
-              {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+              {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(key)}
                 </option>
               ))}
             </select>
           </Field>
         </FieldGrid>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
+          {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
             <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
               <input
                 name="specialty"
@@ -298,7 +298,7 @@ function SiteForm({
                 value={value}
                 className="size-4 accent-primary"
               />
-              {label}
+              {t(key)}
             </label>
           ))}
           <label className="flex min-h-11 items-center gap-2 text-sm font-medium">

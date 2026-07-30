@@ -12,10 +12,10 @@ import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { createTrip, createTripSeries } from "@/db/trips";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import {
   MAX_SERIES_OCCURRENCES,
   MIN_SERIES_OCCURRENCES,
@@ -230,8 +230,9 @@ export default async function NewTripPage({
                   ? t("trips.new.courseDescription", {
                       requirement: selectedCourse.minimumCertificationLevel
                         ? t("trips.new.courseCertRequired", {
-                            level:
-                              CERTIFICATION_LEVEL_LABELS[selectedCourse.minimumCertificationLevel],
+                            level: t(
+                              CERTIFICATION_LEVEL_KEYS[selectedCourse.minimumCertificationLevel],
+                            ),
                           })
                         : t("trips.new.courseNoCardRequired"),
                     })

@@ -3,15 +3,15 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { SPECIALTY_LABELS } from "@/lib/readiness";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
 import {
-  AGENCY_LABELS,
+  AGENCY_KEYS,
   type DiverProfile,
-  HELD_CARD_STATUS_LABELS,
+  HELD_CARD_STATUS_KEYS,
   heldCardDisplayStatus,
   heldCardStatusTone,
   isImportedCard,
@@ -56,9 +56,9 @@ export function SpecialtyCards({
           >
             <Field label={t("divers.certifications.agency")}>
               <select name="agency" className={controlClass}>
-                {Object.entries(AGENCY_LABELS).map(([value, label]) => (
+                {Object.entries(AGENCY_KEYS).map(([value, key]) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t(key)}
                   </option>
                 ))}
               </select>
@@ -66,8 +66,8 @@ export function SpecialtyCards({
             <Field label={t("divers.specialty.specialtyLabel")}>
               <select name="specialty" className={controlClass}>
                 {[
-                  ...Object.entries(SPECIALTY_LABELS),
-                  ["nitrox", t("divers.specialty.nitroxOption")],
+                  ...Object.entries(SPECIALTY_KEYS).map(([value, key]) => [value, t(key)] as const),
+                  ["nitrox", t("divers.specialty.nitroxOption")] as const,
                 ].map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -115,7 +115,7 @@ export function SpecialtyCards({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium">
-                        {AGENCY_LABELS[card.agency]} · {SPECIALTY_LABELS[card.specialty]}
+                        {t(AGENCY_KEYS[card.agency])} · {t(SPECIALTY_KEYS[card.specialty])}
                       </p>
                       <p className="mt-1 break-all text-sm text-muted">
                         {card.identifier}
@@ -144,7 +144,7 @@ export function SpecialtyCards({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={heldCardStatusTone(display)}>
-                        {HELD_CARD_STATUS_LABELS[display]}
+                        {t(HELD_CARD_STATUS_KEYS[display])}
                       </Badge>
                       {isImportedCard(card) ? (
                         <Badge tone="neutral">
@@ -187,7 +187,7 @@ export function SpecialtyCards({
                       certificationId={card.id}
                       confirmationText={t("divers.specialty.confirmDisclosure", {
                         what: t("divers.specialty.whatSpecialtyDive", {
-                          specialty: SPECIALTY_LABELS[card.specialty],
+                          specialty: t(SPECIALTY_KEYS[card.specialty]),
                         }),
                       })}
                       t={t}
@@ -204,14 +204,14 @@ export function SpecialtyCards({
                     <div>
                       <p className="font-medium">
                         {t("divers.specialty.nitroxAgencyLine", {
-                          agency: AGENCY_LABELS[card.agency],
+                          agency: t(AGENCY_KEYS[card.agency]),
                         })}
                       </p>
                       <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={heldCardStatusTone(display)}>
-                        {HELD_CARD_STATUS_LABELS[display]}
+                        {t(HELD_CARD_STATUS_KEYS[display])}
                       </Badge>
                       {isImportedCard(card) ? (
                         <Badge tone="neutral">

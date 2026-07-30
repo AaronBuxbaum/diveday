@@ -194,7 +194,14 @@
     "atAGlance": "At a glance",
     "duration": "Duration",
     "groupSize": "Group size",
-    "certificationOrHigher": "{level} or higher"
+    "certificationOrHigher": "{level} or higher",
+    "certificationLevels": {
+      "openWater": "Open Water",
+      "advancedOpenWater": "Advanced Open Water",
+      "rescue": "Rescue Diver",
+      "divemaster": "Divemaster",
+      "instructor": "Instructor"
+    }
   },
   "path": {
     "sectionTitle": "Where this fits",
@@ -309,6 +316,35 @@
     "almostThere": "Almost there, {name}.",
     "nextDetail": "Next: {detail}",
     "checklistHeading": "Your pre-trip checklist",
+    "checklistCategoryWaiver": "Waiver",
+    "checklistCategoryCertification": "Certification",
+    "checklistCategoryPayment": "Payment",
+    "checklistCategorySetup": "Trip setup",
+    "checklistDetail": {
+      "setupGeneric": "Your shop is still finalizing this trip’s details.",
+      "readinessUnavailable": "Your shop is confirming your readiness. Check back shortly.",
+      "identityUnconfirmed": "Your shop needs to confirm your details before you’re cleared — they’ll be in touch if anything’s needed.",
+      "underMinimumAge": "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, reach out to the shop and they’ll sort it out.",
+      "waiverNotSent": "The shop hasn’t sent your waiver yet — you can ask for it when you arrive, or reach them below.",
+      "waiverPending": "Sign your waiver — it only takes about two minutes.",
+      "waiverExpired": "Your waiver link expired — ask the shop for a fresh one.",
+      "medicalReview": "Thanks for signing. One medical answer needs a closer look — a doctor’s sign-off may be required, and your shop will be in touch about next steps.",
+      "certificationMissing": "Get your certification card to the shop — upload a photo or get in touch — so they can add it to your file.",
+      "certificationPending": "Your certification card is with the shop for verification.",
+      "certificationExpired": "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
+      "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
+      "specialtyMissing": "This dive needs a specialty card — send the shop a photo or get in touch so they can add it.",
+      "specialtyPending": "Your specialty card is with the shop for verification.",
+      "specialtyExpired": "Your specialty card on file is past the refresher date your shop set — check with them about it before you dive.",
+      "specialtyImportUnconfirmed": "Your specialty card came across from your shop’s old system and is with them to confirm.",
+      "nitroxMissing": "This dive uses Nitrox — send the shop a photo of your Nitrox card or get in touch so they can add it.",
+      "nitroxPending": "Your nitrox card is with the shop for verification.",
+      "paymentDue": "There’s a balance to settle. Your shop can take payment before the trip.",
+      "waiverDone": "Signed and on file.",
+      "certificationDone": "Verified and on file.",
+      "paymentDone": "Paid up — thank you.",
+      "certificationMultipleNeeded": "This dive needs more than one certification on file — share every card it calls for (a photo or a quick message works), and your shop will confirm you’re set."
+    },
     "emergencyOnFile": "On file — {name}. Update it below if it’s changed.",
     "changePlans": "Need to change your plans?",
     "reschedulePitch": "Pick a different trip and we’ll move you — your current spot only releases once the new one’s confirmed, so you’re never left without one.",
@@ -782,12 +818,14 @@
         "diver": {
           "role": "For the diver",
           "title": "A clear way onto the boat",
-          "description": "A live schedule, a calm booking flow, and one obvious next step instead of a back-and-forth with the shop."
+          "description": "A live schedule, a calm booking flow, and one obvious next step instead of a back-and-forth with the shop.",
+          "mockupLabel": "The Blue Mantis public schedule with upcoming dive trips and available places."
         },
         "frontDesk": {
           "role": "For the front desk",
           "title": "One answer to “are they ready?”",
-          "description": "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of quietly waving it through."
+          "description": "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of quietly waving it through.",
+          "mockupLabel": "The trip readiness section showing clear diver-ready and diver-blocked states."
         }
       },
       "productEyebrow": "Instead of three apps",

@@ -9,12 +9,12 @@ import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
+import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
@@ -83,7 +83,7 @@ export default async function CoursePage({
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {
-        level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
       })
     : t("course.noCertification");
   // Logistics only. The cert gate and the minimum age are admission facts and

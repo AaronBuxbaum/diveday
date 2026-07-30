@@ -19,23 +19,19 @@ const PAYMENT_CLEARED: ReadonlySet<PaymentStatus> = new Set<PaymentStatus>([
   "waived",
 ]);
 
-export const CERTIFICATION_LEVEL_LABELS = {
-  open_water: "Open Water",
-  advanced_open_water: "Advanced Open Water",
-  rescue: "Rescue Diver",
-  divemaster: "Divemaster",
-  instructor: "Instructor",
-} as const;
-
-export type CertificationLevel = keyof typeof CERTIFICATION_LEVEL_LABELS;
-
-/** Activity-gating specialties; each is a yes/no gate, never a ladder rung. */
-export const SPECIALTY_LABELS = {
-  deep: "Deep",
-  wreck: "Wreck",
-  night: "Night",
-  drysuit: "Drysuit",
-} as const satisfies Record<DiveSpecialty, string>;
+/**
+ * The five-rung certification ladder. Labels for these — and for
+ * `DiveSpecialty` below — live in the message bundles
+ * (`src/i18n/readiness-labels.ts` maps each code to a translation key), never
+ * here: this file states facts about ordering and gates, `src/app` chooses
+ * words.
+ */
+export type CertificationLevel =
+  | "open_water"
+  | "advanced_open_water"
+  | "rescue"
+  | "divemaster"
+  | "instructor";
 
 const levelRank: Record<CertificationLevel, number> = {
   open_water: 1,
@@ -123,9 +119,22 @@ export type ReadinessBlockerCode =
   | "nitrox_pending"
   | "under_minimum_age"
   | "payment_due"
+  | "payment_refunded"
   | "readiness_unavailable";
 
-export type ReadinessBlocker = { code: ReadinessBlockerCode; message: string };
+/**
+ * The data a translated message needs to fill in its placeholders. Which
+ * fields are set depends on `code` — `src/app` looks the code up in a message
+ * bundle and interpolates whichever of these the chosen template calls for.
+ */
+export type ReadinessBlockerParams = {
+  requiredLevel?: CertificationLevel;
+  specialty?: DiveSpecialty;
+  age?: number;
+  minimumAge?: number;
+};
+
+export type ReadinessBlocker = { code: ReadinessBlockerCode; params?: ReadinessBlockerParams };
 
 /** The requirement family a blocker belongs to, shared by every readiness view. */
 export type BlockerCategory = "waiver" | "certification" | "payment" | "setup";
@@ -155,6 +164,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // someone under a course's minimum age.
   under_minimum_age: "setup",
   payment_due: "payment",
+  payment_refunded: "payment",
 };
 
 export type ReadinessResult = {
@@ -199,12 +209,7 @@ export type ReadinessInput = {
 export function unavailableReadiness(): ReadinessResult {
   return {
     status: "blocked",
-    blockers: [
-      {
-        code: "readiness_unavailable",
-        message: "Readiness evidence is unavailable. Do not board this diver until it is checked.",
-      },
-    ],
+    blockers: [{ code: "readiness_unavailable" }],
   };
 }
 
@@ -255,16 +260,10 @@ function certificationBlocker(
         levelRank[certification.level] >= levelRank[minimumLevel],
     )
   ) {
-    return {
-      code: "certification_pending",
-      message: "Certification is waiting for staff verification.",
-    };
+    return { code: "certification_pending" };
   }
   if (verified.length > 0) {
-    return {
-      code: "certification_insufficient",
-      message: `${CERTIFICATION_LEVEL_LABELS[minimumLevel]} or higher is required for this trip.`,
-    };
+    return { code: "certification_insufficient", params: { requiredLevel: minimumLevel } };
   }
   if (
     certifications.some(
@@ -272,12 +271,9 @@ function certificationBlocker(
         certification.expiresAt && isCalendarDateExpired(certification.expiresAt, todayLocal),
     )
   ) {
-    return {
-      code: "certification_expired",
-      message: "Certification on file is past its refresher-due date.",
-    };
+    return { code: "certification_expired" };
   }
-  return { code: "certification_missing", message: "No certification is on file for this trip." };
+  return { code: "certification_missing" };
 }
 
 /**
@@ -299,7 +295,6 @@ function specialtyBlocker(
   todayLocal: CalendarDate,
 ): ReadinessBlocker | null {
   const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
-  const label = SPECIALTY_LABELS[specialty];
   const unexpired = (card: SpecialtyCertification) =>
     !card.expiresAt || !isCalendarDateExpired(card.expiresAt, todayLocal);
   if (
@@ -324,27 +319,15 @@ function specialtyBlocker(
         card.status === "verified" && card.importedAt && !card.reviewedAt && unexpired(card),
     )
   ) {
-    return {
-      code: "specialty_import_unconfirmed",
-      message: `${label} specialty card came across in an import — a staffer needs to confirm it before this dive.`,
-    };
+    return { code: "specialty_import_unconfirmed", params: { specialty } };
   }
   if (cards.some((card) => card.status === "pending")) {
-    return {
-      code: "specialty_pending",
-      message: `${label} specialty card is waiting for staff verification.`,
-    };
+    return { code: "specialty_pending", params: { specialty } };
   }
   if (cards.some((card) => card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal))) {
-    return {
-      code: "specialty_expired",
-      message: `${label} specialty card on file is past its refresher-due date.`,
-    };
+    return { code: "specialty_expired", params: { specialty } };
   }
-  return {
-    code: "specialty_missing",
-    message: `${label} specialty is required; no card is on file.`,
-  };
+  return { code: "specialty_missing", params: { specialty } };
 }
 
 /**
@@ -357,15 +340,9 @@ function nitroxBlocker(
 ): ReadinessBlocker | null {
   if (nitroxCertifications.some((card) => card.status === "verified")) return null;
   if (nitroxCertifications.some((card) => card.status === "pending")) {
-    return {
-      code: "nitrox_pending",
-      message: "Nitrox card is waiting for staff verification.",
-    };
+    return { code: "nitrox_pending" };
   }
-  return {
-    code: "nitrox_missing",
-    message: "Nitrox certification is required; no card is on file.",
-  };
+  return { code: "nitrox_missing" };
 }
 
 /**
@@ -382,11 +359,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // board on that person's certs/waiver until staff confirm it is the same
   // human (H-13), even on a trip whose requirements aren't configured yet.
   if (input.identityUnconfirmed) {
-    blockers.push({
-      code: "identity_unconfirmed",
-      message:
-        "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
-    });
+    blockers.push({ code: "identity_unconfirmed" });
   }
 
   // Also ahead of the trip's requirements, and for the same reason: an
@@ -398,36 +371,25 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     if (age.status === "under") {
       blockers.push({
         code: "under_minimum_age",
-        message: `Under this course’s minimum age: ${age.age} on the course date, and it requires ${age.minimumAge}. Check the date of birth on file before boarding.`,
+        params: { age: age.age, minimumAge: age.minimumAge },
       });
     }
   }
 
   if (!input.requirement) {
-    blockers.push({
-      code: "requirements_not_configured",
-      message: "Trip requirements have not been configured yet.",
-    });
+    blockers.push({ code: "requirements_not_configured" });
     return { status: "blocked", blockers };
   }
 
   if (input.requirement.requiresWaiver) {
     const state = waiverState(input.waiver, now);
-    if (state === "not_sent")
-      blockers.push({ code: "waiver_not_sent", message: "Waiver has not been sent." });
+    if (state === "not_sent") blockers.push({ code: "waiver_not_sent" });
     if (state === "awaiting_signature") {
-      blockers.push({
-        code: "waiver_pending",
-        message: "Waiver is waiting for the diver’s signature.",
-      });
+      blockers.push({ code: "waiver_pending" });
     }
-    if (state === "expired")
-      blockers.push({
-        code: "waiver_expired",
-        message: "Waiver link expired; issue a fresh link.",
-      });
+    if (state === "expired") blockers.push({ code: "waiver_expired" });
     if (state === "medical_review") {
-      blockers.push({ code: "medical_review", message: "A medical answer needs staff follow-up." });
+      blockers.push({ code: "medical_review" });
     }
   }
 
@@ -455,13 +417,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   if (input.requirement.requiresPayment) {
     const status = input.paymentStatus ?? "unpaid";
     if (!PAYMENT_CLEARED.has(status)) {
-      blockers.push({
-        code: "payment_due",
-        message:
-          status === "refunded"
-            ? "Payment was refunded; collect payment before boarding."
-            : "Payment is outstanding for this trip.",
-      });
+      blockers.push({ code: status === "refunded" ? "payment_refunded" : "payment_due" });
     }
   }
   return { status: blockers.length === 0 ? "ready" : "blocked", blockers };

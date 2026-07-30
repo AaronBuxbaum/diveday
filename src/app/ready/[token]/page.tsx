@@ -16,6 +16,7 @@ import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { telHref } from "@/lib/course-inquiry";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -72,6 +73,7 @@ function ChecklistRow({
 }: {
   label: string;
   state: ChecklistState;
+  /** Already resolved by the caller — see `checklistDetailText`. */
   detail: string;
   action?: React.ReactNode;
   t: DiverTranslator;
@@ -124,7 +126,7 @@ function itemAction(
       </form>
     );
   }
-  if (item.code === "payment_due" && canPay) {
+  if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) {
     return (
       <form action={payFromReady.bind(null, token)}>
         <SubmitButton
@@ -346,7 +348,7 @@ export default async function DiverReadinessPage({
             </h2>
             <p className="mt-2 text-base text-muted">
               {nextStep
-                ? t("ready.nextDetail", { detail: nextStep.detail })
+                ? t("ready.nextDetail", { detail: checklistDetailText(t, nextStep) })
                 : t("ready.allSetBody")}
             </p>
           </section>
@@ -363,9 +365,9 @@ export default async function DiverReadinessPage({
             {items.map((item) => (
               <ChecklistRow
                 key={item.category}
-                label={item.label}
+                label={checklistCategoryText(t, item.category)}
                 state={item.state}
-                detail={item.detail}
+                detail={checklistDetailText(t, item)}
                 action={itemAction(item, token, data.canPay, t)}
                 t={t}
               />

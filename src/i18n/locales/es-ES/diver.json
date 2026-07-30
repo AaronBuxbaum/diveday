@@ -194,7 +194,14 @@
     "atAGlance": "De un vistazo",
     "duration": "Duración",
     "groupSize": "Tamaño del grupo",
-    "certificationOrHigher": "{level} o superior"
+    "certificationOrHigher": "{level} o superior",
+    "certificationLevels": {
+      "openWater": "Open Water",
+      "advancedOpenWater": "Advanced Open Water",
+      "rescue": "Buceador de Rescate",
+      "divemaster": "Divemaster",
+      "instructor": "Instructor"
+    }
   },
   "path": {
     "sectionTitle": "Dónde encaja este curso",
@@ -309,6 +316,35 @@
     "almostThere": "Ya casi está, {name}.",
     "nextDetail": "Siguiente: {detail}",
     "checklistHeading": "Tu lista antes de la salida",
+    "checklistCategoryWaiver": "Exención",
+    "checklistCategoryCertification": "Certificación",
+    "checklistCategoryPayment": "Pago",
+    "checklistCategorySetup": "Preparación de la salida",
+    "checklistDetail": {
+      "setupGeneric": "Tu tienda todavía está finalizando los detalles de esta salida.",
+      "readinessUnavailable": "Tu tienda está confirmando tu preparación. Vuelve a comprobarlo en breve.",
+      "identityUnconfirmed": "Tu tienda necesita confirmar tus datos antes de darte luz verde — se pondrán en contacto si hace falta algo.",
+      "underMinimumAge": "Este curso tiene una edad mínima que la fecha de nacimiento registrada no cumple para esta sesión. Si esto es un error, contacta con la tienda y lo resolverán.",
+      "waiverNotSent": "La tienda aún no ha enviado tu exención — puedes pedirla al llegar, o contactar con ellos más abajo.",
+      "waiverPending": "Firma tu exención — solo lleva unos dos minutos.",
+      "waiverExpired": "El enlace de tu exención caducó — pide uno nuevo a la tienda.",
+      "medicalReview": "Gracias por firmar. Una respuesta médica necesita una revisión más de cerca — puede requerirse el visto bueno de un médico, y tu tienda se pondrá en contacto sobre los siguientes pasos.",
+      "certificationMissing": "Haz llegar tu tarjeta de certificación a la tienda — sube una foto o ponte en contacto — para que puedan añadirla a tu ficha.",
+      "certificationPending": "Tu tarjeta de certificación está con la tienda para verificación.",
+      "certificationExpired": "Tu certificación registrada ha superado la fecha de actualización que fijó tu tienda — consulta con ellos sobre una actualización antes de bucear.",
+      "certificationInsufficient": "Esta salida requiere un nivel de certificación superior. Tu tienda puede hablar contigo sobre las opciones.",
+      "specialtyMissing": "Esta inmersión necesita una tarjeta de especialidad — envía una foto a la tienda o ponte en contacto para que puedan añadirla.",
+      "specialtyPending": "Tu tarjeta de especialidad está con la tienda para verificación.",
+      "specialtyExpired": "Tu tarjeta de especialidad registrada ha superado la fecha de actualización que fijó tu tienda — consulta con ellos antes de bucear.",
+      "specialtyImportUnconfirmed": "Tu tarjeta de especialidad llegó del sistema anterior de tu tienda y está pendiente de que la confirmen.",
+      "nitroxMissing": "Esta inmersión usa nitrox — envía una foto de tu tarjeta de nitrox a la tienda o ponte en contacto para que puedan añadirla.",
+      "nitroxPending": "Tu tarjeta de nitrox está con la tienda para verificación.",
+      "paymentDue": "Hay un saldo pendiente. Tu tienda puede cobrarlo antes de la salida.",
+      "waiverDone": "Firmada y registrada.",
+      "certificationDone": "Verificada y registrada.",
+      "paymentDone": "Pagado — gracias.",
+      "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada — comparte cada tarjeta que se requiera (una foto o un mensaje rápido sirve), y tu tienda confirmará que estás listo."
+    },
     "emergencyOnFile": "Registrado — {name}. Actualízalo abajo si ha cambiado.",
     "changePlans": "¿Necesitas cambiar tus planes?",
     "reschedulePitch": "Elige otra salida y te movemos — tu plaza actual solo se libera cuando la nueva queda confirmada, así que nunca te quedas sin ninguna.",
@@ -782,12 +818,14 @@
         "diver": {
           "role": "Para el buceador",
           "title": "Una forma clara de subir al barco",
-          "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con la tienda."
+          "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con la tienda.",
+          "mockupLabel": "El horario público de Blue Mantis con próximas salidas de buceo y plazas disponibles."
         },
         "frontDesk": {
           "role": "Para la recepción",
           "title": "Una sola respuesta a «¿están listos?»",
-          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar en silencio."
+          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar en silencio.",
+          "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
       "productEyebrow": "En vez de tres aplicaciones",

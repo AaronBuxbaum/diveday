@@ -603,7 +603,7 @@ export function OfflineManifestView() {
                     {!ready ? (
                       <ul className="mt-2 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
-                          <li key={blocker.message}>• {blocker.message}</li>
+                          <li key={blocker.code}>• {blocker.text}</li>
                         ))}
                       </ul>
                     ) : null}

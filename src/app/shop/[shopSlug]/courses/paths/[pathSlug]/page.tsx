@@ -10,10 +10,10 @@ import { getDb } from "@/db/client";
 import { getCoursePathBySlug } from "@/db/course-paths";
 import { listCourses } from "@/db/courses";
 import { getShopById } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MAX_PATH_STEPS } from "@/lib/courses";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { PathBuilder } from "../_components/PathBuilder";
 import { savePathAction } from "../actions";
@@ -117,7 +117,7 @@ export default async function EditCoursePathPage({
               isActive: course.isActive,
               gateLabel: course.minimumCertificationLevel
                 ? t("courses.pathBuilder.orHigher", {
-                    level: CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel],
+                    level: t(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
                   })
                 : t("courses.pathBuilder.openToUncertified"),
             }))}

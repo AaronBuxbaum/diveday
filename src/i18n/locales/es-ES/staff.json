@@ -115,6 +115,36 @@
     "day": "Día {number}"
   },
   "divers": {
+    "shared": {
+      "agencies": {
+        "padi": "PADI",
+        "ssi": "SSI",
+        "naui": "NAUI",
+        "sdi": "SDI",
+        "tdi": "TDI",
+        "other": "Otra agencia"
+      },
+      "paymentStatus": {
+        "unpaid": "Sin pagar",
+        "depositPaid": "Depósito pagado",
+        "paid": "Pagado",
+        "waived": "Exonerado",
+        "refunded": "Reembolsado"
+      },
+      "orderStatus": {
+        "open": "Factura abierta",
+        "paid": "Pagado",
+        "void": "Anulado",
+        "uncollectible": "Incobrable",
+        "refunded": "Reembolsado"
+      },
+      "cardStatus": {
+        "pending": "pendiente",
+        "verified": "certificado",
+        "expired": "actualización pendiente",
+        "confirmToClear": "certificado · confirmar para liberar"
+      }
+    },
     "certifications": {
       "heading": "Tarjetas de certificación",
       "description": "La evidencia empieza pendiente. Busca el número de tarjeta con la agencia emisora y márcala como certificada — solo las tarjetas certificadas afectan a la preparación.",
@@ -1879,9 +1909,64 @@
       "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el calendario.",
       "goToLabel": "Ir a {page}"
     },
+    "readiness": {
+      "certificationLevels": {
+        "openWater": "Open Water",
+        "advancedOpenWater": "Advanced Open Water",
+        "rescue": "Buceador de Rescate",
+        "divemaster": "Divemaster",
+        "instructor": "Instructor"
+      },
+      "specialties": {
+        "deep": "Profundidad",
+        "wreck": "Naufragios",
+        "night": "Nocturno",
+        "drysuit": "Traje seco"
+      },
+      "blockers": {
+        "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
+        "identityUnconfirmed": "Identidad sin confirmar: esta reserva usó el correo de un buceador existente con un nombre distinto. Confirma que es la misma persona antes de embarcar.",
+        "waiverNotSent": "La exención aún no se ha enviado.",
+        "waiverPending": "La exención espera la firma del buceador.",
+        "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
+        "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
+        "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
+        "certificationPending": "La certificación espera verificación del personal.",
+        "certificationExpired": "La certificación registrada ha superado su fecha de actualización.",
+        "certificationInsufficient": "Se requiere {level} o superior para esta salida.",
+        "specialtyMissing": "Se requiere la especialidad {specialty}; no hay tarjeta registrada.",
+        "specialtyPending": "La tarjeta de especialidad {specialty} espera verificación del personal.",
+        "specialtyExpired": "La tarjeta de especialidad {specialty} registrada ha superado su fecha de actualización.",
+        "specialtyImportUnconfirmed": "La tarjeta de especialidad {specialty} llegó en una importación — un miembro del personal debe confirmarla antes de esta inmersión.",
+        "nitroxMissing": "Se requiere certificación de nitrox; no hay tarjeta registrada.",
+        "nitroxPending": "La tarjeta de nitrox espera verificación del personal.",
+        "underMinimumAge": "Por debajo de la edad mínima del curso: {age} en la fecha del curso, y se requieren {minimumAge}. Verifica la fecha de nacimiento registrada antes de embarcar.",
+        "paymentDue": "Hay un pago pendiente para esta salida.",
+        "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
+        "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta comprobarlo."
+      }
+    },
     "shopNav": {
       "home": "Inicio de DiveDay",
       "signOut": "Cerrar sesión"
+    },
+    "shopNavLinks": {
+      "primaryNavAriaLabel": "Principal",
+      "more": "Más",
+      "today": "Hoy",
+      "checkIn": "Registro",
+      "blockers": "Bloqueos",
+      "divers": "Buceadores",
+      "schedule": "Calendario",
+      "staffing": "Personal",
+      "diveSites": "Sitios de buceo",
+      "courses": "Cursos",
+      "reviews": "Reseñas",
+      "waivers": "Exenciones",
+      "reports": "Informes",
+      "promoCodes": "Códigos promocionales",
+      "settings": "Ajustes",
+      "team": "Equipo"
     },
     "subSurfaceRipple": {
       "iconTitle": "Icono de pase de lista completo",

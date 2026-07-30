@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
@@ -272,9 +273,9 @@ export function RosterSection({
                 {readiness && readiness.status !== "ready" ? (
                   <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
                     {readiness.blockers.map((blocker) => (
-                      <li key={blocker.message} className="flex gap-2">
+                      <li key={blocker.code} className="flex gap-2">
                         <span aria-hidden="true">!</span>
-                        <span>{blocker.message}</span>
+                        <span>{readinessBlockerText(t, blocker)}</span>
                       </li>
                     ))}
                   </ul>

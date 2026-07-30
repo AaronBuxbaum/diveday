@@ -4,15 +4,15 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
 import {
-  AGENCY_LABELS,
-  CARD_STATUS_LABELS,
+  AGENCY_KEYS,
+  CARD_STATUS_KEYS,
   cardDisplayStatus,
   type DiverProfile,
   isImportedCard,
@@ -75,18 +75,18 @@ export async function CertificationCards({
           >
             <Field label={t("divers.certifications.agency")}>
               <select name="agency" className={controlClass}>
-                {Object.entries(AGENCY_LABELS).map(([value, label]) => (
+                {Object.entries(AGENCY_KEYS).map(([value, key]) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t(key)}
                   </option>
                 ))}
               </select>
             </Field>
             <Field label={t("divers.certifications.level")}>
               <select name="level" className={controlClass}>
-                {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
+                {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t(key)}
                   </option>
                 ))}
               </select>
@@ -132,7 +132,7 @@ export async function CertificationCards({
               >
                 <div>
                   <p className="font-medium">
-                    {AGENCY_LABELS[card.agency]} · {CERTIFICATION_LEVEL_LABELS[card.level]}
+                    {t(AGENCY_KEYS[card.agency])} · {t(CERTIFICATION_LEVEL_KEYS[card.level])}
                   </p>
                   <p className="mt-1 break-all text-sm text-muted">
                     {card.identifier}
@@ -156,8 +156,8 @@ export async function CertificationCards({
                     </summary>
                     <DigitalCardFlip
                       fullName={diver.person.fullName}
-                      agencyLabel={AGENCY_LABELS[card.agency]}
-                      levelLabel={CERTIFICATION_LEVEL_LABELS[card.level]}
+                      agencyLabel={t(AGENCY_KEYS[card.agency])}
+                      levelLabel={t(CERTIFICATION_LEVEL_KEYS[card.level])}
                       cardImageUrl={card.cardImageUrl}
                       verificationStatus={display}
                       copy={{
@@ -167,7 +167,7 @@ export async function CertificationCards({
                         }),
                         idText: t("divers.certifications.card.idText", { id: card.identifier }),
                         flipAriaLabel: t("divers.certifications.card.flipAriaLabel", {
-                          level: CERTIFICATION_LEVEL_LABELS[card.level],
+                          level: t(CERTIFICATION_LEVEL_KEYS[card.level]),
                         }),
                         tapToFlipText: t("divers.certifications.card.tapToFlipText", {
                           target: card.cardImageUrl ? uploadedPhotoText : securityDetailsText,
@@ -177,7 +177,7 @@ export async function CertificationCards({
                   </details>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={statusTone(display)}>{CARD_STATUS_LABELS[display]}</Badge>
+                  <Badge tone={statusTone(display)}>{t(CARD_STATUS_KEYS[display])}</Badge>
                   {isImportedCard(card) ? (
                     <Badge tone="neutral">
                       {card.importedFromLabel

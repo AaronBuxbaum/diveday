@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
+import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
@@ -103,7 +104,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     // imported acceptance must be visibly distinct from a real DiveDay
     // review, never folded into the same "digital" label.
     expect(diver?.medicalWaiver).toMatchObject({ source: "imported" });
-    expect(diver?.readiness.blockers.some((b) => /waiver/i.test(b.message))).toBe(false);
+    expect(diver?.readiness.blockers.some((b) => isWaiverCode(b.code))).toBe(false);
   });
 
   it("allows an explicit not-boarded record but refuses to board blocked evidence", async () => {

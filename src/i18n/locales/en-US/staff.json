@@ -115,6 +115,36 @@
     "day": "Day {number}"
   },
   "divers": {
+    "shared": {
+      "agencies": {
+        "padi": "PADI",
+        "ssi": "SSI",
+        "naui": "NAUI",
+        "sdi": "SDI",
+        "tdi": "TDI",
+        "other": "Other agency"
+      },
+      "paymentStatus": {
+        "unpaid": "Unpaid",
+        "depositPaid": "Deposit paid",
+        "paid": "Paid",
+        "waived": "Waived",
+        "refunded": "Refunded"
+      },
+      "orderStatus": {
+        "open": "Invoice open",
+        "paid": "Paid",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "refunded": "Refunded"
+      },
+      "cardStatus": {
+        "pending": "pending",
+        "verified": "certified",
+        "expired": "refresher due",
+        "confirmToClear": "certified · confirm to clear"
+      }
+    },
     "certifications": {
       "heading": "Certification cards",
       "description": "Evidence starts pending. Look the card number up with the issuing agency, then mark it certified — only certified cards affect readiness.",
@@ -1879,9 +1909,64 @@
       "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the schedule.",
       "goToLabel": "Go to {page}"
     },
+    "readiness": {
+      "certificationLevels": {
+        "openWater": "Open Water",
+        "advancedOpenWater": "Advanced Open Water",
+        "rescue": "Rescue Diver",
+        "divemaster": "Divemaster",
+        "instructor": "Instructor"
+      },
+      "specialties": {
+        "deep": "Deep",
+        "wreck": "Wreck",
+        "night": "Night",
+        "drysuit": "Drysuit"
+      },
+      "blockers": {
+        "requirementsNotConfigured": "Trip requirements have not been configured yet.",
+        "identityUnconfirmed": "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
+        "waiverNotSent": "Waiver has not been sent.",
+        "waiverPending": "Waiver is waiting for the diver’s signature.",
+        "waiverExpired": "Waiver link expired; issue a fresh link.",
+        "medicalReview": "A medical answer needs staff follow-up.",
+        "certificationMissing": "No certification is on file for this trip.",
+        "certificationPending": "Certification is waiting for staff verification.",
+        "certificationExpired": "Certification on file is past its refresher-due date.",
+        "certificationInsufficient": "{level} or higher is required for this trip.",
+        "specialtyMissing": "{specialty} specialty is required; no card is on file.",
+        "specialtyPending": "{specialty} specialty card is waiting for staff verification.",
+        "specialtyExpired": "{specialty} specialty card on file is past its refresher-due date.",
+        "specialtyImportUnconfirmed": "{specialty} specialty card came across in an import — a staffer needs to confirm it before this dive.",
+        "nitroxMissing": "Nitrox certification is required; no card is on file.",
+        "nitroxPending": "Nitrox card is waiting for staff verification.",
+        "underMinimumAge": "Under this course’s minimum age: {age} on the course date, and it requires {minimumAge}. Check the date of birth on file before boarding.",
+        "paymentDue": "Payment is outstanding for this trip.",
+        "paymentRefunded": "Payment was refunded; collect payment before boarding.",
+        "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked."
+      }
+    },
     "shopNav": {
       "home": "DiveDay home",
       "signOut": "Sign out"
+    },
+    "shopNavLinks": {
+      "primaryNavAriaLabel": "Primary",
+      "more": "More",
+      "today": "Today",
+      "checkIn": "Check-in",
+      "blockers": "Blockers",
+      "divers": "Divers",
+      "schedule": "Schedule",
+      "staffing": "Staffing",
+      "diveSites": "Dive sites",
+      "courses": "Courses",
+      "reviews": "Reviews",
+      "waivers": "Waivers",
+      "reports": "Reports",
+      "promoCodes": "Promo codes",
+      "settings": "Settings",
+      "team": "Team"
     },
     "subSurfaceRipple": {
       "iconTitle": "Roll call complete icon",

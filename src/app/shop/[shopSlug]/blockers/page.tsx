@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { BlockerQueueTrip } from "@/lib/blockers";
@@ -37,8 +38,7 @@ function DiverRow({
               <span aria-hidden="true" className="text-danger">
                 •
               </span>
-              {/* i18n-exempt: domain-returned sentence from src/lib/readiness.ts, flagged out of scope in report */}
-              <span>{blocker.message}</span>
+              <span>{readinessBlockerText(t, blocker)}</span>
             </li>
           ))}
         </ul>

@@ -3,6 +3,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
+import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
@@ -187,9 +188,11 @@ export function BookingConfirmation({
         {nextStep ? (
           <>
             <h3 className="font-semibold">
-              {t("booking.nextStep", { step: nextStep.label.toLowerCase() })}
+              {t("booking.nextStep", {
+                step: checklistCategoryText(t, nextStep.category).toLowerCase(),
+              })}
             </h3>
-            <p className="mt-1 text-sm text-muted">{nextStep.detail}</p>
+            <p className="mt-1 text-sm text-muted">{checklistDetailText(t, nextStep)}</p>
           </>
         ) : readiness?.status === "ready" ? (
           <h3 className="font-semibold text-success">{t("booking.allSet")}</h3>

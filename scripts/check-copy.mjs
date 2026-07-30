@@ -38,20 +38,28 @@ import process from "node:process";
  * under-report rather than over-report: a missed string is a gap the baseline
  * will surface later, whereas a false positive blocks unrelated work.
  *
- * ## The blind spot: copy that originates in src/lib or src/db
+ * ## Two remaining blind spots, and how each is closed
  *
- * Scope is `.tsx` under the two UI roots. A sentence *returned* from domain or
- * data code is invisible here, and that is a real hole — `getStaffingView` was
- * handing the staffing page English gap descriptions that no scanner could see
- * and no translator could reach (fixed in 20260730-staff-copy-localization).
+ * **`.ts` files under the two UI roots.** JSX text nodes and copy attributes
+ * only exist in `.tsx`, so a `.ts` file sitting right next to its component
+ * (a `shared.ts` of label maps, a `types.ts` of error messages) was invisible
+ * even though it is squarely inside `src/app`/`src/components`. Fixed by
+ * `findLabelMapCopy` below: it walks `.ts` files too, but with a narrower
+ * pattern than the JSX one — only object-literal properties whose *name*
+ * (`message`, `label`, `text`, …) marks them as prose, the same discipline
+ * `copyAttributes` already applies to JSX attributes. This caught
+ * `divers/[personId]/_components/shared.ts`'s `PAYMENT_STATUS_LABELS` et al.
+ * and `schedule/[id]/_components/types.ts`'s `ERROR_MESSAGES`
+ * (docs ADR 20260731-domain-layer-copy-leaks).
  *
- * Extending the scan there was considered and rejected. Outside JSX there is no
- * structural signal separating prose from the SQL fragments, enum values, keys,
- * log lines, and error codes those layers are full of, so the check would be
- * mostly false positives — and a ratchet whose baseline is padded with noise
- * stops meaning anything, which is the one property this design depends on.
+ * **`src/lib` and `src/db`.** A sentence *returned* from domain or data code
+ * is invisible to a scanner rooted at `src/app`/`src/components` — a sibling
+ * script, `scripts/check-domain-strings.mjs`, covers this instead of widening
+ * this one. See that file for why a separate, narrower tool was the right
+ * shape rather than extending this scan's root list: this file stays about
+ * JSX-adjacent copy, and it stays sound.
  *
- * The enforced rule instead is architectural, and it is stronger than a scan:
+ * The remaining rule is architectural, and it is stronger than either scan:
  * **`src/lib` and `src/db` return codes, `src/app` and `src/components` choose
  * words.** A union of string-literal codes is a compile-time contract, so a
  * page that forgets to translate one is a type error at the lookup map rather
@@ -84,6 +92,26 @@ const copyAttributes = [
 const attributePattern = new RegExp(
   `(?:^|[\\s{])(${copyAttributes.join("|")})=(?:"([^"]*)"|'([^']*)'|\\{\\s*"([^"]*)"\\s*\\})`,
   "g",
+);
+
+/**
+ * Object-literal properties whose *name* marks them as prose — the same
+ * discipline `copyAttributes` applies to JSX attributes, but for plain object
+ * literals (`{ padi: "PADI", other: "Other agency" }`) in a `.ts` file with no
+ * JSX to scan. Deliberately a short, specific list: widen it and this starts
+ * catching `variant`/`tone`/`size`-keyed Tailwind-class maps instead.
+ *
+ * No `title` or `description`: those collide constantly with `export const
+ * metadata` (Next resolves it before locale negotiation can run — the same
+ * exempt-by-convention carve-out `EXEMPT_FILE` documents) and JSON-LD/OG
+ * config objects, which are not prose maps. The JSX attribute list above
+ * still catches a real `title=`/`description=` on an element.
+ */
+const copyProperties = ["message", "label", "text", "reason", "summary"];
+
+const labelMapPropertyPattern = new RegExp(
+  `(?:^|[\\s,{])(${copyProperties.join("|")})\\s*:\\s*(?:"([^"]{2,})"|'([^']{2,})'|\`([^\`]{2,})\`)`,
+  "gm",
 );
 
 /**
@@ -151,7 +179,12 @@ async function walk(relativeDirectory) {
   for (const entry of entries) {
     const relativePath = path.join(relativeDirectory, entry.name);
     if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
+    else if (
+      (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) &&
+      !entry.name.endsWith(".test.ts") &&
+      !entry.name.endsWith(".test.tsx") &&
+      !entry.name.endsWith(".d.ts")
+    ) {
       files.push(relativePath);
     }
   }
@@ -159,7 +192,7 @@ async function walk(relativeDirectory) {
 }
 
 /** Every hard-coded user-facing string in one file, as `{ line, text }`. */
-function findCopy(source) {
+function findCopy(source, { isTsx }) {
   const stripped = stripComments(source);
   const rawLines = source.split("\n");
   const lineStarts = [];
@@ -189,16 +222,22 @@ function findCopy(source) {
     found.push({ line: line + 1, text: text.trim().slice(0, 60) });
   };
 
-  for (const match of stripped.matchAll(textNodePattern)) {
-    if (looksLikeCopy(match[1])) record(match.index + 1, match[1]);
+  if (isTsx) {
+    for (const match of stripped.matchAll(textNodePattern)) {
+      if (looksLikeCopy(match[1])) record(match.index + 1, match[1]);
+    }
+    for (const match of stripped.matchAll(bracedStringPattern)) {
+      const value = match[1] ?? match[2] ?? "";
+      if (looksLikeCopy(value)) record(match.index, value);
+    }
+    for (const match of stripped.matchAll(attributePattern)) {
+      const value = match[2] ?? match[3] ?? match[4] ?? "";
+      if (looksLikeCopy(value)) record(match.index, `${match[1]}="${value}"`);
+    }
   }
-  for (const match of stripped.matchAll(bracedStringPattern)) {
-    const value = match[1] ?? match[2] ?? "";
-    if (looksLikeCopy(value)) record(match.index, value);
-  }
-  for (const match of stripped.matchAll(attributePattern)) {
+  for (const match of stripped.matchAll(labelMapPropertyPattern)) {
     const value = match[2] ?? match[3] ?? match[4] ?? "";
-    if (looksLikeCopy(value)) record(match.index, `${match[1]}="${value}"`);
+    if (looksLikeCopy(value)) record(match.index, `${match[1]}: "${value}"`);
   }
   return found;
 }
@@ -209,7 +248,7 @@ for (const root of guardedRoots) {
   for (const file of await walk(root)) {
     const source = await readFile(path.join(ROOT, file), "utf8");
     if (EXEMPT_FILE.test(source)) continue;
-    const found = findCopy(source);
+    const found = findCopy(source, { isTsx: file.endsWith(".tsx") });
     if (found.length > 0) {
       counts.set(file, found.length);
       details.set(file, found);

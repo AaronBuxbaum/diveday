@@ -1,5 +1,6 @@
 import { nowDate } from "./clock";
 import type { TripManifest } from "./manifests";
+import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 
 /**
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
@@ -30,7 +31,16 @@ export type OfflineManifestPayload = {
         endsAt: string;
       };
       divers: Array<
-        Omit<TripManifest["divers"][number], "rollCall" | "medicalWaiver"> & {
+        Omit<TripManifest["divers"][number], "rollCall" | "medicalWaiver" | "readiness"> & {
+          /**
+           * `text` is resolved once, at save time — this snapshot may be read
+           * back with no network and no translator available, so unlike the
+           * live manifest it cannot look `code` up lazily.
+           */
+          readiness: {
+            status: "ready" | "blocked";
+            blockers: Array<{ code: ReadinessBlockerCode; text: string }>;
+          };
           rollCall?: {
             state: "boarded" | "not_boarded";
             occurredAt: string;
@@ -74,6 +84,8 @@ export type OfflineManifestEnvelope = {
 export function serializeManifests(
   manifests: readonly TripManifest[],
   shop: OfflineManifestPayload["shop"],
+  /** Same resolver `src/i18n/readiness-labels.ts#readinessBlockerText` gives a caller with a translator. */
+  resolveBlockerText: (blocker: ReadinessBlocker) => string,
 ): OfflineManifestPayload {
   return {
     shop,
@@ -84,10 +96,17 @@ export function serializeManifests(
         startsAt: manifest.trip.startsAt.toISOString(),
         endsAt: manifest.trip.endsAt.toISOString(),
       },
-      divers: manifest.divers.map(({ medicalWaiver: _medicalWaiver, ...diver }) => ({
+      divers: manifest.divers.map(({ medicalWaiver: _medicalWaiver, readiness, ...diver }) => ({
         ...diver,
         // Email is not needed for dock-side roll call; minimize retained private data.
         email: null,
+        readiness: {
+          status: readiness.status,
+          blockers: readiness.blockers.map((blocker) => ({
+            code: blocker.code,
+            text: resolveBlockerText(blocker),
+          })),
+        },
         rollCall: diver.rollCall
           ? {
               state: diver.rollCall.state,

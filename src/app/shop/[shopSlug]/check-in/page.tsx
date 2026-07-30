@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -151,8 +152,7 @@ export default async function CheckInPage({
                   {!ready ? (
                     <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-warning">
                       {row.readiness.blockers.slice(0, 3).map((blocker) => (
-                        // i18n-exempt: domain-returned sentence from src/lib/readiness.ts, flagged out of scope in report
-                        <li key={blocker.code}>• {blocker.message}</li>
+                        <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
                       ))}
                     </ul>
                   ) : null}

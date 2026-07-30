@@ -79,15 +79,14 @@ export function MarketingMomentCard({
   );
 }
 
+/**
+ * Only the illustration — never a `label`, which the caller must resolve
+ * through a translator (see `marketing.home.moments.*.mockupLabel` and
+ * `MarketingMockup`'s own `aria-label`).
+ */
 export const marketingMockups = {
-  diverBooking: {
-    label: "The Blue Mantis public schedule with upcoming dive trips and available places.",
-    render: () => <DiverBookingFallback />,
-  },
-  frontDeskReadiness: {
-    label: "The trip readiness section showing clear diver-ready and diver-blocked states.",
-    render: () => <FrontDeskReadinessFallback />,
-  },
+  diverBooking: { render: () => <DiverBookingFallback /> },
+  frontDeskReadiness: { render: () => <FrontDeskReadinessFallback /> },
 } as const;
 
 /**

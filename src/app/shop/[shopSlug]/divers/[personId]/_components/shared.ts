@@ -2,6 +2,7 @@ import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
 import type { getShopById } from "@/db/shops";
 import type { upcomingTripsWithCounts } from "@/db/trips";
+import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { type CalendarDate, isCalendarDateExpired } from "@/lib/calendar-date";
 
 export type DiverProfile = NonNullable<Awaited<ReturnType<typeof getDiverProfile>>>;
@@ -10,29 +11,30 @@ export type UpcomingTrip = Awaited<ReturnType<typeof upcomingTripsWithCounts>>[n
 
 type Agency = "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
 
-export const AGENCY_LABELS: Record<Agency, string> = {
-  padi: "PADI",
-  ssi: "SSI",
-  naui: "NAUI",
-  sdi: "SDI",
-  tdi: "TDI",
-  other: "Other agency",
+/** Every value resolves to a `StaffMessageKey` now, not a rendered word — see `divers.shared.*`. */
+export const AGENCY_KEYS: Record<Agency, StaffMessageKey> = {
+  padi: "divers.shared.agencies.padi",
+  ssi: "divers.shared.agencies.ssi",
+  naui: "divers.shared.agencies.naui",
+  sdi: "divers.shared.agencies.sdi",
+  tdi: "divers.shared.agencies.tdi",
+  other: "divers.shared.agencies.other",
 };
 
-export const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  unpaid: "Unpaid",
-  deposit_paid: "Deposit paid",
-  paid: "Paid",
-  waived: "Waived",
-  refunded: "Refunded",
+export const PAYMENT_STATUS_KEYS: Record<string, StaffMessageKey> = {
+  unpaid: "divers.shared.paymentStatus.unpaid",
+  deposit_paid: "divers.shared.paymentStatus.depositPaid",
+  paid: "divers.shared.paymentStatus.paid",
+  waived: "divers.shared.paymentStatus.waived",
+  refunded: "divers.shared.paymentStatus.refunded",
 };
 
-export const ORDER_STATUS_LABELS: Record<string, string> = {
-  open: "Invoice open",
-  paid: "Paid",
-  void: "Void",
-  uncollectible: "Uncollectible",
-  refunded: "Refunded",
+export const ORDER_STATUS_KEYS: Record<string, StaffMessageKey> = {
+  open: "divers.shared.orderStatus.open",
+  paid: "divers.shared.orderStatus.paid",
+  void: "divers.shared.orderStatus.void",
+  uncollectible: "divers.shared.orderStatus.uncollectible",
+  refunded: "divers.shared.orderStatus.refunded",
 };
 
 /** The stored card status. Staff either certify a card or delete a bad one; there
@@ -55,10 +57,10 @@ export type CardDisplayStatus = CardStatus | "expired";
  * passes its shop-set refresher-due date it reads as "refresher due" and no
  * longer counts as valid until refreshed (H-08).
  */
-export const CARD_STATUS_LABELS: Record<CardDisplayStatus, string> = {
-  pending: "pending",
-  verified: "certified",
-  expired: "refresher due",
+export const CARD_STATUS_KEYS: Record<CardDisplayStatus, StaffMessageKey> = {
+  pending: "divers.shared.cardStatus.pending",
+  verified: "divers.shared.cardStatus.verified",
+  expired: "divers.shared.cardStatus.expired",
 };
 
 /**
@@ -129,9 +131,9 @@ export function needsImportConfirm(card: ImportedCard): boolean {
  */
 export type HeldCardDisplayStatus = CardDisplayStatus | "confirm_to_clear";
 
-export const HELD_CARD_STATUS_LABELS: Record<HeldCardDisplayStatus, string> = {
-  ...CARD_STATUS_LABELS,
-  confirm_to_clear: "certified · confirm to clear",
+export const HELD_CARD_STATUS_KEYS: Record<HeldCardDisplayStatus, StaffMessageKey> = {
+  ...CARD_STATUS_KEYS,
+  confirm_to_clear: "divers.shared.cardStatus.confirmToClear",
 };
 
 export function heldCardDisplayStatus(

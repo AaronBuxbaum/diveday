@@ -22,6 +22,7 @@ import { WaterLocker } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -214,11 +215,11 @@ export default async function TripManifestPage({
         </div>
       </header>
       <OfflineManifestManager
-        payload={serializeManifests(completeManifests, {
-          slug: shopSlug,
-          name: shop.name,
-          timezone: shop.timezone,
-        })}
+        payload={serializeManifests(
+          completeManifests,
+          { slug: shopSlug, name: shop.name, timezone: shop.timezone },
+          (blocker) => readinessBlockerText(t, blocker),
+        )}
         copy={
           {
             checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
@@ -476,7 +477,7 @@ export default async function TripManifestPage({
                       <>
                         <ul className="mt-3 flex flex-col gap-1 text-base text-danger">
                           {diver.readiness.blockers.map((blocker) => (
-                            <li key={blocker.message}>• {blocker.message}</li>
+                            <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
                           ))}
                         </ul>
                         {/* At departure this unblocks boarding; after a dive the

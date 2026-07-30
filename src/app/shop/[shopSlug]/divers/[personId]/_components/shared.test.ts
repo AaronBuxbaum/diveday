@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cardDisplayStatus,
-  HELD_CARD_STATUS_LABELS,
+  HELD_CARD_STATUS_KEYS,
   heldCardDisplayStatus,
   heldCardStatusTone,
   isCardExpired,
@@ -78,7 +78,7 @@ describe("heldCardDisplayStatus", () => {
     const byHand = { status: "verified" as const, importedAt: null, reviewedAt: null };
 
     expect(heldCardDisplayStatus(unconfirmed, today)).toBe("confirm_to_clear");
-    expect(HELD_CARD_STATUS_LABELS.confirm_to_clear).toBe("certified · confirm to clear");
+    expect(HELD_CARD_STATUS_KEYS.confirm_to_clear).toBe("divers.shared.cardStatus.confirmToClear");
     expect(heldCardStatusTone("confirm_to_clear")).toBe("warning");
 
     // Both of these genuinely clear, so both keep the plain certified badge.
