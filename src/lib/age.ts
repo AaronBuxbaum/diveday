@@ -42,6 +42,94 @@ export function ageOnDate(dateOfBirth: CalendarDate, onDate: CalendarDate): numb
   return onYear - birthYear - (hadBirthday ? 0 : 1);
 }
 
+/** The oldest age that is still a minor. Eighteen is majority, so this is 17. */
+export const MINOR_AGE_CEILING = 17;
+
+/**
+ * Whether a diver is a minor on a given date.
+ *
+ * Eighteen, not the diving world's 15. This flag exists because a minor's
+ * liability waiver may need a guardian signature (H-21), which is a question of
+ * legal majority in the shop's jurisdiction — Florida at launch (H-01). The
+ * *diving* restrictions on under-15s are a separate rule and travel through the
+ * junior depth bands in `depth-ceiling.ts`, so the two never have to agree.
+ *
+ * Florida's age of majority is hard-coded here in the sense that 18 is: the day
+ * DiveDay opens in a jurisdiction that differs, this becomes shop-configured
+ * rather than a constant, and this comment is the marker for that work.
+ */
+export function isMinorOnDate(dateOfBirth: CalendarDate, onDate: CalendarDate): boolean {
+  return ageOnDate(dateOfBirth, onDate) <= MINOR_AGE_CEILING;
+}
+
+/**
+ * How many days until a diver's next birthday, counted on the calendar rather
+ * than in elapsed time — a birthday lands on the same day in every timezone.
+ * Returns 0 on the day itself.
+ */
+export function daysUntilBirthday(dateOfBirth: CalendarDate, onDate: CalendarDate): number {
+  const [year, month, day] = onDate.split("-").map(Number);
+  const birthMonth = Number(dateOfBirth.slice(5, 7));
+  const birthDay = Number(dateOfBirth.slice(8, 10));
+
+  // Date.UTC normalises the arithmetic; both operands are date-only, so no
+  // instant, offset, or DST transition is involved in the difference.
+  const today = Date.UTC(year, month - 1, day);
+  // Feb 29 on a common year has no date to land on, so `Date.UTC` rolls it to
+  // Mar 1 — the same day a leap-year birthday is conventionally observed.
+  let next = Date.UTC(year, birthMonth - 1, birthDay);
+  if (next < today) next = Date.UTC(year + 1, birthMonth - 1, birthDay);
+  return Math.round((next - today) / 86_400_000);
+}
+
+/**
+ * How many days since a diver's most recent birthday, counted on the calendar.
+ * Returns 0 on the day itself — the mirror of `daysUntilBirthday`.
+ */
+export function daysSinceBirthday(dateOfBirth: CalendarDate, onDate: CalendarDate): number {
+  const [year, month, day] = onDate.split("-").map(Number);
+  const birthMonth = Number(dateOfBirth.slice(5, 7));
+  const birthDay = Number(dateOfBirth.slice(8, 10));
+
+  const today = Date.UTC(year, month - 1, day);
+  let previous = Date.UTC(year, birthMonth - 1, birthDay);
+  if (previous > today) previous = Date.UTC(year - 1, birthMonth - 1, birthDay);
+  return Math.round((today - previous) / 86_400_000);
+}
+
+/**
+ * How far a birthday counts as worth mentioning, in **either direction**
+ * (H-21, product owner chose seven days each way). Looking back matters as much
+ * as looking ahead: a diver whose birthday was on Tuesday is still worth a
+ * shout-out on Saturday's boat, and the crew has no other way to know.
+ */
+export const BIRTHDAY_WINDOW_DAYS = 7;
+
+export type BirthdayCallout =
+  | { status: "today" }
+  | { status: "soon"; inDays: number }
+  | { status: "recent"; daysAgo: number };
+
+/**
+ * The celebratory callout for a diver on a trip, or null when there is nothing
+ * to celebrate. Carries only *when* — the age they turn is deliberately absent,
+ * because the badge this feeds says the whole thing with an icon and a
+ * relative day count, and a roster is already dense enough.
+ */
+export function birthdayCallout(
+  dateOfBirth: CalendarDate | null | undefined,
+  onDate: CalendarDate,
+  windowDays: number = BIRTHDAY_WINDOW_DAYS,
+): BirthdayCallout | null {
+  if (!dateOfBirth) return null;
+  const inDays = daysUntilBirthday(dateOfBirth, onDate);
+  if (inDays === 0) return { status: "today" };
+  if (inDays <= windowDays) return { status: "soon", inDays };
+  const daysAgo = daysSinceBirthday(dateOfBirth, onDate);
+  if (daysAgo <= windowDays) return { status: "recent", daysAgo };
+  return null;
+}
+
 /**
  * Whether a diver meets a course's minimum age *on the day the course runs* —
  * not the day they book. A 14-year-old booking a 15+ course three months out

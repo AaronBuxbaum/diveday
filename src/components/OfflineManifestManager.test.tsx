@@ -93,7 +93,7 @@ function envelope(events: OfflineManifestEnvelope["events"] = []): OfflineManife
   return {
     snapshot: {
       ...payload,
-      version: 3,
+      version: 4,
       snapshotId: "snapshot-1",
       savedAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 1_000_000).toISOString(),

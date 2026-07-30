@@ -28,6 +28,9 @@ import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 /** Selects which diver medical questionnaire a shop presents (src/lib/medical.ts). */
 export const medicalJurisdiction = pgEnum("medical_jurisdiction", ["rstc", "uk"]);
 
+/** How a shop reads depth. Storage stays metres either way (src/lib/depth-units.ts). */
+export const depthUnit = pgEnum("depth_unit", ["meters", "feet"]);
+
 export const shops = pgTable(
   "shops",
   {
@@ -40,6 +43,14 @@ export const shops = pgTable(
     defaultLocale: text("default_locale").notNull().default("en-US"),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
+    /**
+     * Whether this shop reads depths in metres or feet. Display and entry only —
+     * `dive_sites.max_depth_meters` is always canonical metres, so switching the
+     * unit reinterprets nothing and no stored number ever moves. Metres is the
+     * default because the agency standards DiveDay encodes are stated in metres
+     * (20260724-course-admission-standards); a US shop flips it once in settings.
+     */
+    depthUnit: depthUnit("depth_unit").notNull().default("meters"),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -399,7 +410,26 @@ export const diveSites = pgTable(
     marineLife: text("marine_life"),
     marineLifeDescription: text("marine_life_description"),
     difficulty: text("difficulty"),
+    /**
+     * Free-text prose for the briefing ("6–12 m", "shallow ledge to 18"). Kept
+     * alongside `max_depth_meters` rather than replaced by it: it carries shape
+     * and nuance a single number can't, and it is what the diver-facing site
+     * card has always shown.
+     */
     depthRange: text("depth_range"),
+    /**
+     * The site's deepest point, in metres — the one number a certification
+     * ceiling can actually be compared against (H-08). Null means the shop
+     * hasn't recorded one, and a null never produces a warning: this field
+     * *advises*, it is not a gate, so an absent depth degrades to silence
+     * rather than to a refusal.
+     *
+     * Always metres regardless of the shop's `depth_unit`, and floating-point
+     * rather than integer for exactly that reason: a shop working in feet types
+     * 60, which is 18.288 m, and must read 60 back — not the 59 an integer
+     * metre would round it to.
+     */
+    maxDepthMeters: doublePrecision("max_depth_meters"),
     currentNote: text("current_note"),
     divePlan: text("dive_plan"),
     landmarks: jsonb("landmarks").$type<string[]>().notNull().default([]),
@@ -467,6 +497,7 @@ export const globalDiveSiteVersions = pgTable(
         marineLifeDescription?: string;
         difficulty?: string;
         depthRange?: string;
+        maxDepthMeters?: number;
         currentNote?: string;
         divePlan?: string;
         landmarks?: string[];

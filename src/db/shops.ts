@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import type { DepthUnit } from "@/lib/depth-units";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
@@ -38,6 +39,20 @@ export async function setShopDockCallMinutes(db: AppDb, shopId: string, dockCall
   const [shop] = await db
     .update(shops)
     .set({ dockCallMinutes })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Sets whether the shop reads depth in metres or feet. Presentation only —
+ * `dive_sites.max_depth_meters` stays canonical metres, so flipping this never
+ * changes a stored depth or what a certification ceiling compares against.
+ */
+export async function setShopDepthUnit(db: AppDb, shopId: string, unit: DepthUnit) {
+  const [shop] = await db
+    .update(shops)
+    .set({ depthUnit: unit })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
