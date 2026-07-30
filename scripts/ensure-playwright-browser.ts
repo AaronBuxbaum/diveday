@@ -28,13 +28,14 @@ if (fallback) {
   console.log(
     `e2e: the Chromium pinned by @playwright/test is not installed; falling back to ${fallback}. ` +
       "Functional specs are fine; visual diffs from this browser will not match the CI baseline " +
-      "(run `pnpm exec playwright install chromium` where downloads are allowed).",
+      "(run `pnpm exec playwright install --only-shell chromium` where downloads are allowed — " +
+      "the fleet only ever launches headless, so the shell-only download is all it needs).",
   );
   process.exit(0);
 }
 
 console.error(
-  "e2e: no Chromium found. Run `pnpm exec playwright install chromium`, or set " +
+  "e2e: no Chromium found. Run `pnpm exec playwright install --only-shell chromium`, or set " +
     "PLAYWRIGHT_CHROMIUM_EXECUTABLE (or CHROME_PATH) to a local Chrome executable where " +
     "browser downloads are disabled.",
 );

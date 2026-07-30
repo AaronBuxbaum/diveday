@@ -35,11 +35,63 @@ const exists = (candidate: string | undefined): candidate is string =>
   Boolean(candidate) && fs.existsSync(candidate as string);
 
 /**
- * True when the exact Chromium revision this `@playwright/test` version pins —
- * the one `playwright install chromium` fetches, and therefore the one the
- * lockfile determines — is present on disk.
+ * `chrome-headless-shell` sibling of `chromium.executablePath()`'s reported
+ * path, derived rather than asked for.
+ *
+ * The fleet never sets `headless: false` (see `chromiumLaunchOptions`), and
+ * Playwright's own executable selection resolves a channel-less headless
+ * launch to the `chromium-headless-shell` browser, not `chromium` — so with
+ * `playwright install --only-shell chromium` (installs only the shell, half
+ * the download of the historical default) that shell binary is what actually
+ * launches. `chromium.executablePath()` does not know that: it always
+ * resolves the headed `chromium` name regardless of `headless`, a Playwright
+ * gap tracked upstream at microsoft/playwright#39327. Asking it "is the
+ * browser installed" therefore reports false right after a correct
+ * `--only-shell` install, which would send `chromiumExecutableOverride` off
+ * to a system fallback and silently defeat the pin this file exists to keep.
+ * So: take the revision number out of the (possibly-nonexistent) headed path
+ * it does report, and check the shell's own directory next to it —
+ * `chromium-<rev>` and `chromium_headless_shell-<rev>` are always installed
+ * as a pair for one Playwright release, per Playwright's own registry.
+ */
+function headlessShellExecutablePath(): string | undefined {
+  let headedPath: string;
+  try {
+    headedPath = chromium.executablePath();
+  } catch {
+    return undefined;
+  }
+  const match = headedPath.match(/[/\\]chromium-(\d+)[/\\]/);
+  if (!match || match.index === undefined) return undefined;
+  const revision = match[1];
+  const root = headedPath.slice(0, match.index);
+  const shellDir = `chromium_headless_shell-${revision}`;
+  // Mirrors Playwright's own per-platform (and, on Linux and macOS, per-arch)
+  // layout for the shell binary. Only the platforms this fleet actually runs
+  // on (x64 Linux CI, arm64 Linux sandboxes, macOS local dev on either arch)
+  // need an entry; an unrecognized platform falls through to the headed path
+  // check in `pinnedChromiumInstalled`.
+  const segments: Record<string, string[]> = {
+    "linux-x64": ["chrome-headless-shell-linux64", "chrome-headless-shell"],
+    "linux-arm64": ["chrome-linux", "headless_shell"],
+    "darwin-x64": ["chrome-headless-shell-mac-x64", "chrome-headless-shell"],
+    "darwin-arm64": ["chrome-headless-shell-mac-arm64", "chrome-headless-shell"],
+    "win32-x64": ["chrome-headless-shell-win64", "chrome-headless-shell.exe"],
+  };
+  const parts = segments[`${process.platform}-${process.arch}`];
+  if (!parts) return undefined;
+  return [root, shellDir, ...parts].join("/");
+}
+
+/**
+ * True when the exact Chromium this fleet will actually launch — the shell
+ * binary `chromium-headless-shell`, since every launch here is headless — is
+ * present on disk. Falls back to the headed `chromium` path so a plain
+ * `playwright install chromium` (no `--only-shell`) still resolves correctly.
  */
 export function pinnedChromiumInstalled(): boolean {
+  const shellPath = headlessShellExecutablePath();
+  if (shellPath && fs.existsSync(shellPath)) return true;
   try {
     return fs.existsSync(chromium.executablePath());
   } catch {

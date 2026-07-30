@@ -93,7 +93,15 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  /*
+   * Symbols and emoji are self-hosted fallbacks (see src/app/layout.tsx) for
+   * the glyphs outside Geist's "latin" subset — arrows, checkmarks, dingbats,
+   * and marketing-copy emoji. `system-ui, sans-serif` stays as the last
+   * resort for whatever those two don't cover; a diff confined to that is the
+   * residual risk ADR 20260730-pinned-browser-visual-determinism recorded.
+   */
+  font-family:
+    var(--font-sans), var(--font-noto-symbols), var(--font-noto-emoji), system-ui, sans-serif;
   /*
    * Never let a page scroll sideways. Wide surfaces (data tables, checkpoint
    * strips) opt into their own horizontal scroll with `overflow-x-auto`; the
