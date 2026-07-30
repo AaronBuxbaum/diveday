@@ -81,7 +81,6 @@ async function TodayBody({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
-  const t = staffTranslator(locale);
   if (!shop) return null;
   const t = staffTranslator(locale);
 
