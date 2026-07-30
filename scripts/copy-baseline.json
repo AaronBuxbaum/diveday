@@ -1,10 +1,5 @@
 {
   "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
-  "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 13,
-  "src/app/shop/[shopSlug]/orders/new/page.tsx": 9,
-  "src/app/shop/[shopSlug]/promos/page.tsx": 14,
-  "src/app/shop/[shopSlug]/reports/page.tsx": 18,
-  "src/app/shop/[shopSlug]/reviews/page.tsx": 9,
   "src/app/shop/[shopSlug]/schedule/_components/ScheduleBuilder.tsx": 26,
   "src/app/shop/[shopSlug]/schedule/[id]/_components/RentalFitForm.tsx": 10,
   "src/app/shop/[shopSlug]/schedule/[id]/page.tsx": 4,
