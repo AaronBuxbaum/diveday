@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { CERTIFICATION_LEVEL_LABELS, SPECIALTY_LABELS } from "@/lib/readiness";
 import type { Requirement, SiteRequirement, Trip } from "./types";
 
@@ -9,30 +10,55 @@ export function RequirementsSection({
   trip,
   requirement,
   siteRequirement,
+  locale,
 }: {
   action: (formData: FormData) => void;
   trip: Trip;
   requirement: Requirement;
   siteRequirement: SiteRequirement;
+  locale: string;
 }) {
+  const t = staffTranslator(locale);
+  // The site's extra rules read as one locale-appropriate list ("X, Y and Z"),
+  // not an English-only comma join — each part is itself a translated phrase.
+  const siteRequirementParts = [
+    siteRequirement?.minimumCertificationLevel
+      ? t("trips.requirements.certOrHigher", {
+          level: CERTIFICATION_LEVEL_LABELS[siteRequirement.minimumCertificationLevel],
+        })
+      : null,
+    ...(siteRequirement?.requiredSpecialties.map((specialty) =>
+      t("trips.requirements.specialtyRequired", { specialty: SPECIALTY_LABELS[specialty] }),
+    ) ?? []),
+    siteRequirement?.requiresNitrox ? t("trips.requirements.nitroxCardRequired") : null,
+  ].filter((part): part is string => Boolean(part));
+  const siteRequirementList = new Intl.ListFormat(locale, {
+    style: "long",
+    type: "conjunction",
+  }).format(siteRequirementParts);
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold">Readiness requirements</h2>
+      <h2 className="text-lg font-semibold">{t("trips.requirements.heading")}</h2>
       <p className="mt-1 text-sm text-muted">
         {trip.course
-          ? "This session keeps the admission rules it was created with — editing the course later won’t change what enrolled students need."
-          : "These are the trip’s rules. A diver stays blocked until every one of them checks out."}
+          ? t("trips.requirements.courseDescription")
+          : t("trips.requirements.tripDescription")}
       </p>
       {trip.course ? (
         <div className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm">
           <p>
-            <strong>Waiver:</strong> {requirement?.requiresWaiver ? "required" : "not required"}
+            <strong>{t("trips.requirements.waiverLabel")}</strong>{" "}
+            {requirement?.requiresWaiver
+              ? t("trips.requirements.required")
+              : t("trips.requirements.notRequired")}
           </p>
           <p className="mt-2">
-            <strong>Existing certification:</strong>{" "}
+            <strong>{t("trips.requirements.certificationLabel")}</strong>{" "}
             {requirement?.minimumCertificationLevel
-              ? `${CERTIFICATION_LEVEL_LABELS[requirement.minimumCertificationLevel]} or higher`
-              : "not required for enrollment"}
+              ? t("trips.requirements.certOrHigher", {
+                  level: CERTIFICATION_LEVEL_LABELS[requirement.minimumCertificationLevel],
+                })
+              : t("trips.requirements.notRequiredForEnrollment")}
           </p>
         </div>
       ) : (
@@ -45,7 +71,7 @@ export function RequirementsSection({
                 defaultChecked={requirement?.requiresWaiver ?? true}
                 className="size-4 accent-primary"
               />
-              Require a signed waiver
+              {t("trips.requirements.requireWaiver")}
             </label>
             <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
               <input
@@ -54,16 +80,16 @@ export function RequirementsSection({
                 defaultChecked={requirement?.requiresPayment ?? false}
                 className="size-4 accent-primary"
               />
-              Require payment to board
+              {t("trips.requirements.requirePayment")}
             </label>
             <FieldGrid columns={1}>
-              <Field label="Minimum certification">
+              <Field label={t("trips.requirements.minimumCertificationLabel")}>
                 <select
                   name="minimumCertificationLevel"
                   defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
                   className={controlClass}
                 >
-                  <option value="">No existing C-card required</option>
+                  <option value="">{t("trips.requirements.noCardRequired")}</option>
                   {Object.entries(CERTIFICATION_LEVEL_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -74,9 +100,11 @@ export function RequirementsSection({
             </FieldGrid>
           </div>
           <fieldset className="mt-5">
-            <legend className="text-sm font-medium">Required specialties</legend>
+            <legend className="text-sm font-medium">
+              {t("trips.requirements.requiredSpecialtiesLegend")}
+            </legend>
             <p className="mt-1 text-sm text-muted">
-              A diver is blocked until a verified card for each proves the specialty.
+              {t("trips.requirements.requiredSpecialtiesDescription")}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Object.entries(SPECIALTY_LABELS).map(([value, label]) => (
@@ -100,7 +128,7 @@ export function RequirementsSection({
                   defaultChecked={requirement?.requiresNitrox ?? false}
                   className="size-4 accent-primary"
                 />
-                Nitrox
+                {t("trips.requirements.nitrox")}
               </label>
             </div>
           </fieldset>
@@ -109,32 +137,23 @@ export function RequirementsSection({
             siteRequirement.requiredSpecialties.length > 0 ||
             siteRequirement.requiresNitrox) ? (
             <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-              <strong className="font-medium text-foreground">
-                {trip.diveSite?.name ?? "This site"}
-              </strong>{" "}
-              also requires{" "}
-              {[
-                siteRequirement.minimumCertificationLevel
-                  ? `${CERTIFICATION_LEVEL_LABELS[siteRequirement.minimumCertificationLevel]} or higher`
-                  : null,
-                ...siteRequirement.requiredSpecialties.map(
-                  (specialty) => `${SPECIALTY_LABELS[specialty]} specialty`,
+              {t.rich("trips.requirements.siteAlsoRequires", {
+                site: trip.diveSite?.name ?? t("trips.requirements.thisSite"),
+                list: siteRequirementList,
+                strong: (chunks) => (
+                  <strong className="font-medium text-foreground">{chunks}</strong>
                 ),
-                siteRequirement.requiresNitrox ? "a nitrox card" : null,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-              . Readiness always enforces the stricter of the site and this trip.
+              })}
             </p>
           ) : null}
           <SubmitButton
-            pendingLabel="Saving…"
+            pendingLabel={t("trips.requirements.saving")}
             className={buttonClass({
               variant: "secondary",
               className: "mt-5 text-foreground",
             })}
           >
-            Save requirements
+            {t("trips.requirements.save")}
           </SubmitButton>
         </form>
       )}

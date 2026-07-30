@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { BookableDiver } from "@/db/divers";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 
 /**
@@ -20,6 +21,7 @@ export function AddDiverSection({
   addBookingAction,
   addToWaitlistAction,
   addExistingDiverAction,
+  locale,
 }: {
   shopSlug: string;
   full: boolean;
@@ -28,44 +30,40 @@ export function AddDiverSection({
   addBookingAction: (formData: FormData) => void;
   addToWaitlistAction: (formData: FormData) => void;
   addExistingDiverAction: (formData: FormData) => void;
+  locale: string;
 }) {
+  const t = staffTranslator(locale);
   const searched = query.length > 0;
   return (
     <section id="add-diver" className="mt-10 scroll-mt-24">
-      <h2 className="text-lg font-semibold">Add a diver</h2>
+      <h2 className="text-lg font-semibold">{t("trips.addDiver.heading")}</h2>
 
       {full ? (
-        <p className="mt-1 text-sm text-muted">
-          The boat is full — hand-entered divers go straight onto the wait list, no public booking
-          page required.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
       ) : (
         <>
-          <p className="mt-1 text-sm text-muted">
-            Search a returning diver to add them in one tap — their cards, waivers, and rental fit
-            come along. New to the shop? Enter them by hand below.
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("trips.addDiver.searchDescription")}</p>
 
           {/* Server-fed search, same shape as the diver roster: a GET reload
               carries `diverq` and the section re-renders with matches. No client
               state, so the picker stays pixel-stable for visual regression. */}
           <form method="get" className="mt-4 flex flex-wrap items-end gap-2">
-            <Field label="Find a returning diver" className="min-w-0 flex-1">
+            <Field label={t("trips.addDiver.findLabel")} className="min-w-0 flex-1">
               <input
                 type="search"
                 name="diverq"
                 defaultValue={query}
-                placeholder="Name, email, or phone"
+                placeholder={t("trips.addDiver.findPlaceholder")}
                 maxLength={120}
                 autoComplete="off"
                 className={controlClass}
               />
             </Field>
             <SubmitButton
-              pendingLabel="Searching…"
+              pendingLabel={t("trips.addDiver.searching")}
               className={buttonClass({ variant: "secondary" })}
             >
-              Search
+              {t("trips.addDiver.search")}
             </SubmitButton>
           </form>
 
@@ -86,23 +84,27 @@ export function AddDiverSection({
                         >
                           {person.fullName}
                         </Link>
-                        <p className="text-sm text-muted">{person.email ?? "no email on file"}</p>
+                        <p className="text-sm text-muted">
+                          {person.email ?? t("trips.addDiver.noEmailOnFile")}
+                        </p>
                         {/* "Same as last time": the fit already on file carries
                             onto the trip, so staff confirm rather than re-enter. */}
                         <p className="mt-0.5 text-xs text-muted">
                           {rentalFit
-                            ? `Rental fit on file · ${fit.text}`
-                            : "No rental fit on file yet"}
+                            ? t("trips.addDiver.rentalFitOnFile", { fit: fit.text })
+                            : t("trips.addDiver.noRentalFitYet")}
                         </p>
                       </div>
                       <form action={addExistingDiverAction}>
                         <input type="hidden" name="personId" value={person.id} />
                         <SubmitButton
-                          pendingLabel="Adding…"
-                          ariaLabel={`Add ${person.fullName} to the trip`}
+                          pendingLabel={t("trips.addDiver.adding")}
+                          ariaLabel={t("trips.addDiver.addPersonAriaLabel", {
+                            name: person.fullName,
+                          })}
                           className={buttonClass({ size: "sm" })}
                         >
-                          Add to trip
+                          {t("trips.addDiver.addToTrip")}
                         </SubmitButton>
                       </form>
                     </li>
@@ -111,7 +113,7 @@ export function AddDiverSection({
               </ul>
             ) : (
               <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-4 text-center text-sm text-muted">
-                No returning diver matches “{query}”. Enter them by hand below.
+                {t("trips.addDiver.noMatches", { query })}
               </p>
             )
           ) : null}
@@ -121,28 +123,29 @@ export function AddDiverSection({
       <details className="group mt-4" open={full || !searched}>
         {!full ? (
           <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-primary hover:underline [&::-webkit-details-marker]:hidden">
-            New to the shop? Enter a diver by hand
+            {t("trips.addDiver.handEntrySummary")}
           </summary>
         ) : null}
         <p className="mt-1 text-sm text-muted">
-          For walk-ins or divers tracked in another system — puts them straight on the{" "}
-          {full ? "wait list" : "manifest"}.
+          {full
+            ? t("trips.addDiver.handEntryDescriptionWaitlist")
+            : t("trips.addDiver.handEntryDescriptionManifest")}
         </p>
         <form action={full ? addToWaitlistAction : addBookingAction} className="mt-4">
           <FieldGrid columns={3}>
-            <Field label="Name">
+            <Field label={t("trips.addDiver.nameLabel")}>
               <input name="fullName" required maxLength={120} className={controlClass} />
             </Field>
-            <Field label="Email">
+            <Field label={t("trips.addDiver.emailLabel")}>
               <input name="email" type="email" required maxLength={200} className={controlClass} />
             </Field>
-            <Field label="Phone" hint="(optional)">
+            <Field label={t("trips.addDiver.phoneLabel")} hint={t("trips.addDiver.optionalHint")}>
               <input name="phone" type="tel" maxLength={30} className={controlClass} />
             </Field>
           </FieldGrid>
           <FieldActions className="mt-4">
-            <SubmitButton pendingLabel="Adding…" className={buttonClass()}>
-              {full ? "Add to wait list" : "Add to trip"}
+            <SubmitButton pendingLabel={t("trips.addDiver.adding")} className={buttonClass()}>
+              {full ? t("trips.addDiver.addToWaitlist") : t("trips.addDiver.addToTrip")}
             </SubmitButton>
           </FieldActions>
         </form>

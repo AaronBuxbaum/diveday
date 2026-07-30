@@ -26,10 +26,10 @@ export function DetailsSection({
   const t = staffTranslator(locale);
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold">Details</h2>
+      <h2 className="text-lg font-semibold">{t("trips.details.heading")}</h2>
       <form action={action} className="mt-4 flex flex-col gap-5">
         <FieldGrid columns={1} className="max-w-2xl gap-y-5">
-          <Field label="Title">
+          <Field label={t("trips.details.titleLabel")}>
             <input
               name="title"
               type="text"
@@ -39,7 +39,7 @@ export function DetailsSection({
               className={controlClass}
             />
           </Field>
-          <Field label="Description" hint="(optional)">
+          <Field label={t("trips.details.descriptionLabel")} hint={t("trips.details.optionalHint")}>
             <textarea
               name="description"
               rows={2}
@@ -78,7 +78,7 @@ export function DetailsSection({
           }}
         />
         <FieldGrid columns={1} className="gap-x-5 gap-y-5 sm:grid-cols-5">
-          <Field label="Date">
+          <Field label={t("trips.details.dateLabel")}>
             <input
               name="date"
               type="date"
@@ -87,7 +87,7 @@ export function DetailsSection({
               className={controlClass}
             />
           </Field>
-          <Field label="Departs">
+          <Field label={t("trips.details.departsLabel")}>
             <input
               name="startTime"
               type="time"
@@ -96,7 +96,7 @@ export function DetailsSection({
               className={controlClass}
             />
           </Field>
-          <Field label="Returns">
+          <Field label={t("trips.details.returnsLabel")}>
             <input
               name="endTime"
               type="time"
@@ -105,7 +105,7 @@ export function DetailsSection({
               className={controlClass}
             />
           </Field>
-          <Field label="Capacity">
+          <Field label={t("trips.details.capacityLabel")}>
             <input
               name="capacity"
               type="number"
@@ -116,7 +116,7 @@ export function DetailsSection({
               className={`${controlClass} tabular-nums`}
             />
           </Field>
-          <Field label="Price per diver" hint="(optional)">
+          <Field label={t("trips.details.priceLabel")} hint={t("trips.details.optionalHint")}>
             <input
               name="priceDollars"
               type="number"
@@ -129,15 +129,15 @@ export function DetailsSection({
           </Field>
         </FieldGrid>
         <fieldset className="rounded-lg border border-border bg-surface p-5">
-          <legend className="px-1 text-sm font-medium">Pay at booking</legend>
-          <p className="text-sm text-muted">
-            Optional. Leave the deposit blank to charge the full fare when a diver books online.
-          </p>
+          <legend className="px-1 text-sm font-medium">
+            {t("trips.details.payAtBookingLegend")}
+          </legend>
+          <p className="text-sm text-muted">{t("trips.details.payAtBookingDescription")}</p>
           <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
             <Field
-              label="Deposit per diver"
-              hint="(optional)"
-              description="Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare."
+              label={t("trips.details.depositLabel")}
+              hint={t("trips.details.optionalHint")}
+              description={t("trips.details.depositDescription")}
             >
               <input
                 name="depositDollars"
@@ -152,9 +152,9 @@ export function DetailsSection({
               />
             </Field>
             <Field
-              label="Free cancellation window"
-              hint="(optional)"
-              description="Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window."
+              label={t("trips.details.cancellationWindowLabel")}
+              hint={t("trips.details.optionalHint")}
+              description={t("trips.details.cancellationWindowDescription")}
             >
               <div className="flex items-center gap-2">
                 <input
@@ -167,17 +167,17 @@ export function DetailsSection({
                   defaultValue={trip.cancellationWindowHours ?? ""}
                   className={`${controlClass} tabular-nums sm:w-28`}
                 />
-                <span className="text-sm text-muted">hours</span>
+                <span className="text-sm text-muted">{t("trips.details.hoursSuffix")}</span>
               </div>
             </Field>
           </FieldGrid>
         </fieldset>
         <div>
           <SubmitButton
-            pendingLabel="Saving…"
+            pendingLabel={t("trips.details.saving")}
             className={buttonClass({ size: "lg", className: "text-base" })}
           >
-            Save changes
+            {t("trips.details.saveChanges")}
           </SubmitButton>
         </div>
       </form>

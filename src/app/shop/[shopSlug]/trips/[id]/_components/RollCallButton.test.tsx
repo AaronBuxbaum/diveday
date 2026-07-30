@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RollCallAction, RollCallResult } from "./RollCallButton";
+import type { RollCallAction, RollCallButtonCopy, RollCallResult } from "./RollCallButton";
 import { RollCallButton } from "./RollCallButton";
 
 afterEach(cleanup);
@@ -11,7 +11,12 @@ function mockAction(result: RollCallResult) {
   return vi.fn<RollCallAction>(async () => result);
 }
 
-function setup(action: RollCallAction, guestsHref?: string) {
+const DEFAULT_COPY: RollCallButtonCopy = {
+  errorRefusal: "That didn’t save. Recheck your connection or tap again.",
+  blockedMessage: "Diver is still blocked. Open Guests to resolve the blocker, then try again.",
+};
+
+function setup(action: RollCallAction, copy: RollCallButtonCopy = DEFAULT_COPY) {
   render(
     <RollCallButton
       action={action}
@@ -20,7 +25,7 @@ function setup(action: RollCallAction, guestsHref?: string) {
       label="Board"
       pendingLabel="Boarding…"
       className="btn"
-      guestsHref={guestsHref}
+      copy={copy}
     />,
   );
 }
@@ -67,10 +72,20 @@ describe("RollCallButton", () => {
   });
 
   it("links a readiness refusal to the Guests control", async () => {
-    setup(
-      mockAction({ ok: false, reason: "not_ready" }),
-      "/shop/blue-mantis/trips/trip-1/guests#booking-1",
-    );
+    // `blockedMessage` is pre-rendered by the Server Component caller (see
+    // manifest/page.tsx's `t.rich` call) — the test stands in for that here.
+    setup(mockAction({ ok: false, reason: "not_ready" }), {
+      ...DEFAULT_COPY,
+      blockedMessage: (
+        <>
+          Diver is still blocked.{" "}
+          <a href="/shop/blue-mantis/trips/trip-1/guests#booking-1">
+            Open Guests to resolve the blocker
+          </a>
+          , then try again.
+        </>
+      ),
+    });
 
     await userEvent.click(screen.getByRole("button", { name: "Board" }));
 

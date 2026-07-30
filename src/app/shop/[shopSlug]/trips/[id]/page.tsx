@@ -19,6 +19,7 @@ import {
   listTripScheduleDays,
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -72,6 +73,7 @@ export default async function ManageTripPage({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
@@ -123,13 +125,13 @@ export default async function ManageTripPage({
     <>
       <FlashParams params={["notice", "count"]} />
       <ShopPageHeader
-        eyebrow="Trips"
+        eyebrow={t("trips.detail.eyebrow")}
         title={trip.title}
         meta={
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
               {cancelled ? (
-                <Badge tone="danger">Cancelled</Badge>
+                <Badge tone="danger">{t("trips.detail.cancelledBadge")}</Badge>
               ) : (
                 // A sold-out boat is a win worth noticing, not a quiet state
                 // (design/principles.md #3) — "success" stands out where
@@ -145,45 +147,45 @@ export default async function ManageTripPage({
             </div>
             {scheduleDays.length > 1 ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-                <span>{scheduleDays.length} meeting days · same instructors each day</span>
+                <span>{t("trips.detail.meetingDaysSummary", { count: scheduleDays.length })}</span>
                 {scheduleDays.map((day) => (
                   <span key={day.id}>
-                    Day {day.dayNumber}: {formatShortDate(day.startsAt, locale, shop.timezone)} ·{" "}
-                    {formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone)}
+                    {t("trips.detail.dayLabel", {
+                      number: day.dayNumber,
+                      date: formatShortDate(day.startsAt, locale, shop.timezone),
+                      timeRange: formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone),
+                    })}
                   </span>
                 ))}
               </div>
             ) : null}
             {trip.course ? (
               <p className="text-sm font-medium text-primary">
-                Course session · {trip.course.title}
+                {t("trips.detail.courseSession", { title: trip.course.title })}
               </p>
             ) : null}
             {series ? (
               <p className="text-sm text-muted">
-                Part of a repeating series ·{" "}
-                {recurrenceSummary({
-                  frequency: "weekly",
-                  intervalWeeks: series.intervalWeeks,
-                  occurrenceCount: series.occurrenceCount,
+                {t("trips.detail.seriesPart", {
+                  summary: recurrenceSummary({
+                    frequency: "weekly",
+                    intervalWeeks: series.intervalWeeks,
+                    occurrenceCount: series.occurrenceCount,
+                  }),
+                  count: series.scheduledCount,
                 })}
-                . Changes here apply to this date only; {series.scheduledCount} still on the
-                schedule.
               </p>
             ) : null}
           </div>
         }
       />
 
-      <TripNoticeBanner notice={notice} count={count} />
+      <TripNoticeBanner notice={notice} count={count} locale={locale} />
 
       {canConfigure ? null : (
         <div className="mt-6">
           <ShopNotice tone="neutral" role="status">
-            You're viewing this trip. Its setup — the details, admission requirements, and recurring
-            schedule — is edited by owners, managers, and instructors. Recording conditions,
-            adjusting who's on crew, and cancelling today's trip for weather stay open to you, as do
-            the roster, check-in, manifest, and roll call.
+            {t("trips.detail.viewOnlyNotice")}
           </ShopNotice>
         </div>
       )}
@@ -205,11 +207,13 @@ export default async function ManageTripPage({
         saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
         trip={trip}
+        locale={locale}
       />
 
       <RecapNoteSection
         action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
         shoutout={trip.recapShoutout}
+        locale={locale}
       />
 
       {canConfigure ? (
@@ -218,16 +222,17 @@ export default async function ManageTripPage({
           trip={trip}
           requirement={requirement}
           siteRequirement={siteRequirement}
+          locale={locale}
         />
       ) : null}
 
       {overRatio ? (
         <div className="mt-6">
           <ShopNotice tone="warning" role="status">
-            {trip.booked} divers are booked, but the current crew only covers {entryLevelRatioCap}{" "}
-            under PADI's published entry-level ratio (8 per instructor, +2 per certified assistant).
-            Assign another instructor or a certified assistant before this session sails — existing
-            bookings are unaffected either way.
+            {t("trips.detail.overRatioWarning", {
+              booked: trip.booked,
+              cap: entryLevelRatioCap ?? 0,
+            })}
           </ShopNotice>
         </div>
       ) : null}
@@ -239,6 +244,7 @@ export default async function ManageTripPage({
         staff={staff}
         crewIds={crewIds}
         hasCourseInstructor={hasCourseInstructor}
+        locale={locale}
       />
 
       {canConfigure && series ? (
@@ -249,6 +255,7 @@ export default async function ManageTripPage({
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
           extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
+          locale={locale}
         />
       ) : null}
 
@@ -256,15 +263,12 @@ export default async function ManageTripPage({
         {cancelled ? (
           canConfigure ? (
             <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-              <SubmitButton pendingLabel="Reinstating…" className={buttonClass()}>
-                Reinstate trip
+              <SubmitButton pendingLabel={t("trips.detail.reinstating")} className={buttonClass()}>
+                {t("trips.detail.reinstate")}
               </SubmitButton>
             </form>
           ) : (
-            <p className="text-sm text-muted">
-              This trip is cancelled. Putting it back on the schedule is limited to owners,
-              managers, and instructors.
-            </p>
+            <p className="text-sm text-muted">{t("trips.detail.cancelledNotice")}</p>
           )
         ) : (
           // A single trip's weather cancellation is the crew's go/no-go call
@@ -273,12 +277,13 @@ export default async function ManageTripPage({
             action={cancelTripAction.bind(null, shopSlug, tripId)}
             className="flex items-center gap-3"
           >
-            <SubmitButton pendingLabel="Cancelling…" className={buttonClass({ variant: "danger" })}>
-              Cancel trip
+            <SubmitButton
+              pendingLabel={t("trips.detail.cancelling")}
+              className={buttonClass({ variant: "danger" })}
+            >
+              {t("trips.detail.cancelTrip")}
             </SubmitButton>
-            <p className="text-sm text-muted">
-              Takes it off the public schedule and notifies booked divers.
-            </p>
+            <p className="text-sm text-muted">{t("trips.detail.cancelHint")}</p>
           </form>
         )}
       </section>

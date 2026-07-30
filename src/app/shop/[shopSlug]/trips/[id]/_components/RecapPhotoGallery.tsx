@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import type { StaffRecapPhoto } from "@/db/recap";
+import { staffTranslator } from "@/i18n/staff-messages";
 
 /**
  * The diver photos shared to this trip's recaps, for the shop to reuse — and to
@@ -10,27 +11,30 @@ import type { StaffRecapPhoto } from "@/db/recap";
 export function RecapPhotoGallery({
   photos,
   removeAction,
+  locale,
 }: {
   photos: StaffRecapPhoto[];
   removeAction: (formData: FormData) => void;
+  locale: string;
 }) {
   if (photos.length === 0) return null;
+  const t = staffTranslator(locale);
   return (
     <section className="mt-10">
       <h2 className="text-lg font-semibold">
-        Diver photos <span className="font-normal text-muted tabular-nums">{photos.length}</span>
+        {t("trips.recapPhotos.heading")}{" "}
+        <span className="font-normal text-muted tabular-nums">{photos.length}</span>
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        Shared by divers on their own recap pages. Grab any for the shop, or remove one that
-        shouldn't be up.
-      </p>
+      <p className="mt-1 text-sm text-muted">{t("trips.recapPhotos.description")}</p>
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {photos.map((photo) => (
           <li key={photo.id} className="overflow-hidden rounded-lg border border-border bg-surface">
             {/* biome-ignore lint/performance/noImgElement: diver photos come from the blob store, which no build-time image allowlist can enumerate. */}
             <img
               src={photo.imageUrl}
-              alt={photo.caption ?? `Photo from ${photo.diverName}`}
+              alt={
+                photo.caption ?? t("trips.recapPhotos.photoFromAlt", { diverName: photo.diverName })
+              }
               loading="lazy"
               className="aspect-square w-full object-cover"
             />
@@ -44,11 +48,11 @@ export function RecapPhotoGallery({
               <form action={removeAction}>
                 <input type="hidden" name="photoId" value={photo.id} />
                 <SubmitButton
-                  pendingLabel="…"
-                  confirmMessage="Remove this photo from the diver's recap?"
+                  pendingLabel={t("trips.recapPhotos.removing")}
+                  confirmMessage={t("trips.recapPhotos.confirmRemove")}
                   className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
                 >
-                  Remove
+                  {t("trips.recapPhotos.remove")}
                 </SubmitButton>
               </form>
             </div>

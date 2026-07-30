@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { WaitlistInvite } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
+import {
+  WaitlistInvite,
+  type WaitlistInviteCopy,
+} from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { buttonClass } from "@/components/ui/button";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -36,12 +39,14 @@ function ActionRow({
   shopName,
   inviteAction,
   resendCopy,
+  inviteCopy,
 }: {
   action: TodayAction;
   shopSlug: string;
   shopName: string;
   inviteAction: TodayInviteAction;
   resendCopy: ResendConfirmationCopy;
+  inviteCopy: WaitlistInviteCopy;
 }) {
   return (
     <li className="card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
@@ -79,6 +84,7 @@ function ActionRow({
             tripTitle={action.invite.tripTitle}
             tripWhen={action.invite.tripWhen}
             invite={inviteAction.bind(null, action.invite.tripId)}
+            copy={inviteCopy}
           />
         ) : (
           <Link
@@ -122,6 +128,23 @@ export function TodayQueue({
       notConfigured: t("shared.today.resendConfirmation.errors.notConfigured"),
       failed: t("shared.today.resendConfirmation.errors.failed"),
     },
+  };
+  // Same keys `WaitlistSection.tsx` (the trips batch's own call site) uses —
+  // `WaitlistInvite` is a Client Component, so this composes the full copy
+  // object server-side rather than passing a translator across the boundary.
+  const inviteCopy: WaitlistInviteCopy = {
+    invitedRelative: t("trips.waitlist.invitedRelative"),
+    inviteEmailed: t("trips.waitlist.inviteEmailed"),
+    reSendInvite: t("trips.waitlist.reSendInvite"),
+    emailAnInvite: t("trips.waitlist.emailAnInvite"),
+    copied: t("trips.waitlist.copied"),
+    copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
+    justNow: t("trips.waitlist.justNow"),
+    minutesAgo: t("trips.waitlist.minutesAgo"),
+    hoursAgo: t("trips.waitlist.hoursAgo"),
+    daysAgo: t("trips.waitlist.daysAgo"),
+    emailSubject: t("trips.waitlist.emailSubject"),
+    emailBody: t("trips.waitlist.emailBody"),
   };
 
   if (groups.length === 0) {
@@ -172,6 +195,7 @@ export function TodayQueue({
                   shopName={shopName}
                   inviteAction={inviteAction}
                   resendCopy={resendCopy}
+                  inviteCopy={inviteCopy}
                 />
               ))}
             </ul>
