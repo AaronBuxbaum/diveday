@@ -125,7 +125,7 @@ describe("prepareContactImport — mapping", () => {
 
   it("is fatal when no name column is present", () => {
     const prepared = prepareContactImport("email,phone\nada@example.com,305");
-    expect(prepared.fatal).toMatch(/name column/i);
+    expect(prepared.fatal?.code).toBe("no_name_column");
     expect(prepared.rows).toHaveLength(0);
   });
 
@@ -139,20 +139,20 @@ describe("prepareContactImport — explicit bounds (CR-016)", () => {
   it("rejects a file over the byte limit with a friendly reason and no rows", () => {
     const oversizedName = "x".repeat(MAX_IMPORT_BYTES + 1);
     const prepared = prepareContactImport(`full_name\n${oversizedName}`);
-    expect(prepared.fatal).toMatch(/too large/i);
+    expect(prepared.fatal?.code).toBe("file_too_large");
     expect(prepared.rows).toHaveLength(0);
   });
 
   it("rejects a file with more columns than the limit", () => {
     const headers = Array.from({ length: MAX_IMPORT_COLUMNS + 1 }, (_, i) => `col${i}`).join(",");
     const prepared = prepareContactImport(`full_name,${headers}\nAda,x`);
-    expect(prepared.fatal).toMatch(/too many columns/i);
+    expect(prepared.fatal?.code).toBe("too_many_columns");
   });
 
   it("rejects a file with more rows than the limit", () => {
     const rows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `Diver ${i}`).join("\n");
     const prepared = prepareContactImport(`full_name\n${rows}`);
-    expect(prepared.fatal).toMatch(/too many rows/i);
+    expect(prepared.fatal?.code).toBe("too_many_rows");
     expect(prepared.rows).toHaveLength(0);
   });
 
@@ -166,7 +166,7 @@ describe("prepareContactImport — explicit bounds (CR-016)", () => {
   it("rejects a single cell over the length limit instead of silently truncating it", () => {
     const hugeCell = "x".repeat(MAX_IMPORT_CELL_LENGTH + 1);
     const prepared = prepareContactImport(`full_name\n${hugeCell}`);
-    expect(prepared.fatal).toMatch(/longer than/i);
+    expect(prepared.fatal?.code).toBe("cell_too_long_row");
     expect(prepared.rows).toHaveLength(0);
   });
 });

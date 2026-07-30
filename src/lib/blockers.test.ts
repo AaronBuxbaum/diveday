@@ -18,7 +18,7 @@ const ctx = {
 
 describe("blockerFixFor", () => {
   it("points card evidence at the diver's record without pretending to act", () => {
-    const blockers: ReadinessBlocker[] = [{ code: "certification_pending", message: "..." }];
+    const blockers: ReadinessBlocker[] = [{ code: "certification_pending" }];
     expect(blockerFixFor(blockers, ctx)).toEqual({
       label: "Open Priya’s record",
       href: "/shop/reef-co/divers/person-1",
@@ -28,7 +28,7 @@ describe("blockerFixFor", () => {
   });
 
   it("sends waiver work in place, anchored to the booking (roster is the fallback)", () => {
-    const blockers: ReadinessBlocker[] = [{ code: "waiver_not_sent", message: "..." }];
+    const blockers: ReadinessBlocker[] = [{ code: "waiver_not_sent" }];
     expect(blockerFixFor(blockers, ctx)).toEqual({
       label: "Send waiver",
       href: "/shop/reef-co/trips/trip-1/guests#booking-booking-1",
@@ -39,10 +39,7 @@ describe("blockerFixFor", () => {
 
   it("resolves the worst blocker when several are present", () => {
     // medical_review (severity 0) outranks payment_due, and lives on the roster.
-    const blockers: ReadinessBlocker[] = [
-      { code: "payment_due", message: "..." },
-      { code: "medical_review", message: "..." },
-    ];
+    const blockers: ReadinessBlocker[] = [{ code: "payment_due" }, { code: "medical_review" }];
     expect(blockerFixFor(blockers, ctx)?.label).toBe("Open roster");
   });
 

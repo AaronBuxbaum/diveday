@@ -3,12 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData, commitContactImport, type ImportSummary } from "@/db/import";
+import type { ImportFatalCode, ImportFatalParams } from "@/lib/import";
 import { prepareContactImport } from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
 
+export type ImportActionErrorCode =
+  | ImportFatalCode
+  | "not_owner_or_manager"
+  | "csv_required"
+  | "no_importable_rows";
+
 export type ImportActionState =
   | { status: "idle" }
-  | { status: "error"; message: string }
+  | { status: "error"; code: ImportActionErrorCode; params?: ImportFatalParams }
   | { status: "done"; summary: ImportSummary };
 
 /**
@@ -25,22 +32,18 @@ export async function importContactsAction(
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
-    return {
-      status: "error",
-      message: "Importing contacts is limited to the shop's owner or manager.",
-    };
+    return { status: "error", code: "not_owner_or_manager" };
   }
 
   const csv = String(formData.get("csv") ?? "");
-  if (!csv.trim()) return { status: "error", message: "Choose a CSV file to import." };
+  if (!csv.trim()) return { status: "error", code: "csv_required" };
 
   const prepared = prepareContactImport(csv);
-  if (prepared.fatal) return { status: "error", message: prepared.fatal };
+  if (prepared.fatal) {
+    return { status: "error", code: prepared.fatal.code, params: prepared.fatal.params };
+  }
   if (prepared.totals.importable === 0) {
-    return {
-      status: "error",
-      message: "No importable rows — every row was missing a name or duplicated.",
-    };
+    return { status: "error", code: "no_importable_rows" };
   }
 
   const summary = await commitContactImport(

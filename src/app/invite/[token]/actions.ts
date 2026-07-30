@@ -3,27 +3,13 @@
 import { hash } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { z } from "zod";
 import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { activateStaffAccount, getAccountContact } from "@/db/user-accounts";
 import { signIn } from "@/lib/auth";
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/onboarding";
+import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-
-const acceptSchema = z
-  .object({
-    password: z
-      .string()
-      .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
-      .max(MAX_PASSWORD_LENGTH, `Password must be at most ${MAX_PASSWORD_LENGTH} characters`),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
 
 /**
  * Consumes the invite token and activates the account atomically — a
@@ -38,11 +24,11 @@ export async function acceptStaffInvite(token: string, formData: FormData) {
     redirect(base);
   }
 
-  const parsed = acceptSchema.safeParse(Object.fromEntries(formData));
+  const parsed = passwordConfirmSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    redirect(
-      `${base}?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Invalid input")}`,
-    );
+    const code: PasswordConfirmErrorCode | "invalid_input" =
+      (parsed.error.issues[0]?.message as PasswordConfirmErrorCode | undefined) ?? "invalid_input";
+    redirect(`${base}?error=${encodeURIComponent(code)}`);
   }
 
   const db = await getDb();

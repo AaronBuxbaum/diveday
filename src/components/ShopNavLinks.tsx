@@ -34,7 +34,9 @@ export interface ShopNavLinksCopy {
   team: string;
 }
 
-function primaryLinks(copy: ShopNavLinksCopy): { label: string; suffix: string; alsoMatch?: string }[] {
+function primaryLinks(
+  copy: ShopNavLinksCopy,
+): { label: string; suffix: string; alsoMatch?: string }[] {
   return [
     { label: copy.today, suffix: "" },
     { label: copy.checkIn, suffix: "/check-in" },

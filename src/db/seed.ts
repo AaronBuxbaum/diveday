@@ -1081,6 +1081,7 @@ export async function seedDemoSchedule(
   const seededPaths: Array<{ title: string; summary: string; steps: string[] }> = [
     {
       title: "From first breath to Rescue Diver",
+      // i18n-exempt: shop-editable seed content (course path summary), not app UI copy
       summary: "A first taste, then the three cards, in the order we teach them.",
       steps: [
         "Discover Scuba Diving",
@@ -1091,6 +1092,7 @@ export async function seedDemoSchedule(
     },
     {
       title: "Wreck diver",
+      // i18n-exempt: shop-editable seed content (course path summary), not app UI copy
       summary: "Everything the Spiegel Grove and the Duane ask of you.",
       steps: ["Advanced Open Water Diver", "Nitrox Diver", "Deep Diver", "Wreck Diver"],
     },

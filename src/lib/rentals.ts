@@ -189,7 +189,6 @@ export function hasAnyRentalPricing(pricing: RentalPricing): boolean {
 export type RentalQuoteLine = {
   /** `"set"` and `"nitrox"` are synthetic; every other value is a rentable kind. */
   kind: RentableItemKind | "set" | "nitrox";
-  label: string;
   cents: number;
 };
 
@@ -202,16 +201,6 @@ export type RentalQuote = {
    * few items priced at the shop" instead of quoting a misleadingly low total.
    */
   unpricedKinds: RentableItemKind[];
-};
-
-const ITEM_LABEL: Record<RentableItemKind, string> = {
-  bcd: "BCD",
-  regulator: "Regulator",
-  wetsuit: "Wetsuit",
-  mask_fins: "Mask & fins",
-  weights: "Weights",
-  dive_computer: "Dive computer",
-  gopro: "GoPro",
 };
 
 /**
@@ -246,12 +235,12 @@ export function quoteRentalFit(
   const rentedCore = offeredCore.filter((kind) => rented.has(kind));
   const takesFullSet = offeredCore.length > 0 && rentedCore.length === offeredCore.length;
   if (takesFullSet && pricing.setCents !== null) {
-    lines.push({ kind: "set", label: "Full rental set", cents: pricing.setCents });
+    lines.push({ kind: "set", cents: pricing.setCents });
   } else {
     for (const kind of rentedCore) {
       const cents = pricing.perItemCents[kind];
       if (cents === undefined) unpricedKinds.push(kind);
-      else lines.push({ kind, label: ITEM_LABEL[kind], cents });
+      else lines.push({ kind, cents });
     }
   }
 
@@ -259,14 +248,13 @@ export function quoteRentalFit(
     if (!rented.has(kind)) continue;
     const cents = pricing.perItemCents[kind];
     if (cents === undefined) unpricedKinds.push(kind);
-    else lines.push({ kind, label: ITEM_LABEL[kind], cents });
+    else lines.push({ kind, cents });
   }
 
   if (fit.wantsNitrox && pricing.nitroxCents !== null) {
     const dives = Math.max(1, fit.plannedDives);
     lines.push({
       kind: "nitrox",
-      label: `Nitrox — ${dives} ${dives === 1 ? "dive" : "dives"}`,
       cents: pricing.nitroxCents * dives,
     });
   }

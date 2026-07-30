@@ -54,6 +54,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   nitrox_missing: "shared.today.blockerAction.addNitroxCard",
   nitrox_pending: "shared.today.blockerAction.verifyNitroxCard",
   payment_due: "shared.today.blockerAction.takePayment",
+  payment_refunded: "shared.today.blockerAction.takePayment",
   readiness_unavailable: "shared.today.blockerAction.checkReadiness",
 };
 
@@ -77,6 +78,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   nitrox_missing: "shared.today.blockerGroup.reviewNitroxCards",
   nitrox_pending: "shared.today.blockerGroup.verifyNitroxCards",
   payment_due: "shared.today.blockerGroup.takePayments",
+  payment_refunded: "shared.today.blockerGroup.takePayments",
   readiness_unavailable: "shared.today.blockerGroup.checkReadiness",
 };
 

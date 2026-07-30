@@ -43,6 +43,24 @@ export function catalogItemLabel(t: StaffTranslator, kind: ShopCatalogKind): str
 }
 
 /**
+ * A staff-fit diver's stated sizes, one piece per item — "BCD L, Wetsuit M" —
+ * for the packing line the captain reads with no way to open the profile.
+ * Same `Intl.ListFormat` join as `rentalFitLineText`, just without a size
+ * fallback: every item here already has one (`statedSizeItems`, dive-prep.ts,
+ * only records a piece when its size is on file).
+ */
+export function statedSizesText(
+  t: StaffTranslator,
+  locale: string,
+  items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins"; size: string }[],
+): string {
+  const parts = items.map((item) =>
+    t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),
+  );
+  return new Intl.ListFormat(locale, { style: "long", type: "unit" }).format(parts);
+}
+
+/**
  * The one-line fit `rentalFitLine()` (src/lib/dive-prep.ts) reduces a
  * diver's rental fit to — resolved into a sentence against the staff bundle.
  * Mirrors `readinessBlockerText`'s shape: the lib function hands back a code

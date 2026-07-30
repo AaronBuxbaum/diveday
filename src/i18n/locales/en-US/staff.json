@@ -1774,6 +1774,18 @@
         "noName": "No name — row skipped.",
         "mergedDuplicate": "Same diver as row {row} ({email}) — this row's cards, waiver, and past visit are added to them, contact details left as the earlier row has them.",
         "noEmailNewRecord": "No email — imported as a new record; a re-import can't match it to update."
+      },
+      "errors": {
+        "notOwnerOrManager": "Importing contacts is limited to the shop's owner or manager.",
+        "csvRequired": "Choose a CSV file to import.",
+        "noImportableRows": "No importable rows — every row was missing a name or duplicated.",
+        "fileTooLarge": "The file is too large — the limit is {limitMb} MB.",
+        "fileEmpty": "The file is empty.",
+        "tooManyColumns": "Too many columns ({count}) — the limit is {limit}.",
+        "tooManyRows": "Too many rows ({count}) — the limit is {limit} per import. Split the file and import it in batches.",
+        "cellTooLongHeader": "A cell in the header row is longer than {limit} characters — check for a pasted document instead of a spreadsheet.",
+        "cellTooLongRow": "A cell in row {row} is longer than {limit} characters — check for a pasted document instead of a spreadsheet.",
+        "noNameColumn": "No name column found. The file needs a full name, or first and last name, to import people."
       }
     },
     "embed": {

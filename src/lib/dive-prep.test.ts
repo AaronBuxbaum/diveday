@@ -264,7 +264,12 @@ describe("needs-staff-fit fallback (H-06)", () => {
       {
         fullName: "Ben",
         note: "No L BCD",
-        statedSizes: "BCD M, wetsuit 5mm M, boots 9, fins M",
+        statedSizes: [
+          { kind: "bcd", size: "M" },
+          { kind: "wetsuit", size: "5mm M" },
+          { kind: "boots", size: "9" },
+          { kind: "mask_fins", size: "M" },
+        ],
         flaggedDaysAgo: 0,
       },
     ]);
@@ -350,7 +355,12 @@ describe("needs-staff-fit fallback (H-06)", () => {
       {
         fullName: "Ada",
         note: null,
-        statedSizes: "BCD M, wetsuit 5mm M, boots 9, fins M",
+        statedSizes: [
+          { kind: "bcd", size: "M" },
+          { kind: "wetsuit", size: "5mm M" },
+          { kind: "boots", size: "9" },
+          { kind: "mask_fins", size: "M" },
+        ],
         flaggedDaysAgo: 0,
       },
     ]);

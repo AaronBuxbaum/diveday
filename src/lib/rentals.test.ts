@@ -110,7 +110,7 @@ describe("rental pricing", () => {
       plannedDives: 2,
     });
     // The dive computer is part of the set, so a full set is a single line.
-    expect(quote.lines).toEqual([{ kind: "set", label: "Full rental set", cents: 4500 }]);
+    expect(quote.lines).toEqual([{ kind: "set", cents: 4500 }]);
     expect(quote.subtotalCents).toBe(4500);
     expect(quote.unpricedKinds).toEqual([]);
   });
@@ -141,7 +141,7 @@ describe("rental pricing", () => {
       wantsNitrox: false,
       plannedDives: 2,
     });
-    expect(quote.lines).toEqual([{ kind: "set", label: "Full rental set", cents: 4500 }]);
+    expect(quote.lines).toEqual([{ kind: "set", cents: 4500 }]);
     expect(quote.subtotalCents).toBe(4500);
   });
 

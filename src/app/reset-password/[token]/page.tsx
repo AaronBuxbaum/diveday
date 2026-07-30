@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Notice } from "@/components/account/Notice";
+import { passwordConfirmErrorText } from "@/components/account/passwordConfirmError";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -55,7 +56,7 @@ export default async function ResetPasswordPage({
         <p className="mt-1 text-sm text-muted">{t("account.resetPassword.description")}</p>
         {error ? (
           <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-            {error}
+            {passwordConfirmErrorText(t, error)}
           </p>
         ) : null}
         <form action={submitPasswordReset.bind(null, token)} className="mt-5 flex flex-col gap-4">

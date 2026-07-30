@@ -554,7 +554,13 @@
       "backToSignIn": "Volver a iniciar sesión",
       "email": "Correo electrónico",
       "password": "Contraseña",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "passwordErrors": {
+        "tooShort": "La contraseña debe tener al menos {min} caracteres",
+        "tooLong": "La contraseña debe tener como máximo {max} caracteres",
+        "mismatch": "Las contraseñas no coinciden",
+        "invalid": "Datos no válidos"
+      }
     },
     "forgotPassword": {
       "title": "Restablece tu contraseña",

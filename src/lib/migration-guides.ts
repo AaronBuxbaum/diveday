@@ -1,3 +1,4 @@
+// i18n-exempt-file: long-form marketing/citation content authored directly as data, not app UI copy
 /**
  * Public migration guides — the marketing surface of the portability wedge
  * (docs/product/assessments/competitive-strategy.md #3). One page per incumbent:

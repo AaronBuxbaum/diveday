@@ -554,7 +554,13 @@
       "backToSignIn": "Back to sign in",
       "email": "Email",
       "password": "Password",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "passwordErrors": {
+        "tooShort": "Password must be at least {min} characters",
+        "tooLong": "Password must be at most {max} characters",
+        "mismatch": "Passwords don't match",
+        "invalid": "Invalid input"
+      }
     },
     "forgotPassword": {
       "title": "Reset your password",

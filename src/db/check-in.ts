@@ -81,7 +81,7 @@ export async function listCheckInQueue(
     bookingStatus: row.bookingStatus as "booked" | "checked_in",
     readiness: readinessByBooking.get(row.bookingId) ?? {
       status: "blocked",
-      blockers: [{ code: "readiness_unavailable", message: "Readiness could not be confirmed." }],
+      blockers: [{ code: "readiness_unavailable" }],
     },
   }));
 }

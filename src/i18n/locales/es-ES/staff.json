@@ -1774,6 +1774,18 @@
         "noName": "Sin nombre — fila omitida.",
         "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las tarjetas, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
         "noEmailNewRecord": "Sin correo — importado como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo."
+      },
+      "errors": {
+        "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
+        "csvRequired": "Elige un archivo CSV para importar.",
+        "noImportableRows": "No hay filas importables — a todas les faltaba un nombre o estaban duplicadas.",
+        "fileTooLarge": "El archivo es demasiado grande — el límite es {limitMb} MB.",
+        "fileEmpty": "El archivo está vacío.",
+        "tooManyColumns": "Demasiadas columnas ({count}) — el límite es {limit}.",
+        "tooManyRows": "Demasiadas filas ({count}) — el límite es {limit} por importación. Divide el archivo e impórtalo en lotes.",
+        "cellTooLongHeader": "Una celda de la fila de encabezado tiene más de {limit} caracteres — comprueba que no sea un documento pegado en vez de una hoja de cálculo.",
+        "cellTooLongRow": "Una celda de la fila {row} tiene más de {limit} caracteres — comprueba que no sea un documento pegado en vez de una hoja de cálculo.",
+        "noNameColumn": "No se encontró columna de nombre. El archivo necesita un nombre completo, o nombre y apellido, para importar personas."
       }
     },
     "embed": {

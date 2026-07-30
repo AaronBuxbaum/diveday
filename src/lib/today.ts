@@ -1,3 +1,4 @@
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerActionLabelText,
@@ -27,12 +28,9 @@ import { utcToWallTime } from "./zoned";
  * call sites (`src/db/today.ts`) also fill with a plain string, so it stays
  * `string` rather than forking into a second, code-carrying shape. Those two
  * take a `StaffTranslator`, defaulted to English, and resolve through the same
- * `src/i18n/today-labels.ts` helpers rather than calling `t()` inline. The
- * blocker's own `.message` (`src/lib/readiness.ts`) is still a plain,
- * hard-coded-English sentence at this point — that extraction is a separate,
- * much larger migration (touches `CERTIFICATION_LEVEL_LABELS`/`SPECIALTY_LABELS`
- * consumers across trip/course/dive-site pages) and is out of this batch's
- * scope; see the final report.
+ * `src/i18n/today-labels.ts` helpers (and `src/i18n/readiness-labels.ts`'s
+ * `readinessBlockerText` for the blocker's own sentence) rather than calling
+ * `t()` inline.
  */
 
 /** How soon the work has to be done, derived from the departure it belongs to. */
@@ -215,6 +213,7 @@ export const BLOCKER_ACTIONS: Record<
   nitrox_missing: { kind: "certification", target: "diver" },
   nitrox_pending: { kind: "certification", target: "diver" },
   payment_due: { kind: "payment", target: "trip" },
+  payment_refunded: { kind: "payment", target: "trip" },
   readiness_unavailable: { kind: "readiness_unavailable", target: "trip" },
 };
 
@@ -275,7 +274,7 @@ export function diverBlockerAction(
   const remaining = input.blockers.length - 1;
   const rosterRow = `/shop/${shopSlug}/trips/${input.tripId}/guests#booking-${input.bookingId}`;
   const waiver = isWaiverCode(blocker.code);
-  const blockerText = blocker.message;
+  const blockerText = readinessBlockerText(t, blocker);
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,
     kind,
@@ -346,7 +345,7 @@ export function collapseDiverActions(
       urgency: urgencyFor(first.startsAt, now),
       subject: `${rows.length} divers`,
       context: first.tripTitle,
-      detail: blockerDetailGroupText(t, blocker.message, nameList(names)),
+      detail: blockerDetailGroupText(t, readinessBlockerText(t, blocker), nameList(names)),
       // A batch waiver send keeps the verb ("Send waivers"); any other grouped
       // fix only opens the roster, the one screen that shows all of them.
       actionLabel: waiver

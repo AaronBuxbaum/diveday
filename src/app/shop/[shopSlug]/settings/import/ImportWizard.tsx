@@ -12,7 +12,11 @@ import {
   type PreparedImport,
   prepareContactImport,
 } from "@/lib/import";
-import { type ImportActionState, importContactsAction } from "./actions";
+import {
+  type ImportActionErrorCode,
+  type ImportActionState,
+  importContactsAction,
+} from "./actions";
 
 /**
  * Every word this wizard renders, resolved on the server and passed down as
@@ -67,6 +71,13 @@ type ImportWizardCopy = {
    * template — `fill()` interpolates each issue's `params` once the row is known
    * (only client-side, since the CSV preview never touches the server). */
   issues: Record<ImportIssueCode, string>;
+  /**
+   * Every `ImportActionErrorCode` — both the client-computed `prepared.fatal`
+   * (before submit) and the server action's `state` (after submit) resolve
+   * through this one map, since the action passes `prepared.fatal`'s own code
+   * straight through unchanged.
+   */
+  errors: Record<ImportActionErrorCode, string>;
   result: {
     summary: string;
     cardsLine: string;
@@ -182,7 +193,10 @@ export function ImportWizard({
       {prepared?.fatal ? (
         <div className="mt-4">
           <ShopNotice tone="danger" role="alert">
-            {prepared.fatal}
+            {fill(
+              copy.errors[prepared.fatal.code],
+              (prepared.fatal.params ?? {}) as unknown as Record<string, string | number>,
+            )}
           </ShopNotice>
         </div>
       ) : null}
@@ -371,7 +385,10 @@ export function ImportWizard({
           {state.status === "error" ? (
             <div className="mt-4">
               <ShopNotice tone="danger" role="alert">
-                {state.message}
+                {fill(
+                  copy.errors[state.code],
+                  (state.params ?? {}) as unknown as Record<string, string | number>,
+                )}
               </ShopNotice>
             </div>
           ) : null}

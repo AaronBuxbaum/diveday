@@ -8,6 +8,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { IMPORT_HONESTY_TABLE, type ImportField, type ImportIssueCode } from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
+import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
 /**
@@ -84,6 +85,19 @@ function importWizardCopy(t: StaffTranslator) {
     no_email_new_record: t("settings.import.issues.noEmailNewRecord"),
   };
 
+  const errors: Record<ImportActionErrorCode, string> = {
+    not_owner_or_manager: t("settings.import.errors.notOwnerOrManager"),
+    csv_required: t("settings.import.errors.csvRequired"),
+    no_importable_rows: t("settings.import.errors.noImportableRows"),
+    file_too_large: t("settings.import.errors.fileTooLarge"),
+    file_empty: t("settings.import.errors.fileEmpty"),
+    too_many_columns: t("settings.import.errors.tooManyColumns"),
+    too_many_rows: t("settings.import.errors.tooManyRows"),
+    cell_too_long_header: t("settings.import.errors.cellTooLongHeader"),
+    cell_too_long_row: t("settings.import.errors.cellTooLongRow"),
+    no_name_column: t("settings.import.errors.noNameColumn"),
+  };
+
   return {
     heading: t("settings.import.wizard.heading"),
     chooseFile: t("settings.import.wizard.chooseFile"),
@@ -125,6 +139,7 @@ function importWizardCopy(t: StaffTranslator) {
     submit: t("settings.import.wizard.submit"),
     submitting: t("settings.import.wizard.submitting"),
     issues,
+    errors,
     result: {
       summary: t("settings.import.wizard.result.summary"),
       cardsLine: t("settings.import.wizard.result.cardsLine"),

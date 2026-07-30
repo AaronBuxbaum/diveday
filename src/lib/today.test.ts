@@ -18,8 +18,8 @@ import {
 const NOW = new Date("2026-07-20T14:00:00Z");
 const hoursFromNow = (hours: number) => new Date(NOW.getTime() + hours * 60 * 60 * 1000);
 
-function blocker(code: ReadinessBlocker["code"], message = "…"): ReadinessBlocker {
-  return { code, message };
+function blocker(code: ReadinessBlocker["code"]): ReadinessBlocker {
+  return { code };
 }
 
 function action(overrides: Partial<TodayAction> = {}): TodayAction {
@@ -83,7 +83,7 @@ describe("diverBlockerAction", () => {
     tripId: "t1",
     tripTitle: "Reef Drift · 8:00 AM",
     startsAt: hoursFromNow(3),
-    blockers: [blocker("waiver_not_sent", "Waiver has not been sent.")],
+    blockers: [blocker("waiver_not_sent")],
   };
 
   it("sends waiver work in place, keeping the verb and the booking payload", () => {
@@ -112,11 +112,7 @@ describe("diverBlockerAction", () => {
     const result = diverBlockerAction(
       {
         ...input,
-        blockers: [
-          blocker("medical_review", "A medical answer needs staff follow-up."),
-          blocker("payment_due"),
-          blocker("waiver_pending"),
-        ],
+        blockers: [blocker("medical_review"), blocker("payment_due"), blocker("waiver_pending")],
       },
       "blue-reef",
       NOW,
@@ -128,11 +124,13 @@ describe("diverBlockerAction", () => {
 
   it("says 'blocker' in the singular when only one other remains", () => {
     const result = diverBlockerAction(
-      { ...input, blockers: [blocker("medical_review", "Flagged."), blocker("payment_due")] },
+      { ...input, blockers: [blocker("medical_review"), blocker("payment_due")] },
       "blue-reef",
       NOW,
     );
-    expect(result?.detail).toBe("Flagged. 1 other blocker to clear too.");
+    expect(result?.detail).toBe(
+      "A medical answer needs staff follow-up. 1 other blocker to clear too.",
+    );
   });
 
   it("produces nothing for a diver with no blockers", () => {
@@ -148,7 +146,7 @@ describe("collapseDiverActions", () => {
     tripId,
     tripTitle: "Reef Drift · 8:00 AM",
     startsAt: hoursFromNow(3),
-    blockers: [blocker(code, "Waiver has not been sent.")],
+    blockers: [blocker(code)],
   });
 
   it("turns a boatload of identical blockers into one job", () => {

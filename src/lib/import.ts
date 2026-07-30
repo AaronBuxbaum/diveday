@@ -795,6 +795,29 @@ export type PreparedRow = {
 
 export type ColumnMapping = { field: ImportField; header: string; columnIndex: number };
 
+/**
+ * Every reason a file can't be prepared at all, before any row is read — the
+ * same code/params pattern as `ImportIssueCode`, so a caller resolves it
+ * through the staff bundle rather than this file ever building a sentence.
+ */
+export type ImportFatalCode =
+  | "file_too_large"
+  | "file_empty"
+  | "too_many_columns"
+  | "too_many_rows"
+  | "cell_too_long_header"
+  | "cell_too_long_row"
+  | "no_name_column";
+
+export type ImportFatalParams = {
+  limitMb?: string;
+  count?: number;
+  limit?: number;
+  row?: number;
+};
+
+export type ImportFatal = { code: ImportFatalCode; params?: ImportFatalParams };
+
 export type PreparedImport = {
   mapping: ColumnMapping[];
   unmappedColumns: string[];
@@ -816,7 +839,7 @@ export type PreparedImport = {
     withVisit: number;
   };
   /** Set when the file has no header row, or no recognizable identity column. */
-  fatal: string | null;
+  fatal: ImportFatal | null;
 };
 
 function normalizeAgency(raw: string | undefined): { agency: ImportAgency; recognized: boolean } {
@@ -1092,31 +1115,39 @@ export function prepareContactImport(text: string): PreparedImport {
   const byteLength = new TextEncoder().encode(text).length;
   if (byteLength > MAX_IMPORT_BYTES) {
     const limitMb = (MAX_IMPORT_BYTES / (1024 * 1024)).toFixed(0);
-    return { ...empty, fatal: `The file is too large — the limit is ${limitMb} MB.` };
+    return { ...empty, fatal: { code: "file_too_large", params: { limitMb } } };
   }
-  if (grid.length === 0) return { ...empty, fatal: "The file is empty." };
+  if (grid.length === 0) return { ...empty, fatal: { code: "file_empty" } };
 
   const headers = grid[0];
   const bodyRows = grid.slice(1);
   if (headers.length > MAX_IMPORT_COLUMNS) {
     return {
       ...empty,
-      fatal: `Too many columns (${headers.length}) — the limit is ${MAX_IMPORT_COLUMNS}.`,
+      fatal: {
+        code: "too_many_columns",
+        params: { count: headers.length, limit: MAX_IMPORT_COLUMNS },
+      },
     };
   }
   if (bodyRows.length > MAX_IMPORT_ROWS) {
     return {
       ...empty,
-      fatal: `Too many rows (${bodyRows.length}) — the limit is ${MAX_IMPORT_ROWS} per import. Split the file and import it in batches.`,
+      fatal: {
+        code: "too_many_rows",
+        params: { count: bodyRows.length, limit: MAX_IMPORT_ROWS },
+      },
     };
   }
   for (let r = 0; r < grid.length; r++) {
     const row = grid[r];
     if (row?.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)) {
-      const where = r === 0 ? "the header row" : `row ${r}`;
       return {
         ...empty,
-        fatal: `A cell in ${where} is longer than ${MAX_IMPORT_CELL_LENGTH} characters — check for a pasted document instead of a spreadsheet.`,
+        fatal:
+          r === 0
+            ? { code: "cell_too_long_header", params: { limit: MAX_IMPORT_CELL_LENGTH } }
+            : { code: "cell_too_long_row", params: { row: r, limit: MAX_IMPORT_CELL_LENGTH } },
       };
     }
   }
@@ -1160,8 +1191,7 @@ export function prepareContactImport(text: string): PreparedImport {
       mapping,
       unmappedColumns,
       ignoredMedicalColumns,
-      fatal:
-        "No name column found. The file needs a full name, or first and last name, to import people.",
+      fatal: { code: "no_name_column" },
     };
   }
 
