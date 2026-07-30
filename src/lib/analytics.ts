@@ -1,5 +1,6 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
 import type { FunnelSource } from "./funnel";
+import type { RollCallCheckpoint } from "./manifests";
 
 /**
  * Custom event instrumentation, one seam. Page-level analytics already ships via
@@ -101,7 +102,7 @@ export type AnalyticsEvent =
        * where readiness work is being left too late, not a boarding bug.
        */
       name: "roll_call_blocked";
-      checkpoint: string;
+      checkpoint: RollCallCheckpoint;
     }
   | {
       /** One of the schedule builder's four departure mutations, and how it landed. */
