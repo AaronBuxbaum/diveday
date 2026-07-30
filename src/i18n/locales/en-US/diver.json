@@ -1130,5 +1130,130 @@
       "stillQuestion": "Still have a question a FAQ can't answer? Founding shops get a founder-direct line — use it, always welcome.",
       "emailCta": "Email {email}"
     }
+  },
+  "notifications": {
+    "brief": {
+      "waterTemp": "water around {celsius}°C",
+      "visibility": "visibility near {meters} m",
+      "expect": "Expect {list}.",
+      "firstTimer": "First boat dive? The crew walks everyone through the gear and the plan before you get in — you'll never be handed kit and left to figure it out. Come with questions.",
+      "conditionsLabel": "Conditions:",
+      "bringLabel": "What to bring:",
+      "whoToText": "Questions on the day? Text the shop at {phone}."
+    },
+    "reminderAction": {
+      "waiverPending": "Sign your waiver",
+      "certificationMissing": "Send your shop your certification card",
+      "certificationExpired": "Check on your shop's refresher date for your certification",
+      "certificationInsufficient": "Check your certification level with the shop",
+      "specialtyMissing": "Send your shop your specialty card",
+      "specialtyExpired": "Update your specialty card with the shop",
+      "nitroxMissing": "Send your shop your nitrox card",
+      "paymentDue": "Settle your balance"
+    },
+    "common": {
+      "greeting": "Hi {firstName},",
+      "greetingGeneric": "Hi,",
+      "genericName": "there",
+      "dockCallMinutes": "{minutes} minutes",
+      "trackWhatsLeft": "Track what's left before you sail",
+      "seeWhatsLeft": "See what's left before you sail",
+      "outstandingHeading": "Still to sort before you board:",
+      "medicalReviewNote": "Check whether a medical answer needs a doctor's sign-off before you travel"
+    },
+    "tripConditionsHold": {
+      "subject": "Conditions hold — {tripTitle}",
+      "body": "{shopName} has placed {tripTitle} on a conditions hold for {date}. Your seat is still held while the crew makes the final weather call.",
+      "crewNoteLabel": "Crew note:",
+      "seeUpdate": "See the live trip update"
+    },
+    "bookingConfirmation": {
+      "subject": "You're on the boat — {tripTitle}",
+      "confirmed": "Your spot on {tripTitle} is confirmed.",
+      "dockNote": "Please be at the dock {dock} early. {shopName} will take it from there.",
+      "packingHeading": "Pre-Trip Checklist Reminder:"
+    },
+    "waitlistInvite": {
+      "subject": "A spot opened up on {tripTitle}",
+      "body": "A seat just opened on {tripTitle} with {shopName}, and you're next on the wait list.",
+      "claim": "Claim it before it's gone",
+      "claimLink": "Claim your spot",
+      "footer": "Seats go first-come, so don't wait too long. See you on the boat!"
+    },
+    "lastMinuteDeal": {
+      "subject": "{discountPercent}% off {tripTitle} — last-minute deal",
+      "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",
+      "useCode": "Use code {code} at booking:",
+      "bookLink": "Book {tripTitle}",
+      "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first."
+    },
+    "checkoutRecovery": {
+      "subject": "Finish booking {tripTitle}?",
+      "body": "Your spot on {tripTitle} with {shopName} is still held — you just haven't finished paying.",
+      "pickUp": "Pick up right where you left off",
+      "finishPaying": "Finish paying"
+    },
+    "tripReminder": {
+      "weekSubject": "You sail this week — {tripTitle}",
+      "weekBody": "A quick reminder that {tripTitle} with {shopName} sails this week.",
+      "dockNote": "Please be at the dock {dock} early.",
+      "daySubject": "You sail tomorrow — {tripTitle}",
+      "dayOpenerFirstTimer": "You dive with {shopName} tomorrow — here's everything you need for the day.",
+      "dayOpenerReturning": "A quick reminder that {tripTitle} with {shopName} sails tomorrow.",
+      "arrival": "Aim to be at the dock by {time} — {dock} before we sail."
+    },
+    "tripRecap": {
+      "subject": "Your dive with {shopName} — {tripTitle}",
+      "thanks": "Thanks for diving {tripTitle} with {shopName} on {date}.",
+      "dived": "You dived {sites}.",
+      "seeRecap": "See the recap of your day",
+      "footer": "If you loved it, the best thing you can do is bring a buddy next time. See you in the water!"
+    },
+    "welcome": {
+      "subject": "Welcome to DiveDay, {shopName}",
+      "body": "{shopName} is live on DiveDay. Add your first trip, invite a diver, and the dock is one step closer.",
+      "signIn": "Sign in any time",
+      "footer": "Glad you're here."
+    },
+    "verifyAccount": {
+      "subject": "Confirm your email for DiveDay",
+      "confirm": "Confirm this is your email address",
+      "expiry": "This link expires {expiresAt}. If you didn't create a DiveDay account, you can ignore this."
+    },
+    "staffInvite": {
+      "subject": "{inviterName} invited you to {shopName} on DiveDay",
+      "body": "{inviterName} added you to {shopName} on DiveDay as {roles}.",
+      "setPassword": "Set your password to get started",
+      "expiry": "This link expires {expiresAt}. If you weren't expecting this, you can ignore it."
+    },
+    "passwordReset": {
+      "subject": "Reset your DiveDay password",
+      "body": "Someone asked to reset the password on this DiveDay account.",
+      "choose": "Choose a new one here",
+      "expiry": "This link expires {expiresAt} and works once. If this wasn't you, your password hasn't changed — you can ignore this."
+    },
+    "passwordChanged": {
+      "subject": "Your DiveDay password was changed",
+      "body": "The password on this DiveDay account was just changed. If that was you, there's nothing else to do.",
+      "recoveryWithLink": "If it wasn't, request a new password here right away",
+      "recoveryNoLink": "If it wasn't, request a new password from the sign-in page right away.",
+      "recoveryWithLinkHtml": "If it wasn't, {link} right away.",
+      "recoveryLinkText": "request a new password here"
+    },
+    "waiverRequest": {
+      "subject": "Complete your waiver for {tripTitle}",
+      "body": "{shopName} needs your waiver for {tripTitle}.",
+      "completeText": "Complete it here",
+      "completeLink": "Complete your waiver",
+      "expiry": "This private link expires {expiresAt}."
+    },
+    "sms": {
+      "whenWeek": "this week",
+      "whenDay": "tomorrow",
+      "body": "{shopName}: {tripTitle} sails {when} — {date}, {time}. Please be at the dock {minutes} min early.",
+      "contact": "Questions? Text us at {phone}.",
+      "medicalReviewNote": "Check if a medical answer needs a doctor's sign-off",
+      "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}"
+    }
   }
 }

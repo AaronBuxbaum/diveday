@@ -11,6 +11,10 @@ export type AccountContact = {
   shopSlug: string;
   shopName: string;
   timezone: string;
+  /** The shop's own locale — the only signal for an account-lifecycle email's
+   * language, since no per-person preference is stored (docs ADR
+   * 20260731-notification-locale). */
+  defaultLocale: string;
 };
 
 const contactColumns = {
@@ -21,6 +25,7 @@ const contactColumns = {
   shopSlug: shops.slug,
   shopName: shops.name,
   timezone: shops.timezone,
+  defaultLocale: shops.defaultLocale,
 };
 
 /** The context an already-resolved account id needs to render a lifecycle email. */

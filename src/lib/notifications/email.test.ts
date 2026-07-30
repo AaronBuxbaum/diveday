@@ -12,6 +12,7 @@ import {
 } from "./email";
 
 const base = {
+  locale: "en-US" as const,
   diverName: "Pat Diver",
   shopName: "Blue Mantis",
   tripTitle: "Two-Tank Reef",
@@ -71,7 +72,7 @@ describe("tripReminderEmail", () => {
     const email = tripReminderEmail({
       ...base,
       lead: "day",
-      outstanding: ["sign your waiver", "settle your balance"],
+      outstanding: ["waiver_pending", "payment_due"],
     });
     expect(email.text).toContain("Still to sort before you board:");
     expect(email.text).toContain("- Sign your waiver");
@@ -132,6 +133,7 @@ describe("tripReminderEmail", () => {
 
 describe("tripRecapEmail", () => {
   const recapBase = {
+    locale: "en-US" as const,
     diverName: "Rae Recap",
     shopName: "Blue Mantis",
     tripTitle: "Two-Tank Reef",
@@ -158,6 +160,7 @@ describe("tripRecapEmail", () => {
 describe("welcomeEmail", () => {
   it("names the shop and links to sign-in", () => {
     const email = welcomeEmail({
+      locale: "en-US",
       ownerName: "Pat Diver",
       shopName: "Blue Mantis",
       signInUrl: "https://diveday.example/sign-in",
@@ -196,6 +199,7 @@ describe("newAccountAlertEmail", () => {
 
 describe("verifyAccountEmail", () => {
   const base = {
+    locale: "en-US" as const,
     ownerName: "Pat Diver",
     verifyUrl: "https://diveday.example/verify/abc.def",
     expiresAt: new Date("2026-08-04T13:00:00.000Z"),
@@ -217,6 +221,7 @@ describe("verifyAccountEmail", () => {
 
 describe("passwordResetEmail", () => {
   const base = {
+    locale: "en-US" as const,
     ownerName: "Pat Diver",
     resetUrl: "https://diveday.example/reset-password/abc.def",
     expiresAt: new Date("2026-08-01T14:00:00.000Z"),
@@ -239,6 +244,7 @@ describe("passwordResetEmail", () => {
 describe("passwordChangedEmail", () => {
   it("points a compromised recipient at requesting a new reset, not signing in — the old password no longer works for them", () => {
     const email = passwordChangedEmail({
+      locale: "en-US",
       ownerName: "Pat Diver",
       forgotPasswordUrl: "https://diveday.example/forgot-password",
     });
@@ -248,7 +254,7 @@ describe("passwordChangedEmail", () => {
   });
 
   it("still reads well without a link when APP_HOST is unset", () => {
-    const email = passwordChangedEmail({ ownerName: "Pat Diver" });
+    const email = passwordChangedEmail({ locale: "en-US", ownerName: "Pat Diver" });
     expect(email.text).not.toContain("http");
     expect(email.text).toContain("request a new password");
   });

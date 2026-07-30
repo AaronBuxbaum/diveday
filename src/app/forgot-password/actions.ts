@@ -7,6 +7,7 @@ import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { findActiveAccountByEmail } from "@/db/user-accounts";
+import { toDiverLocale } from "@/i18n/settings";
 import { resetPasswordLinkPath } from "@/lib/account-tokens";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -58,6 +59,7 @@ export async function requestPasswordReset(formData: FormData) {
         tokenId: issued.tokenId,
         shopId: account.shopId,
         to: account.email,
+        locale: toDiverLocale(account.defaultLocale),
         ownerName: account.ownerName,
         resetUrl: new URL(resetPasswordLinkPath(issued.token), `${origin}/`).toString(),
         expiresAt: issued.expiresAt,

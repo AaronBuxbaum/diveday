@@ -50,6 +50,7 @@ describe("notification delivery status", () => {
       bookingId: booking.bookingId,
       shopId: shop.id,
       to: "nora@example.com",
+      locale: "en-US",
       diverName: "Nora Quinn",
       shopName: shop.name,
       tripTitle: "Two-Tank Reef",

@@ -13,6 +13,7 @@ const booking = {
   bookingId: "00000000-0000-4000-8000-000000000001",
   shopId: "00000000-0000-4000-8000-000000000010",
   to: "delivered+booking@resend.dev",
+  locale: "en-US" as const,
   diverName: "Nora Quinn",
   shopName: "Blue Mantis",
   tripTitle: "Two-Tank Reef",
@@ -256,6 +257,7 @@ describe("notify", () => {
           bookingId: "00000000-0000-4000-8000-000000000001",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "delivered+waiver@resend.dev",
+          locale: "en-US",
           diverName: "Nora Quinn",
           shopName: "Blue Mantis",
           tripTitle: "Two-Tank Reef",
@@ -295,6 +297,7 @@ describe("notify", () => {
           waitlistEntryId: "00000000-0000-4000-8000-000000000003",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "delivered+waitlist@resend.dev",
+          locale: "en-US",
           diverName: "Nora Quinn",
           shopName: "Blue Mantis",
           tripTitle: "Two-Tank Reef",
@@ -345,6 +348,7 @@ describe("notify", () => {
           userAccountId: "00000000-0000-4000-8000-000000000020",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "delivered+welcome@resend.dev",
+          locale: "en-US",
           ownerName: "Pat Diver",
           shopName: "Blue Mantis",
           signInUrl: "https://diveday.example/sign-in",
@@ -380,6 +384,7 @@ describe("notify", () => {
           tokenId: "00000000-0000-4000-8000-000000000030",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "delivered+verification@resend.dev",
+          locale: "en-US",
           ownerName: "Pat Diver",
           verifyUrl: "https://diveday.example/verify/raw-token-should-not-appear",
           expiresAt: new Date("2026-07-29T12:00:00.000Z"),
@@ -413,6 +418,7 @@ describe("notify", () => {
           tokenId: "00000000-0000-4000-8000-000000000031",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "delivered+reset@resend.dev",
+          locale: "en-US",
           ownerName: "Pat Diver",
           resetUrl: "https://diveday.example/reset-password/raw-token-should-not-appear",
           expiresAt: new Date("2026-07-26T13:00:00.000Z"),
@@ -450,6 +456,7 @@ describe("notify", () => {
           userAccountId: "00000000-0000-4000-8000-000000000020",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "delivered+changed@resend.dev",
+          locale: "en-US",
           ownerName: "Pat Diver",
           changedAt: new Date("2026-07-26T13:00:00.000Z"),
         },
@@ -472,6 +479,7 @@ describe("notify", () => {
 describe("waitlistInviteEmail", () => {
   it("carries the booking link and escapes staff-entered text", () => {
     const email = waitlistInviteEmail({
+      locale: "en-US",
       diverName: "Nora Quinn",
       shopName: "Blue Mantis & Co.",
       tripTitle: '<Reef "Special">',
@@ -492,6 +500,7 @@ describe("waitlistInviteEmail", () => {
 describe("email rendering", () => {
   it("escapes staff-entered text before it is placed in waiver email HTML", () => {
     const email = waiverRequestEmail({
+      locale: "en-US",
       diverName: "Nora Quinn",
       shopName: "Blue Mantis & Co.",
       tripTitle: '<Reef "Special">',

@@ -1,4 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
+import { toDiverLocale } from "@/i18n/settings";
 import { publicAppUrl } from "@/lib/notifications";
 import type { AppDb } from "./client";
 import { sendAndRecordNotification } from "./notifications";
@@ -93,6 +94,7 @@ export async function issueAndDeliverWaiver(
       bookingId,
       shopId,
       to: email,
+      locale: toDiverLocale(ctx.shop.defaultLocale),
       diverName: ctx.person.fullName,
       shopName: ctx.shop.name,
       tripTitle: ctx.trip.title,

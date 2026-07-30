@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { toDiverLocale } from "@/i18n/settings";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
 import { nowDate } from "@/lib/clock";
 import type { NotificationDelivery, NotificationProvider } from "@/lib/notifications";
@@ -301,6 +302,7 @@ export async function sendDueCheckoutRecoveries(
           checkoutId: checkout.id,
           shopId: shop.id,
           to: checkout.customerEmail,
+          locale: toDiverLocale(shop.defaultLocale),
           shopName: shop.name,
           tripTitle: trip.title,
           startsAt: trip.startsAt,

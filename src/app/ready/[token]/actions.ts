@@ -13,6 +13,7 @@ import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
+import { toDiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
@@ -285,6 +286,7 @@ export async function rescheduleMyBookingAction(token: string, formData: FormDat
           bookingId: result.newBookingId,
           shopId: ctx.data.shop.id,
           to: ctx.data.person.email,
+          locale: toDiverLocale(ctx.data.shop.defaultLocale),
           diverName: ctx.data.detail.person.fullName,
           shopName: ctx.data.detail.shop.name,
           tripTitle: newTrip.title,

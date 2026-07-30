@@ -1130,5 +1130,130 @@
       "stillQuestion": "¿Sigues teniendo una pregunta que las FAQ no responden? Las tiendas fundadoras tienen una línea directa con el fundador — úsala, siempre es bienvenida.",
       "emailCta": "Escribe a {email}"
     }
+  },
+  "notifications": {
+    "brief": {
+      "waterTemp": "agua alrededor de {celsius}°C",
+      "visibility": "visibilidad cercana a {meters} m",
+      "expect": "Prevé {list}.",
+      "firstTimer": "¿Tu primera inmersión en barco? El equipo te explica todo el material y el plan antes de entrar al agua — nunca te dejarán con el equipo sin más indicaciones. Ven con tus preguntas.",
+      "conditionsLabel": "Condiciones:",
+      "bringLabel": "Qué traer:",
+      "whoToText": "¿Preguntas para el día? Escribe a la tienda al {phone}."
+    },
+    "reminderAction": {
+      "waiverPending": "Firma tu waiver",
+      "certificationMissing": "Envía a tu tienda tu tarjeta de certificación",
+      "certificationExpired": "Consulta con tu tienda la fecha de renovación de tu certificación",
+      "certificationInsufficient": "Consulta tu nivel de certificación con la tienda",
+      "specialtyMissing": "Envía a tu tienda tu tarjeta de especialidad",
+      "specialtyExpired": "Actualiza tu tarjeta de especialidad con la tienda",
+      "nitroxMissing": "Envía a tu tienda tu tarjeta de nitrox",
+      "paymentDue": "Salda tu saldo pendiente"
+    },
+    "common": {
+      "greeting": "Hola, {firstName}:",
+      "greetingGeneric": "Hola:",
+      "genericName": "amigo",
+      "dockCallMinutes": "{minutes} minutos",
+      "trackWhatsLeft": "Sigue lo que te falta antes de salir",
+      "seeWhatsLeft": "Consulta lo que te falta antes de salir",
+      "outstandingHeading": "Aún por resolver antes de embarcar:",
+      "medicalReviewNote": "Comprueba si una respuesta médica necesita el visto bueno de un médico antes de viajar"
+    },
+    "tripConditionsHold": {
+      "subject": "Salida en espera por condiciones — {tripTitle}",
+      "body": "{shopName} ha puesto {tripTitle} en espera por condiciones para el {date}. Tu plaza sigue reservada mientras el equipo toma la decisión final sobre el tiempo.",
+      "crewNoteLabel": "Nota del equipo:",
+      "seeUpdate": "Consulta la actualización en directo de la salida"
+    },
+    "bookingConfirmation": {
+      "subject": "Estás a bordo — {tripTitle}",
+      "confirmed": "Tu plaza en {tripTitle} está confirmada.",
+      "dockNote": "Preséntate en el muelle {dock} antes. {shopName} se encargará del resto.",
+      "packingHeading": "Recordatorio de la lista de equipo:"
+    },
+    "waitlistInvite": {
+      "subject": "Se ha liberado una plaza en {tripTitle}",
+      "body": "Se acaba de liberar una plaza en {tripTitle} con {shopName}, y eres el siguiente en la lista de espera.",
+      "claim": "Resérvala antes de que se agote",
+      "claimLink": "Reservar tu plaza",
+      "footer": "Las plazas se asignan por orden de llegada, así que no esperes demasiado. ¡Nos vemos en el barco!"
+    },
+    "lastMinuteDeal": {
+      "subject": "{discountPercent}% de descuento en {tripTitle} — oferta de última hora",
+      "body": "{shopName} acaba de abrir un {discountPercent}% de descuento en {tripTitle}.",
+      "useCode": "Usa el código {code} al reservar:",
+      "bookLink": "Reservar {tripTitle}",
+      "expiry": "El código caduca el {expires} (salida) o cuando se agoten las plazas, lo que ocurra antes."
+    },
+    "checkoutRecovery": {
+      "subject": "¿Terminar la reserva de {tripTitle}?",
+      "body": "Tu plaza en {tripTitle} con {shopName} sigue reservada — solo falta terminar de pagar.",
+      "pickUp": "Continúa justo donde lo dejaste",
+      "finishPaying": "Terminar de pagar"
+    },
+    "tripReminder": {
+      "weekSubject": "Sales esta semana — {tripTitle}",
+      "weekBody": "Un recordatorio rápido de que {tripTitle} con {shopName} sale esta semana.",
+      "dockNote": "Preséntate en el muelle {dock} antes.",
+      "daySubject": "Sales mañana — {tripTitle}",
+      "dayOpenerFirstTimer": "Mañana buceas con {shopName} — aquí tienes todo lo que necesitas para el día.",
+      "dayOpenerReturning": "Un recordatorio rápido de que {tripTitle} con {shopName} sale mañana.",
+      "arrival": "Procura estar en el muelle a las {time} — {dock} antes de zarpar."
+    },
+    "tripRecap": {
+      "subject": "Tu inmersión con {shopName} — {tripTitle}",
+      "thanks": "Gracias por bucear {tripTitle} con {shopName} el {date}.",
+      "dived": "Buceaste en {sites}.",
+      "seeRecap": "Ver el resumen de tu día",
+      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. ¡Nos vemos en el agua!"
+    },
+    "welcome": {
+      "subject": "Bienvenido a DiveDay, {shopName}",
+      "body": "{shopName} ya está activo en DiveDay. Añade tu primera salida, invita a un buceador, y el muelle está un paso más cerca.",
+      "signIn": "Inicia sesión cuando quieras",
+      "footer": "Nos alegra tenerte aquí."
+    },
+    "verifyAccount": {
+      "subject": "Confirma tu correo para DiveDay",
+      "confirm": "Confirma que esta es tu dirección de correo",
+      "expiry": "Este enlace caduca el {expiresAt}. Si no creaste una cuenta de DiveDay, puedes ignorar esto."
+    },
+    "staffInvite": {
+      "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",
+      "body": "{inviterName} te añadió a {shopName} en DiveDay como {roles}.",
+      "setPassword": "Configura tu contraseña para empezar",
+      "expiry": "Este enlace caduca el {expiresAt}. Si no esperabas esto, puedes ignorarlo."
+    },
+    "passwordReset": {
+      "subject": "Restablece tu contraseña de DiveDay",
+      "body": "Alguien pidió restablecer la contraseña de esta cuenta de DiveDay.",
+      "choose": "Elige una nueva aquí",
+      "expiry": "Este enlace caduca el {expiresAt} y funciona una sola vez. Si no fuiste tú, tu contraseña no ha cambiado — puedes ignorar esto."
+    },
+    "passwordChanged": {
+      "subject": "Se cambió tu contraseña de DiveDay",
+      "body": "La contraseña de esta cuenta de DiveDay se acaba de cambiar. Si fuiste tú, no tienes que hacer nada más.",
+      "recoveryWithLink": "Si no fuiste tú, solicita una contraseña nueva aquí de inmediato",
+      "recoveryNoLink": "Si no fuiste tú, solicita una contraseña nueva desde la página de inicio de sesión de inmediato.",
+      "recoveryWithLinkHtml": "Si no fuiste tú, {link} de inmediato.",
+      "recoveryLinkText": "solicita una contraseña nueva aquí"
+    },
+    "waiverRequest": {
+      "subject": "Completa tu waiver para {tripTitle}",
+      "body": "{shopName} necesita tu waiver para {tripTitle}.",
+      "completeText": "Complétalo aquí",
+      "completeLink": "Completar tu waiver",
+      "expiry": "Este enlace privado caduca el {expiresAt}."
+    },
+    "sms": {
+      "whenWeek": "esta semana",
+      "whenDay": "mañana",
+      "body": "{shopName}: {tripTitle} sale {when} — {date}, {time}. Preséntate en el muelle {minutes} min antes.",
+      "contact": "¿Preguntas? Escríbenos al {phone}.",
+      "medicalReviewNote": "Comprueba si una respuesta médica necesita el visto bueno de un médico",
+      "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}"
+    }
   }
 }
