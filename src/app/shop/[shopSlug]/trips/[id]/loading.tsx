@@ -6,7 +6,7 @@
  */
 export default function TripSurfaceLoading() {
   return (
-    <div data-loading-skeleton className="animate-pulse">
+    <div className="animate-pulse">
       <div className="h-4 w-32 rounded bg-surface-sunken" />
       <div className="mt-3 h-9 w-64 rounded bg-surface-sunken" />
       <div className="mt-2 h-4 w-48 rounded bg-surface-sunken" />

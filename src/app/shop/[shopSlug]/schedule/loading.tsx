@@ -1,7 +1,7 @@
 /** Content-shaped skeleton for the schedule list (design principle 1). */
 export default function TripsLoading() {
   return (
-    <main data-loading-skeleton className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <div className="mb-10 animate-pulse">
         <div className="h-4 w-40 rounded bg-surface-sunken" />
         <div className="mt-3 h-8 w-48 rounded bg-surface-sunken" />

@@ -5,7 +5,7 @@
 
 ## Context
 
-[fareharbor-feature-gaps-20260726.md](../../product/assessments/fareharbor-feature-gaps-20260726.md)
+[fareharbor-feature-gaps-20260726.md](../../product/archive/fareharbor-feature-gaps-20260726.md)
 verified this gap: FareHarbor emails a diver who reserved a spot but never finished paying. DiveDay's
 seat is held regardless of payment ([20260721-checkout-at-booking](20260721-checkout-at-booking.md)),
 so this is a nudge to finish paying, not a "you'll lose your spot" threat. Two corrections landed

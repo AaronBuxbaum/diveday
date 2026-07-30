@@ -454,7 +454,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   "Book a dive" button link. Framing is denied site-wide by default (a prior gap — nothing had ever
   set `X-Frame-Options`) except on the two embeddable route/query combinations, enforced at the edge
   (`src/proxy.ts`, `isEmbeddableShopRoute`). Answers the schedule/embed gap named in
-  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  [fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md).
   See [20260726-schedule-embed](../architecture/decisions/20260726-schedule-embed.md).
 
 ## Abandoned pay-at-booking checkout recovery (delivered 2026-07-26)
@@ -465,7 +465,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   once the trip or any linked booking has been cancelled since checkout started. The purchaser's
   email is stored durably on `booking_checkouts.customer_email` at checkout-creation time rather
   than re-derived from the party's linked bookings. Answers the abandoned-cart gap named in
-  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  [fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md).
   See [20260726-abandoned-checkout-recovery](../architecture/decisions/20260726-abandoned-checkout-recovery.md).
 
 ## Post-trip review request (delivered 2026-07-26)
@@ -474,7 +474,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   once in Settings; the recap page renders a plain `target="_blank"` link to it when configured,
   nothing otherwise. No review-platform API integration, no click tracking, no sentiment gating (ToS
   risk). Rides the existing recap delivery rather than its own send. Answers the review-request gap
-  named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  named in [fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md).
   See [20260726-post-trip-review-request](../architecture/decisions/20260726-post-trip-review-request.md).
 
 ## Post-trip crew tipping (delivered 2026-07-26)
@@ -484,7 +484,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   dedicated `tips` table so its simpler lifecycle never threads through the booking-payment gate.
   Three presets ($5/$10/$20) or a bounded custom amount ($1–$500), enforced server-side regardless of
   which the diver used. Inert until a shop both connects Stripe and has `chargesEnabled`. Answers the
-  tipping gap named in [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  tipping gap named in [fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md).
   See [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
 
 ## Diver self-service booking cancel/reschedule (delivered 2026-07-27)
@@ -497,7 +497,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   automated-refund logic the staff cancellation path already uses. Reviewed by `dive-domain-expert`
   and `security-reviewer` per AGENTS.md's hard rules for a manifest-mutating, token-authorized
   surface. Answers the self-service reschedule/cancel gap named in
-  [fareharbor-feature-gaps-20260726.md](assessments/fareharbor-feature-gaps-20260726.md).
+  [fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md).
   See [20260727-diver-self-service-cancel](../architecture/decisions/20260727-diver-self-service-cancel.md).
 
 ## Last-minute fill promos (delivered 2026-07-27)
