@@ -39,6 +39,8 @@ const EXPECTED_FILES = [
   "dive_site_creatures.csv",
   "dive_site_moments.csv",
   "recap_photos.csv",
+  "trip_reviews.csv",
+  "shop_promo_codes.csv",
   "courses.csv",
 ];
 
@@ -72,6 +74,8 @@ const EXPORTED_TABLES = [
   "dive_site_creatures",
   "dive_site_moments",
   "recap_photos",
+  "trip_reviews",
+  "shop_promo_codes",
   "courses",
 ];
 
@@ -96,6 +100,7 @@ const EXCLUDED_TABLES = [
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   "booking_checkouts", // payment attempts; outcomes live in bookings/orders
   "booking_checkout_bookings",
+  "shop_promo_redemptions", // points at a checkout attempt; Stripe holds the authoritative count
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
   "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
@@ -173,6 +178,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   dive_site_creatures: ["shop_id"],
   dive_site_moments: ["shop_id"],
   recap_photos: ["shop_id"],
+  trip_reviews: ["shop_id"],
+  shop_promo_codes: [
+    "shop_id",
+    "stripe_coupon_id", // provider linkage, useless outside this Stripe account
+    "stripe_promotion_code_id",
+  ],
   courses: ["shop_id"],
 };
 

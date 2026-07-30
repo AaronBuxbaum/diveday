@@ -23,6 +23,9 @@ function fakePromotions(overrides: Partial<PromotionProvider> = {}): PromotionPr
         stripePromotionCodeId: `promo_${counter}`,
       };
     },
+    async createShopPromotion(): Promise<CreateTripPromotionResult> {
+      return { status: "failed" };
+    },
     ...overrides,
   };
 }

@@ -16,18 +16,28 @@ import type {
   Trip,
 } from "./types";
 
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+/**
+ * Money on the confirmation panel. The shop's locale decides grouping and
+ * symbol placement (docs ADR 20260729-diver-copy-localization); the currency
+ * stays USD until multi-currency is a real requirement.
+ */
+function moneyFormatter(locale: string) {
+  return new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
+}
 
 function PaymentSection({
   payment,
   payCancelled,
   payRef,
+  locale,
 }: {
   payment: PaymentPanel;
   payCancelled: boolean;
   payRef: RentalFitRef;
+  locale: string;
 }) {
   if (!payment) return null;
+  const usd = moneyFormatter(locale);
 
   if (payment.state === "paid") {
     const depositWithBalance = payment.isDeposit && payment.balanceDueCents > 0;
@@ -124,13 +134,18 @@ export function BookingConfirmation({
         title={`You're on the boat, ${confirmed.person.fullName.split(" ")[0]}! 🤿`}
       >
         <p>
-          {formatShortDate(trip.startsAt, "en-US", shop.timezone)},{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, "en-US", shop.timezone)} — be at the dock{" "}
-          {shop.dockCallMinutes} minutes early and we'll take it from there.
+          {formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone)},{" "}
+          {formatTimeRangeTz(trip.startsAt, trip.endsAt, shop.defaultLocale, shop.timezone)} — be at
+          the dock {shop.dockCallMinutes} minutes early and we'll take it from there.
         </p>
       </EarnedMoment>
 
-      <PaymentSection payment={payment} payCancelled={payCancelled} payRef={fitRef} />
+      <PaymentSection
+        payment={payment}
+        payCancelled={payCancelled}
+        payRef={fitRef}
+        locale={shop.defaultLocale}
+      />
 
       {progressionCourse ? (
         <aside className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">

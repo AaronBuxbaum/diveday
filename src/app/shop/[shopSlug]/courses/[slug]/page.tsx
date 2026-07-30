@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { JsonLd } from "@/components/JsonLd";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
+import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
+import { diverTranslator } from "@/i18n/messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
-import { publicCopy } from "@/lib/public-copy";
+import { publicAppUrl } from "@/lib/notifications";
 import { CERTIFICATION_LEVEL_LABELS } from "@/lib/readiness";
+import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
   CourseAdmission,
@@ -34,9 +38,14 @@ export async function generateMetadata({
   const shop = await getShopBySlug(db, shopSlug);
   const course = shop ? await getCourseBySlug(db, shop.id, slug) : null;
   if (!course) return { title: "Course — DiveDay" };
+  const canonical = shop ? `/shop/${shop.slug}/courses/${course.slug}` : undefined;
+  const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;
+  const description = course.summary ?? course.description ?? undefined;
   return {
-    title: `${course.title} — ${shop?.name ?? "DiveDay"}`,
-    description: course.summary ?? course.description ?? undefined,
+    title,
+    description,
+    alternates: canonical ? { canonical } : undefined,
+    openGraph: { title, description, url: canonical },
   };
 }
 
@@ -65,11 +74,12 @@ export default async function CoursePage({
   if (!course.isActive && !staffView) notFound();
 
   const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
-  const copy = publicCopy(shop.defaultLocale).course;
+  const locale = shop.defaultLocale;
+  const t = diverTranslator(locale);
 
   const certificationRequired = course.minimumCertificationLevel
     ? `${CERTIFICATION_LEVEL_LABELS[course.minimumCertificationLevel]} or higher`
-    : copy.noCertification;
+    : t("course.noCertification");
   // Logistics only. The cert gate and the minimum age are admission facts and
   // belong to CourseAdmission, which is the one place a diver reads them.
   const specs = [
@@ -78,19 +88,40 @@ export default async function CoursePage({
   ].filter((spec) => spec !== null);
   const inquiryHref = shop.contactEmail ? "#get-in-touch" : null;
 
+  // A hidden course is a staff preview, not a public document — emitting a
+  // Course graph for a page divers cannot reach would advertise something that
+  // isn't on sale (docs ADR 20260729-booking-page-structured-data).
+  const structuredData = course.isActive
+    ? coursePageJsonLd(
+        shop,
+        {
+          slug: course.slug,
+          title: course.title,
+          agency: course.agency,
+          summary: course.summary,
+          description: course.description,
+          priceCents: courseTotalCents(course),
+          durationText: course.durationText,
+        },
+        publicAppUrl(),
+        await getShopReviewAggregate(db, shop.id),
+      )
+    : null;
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {structuredData ? <JsonLd data={structuredData} /> : null}
       {course.isActive ? null : (
         <p
           role="status"
           className="mb-6 rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-sm font-medium"
         >
-          {copy.hidden}{" "}
+          {t("course.hidden")}{" "}
           <Link
             href={`/shop/${shopSlug}/courses/${slug}/edit`}
             className="font-semibold text-primary hover:underline"
           >
-            {copy.backToEditing}
+            {t("course.backToEditing")}
           </Link>
         </p>
       )}
@@ -99,6 +130,7 @@ export default async function CoursePage({
         totalCents={courseTotalCents(course)}
         bookHref={sessions.length > 0 ? "#dates" : null}
         inquiryHref={inquiryHref}
+        locale={locale}
       />
       <CourseSpecs items={specs} />
       <CourseAdmission
@@ -114,6 +146,7 @@ export default async function CoursePage({
         sessions={sessions}
         shopSlug={shopSlug}
         timezone={shop.timezone}
+        locale={locale}
         inquiryHref={inquiryHref}
       />
       <CourseFaqs faqs={course.faqs} />

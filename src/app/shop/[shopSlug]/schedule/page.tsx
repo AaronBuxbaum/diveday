@@ -3,12 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
+import { JsonLd } from "@/components/JsonLd";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopReviews } from "@/components/ShopReviews";
 import { StaffScheduleBoard } from "@/components/StaffScheduleBoard";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
+import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
   pagedUpcomingTripsWithCounts,
@@ -17,6 +20,7 @@ import {
   upcomingStaffSchedule,
   upcomingTripsForCalendar,
 } from "@/db/trips";
+import { diverTranslator } from "@/i18n/messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import {
@@ -29,14 +33,39 @@ import {
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
-import { publicCopy } from "@/lib/public-copy";
+import { publicAppUrl } from "@/lib/notifications";
+import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 
-export const metadata: Metadata = {
-  title: "Schedule — DiveDay",
-};
+/**
+ * Per-shop title, description, and canonical URL. The embed surface points its
+ * canonical at the standalone page: the same departures rendered at two URLs is
+ * exactly the duplication a canonical exists to resolve (docs ADR
+ * 20260729-booking-page-structured-data).
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ shopSlug: string }>;
+}): Promise<Metadata> {
+  const { shopSlug } = await params;
+  const shop = await getShopBySlug(await getDb(), shopSlug);
+  if (!shop) return { title: "Schedule — DiveDay" };
+  const t = diverTranslator(shop.defaultLocale);
+  const description = t("schedule.diverDescription");
+  return {
+    title: `Dive schedule — ${shop.name}`,
+    description,
+    alternates: { canonical: `/shop/${shop.slug}/schedule` },
+    openGraph: {
+      title: `Dive schedule — ${shop.name}`,
+      description,
+      url: `/shop/${shop.slug}/schedule`,
+    },
+  };
+}
 
 export default async function TripsPage({
   params,
@@ -67,13 +96,18 @@ export default async function TripsPage({
   // and calendar come from bounded queries — nothing loads every trip at once,
   // so a shop with hundreds of departures on the books stays quick.
   const tz = shop.timezone;
-  const copy = publicCopy(shop.defaultLocale);
+  const locale = shop.defaultLocale;
+  const t = diverTranslator(locale);
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
   const now = nowDate();
-  const [range, stats, { trips: upcoming, nextCursor }] = await Promise.all([
-    upcomingScheduleRange(db, shop.id, now),
-    staffView ? upcomingScheduleStats(db, shop.id, now) : null,
-    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-  ]);
+  const [range, stats, { trips: upcoming, nextCursor }, reviewAggregate, reviews] =
+    await Promise.all([
+      upcomingScheduleRange(db, shop.id, now),
+      staffView ? upcomingScheduleStats(db, shop.id, now) : null,
+      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+      getShopReviewAggregate(db, shop.id),
+      listPublishedShopReviews(db, shop.id),
+    ]);
   const hasUpcoming = range.first !== null;
 
   // Diver-facing month calendar: place the month's dives on their shop-local
@@ -128,12 +162,36 @@ export default async function TripsPage({
       list.push({
         id: trip.id,
         title: trip.title,
-        time: formatTime(trip.startsAt, "en-US", tz),
+        time: formatTime(trip.startsAt, locale, tz),
         full: isFull(trip),
       });
       tripsByDay.set(iso, list);
     }
   }
+
+  // Structured data describes the canonical standalone page only — see
+  // generateMetadata above. Staff see their own board, which is not a public
+  // document and has no business carrying an Event graph.
+  const structuredData =
+    isEmbed || staffView
+      ? null
+      : scheduleJsonLd(
+          shop,
+          upcoming.map((trip) => ({
+            id: trip.id,
+            title: trip.title,
+            description: trip.description,
+            startsAt: trip.startsAt,
+            endsAt: trip.endsAt,
+            capacity: trip.capacity,
+            booked: trip.booked,
+            priceCents: trip.priceCents,
+            diveSiteName: trip.diveSite?.name ?? null,
+            conditionsHold: trip.conditionsHold,
+          })),
+          publicAppUrl(),
+          reviewAggregate,
+        );
 
   return (
     <main
@@ -143,11 +201,12 @@ export default async function TripsPage({
           : "mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
       }
     >
+      {structuredData ? <JsonLd data={structuredData} /> : null}
       {isEmbed ? null : (
         <ShopPageHeader
-          eyebrow={copy.schedule.eyebrow}
-          title={copy.schedule.title}
-          description={staffView ? copy.schedule.staffDescription : copy.schedule.diverDescription}
+          eyebrow={t("schedule.eyebrow")}
+          title={t("schedule.title")}
+          description={staffView ? t("schedule.staffDescription") : t("schedule.diverDescription")}
           actions={
             staffView ? (
               <Link
@@ -205,10 +264,10 @@ export default async function TripsPage({
 
       {!hasUpcoming ? (
         <EmptyState>
-          <h2 className="font-medium">{copy.schedule.noTrips}</h2>
+          <h2 className="font-medium">{t("schedule.noTrips")}</h2>
           {staffView ? (
             <>
-              <p className="mt-1 text-sm text-muted">{copy.schedule.noTripsStaff}</p>
+              <p className="mt-1 text-sm text-muted">{t("schedule.noTripsStaff")}</p>
               <Link
                 href={`/shop/${shopSlug}/trips/new`}
                 className={buttonClass({ className: "mt-4 rounded-xl" })}
@@ -217,7 +276,7 @@ export default async function TripsPage({
               </Link>
             </>
           ) : (
-            <p className="mt-1 text-sm text-muted">{copy.schedule.noTripsPublic}</p>
+            <p className="mt-1 text-sm text-muted">{t("schedule.noTripsPublic")}</p>
           )}
         </EmptyState>
       ) : (
@@ -239,17 +298,17 @@ export default async function TripsPage({
                 >
                   <div className="shrink-0 sm:w-32">
                     <p className="font-medium">
-                      {formatShortDate(trip.startsAt, "en-US", shop.timezone)}
+                      {formatShortDate(trip.startsAt, locale, shop.timezone)}
                     </p>
                     <p className="text-sm text-muted">
-                      {formatTimeRange(trip.startsAt, trip.endsAt, "en-US", shop.timezone)}
+                      {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
                     </p>
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="font-medium group-hover:text-primary">{trip.title}</h2>
                     {trip.course ? (
                       <p className="mt-0.5 text-sm font-medium text-primary">
-                        Course session · {trip.course.title}
+                        {t("schedule.courseSession")} · {trip.course.title}
                       </p>
                     ) : null}
                     {trip.description ? (
@@ -257,20 +316,19 @@ export default async function TripsPage({
                     ) : null}
                     {trip.priceCents !== null ? (
                       <p className="mt-2 text-sm font-semibold tabular-nums">
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(trip.priceCents / 100)}{" "}
-                        <span className="font-normal text-muted">per diver</span>
+                        {money.format(trip.priceCents / 100)}{" "}
+                        <span className="font-normal text-muted">{t("common.perDiver")}</span>
                       </p>
                     ) : null}
                     {trip.diveSite ? (
                       <p className="mt-2 text-sm font-medium text-primary">
-                        Dive site · {trip.diveSite.name}
+                        {t("schedule.diveSite")} · {trip.diveSite.name}
                       </p>
                     ) : null}
                     <p className="mt-2 text-sm text-muted">
-                      {trip.plannedDives === 2 ? "Two-tank trip" : `${trip.plannedDives} dives`}
+                      {trip.plannedDives === 2
+                        ? t("schedule.twoTank")
+                        : t("schedule.diveCount", { count: trip.plannedDives })}
                     </p>
                   </div>
                   <div className="shrink-0">
@@ -291,7 +349,7 @@ export default async function TripsPage({
               href={`/shop/${shopSlug}/schedule?after=${encodeURIComponent(nextCursor)}${month ? `&month=${month}` : ""}${isEmbed ? "&embed=1" : ""}`}
               className={buttonClass({ variant: "secondary" })}
             >
-              Show later departures
+              {t("schedule.showLater")}
             </Link>
           ) : null}
           {after ? (
@@ -299,13 +357,25 @@ export default async function TripsPage({
               href={`/shop/${shopSlug}/schedule${month ? `?month=${month}` : ""}${isEmbed ? `${month ? "&" : "?"}embed=1` : ""}`}
               className="text-sm font-medium text-primary hover:underline"
             >
-              ← Back to the next departure
+              {t("schedule.backToNext")}
             </Link>
           ) : null}
         </div>
       ) : null}
       {/* The embed widget stays compact/booking-focused (docs ADR
           20260726-schedule-embed); this is a full-page-only surface. */}
+      {/* Reviews are a full-page, diver-facing signal: the embed stays a
+          compact booking widget (docs ADR 20260726-schedule-embed), and staff
+          moderate from /shop/[shopSlug]/reviews rather than reading them here. */}
+      {!isEmbed && !staffView ? (
+        <ShopReviews
+          aggregate={reviewAggregate}
+          reviews={reviews}
+          locale={locale}
+          timezone={tz}
+          t={t}
+        />
+      ) : null}
       {!isEmbed && !staffView ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
     </main>
   );

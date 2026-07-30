@@ -13,6 +13,7 @@ import { getDb } from "@/db/client";
 import {
   getShopById,
   setShopContact,
+  setShopDefaultLocale,
   setShopDockCallMinutes,
   setShopPackingList,
   setShopRentalItems,
@@ -25,6 +26,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { DIVER_LOCALE_LABELS, DIVER_LOCALES, isDiverLocale } from "@/i18n/settings";
 import { canExportShopData, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -60,6 +62,11 @@ const NOTICE_MESSAGES: Record<string, { tone: "success" | "danger" | "warning"; 
     text: "Use a complete email address, or empty the box to take it off your public pages.",
   },
   review_url_saved: { tone: "success", text: "Review link saved." },
+  locale_saved: { tone: "success", text: "Diver-facing language saved." },
+  locale_invalid: {
+    tone: "danger",
+    text: "Pick one of the listed languages.",
+  },
   review_url_invalid: {
     tone: "danger",
     text: "Enter a full https:// link, or empty the box to stop asking for reviews.",
@@ -259,6 +266,21 @@ async function saveReviewUrlAction(formData: FormData) {
   revalidateAndRedirect(settings, `${settings}?notice=review_url_saved`);
 }
 
+/**
+ * The language every public and capability page renders in. Parsed against the
+ * supported list, never taken as free text — the value reaches `Intl`
+ * formatters and a `lang` attribute (docs ADR 20260729-diver-copy-localization).
+ */
+async function saveLocaleAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  const locale = formData.get("defaultLocale");
+  if (!isDiverLocale(locale)) redirect(`${settings}?notice=locale_invalid`);
+  await setShopDefaultLocale(await getDb(), session.user.shopId, locale);
+  revalidateAndRedirect(settings, `${settings}?notice=locale_saved`);
+}
+
 async function disconnectAction() {
   "use server";
   const session = await requireStaffSession();
@@ -420,6 +442,32 @@ export default async function PaymentsSettingsPage({
           <FieldActions>
             <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
               Save contact details
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">Diver-facing language</h2>
+        <p className="mt-1 text-sm text-muted">
+          The language your schedule, trip pages, course pages, and post-trip recaps are written in,
+          and how dates and prices are formatted on them. Staff screens stay in English. The waiver
+          and medical questionnaire also stay in English — that wording is legally reviewed and
+          needs a separate sign-off before it can be translated.
+        </p>
+        <FieldGrid as="form" action={saveLocaleAction} columns={1} className="mt-4">
+          <Field label="Language">
+            <select name="defaultLocale" defaultValue={shop.defaultLocale} className={controlClass}>
+              {DIVER_LOCALES.map((locale) => (
+                <option key={locale} value={locale}>
+                  {DIVER_LOCALE_LABELS[locale]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <FieldActions>
+            <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
+              Save language
             </SubmitButton>
           </FieldActions>
         </FieldGrid>

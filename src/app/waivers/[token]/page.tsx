@@ -21,8 +21,8 @@ import {
   saveBookingEmergencyContact,
   saveWaiverDraft,
 } from "@/db/waivers";
+import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
-import { capabilityCopy } from "@/lib/capability-copy";
 import { emergencyContactSchema } from "@/lib/contact";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
@@ -138,7 +138,7 @@ export default async function WaiverPage({
     );
   }
   const shopName = shop.name;
-  const copy = capabilityCopy(shop.defaultLocale);
+  const t = diverTranslator(shop.defaultLocale);
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
     const bookingId = requireTokenBookingId(state.record);
@@ -203,7 +203,7 @@ export default async function WaiverPage({
         <EarnedMoment
           as="h1"
           eyebrow={shopName}
-          title={needsReview ? copy.waiverReceived : copy.waiverDone}
+          title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
         >
           <p>
             {needsReview

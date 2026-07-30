@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { addRecapPhoto, canAddRecapPhoto } from "@/db/recap";
+import { submitTripReview } from "@/db/reviews";
 import { MAX_TIP_CENTS, MIN_TIP_CENTS, startTipCheckout } from "@/db/tips";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { clientIp } from "@/lib/request-ip";
+import { parseReviewRating } from "@/lib/reviews";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 
 /**
@@ -111,4 +113,48 @@ export async function startTipAction(token: string, formData: FormData) {
   }).catch(() => null);
   if (!outcome?.ok) redirect(`${back}?tip=error`);
   redirect(outcome.checkoutUrl);
+}
+
+/**
+ * A diver rates the day they actually dived. The credential is the signed
+ * recap token already in the URL — it resolves to the booking, and shop, trip,
+ * and person are all derived from that row rather than accepted from the form.
+ * That is what makes these reviews verified: there is no way to leave one
+ * without having been on the boat (docs ADR 20260729-verified-diver-reviews).
+ *
+ * Rate-limited by IP before the token is verified, so this also throttles
+ * brute-force token guessing rather than only abuse of a known-good link
+ * (CR-013, same shape as the photo upload above).
+ */
+export async function submitReviewAction(token: string, formData: FormData) {
+  const back = `/recap/${token}`;
+  const ip = await clientIp();
+  if (!checkRateLimit(rateLimitKey("recap-review-ip", ip), RATE_LIMITS.reviewSubmitByIp).allowed) {
+    redirect(`${back}?review=error`);
+  }
+  const bookingId = verifyRecapToken(token);
+  if (!bookingId) redirect(`${back}?review=error`);
+  if (
+    !checkRateLimit(
+      rateLimitKey("recap-review-booking", bookingId),
+      RATE_LIMITS.reviewSubmitByToken,
+    ).allowed
+  ) {
+    redirect(`${back}?review=error`);
+  }
+
+  const rating = parseReviewRating(formData.get("rating"));
+  if (rating === null) redirect(`${back}?review=error`);
+
+  const outcome = await submitTripReview(await getDb(), {
+    bookingId,
+    rating,
+    // `normalizeReviewComment` refuses a non-string, but keep the File case
+    // from reaching it as a type error at all.
+    comment: String(formData.get("comment") ?? ""),
+  }).catch(() => null);
+  if (!outcome?.ok) redirect(`${back}?review=error`);
+
+  revalidatePath(back);
+  redirect(`${back}?review=${outcome.published ? "published" : "pending"}`);
 }

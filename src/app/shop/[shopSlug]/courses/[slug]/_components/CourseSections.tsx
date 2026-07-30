@@ -23,6 +23,7 @@ export function CourseHero({
   totalCents,
   bookHref,
   inquiryHref,
+  locale,
 }: {
   course: Course;
   totalCents: number | null;
@@ -32,8 +33,10 @@ export function CourseHero({
    * visible next step until they scroll past specs, admission, overview,
    * gallery, and the schedule (design/principles.md #2). */
   inquiryHref?: string | null;
+  /** The shop's locale — money and dates on a public page follow it, not the server's. */
+  locale: string;
 }) {
-  const usd = new Intl.NumberFormat("en-US", {
+  const usd = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
@@ -276,6 +279,7 @@ export function CourseSessions({
   sessions,
   shopSlug,
   timezone,
+  locale,
   inquiryHref,
 }: {
   sessions: Array<{
@@ -288,6 +292,7 @@ export function CourseSessions({
   }>;
   shopSlug: string;
   timezone: string;
+  locale: string;
   /** Anchor to the "Get in touch" composer, or null when the shop published no address. */
   inquiryHref: string | null;
 }) {
@@ -332,13 +337,13 @@ export function CourseSessions({
               >
                 <div className="min-w-0">
                   <p className="font-semibold">
-                    {formatShortDate(session.startsAt, "en-US", timezone)}
-                    {multiDay ? ` – ${formatShortDate(session.endsAt, "en-US", timezone)}` : ""}
+                    {formatShortDate(session.startsAt, locale, timezone)}
+                    {multiDay ? ` – ${formatShortDate(session.endsAt, locale, timezone)}` : ""}
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {multiDay
-                      ? `Starts ${formatTime(session.startsAt, "en-US", timezone)}`
-                      : formatTimeRangeTz(session.startsAt, session.endsAt, "en-US", timezone)}{" "}
+                      ? `Starts ${formatTime(session.startsAt, locale, timezone)}`
+                      : formatTimeRangeTz(session.startsAt, session.endsAt, locale, timezone)}{" "}
                     · {capacityLabel(session)}
                   </p>
                 </div>
