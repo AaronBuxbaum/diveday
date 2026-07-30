@@ -39,6 +39,13 @@ security-sensitive or safety-critical surfaces and say so inline.
 | 14 | June — low-vision / screen-reader / assistive-tech user | accessibility everywhere |
 | 15 | Leo — anyone on a slow island connection | performance, offline/PWA, error coverage, email |
 
+Two cross-persona lenses follow the personas:
+
+| § | Lens | Question |
+| --- | --- | --- |
+| 16 | Over-explained copy | Are we too verbose about mechanics customers don't care about? |
+| 17 | Redundancy, coupling, findability | Should functionality live together or apart — and can you find it when you need it? |
+
 Then: a cross-cutting consistency appendix and a ranked quick-wins list.
 
 ---
@@ -308,24 +315,24 @@ built in English in the domain layer (`src/db/checkouts.ts`, `src/lib/courses.ts
 39. **[S] Use `Intl.ListFormat` on the recap page.** `sitesSentence` hardcodes `" and "` while
     the recap *email* already uses `Intl.ListFormat` — the email and the page it links to
     disagree in Spanish. Align the page (`recap/[token]/page.tsx`).
-39a. **[S] Set `<html lang>` from the negotiated locale.** `src/app/layout.tsx` hardcodes
+125. **[S] Set `<html lang>` from the negotiated locale.** `src/app/layout.tsx` hardcodes
     `lang="en"` for every page including fully Spanish ones — screen readers pronounce Spanish
     pages with an English voice. Thread `requestLocale()` into the root layout's `lang`
     attribute. Probably the highest-impact one-line i18n fix in the app.
-39b. **[S] Localize the calendar week start.** `ScheduleCalendar.tsx` + `src/lib/calendar.ts`
+126. **[S] Localize the calendar week start.** `ScheduleCalendar.tsx` + `src/lib/calendar.ts`
     hardcode Sunday-first; Spanish/German calendars are Monday-first. Use
     `Intl.Locale.prototype.getWeekInfo()` with a Sunday fallback.
-39c. **[S] Fix the copy-ratchet blind spot's known leaks.** `scripts/check-copy.mjs` can't see
+127. **[S] Fix the copy-ratchet blind spot's known leaks.** `scripts/check-copy.mjs` can't see
     strings returned from function bodies in `.tsx`, so it reports zero while these ship
     English on localized surfaces: `WaiverSendControl.tsx` ("Copied", "No email on file"…),
     `ConnectivityStatus.tsx` ("This device is online."…), `ImageFileInput.tsx` (task 33), and
     the literal "version" on the waiver page. Fix the strings first; extending the scanner to
     function bodies is a follow-up worth its own task.
-39d. **[M] Per-recipient notification language.** `src/lib/notifications/index.ts` picks the
+128. **[M] Per-recipient notification language.** `src/lib/notifications/index.ts` picks the
     *shop's* locale for every email — a German diver at a Cozumel shop gets Spanish
     confirmations. Add an optional locale on the person (captured from the booking request's
     negotiated locale) and prefer it. Schema-change skill; tests on the notification path.
-39e. **[S] Localize page titles.** 25+ static English `metadata.title` exports on localized
+129. **[S] Localize page titles.** 25+ static English `metadata.title` exports on localized
     pages (waiver, ready, recap, sign-in). Convert the token surfaces at minimum to
     `generateMetadata` with the negotiated locale.
 
@@ -871,6 +878,102 @@ confirmation, no logo, and no unsubscribe link on the marketing-adjacent templat
 
 ---
 
+## 16. Lens: over-explained, over-technical copy
+
+The pattern, stated once: **the product writes best where it names an outcome and worst where
+it recently earned a hard-won correctness guarantee.** "It's on the board." / "Verified and on
+file." / every email subject line — perfect. But wherever engineering solved something hard —
+import fidelity, offline reconciliation, waiver integrity, Stripe coupon ownership, dive-site
+template merges — the copy re-derives the guarantee for the reader instead of asserting the
+result. The email bundle has **zero mechanism leaks** across 15 templates; it is the house
+standard the import and offline surfaces should be held to.
+
+**Mechanism leaks worth keeping** (trust that answers a real fear — trim, don't cut):
+calendar "read-only, DiveDay never changes anything"; Stripe "DiveDay never holds your money";
+calendar-link "treat it like a password"; "no silent passes"; the fill-station gas-analysis
+scope note.
+
+**Leaks that are noise**, with the worst offenders: the offline manifest explains its sync
+algorithm on six surfaces ("Boarding goes by readiness as it stood when this copy was
+saved…" — the captain, offline, cannot act on any of it); Promos explains that "the coupon
+lives on your account, not DiveDay's" and that "Stripe enforces the expiry"; the waiver
+settings page says "server-sealed HMAC over their signed metadata and template snapshot";
+divers-remove says "This is a **soft delete**"; Reports says "Stripe was asked to do something
+and the app never confirmed how it went" under a heading containing "reconciliation"; the
+product hero says "roll-call event"; the marketing capability index says "negotiated
+language," "append-only boarding history," and "command palette." Internal vocabulary verdicts:
+*manifest*, *roll call*, *readiness*, *Today* — earned, keep; *blockers* (nav label),
+*checkpoint*, *workspace*, *line-busting*, *demand signal*, *authoritative roster*, *soft
+delete*, *reconciliation*, *coupon* — internal, rename.
+
+**Caveat overload:** the import contract ("cards land verified and flagged imported, one-tap
+confirm, specialty waits on the confirm, medical answers never reconstructed") is restated in
+**~19 places** across `diver.json`, `staff.json`, `src/lib/import.ts`, and
+`src/lib/migration-guides.ts` — including the same 82-word paragraph twice in one file, on
+pages that also render the honesty table saying it a third time. Reassurances that raise the
+fear they answer: "nothing here is private to anyone but you" (×2), "so you're never left
+without one," three separate "nothing is ever quietly…" constructions on marketing pages.
+
+**Walls of text:** `/product` ships 74 bullets (30 feature + 44 capability); the honesty
+table's worst rows run 119/125/106/104 words; the course editor has 21 hint slots on one form;
+the import wizard shows ~313 words of preamble before a file is chosen; the export page's
+"not included" note is one 87-word paragraph.
+
+### Tasks
+
+130. **[M] One canonical import contract.** Trim every `IMPORT_HONESTY_TABLE` row
+    (`src/lib/import.ts`) to ≤25 words with a one-line summary (move the 119/125-word rows'
+    nuance behind the table's existing detail affordance or cut it), then delete the ~18
+    restatements across `diver.json` (switching pages ×5, FAQ), `staff.json` (import wizard
+    ×3, settings), and `migration-guides.ts` (×4), replacing each with one short sentence
+    that defers to the table. The two byte-identical 82-word `importReadyBody` paragraphs
+    collapse to one ~30-word version. Removes ~600 words; `pnpm check:copy --write` banks it.
+    Conversion-sensitive pages → `conversion-reviewer` after.
+131. **[M] Offline manifest: state, not story.** Across the six offline-manifest copy surfaces
+    (`staff.json` offlineManifest/offlineManifestManager namespaces, `diver.json` product/FAQ
+    notes): replace reconciliation narration with a two-state vocabulary (sent / needs a
+    look) and one-line freshness ("Readiness as of {time}. We'll re-check when you're back in
+    signal."). Also fix the unactionable stale-copy line ("don't rely on it until you've
+    refreshed" — told to someone offline). ~250 words removed.
+132. **[S] Strip engineering nouns from user-visible strings.** Rewrites, all in the bundles:
+    "soft delete" → "They come off your active lists; bookings, cards, and sizes stay on
+    file."; the HMAC waiver-integrity description → "Signed waivers are tamper-evident — if a
+    record has been altered, we flag it." (the marketing phrasing is already better than the
+    in-app one; converge on it); "reconciliation" report headings → "{n} payments we couldn't
+    confirm. Check them in Stripe."; "roll-call event" → "head count"; "workspace" → "shop";
+    "coupon lives on your account" → "codes are created on your own Stripe account";
+    "command palette" (marketing) → "search that jumps straight to a diver or a trip";
+    "line-busting check-in" → "counter check-in"; "demand signal" → "this boat could take
+    more"; "authoritative roster" → "everyone aboard".
+133. **[M] Rename the "Blockers" nav label.** Staff say "who isn't ready," not "blockers" —
+    the page's own empty state ("Every boat is boarding-ready") proves the right register.
+    Rename nav + page title to "Not ready" (bundle keys in `staff.json`, nav in
+    `ShopNavLinks.tsx`); leave internal code names alone. Check the e2e specs that navigate
+    by label.
+134. **[S] Cut the fear-raising reassurances.** Remove "nothing here is private to anyone but
+    you" (both places — also flagged as confusing in task 30's orbit), "better than quietly
+    substituting one," and reduce the three "quietly/silent" marketing constructions to one.
+135. **[M] Put the 44-bullet capability index behind disclosure.** `/product` renders 74
+    bullets; keep the 30-bullet story inline and collapse `productCapabilityIndex` behind a
+    "The full list" `<details>` (or a `/product/everything` page). `conversion-reviewer`
+    after.
+136. **[M] Halve the form-hint density on the two worst forms.** Course editor (21 hint
+    slots) and new-trip (14): delete duplicate hints, move validation rules out of permanent
+    hints into inline errors (e.g. the deposit "Ignored if it's blank or not below the
+    price" rule), and show niche help only on focus. Follow
+    `docs/design/forms-and-controls.md`.
+137. **[S] Shorten the fifteen longest strings.** The audit's length table (94→36 words for
+    the switching FAQ, 87→32 for the export exclusions, 64→18 for `blockedAfterDive`, etc.)
+    is a ready-made worklist: apply the suggested rewrites via the `i18n-copy` skill, en +
+    es, and bank the copy reduction. Protect the good-examples list (the done-states, the
+    email bundle) as the register to match.
+138. **[S] Dedupe the coexist blocks.** FareHarbor's and Rezdy's `coexist.runsInDiveDay`
+    items in `src/lib/migration-guides.ts` differ only by competitor name in 4 of 6 items —
+    extract the shared items into the registry's shared template so the two guides can't
+    drift.
+
+---
+
 ## Appendix A — cross-surface consistency debts
 
 Each of these is a small task ("make X consistent with Y") suitable for a lesser model; file
@@ -919,7 +1022,7 @@ refs above.
 
 If handing a lesser model twelve tasks tomorrow, in order of leverage-per-effort:
 
-1. Task 39a — `<html lang>` hardcoded to `en` (one line; every screen-reader + Spanish user).
+1. Task 125 — `<html lang>` hardcoded to `en` (one line; every screen-reader + Spanish user).
 2. Task 117 — undefined tokens rendering invisible UI (the hold-to-unlock progress fill on
    the boat surface is invisible today).
 3. Task 10 — desync'd schedule calendar/list (public-facing correctness bug).
