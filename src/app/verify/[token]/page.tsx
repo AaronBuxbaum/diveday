@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { Notice } from "@/components/account/Notice";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -13,17 +14,6 @@ export const metadata: Metadata = {
   title: "Confirm your email — DiveDay",
   robots: { index: false, follow: false },
 };
-
-function Notice({ title, text }: { title: string; text: string }) {
-  return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-3 text-muted">{text}</p>
-      </section>
-    </main>
-  );
-}
 
 /**
  * Deliberately does not confirm on the bare GET: a corporate link-prescanner

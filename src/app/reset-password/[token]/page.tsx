@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { Notice } from "@/components/account/Notice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -15,30 +16,6 @@ export const metadata: Metadata = {
   title: "Set a new password — DiveDay",
   robots: { index: false, follow: false },
 };
-
-function Notice({
-  title,
-  text,
-  backToSignIn,
-}: {
-  title: string;
-  text: string;
-  backToSignIn: string;
-}) {
-  return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-3 text-muted">{text}</p>
-        <p className="mt-4 text-sm text-muted">
-          <Link href="/sign-in" className="font-medium text-primary hover:underline">
-            {backToSignIn}
-          </Link>
-        </p>
-      </section>
-    </main>
-  );
-}
 
 /**
  * Doesn't mutate on the bare GET, same as `/verify/[token]` — only the
