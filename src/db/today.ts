@@ -20,7 +20,7 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff, pagedUpcomingTripsWithCounts } from "./trips";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -368,8 +368,14 @@ export async function getTodayWork(
   t: StaffTranslator = staffTranslator("en-US"),
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
-  const upcoming = await upcomingTripsWithCounts(db, shopId, now);
-  const inWindow = upcoming.filter((trip) => trip.startsAt <= horizon).slice(0, MAX_TRIPS);
+  // The board only ever shows the soonest MAX_TRIPS departures, so bound the
+  // query itself with the already-existing keyset page (`pagedUpcomingTripsWithCounts`)
+  // rather than fetching every scheduled trip in the shop's future and slicing after.
+  const { trips: upcoming } = await pagedUpcomingTripsWithCounts(db, shopId, {
+    now,
+    limit: MAX_TRIPS,
+  });
+  const inWindow = upcoming.filter((trip) => trip.startsAt <= horizon);
   const today = shopDay(now, timeZone);
   const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
 
@@ -422,7 +428,7 @@ export async function getTodayWork(
       shopId,
       inWindow.filter((trip) => trip.course).map((trip) => trip.id),
     ),
-    listNotificationDeliveryIssues(db, shopId),
+    listNotificationDeliveryIssues(db, shopId, { from: now, until: horizon }),
     tripIdsNeverSentLastMinuteDeal(
       db,
       shopId,
@@ -604,7 +610,6 @@ export async function getTodayWork(
   }
 
   for (const issue of deliveryIssues) {
-    if (issue.trip.startsAt < now || issue.trip.startsAt > horizon) continue;
     const isWaiver = issue.delivery.kind !== "booking_confirmation";
     const what = isWaiver ? "waiver link" : "booking confirmation";
     const roster = `/shop/${shopSlug}/trips/${issue.trip.id}/guests#booking-${issue.booking.id}`;

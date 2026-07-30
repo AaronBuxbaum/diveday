@@ -731,6 +731,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
 
+        // The waiver: the release editor plus the signed-record integrity
+        // audit, paginated (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`)
+        // so the demo shop's 150+ signed records render as one page with a
+        // "Show more records" link rather than a silent truncation notice.
+        await page.goto("/shop/blue-mantis/waivers");
+        await page.getByRole("heading", { level: 1, name: "Waiver" }).waitFor();
+        await page.getByRole("link", { name: "Show more records" }).waitFor();
+        await capture(page, "staff-waivers", scheme);
+
         // The moderation queue: published reviews, and the "waiting on you"
         // card a written review sits in until staff release it
         // (docs ADR 20260729-verified-diver-reviews).

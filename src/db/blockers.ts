@@ -4,7 +4,7 @@ import { annotateAlsoOn, type BlockerQueueTrip, blockerFixFor } from "@/lib/bloc
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { listTripReadiness } from "./readiness";
-import { upcomingTripsWithCounts } from "./trips";
+import { pagedUpcomingTripsWithCounts } from "./trips";
 
 /**
  * How many upcoming departures the queue inspects. Readiness is a per-trip
@@ -36,8 +36,10 @@ export async function getBlockerQueue(
    */
   t: StaffTranslator = staffTranslator("en-US"),
 ): Promise<BlockerQueue> {
-  const upcoming = await upcomingTripsWithCounts(db, shopId, now);
-  const inspected = upcoming.slice(0, MAX_TRIPS);
+  const { trips: inspected, nextCursor } = await pagedUpcomingTripsWithCounts(db, shopId, {
+    now,
+    limit: MAX_TRIPS,
+  });
   const readinessByTrip = new Map(
     await Promise.all(
       inspected.map(
@@ -95,5 +97,5 @@ export async function getBlockerQueue(
   }
 
   annotateAlsoOn(trips);
-  return { trips, truncated: upcoming.length > inspected.length };
+  return { trips, truncated: nextCursor !== null };
 }

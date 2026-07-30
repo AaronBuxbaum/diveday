@@ -894,7 +894,9 @@
     "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
     "publish": "Publish",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "showMoreReviews": "Show more reviews",
+    "backToTop": "← Back to the top of the list"
   },
   "schedule": {
     "fullTripForm": "Full trip form",
@@ -1886,7 +1888,8 @@
     "integrityValid": "Integrity verified",
     "integrityInvalid": "Integrity mismatch",
     "integrityUnsealed": "Unsealed legacy record",
-    "truncatedNotice": "Showing the 20 most recent signed records. To view the complete history, use the CSV export."
+    "showMoreRecords": "Show more records",
+    "backToTop": "← Back to the top of the list"
   },
   "shopHome": {
     "createdNotice": {

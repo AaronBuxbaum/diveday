@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
@@ -9,6 +9,7 @@ import {
   reviewerDisplayName,
 } from "@/lib/reviews";
 import type { AppDb, DbExecutor } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import { bookings, people, tripReviews, trips } from "./schema";
 
 /**
@@ -203,28 +204,72 @@ export type StaffReview = {
   createdAt: Date;
 };
 
-/** The moderation queue: every review this shop has, newest first, held ones included. */
+/** How many reviews the moderation queue shows per page before "Show more". */
+export const STAFF_REVIEW_PAGE_SIZE = 50;
+
+export type StaffReviewPage = {
+  reviews: StaffReview[];
+  nextCursor: string | null;
+  total: number;
+};
+
+/**
+ * The moderation queue: this shop's reviews, newest first, held ones
+ * included — one keyset page at a time (ordered by creation, then id for a
+ * stable tiebreak), same idiom as `pagedUpcomingTripsWithCounts` and
+ * `listDiverSummaries` so a shop with years of trips costs one page, not the
+ * whole table.
+ */
 export async function listShopReviewsForStaff(
   db: DbExecutor,
   shopId: string,
-): Promise<StaffReview[]> {
-  return db
-    .select({
-      id: tripReviews.id,
-      rating: tripReviews.rating,
-      comment: tripReviews.comment,
-      isPublished: tripReviews.isPublished,
-      diverName: people.fullName,
-      tripId: tripReviews.tripId,
-      tripTitle: trips.title,
-      divedAt: trips.startsAt,
-      createdAt: tripReviews.createdAt,
-    })
-    .from(tripReviews)
-    .innerJoin(people, eq(people.id, tripReviews.personId))
-    .innerJoin(trips, eq(trips.id, tripReviews.tripId))
-    .where(eq(tripReviews.shopId, shopId))
-    .orderBy(desc(tripReviews.createdAt));
+  options: { cursor?: string; limit?: number } = {},
+): Promise<StaffReviewPage> {
+  const limit = options.limit ?? STAFF_REVIEW_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+  const afterDate = after ? new Date(after[0]) : null;
+  const scope = eq(tripReviews.shopId, shopId);
+
+  const [rows, [counted]] = await Promise.all([
+    db
+      .select({
+        id: tripReviews.id,
+        rating: tripReviews.rating,
+        comment: tripReviews.comment,
+        isPublished: tripReviews.isPublished,
+        diverName: people.fullName,
+        tripId: tripReviews.tripId,
+        tripTitle: trips.title,
+        divedAt: trips.startsAt,
+        createdAt: tripReviews.createdAt,
+      })
+      .from(tripReviews)
+      .innerJoin(people, eq(people.id, tripReviews.personId))
+      .innerJoin(trips, eq(trips.id, tripReviews.tripId))
+      .where(
+        and(
+          scope,
+          afterDate && after && !Number.isNaN(afterDate.getTime())
+            ? or(
+                lt(tripReviews.createdAt, afterDate),
+                and(eq(tripReviews.createdAt, afterDate), lt(tripReviews.id, after[1])),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(tripReviews.createdAt), desc(tripReviews.id))
+      .limit(limit + 1),
+    db.select({ total: count() }).from(tripReviews).where(scope),
+  ]);
+
+  const pageRows = rows.slice(0, limit);
+  const last = pageRows.at(-1);
+  return {
+    reviews: pageRows,
+    nextCursor:
+      rows.length > limit && last ? encodeCursor(last.createdAt.toISOString(), last.id) : null,
+    total: counted?.total ?? 0,
+  };
 }
 
 /**
