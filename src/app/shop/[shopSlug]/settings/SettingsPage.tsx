@@ -25,6 +25,8 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { canExportShopData, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -369,6 +371,10 @@ export default async function PaymentsSettingsPage({
   const canImport = canImportShopData(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
   const banner = notice ? NOTICE_MESSAGES[notice] : undefined;
+  // Only the calendar-subscriptions section below reads from this translator so
+  // far; the rest of this page is still inline English and is counted in
+  // scripts/copy-baseline.json until it is extracted.
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -672,6 +678,19 @@ export default async function PaymentsSettingsPage({
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
             Get embed code
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        <h2 className="font-medium">{t("calendar.title")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("calendar.description")}</p>
+        <div className="mt-4">
+          <Link
+            href={`/shop/${shopSlug}/settings/calendar`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            {t("calendar.settingsLink")}
           </Link>
         </div>
       </section>

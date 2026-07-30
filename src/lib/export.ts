@@ -158,7 +158,7 @@ const NOT_INCLUDED = [
   "Promo-code redemption rows — each one points at a checkout attempt, which is itself not exported for the reason above; the shop's own Stripe account holds the authoritative redemption record for every code in shop_promo_codes.csv.",
   "DiveDay's shared dive-site catalog templates (the shop's own copies export in dive_sites.csv).",
   "A pasted image URL a CSV references that was never stored through DiveDay (an external link, or a bundled template asset) — only files DiveDay's own storage actually holds can be bundled as bytes.",
-  "Login accounts, password hashes, and email-verification/password-reset tokens — credentials are never exported.",
+  "Login accounts, password hashes, email-verification/password-reset tokens, and staff calendar-subscription links — credentials are never exported.",
 ];
 
 export type ExportBundleInput = {

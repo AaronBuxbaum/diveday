@@ -16,8 +16,10 @@ import process from "node:process";
  * is `new Date()` / `Date.now()` byte for byte, so routing through it costs
  * nothing there.
  *
- * Scope is src/lib and src/db — the framework-free domain and the data layer,
- * where seed and query time originate. src/app is intentionally out of scope:
+ * Scope is src/lib, src/db, and src/features — the framework-free domain, the
+ * data layer, and the feature modules that compose them (docs ADR
+ * 20260730-feature-module-contracts), where seed and query time originate.
+ * src/app is intentionally out of scope:
  * client components legitimately read the browser clock (which the e2e specs
  * freeze with page.clock instead), so a blanket ban there would fire on
  * genuinely-live UI. Server components under src/app should still thread time
@@ -25,7 +27,7 @@ import process from "node:process";
  */
 
 const ROOT = process.cwd();
-const guardedRoots = ["src/lib", "src/db"];
+const guardedRoots = ["src/lib", "src/db", "src/features"];
 const sourceExtensions = new Set([".ts", ".tsx"]);
 // The clock module is the one place the real wall clock is allowed.
 const allowed = new Set([path.normalize("src/lib/clock.ts")]);

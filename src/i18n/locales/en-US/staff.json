@@ -1,0 +1,117 @@
+{
+  "calendar": {
+    "eyebrow": "Settings",
+    "title": "Calendar subscriptions",
+    "description": "Put your DiveDay departures on the calendar you already use. Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
+    "refreshNote": "Your calendar decides how often it re-reads the feed — usually within a few hours, not instantly. Treat DiveDay as the source of truth for a same-day change.",
+    "scope": {
+      "assignments": {
+        "name": "My departures",
+        "detail": "Every trip you are assigned to crew, teach, or captain."
+      },
+      "shopTrips": {
+        "name": "All shop departures",
+        "detail": "Every scheduled departure at this shop, whoever is crewing it."
+      }
+    },
+    "status": {
+      "none": "Not subscribed yet.",
+      "active": "Subscribed {issued}.",
+      "lastRead": "Your calendar last read it {when}.",
+      "neverRead": "No calendar has read it yet — paste the link into one to finish."
+    },
+    "actions": {
+      "create": "Create subscription link",
+      "creating": "Creating…",
+      "rotate": "Replace link",
+      "rotating": "Replacing…",
+      "turnOff": "Turn off",
+      "turningOff": "Turning off…",
+      "copy": "Copy",
+      "copied": "Copied",
+      "confirmRotate": "Replace this link? Any calendar still using the old one stops updating.",
+      "confirmTurnOff": "Turn off this subscription? The link stops working immediately."
+    },
+    "newLink": {
+      "heading": "Your subscription link",
+      "shownOnce": "Copy this now — for your security it is shown once. If you lose it, replace the link to get a new one.",
+      "webcalLabel": "Apple Calendar and Outlook",
+      "httpsLabel": "Google Calendar and everything else",
+      "webcalHint": "Opens your calendar app and subscribes.",
+      "httpsHint": "Paste under \"Other calendars → From URL\"."
+    },
+    "warning": {
+      "rotate": "Replacing the link stops the old one working right away. Any calendar still using it will quietly stop updating until you paste the new link in.",
+      "shared": "Anyone with this link can read these departures without signing in. Treat it like a password."
+    },
+    "notice": {
+      "denied": "You do not have access to that calendar scope."
+    },
+    "coverage": "Covers departures from {past} days ago through {future} days ahead.",
+    "settingsLink": "Manage subscriptions"
+  },
+  "staffing": {
+    "eyebrow": "Operations",
+    "title": "Staffing",
+    "description": "See who is working, what each person is qualified to teach or crew, and where the next boat still has a coverage gap.",
+    "window": {
+      "from": "From",
+      "through": "Through",
+      "show": "Show window"
+    },
+    "working": {
+      "heading": "Who is working",
+      "managerOnly": "Shift changes require owner or manager",
+      "notScheduled": "Not scheduled in this window.",
+      "remove": "Remove",
+      "removing": "Removing…"
+    },
+    "capability": {
+      "teach": "Can teach",
+      "crew": "Can crew",
+      "captain": "Captain"
+    },
+    "addShift": {
+      "heading": "Add a working shift",
+      "detail": "A shift says when someone is available. Assign the actual crew on each trip separately.",
+      "person": "Staff member",
+      "choosePerson": "Choose a person",
+      "date": "Date",
+      "starts": "Starts",
+      "ends": "Ends",
+      "note": "Note",
+      "noteHint": "Optional",
+      "notePlaceholder": "Dock, classroom, boat 2",
+      "submit": "Add shift",
+      "saving": "Saving…"
+    },
+    "coverage": {
+      "heading": "Coverage gaps",
+      "detail": "These are prompts to resolve before the manifest becomes a dock-side surprise.",
+      "noTrips": "No scheduled trips in this window.",
+      "covered": "Covered",
+      "gapCount": "{count, plural, one {# gap} other {# gaps}}",
+      "allGood": "Crew is assigned, and their shift covers this trip."
+    },
+    "gap": {
+      "no_crew": "No crew assigned",
+      "course_needs_instructor": "Course needs an instructor",
+      "no_shift_coverage": "No working shift covers this trip"
+    },
+    "notice": {
+      "shiftSaved": "Shift saved.",
+      "shiftDeleted": "Shift removed.",
+      "overlap": "That person already has an overlapping shift.",
+      "staffNotFound": "That staff member is no longer on this shop's team.",
+      "invalid": "Check the shift date and times, then try again.",
+      "notAuthorized": "Only owners and managers can change shifts."
+    }
+  },
+  "feed": {
+    "assignmentsName": "{shop} — my departures",
+    "shopTripsName": "{shop} — all departures",
+    "crew": "Crew",
+    "course": "Course",
+    "day": "Day {number}"
+  }
+}

@@ -9,8 +9,10 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { getStaffingView } from "@/db/staffing";
+import { getStaffingView, type StaffingGapCode } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import {
   calendarDateInTimezone,
   formatCalendarDate,
@@ -23,13 +25,25 @@ import { createShiftAction, deleteShiftAction } from "./actions";
 
 export const metadata: Metadata = { title: "Staffing — DiveDay" };
 
-const notices: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
-  "shift-saved": { tone: "success", text: "Shift saved." },
-  "shift-deleted": { tone: "success", text: "Shift removed." },
-  overlap: { tone: "danger", text: "That person already has an overlapping shift." },
-  staff_not_found: { tone: "danger", text: "That staff member is no longer on this shop's team." },
-  invalid: { tone: "danger", text: "Check the shift date and times, then try again." },
-  "not-authorized": { tone: "danger", text: "Only owners and managers can change shifts." },
+/**
+ * A notice query param maps to a message key, never to a sentence — the words
+ * come from the staff bundle at render time (docs ADR
+ * 20260730-staff-copy-localization). Typing the value as `StaffMessageKey`
+ * makes a stale key a compile error rather than a rendered key on screen.
+ */
+const notices: Record<string, { tone: "success" | "danger" | "warning"; key: StaffMessageKey }> = {
+  "shift-saved": { tone: "success", key: "staffing.notice.shiftSaved" },
+  "shift-deleted": { tone: "success", key: "staffing.notice.shiftDeleted" },
+  overlap: { tone: "danger", key: "staffing.notice.overlap" },
+  staff_not_found: { tone: "danger", key: "staffing.notice.staffNotFound" },
+  invalid: { tone: "danger", key: "staffing.notice.invalid" },
+  "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
+};
+
+const GAP_KEYS: Record<StaffingGapCode, StaffMessageKey> = {
+  no_crew: "staffing.gap.no_crew",
+  course_needs_instructor: "staffing.gap.course_needs_instructor",
+  no_shift_coverage: "staffing.gap.no_shift_coverage",
 };
 
 function addDays(value: string, days: number): string {
@@ -51,6 +65,10 @@ export default async function StaffingPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(`/shop/${shopSlug}`);
+  // Negotiated from the request, falling back to the shop's default — a staff
+  // member reads dates and copy in their own language, not the shop row's.
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
   const today = calendarDateInTimezone(new Date(), shop.timezone);
   const fromValue = query.from && isValidCalendarDate(query.from) ? query.from : today;
   const toValue = query.to && isValidCalendarDate(query.to) ? query.to : addDays(fromValue, 6);
@@ -73,30 +91,30 @@ export default async function StaffingPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["from", "to", "notice"]} />
       <ShopPageHeader
-        eyebrow="Operations"
-        title="Staffing"
-        description="See who is working, what each person is qualified to teach or crew, and where the next boat still has a coverage gap."
+        eyebrow={t("staffing.eyebrow")}
+        title={t("staffing.title")}
+        description={t("staffing.description")}
       />
 
       {notice ? (
         <div className="mt-6">
           <ShopNotice tone={notice.tone} role={notice.tone === "danger" ? "alert" : "status"}>
-            {notice.text}
+            {t(notice.key)}
           </ShopNotice>
         </div>
       ) : null}
 
       <section className="mt-8 rounded-2xl border border-border bg-surface p-5">
         <FieldGrid as="form" columns={3} method="get">
-          <Field label="From">
+          <Field label={t("staffing.window.from")}>
             <input name="from" type="date" defaultValue={fromValue} className={controlClass} />
           </Field>
-          <Field label="Through">
+          <Field label={t("staffing.window.through")}>
             <input name="to" type="date" defaultValue={toValue} className={controlClass} />
           </Field>
           <FieldActions>
             <button type="submit" className={buttonClass({ variant: "secondary" })}>
-              Show window
+              {t("staffing.window.show")}
             </button>
           </FieldActions>
         </FieldGrid>
@@ -106,14 +124,13 @@ export default async function StaffingPage({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="working-heading" className="text-xl font-semibold">
-              Who is working
+              {t("staffing.working.heading")}
             </h2>
             <p className="mt-1 text-sm text-muted">
-              {formatCalendarDate(fromValue, shop.defaultLocale)} –{" "}
-              {formatCalendarDate(toValue, shop.defaultLocale)}
+              {formatCalendarDate(fromValue, locale)} – {formatCalendarDate(toValue, locale)}
             </p>
           </div>
-          {canManage ? <Badge tone="neutral">Shift changes require owner or manager</Badge> : null}
+          {canManage ? <Badge tone="neutral">{t("staffing.working.managerOnly")}</Badge> : null}
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {view.staff.map((member) => (
@@ -129,17 +146,13 @@ export default async function StaffingPage({
                 <div className="flex flex-wrap justify-end gap-1.5">
                   {member.capabilities.map((capability) => (
                     <Badge key={capability} tone="primary">
-                      {capability === "teach"
-                        ? "Can teach"
-                        : capability === "captain"
-                          ? "Captain"
-                          : "Can crew"}
+                      {t(`staffing.capability.${capability}`)}
                     </Badge>
                   ))}
                 </div>
               </div>
               {member.shifts.length === 0 ? (
-                <p className="mt-4 text-sm text-warning">Not scheduled in this window.</p>
+                <p className="mt-4 text-sm text-warning">{t("staffing.working.notScheduled")}</p>
               ) : (
                 <ul className="mt-4 space-y-2 text-sm">
                   {member.shifts.map((shift) => (
@@ -149,12 +162,7 @@ export default async function StaffingPage({
                     >
                       <span>
                         <span className="font-medium">
-                          {formatTimeRangeTz(
-                            shift.startsAt,
-                            shift.endsAt,
-                            shop.defaultLocale,
-                            shop.timezone,
-                          )}
+                          {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, shop.timezone)}
                         </span>
                         {shift.note ? <span className="ml-2 text-muted">{shift.note}</span> : null}
                       </span>
@@ -162,10 +170,10 @@ export default async function StaffingPage({
                         <form action={deleteShiftAction}>
                           <input type="hidden" name="shiftId" value={shift.id} />
                           <SubmitButton
-                            pendingLabel="Removing…"
+                            pendingLabel={t("staffing.working.removing")}
                             className={buttonClass({ variant: "ghost", size: "sm" })}
                           >
-                            Remove
+                            {t("staffing.working.remove")}
                           </SubmitButton>
                         </form>
                       ) : null}
@@ -184,15 +192,13 @@ export default async function StaffingPage({
           aria-labelledby="add-shift-heading"
         >
           <h2 id="add-shift-heading" className="text-lg font-semibold">
-            Add a working shift
+            {t("staffing.addShift.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            A shift says when someone is available. Assign the actual crew on each trip separately.
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("staffing.addShift.detail")}</p>
           <FieldGrid as="form" action={createShiftAction} columns={2} className="mt-4">
-            <Field label="Staff member">
+            <Field label={t("staffing.addShift.person")}>
               <select name="personId" required className={controlClass}>
-                <option value="">Choose a person</option>
+                <option value="">{t("staffing.addShift.choosePerson")}</option>
                 {staff.map((member) => (
                   <option key={member.person.id} value={member.person.id}>
                     {member.person.fullName}
@@ -200,7 +206,7 @@ export default async function StaffingPage({
                 ))}
               </select>
             </Field>
-            <Field label="Date">
+            <Field label={t("staffing.addShift.date")}>
               <input
                 name="date"
                 type="date"
@@ -209,7 +215,7 @@ export default async function StaffingPage({
                 className={controlClass}
               />
             </Field>
-            <Field label="Starts">
+            <Field label={t("staffing.addShift.starts")}>
               <input
                 name="startTime"
                 type="time"
@@ -218,7 +224,7 @@ export default async function StaffingPage({
                 className={controlClass}
               />
             </Field>
-            <Field label="Ends">
+            <Field label={t("staffing.addShift.ends")}>
               <input
                 name="endTime"
                 type="time"
@@ -227,17 +233,17 @@ export default async function StaffingPage({
                 className={controlClass}
               />
             </Field>
-            <Field label="Note" hint="Optional">
+            <Field label={t("staffing.addShift.note")} hint={t("staffing.addShift.noteHint")}>
               <input
                 name="note"
                 maxLength={120}
                 className={controlClass}
-                placeholder="Dock, classroom, boat 2"
+                placeholder={t("staffing.addShift.notePlaceholder")}
               />
             </Field>
             <FieldActions>
-              <SubmitButton pendingLabel="Saving…" className={buttonClass()}>
-                Add shift
+              <SubmitButton pendingLabel={t("staffing.addShift.saving")} className={buttonClass()}>
+                {t("staffing.addShift.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
@@ -246,14 +252,12 @@ export default async function StaffingPage({
 
       <section className="mt-10" aria-labelledby="coverage-heading">
         <h2 id="coverage-heading" className="text-xl font-semibold">
-          Coverage gaps
+          {t("staffing.coverage.heading")}
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          These are prompts to resolve before the manifest becomes a dock-side surprise.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t("staffing.coverage.detail")}</p>
         <div className="mt-4 grid gap-3">
           {view.trips.length === 0 ? (
-            <p className="text-sm text-muted">No scheduled trips in this window.</p>
+            <p className="text-sm text-muted">{t("staffing.coverage.noTrips")}</p>
           ) : null}
           {view.trips.map((entry) => (
             <article key={entry.trip.id} className="rounded-xl border border-border bg-surface p-4">
@@ -264,7 +268,7 @@ export default async function StaffingPage({
                     {formatTimeRangeTz(
                       entry.trip.startsAt,
                       entry.trip.endsAt,
-                      shop.defaultLocale,
+                      locale,
                       shop.timezone,
                     )}
                     {entry.courseTitle ? ` · ${entry.courseTitle}` : ""}
@@ -272,20 +276,18 @@ export default async function StaffingPage({
                 </div>
                 <Badge tone={entry.gaps.length === 0 ? "success" : "warning"}>
                   {entry.gaps.length === 0
-                    ? "Covered"
-                    : `${entry.gaps.length} gap${entry.gaps.length === 1 ? "" : "s"}`}
+                    ? t("staffing.coverage.covered")
+                    : t("staffing.coverage.gapCount", { count: entry.gaps.length })}
                 </Badge>
               </div>
               {entry.gaps.length > 0 ? (
                 <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-warning">
                   {entry.gaps.map((gap) => (
-                    <li key={gap}>{gap}</li>
+                    <li key={gap}>{t(GAP_KEYS[gap])}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-success">
-                  Crew is assigned, and their shift covers this trip.
-                </p>
+                <p className="mt-3 text-sm text-success">{t("staffing.coverage.allGood")}</p>
               )}
             </article>
           ))}

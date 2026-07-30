@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createBearerToken, hashBearerToken } from "./bearer-tokens";
 
 /**
  * A booking capability (CR-002/CR-003) never runs forever: it outlives the
@@ -11,13 +11,9 @@ export const CAPABILITY_MAX_TTL_MS = 60 * 24 * 60 * 60 * 1000;
 export const CAPABILITY_TRIP_GRACE_MS = 48 * 60 * 60 * 1000;
 export const CAPABILITY_MIN_TTL_MS = 24 * 60 * 60 * 1000;
 
-export function createCapabilityToken(): string {
-  return randomBytes(32).toString("base64url");
-}
+export const createCapabilityToken = createBearerToken;
 
-export function hashCapabilityToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+export const hashCapabilityToken = hashBearerToken;
 
 /** `min(tripEndsAt + grace, now + max)`, floored at `now + min` so it's never issued dead-on-arrival. */
 export function capabilityExpiryFor(tripEndsAt: Date, now: Date): Date {
