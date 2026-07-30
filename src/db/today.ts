@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
@@ -358,6 +359,13 @@ export async function getTodayWork(
   now: Date = nowDate(),
   /** When set, the result carries which in-window trips this person crews. */
   personId?: string,
+  /**
+   * Resolves the blocked-diver rows' `detail`/`actionLabel` text
+   * (`collapseDiverActions`, `src/lib/today.ts`). Defaults to English so every
+   * pre-existing caller (tests included) keeps working unchanged; the page
+   * passes its own request-locale translator.
+   */
+  t: StaffTranslator = staffTranslator("en-US"),
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
   const upcoming = await upcomingTripsWithCounts(db, shopId, now);
@@ -476,7 +484,7 @@ export async function getTodayWork(
         startsAt: trip.startsAt,
         blockers: row.readiness.blockers,
       }));
-    actions.push(...collapseDiverActions(blockedDivers, shopSlug, now));
+    actions.push(...collapseDiverActions(blockedDivers, shopSlug, now, t));
 
     const withoutFit = missingFit.get(trip.id) ?? 0;
     if (withoutFit > 0) {
