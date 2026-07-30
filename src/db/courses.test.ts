@@ -23,10 +23,19 @@ import {
   upcomingTripsWithCounts,
 } from "./trips";
 
-// The seeded demo now has a real instructor calendar. Keep synthetic course
-// sessions outside that calendar so these tests exercise course admission
-// rules, not the intentionally shared-crew overlap guard.
-const OPEN_TEST_SESSION_OFFSET_MS = 45 * 24 * 60 * 60 * 1000;
+/**
+ * The seeded demo has a real instructor calendar. Keep synthetic course
+ * sessions outside it so these tests exercise course admission rules, not the
+ * intentionally shared-crew overlap guard.
+ *
+ * 180 days, not 45. The seed schedules departures out to day 75, and these
+ * sessions start at *the current time of day* 45 days out — so as the wall
+ * clock advanced, that four-hour window swept across the seeded calendar and
+ * the instructor assignment started failing on an overlap, at some hours of the
+ * day and not others. Anything past day 75 and short of the one year-out row
+ * is clear no matter what time the suite runs.
+ */
+const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 
 async function courseContext() {
   const { db, shop } = await seededShopContext();

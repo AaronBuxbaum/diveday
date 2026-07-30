@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
 
 afterEach(() => {
@@ -15,7 +16,7 @@ describe("BookingPartyFields Name Typo Suggestion", () => {
   ];
 
   it("suggests a corrected name typo on blur", () => {
-    render(<BookingPartyFields maxPartySize={6} knownDivers={knownDivers} />);
+    renderDiver(<BookingPartyFields maxPartySize={6} knownDivers={knownDivers} />);
 
     const nameInput = screen.getByRole("textbox", { name: /name/i });
 
@@ -33,7 +34,7 @@ describe("BookingPartyFields Name Typo Suggestion", () => {
   });
 
   it("autofills both name and email fields when clicking the suggestion", () => {
-    render(<BookingPartyFields maxPartySize={6} knownDivers={knownDivers} />);
+    renderDiver(<BookingPartyFields maxPartySize={6} knownDivers={knownDivers} />);
 
     const nameInput = screen.getByRole("textbox", { name: /name/i });
 
@@ -59,7 +60,7 @@ describe("BookingPartyFields Name Typo Suggestion", () => {
   });
 
   it("only offers name autofill for the lead diver", () => {
-    render(<BookingPartyFields maxPartySize={2} />);
+    renderDiver(<BookingPartyFields maxPartySize={2} />);
 
     fireEvent.change(screen.getByRole("combobox", { name: /number of divers/i }), {
       target: { value: "2" },

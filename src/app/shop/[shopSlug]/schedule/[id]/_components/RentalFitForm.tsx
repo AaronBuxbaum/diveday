@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -44,6 +45,7 @@ export function RentalFitForm({
   plannedDives: number;
   saved: boolean;
 }) {
+  const t = useTranslations();
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
   const nitroxOffered = shopOffersNitrox(rentalItems);
@@ -89,7 +91,7 @@ export function RentalFitForm({
       : (coreSetLabels[0] ?? "");
   return (
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
-      <h3 className="font-medium">Rental fit</h3>
+      <h3 className="font-medium">{t("rental.heading")}</h3>
       <p className="mt-1 text-sm text-muted">
         Tell the crew what you'd like to rent and roughly what size. We keep it on file for next
         time, and they'll confirm fit and weighting with you at the dock.
@@ -117,17 +119,17 @@ export function RentalFitForm({
             }`}
           >
             {rentedKinds.size === 0
-              ? "Bringing own gear — no rental needed."
+              ? t("rental.ownGear")
               : isConfirmed
-                ? "Gear matched and pre-packed."
-                : "Select sizes to confirm your gear match."}
+                ? t("rental.matched")
+                : t("rental.selectSizes")}
           </p>
           <p className="text-xs text-muted mt-0.5">
             {rentedKinds.size === 0
-              ? "You won't be charged for rentals on this trip."
+              ? t("rental.noCharge")
               : isConfirmed
-                ? "The crew has your sizes locked in and ready."
-                : "Add sizes for all selected items."}
+                ? t("rental.sizesLocked")
+                : t("rental.addSizes")}
           </p>
         </div>
       </div>
@@ -143,7 +145,7 @@ export function RentalFitForm({
       <form action={action} className="mt-4 flex flex-col gap-4">
         {offered.length > 0 ? (
           <fieldset>
-            <legend className="text-sm font-medium">What should we plan to have ready?</legend>
+            <legend className="text-sm font-medium">{t("rental.whatToPlan")}</legend>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {offered.map(({ kind, name, label }) => {
                 const priceCents = pricing.perItemCents[kind];
@@ -180,8 +182,8 @@ export function RentalFitForm({
               {showPricing
                 ? pricing.setCents !== null && coreSetSentence
                   ? `A full set includes ${coreSetSentence}. Take it for ${formatMoneyCents(pricing.setCents)}, or pick pieces above.`
-                  : "Prices are per piece."
-                : "Ask the shop what's included in the trip price."}
+                  : t("rental.perPiece")
+                : t("rental.askWhatsIncluded")}
             </p>
             {showPricing && quote.subtotalCents > 0 ? (
               <p className="mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
@@ -220,7 +222,7 @@ export function RentalFitForm({
               </p>
             ) : nitroxRequested ? (
               <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                {wantsNitrox ? "Your nitrox request is on file. " : ""}
+                {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
                 We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send
                 the shop a photo of your card or get in touch and they'll add it. Until then, the
                 crew will plan standard air tanks.
@@ -244,7 +246,7 @@ export function RentalFitForm({
                   onChange={(e) => setBcdSize(e.target.value)}
                   className={controlClass}
                 >
-                  <option value="">Not sure — help me fit it</option>
+                  <option value="">{t("rental.notSure")}</option>
                   {SIZES.map((size) => (
                     <option key={size}>{size}</option>
                   ))}
@@ -252,14 +254,14 @@ export function RentalFitForm({
               </Field>
             ) : null}
             {offers.has("wetsuit") ? (
-              <Field label="Wetsuit size">
+              <Field label={t("rental.wetsuitSize")}>
                 <select
                   name="wetsuitSize"
                   value={wetsuitSize}
                   onChange={(e) => setWetsuitSize(e.target.value)}
                   className={controlClass}
                 >
-                  <option value="">Not sure — help me fit it</option>
+                  <option value="">{t("rental.notSure")}</option>
                   {SIZES.map((size) => (
                     <option key={size}>{size}</option>
                   ))}
@@ -267,7 +269,7 @@ export function RentalFitForm({
               </Field>
             ) : null}
             {offers.has("wetsuit") ? (
-              <Field label="Boot size" hint="(optional)">
+              <Field label={t("rental.bootSize")} hint={t("common.optional")}>
                 <input
                   name="bootSize"
                   maxLength={20}
@@ -278,7 +280,7 @@ export function RentalFitForm({
               </Field>
             ) : null}
             {offers.has("mask_fins") ? (
-              <Field label="Fin size" hint="(optional)">
+              <Field label={t("rental.finSize")} hint={t("common.optional")}>
                 <input
                   name="finSize"
                   maxLength={20}
@@ -293,7 +295,7 @@ export function RentalFitForm({
         ) : null}
         <FieldGrid columns={1}>
           {offers.has("weights") ? (
-            <Field label="Usual weight setup" hint="(optional)">
+            <Field label={t("rental.weightSetup")} hint={t("common.optional")}>
               <input
                 name="weightPreference"
                 maxLength={80}
@@ -303,7 +305,7 @@ export function RentalFitForm({
               />
             </Field>
           ) : null}
-          <Field label="Anything else the crew should know?" hint="(optional)">
+          <Field label={t("rental.anythingElse")} hint={t("common.optional")}>
             <textarea
               name="note"
               rows={2}
@@ -315,7 +317,7 @@ export function RentalFitForm({
         </FieldGrid>
         <div>
           <SubmitButton
-            pendingLabel="Saving fit…"
+            pendingLabel={t("rental.savingFit")}
             className={buttonClass({
               variant: "secondary",
               size: "sm",

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
@@ -38,21 +39,22 @@ function PaymentSection({
 }) {
   if (!payment) return null;
   const usd = moneyFormatter(locale);
+  const t = diverTranslator(locale);
 
   if (payment.state === "paid") {
     const depositWithBalance = payment.isDeposit && payment.balanceDueCents > 0;
     return (
       <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
         <h3 className="font-semibold text-success">
-          {depositWithBalance ? "Deposit received" : "Payment received"}
+          {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
           {payment.amountCents !== null ? ` — ${usd.format(payment.amountCents / 100)}` : ""} ✓
         </h3>
         <p className="mt-1 text-sm text-muted">
           {depositWithBalance
-            ? `Your seat's locked in. The ${usd.format(
-                payment.balanceDueCents / 100,
-              )} balance is due at the dock.`
-            : "You're square with the shop for this trip."}
+            ? t("booking.paymentDepositBalance", {
+                balance: usd.format(payment.balanceDueCents / 100),
+              })
+            : t("booking.paymentSquare")}
         </p>
       </div>
     );
@@ -61,26 +63,23 @@ function PaymentSection({
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-semibold">
-        {payCancelled ? "Your spot is safe — payment's still open" : "One thing left: payment"}
+        {payCancelled ? t("booking.paymentStillOpen") : t("booking.paymentOneThingLeft")}
       </h3>
-      <p className="mt-1 text-sm text-muted">
-        Pay securely through the shop's own payment page. If you'd rather settle at the counter,
-        that works too.
-      </p>
+      <p className="mt-1 text-sm text-muted">{t("booking.paymentBody")}</p>
       {payment.state === "pending" ? (
         <a
           href={payment.checkoutUrl}
           className={buttonClass({ className: "mt-3 px-5 py-2.5 text-base" })}
         >
-          Finish paying
+          {t("booking.finishPaying")}
         </a>
       ) : (
         <form action={payForBooking.bind(null, payRef)} className="mt-3">
           <SubmitButton
-            pendingLabel="Opening payment…"
+            pendingLabel={t("booking.openingPayment")}
             className={buttonClass({ className: "px-5 py-2.5 text-base disabled:opacity-70" })}
           >
-            Pay now
+            {t("booking.payNow")}
           </SubmitButton>
         </form>
       )}
@@ -103,7 +102,7 @@ export function BookingConfirmation({
   payment,
   payCancelled,
   readinessLink,
-  progressionCourse,
+  progression,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -121,8 +120,17 @@ export function BookingConfirmation({
   payCancelled: boolean;
   /** Null when no readiness capability could be issued (e.g. no canonical origin configured). */
   readinessLink: string | null;
-  progressionCourse: { title: string; slug: string } | null;
+  /**
+   * The next rung of one of the shop's own certification paths, or null when
+   * the shop has not built a path that reaches this diver. Never a guess — see
+   * `nextPathStep` in src/db/course-paths.ts.
+   */
+  progression: {
+    path: { title: string };
+    step: { note: string | null; course: { title: string; slug: string } };
+  } | null;
 }) {
+  const t = diverTranslator(locale);
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
   const nextStep = nextDiverStep(checklist);
 
@@ -134,12 +142,16 @@ export function BookingConfirmation({
           (design/principles.md #3). */}
       <EarnedMoment
         className="mt-10"
-        title={`You're on the boat, ${confirmed.person.fullName.split(" ")[0]}! 🤿`}
+        title={t("booking.confirmedHeading", {
+          name: confirmed.person.fullName.split(" ")[0],
+        })}
       >
         <p>
-          {formatShortDate(trip.startsAt, locale, shop.timezone)},{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)} — be at the dock{" "}
-          {shop.dockCallMinutes} minutes early and we'll take it from there.
+          {t("booking.confirmedDockCall", {
+            date: formatShortDate(trip.startsAt, locale, shop.timezone),
+            time: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
+            minutes: shop.dockCallMinutes,
+          })}
         </p>
       </EarnedMoment>
 
@@ -150,18 +162,23 @@ export function BookingConfirmation({
         locale={locale}
       />
 
-      {progressionCourse ? (
+      {progression ? (
         <aside className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <h3 className="font-semibold">Ready to go deeper?</h3>
-          <p className="mt-1 text-sm text-muted">
-            This dive needs the next certification step. See how {progressionCourse.title} gets you
-            there — no pressure, just the path when you want it.
+          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+            {progression.path.title}
           </p>
+          <h3 className="mt-1 font-semibold">{t("booking.goDeeperHeading")}</h3>
+          <p className="mt-1 text-sm text-muted">
+            {t("booking.goDeeperBody", { course: progression.step.course.title })}
+          </p>
+          {progression.step.note ? (
+            <p className="mt-1 text-sm text-muted italic">{progression.step.note}</p>
+          ) : null}
           <Link
-            href={`/shop/${shopSlug}/courses/${progressionCourse.slug}`}
+            href={`/shop/${shopSlug}/courses/${progression.step.course.slug}`}
             className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
           >
-            Explore the course →
+            {t("booking.goDeeperCta")}
           </Link>
         </aside>
       ) : null}
@@ -169,20 +186,17 @@ export function BookingConfirmation({
       <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
         {nextStep ? (
           <>
-            <h3 className="font-semibold">Next: {nextStep.label.toLowerCase()}</h3>
+            <h3 className="font-semibold">
+              {t("booking.nextStep", { step: nextStep.label.toLowerCase() })}
+            </h3>
             <p className="mt-1 text-sm text-muted">{nextStep.detail}</p>
           </>
         ) : readiness?.status === "ready" ? (
-          <h3 className="font-semibold text-success">
-            You're all set — nothing left but to show up.
-          </h3>
+          <h3 className="font-semibold text-success">{t("booking.allSet")}</h3>
         ) : (
           <>
-            <h3 className="font-semibold">You're booked — the shop takes it from here</h3>
-            <p className="mt-1 text-sm text-muted">
-              We're double-checking a couple of things on our side. Nothing you need to do right
-              now.
-            </p>
+            <h3 className="font-semibold">{t("booking.shopTakesOver")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("booking.shopTakesOverBody")}</p>
           </>
         )}
         <Link
@@ -195,7 +209,7 @@ export function BookingConfirmation({
           target={fitRef.embed ? "_top" : undefined}
           className="mt-3 inline-block text-sm font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
         >
-          Track everything on your readiness page →
+          {t("booking.trackReadiness")}
         </Link>
       </div>
 
@@ -213,7 +227,7 @@ export function BookingConfirmation({
         href={`/shop/${shopSlug}/schedule${fitRef.embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
-        Back to the schedule
+        {t("common.backToSchedule")}
       </Link>
     </>
   );

@@ -82,9 +82,36 @@ function flatten(node, prefix = "") {
   return out;
 }
 
-/** ICU argument names in a message — `{name}` and the `{count, plural, …}` head alike. */
+/**
+ * ICU argument names in a message — `{name}` and the `{count, plural, …}` head
+ * alike, and *only* those.
+ *
+ * The nesting matters. A plural branch body is itself a brace group holding
+ * ordinary text (`one {queda #}`), and matching every `{word` in the string
+ * reads that text as two more arguments — which fails any translation whose
+ * plural forms differ by more than the number, i.e. most of them outside
+ * English. Argument names sit at even brace depth (an argument opens at depth
+ * 0; its branch bodies open at depth 1; an argument nested inside a body opens
+ * at depth 2), so depth is what tells the two apart.
+ */
 function placeholders(message) {
-  return [...String(message).matchAll(/\{\s*(\w+)/g)].map((match) => match[1]).sort();
+  const names = [];
+  let depth = 0;
+  const text = String(message);
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === "}") {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (character !== "{") continue;
+    if (depth % 2 === 0) {
+      const name = /^\s*(\w+)/.exec(text.slice(index + 1));
+      if (name) names.push(name[1]);
+    }
+    depth += 1;
+  }
+  return names.sort();
 }
 
 const violations = [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { editDistance, suggestEmailTypo } from "@/lib/email-typo";
@@ -69,6 +70,7 @@ export function BookingPartyFields({
   fieldErrors?: BookingFieldErrors;
   knownDivers?: { fullName: string; email: string }[];
 }) {
+  const t = useTranslations();
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
   const [party, setParty] = useState<PartyMember[]>(() =>
@@ -87,7 +89,7 @@ export function BookingPartyFields({
   return (
     <>
       <FieldGrid columns={1} className="max-w-48">
-        <Field label="Number of divers" className="text-base">
+        <Field label={t("party.numberOfDivers")} className="text-base">
           <select
             name="partySize"
             value={size}
@@ -118,7 +120,7 @@ export function BookingPartyFields({
           // instead of the page silently jumping taller (design/principles.md #5).
           <fieldset key={slot} className="rise-in rounded-xl border border-border p-4">
             <legend className="px-1 text-sm font-semibold text-muted">
-              {index === 0 ? "Your details" : `Diver ${index + 1}`}
+              {index === 0 ? t("party.yourDetails") : t("party.diverN", { number: index + 1 })}
             </legend>
             <FieldGrid columns={2}>
               <Field

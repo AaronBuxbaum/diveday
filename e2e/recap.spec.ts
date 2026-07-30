@@ -39,7 +39,7 @@ test("a shop's review link appears on the recap page once set, and not before", 
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Leave a review" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/settings");
@@ -49,7 +49,7 @@ test("a shop's review link appears on the recap page once set, and not before", 
   await page.getByRole("button", { name: "Sign out" }).click();
 
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  const reviewLink = page.getByRole("link", { name: "Leave a review" });
+  const reviewLink = page.getByRole("link", { name: "Leave a public review" });
   await expect(reviewLink).toBeVisible();
   await expect(reviewLink).toHaveAttribute("href", "https://g.page/r/blue-mantis/review");
   await expect(reviewLink).toHaveAttribute("target", "_blank");

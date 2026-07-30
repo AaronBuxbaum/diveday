@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openTripFromBoard } from "./helpers";
 
 /**
  * Visual regression coverage. Forty-one key surfaces × light/dark, each
@@ -329,6 +330,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers");
         await capture(page, "divers", scheme);
 
+        // Found by search, not by scrolling: the demo shop now has enough
+        // divers to page the roster, so nobody is reliably on the first page.
+        await page.goto("/shop/blue-mantis/divers?q=Priya");
         await page
           .getByRole("row")
           .filter({ hasText: "Priya Sharma" })
@@ -340,7 +344,7 @@ for (const scheme of ["light", "dark"] as const) {
         // A diver holding a card past its shop refresher-due date: the
         // "refresher due" badge renders red and the card no longer counts as
         // valid — the safety-relevant state (H-08: cards don't expire).
-        await page.goto("/shop/blue-mantis/divers");
+        await page.goto("/shop/blue-mantis/divers?q=Yusuf");
         await page
           .getByRole("row")
           .filter({ hasText: "Yusuf Demir" })
@@ -357,7 +361,7 @@ for (const scheme of ["light", "dark"] as const) {
         // cancelled booking struck through so it can't be read as a dive. This
         // page is where a spreadsheet cell either looks like evidence or looks
         // like what it is, so it is worth a baseline in both schemes.
-        await page.goto("/shop/blue-mantis/divers");
+        await page.goto("/shop/blue-mantis/divers?q=Hana");
         await page
           .getByRole("row")
           .filter({ hasText: "Hana Kobayashi" })
@@ -369,12 +373,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The seeded reef trip: schedule card → Overview (what the dive is) →
         // Guests (who is attending) → Manifest (the day-of boarding + roll call).
         await page.goto("/shop/blue-mantis/schedule");
-        await page
-          .locator("li")
-          .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-          .getByRole("link")
-          .click();
-        await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
         // The four trip surfaces share a layout that streams a skeleton while the
         // page's data loads, so every capture waits for real content — never the
         // loading fallback — before shooting.
@@ -519,12 +518,7 @@ for (const scheme of ["light", "dark"] as const) {
       // blocker until staff vouch for it — a safety-critical state worth a baseline.
       test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule");
-        await page
-          .locator("li")
-          .filter({ hasText: "Night Dive — City of Washington" })
-          .getByRole("link")
-          .click();
-        await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+        await openTripFromBoard(page, "Night Dive — City of Washington");
         await page
           .getByRole("navigation", { name: "Trip" })
           .getByRole("link", { name: "Guests" })

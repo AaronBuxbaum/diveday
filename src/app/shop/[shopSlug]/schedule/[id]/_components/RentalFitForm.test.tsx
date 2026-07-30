@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DiverRentalFit } from "@/db/rental-fit";
 import type { RentalPricing } from "@/lib/rentals";
+import { renderDiver } from "@/test/intl";
 import { RentalFitForm } from "./RentalFitForm";
 
 const emptyFit: DiverRentalFit = {
@@ -44,7 +45,7 @@ afterEach(() => {
 
 describe("RentalFitForm Gear-Status Light-up Indicator", () => {
   it("renders 'Bringing own gear' by default if no rentals selected", () => {
-    render(
+    renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={emptyFit}
@@ -63,7 +64,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
   it("renders 'Select sizes' when rentals are selected but size is missing", () => {
     const fitWithRentals = { ...emptyFit, rentsBcd: true };
-    render(
+    renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={fitWithRentals}
@@ -82,7 +83,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
   it("renders 'Gear matched and pre-packed' when all sizes are confirmed", () => {
     const confirmedFit = { ...emptyFit, rentsBcd: true, bcdSize: "M" };
-    render(
+    renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={confirmedFit}
@@ -100,7 +101,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
   });
 
   it("updates dynamically when user checks a rental and inputs a size", () => {
-    const { container } = render(
+    const { container } = renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={emptyFit}
@@ -135,7 +136,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
   it("renders 'Gear matched' for wetsuit once wetsuit size is provided", () => {
     const wetsuitFit = { ...emptyFit, rentsWetsuit: true };
-    const { container } = render(
+    const { container } = renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={wetsuitFit}
@@ -162,7 +163,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
   it("renders 'Gear matched' for mask/fins immediately because fin size is optional", () => {
     const finsFit = { ...emptyFit, rentsMaskFins: true };
-    render(
+    renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={finsFit}
@@ -181,7 +182,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
   it("confirms gear match when BCD size is provided even if optional fin size is empty", () => {
     const mixedFit = { ...emptyFit, rentsBcd: true, rentsMaskFins: true };
-    const { container } = render(
+    const { container } = renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={mixedFit}

@@ -1,41 +1,50 @@
 import { DiveBriefingCard } from "@/components/DiveBriefingCard";
+import { diverTranslator } from "@/i18n/messages";
 import type { DiveBriefing, Trip } from "./types";
 
 export function DiveBriefingsSection({
   briefings,
   trip,
+  locale,
 }: {
   briefings: DiveBriefing[];
   trip: Trip;
+  /** The negotiated request locale, not the shop's stored default. */
+  locale: string;
 }) {
   if (briefings.length === 0) return null;
+  const t = diverTranslator(locale);
   return (
     <section className="mt-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium tracking-widest text-primary uppercase">
-            Dive briefings
+            {t("trip.briefingsEyebrow")}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-            {trip.plannedDives === 2 ? "Your two-tank plan" : `Your ${trip.plannedDives}-dive plan`}
+            {trip.plannedDives === 2
+              ? t("trip.planTwoTank")
+              : t("trip.planDiveCount", { count: trip.plannedDives })}
           </h2>
         </div>
         {briefings.length > 1 ? (
-          <p className="text-sm font-medium text-muted sm:hidden">Swipe to explore each dive →</p>
+          <p className="text-sm font-medium text-muted sm:hidden">{t("trip.swipeHint")}</p>
         ) : null}
       </div>
       {briefings.filter(({ diveSite }) => diveSite).length > 1 ? (
         <details className="mt-5 rounded-xl border border-border bg-surface p-4">
-          <summary className="min-h-11 cursor-pointer font-semibold">Compare the sites</summary>
+          <summary className="min-h-11 cursor-pointer font-semibold">
+            {t("trip.compareSites")}
+          </summary>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-lg text-left text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="p-2">Site</th>
-                  <th className="p-2">Depth</th>
-                  <th className="p-2">Experience</th>
-                  <th className="p-2">Water movement</th>
-                  <th className="p-2">Likely life</th>
+                  <th className="p-2">{t("trip.columnSite")}</th>
+                  <th className="p-2">{t("trip.columnDepth")}</th>
+                  <th className="p-2">{t("trip.columnExperience")}</th>
+                  <th className="p-2">{t("trip.columnWaterMovement")}</th>
+                  <th className="p-2">{t("trip.columnLikelyLife")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -44,22 +53,26 @@ export function DiveBriefingsSection({
                   .map(({ dive, diveSite }) => (
                     <tr key={dive.id} className="border-b border-border/60">
                       <th className="p-2 font-semibold">{diveSite?.name}</th>
-                      <td className="p-2 text-muted">{diveSite?.depthRange ?? "Varies"}</td>
-                      <td className="p-2 text-muted">{diveSite?.difficulty ?? "Crew-led"}</td>
                       <td className="p-2 text-muted">
-                        {diveSite?.currentNote ?? "Confirmed at dock"}
+                        {diveSite?.depthRange ?? t("common.varies")}
                       </td>
                       <td className="p-2 text-muted">
-                        {diveSite?.marineLife ?? diveSite?.marineLifeDescription ?? "Ask the crew"}
+                        {diveSite?.difficulty ?? t("common.crewLed")}
+                      </td>
+                      <td className="p-2 text-muted">
+                        {diveSite?.currentNote ?? t("common.confirmedAtDock")}
+                      </td>
+                      <td className="p-2 text-muted">
+                        {diveSite?.marineLife ??
+                          diveSite?.marineLifeDescription ??
+                          t("common.askTheCrew")}
                       </td>
                     </tr>
                   ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-muted">
-            Typical site facts, not a promise of the route, wildlife, or conditions on the day.
-          </p>
+          <p className="mt-3 text-xs text-muted">{t("trip.compareNote")}</p>
         </details>
       ) : null}
       {/* Dives stack in one column on larger screens: a two-tank day often
@@ -76,13 +89,11 @@ export function DiveBriefingsSection({
             site={diveSite}
             creatures={creatures}
             moments={moments}
+            locale={locale}
           />
         ))}
       </div>
-      <p className="mt-3 text-sm text-muted">
-        Conditions and timing apply to the whole boat day. Sites can change, and the crew makes the
-        final call at the dock.
-      </p>
+      <p className="mt-3 text-sm text-muted">{t("trip.briefingsFooter")}</p>
     </section>
   );
 }

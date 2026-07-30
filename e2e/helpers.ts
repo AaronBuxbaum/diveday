@@ -36,3 +36,22 @@ export async function signInAs(page: Page, login: { email: string; password: str
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/shop/);
 }
+
+/**
+ * Open a departure from the staff schedule board.
+ *
+ * The board is the schedule builder (src/app/shop/[shopSlug]/schedule/_components),
+ * where a row carries its own Move/Copy/Remove controls and only the title is a
+ * link — so clicking the row itself lands on padding and navigates nowhere.
+ * Every spec that starts "from the board, open trip X" goes through here rather
+ * than re-deriving that.
+ */
+export async function openTripFromBoard(page: Page, title: string) {
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .first()
+    .getByRole("link", { name: title })
+    .click();
+  await expect(page).toHaveURL(/\/trips\//);
+}

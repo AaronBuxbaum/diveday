@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
+import type { DiverTranslator } from "@/i18n/messages";
 import { type CourseFaq, type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -11,6 +12,14 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * left it empty, so a half-written page degrades to a shorter page rather than
  * to a row of empty headings.
  */
+
+/** One of the shop's certification paths, flattened for the trail below. */
+export type PathTrail = {
+  slug: string;
+  title: string;
+  summary: string | null;
+  steps: Array<{ id: string; title: string; slug: string }>;
+};
 
 /** Photo from a shop's blob store, a bundled path, or a link the shop pasted. */
 function CourseImage({ src, alt, className }: { src: string; alt: string; className: string }) {
@@ -24,6 +33,7 @@ export function CourseHero({
   bookHref,
   inquiryHref,
   locale,
+  t,
 }: {
   course: Course;
   totalCents: number | null;
@@ -35,6 +45,7 @@ export function CourseHero({
   inquiryHref?: string | null;
   /** The shop's locale — money and dates on a public page follow it, not the server's. */
   locale: string;
+  t: DiverTranslator;
 }) {
   const usd = new Intl.NumberFormat(locale, {
     style: "currency",
@@ -52,7 +63,7 @@ export function CourseHero({
       ) : null}
       <div className="p-6 sm:p-8">
         <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-          {course.agency.toUpperCase()} course
+          {t("course.agencyCourse", { agency: course.agency.toUpperCase() })}
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{course.title}</h1>
         {course.summary ? (
@@ -67,11 +78,11 @@ export function CourseHero({
           )}
           {bookHref ? (
             <Link href={bookHref} className={buttonClass({ size: "cta" })}>
-              See dates
+              {t("course.seeDates")}
             </Link>
           ) : inquiryHref ? (
             <Link href={inquiryHref} className={buttonClass({ variant: "secondary", size: "cta" })}>
-              Ask about dates
+              {t("course.askAboutDates")}
             </Link>
           ) : null}
         </div>
@@ -85,10 +96,16 @@ export function CourseHero({
  * minimum age, the shop's own note) all live in CourseAdmission below, so a
  * diver has exactly one place to read the answer to "can I do this?".
  */
-export function CourseSpecs({ items }: { items: Array<{ label: string; value: string }> }) {
+export function CourseSpecs({
+  items,
+  label,
+}: {
+  items: Array<{ label: string; value: string }>;
+  label: string;
+}) {
   if (items.length === 0) return null;
   return (
-    <section aria-label="At a glance" className="mt-8 max-w-2xl">
+    <section aria-label={label} className="mt-8 max-w-2xl">
       <dl className="grid grid-cols-2 gap-3">
         {items.map((item) => (
           <div key={item.label} className="rounded-2xl border border-border bg-surface p-4">
@@ -120,10 +137,12 @@ export function CourseAdmission({
   certificationRequired,
   minimumAge,
   shopNote,
+  t,
 }: {
   certificationRequired: string;
   minimumAge: number | null;
   shopNote: string | null;
+  t: DiverTranslator;
 }) {
   return (
     <section
@@ -131,32 +150,106 @@ export function CourseAdmission({
       className="mt-6 max-w-2xl rounded-2xl border border-border bg-surface-sunken p-5"
     >
       <h2 id="who-can-enroll" className="text-sm font-semibold tracking-wide text-muted uppercase">
-        Who can enroll
+        {t("course.whoCanEnroll")}
       </h2>
       <dl className="mt-3 grid gap-4 sm:grid-cols-2">
         <div>
           <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
-            Certification
+            {t("course.certification")}
           </dt>
           <dd className="mt-1 font-semibold">{certificationRequired}</dd>
         </div>
         {minimumAge ? (
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
-              Minimum age
+              {t("course.minimumAge")}
             </dt>
-            <dd className="mt-1 font-semibold">{minimumAge} years</dd>
+            <dd className="mt-1 font-semibold">
+              {t("course.minimumAgeYears", { age: minimumAge })}
+            </dd>
           </div>
         ) : null}
       </dl>
       {shopNote ? (
         <>
           <h3 className="mt-4 text-sm font-semibold tracking-wide text-muted uppercase">
-            From the shop
+            {t("course.fromTheShop")}
           </h3>
           <p className="mt-1 text-sm leading-relaxed text-muted">{shopNote}</p>
         </>
       ) : null}
+    </section>
+  );
+}
+
+/**
+ * Where this course sits in the shop's own certification paths, and what comes
+ * next on each. Renders nothing when the shop has not put this course on a path
+ * — a diver reading a standalone specialty should not see an empty "your path"
+ * heading (docs/design/principles.md).
+ *
+ * The rung the diver is reading is marked but not linked; every other rung is,
+ * so the section works as navigation through the progression.
+ */
+export function CoursePathTrail({
+  paths,
+  courseId,
+  shopSlug,
+  t,
+}: {
+  paths: PathTrail[];
+  courseId: string;
+  shopSlug: string;
+  t: DiverTranslator;
+}) {
+  const withCourse = paths.filter((path) => path.steps.some((step) => step.id === courseId));
+  if (withCourse.length === 0) return null;
+
+  return (
+    <section aria-labelledby="course-paths" className="mt-10 max-w-2xl">
+      <h2 id="course-paths" className="text-lg font-semibold">
+        {t("path.sectionTitle")}
+      </h2>
+      <div className="mt-4 grid gap-4">
+        {withCourse.map((path) => {
+          const index = path.steps.findIndex((step) => step.id === courseId);
+          const next = path.steps[index + 1];
+          return (
+            <article key={path.slug} className="rounded-2xl border border-border bg-surface p-5">
+              <h3 className="font-semibold">{path.title}</h3>
+              {path.summary ? <p className="mt-1 text-sm text-muted">{path.summary}</p> : null}
+              <ol className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
+                {path.steps.map((step, stepIndex) => (
+                  <li key={step.id} className="flex items-center gap-1">
+                    {stepIndex > 0 ? (
+                      <span aria-hidden="true" className="text-muted">
+                        {" → "}
+                      </span>
+                    ) : null}
+                    {step.id === courseId ? (
+                      <span aria-current="step" className="font-semibold text-primary">
+                        {step.title}
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/shop/${shopSlug}/courses/${step.slug}`}
+                        className="hover:underline"
+                      >
+                        {step.title}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3 text-sm text-muted">
+                {next
+                  ? t("path.nextUp", { course: next.title })
+                  : t("path.lastStep", { path: path.title })}
+              </p>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -178,11 +271,11 @@ export function CourseOverview({ overview }: { overview: string | null }) {
   );
 }
 
-export function CourseSchedule({ days }: { days: CourseScheduleDay[] }) {
+export function CourseSchedule({ days, t }: { days: CourseScheduleDay[]; t: DiverTranslator }) {
   if (days.length === 0) return null;
   return (
     <section className="mt-12">
-      <h2 className="text-2xl font-semibold tracking-tight">How the course runs</h2>
+      <h2 className="text-2xl font-semibold tracking-tight">{t("course.howItRunsHeading")}</h2>
       <ol className="mt-6 grid gap-4">
         {days.map((day) => (
           <li key={day.title} className="rounded-2xl border border-border bg-surface p-5">
@@ -211,15 +304,25 @@ export function CourseSchedule({ days }: { days: CourseScheduleDay[] }) {
   );
 }
 
-export function CourseIncludes({ includes, excludes }: { includes: string[]; excludes: string[] }) {
+export function CourseIncludes({
+  includes,
+  excludes,
+  t,
+}: {
+  includes: string[];
+  excludes: string[];
+  t: DiverTranslator;
+}) {
   if (includes.length === 0 && excludes.length === 0) return null;
   return (
     <section className="mt-12">
-      <h2 className="text-2xl font-semibold tracking-tight">What the fee covers</h2>
+      <h2 className="text-2xl font-semibold tracking-tight">{t("course.feeCovers")}</h2>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {includes.length > 0 ? (
           <div className="rounded-2xl border border-border bg-surface p-5">
-            <h3 className="text-sm font-semibold tracking-wide text-success uppercase">Included</h3>
+            <h3 className="text-sm font-semibold tracking-wide text-success uppercase">
+              {t("trip.packProvided")}
+            </h3>
             <ul className="mt-3 grid gap-2 text-sm">
               {includes.map((item) => (
                 <li key={item} className="flex gap-2">
@@ -235,7 +338,7 @@ export function CourseIncludes({ includes, excludes }: { includes: string[]; exc
         {excludes.length > 0 ? (
           <div className="rounded-2xl border border-border bg-surface p-5">
             <h3 className="text-sm font-semibold tracking-wide text-muted uppercase">
-              Not included
+              {t("course.notIncludedHeading")}
             </h3>
             <ul className="mt-3 grid gap-2 text-sm text-muted">
               {excludes.map((item) => (
@@ -252,11 +355,19 @@ export function CourseIncludes({ includes, excludes }: { includes: string[]; exc
   );
 }
 
-export function CourseGallery({ imageUrls, title }: { imageUrls: string[]; title: string }) {
+export function CourseGallery({
+  imageUrls,
+  title,
+  t,
+}: {
+  imageUrls: string[];
+  title: string;
+  t: DiverTranslator;
+}) {
   if (imageUrls.length === 0) return null;
   return (
     <section className="mt-12">
-      <h2 className="sr-only">Photos from the {title} course</h2>
+      <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {imageUrls.map((url) => (
           <CourseImage
@@ -281,6 +392,7 @@ export function CourseSessions({
   timezone,
   locale,
   inquiryHref,
+  t,
 }: {
   sessions: Array<{
     id: string;
@@ -295,29 +407,30 @@ export function CourseSessions({
   locale: string;
   /** Anchor to the "Get in touch" composer, or null when the shop published no address. */
   inquiryHref: string | null;
+  t: DiverTranslator;
 }) {
   return (
     <section id="dates" className="mt-12 scroll-mt-8">
-      <h2 className="text-2xl font-semibold tracking-tight">Upcoming dates</h2>
+      <h2 className="text-2xl font-semibold tracking-tight">{t("course.datesHeading")}</h2>
       {sessions.length === 0 ? (
         <p className="mt-4 max-w-2xl text-muted">
-          No dates on the books right now — this course runs on request.{" "}
+          {t("course.noDatesLead")}{" "}
           <Link
             href={`/shop/${shopSlug}/schedule`}
             className="font-medium text-primary hover:underline"
           >
-            See the full schedule
+            {t("course.seeFullSchedule")}
           </Link>
           {inquiryHref ? (
             <>
               , or{" "}
               <Link href={inquiryHref} className="font-medium text-primary hover:underline">
-                ask us to set one
+                {t("course.orAskUs")}
               </Link>
               .
             </>
           ) : (
-            " or get in touch and we will set one."
+            ` ${t("course.orGetInTouch")}`
           )}
         </p>
       ) : (
@@ -342,7 +455,9 @@ export function CourseSessions({
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {multiDay
-                      ? `Starts ${formatTime(session.startsAt, locale, timezone)}`
+                      ? t("course.startsAt", {
+                          time: formatTime(session.startsAt, locale, timezone),
+                        })
                       : formatTimeRangeTz(session.startsAt, session.endsAt, locale, timezone)}{" "}
                     · {capacityLabel(session)}
                   </p>
@@ -354,7 +469,7 @@ export function CourseSessions({
                     className: full ? "text-foreground" : "",
                   })}
                 >
-                  {full ? "Join the wait list" : "Book this date"}
+                  {full ? t("course.joinWaitList") : t("course.bookThisDate")}
                 </Link>
               </li>
             );
@@ -365,11 +480,11 @@ export function CourseSessions({
   );
 }
 
-export function CourseFaqs({ faqs }: { faqs: CourseFaq[] }) {
+export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator }) {
   if (faqs.length === 0) return null;
   return (
     <section className="mt-12">
-      <h2 className="text-2xl font-semibold tracking-tight">Questions divers ask</h2>
+      <h2 className="text-2xl font-semibold tracking-tight">{t("course.faqsHeading")}</h2>
       <div className="mt-6 grid gap-2">
         {faqs.map((faq) => (
           <details

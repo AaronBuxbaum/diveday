@@ -42,6 +42,8 @@ const EXPECTED_FILES = [
   "trip_reviews.csv",
   "shop_promo_codes.csv",
   "courses.csv",
+  "course_paths.csv",
+  "course_path_steps.csv",
 ];
 
 /** Schema tables that get their own CSV in the bundle. */
@@ -77,6 +79,8 @@ const EXPORTED_TABLES = [
   "trip_reviews",
   "shop_promo_codes",
   "courses",
+  "course_paths",
+  "course_path_steps",
 ];
 
 /** Tables whose data rides inside another file rather than its own CSV. */
@@ -185,6 +189,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_promotion_code_id",
   ],
   courses: ["shop_id"],
+  course_paths: ["shop_id"],
+  // A step is scoped by the path it hangs off, which is already in the bundle.
+  course_path_steps: [],
 };
 
 function table(

@@ -6,6 +6,12 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 }) => {
   await page.goto("/shop/blue-mantis/schedule");
   await page.getByRole("link", { name: /Discover Scuba — Pool & Reef/ }).click();
+  // Wait for the navigation before asserting on text. `click()` returns as soon
+  // as the click is dispatched, so the next assertion can still run against the
+  // schedule — where "Course session · Discover Scuba Diving" appears once per
+  // seeded session. A strict-mode violation is thrown immediately rather than
+  // retried, so that race fails the test outright instead of settling.
+  await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
   await expect(page.getByText("Giving this dive as a gift?")).toBeVisible();
   await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();

@@ -96,6 +96,14 @@ export default async function CoursesPage() {
         eyebrow="Catalog"
         title="Courses"
         description="Your shop copy of the PADI and SSI catalog. Open a course to edit its page and pricing, or hide the ones you don’t offer."
+        actions={
+          <Link
+            href={`/shop/${shop.slug}/courses/paths`}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            Certification paths
+          </Link>
+        }
       />
 
       <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
