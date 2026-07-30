@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { auth, signOut } from "@/lib/auth";
+import { trialHref } from "@/lib/funnel";
 
 const links = [
   { href: "/product", label: "Product" },
@@ -52,7 +53,7 @@ export async function MarketingNav() {
             </Link>
           )}
           <Link
-            href="/onboard"
+            href={trialHref("nav")}
             className={buttonClass({ className: "font-semibold whitespace-nowrap" })}
           >
             Start a trial

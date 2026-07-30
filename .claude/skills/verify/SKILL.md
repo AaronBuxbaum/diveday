@@ -26,14 +26,15 @@ check` includes `check:clock`, which fails if domain/data code reads the wall cl
 
 ## 3. UI changed: look at it
 
-Never ship UI you haven't seen. Start the app and capture light + dark, desktop + phone:
+Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
+phone and desktop widths, in light and dark — so a filtered run of it is the capture step:
 
 ```bash
-pnpm dev &        # in background; wait for "Ready"
-node scripts/screenshot.mjs / <changed-routes...>
+pnpm e2e:build
+npx playwright test e2e/visual.spec.ts -g '<name of the capture group>' --reporter=line
 ```
 
-Read the PNGs in `.screenshots/` and check them against the checklist at the bottom of
+Read the PNGs in `e2e/screenshots/` (gitignored) and check them against the checklist at the bottom of
 `docs/design/principles.md`. For significant UI work, also run the `design-review` skill.
 Send the screenshots to the user when reporting completion.
 

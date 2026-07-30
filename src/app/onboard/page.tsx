@@ -5,27 +5,67 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { eventSource } from "@/lib/funnel";
 import { onboardAction } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Set up your shop — DiveDay",
+  title: "Start a dive shop trial — DiveDay",
+  description:
+    "Set up your own DiveDay shop in a few details. No card, no setup fee, and your records download as one ZIP from day one.",
+  // Canonical because every marketing page now links here with a `?from=`
+  // funnel tag — one page, not nine.
+  alternates: { canonical: "/onboard" },
+  openGraph: {
+    title: "Start a dive shop trial — DiveDay",
+    description:
+      "A few details and you're looking at your own working shop. No card, no setup fee.",
+    url: "/onboard",
+  },
 };
+
+/**
+ * The reassurance a shop owner needs at the moment they're being asked for a
+ * password by a vendor they'd never heard of an hour ago. Every line is a
+ * shipped, checkable fact — no card field exists, the export button works on
+ * day one, and the founder-direct line is an authorized founding-shop term.
+ */
+const reassurance = [
+  {
+    lead: "No card, no setup fee.",
+    body: "Nothing to pay to look around. Put your first trip on the calendar and see how the day runs.",
+  },
+  {
+    lead: "Your records leave with you.",
+    body: "Settings hands back one ZIP of your shop's files — divers, bookings, waivers, payments, photos. It works on your first day, not just your last.",
+  },
+  {
+    lead: "You get a founder-direct line.",
+    body: "Founding shops write in and hear back the same day, and what your crew runs into shapes what ships next.",
+  },
+] as const;
 
 export default async function OnboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; from?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, from } = await searchParams;
+  // Which marketing page's "Start a trial" sent them here; the action reads it
+  // back off the form for the trial_started funnel event.
+  const source = eventSource(from);
 
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNav />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-12 sm:py-24">
         <div className="rounded-lg border border-border bg-surface p-6 sm:p-8 shadow-sm">
-          <h1 className="text-3xl font-semibold tracking-tight">Set up your shop</h1>
+          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+            Founding shop
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Set up your shop</h1>
           <p className="mt-1.5 text-sm text-muted">
-            A few details, and you&apos;ll be looking at your own working shop.
+            A few details, and you&apos;ll be looking at your own working shop. DiveDay is early,
+            and the first shops steer it.
           </p>
 
           {error ? (
@@ -35,6 +75,7 @@ export default async function OnboardPage({
           ) : null}
 
           <form action={onboardAction} className="mt-6 flex flex-col gap-5">
+            <input type="hidden" name="source" value={source} />
             <section className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold border-b border-border pb-1">Your shop</h2>
               <FieldGrid columns={2}>
@@ -117,7 +158,20 @@ export default async function OnboardPage({
               </FieldGrid>
             </section>
 
-            <p className="mt-2 text-xs text-muted">
+            <ul className="mt-2 flex flex-col gap-3 rounded-lg border border-border bg-surface-sunken p-4">
+              {reassurance.map((item) => (
+                <li key={item.lead} className="flex gap-3 text-sm leading-6 text-muted">
+                  <span aria-hidden className="font-semibold text-primary">
+                    ✓
+                  </span>
+                  <span>
+                    <span className="font-semibold text-foreground">{item.lead}</span> {item.body}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-xs text-muted">
               Your shop starts empty and ready for your own trips and divers. Want to explore a shop
               that&apos;s already full of sample trips first?{" "}
               <Link href="/" className="text-primary font-medium hover:underline">

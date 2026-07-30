@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
+import { FunnelTag } from "@/components/FunnelTag";
 import { HomeCTA } from "@/components/HomeCTA";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
@@ -13,6 +14,7 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { trialHref } from "@/lib/funnel";
 import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 
 export const metadata: Metadata = {
@@ -240,7 +242,7 @@ export default function Home() {
             <div className="mt-8 flex flex-col items-center gap-3">
               <div className="flex flex-col justify-center gap-3 sm:flex-row">
                 <form action={enterDemoAction}>
-                  <input type="hidden" name="source" value="home-closing" />
+                  <FunnelTag source="home-closing" />
                   <SubmitButton
                     pendingLabel="Getting your shop ready…"
                     className={buttonClass({
@@ -252,7 +254,7 @@ export default function Home() {
                   </SubmitButton>
                 </form>
                 <Link
-                  href="/onboard"
+                  href={trialHref("home-closing")}
                   className={buttonClass({
                     variant: "secondary",
                     size: "cta",

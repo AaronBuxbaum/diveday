@@ -71,4 +71,6 @@ verified.
    routing (including the 404 case for an unregistered slug), and existing guides.
 2. New guide → add its hub-and-detail coverage to `e2e/marketing.spec.ts` and visual snapshots
    (light + dark) to `e2e/visual.spec.ts`, following the existing `switching-*` capture names.
-3. Screenshot the new/changed route: `node scripts/screenshot.mjs /switching /switching/<slug>`.
+3. Screenshot the new/changed route and look at the PNGs:
+   `pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'public surfaces' --reporter=line`
+   writes them to `e2e/screenshots/` (gitignored), `switching-*` among them.

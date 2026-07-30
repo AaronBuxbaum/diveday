@@ -41,7 +41,6 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
-| [assessments/marketing-review.md](product/assessments/marketing-review.md) | 2026-07-23 review of the public pages: the case for repositioning, SEO substrate gaps, and the task breakdown (M1–M8) |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
@@ -51,6 +50,7 @@ rationale. Not open work; do not plan from them.
 | [archive/product-space-investigation.md](product/archive/product-space-investigation.md) | 2026-07-20 breadth→depth assessment; its recommendations shipped |
 | [archive/codebase-review-20260723.md](product/archive/codebase-review-20260723.md) | 2026-07-23 whole-repository review (CR-001–CR-021); all tickets shipped and human-owned decisions resolved 2026-07-24 |
 | [archive/ux-audit-20260721.md](product/archive/ux-audit-20260721.md) | 2026-07-21 UX work plan (WP-1…WP-11); fully delivered 2026-07-23 |
+| [archive/marketing-review-20260723.md](product/archive/marketing-review-20260723.md) | 2026-07-23 review of the public pages (M1–M8); fully delivered 2026-07-30. The live rulebook is [product/marketing.md](product/marketing.md) |
 | [archive/delight-and-experience.md](product/archive/delight-and-experience.md) | Completed delight-and-experience brainstorm; delivered ideas are summarized in shipped.md |
 | [archive/diver-booking-delight-20260729.md](product/archive/diver-booking-delight-20260729.md) | Completed diver-booking-delight follow-on brainstorm; delivered ideas are summarized in shipped.md |
 | [archive/fareharbor-feature-gaps-20260726.md](product/archive/fareharbor-feature-gaps-20260726.md) | 2026-07-26 feature-level audit vs FareHarbor (embed, promo codes, self-service cancel, abandoned cart, reviews, structured data); closed 2026-07-30 — those shipped, and gift cards, charters, and upsells moved to future-features.md |

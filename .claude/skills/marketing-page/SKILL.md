@@ -15,9 +15,14 @@ the same PR.
 1. Read `docs/product/marketing.md` end to end. It is short and every rule in it is load-bearing.
 2. Know what's actually shipped: `docs/product/shipped.md` (claims are shipped-only, demonstrable
    in the live demo — never roadmap marketing).
-3. If the change is positioning-level (hero, section order, new page), read
-   `docs/product/assessments/marketing-review.md` for the current case and task list (M1–M8).
-4. If the task is a new or edited `/switching/*` guide, use the **switching-pages** skill instead
+3. If the change is positioning-level (hero, section order, new page), the spine and its reasoning
+   are in `docs/product/marketing.md`; the 2026-07-23 review that argued for it is delivered and
+   archived at `docs/product/archive/marketing-review-20260723.md` — read it for *why*, never as a
+   task list.
+4. Any new CTA gets a funnel tag from the registry in `src/lib/funnel.ts` — `<FunnelTag source="…">`
+   on a demo form, `trialHref("…")` on a trial link. A new page adds its tag there first. See
+   "Measuring which story converts" in `docs/product/marketing.md`.
+5. If the task is a new or edited `/switching/*` guide, use the **switching-pages** skill instead
    — it layers the incumbent-specific procedure (guide shapes, `IMPORT_HONESTY_TABLE`, coexist
    framing) on top of this one.
 
@@ -63,8 +68,10 @@ things, `<Field>`/`<FieldGrid>` for forms.
 1. `pnpm check` green.
 2. `pnpm e2e marketing.spec.ts --reporter=line` — update its pinned headline/price assertions
    deliberately when copy changes; a red marketing spec on a copy change is the test working.
-3. Screenshot every touched route and **look at the PNGs**, light + dark, desktop + phone:
-   `node scripts/screenshot.mjs / /product /pricing`
+3. Screenshot every touched route and **look at the PNGs**, light + dark, desktop + phone. The
+   visual spec writes them, so a filtered run is the fastest way in:
+   `pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'public surfaces' --reporter=line`,
+   then read the images it wrote under `e2e/screenshots/` (gitignored).
 4. Run the `design-review` skill for anything beyond a copy tweak; new sections or pages get a
    visual snapshot in `e2e/visual.spec.ts` (see `e2e-and-visual`).
 5. Launch the `conversion-reviewer` agent for anything beyond a copy tweak — CTA clarity, funnel
