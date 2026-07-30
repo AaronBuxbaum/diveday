@@ -6,7 +6,7 @@ import { canPersonDeleteDiver, canPersonOverrideGearRequest, canPersonRefund } f
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
@@ -23,6 +23,13 @@ import { StatsSummary } from "./_components/StatsSummary";
 import { restoreCardAction } from "./actions";
 
 export const metadata: Metadata = { title: "Diver — DiveDay" };
+
+/**
+ * How many upcoming trips the "book on an upcoming trip" picker scans. Some
+ * of the scanned trips get filtered out below (already booked, full), so
+ * this is generously larger than what the picker actually shows.
+ */
+const BOOK_ACTIVITY_TRIP_SCAN_LIMIT = 50;
 
 export default async function DiverDetailPage({
   params,
@@ -50,7 +57,10 @@ export default async function DiverDetailPage({
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
   ]);
-  const upcoming = (await upcomingTripsWithCounts(db, shop.id)).filter(
+  const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
+    limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT,
+  });
+  const upcoming = scannedTrips.filter(
     (trip) =>
       !diver.bookings.some(
         ({ booking }) => booking.tripId === trip.id && booking.status !== "cancelled",

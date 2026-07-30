@@ -897,7 +897,9 @@
     "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
     "publish": "Publicar",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "showMoreReviews": "Mostrar más reseñas",
+    "backToTop": "← Volver al principio de la lista"
   },
   "schedule": {
     "fullTripForm": "Formulario completo de salida",
@@ -1911,7 +1913,8 @@
     "integrityValid": "Integridad verificada",
     "integrityInvalid": "Integridad no coincide",
     "integrityUnsealed": "Registro heredado sin sellar",
-    "truncatedNotice": "Mostrando los 20 registros firmados más recientes. Para ver el historial completo, usa la exportación CSV."
+    "showMoreRecords": "Mostrar más registros",
+    "backToTop": "← Volver al principio de la lista"
   },
   "shopHome": {
     "createdNotice": {

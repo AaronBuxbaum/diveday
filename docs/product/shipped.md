@@ -7,6 +7,21 @@ lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## List pagination and query bounding (delivered 2026-07-30)
+
+- **Cursor pagination reaches the waiver integrity audit and the staff reviews queue** — both now
+  page with the same opaque keyset cursor (`src/db/cursor.ts`) that the diver roster and schedule
+  board already used, showing a "Show more" link instead of either an unbounded fetch or a silent
+  truncation. The waivers page previously fetched every signed record a shop ever had and then
+  showed only the first 20 with no way to reach the rest; it now pages the same way the other lists
+  do.
+- **Today's board, the blockers queue, the reschedule picker, and a diver's "book on an upcoming
+  trip" list** all switched from the intentionally-unbounded `upcomingTripsWithCounts` to the
+  existing `pagedUpcomingTripsWithCounts`, so each asks the database for only the trips it can use
+  instead of every scheduled trip in the shop's future. The notification-delivery-issues query Today
+  reads is now windowed to Today's own horizon in SQL rather than fetched shop-wide and filtered
+  after.
+
 ## Calendar subscriptions, feature modules, and the copy ratchet (delivered 2026-07-30)
 
 - **Staff calendar subscriptions** — a captain or instructor subscribes to their DiveDay departures

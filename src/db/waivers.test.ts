@@ -13,9 +13,11 @@ import {
   getWaiverForToken,
   issueWaiverRequest,
   listTripWaiverActivity,
+  listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
   saveWaiverTemplate,
+  WAIVER_INTEGRITY_PAGE_SIZE,
 } from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
@@ -231,6 +233,48 @@ describe("waiver records (in-memory PGlite)", () => {
     expect(record?.templateVersion).toBe(template.version);
     expect(record?.templateBody).toBe(template.body);
     expect(record ? verifyWaiverIntegrity(record) : "unsealed").toBe("valid");
+  });
+});
+
+describe("listWaiverIntegrityAudit pagination", () => {
+  it("pages with a keyset cursor and never repeats or skips a record", async () => {
+    const { db, shop } = await waiverContext();
+
+    // The demo shop's history is well past WAIVER_INTEGRITY_PAGE_SIZE, so
+    // fetch a limit large enough to get every record back as ground truth.
+    const all = await listWaiverIntegrityAudit(db, shop.id, { limit: 1000 });
+    expect(all.nextCursor).toBeNull();
+    expect(all.entries.length).toBeGreaterThan(WAIVER_INTEGRITY_PAGE_SIZE);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    const maxHops = Math.ceil(all.entries.length / 40) + 1;
+    for (let hops = 0; hops < maxHops; hops++) {
+      const page = await listWaiverIntegrityAudit(db, shop.id, { cursor, limit: 40 });
+      expect(page.entries.length).toBeLessThanOrEqual(40);
+      seen.push(...page.entries.map((entry) => entry.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(all.entries.map((entry) => entry.id));
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("defaults to WAIVER_INTEGRITY_PAGE_SIZE per page and returns a cursor for more", async () => {
+    const { db, shop } = await waiverContext();
+    const page = await listWaiverIntegrityAudit(db, shop.id);
+    expect(page.entries.length).toBe(WAIVER_INTEGRITY_PAGE_SIZE);
+    expect(page.nextCursor).not.toBeNull();
+  });
+
+  it("treats a mangled cursor as the first page", async () => {
+    const { db, shop } = await waiverContext();
+    const all = await listWaiverIntegrityAudit(db, shop.id, { limit: 5 });
+    const mangled = await listWaiverIntegrityAudit(db, shop.id, {
+      cursor: "not-a-real-cursor",
+      limit: 5,
+    });
+    expect(mangled.entries.map((entry) => entry.id)).toEqual(all.entries.map((entry) => entry.id));
   });
 });
 

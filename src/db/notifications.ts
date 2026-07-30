@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { toDiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -542,8 +542,16 @@ export async function applyProviderEmailEvent(
  * `not_configured`) or a send the provider later reported went nowhere —
  * a bounce or a spam complaint is invisible at send time and is the more
  * common real-world failure of the two.
+ *
+ * `window` bounds the result to trips departing in `[from, until]` — Today
+ * only ever wants issues inside its own horizon, so the bound belongs in the
+ * query, not a filter over every issue the shop has ever had.
  */
-export async function listNotificationDeliveryIssues(db: AppDb, shopId: string) {
+export async function listNotificationDeliveryIssues(
+  db: AppDb,
+  shopId: string,
+  window: { from?: Date; until?: Date } = {},
+) {
   return db
     .select({
       delivery: notificationDeliveries,
@@ -571,6 +579,8 @@ export async function listNotificationDeliveryIssues(db: AppDb, shopId: string) 
           inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),
         ),
         ne(bookings.status, "cancelled"),
+        window.from ? gte(trips.startsAt, window.from) : undefined,
+        window.until ? lte(trips.startsAt, window.until) : undefined,
       ),
     )
     .groupBy(notificationDeliveries.id, bookings.id, people.id, trips.id)

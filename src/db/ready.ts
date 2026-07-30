@@ -11,7 +11,7 @@ import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readin
 import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
 import { bookings, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked, upcomingTripsWithCounts } from "./trips";
+import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "./trips";
 
 /** One alternative trip a diver could reschedule this booking into. */
 export type RescheduleCandidate = {
@@ -24,6 +24,14 @@ export type RescheduleCandidate = {
 
 /** How many upcoming trips the reschedule picker offers — plenty to browse without loading the whole calendar. */
 const MAX_RESCHEDULE_CANDIDATES = 8;
+
+/**
+ * How many upcoming trips to scan for reschedule candidates. Some of the
+ * scanned trips are full and get filtered out below, so this is generously
+ * larger than MAX_RESCHEDULE_CANDIDATES rather than fetching every scheduled
+ * trip the shop has.
+ */
+const RESCHEDULE_CANDIDATE_SCAN_LIMIT = 50;
 
 /**
  * Everything the transactional `/ready` page needs, gathered from the same
@@ -163,7 +171,10 @@ export async function getReadyPageData(
   // that decision forward. Showing the picker for a waived booking anyway
   // would promise a move `rescheduleBooking` then rejects as already_paid.
   if (!settled && canManageBooking) {
-    const upcoming = await upcomingTripsWithCounts(db, row.shopId, now);
+    const { trips: upcoming } = await pagedUpcomingTripsWithCounts(db, row.shopId, {
+      now,
+      limit: RESCHEDULE_CANDIDATE_SCAN_LIMIT,
+    });
     // Known gap (Codex finding, accepted for now): this only filters by raw
     // capacity, not by the course prerequisite / instructor-ratio / minimum-age
     // gates `rescheduleBooking`'s own `createBookingRecord` call enforces at
