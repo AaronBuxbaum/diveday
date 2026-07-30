@@ -2064,6 +2064,94 @@
         "readyCount": "{count} listos",
         "blockedCount": "{count} bloqueados",
         "openRoster": "Ver lista"
+      },
+      "urgency": {
+        "now": "Antes de las salidas de hoy",
+        "soon": "Próximos 3 días",
+        "later": "Esta semana"
+      },
+      "actionKind": {
+        "medicalReview": "Médico",
+        "readinessUnavailable": "Disponibilidad",
+        "identity": "Identidad",
+        "certification": "Tarjetas",
+        "requirements": "Configuración",
+        "waiver": "Exención",
+        "instructorMissing": "Tripulación",
+        "nitroxGate": "Nitrox",
+        "divePrep": "Preparación",
+        "payment": "Pago",
+        "emailDelivery": "Correo",
+        "waitlistSeat": "Lista de espera",
+        "lastMinuteFill": "Llenar plazas",
+        "emergencyContact": "Contacto"
+      },
+      "blockerAction": {
+        "setRequirements": "Configurar requisitos",
+        "confirmIdentity": "Confirmar identidad",
+        "checkDateOfBirth": "Verificar fecha de nacimiento",
+        "sendWaiver": "Enviar exención",
+        "nudgeWaiver": "Recordar exención",
+        "reissueWaiver": "Reemitir exención",
+        "reviewMedical": "Revisar informe médico",
+        "addCard": "Añadir tarjeta",
+        "verifyCard": "Verificar tarjeta",
+        "updateCard": "Actualizar tarjeta",
+        "reviewCard": "Revisar tarjeta",
+        "addSpecialty": "Añadir especialidad",
+        "verifySpecialty": "Verificar especialidad",
+        "updateSpecialty": "Actualizar especialidad",
+        "confirmSpecialty": "Confirmar especialidad",
+        "addNitroxCard": "Añadir tarjeta de nitrox",
+        "verifyNitroxCard": "Verificar tarjeta de nitrox",
+        "takePayment": "Cobrar pago",
+        "checkReadiness": "Comprobar disponibilidad"
+      },
+      "blockerGroup": {
+        "setRequirements": "Configurar requisitos",
+        "confirmIdentities": "Confirmar identidades",
+        "checkDatesOfBirth": "Verificar fechas de nacimiento",
+        "sendWaivers": "Enviar exenciones",
+        "nudgeWaivers": "Recordar exenciones",
+        "reissueWaivers": "Reemitir exenciones",
+        "reviewMedicals": "Revisar informes médicos",
+        "reviewCards": "Revisar tarjetas",
+        "verifyCards": "Verificar tarjetas",
+        "updateCards": "Actualizar tarjetas",
+        "reviewSpecialties": "Revisar especialidades",
+        "verifySpecialties": "Verificar especialidades",
+        "updateSpecialties": "Actualizar especialidades",
+        "confirmImportedSpecialties": "Confirmar especialidades importadas",
+        "reviewNitroxCards": "Revisar tarjetas de nitrox",
+        "verifyNitroxCards": "Verificar tarjetas de nitrox",
+        "takePayments": "Cobrar pagos",
+        "checkReadiness": "Comprobar disponibilidad"
+      },
+      "pointingLabel": {
+        "trip": "Ver lista",
+        "diver": "Abrir la ficha de {name}"
+      },
+      "blockerDetail": {
+        "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo más por resolver.} other {Quedan # bloqueos más por resolver.}}",
+        "group": "{detail} {names}."
+      },
+      "summary": {
+        "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
+        "clear": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}} — y no tienes nada pendiente.",
+        "urgent": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {urgent, plural, =1 {1 tarea por resolver antes de zarpar.} other {# tareas por resolver antes de zarpar.}}",
+        "ahead": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. Nada es urgente; {jobs, plural, =1 {1 tarea para adelantar.} other {# tareas para adelantar.}}"
+      },
+      "greeting": {
+        "morning": "Buenos días, {name} ☕",
+        "afternoon": "Buenas tardes, {name} ☀️",
+        "evening": "Buenas noches, {name} 🌙",
+        "night": "Buenas noches, {name} 🌌"
+      },
+      "seasonalBriefing": {
+        "summer": "Aprovecha el intervalo de superficie — busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
+        "autumn": "Aprovecha el intervalo de superficie — coge una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
+        "winter": "Aprovecha el intervalo de superficie — abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
+        "spring": "Aprovecha el intervalo de superficie — disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
       }
     },
     "tripDiveFields": {

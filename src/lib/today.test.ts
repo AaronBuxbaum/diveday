@@ -299,19 +299,21 @@ describe("groupActions", () => {
 
 describe("summarizeDay", () => {
   it("celebrates a genuinely clear day", () => {
-    expect(summarizeDay([], 2)).toBe("2 departures today — and nothing is waiting on you.");
+    expect(summarizeDay([], 2)).toEqual({ code: "clear", departures: 2 });
   });
 
   it("leads with the people who cannot board, not the number of rows", () => {
     // Nine divers collapsed into one row is still nine divers.
     const summary = summarizeDay([action({ urgency: "now" })], 1, 9);
-    expect(summary).toBe("1 departure today. 9 divers still can’t board.");
+    expect(summary).toEqual({ code: "blocked", departures: 1, blockedToday: 9 });
   });
 
   it("counts a single blocked diver in the singular", () => {
-    expect(summarizeDay([action({ urgency: "now" })], 1, 1)).toBe(
-      "1 departure today. 1 diver still can’t board.",
-    );
+    expect(summarizeDay([action({ urgency: "now" })], 1, 1)).toEqual({
+      code: "blocked",
+      departures: 1,
+      blockedToday: 1,
+    });
   });
 
   it("falls back to jobs when today's boats are clear but work remains", () => {
@@ -319,12 +321,12 @@ describe("summarizeDay", () => {
       [action({ urgency: "now" }), action({ id: "b", urgency: "later" })],
       1,
     );
-    expect(summary).toBe("1 departure today. 1 job to clear before they sail.");
+    expect(summary).toEqual({ code: "urgent", departures: 1, urgent: 1 });
   });
 
   it("stays calm when nothing is urgent", () => {
     const summary = summarizeDay([action({ urgency: "soon" })], 0);
-    expect(summary).toBe("No boats out today. Nothing is urgent; 1 job to work ahead.");
+    expect(summary).toEqual({ code: "ahead", departures: 0, jobs: 1 });
   });
 
   it("pluralises departures and jobs", () => {
@@ -332,7 +334,7 @@ describe("summarizeDay", () => {
       [action({ id: "a", urgency: "soon" }), action({ id: "b", urgency: "later" })],
       3,
     );
-    expect(summary).toBe("3 departures today. Nothing is urgent; 2 jobs to work ahead.");
+    expect(summary).toEqual({ code: "ahead", departures: 3, jobs: 2 });
   });
 });
 
@@ -366,47 +368,41 @@ describe("leadWithCrewed", () => {
 });
 
 describe("getSeasonalBriefing", () => {
-  it("returns summer briefing for June, July, August", () => {
-    expect(getSeasonalBriefing(new Date("2026-07-15"))).toContain("grab some shade");
+  it("returns summer for June, July, August", () => {
+    expect(getSeasonalBriefing(new Date("2026-07-15"))).toBe("summer");
   });
 
-  it("returns autumn briefing for September, October, November", () => {
-    expect(getSeasonalBriefing(new Date("2026-10-15"))).toContain("grab a warm towel");
+  it("returns autumn for September, October, November", () => {
+    expect(getSeasonalBriefing(new Date("2026-10-15"))).toBe("autumn");
   });
 
-  it("returns winter briefing for December, January, February", () => {
-    expect(getSeasonalBriefing(new Date("2026-01-15"))).toContain("warm up with a dry coat");
+  it("returns winter for December, January, February", () => {
+    expect(getSeasonalBriefing(new Date("2026-01-15"))).toBe("winter");
   });
 
-  it("returns spring briefing for March, April, May", () => {
-    expect(getSeasonalBriefing(new Date("2026-04-15"))).toContain("catch some sun");
-  });
-
-  it("interpolates shopName when provided", () => {
-    expect(getSeasonalBriefing(new Date("2026-07-15"), "Blue Mantis Divers")).toContain(
-      "grab some shade at Blue Mantis Divers",
-    );
+  it("returns spring for March, April, May", () => {
+    expect(getSeasonalBriefing(new Date("2026-04-15"))).toBe("spring");
   });
 });
 
 describe("getTimeOfDayGreeting", () => {
-  it("returns morning greeting for 8 AM local time", () => {
+  it("returns morning for 8 AM local time", () => {
     const date = new Date("2026-11-15T13:00:00Z"); // 13:00 UTC -> 8:00 AM America/New_York
-    expect(getTimeOfDayGreeting(date, "America/New_York", "Sal")).toBe("Good morning, Sal ☕");
+    expect(getTimeOfDayGreeting(date, "America/New_York")).toBe("morning");
   });
 
-  it("returns afternoon greeting for 2 PM local time", () => {
+  it("returns afternoon for 2 PM local time", () => {
     const date = new Date("2026-11-15T19:00:00Z"); // 19:00 UTC -> 2:00 PM America/New_York
-    expect(getTimeOfDayGreeting(date, "America/New_York", "Dana")).toBe("Good afternoon, Dana ☀️");
+    expect(getTimeOfDayGreeting(date, "America/New_York")).toBe("afternoon");
   });
 
-  it("returns evening greeting for 7 PM local time", () => {
+  it("returns evening for 7 PM local time", () => {
     const date = new Date("2026-11-15T24:00:00Z"); // 00:00 UTC next day -> 7:00 PM America/New_York
-    expect(getTimeOfDayGreeting(date, "America/New_York", "Keiko")).toBe("Good evening, Keiko 🌙");
+    expect(getTimeOfDayGreeting(date, "America/New_York")).toBe("evening");
   });
 
-  it("returns night greeting for 11 PM local time", () => {
+  it("returns night for 11 PM local time", () => {
     const dateNight = new Date("2026-11-16T04:00:00Z"); // 04:00 UTC -> 11:00 PM America/New_York
-    expect(getTimeOfDayGreeting(dateNight, "America/New_York", "Dana")).toBe("Good night, Dana 🌌");
+    expect(getTimeOfDayGreeting(dateNight, "America/New_York")).toBe("night");
   });
 });

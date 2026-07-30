@@ -1,3 +1,5 @@
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { pointingLabelText } from "@/i18n/today-labels";
 import { annotateAlsoOn, type BlockerQueueTrip, blockerFixFor } from "@/lib/blockers";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
@@ -27,6 +29,12 @@ export async function getBlockerQueue(
   shopId: string,
   shopSlug: string,
   now: Date = nowDate(),
+  /**
+   * Resolves every fix's button label (`blockerFixFor`, `src/lib/blockers.ts`).
+   * Defaults to English so every pre-existing caller (tests included) keeps
+   * working unchanged; the page passes its own request-locale translator.
+   */
+  t: StaffTranslator = staffTranslator("en-US"),
 ): Promise<BlockerQueue> {
   const upcoming = await upcomingTripsWithCounts(db, shopId, now);
   const inspected = upcoming.slice(0, MAX_TRIPS);
@@ -49,14 +57,23 @@ export async function getBlockerQueue(
         fullName: row.person.fullName,
         blockers: [...row.readiness.blockers],
         // Every blocked row has at least one blocker, so a fix always resolves.
-        fix: blockerFixFor(row.readiness.blockers, {
-          shopSlug,
-          tripId: trip.id,
-          personId: row.person.id,
-          bookingId: row.booking.id,
-          fullName: row.person.fullName,
-        }) ?? {
-          label: "Open roster",
+        fix: blockerFixFor(
+          row.readiness.blockers,
+          {
+            shopSlug,
+            tripId: trip.id,
+            personId: row.person.id,
+            bookingId: row.booking.id,
+            fullName: row.person.fullName,
+          },
+          t,
+        ) ?? {
+          // Every blocked row has at least one blocker (`primaryBlocker` never
+          // returns null here), so this fallback is unreachable in practice —
+          // kept only because `blockerFixFor` types as nullable. Same "points
+          // at the roster" wording as any other row with nowhere more specific
+          // to send a diver.
+          label: pointingLabelText(t, "trip", row.person.fullName),
           href: `/shop/${shopSlug}/trips/${trip.id}/guests`,
           sendsWaiver: false,
           bookingId: row.booking.id,

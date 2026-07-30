@@ -13,6 +13,7 @@ import { getShopById } from "@/db/shops";
 import { getTodayWork } from "@/db/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { GREETING_KEYS, summarizeDayText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -95,6 +96,7 @@ async function TodayBody({
     shop.timezone,
     now,
     lens ? session.user.personId : undefined,
+    t,
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
   const crewedSet = new Set(crewedTripIds);
@@ -114,13 +116,16 @@ async function TodayBody({
     <>
       <ShopPageHeader
         eyebrow={formatShortDate(now, locale, shop.timezone)}
-        title={getTimeOfDayGreeting(now, shop.timezone, firstName)}
+        title={t(GREETING_KEYS[getTimeOfDayGreeting(now, shop.timezone)], { name: firstName })}
         meta={
           <p className="max-w-2xl text-lg text-muted">
-            {summarizeDay(
-              actions,
-              departures.length,
-              departures.reduce((total, departure) => total + departure.blocked, 0),
+            {summarizeDayText(
+              t,
+              summarizeDay(
+                actions,
+                departures.length,
+                departures.reduce((total, departure) => total + departure.blocked, 0),
+              ),
             )}
             {yourBoat
               ? ` ${t("shopHome.crewingBoat", {

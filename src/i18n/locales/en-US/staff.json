@@ -2064,6 +2064,94 @@
         "readyCount": "{count} ready",
         "blockedCount": "{count} blocked",
         "openRoster": "Open roster"
+      },
+      "urgency": {
+        "now": "Before today’s boats",
+        "soon": "Next 3 days",
+        "later": "This week"
+      },
+      "actionKind": {
+        "medicalReview": "Medical",
+        "readinessUnavailable": "Readiness",
+        "identity": "Identity",
+        "certification": "Cards",
+        "requirements": "Setup",
+        "waiver": "Waiver",
+        "instructorMissing": "Crew",
+        "nitroxGate": "Nitrox",
+        "divePrep": "Prep",
+        "payment": "Payment",
+        "emailDelivery": "Email",
+        "waitlistSeat": "Wait list",
+        "lastMinuteFill": "Fill seats",
+        "emergencyContact": "Contact"
+      },
+      "blockerAction": {
+        "setRequirements": "Set requirements",
+        "confirmIdentity": "Confirm identity",
+        "checkDateOfBirth": "Check date of birth",
+        "sendWaiver": "Send waiver",
+        "nudgeWaiver": "Nudge waiver",
+        "reissueWaiver": "Reissue waiver",
+        "reviewMedical": "Review medical",
+        "addCard": "Add card",
+        "verifyCard": "Verify card",
+        "updateCard": "Update card",
+        "reviewCard": "Review card",
+        "addSpecialty": "Add specialty",
+        "verifySpecialty": "Verify specialty",
+        "updateSpecialty": "Update specialty",
+        "confirmSpecialty": "Confirm specialty",
+        "addNitroxCard": "Add nitrox card",
+        "verifyNitroxCard": "Verify nitrox card",
+        "takePayment": "Take payment",
+        "checkReadiness": "Check readiness"
+      },
+      "blockerGroup": {
+        "setRequirements": "Set requirements",
+        "confirmIdentities": "Confirm identities",
+        "checkDatesOfBirth": "Check dates of birth",
+        "sendWaivers": "Send waivers",
+        "nudgeWaivers": "Nudge waivers",
+        "reissueWaivers": "Reissue waivers",
+        "reviewMedicals": "Review medicals",
+        "reviewCards": "Review cards",
+        "verifyCards": "Verify cards",
+        "updateCards": "Update cards",
+        "reviewSpecialties": "Review specialties",
+        "verifySpecialties": "Verify specialties",
+        "updateSpecialties": "Update specialties",
+        "confirmImportedSpecialties": "Confirm imported specialties",
+        "reviewNitroxCards": "Review nitrox cards",
+        "verifyNitroxCards": "Verify nitrox cards",
+        "takePayments": "Take payments",
+        "checkReadiness": "Check readiness"
+      },
+      "pointingLabel": {
+        "trip": "Open roster",
+        "diver": "Open {name}’s record"
+      },
+      "blockerDetail": {
+        "withRemaining": "{detail} {remaining, plural, one {# other blocker to clear too.} other {# other blockers to clear too.}}",
+        "group": "{detail} {names}."
+      },
+      "summary": {
+        "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
+        "clear": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}} — and nothing is waiting on you.",
+        "urgent": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {urgent, plural, =1 {1 job to clear before they sail.} other {# jobs to clear before they sail.}}",
+        "ahead": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. Nothing is urgent; {jobs, plural, =1 {1 job to work ahead.} other {# jobs to work ahead.}}"
+      },
+      "greeting": {
+        "morning": "Good morning, {name} ☕",
+        "afternoon": "Good afternoon, {name} ☀️",
+        "evening": "Good evening, {name} 🌙",
+        "night": "Good night, {name} 🌌"
+      },
+      "seasonalBriefing": {
+        "summer": "Enjoy the surface interval — grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we'll see you on the next boat.",
+        "autumn": "Enjoy the surface interval — grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we'll see you on the next boat.",
+        "winter": "Enjoy the surface interval — warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we'll see you on the next boat.",
+        "spring": "Enjoy the surface interval — catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we'll see you on the next boat."
       }
     },
     "tripDiveFields": {
