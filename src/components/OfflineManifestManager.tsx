@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
+import { formatDateTimeTz } from "@/lib/format";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -62,9 +63,12 @@ function fill(template: string, values: Record<string, string>): string {
 
 export function OfflineManifestManager({
   payload,
+  locale,
   copy,
 }: {
   payload: OfflineManifestPayload;
+  /** Negotiated request locale (see requestLocale) — never hard-coded, per AGENTS.md. */
+  locale: string;
   copy: OfflineManifestManagerCopy;
 }) {
   const router = useRouter();
@@ -391,7 +395,11 @@ export function OfflineManifestManager({
           {saved ? (
             <p className="mt-1 text-xs text-muted">
               {fill(copy.savedSummary, {
-                date: new Date(saved.snapshot.savedAt).toLocaleString(),
+                date: formatDateTimeTz(
+                  new Date(saved.snapshot.savedAt),
+                  locale,
+                  payload.shop.timezone,
+                ),
                 pending: String(pending),
                 rejected: String(rejected),
               })}
@@ -410,7 +418,7 @@ export function OfflineManifestManager({
           {saved ? (
             <a
               href={`/offline-manifest?trip=${tripId}`}
-              className={buttonClass({ variant: "primary" })}
+              className={buttonClass({ variant: "primary", size: "boat" })}
             >
               {copy.openOfflineRollCall}
             </a>

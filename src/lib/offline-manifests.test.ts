@@ -83,12 +83,41 @@ describe("offline manifest policy", () => {
     expect(isOfflineManifestExpired(saved, new Date("2026-08-01T00:00:00.000Z"))).toBe(true);
   });
 
-  it("never lets a snapshot board a missing or blocked diver", () => {
+  it("never lets a snapshot board a missing or blocked diver at departure", () => {
     const saved = snapshot();
-    expect(canRecordOfflineStatus(saved, "ready", "boarded")).toBe(true);
-    expect(canRecordOfflineStatus(saved, "blocked", "boarded")).toBe(false);
-    expect(canRecordOfflineStatus(saved, "blocked", "not_boarded")).toBe(true);
-    expect(canRecordOfflineStatus(saved, "missing", "not_boarded")).toBe(false);
+    expect(canRecordOfflineStatus(saved, "ready", "boarded", "departure")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "departure")).toBe(false);
+    expect(canRecordOfflineStatus(saved, "blocked", "not_boarded", "departure")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "departure")).toBe(false);
+  });
+
+  // Dive-domain-expert review (docs/product/assessments/ux-personas-20260730.md,
+  // persona 10 Sal, task 72, invariant 2): the UI shows a live "Board" button
+  // after any numbered dive regardless of readiness (`ready || !isDeparture`
+  // in OfflineManifestView) because post-departure roll call is a pure head
+  // count. `canRecordOfflineStatus` is the real fail-closed authority and
+  // must agree — it used to ignore checkpoint entirely and always re-check
+  // readiness, silently refusing exactly the board the UI implies will
+  // succeed. This mirrors the server's own gate (`recordRollCall` in
+  // src/db/manifests.ts: `status === "boarded" && checkpoint === "departure"`).
+  it("still allows boarding a not-ready diver after a numbered dive as a pure headcount", () => {
+    const saved = snapshot();
+    // A missing/uncleared medical, unresolved at departure.
+    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "departure")).toBe(false);
+    // The same diver, same unresolved readiness, at a post-departure
+    // checkpoint — must succeed. This is the case that regresses without the
+    // checkpoint gate.
+    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "after_dive_1")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "after_dive_2")).toBe(true);
+    // Readiness still gates a fresh board attempt at departure itself, even
+    // when other checkpoints exist on the same snapshot.
+    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "departure")).toBe(false);
+  });
+
+  it("never lets an unknown bookingId board at any checkpoint", () => {
+    const saved = snapshot();
+    expect(canRecordOfflineStatus(saved, "missing", "boarded", "after_dive_1")).toBe(false);
+    expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "after_dive_1")).toBe(false);
   });
 
   it("uses the latest non-rejected device event and exposes pending state", () => {

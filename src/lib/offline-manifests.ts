@@ -191,14 +191,33 @@ export function isOfflineManifestExpired(
   return new Date(snapshot.expiresAt) <= now;
 }
 
+/**
+ * The real fail-closed authority for offline roll call, independent of the
+ * UI. Mirrors `recordRollCall`'s server-side gate exactly (src/db/manifests.ts:
+ * `if (input.status === "boarded" && checkpoint === "departure")`): readiness
+ * blocks boarding only at the "departure" checkpoint. After any numbered dive,
+ * boarding is a pure head count — a diver already aboard is recorded present
+ * regardless of a paperwork state that changed after the boat left.
+ *
+ * A missing `checkpoint` argument used to make this the same check at every
+ * checkpoint, always keyed off `snapshot.manifests[0]` (whichever manifest
+ * happens to be first, always "departure" per `rollCallCheckpoints`) — so an
+ * offline board recorded after dive 1 against a not-ready snapshot was
+ * silently refused here even though the UI renders a live "Board" button for
+ * exactly that case (`ready || !isDeparture` in OfflineManifestView). See the
+ * regression test in offline-manifests.test.ts and offline-manifest-store.test.ts.
+ */
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
   status: OfflineRollCallEvent["status"],
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
 ): boolean {
   const diver = snapshot.manifests[0]?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
-  return status === "not_boarded" || diver.readiness.status === "ready";
+  if (status === "not_boarded") return true;
+  if (checkpoint !== "departure") return true;
+  return diver.readiness.status === "ready";
 }
 
 export function latestOfflineRollCall(

@@ -1311,6 +1311,7 @@
       "summaryBoarded": "Embarcados",
       "summaryNotBoarded": "No embarcados",
       "summaryAwaiting": "Pendientes",
+      "moreStatsSummary": "Más estadísticas",
       "checkpointNavAriaLabel": "Punto de control del pase de lista",
       "activeCheckpoint": "Punto de control activo",
       "rollCallComplete": "Pase de lista completo ✦",
@@ -2092,7 +2093,8 @@
       "goToSettings": "Ajustes",
       "goToWaivers": "Exenciones",
       "goToBoarding": "Embarque — el barco de hoy",
-      "goToWalkIn": "Walk-in"
+      "goToWalkIn": "Walk-in",
+      "goToOfflineRollCall": "Abrir pase de lista sin conexión"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2175,7 +2177,8 @@
       "holdLine1": "MANTÉN",
       "holdLine2": "2s",
       "unlockingProgress": "Desbloqueando... {percent}%",
-      "holdToUnlock": "Mantén pulsado el botón para desbloquear"
+      "holdToUnlock": "Mantén pulsado el botón para desbloquear",
+      "disableToggleLabel": "Desactivar la protección contra salpicaduras en este dispositivo"
     },
     "undoToast": {
       "pendingLabel": "Deshaciendo…",

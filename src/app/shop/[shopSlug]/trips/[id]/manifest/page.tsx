@@ -18,7 +18,8 @@ import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
-import { WaterLocker } from "@/components/WaterLocker";
+import { buttonClass } from "@/components/ui/button";
+import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
 import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
@@ -223,6 +224,7 @@ export default async function TripManifestPage({
         </div>
       </header>
       <OfflineManifestManager
+        locale={locale}
         payload={serializeManifests(
           completeManifests,
           { slug: shopSlug, name: shop.name, timezone: shop.timezone },
@@ -263,24 +265,71 @@ export default async function TripManifestPage({
         }
       />
 
-      <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          [t("trips.manifest.summaryDivers"), manifest.summary.totalDivers],
-          [t("trips.manifest.summaryReady"), manifest.summary.ready],
-          [t("trips.manifest.summaryBlocked"), manifest.summary.blocked],
-          [t("trips.manifest.summaryBoarded"), manifest.summary.boarded],
-          [t("trips.manifest.summaryNotBoarded"), manifest.summary.notBoarded],
-          [t("trips.manifest.summaryAwaiting"), manifest.summary.awaiting],
-        ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-lg border border-border bg-surface px-4 py-3">
-            <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      <section className="mt-7">
+        {/*
+         * Two key tiles + a `<details>` for the rest below `sm` (task 75,
+         * persona 10 Sal): the full six-tile `grid-cols-2` grid used to push
+         * the first diver row below the fold on a phone. Boarded/Awaiting are
+         * what a captain checks mid-roll-call; Divers/Ready/Blocked/Not
+         * boarded are one tap away instead of gone.
+         */}
+        <div className="grid grid-cols-2 gap-3 sm:hidden">
+          {[
+            [t("trips.manifest.summaryBoarded"), manifest.summary.boarded],
+            [t("trips.manifest.summaryAwaiting"), manifest.summary.awaiting],
+          ].map(([label, value]) => (
+            <div
+              key={String(label)}
+              className="rounded-lg border border-border bg-surface px-4 py-3"
+            >
+              <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+        <details className="mt-3 sm:hidden">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-primary">
+            {t("trips.manifest.moreStatsSummary")}
+          </summary>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {[
+              [t("trips.manifest.summaryDivers"), manifest.summary.totalDivers],
+              [t("trips.manifest.summaryReady"), manifest.summary.ready],
+              [t("trips.manifest.summaryBlocked"), manifest.summary.blocked],
+              [t("trips.manifest.summaryNotBoarded"), manifest.summary.notBoarded],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="rounded-lg border border-border bg-surface px-4 py-3"
+              >
+                <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        </details>
+        <div className="hidden gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            [t("trips.manifest.summaryDivers"), manifest.summary.totalDivers],
+            [t("trips.manifest.summaryReady"), manifest.summary.ready],
+            [t("trips.manifest.summaryBlocked"), manifest.summary.blocked],
+            [t("trips.manifest.summaryBoarded"), manifest.summary.boarded],
+            [t("trips.manifest.summaryNotBoarded"), manifest.summary.notBoarded],
+            [t("trips.manifest.summaryAwaiting"), manifest.summary.awaiting],
+          ].map(([label, value]) => (
+            <div
+              key={String(label)}
+              className="rounded-lg border border-border bg-surface px-4 py-3"
+            >
+              <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <nav
-        className="mt-7 flex gap-2 overflow-x-auto pb-2 print:hidden"
+        className="mt-7 flex flex-wrap items-center gap-2 overflow-x-auto pb-2 print:hidden"
         aria-label={t("trips.manifest.checkpointNavAriaLabel")}
       >
         {checkpoints.map((value) => (
@@ -288,15 +337,18 @@ export default async function TripManifestPage({
             key={value}
             href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
             scroll={false}
-            className={
-              value === checkpoint
-                ? "inline-flex min-h-11 shrink-0 items-center rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
-                : "inline-flex min-h-11 shrink-0 items-center rounded-lg border border-border-strong px-4 py-2.5 font-semibold hover:bg-surface-sunken"
-            }
+            className={buttonClass({
+              variant: value === checkpoint ? "primary" : "secondary",
+              size: "boat",
+              className: "shrink-0",
+            })}
           >
             {rollCallCheckpointText(t, value)}
           </Link>
         ))}
+        <WaterLockerToggle
+          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+        />
       </nav>
 
       <section

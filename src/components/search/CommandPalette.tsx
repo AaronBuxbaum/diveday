@@ -38,6 +38,7 @@ export type CommandPaletteCopy = {
   goToWaivers: string;
   goToBoarding: string;
   goToWalkIn: string;
+  goToOfflineRollCall: string;
 };
 
 /**
@@ -118,6 +119,18 @@ export function CommandPalette({
     const goto: PaletteItem[] = [];
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
       goto.push({ key: "goto:boarding", label: copy.goToBoarding, href: boatBoardingHref });
+    }
+    // Not shop-scoped (the offline snapshot lives per-device, not per-shop
+    // route) so this doesn't need a `boatBoardingHref`-style prop — it's
+    // always the same URL and always findable, per task 77 (persona 10, Sal):
+    // the entry point used to be only a button below the live manifest
+    // header, easy to miss on a device that's about to lose signal.
+    if (q === "" || "offline".includes(q) || "roll call".includes(q) || "manifest".includes(q)) {
+      goto.push({
+        key: "goto:offline-roll-call",
+        label: copy.goToOfflineRollCall,
+        href: "/offline-manifest",
+      });
     }
     const baseGoTo: { label: string; suffix: string }[] = [
       { label: copy.goToToday, suffix: "" },

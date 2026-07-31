@@ -341,7 +341,9 @@ export async function appendOfflineRollCall(
     if (isOfflineManifestExpired(envelope.snapshot)) {
       throw new Error("This saved copy has expired — open the live manifest to record roll call.");
     }
-    if (!canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status)) {
+    if (
+      !canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status, input.checkpoint)
+    ) {
       throw new Error("This saved readiness record does not allow boarding");
     }
     envelope.events.push({
