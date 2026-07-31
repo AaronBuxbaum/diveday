@@ -138,6 +138,29 @@ function firstNameOf(fullName: string, fallback: string): string {
   return fullName.trim().split(/\s+/)[0] || fallback;
 }
 
+/**
+ * The light-mode `--primary` token, duplicated intentionally: an email
+ * document can't reference globals.css custom properties any more than
+ * `icon.tsx`'s `ImageResponse` can (see that file's own comment).
+ */
+const BRAND_PRIMARY_COLOR = "#0e7490";
+
+/**
+ * Wraps a template's inner body fragment in a real HTML document — doctype,
+ * `<html lang>`, a viewport meta tag, and a max-width container, none of
+ * which any individual template had before (they returned bare `<p>` soup
+ * that Resend delivered as-is). Kept deliberately plain: inline styles only,
+ * no external stylesheet or font, so it stays deliverability-safe. The shop
+ * name renders as a small text header — never a logo image, matching the
+ * "no image-heavy layouts" rule for transactional mail.
+ */
+export function wrapEmailHtml(
+  bodyHtml: string,
+  options: { shopName: string; locale: string },
+): string {
+  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"></head><body style="margin: 0; padding: 0; background-color: #f3f4f6; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><p style="margin: 0 0 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></body></html>`;
+}
+
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
@@ -262,7 +285,7 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     ? `\n\n${packingHeading}\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
     : "";
   const reminderHtml = packingItems.length
-    ? `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+    ? `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
     : "";
 
   const confirmed = t("notifications.bookingConfirmation.confirmed", {

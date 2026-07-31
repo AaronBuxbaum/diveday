@@ -46,6 +46,10 @@ export default async function PricingPage() {
       answer: t("marketing.pricing.faq.billing.answer"),
     },
     {
+      question: t("marketing.pricing.faq.trialMeaning.question"),
+      answer: t("marketing.pricing.faq.trialMeaning.answer"),
+    },
+    {
       question: t("marketing.pricing.faq.seeBefore.question"),
       answer: t("marketing.pricing.faq.seeBefore.answer"),
     },

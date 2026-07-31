@@ -18,6 +18,7 @@ import {
   waitlistInviteEmail,
   waiverRequestEmail,
   welcomeEmail,
+  wrapEmailHtml,
 } from "./email";
 
 const emailAddressSchema = z.email().max(200);
@@ -391,6 +392,16 @@ function reservedTestRecipientDelivery(to: string): NotificationDelivery | null 
 }
 
 function messageFor(notification: Notification): NotificationEmail {
+  const message = rawMessageFor(notification);
+  // Not every kind carries both fields (the internal new-account alert has no
+  // locale; password-changed has no shop to brand as) — the wrapper's own
+  // document chrome (doctype, viewport, container) applies uniformly either way.
+  const shopName = "shopName" in notification ? notification.shopName : "DiveDay";
+  const locale = "locale" in notification ? notification.locale : "en";
+  return { ...message, html: wrapEmailHtml(message.html, { shopName, locale }) };
+}
+
+function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
   if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
   if (notification.kind === "trip_reminder_7d") {

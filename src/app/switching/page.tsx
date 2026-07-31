@@ -26,6 +26,13 @@ const metadataCompetitors = new Intl.ListFormat(DEFAULT_DIVER_LOCALE, {
 export const metadata: Metadata = {
   title: "Switching guides — DiveDay",
   description: `On a spreadsheet, or leaving ${metadataCompetitors}? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.`,
+  alternates: { canonical: "/switching" },
+  openGraph: {
+    title: "Switching guides — DiveDay",
+    description:
+      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
+    url: "/switching",
+  },
 };
 
 export default async function SwitchHubPage() {

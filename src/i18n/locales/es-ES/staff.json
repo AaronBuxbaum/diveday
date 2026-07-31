@@ -1424,9 +1424,6 @@
       "eyebrow": "Salidas",
       "cancelledBadge": "Cancelada",
       "courseSession": "Sesión de curso · {title}",
-      "privateWaiverLinkReady": "Enlace privado de exención listo",
-      "waiverLinkDescription": "Comparte este enlace con el buceador. Caduca en siete días y se sustituye si emites uno nuevo.",
-      "openWaiverLink": "Abrir enlace de exención",
       "demandSignal": "Este barco podría llevar más gente",
       "demandHeading": "Esta salida podría admitir más capacidad",
       "scheduleAnotherDeparture": "Programar otra salida",
@@ -1568,7 +1565,7 @@
         "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
         "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad — DiveDay nunca retiene tu dinero, y los pagos de pedidos y facturas van directo a tu propio saldo de Stripe.",
         "connect": "Conectar Stripe",
-        "notConfiguredWarning": "Los pagos en línea aún no están activados en esta instalación de DiveDay — pide a quien administre tu alojamiento que termine la configuración de Stripe.",
+        "notConfiguredWarning": "Los pagos en línea no están configurados en esta instancia de DiveDay — contacta a {email} para activarlos.",
         "connectedHeading": "Cuenta de Stripe conectada",
         "disconnectedHeading": "Cuenta de Stripe desconectada",
         "readyBadge": "Lista para pagos",
@@ -1838,7 +1835,7 @@
       "eyebrow": "Ajustes",
       "title": "Widget para tu web",
       "description": "Pega uno de estos en tu propia web para que los buceadores puedan explorar y reservar sin salir de tu sitio. Ambos apuntan al mismo calendario en directo — sin configuración aparte, sin sincronización que mantener.",
-      "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada — pide a quien administre tu alojamiento de DiveDay que termine la configuración antes de generar estos fragmentos.",
+      "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada en esta instancia de DiveDay — contacta a {email} para activarla.",
       "calendarEmbed": {
         "heading": "Widget de calendario",
         "description": "Un calendario de reservas completo, ajustado al tamaño donde lo coloques en tu página. Ideal para una página dedicada de \"Reservar ahora\" en tu web.",
@@ -2236,6 +2233,7 @@
         "openRoster": "Ver lista"
       },
       "urgency": {
+        "imminent": "Próximas 3 horas",
         "now": "Antes de las salidas de hoy",
         "soon": "Próximos 3 días",
         "later": "Esta semana"
@@ -2304,6 +2302,30 @@
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo más por resolver.} other {Quedan # bloqueos más por resolver.}}",
         "group": "{detail} {names}."
+      },
+      "detail": {
+        "missingFit": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} equipo asignado, así que la lista de preparación está incompleta.",
+        "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin una tarjeta verificada — esos tanques están planeados con aire.",
+        "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
+        "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
+        "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
+        "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",
+        "emailNotConfigured": {
+          "waiver": "Su enlace de exención nunca se envió — el correo no está configurado.",
+          "confirmation": "Su confirmación de reserva nunca se envió — el correo no está configurado."
+        },
+        "emailFailed": {
+          "waiver": "No se pudo entregar su enlace de exención{attempts, plural, =0 {} =1 {} other { tras # intentos}}.",
+          "confirmation": "No se pudo entregar su confirmación de reserva{attempts, plural, =0 {} =1 {} other { tras # intentos}}."
+        }
+      },
+      "actionLabel": {
+        "openPrepList": "Abrir lista de preparación",
+        "openTrip": "Abrir salida",
+        "openGuests": "Abrir invitados",
+        "inviteFromWaitlist": "Invitar de la lista de espera",
+        "resendWaiverLink": "Reenviar enlace de exención",
+        "resendConfirmation": "Reenviar confirmación"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",

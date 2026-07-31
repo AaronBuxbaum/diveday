@@ -9,6 +9,7 @@ import {
   tripReminderEmail,
   verifyAccountEmail,
   welcomeEmail,
+  wrapEmailHtml,
 } from "./email";
 
 const base = {
@@ -257,5 +258,24 @@ describe("passwordChangedEmail", () => {
     const email = passwordChangedEmail({ locale: "en-US", ownerName: "Pat Diver" });
     expect(email.text).not.toContain("http");
     expect(email.text).toContain("request a new password");
+  });
+});
+
+describe("wrapEmailHtml", () => {
+  it("produces a real document — doctype, negotiated lang, viewport meta", () => {
+    const html = wrapEmailHtml("<p>Hello</p>", { shopName: "Blue Mantis", locale: "es-ES" });
+    expect(html).toMatch(/^<!doctype html>/i);
+    expect(html).toContain('<html lang="es-ES">');
+    expect(html).toContain('name="viewport"');
+    expect(html).toContain("<p>Hello</p>");
+  });
+
+  it("renders the shop name as a text header, escaped, never a logo image", () => {
+    const html = wrapEmailHtml("<p>Body</p>", {
+      shopName: "Sal & Sons <Diving>",
+      locale: "en-US",
+    });
+    expect(html).toContain("Sal &amp; Sons &lt;Diving&gt;");
+    expect(html).not.toContain("<img");
   });
 });

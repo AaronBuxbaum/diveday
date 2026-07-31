@@ -22,15 +22,18 @@ import type { WaiverSendState, WaiverSendSurface } from "./waiver-send-types";
  * export async functions.
  */
 
-const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string) => string> = {
+const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string, tripId?: string) => string> = {
   today: (shopSlug) => `/shop/${shopSlug}`,
   blockers: (shopSlug) => `/shop/${shopSlug}/blockers`,
   check_in: (shopSlug) => `/shop/${shopSlug}/check-in`,
+  roster: (shopSlug, tripId) => `/shop/${shopSlug}/trips/${tripId}/guests`,
 };
 
 export async function sendWaiversAction(
   shopSlug: string,
   surface: WaiverSendSurface,
+  /** Only meaningful (and required) for the "roster" surface — which trip's guests page to revalidate. */
+  tripId: string | undefined,
   _prev: WaiverSendState,
   formData: FormData,
 ): Promise<WaiverSendState> {
@@ -65,7 +68,7 @@ export async function sendWaiversAction(
 
   // The blocked row itself moves to its awaiting state (a fresh link is now
   // pending) once the server data refreshes.
-  revalidatePath(SURFACE_PATH[surface](shopSlug));
+  revalidatePath(SURFACE_PATH[surface](shopSlug, tripId));
   if (state.sent.length > 0) {
     await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface });
   }

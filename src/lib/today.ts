@@ -34,12 +34,14 @@ import { utcToWallTime } from "./zoned";
  */
 
 /** How soon the work has to be done, derived from the departure it belongs to. */
-export type TodayUrgency = "now" | "soon" | "later";
+export type TodayUrgency = "imminent" | "now" | "soon" | "later";
 
-const URGENCY_RANK: Record<TodayUrgency, number> = { now: 0, soon: 1, later: 2 };
+const URGENCY_RANK: Record<TodayUrgency, number> = { imminent: 0, now: 1, soon: 2, later: 3 };
 
 const HOUR = 60 * 60 * 1000;
-/** Anything departing inside a day is "get it done now" work. */
+/** The next boat out — close enough that "later today" isn't precise enough. */
+const IMMINENT_WINDOW_MS = 3 * HOUR;
+/** Anything departing inside a day is "get it done today" work. */
 const NOW_WINDOW_MS = 24 * HOUR;
 const SOON_WINDOW_MS = 72 * HOUR;
 /** The queue never looks further out than this; beyond it, Schedule is the tool. */
@@ -220,6 +222,7 @@ export const BLOCKER_ACTIONS: Record<
 export function urgencyFor(dueAt: Date | null, now: Date): TodayUrgency {
   if (!dueAt) return "later";
   const delta = dueAt.getTime() - now.getTime();
+  if (delta <= IMMINENT_WINDOW_MS) return "imminent";
   if (delta <= NOW_WINDOW_MS) return "now";
   if (delta <= SOON_WINDOW_MS) return "soon";
   return "later";
@@ -390,7 +393,7 @@ export type TodayActionGroup = {
 /** Only groups with work are returned; an empty heading is noise. */
 export function groupActions(actions: readonly TodayAction[]): TodayActionGroup[] {
   const sorted = sortActions(actions);
-  return (["now", "soon", "later"] as const)
+  return (["imminent", "now", "soon", "later"] as const)
     .map((urgency) => ({
       urgency,
       actions: sorted.filter((action) => action.urgency === urgency),
@@ -420,7 +423,9 @@ export function summarizeDay(
 ): DaySummary {
   if (blockedToday > 0) return { code: "blocked", departures, blockedToday };
   if (actions.length === 0) return { code: "clear", departures };
-  const urgent = actions.filter((action) => action.urgency === "now").length;
+  const urgent = actions.filter(
+    (action) => action.urgency === "imminent" || action.urgency === "now",
+  ).length;
   if (urgent > 0) return { code: "urgent", departures, urgent };
   return { code: "ahead", departures, jobs: actions.length };
 }

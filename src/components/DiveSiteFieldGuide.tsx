@@ -55,6 +55,7 @@ export function DiveSiteFieldGuide({
                 <img
                   src={resolveDiveSiteImageUrl(creature.imageUrl) ?? undefined}
                   alt={creature.name}
+                  loading="lazy"
                   className="aspect-[4/3] w-full rounded-lg bg-surface-sunken object-cover"
                 />
               ) : (

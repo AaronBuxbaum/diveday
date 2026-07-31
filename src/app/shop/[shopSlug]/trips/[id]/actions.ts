@@ -36,11 +36,7 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
-import {
-  issueAndDeliverWaiver,
-  issueWaiverOnJoin,
-  issueWaiversForBookings,
-} from "@/db/waiver-issue";
+import { issueWaiverOnJoin, issueWaiversForBookings } from "@/db/waiver-issue";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
@@ -723,26 +719,6 @@ export async function confirmDiverIdentityAction(
   revalidateAndRedirect(
     back,
     `${back}?notice=${confirmed ? "identity-confirmed" : "invalid"}&bid=${bookingId}`,
-  );
-}
-
-export async function issueWaiverAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(`${back}?notice=waiver-error`);
-  // Same issue-and-deliver path the Today/Blockers one-tap sends use, so the
-  // roster never diverges from the queue. The private link is always surfaced
-  // here so staff can hand it over when email delivery isn't `sent`.
-  const outcome = await issueAndDeliverWaiver(await getDb(), s.user.shopId, bookingId);
-  if (!outcome.ok) {
-    redirect(
-      `${back}?notice=${outcome.reason === "already_completed" ? "waiver-complete" : "waiver-error"}`,
-    );
-  }
-  revalidateAndRedirect(
-    back,
-    `${back}?notice=waiver-link&bid=${bookingId}&waiver=${outcome.token}`,
   );
 }
 

@@ -1424,9 +1424,6 @@
       "eyebrow": "Trips",
       "cancelledBadge": "Cancelled",
       "courseSession": "Course session · {title}",
-      "privateWaiverLinkReady": "Private waiver link ready",
-      "waiverLinkDescription": "Share this link with the diver. It expires in seven days and is replaced if you issue a new one.",
-      "openWaiverLink": "Open waiver link",
       "demandSignal": "This boat could take more",
       "demandHeading": "This departure could support more capacity",
       "scheduleAnotherDeparture": "Schedule another departure",
@@ -1568,7 +1565,7 @@
         "notConnectedHeading": "No Stripe account connected",
         "notConnectedDescription": "Connect a Stripe account you own — DiveDay never holds your money, and payments for orders and invoices go straight into your own Stripe balance.",
         "connect": "Connect Stripe",
-        "notConfiguredWarning": "Online payments aren't switched on for this DiveDay setup yet — ask whoever runs your hosting to finish the Stripe configuration.",
+        "notConfiguredWarning": "Online payments aren't configured for this DiveDay instance yet — contact {email} to get it set up.",
         "connectedHeading": "Stripe account connected",
         "disconnectedHeading": "Stripe account disconnected",
         "readyBadge": "Ready for payments",
@@ -1838,7 +1835,7 @@
       "eyebrow": "Settings",
       "title": "Website embed",
       "description": "Paste one of these into your own website so divers can browse and book without leaving your site. Both point at the same live schedule — no separate setup, no sync to keep working.",
-      "notConfigured": "Embed links need a configured public hosting address — ask whoever runs your DiveDay hosting to finish setup before these snippets can be generated.",
+      "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance — contact {email} to get it set up.",
       "calendarEmbed": {
         "heading": "Calendar embed",
         "description": "A full booking calendar, sized to fit wherever you place it on your page. Best for a dedicated \"Book now\" page on your site.",
@@ -2236,6 +2233,7 @@
         "openRoster": "Open roster"
       },
       "urgency": {
+        "imminent": "Next 3 hours",
         "now": "Before today’s boats",
         "soon": "Next 3 days",
         "later": "This week"
@@ -2304,6 +2302,30 @@
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {# other blocker to clear too.} other {# other blockers to clear too.}}",
         "group": "{detail} {names}."
+      },
+      "detail": {
+        "missingFit": "{count, plural, one {# diver has} other {# divers have}} no rental fit on file, so the prep list is incomplete.",
+        "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
+        "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
+        "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
+        "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
+        "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
+        "emailNotConfigured": {
+          "waiver": "Their waiver link never sent — email is not configured.",
+          "confirmation": "Their booking confirmation never sent — email is not configured."
+        },
+        "emailFailed": {
+          "waiver": "Their waiver link could not be delivered{attempts, plural, =0 {} =1 {} other { after # attempts}}.",
+          "confirmation": "Their booking confirmation could not be delivered{attempts, plural, =0 {} =1 {} other { after # attempts}}."
+        }
+      },
+      "actionLabel": {
+        "openPrepList": "Open prep list",
+        "openTrip": "Open trip",
+        "openGuests": "Open guests",
+        "inviteFromWaitlist": "Invite from wait list",
+        "resendWaiverLink": "Resend waiver link",
+        "resendConfirmation": "Resend confirmation"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",

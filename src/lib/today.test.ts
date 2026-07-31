@@ -38,8 +38,13 @@ function action(overrides: Partial<TodayAction> = {}): TodayAction {
 }
 
 describe("urgencyFor", () => {
-  it("treats anything inside a day as work for right now", () => {
-    expect(urgencyFor(hoursFromNow(1), NOW)).toBe("now");
+  it("flags the next boat out — inside three hours — as imminent", () => {
+    expect(urgencyFor(hoursFromNow(0.5), NOW)).toBe("imminent");
+    expect(urgencyFor(hoursFromNow(3), NOW)).toBe("imminent");
+  });
+
+  it("treats the rest of today, past the imminent window, as work for now", () => {
+    expect(urgencyFor(hoursFromNow(3.5), NOW)).toBe("now");
     expect(urgencyFor(hoursFromNow(23), NOW)).toBe("now");
   });
 
@@ -93,7 +98,7 @@ describe("diverBlockerAction", () => {
     expect(result?.actionLabel).toBe("Send waiver");
     expect(result?.waiver).toEqual({ bookingIds: ["b1"] });
     expect(result?.subject).toBe("Maya Alvarez");
-    expect(result?.urgency).toBe("now");
+    expect(result?.urgency).toBe("imminent");
   });
 
   it("points card work at the person record instead of pretending to act", () => {
@@ -281,13 +286,14 @@ describe("groupActions", () => {
     expect(groups[0]?.actions).toHaveLength(2);
   });
 
-  it("keeps groups in urgency order", () => {
+  it("keeps groups in urgency order, imminent ahead of the rest of today", () => {
     const groups = groupActions([
       action({ id: "l", urgency: "later", dueAt: hoursFromNow(100) }),
       action({ id: "n", urgency: "now" }),
+      action({ id: "i", urgency: "imminent", dueAt: hoursFromNow(1) }),
       action({ id: "s", urgency: "soon", dueAt: hoursFromNow(40) }),
     ]);
-    expect(groups.map((group) => group.urgency)).toEqual(["now", "soon", "later"]);
+    expect(groups.map((group) => group.urgency)).toEqual(["imminent", "now", "soon", "later"]);
   });
 
   it("returns nothing at all for an empty queue", () => {
@@ -317,6 +323,14 @@ describe("summarizeDay", () => {
   it("falls back to jobs when today's boats are clear but work remains", () => {
     const summary = summarizeDay(
       [action({ urgency: "now" }), action({ id: "b", urgency: "later" })],
+      1,
+    );
+    expect(summary).toEqual({ code: "urgent", departures: 1, urgent: 1 });
+  });
+
+  it("counts imminent work as urgent alongside the rest of today", () => {
+    const summary = summarizeDay(
+      [action({ id: "a", urgency: "imminent" }), action({ id: "b", urgency: "later" })],
       1,
     );
     expect(summary).toEqual({ code: "urgent", departures: 1, urgent: 1 });

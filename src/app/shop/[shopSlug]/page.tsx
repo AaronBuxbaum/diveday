@@ -101,6 +101,7 @@ async function TodayBody({
     now,
     lens ? session.user.personId : undefined,
     t,
+    locale,
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
   // The first-run checklist only matters for a real shop with nothing on the

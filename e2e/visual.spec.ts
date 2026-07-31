@@ -417,10 +417,9 @@ for (const scheme of ["light", "dark"] as const) {
         .locator("section")
         .filter({ has: staffPage.getByRole("heading", { name: /^Divers/ }) });
       await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-      await staffPage.getByRole("heading", { name: "Private waiver link ready" }).waitFor();
-      const waiverHref = await staffPage
-        .getByRole("link", { name: "Open waiver link" })
-        .getAttribute("href");
+      const resultNotice = diverSection.getByRole("status");
+      await resultNotice.waitFor();
+      const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
       await staffContext.close();
 
       // Active (unsigned) waiver — the safety-critical form itself, before any

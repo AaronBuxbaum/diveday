@@ -64,6 +64,19 @@ export type CoexistFraming = {
   replace: { heading: string; body: string };
 };
 
+/**
+ * The "what does the actual switch look like" section every guide answers the
+ * same way — parallel-run, timing, re-import safety, and a rough time
+ * estimate are properties of the importer and the switch itself, not of any
+ * one incumbent, so this is one shared object every guide points at (like
+ * `coexistRunsInDiveDay` below).
+ */
+export type CutoverSection = {
+  heading: string;
+  intro: string;
+  steps: { title: string; detail: string }[];
+};
+
 export type MigrationGuide = {
   /** URL segment: /switching/<slug>. */
   slug: string;
@@ -97,6 +110,9 @@ export type MigrationGuide = {
   exportSteps: ExportStep[];
   /** Caveats that keep the click-path honest (version drift, what won't export). */
   exportNotes: string[];
+
+  /** What the switch itself looks like — every guide shares CUTOVER_SECTION. */
+  cutover: CutoverSection;
 
   /**
    * Optional one-line, competitor-specific caveat for the import step — e.g. a
@@ -154,6 +170,40 @@ function coexistRunsInDiveDay(competitor: string): { title: string; detail: stri
     },
   ];
 }
+
+/**
+ * Shared by every guide (see `CutoverSection` above). Verified against the
+ * importer's actual behavior, not aspirational: the re-import claim matches
+ * `findOrCreatePerson`'s email-match update-in-place (src/db/import.ts) and
+ * `priorVisitDedupeKey`'s idempotent history key (src/lib/import.ts).
+ */
+const CUTOVER_SECTION: CutoverSection = {
+  heading: "Cutover without drama",
+  intro:
+    "Leaving a system you've run for years doesn't have to mean a weekend of downtime. Here's how shops actually make the switch.",
+  steps: [
+    {
+      title: "Run both systems for one trip cycle",
+      detail:
+        "Import into DiveDay and start taking real trips through it — waivers, roster, manifest — while you keep your old system running alongside it. Nothing forces a hard cutoff on day one.",
+    },
+    {
+      title: "Time it to your slow season",
+      detail:
+        "Pick a week with the fewest trips already on the books. Fewer live bookings straddling the switch means less to reconcile by hand.",
+    },
+    {
+      title: "A second import updates your roster, it doesn't duplicate it",
+      detail:
+        "Re-run the export later, once your old system has more bookings in it — DiveDay matches existing divers by email and updates their record instead of creating a second one, and a repeated visit history collapses instead of doubling. Safe to import more than once as your export improves.",
+    },
+    {
+      title: "Budget an afternoon, not a week",
+      detail:
+        "Exporting from the old system is usually minutes of work; the import preview shows exactly what will land before anything saves, so most shops review, fix a handful of rows, and import for real in one sitting.",
+    },
+  ],
+};
 
 const eve: MigrationGuide = {
   slug: "eve",
@@ -216,6 +266,7 @@ const eve: MigrationGuide = {
     "Your column headings don't have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you exactly how each column mapped before you commit.",
     "If EVE will give you a sales or booking report as well, take it — a file with one row per booking brings your regulars' visit history across, so a fifteen-year customer doesn't arrive looking brand new. Register receipts and repair tickets stay in EVE; see the scope table below.",
   ],
+  cutover: CUTOVER_SECTION,
   sources: [
     {
       label: "DiveShop360 acquires EVE Diving (Divernet, 2023)",
@@ -287,6 +338,7 @@ const diveshop360: MigrationGuide = {
   ],
   importerNote:
     "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file adds to the same divers instead of duplicating them. A certification file usually holds one row per card, so a diver with three cards appears on three rows: each row's card lands on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card.",
+  cutover: CUTOVER_SECTION,
   sources: [
     {
       label: "DiveShop360 FAQ — the datasets you can export",
@@ -353,6 +405,7 @@ const diveadmin: MigrationGuide = {
   ],
   importerNote:
     'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels (see what comes across below). It reads the specialties the same way — a "PADI Deep Diver" row with a card number becomes a deep specialty card — and anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
+  cutover: CUTOVER_SECTION,
   sources: [
     {
       label: "DiveAdmin API documentation",
@@ -418,6 +471,7 @@ const smartwaiver: MigrationGuide = {
   ],
   importerNote:
     "A Smartwaiver export is mostly contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). A waiver your export shows as already accepted comes across too, marked imported.",
+  cutover: CUTOVER_SECTION,
   sources: [
     { label: "Smartwaiver", url: "https://www.smartwaiver.com/" },
     {
@@ -500,6 +554,7 @@ const fareharbor: MigrationGuide = {
   ],
   importerNote:
     "A FareHarbor export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the Contacts file, then the Bookings file: DiveDay matches divers by email, so the second file adds each booking to the same diver's history instead of duplicating them, and re-running either one later updates rather than doubles.",
+  cutover: CUTOVER_SECTION,
   sources: [
     {
       label: "FareHarbor — booking software for tours & activities",
@@ -597,6 +652,7 @@ const rezdy: MigrationGuide = {
   ],
   importerNote:
     "A Rezdy export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). The Orders file is the one to bring: DiveDay matches divers by email, so its repeated rows for one customer become that diver's visit history rather than duplicate people, and re-running it later updates instead of doubling.",
+  cutover: CUTOVER_SECTION,
   sources: [
     {
       label: "Rezdy — booking software for tours & activities",

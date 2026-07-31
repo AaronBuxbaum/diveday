@@ -75,6 +75,7 @@ export function DiveBriefingCard({
         <img
           src={site.satelliteImageUrl}
           alt={t("trip.siteSatelliteAlt", { site: site.name })}
+          loading="lazy"
           className="h-56 w-full object-cover"
         />
       ) : null}

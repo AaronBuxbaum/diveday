@@ -244,6 +244,7 @@ export default async function WaiverPage({
                     <img
                       src={site.imageUrls[0]}
                       alt={site.name}
+                      loading="lazy"
                       className="h-32 w-full object-cover"
                     />
                   ) : (
