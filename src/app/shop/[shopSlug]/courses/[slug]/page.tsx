@@ -47,7 +47,9 @@ export async function generateMetadata({
   // Next resolves `generateMetadata` independently of that later `notFound()`
   // and would otherwise leak the title/summary into the anonymous <head>.
   const session = await auth();
-  const staffView = Boolean(shop && session?.user?.shopId === shop.id && isStaff(session.user.roles));
+  const staffView = Boolean(
+    shop && session?.user?.shopId === shop.id && isStaff(session.user.roles),
+  );
   if (!course.isActive && !staffView) return { title: "Course — DiveDay" };
   const canonical = shop ? `/shop/${shop.slug}/courses/${course.slug}` : undefined;
   const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;

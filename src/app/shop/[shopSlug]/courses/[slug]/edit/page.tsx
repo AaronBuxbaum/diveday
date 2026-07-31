@@ -179,7 +179,10 @@ export default async function EditCoursePage({
             <legend className="px-1 text-sm font-semibold">{t("courses.edit.photosLegend")}</legend>
             <p className="mt-1 text-sm text-muted">{t("courses.edit.photosDescription")}</p>
             <FieldGrid columns={1} className="mt-4 gap-y-5">
-              <Field label={t("courses.edit.heroPhotoLabel")} hint={t("courses.edit.heroPhotoHint")}>
+              <Field
+                label={t("courses.edit.heroPhotoLabel")}
+                hint={t("courses.edit.heroPhotoHint")}
+              >
                 {course.heroImageUrl ? (
                   <div className="mb-2 flex items-center gap-3">
                     <Thumb
@@ -261,7 +264,9 @@ export default async function EditCoursePage({
                             type="text"
                             maxLength={200}
                             defaultValue={course.imageAlts[index] ?? ""}
-                            placeholder={t("courses.edit.photoCaptionPlaceholder", { n: index + 2 })}
+                            placeholder={t("courses.edit.photoCaptionPlaceholder", {
+                              n: index + 2,
+                            })}
                             className={`${controlClass} text-xs`}
                           />
                         </Field>

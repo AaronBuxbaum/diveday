@@ -153,7 +153,5 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   // CR-012 test) — even a real photo lands here rather than "added". The
   // point proven is that the whole multi-file batch round-trips through one
   // submit to one notice, not a per-file page reload.
-  await expect(
-    page.getByText("Photo uploads aren’t set up for this shop yet"),
-  ).toBeVisible();
+  await expect(page.getByText("Photo uploads aren’t set up for this shop yet")).toBeVisible();
 });

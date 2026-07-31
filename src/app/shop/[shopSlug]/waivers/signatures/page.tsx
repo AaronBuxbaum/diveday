@@ -20,7 +20,6 @@ export const metadata: Metadata = {
 type SignedWaiverEntry = Awaited<ReturnType<typeof getSignedWaiverRecordForShop>>;
 type Shop = NonNullable<Awaited<ReturnType<typeof getShopById>>>;
 
-
 /**
  * One row of signed-record evidence, shared by the "jumped to from the
  * roster" highlight and the paginated list below it, so the two never drift

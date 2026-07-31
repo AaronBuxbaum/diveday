@@ -42,7 +42,13 @@ const CARD_STYLE = {
 const WORDMARK = (
   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
     <div
-      style={{ width: 28, height: 28, borderRadius: 9999, backgroundColor: "#22d3ee", display: "flex" }}
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 9999,
+        backgroundColor: "#22d3ee",
+        display: "flex",
+      }}
     />
     <div style={{ display: "flex", fontSize: 40, fontWeight: 600 }}>
       DiveDay

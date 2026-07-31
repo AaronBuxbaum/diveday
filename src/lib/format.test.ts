@@ -66,9 +66,7 @@ describe("formatRelativeDay", () => {
   const noon = (day: string) => new Date(`${day}T12:00:00Z`);
 
   it("reads today/tomorrow/in N days off the calendar day, not the raw hour difference", () => {
-    expect(formatRelativeDay(noon("2026-07-17"), noon("2026-07-17"), "en-US", "UTC")).toBe(
-      "today",
-    );
+    expect(formatRelativeDay(noon("2026-07-17"), noon("2026-07-17"), "en-US", "UTC")).toBe("today");
     expect(formatRelativeDay(noon("2026-07-18"), noon("2026-07-17"), "en-US", "UTC")).toBe(
       "tomorrow",
     );

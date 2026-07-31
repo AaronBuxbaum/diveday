@@ -11,7 +11,6 @@ afterEach(() => {
 /** Renders inside a real <form> — InlineConfirm's confirm button is a real submit, guarded by this. */
 function renderInForm(onSubmit: () => void) {
   render(
-    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: test harness only needs the submit event, not a keyboard/role contract
     <form
       onSubmit={(event) => {
         event.preventDefault();

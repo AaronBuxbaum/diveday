@@ -28,13 +28,17 @@ describe("TipAmountPicker currency (task 60)", () => {
   });
 
   it("still defaults to $ when the shop's currency is usd", () => {
-    render(<TipAmountPicker presets={[5, 10, 20]} defaultPreset={10} currencySymbol="$" {...copy} />);
+    render(
+      <TipAmountPicker presets={[5, 10, 20]} defaultPreset={10} currencySymbol="$" {...copy} />,
+    );
     expect(screen.getByText("$10")).toBeInTheDocument();
   });
 
   it("keeps a typed custom amount mutually exclusive with the presets", async () => {
     const user = userEvent.setup();
-    render(<TipAmountPicker presets={[5, 10, 20]} defaultPreset={10} currencySymbol="$" {...copy} />);
+    render(
+      <TipAmountPicker presets={[5, 10, 20]} defaultPreset={10} currencySymbol="$" {...copy} />,
+    );
     const custom = screen.getByLabelText("Other tip amount");
     await user.type(custom, "42");
     expect(custom).toHaveValue(42);
