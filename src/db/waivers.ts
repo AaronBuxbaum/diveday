@@ -241,7 +241,11 @@ export async function issueWaiverRequest(
 
 export type TokenWaiverState =
   | { state: "unavailable" }
-  | { state: "expired" }
+  // Carries the record (a real, once-valid link) so the page can still
+  // identify the shop and its contact channels, and the record's own
+  // `expiresAt` — a diver reading a dead link still deserves a name and a
+  // way to reach someone, not a wall with nothing to click.
+  | { state: "expired"; record: typeof waiverRecords.$inferSelect }
   | { state: "available"; record: typeof waiverRecords.$inferSelect }
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
@@ -280,7 +284,7 @@ export async function getWaiverForToken(
   const record = await currentRecordForToken(db, token);
   if (!record) return { state: "unavailable" };
   if (record.status !== "pending") return { state: "completed", record };
-  if (record.expiresAt <= now) return { state: "expired" };
+  if (record.expiresAt <= now) return { state: "expired", record };
   return { state: "available", record };
 }
 

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { RentalFitForm } from "@/app/shop/[shopSlug]/schedule/[id]/_components/RentalFitForm";
+import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import {
   resolveRevokedBookingCapability,
   verifyBookingCapability,
@@ -18,8 +20,9 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
+import { nowDate } from "@/lib/clock";
 import { telHref } from "@/lib/course-inquiry";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import {
   buildDiverChecklist,
   type ChecklistState,
@@ -164,6 +167,12 @@ const READY_NOTICES: Record<
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
   "saved-rescheduled": { tone: "success", key: "ready.movedHeading" },
   "error-reschedule": { tone: "danger", key: "ready.moveFailed" },
+  // Task 49: every throttled action used to redirect with no error param at
+  // all, so a rate-limited tap just looked like the button did nothing.
+  "error-rate": { tone: "danger", key: "ready.rateLimited" },
+  // Task 49: a failed gear/setup save (`saveFitFromReady`'s `?error=fit`)
+  // had no entry here either — the same silent-failure gap, one field over.
+  "error-fit": { tone: "danger", key: "ready.fitUnavailable" },
 };
 
 /**
@@ -283,6 +292,25 @@ export default async function DiverReadinessPage({
     shop.defaultLocale,
     detail.shop.timezone,
   );
+  // Task 46: the day-before email already tells a diver when to be at the
+  // dock (`dockCallPhrase` in src/lib/notifications/email.ts) — this page
+  // never did, so a diver re-checking it after reading the email couldn't
+  // find the one number that actually matters that morning.
+  const dockCallAt = new Date(detail.trip.startsAt.getTime() - shop.dockCallMinutes * 60_000);
+  const dockCallLine = t("ready.dockCallLine", {
+    time: formatTime(dockCallAt, shop.defaultLocale, detail.shop.timezone),
+    dock: t("notifications.common.dockCallMinutes", { minutes: shop.dockCallMinutes }),
+  });
+  // Task 47: "in 2 days" / "tomorrow" / "today" — the page a diver opens the
+  // night before should read at least as rich as the email that sent them
+  // here, and a bare date is easy to misjudge at a glance the way a full
+  // relative phrase isn't.
+  const relativeWhen = formatRelativeDay(
+    detail.trip.startsAt,
+    nowDate(),
+    shop.defaultLocale,
+    detail.shop.timezone,
+  );
 
   if (detail.cancelled) {
     // Reached when the capability check above succeeded but the booking was
@@ -324,8 +352,9 @@ export default async function DiverReadinessPage({
             {detail.trip.title}
           </h1>
           <p className="mt-1 text-base text-muted">
-            {when} · {timeRange}
+            {when} · {timeRange} · {relativeWhen}
           </p>
+          <p className="mt-1 text-sm text-muted">{dockCallLine}</p>
         </header>
 
         {notice ? (
@@ -356,6 +385,12 @@ export default async function DiverReadinessPage({
             </p>
           </section>
         )}
+
+        <DiveSitesPeek
+          sites={data.sites}
+          heading={t("ready.scheduledSites")}
+          subheading={t("ready.sitesPeek")}
+        />
 
         <section className="mt-6" aria-labelledby="checklist-heading">
           <h2
@@ -482,13 +517,14 @@ export default async function DiverReadinessPage({
                       </option>
                     ))}
                   </select>
-                  <SubmitButton
+                  <InlineConfirm
+                    triggerLabel={t("ready.moveBooking")}
+                    triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+                    message={t("ready.moveConfirm")}
+                    confirmLabel={t("ready.moveConfirmButton")}
+                    cancelLabel={t("ready.neverMind")}
                     pendingLabel={t("ready.moving")}
-                    confirmMessage={t("ready.moveConfirm")}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {t("ready.moveBooking")}
-                  </SubmitButton>
+                  />
                 </form>
               </div>
             ) : null}
@@ -502,13 +538,27 @@ export default async function DiverReadinessPage({
                 {t("ready.cancelLead")} {cancelPreviewKey ? t(cancelPreviewKey) : null}
               </p>
               <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
-                <SubmitButton
+                {/* Task 50: replaces window.confirm, which could only show a
+                    fixed string — never the refund preview this page already
+                    computed above. Repeating it right at the point of
+                    commitment (task 41's "reassurance at the point of
+                    anxiety" pattern, applied to a warning instead) means the
+                    diver reads it once more, right before the irreversible
+                    submit, not just once further up the page. */}
+                <InlineConfirm
+                  triggerLabel={t("ready.cancelSpot")}
+                  triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                  message={[
+                    t("ready.cancelConfirm", { trip: detail.trip.title }),
+                    cancelPreviewKey ? t(cancelPreviewKey) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  confirmLabel={t("ready.cancelConfirmButton")}
+                  cancelLabel={t("ready.neverMind")}
                   pendingLabel={t("ready.cancelling")}
-                  confirmMessage={t("ready.cancelConfirm", { trip: detail.trip.title })}
-                  className={buttonClass({ variant: "danger", size: "sm" })}
-                >
-                  {t("ready.cancelSpot")}
-                </SubmitButton>
+                  confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+                />
               </form>
             </div>
           </section>

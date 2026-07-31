@@ -55,10 +55,16 @@ export default async function VerifyAccountPage({
 
   const check = await checkAccountToken(db, { token, purpose: "email_verification" });
   if (!check) {
+    // Task 45: this used to be a dead end with nothing else to click — a
+    // sibling of the same no-link problem the waiver token pages had. There
+    // is no shop to attribute an account-lifecycle token to, but there is
+    // always a way back to sign in, the same recovery `/invite` and
+    // `/reset-password` already offer their own dead links.
     return (
       <Notice
         title={t("account.verify.unavailableTitle")}
         text={t("account.verify.unavailableText")}
+        backToSignIn={t("account.common.backToSignIn")}
       />
     );
   }

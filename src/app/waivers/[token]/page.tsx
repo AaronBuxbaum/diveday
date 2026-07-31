@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -11,8 +12,9 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import { bookings, diveSites, type MedicalAnswers, tripDives, trips } from "@/db/schema";
+import { bookings, type MedicalAnswers, type Shop, trips } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { getTripDiveSitesPeek } from "@/db/trips";
 import {
   completeWaiver,
   getEmergencyContactForBooking,
@@ -21,13 +23,14 @@ import {
   saveBookingEmergencyContact,
   saveWaiverDraft,
 } from "@/db/waivers";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { emergencyContactSchema } from "@/lib/contact";
 import { telHref } from "@/lib/course-inquiry";
+import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -84,18 +87,26 @@ const labelTextBase = "text-(length:--text-base) leading-6";
  * — the diver must make a conscious choice on every question, including the
  * medical ones, rather than silently inherit a "No" the page picked for them.
  * "Yes" renders before "No" to match the paper RSTC form's own order.
+ *
+ * The reassurance line under a "Yes" answer (task 41) is pure CSS, not a
+ * Client Component: `group` on the fieldset plus `group-has-[…]:` on the
+ * paragraph reveals it exactly when that question's "Yes" radio is checked
+ * — by a click, or by `defaultChecked` prefilling a draft answer on load —
+ * with no JS required and nothing to hydrate.
  */
 function RadioQuestion({
   name,
   question,
   yes,
+  reassurance,
 }: {
   name: string;
   question: string;
   yes: boolean | undefined;
+  reassurance: string;
 }) {
   return (
-    <fieldset className="rounded-lg border border-border bg-surface p-4">
+    <fieldset className="group rounded-lg border border-border bg-surface p-4">
       <legend className="px-1 text-base font-medium">{question}</legend>
       <div className="mt-3 flex gap-3">
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
@@ -107,6 +118,9 @@ function RadioQuestion({
           No
         </label>
       </div>
+      <p className="mt-3 hidden text-sm text-muted group-has-[input[value=yes]:checked]:block">
+        {reassurance}
+      </p>
     </fieldset>
   );
 }
@@ -129,6 +143,10 @@ export default async function WaiverPage({
   const state = await getWaiverForToken(db, token);
 
   if (state.state === "unavailable") {
+    // No record at all reached through this token (garbage, or a link
+    // superseded by a fresher one) — there is no shop to attribute it to
+    // without weakening the token model's own guarantee that a bearer token
+    // reveals only its own record.
     return (
       <Unavailable
         title={anonT("waiver.unavailableHeading")}
@@ -137,12 +155,9 @@ export default async function WaiverPage({
     );
   }
 
-  if (state.state === "expired") {
-    return (
-      <Unavailable title={anonT("waiver.expiredHeading")} text={anonT("waiver.expiredBody")} />
-    );
-  }
-
+  // Every remaining state carries a real record, so the shop it belongs to
+  // is always resolvable from here on — including "expired", which used to
+  // bail out before the shop (and so its contact info) was ever loaded.
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) {
     return (
@@ -155,6 +170,18 @@ export default async function WaiverPage({
   const shopName = shop.name;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
+
+  if (state.state === "expired") {
+    return (
+      <Unavailable
+        title={t("waiver.expiredHeading")}
+        text={t("waiver.expiredBody")}
+        shop={shop}
+        t={t}
+      />
+    );
+  }
+
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
     const bookingId = requireTokenBookingId(state.record);
@@ -165,48 +192,7 @@ export default async function WaiverPage({
       .limit(1)
       .then((rows) => rows[0]);
 
-    const diveSitesList: {
-      name: string;
-      description: string | null;
-      difficulty: string | null;
-      depthRange: string | null;
-      imageUrls: string[];
-    }[] = [];
-
-    if (booking?.tripId) {
-      const tripSites = await db
-        .select({
-          name: diveSites.name,
-          description: diveSites.description,
-          difficulty: diveSites.difficulty,
-          depthRange: diveSites.depthRange,
-          imageUrls: diveSites.imageUrls,
-        })
-        .from(trips)
-        .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-        .where(eq(trips.id, booking.tripId))
-        .limit(1);
-
-      const tripDiveSites = await db
-        .select({
-          name: diveSites.name,
-          description: diveSites.description,
-          difficulty: diveSites.difficulty,
-          depthRange: diveSites.depthRange,
-          imageUrls: diveSites.imageUrls,
-        })
-        .from(tripDives)
-        .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
-        .where(eq(tripDives.tripId, booking.tripId));
-
-      const seenNames = new Set<string>();
-      for (const site of [...tripSites, ...tripDiveSites]) {
-        if (!seenNames.has(site.name)) {
-          seenNames.add(site.name);
-          diveSitesList.push(site);
-        }
-      }
-    }
+    const diveSitesList = booking?.tripId ? await getTripDiveSitesPeek(db, booking.tripId) : [];
 
     const readyCapability = await issueBookingCapability(db, {
       shopId: state.record.shopId,
@@ -222,6 +208,56 @@ export default async function WaiverPage({
           title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
         >
           <p>{needsReview ? t("waiver.medicalReview") : t("waiver.signedBody")}</p>
+          {needsReview ? (
+            <>
+              {/* Corrected copy from the 2026-07-30 UX persona review (task
+                  44): a "yes" answer needs a *physician's* written
+                  clearance — the shop only receives and checks for that
+                  sign-off, it never grants medical clearance itself, and
+                  this never promises a timeline the diver's own doctor
+                  controls. */}
+              <p className="mt-3">{t("waiver.medicalReviewNext")}</p>
+              <p className="mt-3 font-medium text-foreground">
+                {shop.contactEmail && shop.contactPhone
+                  ? t.rich("waiver.medicalContactBoth", {
+                      shop: shopName,
+                      phoneNumber: shop.contactPhone,
+                      emailAddress: shop.contactEmail,
+                      phone: (chunks) => (
+                        <a href={telHref(shop.contactPhone ?? "")} className="hover:underline">
+                          {chunks}
+                        </a>
+                      ),
+                      email: (chunks) => (
+                        <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
+                          {chunks}
+                        </a>
+                      ),
+                    })
+                  : shop.contactPhone
+                    ? t.rich("waiver.medicalContactPhoneOnly", {
+                        shop: shopName,
+                        phoneNumber: shop.contactPhone,
+                        phone: (chunks) => (
+                          <a href={telHref(shop.contactPhone ?? "")} className="hover:underline">
+                            {chunks}
+                          </a>
+                        ),
+                      })
+                    : shop.contactEmail
+                      ? t.rich("waiver.medicalContactEmailOnly", {
+                          shop: shopName,
+                          emailAddress: shop.contactEmail,
+                          email: (chunks) => (
+                            <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
+                              {chunks}
+                            </a>
+                          ),
+                        })
+                      : t("waiver.medicalContactNone", { shop: shopName })}
+              </p>
+            </>
+          ) : null}
           {readyPath ? (
             <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
               {t("waiver.seeWhatsLeft")}
@@ -229,47 +265,11 @@ export default async function WaiverPage({
           ) : null}
         </EarnedMoment>
 
-        {diveSitesList.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold tracking-tight">{t("waiver.scheduledSites")}</h2>
-            <p className="text-sm text-muted mt-1">{t("waiver.sitesPeek")}</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {diveSitesList.map((site) => (
-                <div
-                  key={site.name}
-                  className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
-                >
-                  {site.imageUrls && site.imageUrls.length > 0 ? (
-                    // biome-ignore lint/performance/noImgElement: standard img tag is preferred for dynamic external site images
-                    <img
-                      src={site.imageUrls[0]}
-                      alt={site.name}
-                      loading="lazy"
-                      className="h-32 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-32 w-full bg-surface-sunken flex items-center justify-center text-3xl">
-                      🐠
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <h3 className="font-bold text-base">{site.name}</h3>
-                    {(site.depthRange || site.difficulty) && (
-                      <p className="text-xs font-semibold text-primary mt-0.5">
-                        {site.depthRange ? `${site.depthRange}` : ""}
-                        {site.depthRange && site.difficulty ? " · " : ""}
-                        {site.difficulty ? `${site.difficulty}` : ""}
-                      </p>
-                    )}
-                    {site.description && (
-                      <p className="mt-2 text-sm text-muted line-clamp-3">{site.description}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <DiveSitesPeek
+          sites={diveSitesList}
+          heading={t("waiver.scheduledSites")}
+          subheading={t("waiver.sitesPeek")}
+        />
       </main>
     );
   }
@@ -282,18 +282,30 @@ export default async function WaiverPage({
   /** Only pre-fill draft answers captured against this same questionnaire. */
   const draftResponses =
     draft && draft.questionnaireId === questionnaire.id ? draft.responses : undefined;
+  // The trip this waiver is for (task 42) — named on the page itself so the
+  // diver can verify what they're signing for, rather than trusting a link
+  // that names only the shop.
+  const tripHeader = await db
+    .select({ title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(eq(bookings.id, recordBookingId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   const errorText =
     error === "invalid"
       ? t("waiver.incomplete")
       : error === "unavailable"
         ? t("waiver.linkInactive")
-        : undefined;
+        : error === "rate"
+          ? t("waiver.rateLimited")
+          : undefined;
 
   async function saveDraftAction(formData: FormData) {
     "use server";
     const ip = await clientIp();
     if (!checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction).allowed) {
-      redirect(`/waivers/${token}?error=invalid`);
+      redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
@@ -325,7 +337,7 @@ export default async function WaiverPage({
     "use server";
     const ip = await clientIp();
     if (!checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction).allowed) {
-      redirect(`/waivers/${token}?error=invalid`);
+      redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
@@ -373,6 +385,25 @@ export default async function WaiverPage({
           {t("waiver.beforeDockTitle")}
         </h1>
         <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
+        {tripHeader ? (
+          <p className="mt-3 text-base font-medium text-foreground">
+            {t("waiver.tripHeader", {
+              trip: tripHeader.title,
+              when: formatShortDate(tripHeader.startsAt, locale, shop.timezone),
+              time: formatTimeRangeTz(
+                tripHeader.startsAt,
+                tripHeader.endsAt,
+                locale,
+                shop.timezone,
+              ),
+            })}
+          </p>
+        ) : null}
+        <p className="mt-2 text-sm text-muted">
+          {t("waiver.linkExpiresAt", {
+            date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
+          })}
+        </p>
       </header>
 
       {saved ? (
@@ -419,6 +450,7 @@ export default async function WaiverPage({
                 name={`q_${question.id}`}
                 yes={draftResponses?.[question.id]}
                 question={question.prompt}
+                reassurance={t("waiver.yesReassurance")}
               />
             ))}
           </div>
@@ -522,12 +554,49 @@ export default async function WaiverPage({
   );
 }
 
-function Unavailable({ title, text }: { title: string; text: string }) {
+/**
+ * The dead-link card (unavailable or expired). `shop`/`t` are only present
+ * when the token resolved to a real record (task 45) — an "unavailable"
+ * token that matched nothing at all has no shop to attribute it to, so that
+ * branch still renders without contact links, by design.
+ */
+function Unavailable({
+  title,
+  text,
+  shop,
+  t,
+}: {
+  title: string;
+  text: string;
+  shop?: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
+  t?: DiverTranslator;
+}) {
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
       <section className="rounded-lg border border-border bg-surface p-7 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-3 text-muted">{text}</p>
+        {shop && t ? (
+          <p className="mt-4 text-sm text-muted">
+            {shop.contactEmail || shop.contactPhone
+              ? t.rich("waiver.needHelpContact", {
+                  shop: shop.name,
+                  link: (chunks) => (
+                    <a
+                      href={
+                        shop.contactEmail
+                          ? `mailto:${shop.contactEmail}`
+                          : telHref(shop.contactPhone ?? "")
+                      }
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                })
+              : t("waiver.needHelpPlain", { shop: shop.name })}
+          </p>
+        ) : null}
       </section>
     </main>
   );

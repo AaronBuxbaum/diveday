@@ -139,9 +139,11 @@ describe("waiver records (in-memory PGlite)", () => {
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    expect(await getWaiverForToken(db, issued.token, issued.expiresAt)).toEqual({
-      state: "expired",
-    });
+    const expiredState = await getWaiverForToken(db, issued.token, issued.expiresAt);
+    // Still carries the record — a dead link's page needs the shop id off of
+    // it to show contact details, not just a bare "expired" flag.
+    expect(expiredState.state).toBe("expired");
+    expect(expiredState.state === "expired" && expiredState.record.shopId).toBe(shop.id);
     expect(
       await issueWaiverRequest(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
