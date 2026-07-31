@@ -58,18 +58,24 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // The first question's affirmative answer must not disappear into a generic
   // success state; it becomes an explicit staff follow-up item.
   await page.getByRole("radio", { name: "Yes" }).first().check();
+  const waiverUrl = page.url();
   await page.getByRole("button", { name: "Sign waiver" }).click();
+  // Signing sends the diver straight to "what's left" instead of stopping on
+  // the signed-waiver page, whose only forward path used to be one more link.
+  await expect(page).toHaveURL(/\/ready\//);
+  await expect(page.getByRole("heading", { name: "Almost there, Priya." })).toBeVisible();
+  // The copy uses a typographic apostrophe (U+2019), not a straight one.
+  await expect(page.getByText(/doctor’s sign-off may be required/)).toBeVisible();
+
+  // Revisiting the same waiver link afterward still shows the signed
+  // confirmation and the scheduled dive-site preview (delight feature) — only
+  // the fresh-sign flow skips straight past it to readiness.
+  await page.goto(waiverUrl);
   // The completed state's EarnedMoment is this page's only heading — assert
   // the level explicitly so a regression back to <h2> (no <h1> on the page at
   // all) fails here instead of silently passing a level-agnostic query.
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).toBeVisible();
-  // The copy uses a typographic apostrophe (U+2019), not a straight one.
-  await expect(page.getByText(/doctor’s sign-off may be required/)).toBeVisible();
-  // The done screen sends the diver onward to their readiness page, not a dead
-  // end back to the shop home.
   await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
-
-  // Assert scheduled dive site cards are rendered (delight feature)
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
 
