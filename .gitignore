@@ -58,3 +58,6 @@ next-env.d.ts
 /.reg-report/
 /infra/dist/
 /cdk.out/
+
+# agent worktree scratch space (Claude Code isolation:"worktree")
+/.claude/worktrees/
