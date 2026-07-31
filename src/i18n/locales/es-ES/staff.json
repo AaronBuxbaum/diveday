@@ -825,7 +825,15 @@
     "retrying": "Intentando de nuevo…",
     "delete": "Eliminar",
     "deleting": "Eliminando…",
-    "deleteConfirm": "¿Eliminar el código {code}? Nunca llegó a activarse, así que no se aplicó ningún descuento — esto no se puede deshacer."
+    "deleteConfirm": "¿Eliminar el código {code}? Nunca llegó a activarse, así que no se aplicó ningún descuento — esto no se puede deshacer.",
+    "tripDeals": {
+      "heading": "Ofertas por salida",
+      "description": "Descuentos de una sola salida enviados desde la página de una salida — la otra mitad de cada código activo, reunidos aquí para que ninguno sea visible solo desde la salida en la que se envió.",
+      "empty": "No hay ofertas por salida activas ahora mismo. Envía una desde la página de una salida cuando el barco necesite llenarse.",
+      "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
+      "expiresAt": "Caduca {date}",
+      "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de toda la tienda de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas."
+    }
   },
   "reports": {
     "operationKind": {
@@ -1253,7 +1261,12 @@
       "fullNotice": "Esta salida está llena — no hay nada que llenar.",
       "noneAroundNotice": "Nadie de la lista de última hora está disponible para esta fecha todavía.",
       "percentOff": "{percent}% de descuento",
-      "sentTo": "{count, plural, one {Enviado el {date} a # buceador} other {Enviado el {date} a # buceadores}}"
+      "sentTo": "{count, plural, one {Enviado el {date} a # buceador} other {Enviado el {date} a # buceadores}}",
+      "status": {
+        "sent": "Enviada",
+        "pending": "Nunca se terminó",
+        "failed": "Falló en Stripe"
+      }
     },
     "roster": {
       "waiverSend": "Enviar exención",

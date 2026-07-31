@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
   toRentableKinds,
 } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
@@ -403,7 +405,7 @@ export default async function PaymentsSettingsPage({
   const canImport = canImportShopData(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const banner = notice ? noticeMessages(t)[notice] : undefined;
+  const banner = noticeFromParam(notice, noticeMessages(t));
   // A recognized section renders the notice inline; anything else (chiefly
   // `not_authorized`, which spans several sections rather than owning one)
   // keeps the old top-of-page banner.
@@ -421,11 +423,7 @@ export default async function PaymentsSettingsPage({
       />
 
       {banner && !activeSection ? (
-        <div className="mb-6">
-          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.text}
-          </ShopNotice>
-        </div>
+        <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">

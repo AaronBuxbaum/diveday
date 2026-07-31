@@ -16,6 +16,7 @@ import { blockerFixFor } from "@/lib/blockers";
 import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { checkInAction } from "./actions";
 import { CheckInSearch } from "./CheckInSearch";
 
@@ -67,7 +68,7 @@ export default async function CheckInPage({
 
   const query = q?.trim() ?? "";
   const queue = await listCheckInQueue(db, shop.id, { query });
-  const copy = notice ? noticeCopy[notice] : undefined;
+  const copy = noticeFromParam(notice, noticeCopy);
   // The `not_ready` refusal links straight to the diver's guest row instead
   // of just naming the problem — the same rich-link pattern the manifest's
   // `not_ready` refusal already uses (trips/[id]/manifest/page.tsx). The

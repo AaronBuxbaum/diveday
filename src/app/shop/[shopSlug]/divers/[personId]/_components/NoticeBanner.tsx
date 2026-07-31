@@ -1,4 +1,5 @@
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { noticeFromParam } from "@/lib/staff-notices";
 
 /**
  * One entry per notice, carrying its own tone and message key. Previously
@@ -41,10 +42,7 @@ const NOTICE_KEYS: Record<string, { tone: "success" | "danger"; key: StaffMessag
 };
 
 export function NoticeBanner({ notice, locale }: { notice?: string; locale: string }) {
-  // `Object.hasOwn`, not a bare lookup: `notice` is an attacker-supplied query
-  // param, and `?notice=constructor` would otherwise return a truthy inherited
-  // value and render an empty banner.
-  const banner = notice && Object.hasOwn(NOTICE_KEYS, notice) ? NOTICE_KEYS[notice] : undefined;
+  const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return null;
   const t = staffTranslator(locale);
 

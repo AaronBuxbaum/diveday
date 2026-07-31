@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 
 export const metadata: Metadata = { title: "Order — DiveDay" };
 
@@ -105,24 +107,17 @@ async function refundAction(formData: FormData) {
   revalidateAndRedirect(back, `${back}?notice=${updated ? "refunded" : "refund_failed"}`);
 }
 
-const FAILED_NOTICES = new Set([
-  "refresh_failed",
-  "void_failed",
-  "refund_failed",
-  "not_authorized",
-]);
-
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-const NOTICE_KEYS: Record<string, StaffMessageKey> = {
-  refreshed: "orders.detail.notice.refreshed",
-  refresh_failed: "orders.detail.notice.refreshFailed",
-  voided: "orders.detail.notice.voided",
-  void_failed: "orders.detail.notice.voidFailed",
-  refunded: "orders.detail.notice.refunded",
-  refund_failed: "orders.detail.notice.refundFailed",
-  not_authorized: "orders.detail.notice.notAuthorized",
-  demo_disabled: "orders.detail.notice.demoDisabled",
+const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+  refreshed: { tone: "success", key: "orders.detail.notice.refreshed" },
+  refresh_failed: { tone: "danger", key: "orders.detail.notice.refreshFailed" },
+  voided: { tone: "success", key: "orders.detail.notice.voided" },
+  void_failed: { tone: "danger", key: "orders.detail.notice.voidFailed" },
+  refunded: { tone: "success", key: "orders.detail.notice.refunded" },
+  refund_failed: { tone: "danger", key: "orders.detail.notice.refundFailed" },
+  not_authorized: { tone: "danger", key: "orders.detail.notice.notAuthorized" },
+  demo_disabled: { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
 };
 
 /** A greyed-out stand-in for a Stripe action a demo shop can't perform. */
@@ -171,6 +166,7 @@ export default async function OrderDetailPage({
   const locale = await requestLocale();
   const t = staffTranslator(locale);
   const demoActionHint = t("orders.detail.demoActionHint");
+  const banner = noticeFromParam(notice, NOTICES);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -190,20 +186,9 @@ export default async function OrderDetailPage({
       />
 
       {notice ? (
-        <div className="mb-6">
-          <ShopNotice
-            tone={
-              notice === "demo_disabled"
-                ? "neutral"
-                : FAILED_NOTICES.has(notice)
-                  ? "danger"
-                  : "success"
-            }
-            role={FAILED_NOTICES.has(notice) ? "alert" : "status"}
-          >
-            {NOTICE_KEYS[notice] ? t(NOTICE_KEYS[notice]) : notice}
-          </ShopNotice>
-        </div>
+        <StaffNoticeBanner tone={banner?.tone ?? "success"}>
+          {banner ? t(banner.key) : notice}
+        </StaffNoticeBanner>
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
