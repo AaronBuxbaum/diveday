@@ -1359,6 +1359,7 @@ direction.
     concurrent edits), and link each staffing coverage gap (`staffing/page.tsx`) to the
     trip's crew editor with a `#crew` anchor. Also give Today's `instructor_missing` row
     that anchor — it currently lands on the bare Overview.
+    **Done — UXP session, 2026-07-31.**
 140. **[M] One waiver-send control.** Extend `WaiverSendSurface` with `"roster"` and mount
     `WaiverSendControl` in `RosterSection`, deleting the redirect-based
     `issueWaiverAction`/banner variant so both surfaces share optimistic feedback and the
@@ -1368,17 +1369,21 @@ direction.
 141. **[S] Name the time windows.** Today (7 days), Blockers (next 40 trips), check-in
     (−6h/+36h) slice the same readiness data with undocumented horizons — a diver "cleared"
     on one list still shows on another. Say the window in each page's description line.
+    **Done — UXP session, 2026-07-31.**
 142. **[S] Rename the "Waivers" nav item.** It points at the release-template editor, not
     signature chasing. Rename to "Waiver template" and move it into the admin group in
     `ShopNavLinks.tsx`; longer term see task 155.
+    **Done — UXP session, 2026-07-31.**
 143. **[S] Deduplicate emergency-contact capture.** `/ready` and `/waivers` both collect it
     with different labels. Show it read-only with an "already on file" state on whichever
     surface the diver reaches second (both write through `saveBookingEmergencyContact`).
+    **Done — UXP session, 2026-07-31.**
 144. **[M] Let staff record an emergency contact.** Today tells staff to "ask at the
     counter" and links to a roster with no field. Add the two fields to the roster's
     per-diver card and the diver-record edit form (`divers/[personId]/actions.ts`
     `personSchema` has no contact fields). Prints on the manifest → safety-adjacent,
     failure-path tests.
+    **Done — UXP session, 2026-07-31.**
 145. **[S] Distinguish the two demo doors.** "Try the live demo" mints a staff demo;
     "See a live schedule" hard-links the seeded shop's diver view from a presentational
     component. Relabel ("Try the staff app" / "See a diver's booking page"), source the slug
@@ -1399,19 +1404,25 @@ direction.
     the two systems' discount ranges (1–100% vs 5–90%) or say why they differ. Also fix
     `LastMinuteDealSection` rendering the raw status enum (`sent`/`pending`/`failed`) into
     a Badge — bundle keys.
+    **Done — UXP session, 2026-07-31.**
 149. **[S] Make check-in and boarding visible to each other.** Show a "Checked in ✓" pill
     on the manifest row and a "Boarded" pill on the check-in row (the check-in page's own
     description promises this split; the UI doesn't carry it through).
+    **Done — UXP session, 2026-07-31.**
 150. **[S] Flag unpriced builder trips.** A builder-created trip publishes to the public
     schedule with no price and the builder never says so. Show "No price set" on the
     builder card, linking to the trip's Details form.
+    **Done — UXP session, 2026-07-31.**
 151. **[M] One "course crew gap" computation.** The trip page, staffing page, and Today
     each compute "no instructor" differently (only the trip page knows PADI ratios).
     Extract one helper in `src/lib/` consumed by all three, with the ratio logic; unit
     tests move with it.
+    **Done — UXP session, 2026-07-31.** Extracted to `src/lib/course-ratios.ts`.
 152. **[S] Shared flash-notice helper.** ~11 files re-implement the `?notice=` →
     `{tone, copy}` map with tone drift for the same outcomes. One `noticeFromParam` helper
     + shared banner component.
+    **Done — UXP session, 2026-07-31.** `src/lib/staff-notices.ts` + `StaffNoticeBanner`;
+    migrated the files that fit the common shape.
 153. **[L] Split the schedule route.** `/schedule` becomes the public, canonical,
     embeddable page (calendar, list, reviews, last-minute form); the staff builder + KPI
     tiles move to `/schedule/board` (staff-only), which links to the public page as its
@@ -1419,24 +1430,34 @@ direction.
     anonymous `joinLastMinuteListAction` out of the builder's auth-gated action module.
     Big but high-value: it makes task 160 trivial and un-forks the page nobody can see
     whole. Route change → check e2e specs, sitemap, canonical metadata.
+    **Deferred — UXP session, 2026-07-31.** Deliberately not attempted in this pass: it's
+    the single highest-risk item in the doc (a route split touching e2e specs, sitemap,
+    and canonical metadata across a page nearly every other task this session also
+    touched), and task 160 — the thing it was meant to make trivial — already shipped
+    without it. Left for a dedicated follow-up.
 154. **[M] Group Settings.** Three labelled groups ("Your shop" / "Money" / "Data &
     integrations") with anchors, sub-page back-links (`settings/team`, `calendar`,
     `import`, `export` currently have no route back), and the founder mailto demoted to a
     footer. Rename the component from its stale `PaymentsSettingsPage`.
+    **Done — UXP session, 2026-07-31.**
 155. **[M] Give `/waivers` two tabs — Template and Signatures.** The template editor,
     signature chasing (Blockers/Today), and the signed-record evidence are three
     unconnected places today; a Signatures tab listing signed records (linked from blocker
     rows) closes the loop. Security-sensitive (waiver records) → reviewer per AGENTS.md.
+    **Done — UXP session, 2026-07-31.** Security-reviewer pass pending before merge.
 156. **[S] Slim the Guests tab.** Move the last-minute deal blast behind a "Promote" card
     or `/promos` (with trip picker) and recap-photo moderation to the trip Overview beside
     the crew shoutout — Guests returns to "who is attending."
+    **Done — UXP session, 2026-07-31.**
 157. **[S] Move ops alerts from Reports to Today.** Stuck Stripe operations and failed
     photo deletions are urgent chores gated behind the owner-only monthly report; surface
     them as `urgency: "now"` Today rows (Reports keeps the monthly view).
+    **Done — UXP session, 2026-07-31.**
 158. **[M] Give orders an index.** `/orders` with status/date/diver filters, added to nav
     (or Settings' Money group), command-palette go-tos, and linked from Reports revenue
     rows and roster payment cells. Today orders are reachable only via a diver's payments
     section.
+    **Done — UXP session, 2026-07-31.**
 159. **[S] Link the dead-end pages.** Check-in rows: diver name → record, trip →
     manifest, per-blocker fix buttons (extends task 68). Prep page: every named diver →
     their record, nitrox rows → their cards. Blockers and Reviews: link the diver name.
@@ -1470,6 +1491,7 @@ direction.
 165. **[M] Cross-link staffing shifts and trip crew.** A person can crew a boat with no
     shift or hold a shift with no boat, and neither surface knows. Show assigned trips in
     each staffing card and shift coverage inside `CrewSection`.
+    **Done — UXP session, 2026-07-31.**
 
 Each of these is a small task ("make X consistent with Y") suitable for a lesser model; file
 refs above.
@@ -1477,41 +1499,65 @@ refs above.
 - **Full-boat badge:** grey `neutral` on the schedule builder vs. celebratory green `success`
   on trip pages (the trip page comment explains why success is right — align the builder,
   `ScheduleBuilder.tsx`).
+  **Done — UXP session, 2026-07-31.**
 - **Confirmation dialogs:** native `window.confirm` for deletes/resends/rotations; nothing at
   all for hiding reviews or signing out; the refund preview can't render in either. One shared
   inline-confirm component (tasks 50, 81, 85).
+  **Done (partial) — UXP session, 2026-07-31.** `src/components/ui/InlineConfirm.tsx` (task
+  50, cancel/reschedule) and `src/components/InlineConfirmButton.tsx` (task 81, sign-out) both
+  shipped, built independently by concurrent batches — two similar components, not yet
+  unified into one. Not adopted for every remaining `window.confirm` site; a follow-up should
+  consolidate on one component and finish the sweep.
 - **Failure feedback:** worded rollback (roll call) vs. silent revert (crew assign) vs. silent
   no-op (clipboard copy). Standard: every failed action says so in words (tasks 63, 87).
+  **Done — UXP session, 2026-07-31.**
 - **Copy-to-clipboard:** exists once (`CopyableUrl`); needed on promo codes, public schedule
   URL, payment links (task 87 generalizes it).
+  **Done — UXP session, 2026-07-31.** Generalized to `src/components/Copyable.tsx`, used on
+  promo codes; not yet swept onto every one of the five original call sites.
 - **Empty states:** shared dashed `EmptyState` vs. bespoke emoji panels vs. bare `<p>` — pick
   the warm bespoke pattern for terminal pages, the compact one for sections; document in
   `design/principles.md`.
 - **Date formatting:** `formatDateTimeTz` everywhere except `toLocaleString()` in
   `OfflineManifestManager`, device-locale `Intl` in the offline view (justified — offline),
   and `"en-US"` in `db/today.ts` (tasks 61, 76).
+  **Done — PR #274 (task 61) + UXP session 2026-07-31 (task 76).**
 - **Two price-entry patterns:** Settings' `PriceField` (`type="number"`) vs. course editor's
   free-text decimal inputs — unify on `PriceField`.
+  **Done — UXP session, 2026-07-31.**
 - **Skeleton/page mismatch:** `schedule/loading.tsx` and `schedule/[id]/loading.tsx` use
   different max-widths than their pages, causing a double reflow — match the layout constants.
+  **Done — UXP session, 2026-07-31.**
 - **Authorization refusals:** in-page notice naming roles (best) vs. wrong-page notice vs.
   silent redirect (task 82 is the sweep).
+  **Done — PR #274/UXP session (task 82).**
 - **ICU placeholder `fill()` re-implemented three times** in client components
   (`DepartureBoard`, `WaterLocker`, `OfflineManifestManager`) — none handle plurals, hence
   awkward `…One`/`…Other` prop pairs. Extract one shared helper.
+  **Done — UXP session, 2026-07-31.** Extracted to `src/i18n/fill.ts` (`fill`/`pluralForm`).
 - **Hand-rolled danger banners:** `bg-danger/10 …` is copy-pasted in seven places
   (`sign-in`, `reset-password`, `invite`, `onboard`, `dive-sites` ×2, `BookingSections`)
   with three different paddings while `ShopNotice` exists — unify.
+  **Done — UXP session, 2026-07-31.**
 - **`ShopPageHeader` skipped by five pages** (`settings`, `courses/[slug]`,
   `schedule/[id]`, `divers/[personId]`, `offline-manifest`) that hand-roll their `<h1>`.
+  **Done — UXP session, 2026-07-31.**
 - **Copy-to-clipboard implemented five times** with reset delays from 2000–4000ms — the
   `Copyable` generalization in task 87 should absorb all of them.
+  **Done (partial)** — see the "Copy-to-clipboard" bullet above; `Copyable` exists, full sweep
+  outstanding.
 - **The embed snippet ships an off-token color:** `settings/embed/page.tsx` hardcodes
   `background:#0f766e` — not any DiveDay token (`--primary` is `#0e7490`). Every shop that
   pastes it gets an off-brand button.
+  **Done — UXP session, 2026-07-31.**
 - **Undo pattern used once:** `UndoToast` frames itself as the house alternative to
   blocking confirms but has exactly one call site — either adopt it for the destructive
   actions in tasks 50/85 or note why confirms won.
+  **Deferred — UXP session, 2026-07-31.** Tasks 50/81/85 all shipped with the inline-confirm
+  pattern instead (see above) rather than `UndoToast` — a destructive action (cancel a
+  booking, sign out, hide a review) benefits more from a confirm-before-acting step than an
+  undo-after-acting one, since some of these effects (a refund, a signed-out session) aren't
+  cleanly reversible. Left as a real, unresolved inconsistency rather than silently reconciled.
 
 ## Appendix B — ranked quick wins
 
