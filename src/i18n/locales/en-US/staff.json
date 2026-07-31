@@ -443,6 +443,9 @@
       "galleryPhotosLabel": "Gallery photos",
       "galleryPhotosHint": "(up to eight in total, {max} new per save)",
       "removeLabel": "Remove",
+      "photoCaptionLabel": "Caption",
+      "photoCaptionHint": "(optional — read aloud by screen readers)",
+      "photoCaptionPlaceholder": "What's in photo {n}?",
       "glanceLegend": "At a glance",
       "glanceDescription": "The chips across the top of the page — how the course runs. Who may take it is the next box.",
       "durationLabel": "Duration",
@@ -2002,6 +2005,7 @@
     }
   },
   "shared": {
+    "skipToContent": "Skip to main content",
     "imageInput": {
       "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
       "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
@@ -2068,6 +2072,7 @@
     },
     "commandPalette": {
       "search": "Search",
+      "dialogAriaLabel": "Quick search",
       "comboboxAriaLabel": "Search divers, trips, and pages",
       "placeholder": "Search divers, trips, or jump to a page…",
       "emptyShort": "Type to search people and trips, or jump to a page.",

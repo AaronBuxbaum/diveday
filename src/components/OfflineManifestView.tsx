@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { SkipLink } from "@/components/SkipLink";
 import { controlClass } from "@/components/ui/form";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -399,12 +400,7 @@ export function OfflineManifestView() {
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <AmbientGlareDetector />
-      <a
-        href="#offline-roll-call"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
-      >
-        {t("shared.offlineManifest.single.skipLink")}
-      </a>
+      <SkipLink href="#offline-roll-call" label={t("shared.offlineManifest.single.skipLink")} />
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -532,7 +528,8 @@ export function OfflineManifestView() {
         ) : null}
         <ul
           id="offline-roll-call"
-          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface"
+          tabIndex={-1}
+          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface outline-none"
         >
           {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(

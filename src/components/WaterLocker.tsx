@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useFocusTrap } from "@/components/useFocusTrap";
 
 export type WaterLockerCopy = {
   rainAlt: string;
@@ -25,6 +26,16 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   const touchHistory = useRef<{ x: number; y: number; time: number }[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headingId = useId();
+  const bodyId = useId();
+
+  // A locked screen isn't a request the diver or captain made — it can engage
+  // mid-task from a spray of water the touch heuristic mistakes for input, so
+  // it needs a dialog's focus containment (a stray tap on "what's underneath"
+  // must not reach the roll call it's covering) *and* an immediate
+  // announcement of why, not just a focus move a screen reader might miss.
+  useFocusTrap(isLocked, dialogRef);
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
@@ -103,13 +114,26 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   if (!isLocked) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md animate-fade-in">
+    <div
+      ref={dialogRef}
+      role="alertdialog"
+      aria-modal="true"
+      aria-live="assertive"
+      aria-labelledby={headingId}
+      aria-describedby={bodyId}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md animate-fade-in outline-none"
+    >
       <div className="max-w-md text-center">
         <span className="text-5xl animate-bounce" role="img" aria-label={copy.rainAlt}>
           🌧️
         </span>
-        <h2 className="mt-6 text-2xl font-bold tracking-tight">{copy.heading}</h2>
-        <p className="mt-3 text-base text-muted">{copy.body}</p>
+        <h2 id={headingId} className="mt-6 text-2xl font-bold tracking-tight">
+          {copy.heading}
+        </h2>
+        <p id={bodyId} className="mt-3 text-base text-muted">
+          {copy.body}
+        </p>
 
         <div className="mt-8 flex flex-col items-center gap-4">
           <button

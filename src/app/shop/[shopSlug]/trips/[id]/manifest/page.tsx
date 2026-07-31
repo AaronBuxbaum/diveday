@@ -16,6 +16,7 @@ import {
 } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { RollCallNote } from "@/components/RollCallNote";
+import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { WaterLocker } from "@/components/WaterLocker";
@@ -178,12 +179,7 @@ export default async function TripManifestPage({
   return (
     <div className="boat-mode">
       <AmbientGlareDetector />
-      <a
-        href="#roll-call-list"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
-      >
-        {t("trips.manifest.skipToRollCall")}
-      </a>
+      <SkipLink href="#roll-call-list" label={t("trips.manifest.skipToRollCall")} />
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -385,7 +381,7 @@ export default async function TripManifestPage({
         )}
       </section>
 
-      <section id="roll-call-list" className="mt-9">
+      <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">

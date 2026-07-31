@@ -25,13 +25,17 @@ function getInitials(fullName: string): string {
     .toUpperCase();
 }
 
+// Decorative only — picks a visually distinct border/fill for each diver's
+// initials, nothing more. Deliberately excludes success/warning/danger: this
+// grid sits right next to a manifest that uses those same tones to mean
+// "flagged"/"ready"/"blocked", so a status-colored avatar would read as a
+// status by accident (H-accessibility, colorblind-scanning persona).
 function getAvatarColor(fullName: string): string {
   const colors = [
     "bg-primary text-primary-foreground border-primary-hover",
-    "bg-success text-primary-foreground border-success",
     "bg-accent text-accent-foreground border-accent",
-    "bg-warning text-primary-foreground border-warning",
-    "bg-danger text-primary-foreground border-danger",
+    "bg-surface-sunken text-foreground border-border-strong",
+    "bg-foreground/10 text-foreground border-border-strong",
   ];
   let hash = 0;
   for (let index = 0; index < fullName.length; index++) {
@@ -90,7 +94,7 @@ export function MissingDiversGrid({
               >
                 {diver.fullName.split(" ")[0]}
               </span>
-              <span className="block w-full truncate text-[10px] text-muted">
+              <span className="block w-full truncate text-xs text-muted">
                 {diver.rentsKit ? copy.rentsKitLabel : copy.ownKitLabel}
               </span>
             </button>

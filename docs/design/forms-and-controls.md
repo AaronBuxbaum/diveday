@@ -33,10 +33,55 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
   the bug this component exists to prevent.
 - The caption goes through `label`/`hint`, never as children — that is what keeps the two-row shape.
 - `hint` is a short inline qualifier ("(optional)"). `description` is longer helper text and renders
-  under the control.
+  under the control, referenced via `aria-describedby` rather than folded into the control's
+  accessible name (below).
 - `columns` is 1–4; per-field spans and widths go on `<Field className>`.
 - `FieldActions` spans every column, so the submit button never becomes a lopsided extra field.
 - Horizontal checkbox/radio rows are not stacked fields — leave them as plain labels.
+
+### Required fields
+
+**Convention: every field is required unless the caption carries `hint="(optional)"`.** Add
+`required` to the control itself (the native attribute, not a `Field` prop) — `Field` detects it
+and renders a visible `*` next to the label automatically, for every field in the app, with no
+per-call-site change needed. The marker is decorative (`aria-hidden`); a screen reader announces
+"required" from the control's own native `required` attribute, which is why the attribute has to
+be real and not just a visual convention.
+
+```tsx
+<Field label={t("party.emailLabel")}>
+  <input name="email" type="email" required className={controlClass} />
+</Field>
+<Field label={t("party.phoneLabel")} hint={t("party.phoneHint" /* "(optional)" */)}>
+  <input name="phone" type="tel" className={controlClass} />
+</Field>
+```
+
+### `aria-describedby` and control association
+
+`Field` clones the single control it's given (the documented `children` contract: pass the
+control itself) to wire two things automatically, so hand-rolled `htmlFor`/`id`/`aria-describedby`
+plumbing at the call site is no longer needed for the common case:
+
+- **Association.** The caption `<label>` wraps only itself and points at the control via
+  `htmlFor`/`id` — pass `htmlFor` when the control already has a stable `id` of its own (or let
+  `Field` mint one with `useId()`).
+- **Description.** `description` gets its own id, referenced from the control's
+  `aria-describedby` (merged with anything the caller already set — a per-field error id from
+  `BookingPartyFields`/`ImageFileInput`'s pattern keeps working the same way).
+
+This only applies when `children` is a single control element (`<input>`/`<select>`/`<textarea>`)
+— the documented contract. A `Field` wrapping something else (rare) falls back to the original
+label-wraps-everything shape.
+
+### Lint note: icon-only controls
+
+An icon-only `<button>`/`<a>` (a chevron, an `×`, the `?` shortcuts trigger) has no text content
+for a screen reader to read — it needs an explicit `aria-label`, sourced from the message bundles
+like any other copy. `biome`/`check:copy` cannot catch a *missing* `aria-label`, only a
+hard-coded one, so this is a manual review point: if a control's only visible content is an icon,
+glyph, or `aria-hidden` SVG, it must carry `aria-label` (or, for a toggle whose pressed state
+matters, `aria-pressed` too).
 
 ## Buttons: `buttonClass()`
 

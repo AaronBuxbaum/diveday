@@ -284,7 +284,11 @@ export const courses = pgTable(
     summary: text("summary"),
     overview: text("overview"),
     heroImageUrl: text("hero_image_url"),
+    /** Real alt text, staff-authored; falls back to "{title} — photo N" when blank (H-accessibility). */
+    heroImageAlt: text("hero_image_alt"),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
+    /** Parallel to `imageUrls` — same length, same order, "" where no caption was given. */
+    imageAlts: jsonb("image_alts").$type<string[]>().notNull().default([]),
     durationText: text("duration_text"),
     groupSizeText: text("group_size_text"),
     minimumAge: integer("minimum_age"),

@@ -76,6 +76,16 @@ export function ShopStat({
   );
 }
 
+// Decorative, `aria-hidden` tone glyph — the same reasoning as `Badge`'s (see
+// ui/badge.tsx): status here is hue plus reading the words, which a
+// colorblind scan can miss before it gets to the words at all.
+const NOTICE_GLYPH: Record<"success" | "danger" | "warning" | "neutral", string | null> = {
+  success: "✓ ",
+  danger: "✕ ",
+  warning: "▲ ",
+  neutral: null,
+};
+
 export function ShopNotice({
   children,
   tone = "success",
@@ -95,12 +105,14 @@ export function ShopNotice({
         : tone === "neutral"
           ? "border-border bg-surface-sunken text-foreground"
           : "border-success/20 bg-success/10 text-success";
+  const glyph = NOTICE_GLYPH[tone];
 
   return (
     <div
       role={role}
       className={`rounded-xl border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
+      {glyph ? <span aria-hidden="true">{glyph}</span> : null}
       {children}
     </div>
   );

@@ -39,6 +39,15 @@
   --warning: #b45309;
   --danger: #b91c1c;
   --info: #4338ca;
+  /*
+   * A small-badge success/warning text on its own `/10`-opacity tinted fill
+   * measured ~4.38:1 — just under AA at 12px. Derived like --primary-sunken:
+   * one lazily-resolving declaration that tracks whichever --success/--warning
+   * is in scope (default/dark/boat-mode/glare-mode) rather than redeclared
+   * per skin. The nudge is tiny (a few % black) because the gap was tiny.
+   */
+  --success-strong: color-mix(in srgb, black 6%, var(--success));
+  --warning-strong: color-mix(in srgb, black 6%, var(--warning));
 
   /* Shape & motion */
   --radius: 0.75rem;
@@ -93,6 +102,8 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
+  --color-success-strong: var(--success-strong);
+  --color-warning-strong: var(--warning-strong);
   --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -172,8 +183,20 @@ body {
  * would push these dark-ink light values onto the dark palette — dark-on-dark,
  * ~1.5:1 muted text — for exactly the users who asked for MORE contrast. So
  * light gets darker ink/borders; dark gets brighter ones.
+ *
+ * Was `.boat-mode`-only — `prefers-contrast: more` is an OS-level signal from
+ * a real low-vision user, not a boat-deck setting, so every page honors it,
+ * not just the manifest. `:root` gets its own boosted values (not boat-mode's
+ * — those are boat-mode's *already-boosted* palette pushed further, a
+ * different starting point).
  */
 @media (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root {
+    --border: #6b6a63;
+    --border-strong: #3f3d37;
+    --muted: #33454d;
+  }
+
   .boat-mode {
     --border: #6b7d82;
     --border-strong: #263f47;
@@ -182,6 +205,13 @@ body {
 }
 
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root {
+    --border: #4f7285;
+    --border-strong: #8fb4c6;
+    --muted: #c3d8de;
+    --foreground: #ffffff;
+  }
+
   .boat-mode {
     --border: #6f97a8;
     --border-strong: #9cbcc9;

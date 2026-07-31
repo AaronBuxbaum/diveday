@@ -137,7 +137,11 @@ export type CourseContent = {
   summary: string | null;
   overview: string | null;
   heroImageUrl: string | null;
+  /** Staff-authored alt text for the hero photo; blank falls back to a generated caption. */
+  heroImageAlt: string | null;
   imageUrls: string[];
+  /** Parallel to `imageUrls` — same length and order, "" where no caption was given. */
+  imageAlts: string[];
   durationText: string | null;
   groupSizeText: string | null;
   minimumAge: number | null;
@@ -205,6 +209,16 @@ export function parseFaqs(value: string): CourseFaq[] {
 
 export function formatFaqs(faqs: CourseFaq[]): string {
   return faqs.map((faq) => `${faq.question}\n${faq.answer}`).join("\n\n");
+}
+
+/**
+ * A staff-authored caption if there is one, otherwise the caller's already-
+ * localized fallback ("{title} — photo {n}"). Kept copy-free (src/lib returns
+ * codes/values, not sentences) — the caller resolves the fallback string.
+ */
+export function resolveImageAlt(caption: string | null | undefined, fallback: string): string {
+  const trimmed = caption?.trim();
+  return trimmed ? trimmed : fallback;
 }
 
 const MAX_COURSE_IMAGES = 8;
