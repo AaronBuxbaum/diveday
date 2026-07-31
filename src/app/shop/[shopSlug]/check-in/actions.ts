@@ -21,5 +21,10 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
   if (outcome.ok) {
     redirect(`${back}?notice=${outcome.duplicate ? "already_checked_in" : "checked_in"}`);
   }
+  // `not_ready` carries the diver's booking/trip so the notice can link
+  // straight to their guest row instead of just naming the problem.
+  if (outcome.reason === "not_ready" && outcome.tripId) {
+    redirect(`${back}?notice=not_ready&bid=${bookingId}&tid=${outcome.tripId}`);
+  }
   redirect(`${back}?notice=${outcome.reason}`);
 }

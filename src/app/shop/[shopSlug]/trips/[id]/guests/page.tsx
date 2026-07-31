@@ -29,7 +29,7 @@ import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { RecapPhotoGallery } from "../_components/RecapPhotoGallery";
-import { RosterSection } from "../_components/RosterSection";
+import { isRosterFilter, RosterSection } from "../_components/RosterSection";
 import { TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { WaitlistSection } from "../_components/WaitlistSection";
 import {
@@ -69,11 +69,13 @@ export default async function TripGuestsPage({
     bid?: string;
     diverq?: string;
     count?: string;
+    rf?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, diverq, count } = await searchParams;
+  const { notice, bid, diverq, count, rf } = await searchParams;
+  const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -253,6 +255,7 @@ export default async function TripGuestsPage({
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}
+        rosterFilter={rosterFilter}
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
         rentalFitByBooking={rentalFitByBooking}

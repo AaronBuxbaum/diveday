@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -54,4 +55,47 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(page).toHaveURL(/\/check-in\?notice=walkin_added/);
   await expect(page.getByText("Added and on the boat.")).toBeVisible();
   await expect(page.locator("article").filter({ hasText: "Walk-in Test Diver" })).toHaveCount(1);
+});
+
+test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
+  // A same-day, one-seat trip so it's both offered by the walk-in picker
+  // (today's/tomorrow's departures) and trivially fillable in one step.
+  const title = `Walk-in Full Trip ${e2eNow().getTime()}`;
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(0));
+  await page.getByLabel("Departs").fill("20:00");
+  await page.getByLabel("Returns").fill("22:00");
+  await page.getByLabel("Capacity").fill("1");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  await page.goto("/shop/blue-mantis/schedule");
+  await openTripFromBoard(page, title);
+  const tripId = page.url().match(/\/trips\/([^/?]+)/)?.[1];
+  if (!tripId) throw new Error("could not read the trip id from the URL");
+
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  const addDiver = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+  await addDiver.getByLabel("Name").fill("Fills The Boat");
+  await addDiver.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
+  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+
+  // The boat is now full — a counter walk-in onto it is refused, not silently
+  // dropped, and points the crew at the wait list instead.
+  await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}`);
+  await page.locator('input[name="fullName"]').fill("Turned Away Tara");
+  await page.getByRole("button", { name: "Add to boat" }).click();
+
+  await expect(page).toHaveURL(/\/check-in\?notice=walkin_full/);
+  await expect(
+    page.getByText("That boat is full — try the wait list from its trip page instead."),
+  ).toBeVisible();
+  await expect(page.locator("article").filter({ hasText: "Turned Away Tara" })).toHaveCount(0);
 });

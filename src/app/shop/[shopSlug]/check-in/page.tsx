@@ -13,6 +13,7 @@ import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
+import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { checkInAction } from "./actions";
@@ -51,11 +52,11 @@ export default async function CheckInPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ q?: string; notice?: string }>;
+  searchParams: Promise<{ q?: string; notice?: string; bid?: string; tid?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { q, notice } = await searchParams;
+  const { q, notice, bid, tid } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop || shop.id !== session.user.shopId) notFound();
@@ -67,6 +68,28 @@ export default async function CheckInPage({
   const query = q?.trim() ?? "";
   const queue = await listCheckInQueue(db, shop.id, { query });
   const copy = notice ? noticeCopy[notice] : undefined;
+  // The `not_ready` refusal links straight to the diver's guest row instead
+  // of just naming the problem — the same rich-link pattern the manifest's
+  // `not_ready` refusal already uses (trips/[id]/manifest/page.tsx). The
+  // message itself always carries the `<guestsLink>` tag, so this always
+  // resolves with `t.rich`, never plain `t()` — falling back to the queue
+  // itself on the vanishingly unlikely chance `bid`/`tid` didn't round-trip.
+  const notReadyHref =
+    bid && tid
+      ? `/shop/${shopSlug}/trips/${tid}/guests#booking-${bid}`
+      : `/shop/${shopSlug}/check-in`;
+  const noticeContent =
+    copy?.key === "checkIn.notice.notReady"
+      ? t.rich("checkIn.notice.notReady", {
+          guestsLink: (chunks) => <Link href={notReadyHref}>{chunks}</Link>,
+        })
+      : copy
+        ? t(copy.key)
+        : null;
+  // Only the full, unsearched day's roster can be "cleared" — a filtered
+  // search matching one already-checked-in diver says nothing about anyone
+  // else still pending elsewhere.
+  const cleared = !query && allDiversCheckedIn(queue);
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -83,7 +106,7 @@ export default async function CheckInPage({
 
       {copy ? (
         <ShopNotice tone={copy.tone} className="mb-6">
-          {t(copy.key)}
+          {noticeContent}
         </ShopNotice>
       ) : null}
 
@@ -116,6 +139,12 @@ export default async function CheckInPage({
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
             <h3 className="font-semibold">{t("checkIn.emptyTitle")}</h3>
             <p className="mt-1 text-sm text-muted">{t("checkIn.emptyDescription")}</p>
+          </div>
+        ) : cleared ? (
+          <div className="rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
+            <h3 className="font-semibold text-success">
+              {t("checkIn.clearedTitle", { count: queue.length })}
+            </h3>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -192,6 +221,13 @@ export default async function CheckInPage({
                         {row.readiness.blockers.slice(0, 3).map((blocker) => (
                           <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
                         ))}
+                        {row.readiness.blockers.length > 3 ? (
+                          <li>
+                            {t("checkIn.blockersMore", {
+                              count: row.readiness.blockers.length - 3,
+                            })}
+                          </li>
+                        ) : null}
                       </ul>
                       {fix ? (
                         <div className="mt-3">

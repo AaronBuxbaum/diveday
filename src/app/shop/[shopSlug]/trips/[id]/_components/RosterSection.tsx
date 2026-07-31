@@ -48,6 +48,17 @@ type WaiverControlKeys = {
   confirm: boolean;
 };
 
+/**
+ * The roster's filter chips (server-rendered `?rf=` query param, task 69):
+ * scanning a 12-person boat for who still needs a waiver, or who's flat-out
+ * blocked, beats reading every ~200px card end to end.
+ */
+export type RosterFilter = "all" | "needs_waiver" | "blocked";
+
+export function isRosterFilter(value: string | undefined): value is RosterFilter {
+  return value === "all" || value === "needs_waiver" || value === "blocked";
+}
+
 const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
   not_sent: {
     labelKey: "trips.roster.waiverSend",
@@ -106,6 +117,7 @@ export function RosterSection({
   deleteNoteAction,
   depthUnit,
   tripDate,
+  rosterFilter,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -114,6 +126,8 @@ export function RosterSection({
   booked: number;
   capacity: number;
   roster: RosterEntry[];
+  /** Server-rendered `?rf=` selection (task 69) — defaults to "all" upstream. */
+  rosterFilter: RosterFilter;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -168,6 +182,31 @@ export function RosterSection({
       WAIVER_CONTROLS[waiverState(waiverByBooking.get(booking.id)?.waiver ?? null)].action;
     return action !== null;
   }).length;
+  // Filter chips read against the *full* roster's own signals, never a
+  // separate query, so the counts and the cards they gate can never disagree.
+  const needsWaiver = ({ booking }: RosterEntry) =>
+    waiverState(waiverByBooking.get(booking.id)?.waiver ?? null) !== "complete";
+  const isBlocked = ({ booking }: RosterEntry) =>
+    readinessByBooking.get(booking.id)?.readiness?.status !== "ready";
+  const filterCounts = {
+    all: roster.length,
+    needs_waiver: roster.filter(needsWaiver).length,
+    blocked: roster.filter(isBlocked).length,
+  } as const;
+  const filteredRoster =
+    rosterFilter === "needs_waiver"
+      ? roster.filter(needsWaiver)
+      : rosterFilter === "blocked"
+        ? roster.filter(isBlocked)
+        : roster;
+  const filterChipHref = (filter: RosterFilter) =>
+    `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
+  const filterChipClass = (active: boolean) =>
+    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
+      active
+        ? "border-primary bg-primary/10 text-primary"
+        : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
+    }`;
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -196,13 +235,35 @@ export function RosterSection({
           </form>
         ) : null}
       </div>
+      {roster.length > 0 ? (
+        <nav aria-label={t("trips.roster.filterAriaLabel")} className="mt-4 flex flex-wrap gap-2">
+          {(["all", "needs_waiver", "blocked"] as const).map((filter) => (
+            <Link
+              key={filter}
+              href={filterChipHref(filter)}
+              scroll={false}
+              className={filterChipClass(rosterFilter === filter)}
+            >
+              {filter === "all"
+                ? t("trips.roster.filterAll", { count: filterCounts.all })
+                : filter === "needs_waiver"
+                  ? t("trips.roster.filterNeedsWaiver", { count: filterCounts.needs_waiver })
+                  : t("trips.roster.filterBlocked", { count: filterCounts.blocked })}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       {roster.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
           {t("trips.roster.noBookings")}
         </p>
+      ) : filteredRoster.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+          {t("trips.roster.noneMatchFilter")}
+        </p>
       ) : (
         <ul className="mt-5 grid gap-4">
-          {roster.map(({ booking, person }) => {
+          {filteredRoster.map(({ booking, person }) => {
             const readiness = readinessByBooking.get(booking.id)?.readiness;
             const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
             const paymentSource = paymentSourceLine(

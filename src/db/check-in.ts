@@ -136,6 +136,10 @@ export type CheckInOutcome =
       ok: false;
       reason: "not_found" | "already_checked_in" | "not_bookable" | "not_ready" | "staff_not_found";
       blockers?: ReadinessResult["blockers"];
+      // Only set on `not_ready` — the caller needs it to link straight back to
+      // the diver's guest row (`trips/[id]/guests#booking-<id>`), the same
+      // rich-link pattern the manifest's `not_ready` refusal already uses.
+      tripId?: string;
     };
 
 /**
@@ -188,7 +192,12 @@ export async function checkInBooking(
 
     const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, booking.id);
     if (readiness?.status !== "ready") {
-      return { ok: false, reason: "not_ready", blockers: readiness?.blockers };
+      return {
+        ok: false,
+        reason: "not_ready",
+        blockers: readiness?.blockers,
+        tripId: booking.tripId,
+      };
     }
 
     const [updated] = await tx
