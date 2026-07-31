@@ -25,6 +25,14 @@ export type BuilderTrip = {
   dayCount: number;
   /** Who is crewing it — the board's other question, answered in place. */
   crew: string[];
+  /**
+   * Null when no price has ever been set. A builder-created trip publishes
+   * to the public schedule the moment it's on the board, price or not, and
+   * the builder never said so (task 150, UX persona lens 17) — flagged here
+   * so staff catch it before a diver hits an unpriced trip on the public
+   * page.
+   */
+  priceCents: number | null;
 };
 
 export type BuilderDay = {
@@ -68,6 +76,8 @@ export type BuilderCopy = {
   dayCountLabel: string;
   crewLabel: string;
   crewNobodyYet: string;
+  noPriceSet: string;
+  noPriceSetAria: string;
   move: string;
   moveAria: string;
   copy: string;
@@ -358,9 +368,23 @@ export function ScheduleBuilder({
                           )}
                         </p>
                       </div>
-                      <Badge tone={full ? "neutral" : "primary"} tabularNums>
+                      {/* A sold-out boat is a win worth noticing, not a quiet
+                          state (design/principles.md #3) — "success" stands
+                          out where "neutral" would recede. Matches the same
+                          badge on the trip page (task appendix, UX persona
+                          lens 17: this one used to render grey here and green
+                          there for the same fact). */}
+                      <Badge tone={full ? "success" : "primary"} tabularNums>
                         {trip.booked}/{trip.capacity}
                       </Badge>
+                      {trip.priceCents === null ? (
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${trip.id}#details`}
+                          aria-label={fill(copy.noPriceSetAria, { ref })}
+                        >
+                          <Badge tone="warning">{copy.noPriceSet}</Badge>
+                        </Link>
+                      ) : null}
                       {canConfigure ? (
                         <div className="flex shrink-0 flex-wrap items-center gap-1">
                           <button

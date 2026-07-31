@@ -10,7 +10,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
 import { getTripManifest, recordRollCall, updateLatestRollCallNote } from "./manifests";
-import { people, rollCallEvents, waiverRecords } from "./schema";
+import { bookings, people, rollCallEvents, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
@@ -77,6 +77,30 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       readiness: { status: "ready" },
       rollCall: { state: "boarded", recordedByName: staff.fullName },
     });
+  });
+
+  it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {
+    // Counter check-in and boat roll call are two different questions —
+    // arrived vs. aboard. `checked_in` used to have exactly one reader in
+    // the app (the check-in page itself); the manifest never showed it.
+    const { db, shop, reef, booking } = await manifestContext();
+
+    const beforeCheckIn = await getTripManifest(db, shop.id, reef.id);
+    expect(
+      beforeCheckIn?.divers.find((entry) => entry.bookingId === booking.booking.id)?.checkedIn,
+    ).toBe(false);
+
+    await db
+      .update(bookings)
+      .set({ status: "checked_in" })
+      .where(eq(bookings.id, booking.booking.id));
+
+    const afterCheckIn = await getTripManifest(db, shop.id, reef.id);
+    const diver = afterCheckIn?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    // Checked in at the counter, but never boarded — the two states stay
+    // independent rather than one implying the other.
+    expect(diver?.checkedIn).toBe(true);
+    expect(diver?.rollCall).toBeUndefined();
   });
 
   it("carries an imported waiver's medical mark onto the manifest, distinctly from a real review (ADR 20260724-import-waiver-acceptance)", async () => {

@@ -51,6 +51,7 @@ describe("buildTripManifest", () => {
             ],
           },
           nitroxRequested: true,
+          checkedIn: true,
           rollCall: {
             state: "boarded",
             occurredAt: new Date("2026-07-20T11:45:00.000Z"),
@@ -66,6 +67,7 @@ describe("buildTripManifest", () => {
           emergencyContactPhone: null,
           rentalFit: { state: "not_recorded" as const },
           nitroxRequested: false,
+          checkedIn: false,
         },
       ],
     });
@@ -82,6 +84,12 @@ describe("buildTripManifest", () => {
       notBoarded: 0,
       awaiting: 1,
     });
+    // Counter check-in and boat roll call are different questions (task 149):
+    // a diver can be checked in at the counter without being boarded, or
+    // vice versa on a walk-in who skipped the counter — the manifest carries
+    // both independently rather than conflating them.
+    expect(manifest.divers.find((d) => d.bookingId === "booking-ready")?.checkedIn).toBe(true);
+    expect(manifest.divers.find((d) => d.bookingId === "booking-unknown")?.checkedIn).toBe(false);
   });
 
   it("uses explicit words for every roll-call state", () => {

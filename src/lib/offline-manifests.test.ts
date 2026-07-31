@@ -194,6 +194,7 @@ describe("offline manifest policy", () => {
           readiness: { status: "ready", blockers: [] },
           rentalFit: { state: "own_kit" },
           nitroxRequested: false,
+          checkedIn: false,
           rollCall: {
             state: "not_boarded",
             occurredAt: new Date("2026-07-20T13:30:00.000Z"),
@@ -248,6 +249,7 @@ describe("offline manifest policy", () => {
           readiness: { status: "ready", blockers: [] },
           rentalFit: { state: "own_kit" },
           nitroxRequested: false,
+          checkedIn: false,
           age: 12,
           minor: true,
           birthday: { status: "today" },
