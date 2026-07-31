@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   loadOfflineManifest,
@@ -130,7 +130,7 @@ describe("OfflineManifestManager", () => {
     // Mount's own save+reconcile settles immediately.
     vi.mocked(syncOfflineManifest).mockResolvedValueOnce(envelope());
 
-    render(<OfflineManifestManager payload={payload} copy={copy} />);
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
     await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
 
     // From here on, every call hangs until resolved by hand — standing in
@@ -166,5 +166,35 @@ describe("OfflineManifestManager", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(syncOfflineManifest).toHaveBeenCalledTimes(3);
+  });
+
+  // Task 76: the "Saved …" timestamp used to call the bare `toLocaleString()`
+  // (the JS runtime's default locale, no shop timezone) — the one date on
+  // this whole surface that ignored both the negotiated staff locale and
+  // AGENTS.md's "never hard-code a locale" rule. It must render through the
+  // same `formatDateTimeTz` + shop timezone every other staff date uses.
+  it("formats the saved timestamp for the negotiated locale and shop timezone, not the runtime default", async () => {
+    setOnline(true);
+    const saved = envelope();
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValueOnce(saved);
+
+    render(<OfflineManifestManager payload={payload} locale="es-ES" copy={copy} />);
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
+
+    const expected = new Intl.DateTimeFormat("es-ES", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: "America/New_York",
+    }).format(new Date(saved.snapshot.savedAt));
+
+    expect(
+      await screen.findByText(new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))),
+    ).toBeInTheDocument();
   });
 });

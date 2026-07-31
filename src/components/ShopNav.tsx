@@ -110,6 +110,7 @@ export function ShopNav({
               goToWaivers: t("shared.commandPalette.goToWaivers"),
               goToBoarding: t("shared.commandPalette.goToBoarding"),
               goToWalkIn: t("shared.commandPalette.goToWalkIn"),
+              goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
             }}
           />
           <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />

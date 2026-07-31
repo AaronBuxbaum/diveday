@@ -104,7 +104,12 @@ export function RosterSection({
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
-  depthUnit,
+  // Accepted for interface parity with callers/DepthUnit plumbing elsewhere
+  // on this page, but `depthWarningText` already embeds its own unit
+  // formatting — nothing in this component needs it directly. Pre-existing
+  // (unrelated to manifests/roll-call); kept rather than dropped from the
+  // props contract in case another in-flight change depends on it.
+  depthUnit: _depthUnit,
   tripDate,
 }: {
   shopSlug: string;

@@ -86,6 +86,29 @@ const otherShopPayload: OfflineManifestPayload = {
   ],
 };
 
+// A trip with a diver who is not ready at departure (an uncleared medical,
+// say), saved with both a "departure" and an "after_dive_1" checkpoint — for
+// the dive-domain-expert regression below (task 72, invariant 2).
+const blockedDiverPayload: OfflineManifestPayload = {
+  shop: payload.shop,
+  manifests: [
+    {
+      ...payload.manifests[0],
+      checkpoint: "departure",
+      divers: [
+        { ...payload.manifests[0].divers[0], readiness: { status: "blocked", blockers: [] } },
+      ],
+    },
+    {
+      ...payload.manifests[0],
+      checkpoint: "after_dive_1",
+      divers: [
+        { ...payload.manifests[0].divers[0], readiness: { status: "blocked", blockers: [] } },
+      ],
+    },
+  ],
+};
+
 /** Backdates a stored record's plaintext expiry without touching its ciphertext. */
 function patchStoredExpiresAt(tripId: string, expiresAt: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -381,6 +404,53 @@ describe("appendOfflineRollCall", () => {
     // doesn't discard evidence already recorded.
     const reloaded = await loadOfflineManifest(tripId);
     expect(reloaded?.events).toHaveLength(1);
+  });
+
+  // Dive-domain-expert review (docs/product/assessments/ux-personas-20260730.md,
+  // persona 10 Sal, task 72, invariant 2): readiness gates boarding at
+  // departure only. OfflineManifestView renders a live "Board" button after
+  // any numbered dive regardless of the saved readiness snapshot
+  // (`ready || !isDeparture`) — this is the store-level guarantee that
+  // actually recording that tap succeeds as a pure headcount, rather than
+  // silently rejecting an action the UI implied would work.
+  it("refuses to board a not-ready diver at departure but allows it after a numbered dive", async () => {
+    const tripId = blockedDiverPayload.manifests[0].trip.id;
+    const bookingId = blockedDiverPayload.manifests[0].divers[0].bookingId;
+    await saveOfflineManifest(blockedDiverPayload);
+
+    await expect(
+      appendOfflineRollCall(tripId, {
+        bookingId,
+        checkpoint: "departure",
+        status: "boarded",
+        note: null,
+      }),
+    ).rejects.toThrow(/does not allow boarding/);
+
+    // Same diver, same unresolved readiness — a pure headcount after dive 1
+    // must succeed, matching what the "Board" button implies is possible.
+    const envelope = await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "after_dive_1",
+      status: "boarded",
+      note: null,
+    });
+    const event = envelope.events.find((entry) => entry.checkpoint === "after_dive_1");
+    expect(event?.status).toBe("boarded");
+    expect(event?.syncStatus).toBe("pending");
+
+    // "not_boarded" is always allowed regardless of checkpoint or readiness.
+    const notBoarded = await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    expect(
+      notBoarded.events.find(
+        (entry) => entry.checkpoint === "departure" && entry.status === "not_boarded",
+      ),
+    ).toBeDefined();
   });
 });
 
