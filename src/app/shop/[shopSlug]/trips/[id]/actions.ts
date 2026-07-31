@@ -1,5 +1,6 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -18,6 +19,7 @@ import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
@@ -29,7 +31,6 @@ import {
   getTripSeriesById,
   getTripWithBooked,
   listTripDiverContacts,
-  setTripCrew,
   setTripStatus,
   type TripCrewChange,
   updateTrip,
@@ -402,25 +403,6 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
     });
   }
   revalidateAndRedirect(back, `${back}?notice=recap-photo-removed`);
-}
-
-export async function saveCrewAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = backPath(shopSlug, tripId);
-  // Who is aboard is part of the manifest — a legal safety document that must
-  // stay truthful when the day-of lead swaps a sick divemaster or a second
-  // captain at the dock (glossary). Day-of crew assignment is operating work,
-  // open to all staff; trip *definition* below stays config-gated (H-14).
-  const s = await requireStaffSession();
-  const ids = formData.getAll("crew").map(String);
-  const saved = await setTripCrew(await getDb(), s.user.shopId, tripId, ids);
-  if (!saved) redirect(`${back}?notice=crew-conflict`);
-  await recordTripActivity(await getDb(), {
-    shopId: s.user.shopId,
-    tripId,
-    actorPersonId: s.user.personId,
-    action: "updated the crew assignment",
-  });
-  revalidateAndRedirect(back, `${back}?notice=crew`);
 }
 
 export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -820,6 +802,26 @@ export async function updateTripCrewAction(
   const db = await getDb();
   const success = await changeTripCrew(db, s.user.shopId, tripId, change);
   if (success) {
+    // One write path for crew (Today's board and the trip's CrewSection both
+    // call this), so the trip's activity log — read from the Guests tab —
+    // stays the single record of who touched the crew and when, regardless of
+    // which surface they used.
+    const [person] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, change.personId), eq(people.shopId, s.user.shopId)))
+      .limit(1);
+    if (person) {
+      await recordTripActivity(db, {
+        shopId: s.user.shopId,
+        tripId,
+        actorPersonId: s.user.personId,
+        action:
+          change.operation === "assign"
+            ? `assigned ${person.fullName} to crew`
+            : `removed ${person.fullName} from crew`,
+      });
+    }
     revalidatePath(`/shop/${shopSlug}`);
     revalidatePath(`/shop/${shopSlug}/trips/${tripId}`);
     revalidatePath(`/shop/${shopSlug}/trips/${tripId}/manifest`);
