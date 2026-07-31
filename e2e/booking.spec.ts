@@ -266,7 +266,16 @@ test("a shared-inbox booking under a different name is held for staff identity c
 
   // A different name on the same inbox books trip B — reuses Nora's record.
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  // Scoped to the trip list itself: a day with more than one departure also
+  // renders a same-titled <li> in the month calendar
+  // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+  // resolve to both.
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: tripB })
+    .getByRole("link")
+    .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
   await page.getByLabel("Email", { exact: true }).fill(email);
@@ -276,7 +285,14 @@ test("a shared-inbox booking under a different name is held for staff identity c
   // Staff open trip B's roster: the diver is held on identity, not ready.
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  await page
+    .locator("li")
+    .filter({ hasText: tripB })
+    // Exact match: an unpriced trip's card also carries a "Set a price for
+    // {title}, ..." link whose accessible name contains the trip title as a
+    // substring.
+    .getByRole("link", { name: tripB, exact: true })
+    .click();
   await page
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })

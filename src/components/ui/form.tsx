@@ -70,6 +70,9 @@ type ControlProps = {
   "aria-describedby"?: string;
 };
 
+/** Native form-control tags `Field` will clone an id/aria-describedby onto. */
+const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
+
 /**
  * A labelled control. Pass the control itself as `children`; the caption goes
  * through `label`/`hint` so the component keeps ownership of the two-row shape.
@@ -117,7 +120,16 @@ export function Field({
 }) {
   const autoId = useId();
   const descriptionId = description ? `${autoId}-description` : undefined;
-  const isControl = isValidElement<ControlProps>(children);
+  // A native form-control tag specifically, not just any single element — a
+  // wrapping <div> (e.g. an input plus a "$" prefix, or a select plus its own
+  // button) is also `isValidElement`, and cloning the auto id/aria-describedby
+  // onto that wrapper instead of the real control it wraps leaves the label
+  // pointing at an id nothing else has. The wrap-everything fallback below
+  // handles those correctly via implicit label-wraps-control association.
+  const isControl =
+    isValidElement<ControlProps>(children) &&
+    typeof children.type === "string" &&
+    CONTROL_TAGS.has(children.type);
   const controlId = htmlFor ?? (isControl ? (children.props.id ?? autoId) : undefined);
   const isRequired = isControl && children.props.required === true;
 
