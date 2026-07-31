@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ilike, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { people, shops, trips } from "./schema";
+import { courses, diveSites, orders, people, shops, trips } from "./schema";
 import { searchShop } from "./search";
 
 describe("searchShop", () => {
@@ -57,7 +57,65 @@ describe("searchShop", () => {
   it("returns nothing for a below-minimum-length query", async () => {
     const { db, shop } = await seededShopContext();
     const result = await searchShop(db, shop.id, "p", "America/New_York");
-    expect(result).toEqual({ divers: [], trips: [] });
+    expect(result).toEqual({ divers: [], trips: [], diveSites: [], courses: [], orders: [] });
+  });
+
+  it("finds a dive site by a substring of its name", async () => {
+    const { db, shop } = await seededShopContext();
+    const [site] = await db
+      .select()
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shop.id), ilike(diveSites.name, "%Spiegel Grove%")))
+      .limit(1);
+    if (!site) throw new Error("seed dive site missing");
+
+    const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York");
+    expect(result.diveSites.map((s) => s.id)).toContain(site.id);
+  });
+
+  it("finds a course by a substring of its title", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    if (!course) throw new Error("seed course missing");
+
+    const result = await searchShop(db, shop.id, course.title, "America/New_York");
+    expect(result.courses.map((c) => c.id)).toContain(course.id);
+  });
+
+  it("finds an order by the buyer's name", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    const [order] = await db
+      .select({ id: orders.id, personId: orders.personId })
+      .from(orders)
+      .where(eq(orders.shopId, shop.id))
+      .limit(1);
+    if (!order) throw new Error("seed order missing");
+    const [buyer] = await db.select().from(people).where(eq(people.id, order.personId)).limit(1);
+    if (!buyer) throw new Error("seed order's buyer missing");
+
+    const result = await searchShop(db, shop.id, buyer.fullName, "America/New_York");
+    expect(result.orders.map((o) => o.id)).toContain(order.id);
+  });
+
+  it("never returns another shop's dive sites, courses, or orders", async () => {
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Second Shop", slug: "second-shop-2", timezone: "America/New_York" })
+      .returning();
+    if (!otherShop) throw new Error("insert failed");
+    const [otherSite] = await db
+      .insert(diveSites)
+      .values({ shopId: otherShop.id, name: "Priya's Point" })
+      .returning();
+    if (!otherSite) throw new Error("insert failed");
+
+    const result = await searchShop(db, shop.id, "Priya's Point", "America/New_York");
+    expect(result.diveSites.map((s) => s.id)).not.toContain(otherSite.id);
   });
 });
 

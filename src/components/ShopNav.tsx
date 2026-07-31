@@ -82,6 +82,7 @@ export function ShopNav({
             shopSlug={shopSlug}
             boatBoardingHref={boatBoardingHref}
             canManageWaivers={navGates.waivers}
+            canManageReports={navGates.reports}
             copy={{
               search: t("shared.commandPalette.search"),
               comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
@@ -90,9 +91,19 @@ export function ShopNav({
               emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
               groupDivers: t("shared.commandPalette.groupDivers"),
               groupTrips: t("shared.commandPalette.groupTrips"),
+              groupDiveSites: t("shared.commandPalette.groupDiveSites"),
+              groupCourses: t("shared.commandPalette.groupCourses"),
+              groupOrders: t("shared.commandPalette.groupOrders"),
               groupGoTo: t("shared.commandPalette.groupGoTo"),
               goToToday: t("shared.commandPalette.goToToday"),
               goToBlockers: t("shared.commandPalette.goToBlockers"),
+              goToCheckIn: t("shared.commandPalette.goToCheckIn"),
+              goToStaffing: t("shared.commandPalette.goToStaffing"),
+              goToDiveSites: t("shared.commandPalette.goToDiveSites"),
+              goToCourses: t("shared.commandPalette.goToCourses"),
+              goToReviews: t("shared.commandPalette.goToReviews"),
+              goToReports: t("shared.commandPalette.goToReports"),
+              goToPromos: t("shared.commandPalette.goToPromos"),
               goToSchedule: t("shared.commandPalette.goToSchedule"),
               goToDivers: t("shared.commandPalette.goToDivers"),
               goToSettings: t("shared.commandPalette.goToSettings"),

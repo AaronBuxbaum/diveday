@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
-import { formatShortDate } from "@/lib/format";
+import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { AppDb } from "./client";
-import { diveSites, people, trips } from "./schema";
+import { courses, diveSites, orders, people, trips } from "./schema";
 
 /**
  * The shop-scoped index behind the command palette. Every clause is pinned to
@@ -13,11 +13,28 @@ import { diveSites, people, trips } from "./schema";
 
 export type DiverHit = { id: string; fullName: string; detail: string | null };
 export type TripHit = { id: string; title: string; detail: string };
-export type SearchResults = { divers: DiverHit[]; trips: TripHit[] };
+export type DiveSiteHit = { id: string; name: string };
+export type CourseHit = { id: string; slug: string; title: string };
+export type OrderHit = { id: string; personName: string; detail: string };
+export type SearchResults = {
+  divers: DiverHit[];
+  trips: TripHit[];
+  diveSites: DiveSiteHit[];
+  courses: CourseHit[];
+  orders: OrderHit[];
+};
 
 const PER_GROUP = 8;
 /** One character matches everything; wait for a real query. */
 const MIN_QUERY = 2;
+
+const EMPTY_RESULTS: SearchResults = {
+  divers: [],
+  trips: [],
+  diveSites: [],
+  courses: [],
+  orders: [],
+};
 
 export async function searchShop(
   db: AppDb,
@@ -26,10 +43,10 @@ export async function searchShop(
   timeZone: string,
 ): Promise<SearchResults> {
   const query = rawQuery.trim();
-  if (query.length < MIN_QUERY) return { divers: [], trips: [] };
+  if (query.length < MIN_QUERY) return EMPTY_RESULTS;
   const like = `%${query}%`;
 
-  const [diverRows, tripRows] = await Promise.all([
+  const [diverRows, tripRows, diveSiteRows, courseRows, orderRows] = await Promise.all([
     db
       .select({
         id: people.id,
@@ -61,6 +78,36 @@ export async function searchShop(
       )
       .orderBy(desc(trips.startsAt))
       .limit(PER_GROUP),
+    db
+      .select({ id: diveSites.id, name: diveSites.name })
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shopId), ilike(diveSites.name, like)))
+      .orderBy(diveSites.name)
+      .limit(PER_GROUP),
+    db
+      .select({ id: courses.id, slug: courses.slug, title: courses.title })
+      .from(courses)
+      .where(and(eq(courses.shopId, shopId), ilike(courses.title, like)))
+      .orderBy(courses.title)
+      .limit(PER_GROUP),
+    db
+      .select({
+        id: orders.id,
+        personName: people.fullName,
+        description: orders.description,
+        totalCents: orders.totalCents,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .innerJoin(people, eq(people.id, orders.personId))
+      .where(
+        and(
+          eq(orders.shopId, shopId),
+          or(ilike(people.fullName, like), ilike(orders.description, like)),
+        ),
+      )
+      .orderBy(desc(orders.createdAt))
+      .limit(PER_GROUP),
   ]);
 
   return {
@@ -77,5 +124,12 @@ export async function searchShop(
         detail: row.siteName ? `${date} · ${row.siteName}` : date,
       };
     }),
+    diveSites: diveSiteRows,
+    courses: courseRows,
+    orders: orderRows.map((row) => ({
+      id: row.id,
+      personName: row.personName,
+      detail: `${formatMoneyCents(row.totalCents)} · ${formatShortDate(row.createdAt, "en-US", timeZone)}`,
+    })),
   };
 }
