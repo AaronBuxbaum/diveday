@@ -17,6 +17,9 @@ Before implementing anything here, follow AGENTS.md (skills: `new-feature`, `i18
 `product/roadmap.md` as of this date, but the roadmap owns priority. Several tasks touch
 security-sensitive or safety-critical surfaces and say so inline.
 
+**Completion tracking.** Finished tasks carry a trailing `**Done — PR #N.**` (or `**Deferred —
+...**` for a task deliberately not implemented, with the reason). Untagged tasks are still open.
+
 ---
 
 ## Contents
@@ -291,6 +294,7 @@ and discover it at the dock.
     triggers off `/discover scuba|try scuba/i` on the course title
     (`BookingSections.tsx`) — English-only. Add an `isIntroCourse`-style boolean to the course
     content shape (`src/lib/courses.ts`, editor checkbox in `courses/[slug]/edit`) and use it.
+    **Done — PR #273.**
 
 ---
 
@@ -310,17 +314,24 @@ dead code: `knownDivers` is only ever passed in the test file (`BookingPartyFiel
     name/email (not payment data) in `localStorage` and prefill the next booking form with a
     one-tap "Booking as Marco (not you?)" chip. Client-only, no schema change; keep it out of
     embed mode if the embed is meant to be stateless. Add an e2e assertion.
+    **Done — PR #273.**
 28. **[M] Add simple schedule filters.** "Has space" toggle + trip-type filter (fun dive /
     course) as query params on `schedule/page.tsx`, server-rendered (no client state — see the
     visual-stability note in `AddDiverSection.tsx` for the house pattern). Unit tests on the
     filtered query.
+    **Done — PR #273.**
 29. **[S] Wire up `knownDivers` or delete it.** `suggestNameTypo` in `BookingPartyFields.tsx`
     never fires in production (both call sites omit the prop). Either pass recent public-safe
     known-diver names where staff use the same component, or remove the dead path — half-built
     features cost comprehension.
+    **Done — PR #273.** Resolved by deletion, not wiring-up: the only real data source for
+    `knownDivers` is the shop's full diver roster, and the booking page is public/unauthenticated
+    — wiring it up as sketched would leak other divers' names/emails to anonymous visitors. Task
+    27 (remember-this-device) covers the actual need without that exposure.
 30. **[S] "Next departure" quick link.** At the top of the schedule, render one prominent card
     for the soonest departure with spots ("Next boat out: Sat 7:30 — 3 spots") linking straight
     to its booking form. Data is already in `range.first`.
+    **Done — PR #273.**
 
 ---
 
@@ -350,37 +361,48 @@ built in English in the domain layer (`src/db/checkouts.ts`, `src/lib/courses.ts
     exists). Domain layer returns codes, not sentences — this is the ADR
     20260731-domain-layer-copy-leaks pattern; run `pnpm check:domain-strings --write` to bank
     the reduction.
+    **Done — PR #272.**
 32. **[S] Localize booking-action validation errors.** Move the six hardcoded strings in
     `schedule/[id]/actions.ts` into the diver bundle via `requestTranslator()`. Same for the
     three raw strings in `schedule/actions.ts` (`joinLastMinuteListAction`) — the rate-limit
     error two lines above already shows the correct pattern.
+    **Done — PR #272.**
 33. **[S] Localize `ImageFileInput` client errors.** `src/components/ImageFileInput.tsx` has
     hardcoded English validation messages on localized diver surfaces; accept the strings as
     props from the server component (the staff-Client-Component pattern) or use
     `useTranslations()` under `DiverIntlProvider`.
+    **Done — PR #272.**
 34. **[M] De-fragment assembled sentences.** Audit the three-key stitched sentences: the waiver
     help footer (`waivers/[token]/page.tsx` — currently reads "Need help? Return to the shop and
     contact your dive shop," with the link going to DiveDay's marketing homepage), the ready
     contact line, the recap greeting's hardcoded punctuation, and `" · "`/`" — "` literals in
     JSX. Replace each with a single ICU message using `t.rich` for embedded links. Fix the
     waiver footer's `href="/"` to the shop's contact while there.
+    **Done — PR #272.**
 35. **[L] Localize money end-to-end.** Add `currency` to `shops` (schema-change skill), thread it
     through `formatMoneyCents` (`src/lib/format.ts` defaults `"usd"`), checkout creation
     (`src/db/checkouts.ts`), tip presets (`recap/[token]/page.tsx` — `TIP_PRESETS_USD`), and
     course fee display. Stripe owns conversion arithmetic. This is a prerequisite for any
     non-US shop; needs an ADR note and careful test coverage of the payments path.
+    **Deferred (Ingrid session, PR #272).** Cross-surface schema + payments-path change; scoped
+    out of the i18n backlog pass to keep that PR reviewable. Needs its own ADR-led change.
 36. **[S] Move Stripe line descriptions out of the domain layer.** `` `Deposit — ${title}` `` in
     `src/db/checkouts.ts` and `` `${course.title} — instruction` `` in `src/lib/courses.ts` are
     English sentences from `src/db`/`src/lib`. Return structured parts and compose the localized
     label at the call boundary.
+    **Deferred (Ingrid session, PR #272).** Depends on task 35 landing currency handling first,
+    since the Stripe line item composition point is the natural place to localize both together.
 37. **[S] Fix untranslated greeting fallbacks.** `"there"` (`ready/[token]/page.tsx`) and
     `"diver"` (`recap/[token]/page.tsx`) are injected into localized greetings. Add translated
     fallback keys.
+    **Done — PR #272.**
 38. **[M] Add an interim notice for English-only legal/medical text.** While H-01/H-03 keep
     waiver/medical wording in English, render a one-line translated notice above them on non-en
     locales: "This legal and medical text is provided in English — ask the shop if anything is
     unclear." Keeps trust without touching the frozen wording. Coordinate with
     `dive-domain-expert`.
+    **Done — PR #272.** Shipped the dive-domain-expert-corrected wording below (not the
+    original draft), which never implies the shop will translate the waiver/medical text.
 
     **Dive-domain-expert review.** The proposed wording is a liability problem, not just a
     nicety gap — "ask the shop if anything is unclear" implies the shop is offering translation
@@ -396,26 +418,35 @@ built in English in the domain layer (`src/db/checkouts.ts`, `src/lib/courses.ts
 39. **[S] Use `Intl.ListFormat` on the recap page.** `sitesSentence` hardcodes `" and "` while
     the recap *email* already uses `Intl.ListFormat` — the email and the page it links to
     disagree in Spanish. Align the page (`recap/[token]/page.tsx`).
+    **Done — PR #272.**
 125. **[S] Set `<html lang>` from the negotiated locale.** `src/app/layout.tsx` hardcodes
     `lang="en"` for every page including fully Spanish ones — screen readers pronounce Spanish
     pages with an English voice. Thread `requestLocale()` into the root layout's `lang`
     attribute. Probably the highest-impact one-line i18n fix in the app.
+    **Done — PR #272.**
 126. **[S] Localize the calendar week start.** `ScheduleCalendar.tsx` + `src/lib/calendar.ts`
     hardcode Sunday-first; Spanish/German calendars are Monday-first. Use
     `Intl.Locale.prototype.getWeekInfo()` with a Sunday fallback.
+    **Done — PR #272.**
 127. **[S] Fix the copy-ratchet blind spot's known leaks.** `scripts/check-copy.mjs` can't see
     strings returned from function bodies in `.tsx`, so it reports zero while these ship
     English on localized surfaces: `WaiverSendControl.tsx` ("Copied", "No email on file"…),
     `ConnectivityStatus.tsx` ("This device is online."…), `ImageFileInput.tsx` (task 33), and
     the literal "version" on the waiver page. Fix the strings first; extending the scanner to
     function bodies is a follow-up worth its own task.
+    **Done — PR #272.**
 128. **[M] Per-recipient notification language.** `src/lib/notifications/index.ts` picks the
     *shop's* locale for every email — a German diver at a Cozumel shop gets Spanish
     confirmations. Add an optional locale on the person (captured from the booking request's
     negotiated locale) and prefer it. Schema-change skill; tests on the notification path.
+    **Deferred (Ingrid session, PR #272).** ADR 20260731-notification-locale (pre-existing,
+    written before this session) deliberately scopes notification locale to the shop only, with
+    per-person locale explicitly named as future work — implementing it here would have reversed
+    a standing architectural decision without its own review.
 129. **[S] Localize page titles.** 25+ static English `metadata.title` exports on localized
     pages (waiver, ready, recap, sign-in). Convert the token surfaces at minimum to
     `generateMetadata` with the negotiated locale.
+    **Done — PR #272.**
 
 ---
 
@@ -1056,12 +1087,14 @@ the import wizard shows ~313 words of preamble before a file is chosen; the expo
     that defers to the table. The two byte-identical 82-word `importReadyBody` paragraphs
     collapse to one ~30-word version. Removes ~600 words; `pnpm check:copy --write` banks it.
     Conversion-sensitive pages → `conversion-reviewer` after.
+    **Done — PR #269.**
 131. **[M] Offline manifest: state, not story.** Across the six offline-manifest copy surfaces
     (`staff.json` offlineManifest/offlineManifestManager namespaces, `diver.json` product/FAQ
     notes): replace reconciliation narration with a two-state vocabulary (sent / needs a
     look) and one-line freshness ("Readiness as of {time}. We'll re-check when you're back in
     signal."). Also fix the unactionable stale-copy line ("don't rely on it until you've
     refreshed" — told to someone offline). ~250 words removed.
+    **Done — PR #269.**
 132. **[S] Strip engineering nouns from user-visible strings.** Rewrites, all in the bundles:
     "soft delete" → "They come off your active lists; bookings, cards, and sizes stay on
     file."; the HMAC waiver-integrity description → "Signed waivers are tamper-evident — if a
@@ -1072,32 +1105,39 @@ the import wizard shows ~313 words of preamble before a file is chosen; the expo
     "command palette" (marketing) → "search that jumps straight to a diver or a trip";
     "line-busting check-in" → "counter check-in"; "demand signal" → "this boat could take
     more"; "authoritative roster" → "everyone aboard".
+    **Done — PR #269.**
 133. **[M] Rename the "Blockers" nav label.** Staff say "who isn't ready," not "blockers" —
     the page's own empty state ("Every boat is boarding-ready") proves the right register.
     Rename nav + page title to "Not ready" (bundle keys in `staff.json`, nav in
     `ShopNavLinks.tsx`); leave internal code names alone. Check the e2e specs that navigate
     by label.
+    **Done — PR #269.**
 134. **[S] Cut the fear-raising reassurances.** Remove "nothing here is private to anyone but
     you" (both places — also flagged as confusing in task 30's orbit), "better than quietly
     substituting one," and reduce the three "quietly/silent" marketing constructions to one.
+    **Done — PR #269.**
 135. **[M] Put the 44-bullet capability index behind disclosure.** `/product` renders 74
     bullets; keep the 30-bullet story inline and collapse `productCapabilityIndex` behind a
     "The full list" `<details>` (or a `/product/everything` page). `conversion-reviewer`
     after.
+    **Done — PR #269.**
 136. **[M] Halve the form-hint density on the two worst forms.** Course editor (21 hint
     slots) and new-trip (14): delete duplicate hints, move validation rules out of permanent
     hints into inline errors (e.g. the deposit "Ignored if it's blank or not below the
     price" rule), and show niche help only on focus. Follow
     `docs/design/forms-and-controls.md`.
+    **Done — PR #269.**
 137. **[S] Shorten the fifteen longest strings.** The audit's length table (94→36 words for
     the switching FAQ, 87→32 for the export exclusions, 64→18 for `blockedAfterDive`, etc.)
     is a ready-made worklist: apply the suggested rewrites via the `i18n-copy` skill, en +
     es, and bank the copy reduction. Protect the good-examples list (the done-states, the
     email bundle) as the register to match.
+    **Done — PR #269.**
 138. **[S] Dedupe the coexist blocks.** FareHarbor's and Rezdy's `coexist.runsInDiveDay`
     items in `src/lib/migration-guides.ts` differ only by competitor name in 4 of 6 items —
     extract the shared items into the registry's shared template so the two guides can't
     drift.
+    **Done — PR #269.**
 
 ---
 
@@ -1177,14 +1217,17 @@ direction.
     "See a live schedule" hard-links the seeded shop's diver view from a presentational
     component. Relabel ("Try the staff app" / "See a diver's booking page"), source the slug
     from `DEMO_SHOP_SLUG`, and tag the schedule link for funnel attribution.
+    **Done — PR #270.**
 146. **[S] Stop reusing the calendar page's keys in Settings.** The Settings card renders
     the calendar page's full title/description; add proper `settings.main.calendar.*`
     teaser keys like every sibling card.
+    **Done — PR #270.**
 147. **[M] Reconcile wait list and last-minute list.** Make the deal send offer wait-listed
     divers first (they hold "a place in line" the deal can currently sell out from under),
     and cross-reference the two diver forms ("Want any-trip deal alerts instead?"). Read
     `src/db/trip-promos.ts` + waitlist logic in `src/db/bookings.ts` first; tests on the
     ordering.
+    **Done — PR #270.**
 148. **[S] One page listing every live discount.** Add a read-only "Trip deals" section to
     `/promos` showing outstanding last-minute codes with links to their trips, and align
     the two systems' discount ranges (1–100% vs 5–90%) or say why they differ. Also fix
@@ -1233,25 +1276,31 @@ direction.
     their record, nitrox rows → their cards. Blockers and Reviews: link the diver name.
     Reports: link trip rows to their Guests tab. Dive-site page: "Upcoming dives here"
     list; trip header: link the site and the course title.
+    **Done — PR #270.**
 160. **[S] Let staff see and share the diver's booking page.** "View / share booking page"
     action on `TripHeader` (copy link + open), and fix `/reviews`' "View public page" to
     show a view that actually contains reviews (`?embed=1` or a diver-preview flag until
     task 153 lands).
+    **Done — PR #270.**
 161. **[S] Show a diver's upcoming trips on their record.** The diver page fetches
     upcoming trips only to populate the booking dropdown (filtered to trips they're *not*
     on). Add an "Upcoming" list above the history, each row linking to the manifest —
     answers "which boats is this person on this week?"
+    **Done — PR #270.**
 162. **[M] Widen the command palette.** Add every gated nav destination (check-in,
     staffing, dive sites, courses, reviews, reports, promos, orders) to the go-to list,
     and dive sites + courses + orders to `searchShop` in `src/db/search.ts`.
+    **Done — PR #270.**
 163. **[S] Connect import and the switching guides.** `settings/import` offers "Coming
     from EVE / DiveShop360 / a spreadsheet?" links to the matching guide; each guide's CTA
     deep-links signed-in owners to `/settings/import`. Zero links exist today in either
     direction.
+    **Done — PR #270.**
 164. **[S] Send signed divers back to readiness.** After `completeAction` on
     `/waivers/[token]`, redirect to the booking's readiness link (when it resolves) so the
     diver lands on "what's left" instead of the signed-waiver page with no forward path
     beyond one link.
+    **Done — PR #270.**
 165. **[M] Cross-link staffing shifts and trip crew.** A person can crew a boat with no
     shift or hold a shift with no boat, and neither surface knows. Show assigned trips in
     each staffing card and shift coverage inside `CrewSection`.
