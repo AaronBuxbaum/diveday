@@ -15,6 +15,24 @@ Sections: [UX & interaction design](#1-ux--interaction-design) ·
 [ML & data](#6-ml--data) · [Backend & data architecture](#7-backend--data-architecture) ·
 [Developer & agent experience](#8-developer--agent-experience)
 
+**Overlap with `docs/product/assessments/ux-personas-20260730.md`.** That document's tasks were
+cross-checked against this one on 2026-07-31. Three tasks below were already fully shipped by
+ux-persona work landed before this audit and are marked done in place rather than removed, so the
+cross-reference survives: *content-shaped skeletons for bearer-token pages* (§1, ux-persona task
+119, PR #274), *document `lang` from the negotiated locale* (§3, ux-persona task 125, PR #272),
+and *canonicals/OpenGraph on the switching pages* (§4, ux-persona task 104, PR #274) — all three
+verified present in the current tree. A further five tasks overlap with ux-persona tasks that had
+not landed as of this audit; each carries an inline "Scope update" or "Superseded" note pointing
+at the relevant ux-persona task number so whoever picks either document up next doesn't duplicate
+work: *loading states for remaining staff routes* (§2, vs. ux-persona task 119 — partially
+subsumed), *keyboard-shortcuts dialog modal behavior* (§3, vs. task 110), *skip link for the staff
+shell/public schedule* (§3, vs. task 109 — fully subsumed by the broader version), *automated axe
+scans* (§3, vs. task 108 — setup work partially subsumed), and *course-session links on the public
+schedule* (§4, vs. task 1 — schedule-list half subsumed). If the ux-persona document reaches full
+completion before this one is worked, re-sweep this file for any of those five tasks still marked
+open and drop or narrow them per their inline notes rather than re-implementing from the original
+prompt.
+
 ---
 
 ## 1. UX & interaction design
@@ -32,10 +50,10 @@ and the main diver/staff flows.
 
 ### Add content-shaped skeletons to the bearer-token diver pages
 
-- **Priority**: high
-- **Effort**: S
-- **Prompt**: The staff routes all have content-shaped `loading.tsx` skeletons (e.g. `src/app/shop/[shopSlug]/schedule/[id]/loading.tsx`), but the three diver-facing bearer-token pages have none: `src/app/waivers/[token]/page.tsx`, `src/app/ready/[token]/page.tsx`, and `src/app/recap/[token]/page.tsx` each run several sequential DB queries (`await connection()` plus token verification, shop lookup, checklist assembly), so a cold tap on an emailed link shows a blank page. Create a `loading.tsx` next to each `page.tsx`, modeled on the trip-detail skeleton: `animate-pulse` blocks using only semantic token classes (`bg-surface-sunken`, `border-border`, `rounded-2xl`), shaped like each page's real layout — eyebrow line + h1 + body card for the waiver, header + checklist rows (a `divide-y` list of ~5 row-shaped bars) for `/ready`, header + photo/summary card for `/recap`. Match each page's real `main` wrapper (`mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16`) so there is no layout shift when content lands. No copy is needed in a skeleton, so the copy ratchet is not touched.
-- **Verification**: `pnpm check`; in `pnpm dev` with DevTools network throttling (Slow 3G), open a waiver link and a `/ready/[token]` link and confirm the skeleton appears immediately, matches the loaded page's shape (no shift), and reads correctly in light and dark.
+**Already done — drop this task.** `docs/product/assessments/ux-personas-20260730.md` task 119
+shipped this exact fix in PR #274: `loading.tsx` now exists next to `src/app/waivers/[token]/page.tsx`,
+`src/app/ready/[token]/page.tsx`, and `src/app/recap/[token]/page.tsx`, each matching its page's
+own max-width — confirmed present in the current tree. No further action needed.
 
 ### Turn the /ready checklist into a wave-fill readiness progress bar
 
@@ -138,7 +156,14 @@ server-action body limit.
 
 - **Priority**: medium
 - **Effort**: M
-- **Prompt**: `src/app/shop/[shopSlug]/schedule/page.tsx` is fully dynamic (`connection()` at line 115) and blocks its entire response on two `Promise.all` batches (lines 145 and 179 — trips, stats, review aggregate, review list, builder options) plus a genuinely sequential `upcomingTripsForCalendar` await at line 292 (it depends on `range` from the first batch). Restructure so the first paint is the trip list: move the month calendar (the line-292 fetch) and the reviews section (`getShopReviewAggregate`/`listPublishedShopReviews`) into async child Server Components wrapped in `<Suspense>` with skeleton fallbacks, letting the shell and list stream first. There is exactly one `Suspense` in the whole app today (`src/app/shop/[shopSlug]/page.tsx:51`), so follow its pattern. Separately, add `loading.tsx` files (mirroring `src/app/shop/[shopSlug]/schedule/loading.tsx`) to the staff routes that have none: `waivers/`, `check-in/`, `orders/`, `reports/`, `reviews/`, `promos/`, and `staffing/` under `src/app/shop/[shopSlug]/`. Keep skeleton copy out of components per the copy ratchet (`pnpm check:copy`).
+- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 119 (PR #274) already
+  added `loading.tsx` to `check-in/`, `reports/`, `reviews/`, and `promos/` under
+  `src/app/shop/[shopSlug]/` — confirmed present in the current tree. Only `waivers/` and
+  `staffing/` still lack one; `orders/` has no top-level index page to attach a skeleton to yet
+  (see ux-personas task 158 — "Give orders an index" — build the loading state alongside that
+  page once it exists, not before). The Suspense-streaming half of this task (calendar + reviews
+  on the schedule page) is untouched by that work and remains fully in scope.
+- **Prompt**: `src/app/shop/[shopSlug]/schedule/page.tsx` is fully dynamic (`connection()` at line 115) and blocks its entire response on two `Promise.all` batches (lines 145 and 179 — trips, stats, review aggregate, review list, builder options) plus a genuinely sequential `upcomingTripsForCalendar` await at line 292 (it depends on `range` from the first batch). Restructure so the first paint is the trip list: move the month calendar (the line-292 fetch) and the reviews section (`getShopReviewAggregate`/`listPublishedShopReviews`) into async child Server Components wrapped in `<Suspense>` with skeleton fallbacks, letting the shell and list stream first. There is exactly one `Suspense` in the whole app today (`src/app/shop/[shopSlug]/page.tsx:51`), so follow its pattern. Separately, add `loading.tsx` files (mirroring `src/app/shop/[shopSlug]/schedule/loading.tsx`) to the remaining staff routes that have none: `waivers/` and `staffing/` under `src/app/shop/[shopSlug]/` (plus `orders/` once it has an index page). Keep skeleton copy out of components per the copy ratchet (`pnpm check:copy`).
 - **Verification**: `pnpm check` green; in `pnpm dev` with DevTools network throttling, confirm the schedule shell/list paints before reviews/calendar arrive; `pnpm e2e e2e/visual.spec.ts --reporter=line` and review diffs (skeletons should not appear in frozen-clock captures once data resolves).
 
 ### Parallelize the sequential session/shop/locale prologue in staff pages
@@ -180,10 +205,11 @@ token hex values.
 
 ### Set the document language from the negotiated locale
 
-- **Priority**: high
-- **Effort**: M
-- **Prompt**: `src/app/layout.tsx` hard-codes `<html lang="en">` (line 61), but the app negotiates diver copy per request via `requestLocale()` from `Accept-Language` with an `es-ES` bundle in `src/i18n/locales/es-ES/` — so a Spanish-speaking diver signing a waiver gets Spanish content announced with English pronunciation rules (WCAG 3.1.1 failure on a legally required flow), and the mismatch also misleads search engines' language detection. Make `RootLayout` an async server component, call `requestLocale()` from `src/i18n/request.ts`, and render `lang` from the negotiated tag (e.g. `es-ES` → `lang="es-ES"`). Note the root layout cannot know a shop's `default_locale` fallback; negotiating from the header alone is correct there and matches what `diverTranslator(await requestLocale())` already does for token pages like `src/app/waivers/[token]/page.tsx`. Check `node_modules/next/dist/docs/` first per AGENTS.md — this Next version's conventions may differ — and confirm making the root layout dynamic doesn't break static marketing pages (if it does, scope the dynamic `lang` to the token-page/shop layouts instead and document why). Coordinate with the marketing-page caching task in §2 — that task wants marketing pages *more* static; if both land, the per-section-layout scoping is the compatible shape. The deliberate design constraint stands: no `[locale]` routes and no hreflang alternates (one URL serves all languages), so `lang` is the only correct language signal — do not add hreflang tags.
-- **Verification**: `curl -H "Accept-Language: es-ES" localhost:3000/waivers/<token> | grep '<html'` shows `lang="es-ES"` while a default request keeps `lang="en"`; `pnpm check` and the existing e2e suite stay green; VoiceOver/NVDA spot check that Spanish copy reads with Spanish pronunciation; confirm `pnpm build` output still marks the switching pages as static if they were before.
+**Already done — drop this task.** `docs/product/assessments/ux-personas-20260730.md` task 125
+shipped this exact fix in PR #272: `src/app/layout.tsx` renders `lang={locale}` from the
+negotiated request locale instead of a hardcoded `lang="en"` — confirmed in the current tree
+(line 63). No further action needed. (The coordination note this task raised with the §2
+marketing-page-caching task still applies to whoever picks that one up.)
 
 ### Associate waiver errors with fields and mirror constraints client-side
 
@@ -196,6 +222,15 @@ token hex values.
 
 - **Priority**: medium
 - **Effort**: M
+- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 110 ("Fix the two
+  portal dialogs") targets this exact gap in `KeyboardShortcuts.tsx` — focus trap, focus restore
+  on close — as one shared focus-trap utility used by both it and `CommandPalette.tsx`. As of
+  this audit neither fix has landed (`KeyboardShortcuts.tsx` still only sets `role="dialog"
+  aria-modal="true"` with no trap/restore, confirmed in the current tree). If task 110 lands
+  first, treat this entry as satisfied and skip it rather than re-implementing with the
+  `<dialog>`-element approach below — verify against task 110's acceptance criteria (focus enters
+  on open, Tab cycles within it, Escape restores focus) before dropping it. If task 110 has *not*
+  landed, this task's native-`<dialog>` approach is a fine implementation and should proceed.
 - **Prompt**: `src/components/KeyboardShortcuts.tsx` renders a `role="dialog" aria-modal="true"` cheat-sheet (lines 121–125) via portal, but nothing moves focus into it when it opens (especially when opened via the `?` key, focus stays wherever it was in the page), nothing traps Tab inside it, and nothing restores focus on close — `aria-modal` tells screen readers the background is inert when it is not (WCAG 2.4.3 / dialog pattern). Replace the hand-rolled div with a native `<dialog>` element driven by `showModal()`/`close()`, which provides the focus trap, backdrop, Escape handling, and focus restoration for free; keep the existing `aria-label={copy.dialogAriaLabel}` and move the close button's handler to `dialog.close()`. Keep the existing global `?`/Escape key handling in sync with the dialog's own `close` event so state doesn't drift.
 - **Verification**: Keyboard walkthrough on any `/shop/**` page: press `?` → focus lands inside the dialog (close button), Tab cycles only within it, Escape closes and returns focus to the previously focused element; existing `pnpm e2e keyboard-shortcuts.spec.ts --reporter=line` stays green and gains a `toBeFocused()` assertion on open/close.
 
@@ -222,6 +257,16 @@ token hex values.
 
 ### Add a skip link to the staff shell and public schedule
 
+**Superseded — drop this task if ux-personas task 109 has landed.**
+`docs/product/assessments/ux-personas-20260730.md` task 109 ("Skip links everywhere") is a
+strict superset of this ask: it generalizes the offline manifest's skip-link pattern into
+*both* `src/app/layout.tsx` and `shop/[shopSlug]/layout.tsx`, covering every page rather than
+just the staff shell and public schedule. As of this audit it has not landed (confirmed:
+grepping `src/app/layout.tsx` and the shop layout for a skip link finds nothing). If task 109
+ships first, this entry needs no separate work — just confirm the public schedule route is
+covered by its implementation. If it has not shipped, the narrower prompt below is still a valid
+standalone fix.
+
 - **Priority**: medium
 - **Effort**: S
 - **Prompt**: Only the offline manifest has a skip link (`src/components/OfflineManifestView.tsx` lines 402–407, `sr-only focus:not-sr-only` pattern); a repo-wide grep for "Skip to"/`id="main"` finds nothing else, so keyboard and screen-reader users must tab through the full `ShopNav` (`src/components/ShopNav.tsx`) on every staff page and through `MarketingNav` on public pages (WCAG 2.4.1). Add a "skip to content" anchor as the first focusable element in the shop layout (the layout that renders `ShopNav` under `src/app/shop/`) and in the marketing/public layout, targeting an `id` on the page's `<main>` region, reusing the exact focus-reveal classes the offline manifest already uses so styling stays consistent. The link copy must come from the message bundles (`staff.json` for the shop shell, `diver.json` for public pages) per the i18n-copy skill — the offline manifest's `shared.offlineManifest.single.skipLink` key shows the pattern.
@@ -238,6 +283,16 @@ token hex values.
 
 - **Priority**: medium
 - **Effort**: M
+- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 108
+  ("Keyboard-and-SR pass on the booking flow") adds `axe-core/playwright` and runs an
+  assertion pass against the booking-flow spec — confirmed not yet present (`@axe-core/playwright`
+  is absent from `package.json` and no `e2e/a11y.spec.ts` exists in the current tree). If task
+  108 lands first, its dependency addition and ADR cover the setup work here; this task then
+  narrows to extending the same pattern to the four remaining named surfaces (waiver, staff
+  manifest, `/offline-manifest`, and the public schedule if task 108's scan didn't already cover
+  it) rather than standing up the dependency and ADR from scratch. Confirm whether task 108 used
+  a dedicated `e2e/a11y.spec.ts` or inlined the check into the booking spec before deciding
+  whether to extend that file or create a new one.
 - **Prompt**: The e2e suite (`e2e/`) asserts behavior almost entirely through accessible roles/names (good), but nothing runs an automated a11y scan and no spec asserts focus behavior beyond `keyboard-shortcuts.spec.ts` — regressions like the failing focus ring or a missing label ship silently. Add `@axe-core/playwright` as a devDependency (write an ADR per the "new runtime dependency → ADR" rule, noting it is test-only, using a `YYYYMMDD-short-slug` id) and create `e2e/a11y.spec.ts` that runs `new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag22aa"]).analyze()` and asserts zero violations on the five highest-stakes surfaces: the public schedule (`/shop/<slug>/schedule`), the trip booking page + confirmation, the waiver page (`/waivers/<token>` — seed a token via the existing helpers in `e2e/helpers.ts`/`e2e/fixtures.ts`, following how `waivers.spec.ts` obtains one), the staff manifest page, and `/offline-manifest`. Triage any violations the scan finds into the fixes above rather than filtering rules; only document a rule exclusion with an inline comment if it is a genuine false positive.
 - **Verification**: `pnpm e2e a11y.spec.ts --reporter=line` passes locally (never `pnpm e2e -- a11y.spec.ts` — the `--` breaks pnpm arg forwarding per AGENTS.md); intentionally removing an `aria-label` in `ScheduleBuilder.tsx` locally makes the scan fail, proving it bites; `pnpm check` green and the ADR committed in the same change.
 
@@ -263,15 +318,24 @@ in 2023), and JSON-LD in embed mode or on token pages (correctly prohibited toda
 
 - **Priority**: high
 - **Effort**: S
+- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 1 ("Make course
+  sessions on the schedule link to their course page") is the schedule-list half of this exact
+  task, targeting the same `{t("schedule.courseSession")} · {trip.course.title}` line in
+  `src/app/shop/[shopSlug]/schedule/page.tsx`. As of this audit it is unimplemented (confirmed:
+  line ~600 still renders the title as plain text, no `Link`). If task 1 lands first, this task
+  narrows to just the trip detail page's course display (`TripHeader.tsx` or wherever the course
+  title renders there) — the schedule-list linking and its e2e assertion are already covered and
+  should not be redone.
 - **Prompt**: Public course pages currently have almost no crawlable inbound links: the only in-app link to `/shop/[shopSlug]/courses/[slug]` is inside the post-booking `BookingConfirmation` component (`src/app/shop/[shopSlug]/schedule/[id]/_components/BookingConfirmation.tsx:179`), which a crawler never reaches. On the public schedule list (`src/app/shop/[shopSlug]/schedule/page.tsx`, ~line 473) a course session renders `{t("schedule.courseSession")} · {trip.course.title}` as plain text — turn the course title into a `next/link` to the course page (the trip query already returns `trip.course`; confirm it includes `slug`, and add it to the select in `src/db/trips.ts` if not). Do the same on the trip detail page's course display (`src/app/shop/[shopSlug]/schedule/[id]/_components/TripHeader.tsx` or wherever the course title renders). Keep the link out of embed mode's nested-navigation only if the existing embed ADR (20260726-schedule-embed) demands it — otherwise carry `?embed=1` through like the trip links do. Any new copy goes through `src/i18n/locales/<locale>/diver.json` (see the i18n-copy skill).
 - **Verification**: `pnpm test` for any touched db query test; extend `e2e/schedule-trip.spec.ts` or `e2e/courses.spec.ts` with an assertion that the anonymous schedule page contains an `a[href*="/courses/"]` for a seeded course session; `pnpm check`.
 
 ### Add canonicals and OpenGraph to the switching pages
 
-- **Priority**: high
-- **Effort**: S
-- **Prompt**: The switching guides are in the sitemap at priority 0.7–0.8 but have the thinnest metadata of any marketing page: `src/app/switching/page.tsx` exports only `title`/`description` (no `alternates.canonical`, no `openGraph`), and `src/app/switching/[competitor]/page.tsx`'s `generateMetadata` (lines 24–33) likewise returns only title/description. Compare with `src/app/pricing/page.tsx` lines 16–27 for the established pattern. Add `alternates: { canonical: "/switching" }` and an `openGraph` block to the hub, and `alternates: { canonical: "/switching/" + guide.slug }` plus `openGraph: { title, description, url }` to the competitor page using the guide's existing `metaTitle`/`metaDescription` from `src/lib/migration-guides.ts`. Check `src/app/switching/spreadsheet/page.tsx` has an `openGraph` block too (it already has the canonical). These are metadata literals, same carve-out as the other marketing pages — no i18n bundle needed. Consult the switching-pages skill first.
-- **Verification**: `pnpm dev`, then `curl -s localhost:3000/switching/eve | grep -E 'canonical|og:'` shows the canonical link and og:title/og:description/og:url; `pnpm check` green.
+**Already done — drop this task.** `docs/product/assessments/ux-personas-20260730.md` task 104
+shipped this exact fix in PR #274: `src/app/switching/page.tsx`,
+`src/app/switching/[competitor]/page.tsx`, and `src/app/switching/spreadsheet/page.tsx` all carry
+`alternates.canonical` and `openGraph` metadata — confirmed in the current tree. No further
+action needed.
 
 ### Complete the robots.txt disallow list for token routes
 
