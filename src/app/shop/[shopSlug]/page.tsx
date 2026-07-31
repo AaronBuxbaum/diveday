@@ -169,22 +169,30 @@ async function TodayBody({
         eyebrow={formatShortDate(now, locale, shop.timezone)}
         title={t(GREETING_KEYS[getTimeOfDayGreeting(now, shop.timezone)], { name: firstName })}
         meta={
-          <p className="max-w-2xl text-lg text-muted">
-            {summarizeDayText(
-              t,
-              summarizeDay(
-                actions,
-                departures.length,
-                departures.reduce((total, departure) => total + departure.blocked, 0),
-              ),
-            )}
-            {yourBoat
-              ? ` ${t("shopHome.crewingBoat", {
-                  time: formatTime(yourBoat.startsAt, locale, shop.timezone),
-                  title: yourBoat.title,
-                })}`
-              : ""}
-          </p>
+          <>
+            <p className="max-w-2xl text-lg text-muted">
+              {summarizeDayText(
+                t,
+                summarizeDay(
+                  actions,
+                  departures.length,
+                  departures.reduce((total, departure) => total + departure.blocked, 0),
+                ),
+              )}
+              {yourBoat
+                ? ` ${t("shopHome.crewingBoat", {
+                    time: formatTime(yourBoat.startsAt, locale, shop.timezone),
+                    title: yourBoat.title,
+                  })}`
+                : ""}
+            </p>
+            {/* Today, Blockers, and Check-in each slice the same readiness
+                data on a different, undocumented horizon (task 141, UX
+                persona lens 17) — a diver "cleared" here can still show on
+                one of the other two. Name the window so that is never a
+                surprise. */}
+            <p className="mt-1 max-w-2xl text-sm text-muted">{t("shopHome.windowNote")}</p>
+          </>
         }
       />
 

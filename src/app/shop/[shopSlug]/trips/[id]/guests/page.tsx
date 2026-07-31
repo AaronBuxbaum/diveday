@@ -270,7 +270,6 @@ export default async function TripGuestsPage({
         notesByBooking={notesByBooking}
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}
-        depthUnit={shop.depthUnit}
         tripDate={tripDateIso}
       />
 

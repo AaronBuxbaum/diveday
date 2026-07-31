@@ -97,6 +97,10 @@ export default async function CheckInPage({
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
         description={t("checkIn.description")}
+        // Today, Blockers, and Check-in each slice the same readiness data on
+        // a different, undocumented horizon (task 141, UX persona lens 17) —
+        // a diver "cleared" here can still show on one of the other two.
+        meta={<p className="text-sm text-muted">{t("checkIn.windowNote")}</p>}
         actions={
           <Link href={`/shop/${shopSlug}/check-in/walk-in`} className={buttonClass()}>
             {t("checkIn.walkIn.title")}
@@ -181,6 +185,13 @@ export default async function CheckInPage({
                         </Link>
                         {checkedIn ? (
                           <Badge tone="success">{t("checkIn.checkedInBadge")}</Badge>
+                        ) : null}
+                        {/* The check-in queue's own description promises this
+                            split — check-in is arrival, boarding is confirmed
+                            on the manifest — but the queue never actually
+                            showed it (task 149, UX persona lens 17). */}
+                        {row.boarded ? (
+                          <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
                         ) : null}
                       </div>
                       <Link

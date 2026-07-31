@@ -288,6 +288,8 @@ export default async function TripsPage({
     dayCountLabel: st("schedule.builder.dayCountLabel"),
     crewLabel: st("schedule.builder.crewLabel"),
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
+    noPriceSet: st("schedule.builder.noPriceSet"),
+    noPriceSetAria: st("schedule.builder.noPriceSetAria"),
     move: st("schedule.builder.move"),
     moveAria: st("schedule.builder.moveAria"),
     copy: st("schedule.builder.copy"),
@@ -343,6 +345,7 @@ export default async function TripsPage({
       diveSiteName: trip.diveSite?.name ?? null,
       dayCount: dayCounts.get(trip.id) ?? 1,
       crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
+      priceCents: trip.priceCents,
     });
   }
 

@@ -497,6 +497,15 @@ export default async function TripManifestPage({
                           ? t("trips.manifest.readyToBoard")
                           : t("trips.manifest.blockedBadge")}
                       </Badge>
+                      {/* Counter check-in and boat roll call are different
+                          questions — arrived vs. aboard — and `checked_in`
+                          used to have exactly one reader in the app, the
+                          check-in page itself (task 149, UX persona lens 17).
+                          This is informational only: it never gates roll
+                          call. */}
+                      {diver.checkedIn ? (
+                        <Badge tone="neutral">{t("trips.manifest.checkedInPill")}</Badge>
+                      ) : null}
                       {/* The captain reading the boarding list has no other way
                           to know a booked diver is 12 (H-21). Words, not colour
                           alone — this is read in sunlight on a moving boat. */}

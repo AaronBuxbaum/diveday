@@ -125,6 +125,15 @@ export type ManifestDiverInput = {
    */
   medicalWaiver?: MedicalWaiverMark | null;
   rollCall?: RollCallRecord;
+  /**
+   * The diver was confirmed at the counter (`bookings.status === "checked_in"`).
+   * Counter check-in and boat roll call are two different questions — arrived
+   * vs. aboard — and `checked_in` used to have exactly one reader in the app
+   * (the check-in page itself). Carrying it onto the manifest lets crew see
+   * who already showed up even before boarding them (task 149, UX persona
+   * lens 17).
+   */
+  checkedIn: boolean;
 };
 
 export type RollCallRecord = {

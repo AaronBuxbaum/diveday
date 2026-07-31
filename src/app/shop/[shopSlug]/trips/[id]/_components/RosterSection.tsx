@@ -14,7 +14,6 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -148,8 +147,6 @@ export function RosterSection({
   notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
-  /** How this shop reads depth; the stored figure is always metres. */
-  depthUnit: DepthUnit;
   /** The trip's own shop-local calendar date — when age and birthdays are measured. */
   tripDate: CalendarDate;
 }) {
