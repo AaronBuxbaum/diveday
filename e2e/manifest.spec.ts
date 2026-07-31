@@ -131,7 +131,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   ).toBeVisible();
 
   await context.setOffline(false);
-  await expect(page.getByRole("status").filter({ hasText: "caught up" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
 });
 
 test("a captain who lost the saved copy to storage eviction still lands on a page after a failed reload", async ({
