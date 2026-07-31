@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Copyable } from "@/components/Copyable";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -19,7 +20,12 @@ import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireStaffSession } from "@/lib/session";
-import { createPromoAction, setPromoEnabledAction } from "./actions";
+import {
+  createPromoAction,
+  deletePromoAction,
+  retryPromoAction,
+  setPromoEnabledAction,
+} from "./actions";
 
 export const metadata: Metadata = {
   title: "Promo codes — DiveDay",
@@ -31,6 +37,7 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   created: { tone: "success", key: "promos.notice.created" },
   enabled: { tone: "success", key: "promos.notice.enabled" },
   disabled: { tone: "success", key: "promos.notice.disabled" },
+  deleted: { tone: "success", key: "promos.notice.deleted" },
   invalid: { tone: "danger", key: "promos.notice.invalid" },
   invalid_code: { tone: "danger", key: "promos.notice.invalidCode" },
   invalid_discount: { tone: "danger", key: "promos.notice.invalidDiscount" },
@@ -162,6 +169,9 @@ export default async function PromosPage({
           <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
             <input name="expiresAt" type="datetime-local" className={controlClass} />
           </Field>
+          <p className="-mt-2 text-xs text-muted sm:col-span-2">
+            {t("promos.fields.timezoneHint", { timezone })}
+          </p>
           <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
             <input
               name="description"
@@ -203,6 +213,13 @@ export default async function PromosPage({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="font-mono text-base font-semibold">{promo.code}</span>
+                    <Copyable
+                      layout="inline"
+                      value={promo.code}
+                      copyLabel={t("promos.copyCode")}
+                      copiedLabel={t("promos.copyCodeCopied")}
+                      failedLabel={t("promos.copyCodeFailed")}
+                    />
                     <span className="text-sm font-medium text-primary tabular-nums">
                       {t("promos.discountOff", { percent: promo.discountPercent })}
                     </span>
@@ -259,6 +276,34 @@ export default async function PromosPage({
                       {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
                     </SubmitButton>
                   </form>
+                ) : null}
+                {promo.status === "failed" || promo.status === "pending" ? (
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {promo.status === "failed" ? (
+                      <form action={retryPromoAction}>
+                        <input type="hidden" name="promoId" value={promo.id} />
+                        <SubmitButton
+                          pendingLabel={t("promos.retrying")}
+                          className={buttonClass({
+                            variant: "secondary",
+                            className: "text-foreground",
+                          })}
+                        >
+                          {t("promos.retry")}
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                    <form action={deletePromoAction}>
+                      <input type="hidden" name="promoId" value={promo.id} />
+                      <SubmitButton
+                        pendingLabel={t("promos.deleting")}
+                        confirmMessage={t("promos.deleteConfirm", { code: promo.code })}
+                        className={buttonClass({ variant: "danger" })}
+                      >
+                        {t("promos.delete")}
+                      </SubmitButton>
+                    </form>
+                  </div>
                 ) : null}
               </li>
             );

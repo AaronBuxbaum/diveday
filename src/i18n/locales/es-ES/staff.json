@@ -29,6 +29,7 @@
       "turningOff": "Desactivando…",
       "copy": "Copiar",
       "copied": "Copiado",
+      "copyFailed": "No se pudo copiar: selecciónalo a mano",
       "confirmRotate": "¿Sustituir este enlace? Cualquier calendario que siga usando el anterior dejará de actualizarse.",
       "confirmTurnOff": "¿Desactivar esta suscripción? El enlace dejará de funcionar de inmediato."
     },
@@ -757,7 +758,8 @@
       "duplicate": "Ya tienes un código con ese texto.",
       "notConnected": "Conecta tu cuenta de Stripe en Ajustes primero — un código se crea en tu propia cuenta.",
       "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento; inténtalo de nuevo.",
-      "notAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes."
+      "notAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes.",
+      "deleted": "Código eliminado."
     },
     "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — los códigos se crean en tu propia cuenta de Stripe, no en la de DiveDay.",
     "settingsLink": "Ajustes",
@@ -786,7 +788,8 @@
       "expiresHint": "(opcional)",
       "whatFor": "Para qué es",
       "whatForHint": "(opcional — tu nota, nunca se muestra a los buceadores)",
-      "whatForPlaceholder": "Impulso de otoño para buceadores recurrentes"
+      "whatForPlaceholder": "Impulso de otoño para buceadores recurrentes",
+      "timezoneHint": "Las horas están en {timezone}, la zona horaria de tu centro."
     },
     "creating": "Creando…",
     "createCode": "Crear código",
@@ -811,7 +814,15 @@
     "redeemedNoCap": "{count, plural, one {Canjeado # vez} other {Canjeado # veces}}",
     "switchOff": "Desactivar",
     "switchOn": "Activar",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "copyCode": "Copiar código",
+    "copyCodeCopied": "Copiado",
+    "copyCodeFailed": "No se pudo copiar: selecciónalo a mano",
+    "retry": "Intentar de nuevo",
+    "retrying": "Intentando de nuevo…",
+    "delete": "Eliminar",
+    "deleting": "Eliminando…",
+    "deleteConfirm": "¿Eliminar el código {code}? Nunca llegó a activarse, así que no se aplicó ningún descuento — esto no se puede deshacer."
   },
   "reports": {
     "operationKind": {
@@ -895,15 +906,25 @@
     "publishedDetail": "Se muestra en tu página de calendario",
     "waitingOnYou": "Esperando tu revisión",
     "waitingDetail": "Reseñas con palabras por leer",
+    "thisMonthStat": "Este mes: media de {rating}★ de {count, plural, one {# reseña} other {# reseñas}}",
+    "standout": "✦ Reseña destacada",
     "emptyHeading": "Todavía no hay reseñas",
     "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida. Las primeras aparecerán aquí.",
+    "emptyWaitingHeading": "Nada esperando tu revisión",
+    "emptyWaitingDetail": "Ya se ha leído toda reseña con palabras. Las nuevas aparecerán aquí en cuanto un buceador deje una.",
     "ratingOnly": "Solo valoración — sin palabras que revisar.",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
+    "hideConfirm": "¿Ocultar esta reseña? Deja de contar para tu valoración pública.",
     "publish": "Publicar",
     "saving": "Guardando…",
     "showMoreReviews": "Mostrar más reseñas",
-    "backToTop": "← Volver al principio de la lista"
+    "backToTop": "← Volver al principio de la lista",
+    "filterLabel": "Filtrar reseñas",
+    "filter": {
+      "all": "Todas las reseñas",
+      "waiting": "Esperando tu revisión ({count})"
+    }
   },
   "schedule": {
     "fullTripForm": "Formulario completo de salida",
