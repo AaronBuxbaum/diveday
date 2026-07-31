@@ -14,10 +14,18 @@ const nextConfig: NextConfig = {
   // the TS CLI instead (tsgo), which this flag enables.
   experimental: {
     useTypeScriptCli: true,
-    // Without a Neon connection string, local/CI builds use the embedded PGlite
-    // fallback. Static-generation workers must not contend for that database.
-    cpus: 1,
-    staticGenerationMaxConcurrency: 1,
+    // Static-generation workers only need to be serialized when they'd share
+    // one file-backed PGlite database (src/db/client.ts): a real DATABASE_URL
+    // (production/preview) is a pooled connection built for concurrent
+    // callers, and PGLITE_DATA_DIR=memory (e2e:build) gives every worker
+    // process its own private, in-memory database — the same per-process
+    // isolation ADR 20260720-e2e-parallel-prod-fleet.md already relies on for
+    // the runtime e2e/visual server fleet. Only the local-dev fallback (no
+    // DATABASE_URL, file-backed .pglite so data survives across `pnpm dev`
+    // restarts) is genuinely single-connection and must stay capped.
+    ...(!process.env.DATABASE_URL && process.env.PGLITE_DATA_DIR !== "memory"
+      ? { cpus: 1, staticGenerationMaxConcurrency: 1 }
+      : {}),
     // Next's 1 MB default is below the 5 MB the storage seam and its UI promise
     // (docs/architecture/decisions/20260718-card-image-storage.md and friends).
     // 16 MB covers the worst single Server Action body this app sends today: the

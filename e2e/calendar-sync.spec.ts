@@ -1,5 +1,6 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { expect, test } from "./fixtures";
 import { signInAs, signInAsOwner } from "./helpers";
 
 const CALENDAR_SETTINGS = "/shop/blue-mantis/settings/calendar";

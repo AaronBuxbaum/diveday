@@ -11,16 +11,20 @@ import { cpus } from "node:os";
  * isolation is what lets the suite run fully parallel.
  */
 // Each worker runs BOTH a headless browser AND its own Next server, so every
-// worker costs ~2 cores, not one. Playwright's usual cpus/2 heuristic assumes
-// one browser per worker; using it here (e.g. 2 workers on a 4-core CI runner)
-// puts 4 heavy processes on 4 cores, and the resulting contention slows the
-// first render of each route enough to blow assertion timeouts — which then
-// burn retries and make the parallel run *slower* than a serial one. Budget
-// ~2 cores per worker instead, which lands on a single uncontended worker for
-// a typical 4-core runner and scales up on bigger machines. Override with
-// E2E_WORKERS.
+// worker costs ~2 cores, not one — hence cpus/2 rather than Playwright's usual
+// cpus/2-assumes-one-browser-per-worker default (which would double-book here).
+// This used to divide by 4 instead: an earlier round found 2 workers on a
+// 4-core CI runner (4 heavy processes total) blew assertion timeouts under
+// contention and made the parallel run *slower* than serial, so the budget was
+// doubled to be safe. That finding predates the CI runners moving from 3-core
+// macOS to real 4-core/16GB Linux boxes (20260730-linux-ci-runners.md) and
+// wasn't revisited after — a later run on the current hardware put 2 workers
+// on 4 cores with no timeouts, confirming the doubled budget was calibrated
+// for the weaker runners it no longer runs on
+// (20260731-ci-parallelization-resources-build-concurrency.md). Override with
+// E2E_WORKERS if a future runner change reintroduces contention.
 const envWorkers = Number(process.env.E2E_WORKERS);
-const defaultWorkers = Math.max(1, Math.floor(cpus().length / 4));
+const defaultWorkers = Math.max(1, Math.floor(cpus().length / 2));
 
 /** How many parallel worker servers to run (and therefore Playwright workers). */
 export const E2E_WORKER_COUNT =
