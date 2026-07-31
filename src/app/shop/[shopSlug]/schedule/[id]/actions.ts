@@ -147,19 +147,20 @@ export async function bookSpot(
   for (let index = 0; index < partySize.data; index++) {
     const fullName = String(formData.get(`fullName-${index}`) ?? "").trim();
     const email = String(formData.get(`email-${index}`) ?? "").trim();
-    if (!fullName) fieldErrors[`fullName-${index}`] = "Enter a name.";
-    if (fullName.length > 120) fieldErrors[`fullName-${index}`] = "That name is too long.";
+    if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
+    if (fullName.length > 120)
+      fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
     if (!emailField.safeParse(email).success)
-      fieldErrors[`email-${index}`] = "Enter a valid email address.";
+      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
     validParty.push({ fullName, email });
   }
   const phone = String(formData.get("phone") ?? "").trim();
   const groupPreference = String(formData.get("groupPreference") ?? "").trim();
-  if (phone.length > 30) fieldErrors.phone = "That phone number is too long.";
+  if (phone.length > 30) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
   if (groupPreference.length > 300)
-    fieldErrors.groupPreference = "Keep this note under 300 characters.";
+    fieldErrors.groupPreference = t("booking.fieldErrors.noteTooLong");
   if (Object.keys(fieldErrors).length > 0) {
-    return { error: "Check the highlighted fields and try again.", fieldErrors };
+    return { error: t("booking.errors.checkFields"), fieldErrors };
   }
 
   const dbi = await getDb();

@@ -37,14 +37,15 @@ export async function joinLastMinuteListAction(
   _prev: LastMinuteListFormState,
   formData: FormData,
 ): Promise<LastMinuteListFormState> {
+  // Resolved here, not passed back as a code: this state reaches
+  // LastMinuteListForm.tsx straight off `useActionState`, with no Server
+  // Component render in between to translate it first.
+  const t = diverTranslator(await requestLocale());
   const ip = await clientIp();
   if (
     !checkRateLimit(rateLimitKey("last-minute-list", ip), RATE_LIMITS.lastMinuteListJoin).allowed
   ) {
-    // Resolved here, not passed back as a code: this state reaches
-    // LastMinuteListForm.tsx straight off `useActionState`, with no
-    // Server Component render in between to translate it first.
-    return { error: diverTranslator(await requestLocale())("common.rateLimited") };
+    return { error: t("common.rateLimited") };
   }
 
   const parsed = joinSchema.safeParse({
@@ -54,18 +55,18 @@ export async function joinLastMinuteListAction(
     availableFrom: formData.get("availableFrom") || undefined,
     availableUntil: formData.get("availableUntil") || undefined,
   });
-  if (!parsed.success) return { error: "Enter a name and a valid email." };
+  if (!parsed.success) return { error: t("lastMinute.errors.invalid") };
   if (
     parsed.data.availableFrom &&
     parsed.data.availableUntil &&
     parsed.data.availableFrom > parsed.data.availableUntil
   ) {
-    return { error: "The end date has to be on or after the start date." };
+    return { error: t("lastMinute.errors.dateRange") };
   }
 
   const dbi = await getDb();
   const shop = await getShopBySlug(dbi, shopSlug);
-  if (!shop) return { error: "This shop isn't available right now." };
+  if (!shop) return { error: t("lastMinute.errors.shopUnavailable") };
 
   await joinLastMinuteList(dbi, {
     shopId: shop.id,

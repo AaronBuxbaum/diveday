@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
 import {
   WaitlistInvite,
   type WaitlistInviteCopy,
@@ -39,6 +40,7 @@ function ActionRow({
   shopSlug,
   shopName,
   inviteAction,
+  waiverCopy,
   resendCopy,
   inviteCopy,
   t,
@@ -47,6 +49,7 @@ function ActionRow({
   shopSlug: string;
   shopName: string;
   inviteAction: TodayInviteAction;
+  waiverCopy: WaiverSendCopy;
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
   t: StaffTranslator;
@@ -68,6 +71,7 @@ function ActionRow({
             surface="today"
             bookingIds={action.waiver.bookingIds}
             label={action.actionLabel}
+            copy={waiverCopy}
           />
         ) : action.resend ? (
           <ResendConfirmationControl
@@ -122,6 +126,7 @@ export function TodayQueue({
 }) {
   const groups = groupActions(actions);
   const t = staffTranslator(locale);
+  const waiverCopy = waiverSendCopy(t);
   const resendCopy: ResendConfirmationCopy = {
     resending: t("shared.today.resendConfirmation.resending"),
     confirmationResent: t("shared.today.resendConfirmation.confirmationResent"),
@@ -198,6 +203,7 @@ export function TodayQueue({
                   shopSlug={shopSlug}
                   shopName={shopName}
                   inviteAction={inviteAction}
+                  waiverCopy={waiverCopy}
                   resendCopy={resendCopy}
                   inviteCopy={inviteCopy}
                   t={t}

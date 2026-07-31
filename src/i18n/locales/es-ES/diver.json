@@ -185,12 +185,25 @@
       "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
       "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor o ayudante certificado.",
       "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
-      "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura — inténtalo de nuevo en un momento, o paga en el centro."
+      "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura — inténtalo de nuevo en un momento, o paga en el centro.",
+      "checkFields": "Revisa los campos resaltados e inténtalo de nuevo."
+    },
+    "fieldErrors": {
+      "nameRequired": "Escribe un nombre.",
+      "nameTooLong": "Ese nombre es demasiado largo.",
+      "emailInvalid": "Escribe un correo electrónico válido.",
+      "phoneTooLong": "Ese número de teléfono es demasiado largo.",
+      "noteTooLong": "Deja esta nota en menos de 300 caracteres."
     }
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
     "body": "Dinos cuándo estarás por aquí y te escribimos si un barco necesita llenar plazas con descuento.",
+    "errors": {
+      "invalid": "Escribe un nombre y un correo electrónico válido.",
+      "dateRange": "La fecha final debe ser igual o posterior a la fecha de inicio.",
+      "shopUnavailable": "Este centro no está disponible en este momento."
+    },
     "alreadyHaveATrip": "¿Ya tienes una salida concreta en mente? Apúntate a su lista de espera desde la página de esa salida — así te avisaremos primero si hay descuento en ella.",
     "availableFrom": "Disponible desde",
     "availableUntil": "Disponible hasta",
@@ -259,8 +272,10 @@
     "aggregate": "{average} sobre 5 · {count, plural, one {# opinión} other {# opiniones}}"
   },
   "recap": {
+    "metaTitle": "Tu resumen de la inmersión — DiveDay",
     "eyebrow": "Fin de la jornada",
-    "heading": "Buenas inmersiones",
+    "greeting": "Buenas inmersiones, {name}.",
+    "namelessFallback": "buceador",
     "externalReviewHeading": "¿Has disfrutado la inmersión?",
     "externalReviewBody": "Una opinión pública ayuda a otros buceadores a encontrar {shop} — y significa mucho para la tripulación que te ha sacado hoy.",
     "externalReviewCta": "Dejar una opinión pública",
@@ -296,6 +311,8 @@
     "photoAlt": "Una foto de {trip}",
     "photoLimitReached": "Ya has añadido el máximo de fotos que admite un resumen. ¡Buen botín!",
     "addAPhoto": "Añadir una foto",
+    "photoWrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
+    "photoTooBigSuffix": ": supera los {maxMb} MB — prueba con una foto más pequeña.",
     "addToMyRecap": "Añadir a mi resumen",
     "buddyBody": "Bucear es mejor con alguien conocido. Reserva plaza en la próxima salida y tráetelo.",
     "seeWhatsNext": "Ver la próxima salida",
@@ -310,7 +327,8 @@
     "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# punto de buceo} other {# puntos de buceo}}"
   },
   "ready": {
-    "title": "Tu preparación para la salida",
+    "metaTitle": "Tu preparación para la salida — DiveDay",
+    "namelessFallback": "buceador",
     "withTheShop": "Con el centro",
     "allSetHeading": "Lo tienes todo listo",
     "allSetBody": "El centro está terminando las últimas comprobaciones — ahora mismo no tienes que hacer nada.",
@@ -393,17 +411,20 @@
     "cancelPreviewNoPolicy": "Este centro no automatiza las devoluciones por cancelación, así que no se devuelve nada de inmediato.",
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelSpot": "Cancelar mi plaza",
-    "questionsPrefix": "¿Dudas? Escribe a {shop}",
-    "questionsSuffix": "Ven exactamente lo que hay en esta página.",
+    "contactLineBoth": "¿Dudas? Escribe a {shop} — <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>. Verán exactamente lo que hay en esta página.",
+    "contactLinePhoneOnly": "¿Dudas? Escribe a {shop} — <phone>{phoneNumber}</phone>. Verán exactamente lo que hay en esta página.",
+    "contactLineEmailOnly": "¿Dudas? Escribe a {shop} — <email>{emailAddress}</email>. Verán exactamente lo que hay en esta página.",
+    "contactLineNone": "¿Dudas? Escribe a {shop}. Verán exactamente lo que hay en esta página.",
     "gearAndSetup": "Equipo y ajuste"
   },
   "waiver": {
-    "title": "Completa tu exención de responsabilidad",
+    "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
     "unavailableHeading": "Este enlace de exención no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "expiredHeading": "Este enlace de exención ha caducado",
     "expiredBody": "Pide a tu centro un enlace nuevo — no se envió ninguna información.",
     "scheduledSites": "Tus puntos de buceo previstos",
+    "templateVersion": "{title} · versión {version}",
     "emergencyContact": "Contacto de emergencia",
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
@@ -424,9 +445,9 @@
     "signatureNote": "Tu nombre escrito, tu conformidad y la hora de finalización se guardan con esta versión exacta de la exención.",
     "saveForLater": "Guardar y terminar después",
     "signButton": "Firmar exención",
-    "needHelp": "¿Necesitas ayuda?",
-    "returnToShop": "Volver al centro",
-    "returnToShopSuffix": "y contacta con tu centro de buceo."
+    "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
+    "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
+    "englishOnlyNotice": "Por ahora, esta exención y el cuestionario médico solo están disponibles en inglés. Si no te sientes cómodo/a leyendo texto legal o médico en inglés, trae a alguien que pueda ayudarte a leerlo con atención, o consulta con el centro antes de tu salida — no firmes nada que no entiendas."
   },
   "capability": {
     "waiverReceived": "Exención recibida",
@@ -603,6 +624,7 @@
       "submit": "Guardar nueva contraseña"
     },
     "signIn": {
+      "metaTitle": "Iniciar sesión — DiveDay",
       "title": "Bienvenido de nuevo",
       "description": "Inicia sesión para llevar la tienda.",
       "error": "Ese correo y contraseña no coinciden — inténtalo de nuevo.",

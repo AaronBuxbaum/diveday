@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { DiverTranslator } from "@/i18n/messages";
-import type { CalendarDay } from "@/lib/calendar";
+import { type CalendarDay, weekStartsOn } from "@/lib/calendar";
 
 /** A single dive/trip placed on a calendar day. `time` is pre-formatted in the shop timezone. */
 export type CalendarTrip = {
@@ -14,13 +14,15 @@ export type CalendarTrip = {
  * The seven weekday names in the reader's own language, from `Intl` rather than
  * from the message bundle: a weekday name is not copy anyone writes, and a
  * hand-maintained list of seven strings per locale is seven chances to be wrong
- * about a language nobody on the team speaks. 2024-01-07 is a Sunday, so the
- * week starts where the grid does (src/lib/calendar.ts).
+ * about a language nobody on the team speaks. 2024-01-07 is a Sunday, so
+ * offsetting by the locale's own first day keeps the header aligned with the
+ * grid below it (src/lib/calendar.ts, `buildCalendarWeeks`).
  */
 function weekdayNames(locale: string): string[] {
   const format = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const firstDay = weekStartsOn(locale);
   return Array.from({ length: 7 }, (_, index) =>
-    format.format(new Date(Date.UTC(2024, 0, 7 + index))),
+    format.format(new Date(Date.UTC(2024, 0, 7 + firstDay + index))),
   );
 }
 
