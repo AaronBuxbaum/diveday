@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StarRating } from "@/components/StarRating";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { setReviewPublishedAction } from "./actions";
 
 export const metadata: Metadata = {
@@ -50,7 +52,7 @@ export default async function ReviewsPage({
     countReviewsAwaitingModeration(db, session.user.shopId),
   ]);
   const { reviews, nextCursor, total } = reviewPage;
-  const banner = notice ? NOTICES[notice] : undefined;
+  const banner = noticeFromParam(notice, NOTICES);
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
@@ -74,13 +76,7 @@ export default async function ReviewsPage({
         }
       />
 
-      {banner ? (
-        <div className="mb-6">
-          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {t(banner.key)}
-          </ShopNotice>
-        </div>
-      ) : null}
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       <section aria-label={t("reviews.overviewLabel")} className="mb-8 grid gap-3 sm:grid-cols-3">
         <ShopStat

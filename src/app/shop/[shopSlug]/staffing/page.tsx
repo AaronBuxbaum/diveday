@@ -20,6 +20,7 @@ import {
 } from "@/lib/calendar-date";
 import { formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { parseWallTime, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { createShiftAction, deleteShiftAction } from "./actions";
 
@@ -83,7 +84,7 @@ export default async function StaffingPage({
   );
   const staff = await listStaff(db, shop.id);
   const canManage = await canPersonManageStaffAccounts(db, shop.id, session.user.personId);
-  const notice = query.notice ? notices[query.notice] : undefined;
+  const notice = noticeFromParam(query.notice, notices);
   const defaultStart = utcToWallTime(view.from, shop.timezone);
   const defaultDate = toDateInputValue(defaultStart);
 

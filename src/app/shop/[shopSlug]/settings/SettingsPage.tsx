@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
   toRentableKinds,
 } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
@@ -391,7 +393,7 @@ export default async function PaymentsSettingsPage({
   const canImport = canImportShopData(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const banner = notice ? noticeMessages(t)[notice] : undefined;
+  const banner = noticeFromParam(notice, noticeMessages(t));
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -402,13 +404,7 @@ export default async function PaymentsSettingsPage({
         description={t("settings.main.description")}
       />
 
-      {banner ? (
-        <div className="mb-6">
-          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.text}
-          </ShopNotice>
-        </div>
-      ) : null}
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.main.contact.heading")}</h2>

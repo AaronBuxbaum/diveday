@@ -811,7 +811,15 @@
     "redeemedNoCap": "{count, plural, one {Redeemed # time} other {Redeemed # times}}",
     "switchOff": "Switch off",
     "switchOn": "Switch on",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "tripDeals": {
+      "heading": "Trip deals",
+      "description": "One-trip discounts sent from a departure's page — the other half of every live code, gathered here so nothing is only visible from the trip it was sent on.",
+      "empty": "No trip deals are outstanding right now. Send one from a departure's page when a boat needs filling.",
+      "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
+      "expiresAt": "Expires {date}",
+      "rangeNote": "Trip deals top out at 90% off — the boat is sailing either way, so a deal always leaves something on the table. Shop-wide codes above can go to 100% because staff also use them for comps and loyalty, not only for filling seats."
+    }
   },
   "reports": {
     "operationKind": {
@@ -1227,7 +1235,12 @@
       "fullNotice": "This trip is full — there's nothing to fill.",
       "noneAroundNotice": "No one on the last-minute list is around for this date yet.",
       "percentOff": "{percent}% off",
-      "sentTo": "{count, plural, one {Sent {date} to # diver} other {Sent {date} to # divers}}"
+      "sentTo": "{count, plural, one {Sent {date} to # diver} other {Sent {date} to # divers}}",
+      "status": {
+        "sent": "Sent",
+        "pending": "Never finished",
+        "failed": "Failed at Stripe"
+      }
     },
     "roster": {
       "waiverSend": "Send waiver",

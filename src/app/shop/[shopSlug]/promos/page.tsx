@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -13,12 +14,14 @@ import { getDb } from "@/db/client";
 import { listShopPromoCodes } from "@/db/shop-promos";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { listOutstandingLastMinutePromos } from "@/db/trip-promos";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { createPromoAction, setPromoEnabledAction } from "./actions";
 
 export const metadata: Metadata = {
@@ -65,13 +68,14 @@ export default async function PromosPage({
   );
   if (!allowed) redirect(`/shop/${shopSlug}/settings?notice=not_authorized`);
 
-  const [shop, promos, stripeAccount] = await Promise.all([
+  const [shop, promos, stripeAccount, tripDeals] = await Promise.all([
     getShopById(db, session.user.shopId),
     listShopPromoCodes(db, session.user.shopId),
     getShopStripeAccount(db, session.user.shopId),
+    listOutstandingLastMinutePromos(db, session.user.shopId),
   ]);
   const connected = canAcceptPayments(stripeAccount);
-  const banner = notice ? NOTICES[notice] : undefined;
+  const banner = noticeFromParam(notice, NOTICES);
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
@@ -87,13 +91,11 @@ export default async function PromosPage({
       />
 
       {banner ? (
-        <div className="mb-6">
-          <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
-            {banner.key === "promos.notice.invalidDiscount"
-              ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
-              : t(banner.key)}
-          </ShopNotice>
-        </div>
+        <StaffNoticeBanner tone={banner.tone}>
+          {banner.key === "promos.notice.invalidDiscount"
+            ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
+            : t(banner.key)}
+        </StaffNoticeBanner>
       ) : null}
 
       {connected ? null : (
@@ -265,6 +267,43 @@ export default async function PromosPage({
           })}
         </ul>
       )}
+
+      <h2 className="mt-10 font-medium">{t("promos.tripDeals.heading")}</h2>
+      <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
+      {tripDeals.length === 0 ? (
+        <EmptyState className="mt-3">
+          <p className="text-sm text-muted">{t("promos.tripDeals.empty")}</p>
+        </EmptyState>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-3">
+          {tripDeals.map((deal) => (
+            <li
+              key={deal.id}
+              className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-5"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-sm font-medium text-primary tabular-nums">
+                  {t("promos.discountOff", { percent: deal.discountPercent })}
+                </span>
+                <span className="font-mono text-base font-semibold">{deal.code}</span>
+              </div>
+              <Link
+                href={`/shop/${shopSlug}/trips/${deal.tripId}#last-minute-deal`}
+                className="font-medium underline underline-offset-2"
+              >
+                {deal.tripTitle}
+              </Link>
+              <p className="text-sm text-muted">
+                {t("promos.tripDeals.expiresAt", {
+                  date: formatDateTimeTz(deal.expiresAt, locale, timezone),
+                })}{" "}
+                · {t("promos.tripDeals.recipients", { count: deal.recipientCount })}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 text-xs text-muted">{t("promos.tripDeals.rangeNote")}</p>
     </main>
   );
 }

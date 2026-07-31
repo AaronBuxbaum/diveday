@@ -42,6 +42,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, toTimeInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -261,7 +262,7 @@ export default async function TripsPage({
         [],
       ];
 
-  const builderNoticeEntry = builder ? BUILDER_NOTICE_KEYS[builder] : undefined;
+  const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
   const builderNotice = builderNoticeEntry
     ? { tone: builderNoticeEntry.tone, message: st(builderNoticeEntry.key) }
     : undefined;

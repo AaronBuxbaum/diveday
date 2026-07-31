@@ -7,6 +7,7 @@ import { joinLastMinuteList } from "./last-minute-list";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getActiveTripPromoByCode,
+  listOutstandingLastMinutePromos,
   listTripLastMinutePromos,
   sendLastMinuteDealBlast,
   tripIdsNeverSentLastMinuteDeal,
@@ -274,6 +275,71 @@ describe("getActiveTripPromoByCode", () => {
         now: new Date(openTrip.startsAt.getTime() + 1),
       }),
     ).toBeNull();
+  });
+});
+
+describe("listOutstandingLastMinutePromos", () => {
+  it("surfaces a sent, unexpired code with its trip so the shop-wide promos page can list it", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
+      fakePromotions(),
+    );
+    if (!outcome.ok) throw new Error("expected success");
+
+    // The seeded demo shop already carries its own outstanding deal on a
+    // different trip (src/db/seed.ts) — assert this one is present rather
+    // than that it's the only row, so the test doesn't depend on the seed's
+    // shape.
+    const outstanding = await listOutstandingLastMinutePromos(db, shop.id);
+    expect(outstanding).toContainEqual(
+      expect.objectContaining({
+        id: outcome.promoId,
+        code: outcome.code,
+        discountPercent: 30,
+        tripId: openTrip.id,
+        tripTitle: openTrip.title,
+      }),
+    );
+  });
+
+  it("excludes a failed send — it never discounted anything and has nothing to list", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
+      fakePromotions({
+        async createTripPromotion() {
+          return { status: "failed" };
+        },
+      }),
+    );
+
+    const outstanding = await listOutstandingLastMinutePromos(db, shop.id);
+    expect(outstanding.map((promo) => promo.tripId)).not.toContain(openTrip.id);
+  });
+
+  it("excludes a sent code once it has expired — it can no longer discount anything", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
+      fakePromotions(),
+    );
+
+    // The code expires at the trip's own departure (docs ADR
+    // 20260727-last-minute-fill-promos) — asking "as of after departure"
+    // is the same query the diver-facing lookup uses to treat it as dead.
+    const afterDeparture = new Date(openTrip.startsAt.getTime() + 1);
+    const outstanding = await listOutstandingLastMinutePromos(db, shop.id, afterDeparture);
+    expect(outstanding.map((promo) => promo.tripId)).not.toContain(openTrip.id);
   });
 });
 

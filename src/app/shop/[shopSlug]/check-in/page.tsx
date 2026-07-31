@@ -15,6 +15,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { checkInAction } from "./actions";
 import { CheckInSearch } from "./CheckInSearch";
 
@@ -66,7 +67,7 @@ export default async function CheckInPage({
 
   const query = q?.trim() ?? "";
   const queue = await listCheckInQueue(db, shop.id, { query });
-  const copy = notice ? noticeCopy[notice] : undefined;
+  const copy = noticeFromParam(notice, noticeCopy);
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
